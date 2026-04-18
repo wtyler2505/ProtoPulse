@@ -178,8 +178,8 @@ function buildRailHookup(pin: BreadboardPinMapEntry, netType: 'power' | 'ground'
   const prefersLeftRail = pin.side !== 'right';
   const rail: RailId =
     netType === 'power'
-      ? prefersLeftRail ? 'top_pos' : 'bottom_pos'
-      : prefersLeftRail ? 'top_neg' : 'bottom_neg';
+      ? prefersLeftRail ? 'left_pos' : 'right_pos'
+      : prefersLeftRail ? 'left_neg' : 'right_neg';
 
   return {
     id: `hookup-${netType}-${pin.id}`,
@@ -227,8 +227,8 @@ function getPreferredBridgeRow(model: BreadboardSelectedPartModel): number {
 function buildRailBridge(netType: 'power' | 'ground', row: number): BreadboardCoachRailBridge {
   const bridgeIndex = clampRow(row) - 1;
   const [fromRail, toRail] = netType === 'power'
-    ? (['top_pos', 'bottom_pos'] as const)
-    : (['top_neg', 'bottom_neg'] as const);
+    ? (['left_pos', 'right_pos'] as const)
+    : (['left_neg', 'right_neg'] as const);
 
   return {
     id: `bridge-${netType}-rails`,

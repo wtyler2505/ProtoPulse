@@ -989,7 +989,7 @@ describe('BreadboardView', () => {
           netId: 99,
           view: 'breadboard',
           points: [
-            coordToPixel({ type: 'rail', rail: 'top_pos', index: 2 }),
+            coordToPixel({ type: 'rail', rail: 'left_pos', index: 2 }),
             { x: 18, y: 70 },
             coordToPixel({ type: 'terminal', col: 'e', row: 3 }),
           ],
@@ -1004,7 +1004,7 @@ describe('BreadboardView', () => {
           netId: 1,
           view: 'breadboard',
           points: [
-            coordToPixel({ type: 'rail', rail: 'top_neg', index: 1 }),
+            coordToPixel({ type: 'rail', rail: 'left_neg', index: 1 }),
             { x: 18, y: 58 },
             coordToPixel({ type: 'terminal', col: 'e', row: 2 }),
           ],
@@ -1019,9 +1019,9 @@ describe('BreadboardView', () => {
           netId: 99,
           view: 'breadboard',
           points: [
-            coordToPixel({ type: 'rail', rail: 'top_pos', index: 14 }),
+            coordToPixel({ type: 'rail', rail: 'left_pos', index: 14 }),
             { x: 95, y: 193 },
-            coordToPixel({ type: 'rail', rail: 'bottom_pos', index: 14 }),
+            coordToPixel({ type: 'rail', rail: 'right_pos', index: 14 }),
           ],
           layer: null,
           width: 1.5,
@@ -1034,9 +1034,9 @@ describe('BreadboardView', () => {
           netId: 1,
           view: 'breadboard',
           points: [
-            coordToPixel({ type: 'rail', rail: 'top_neg', index: 14 }),
+            coordToPixel({ type: 'rail', rail: 'left_neg', index: 14 }),
             { x: 88, y: 193 },
-            coordToPixel({ type: 'rail', rail: 'bottom_neg', index: 14 }),
+            coordToPixel({ type: 'rail', rail: 'right_neg', index: 14 }),
           ],
           layer: null,
           width: 1.5,

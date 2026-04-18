@@ -88,7 +88,7 @@ describe('toPoint3D', () => {
   });
 
   it('converts rail point to 3D coordinates', () => {
-    const p = toPoint3D(rail('top_pos', 0));
+    const p = toPoint3D(rail('left_pos', 0));
     expect(p.y).toBe(0);
     expect(p.z).toBe(0);
   });
@@ -99,10 +99,10 @@ describe('toPoint3D', () => {
   });
 
   it('different rail IDs have different x positions', () => {
-    const topPos = toPoint3D(rail('top_pos', 0));
-    const topNeg = toPoint3D(rail('top_neg', 0));
-    const botPos = toPoint3D(rail('bottom_pos', 0));
-    const botNeg = toPoint3D(rail('bottom_neg', 0));
+    const topPos = toPoint3D(rail('left_pos', 0));
+    const topNeg = toPoint3D(rail('left_neg', 0));
+    const botPos = toPoint3D(rail('right_pos', 0));
+    const botNeg = toPoint3D(rail('right_neg', 0));
     const xs = [topPos.x, topNeg.x, botPos.x, botNeg.x];
     // All should be distinct
     expect(new Set(xs).size).toBe(4);
@@ -145,14 +145,14 @@ describe('getConnectionGroup', () => {
   });
 
   it('rail points on same rail share a group', () => {
-    const r0 = getConnectionGroup(rail('top_pos', 0));
-    const r10 = getConnectionGroup(rail('top_pos', 10));
+    const r0 = getConnectionGroup(rail('left_pos', 0));
+    const r10 = getConnectionGroup(rail('left_pos', 10));
     expect(r0).toBe(r10);
   });
 
   it('different rails are different groups', () => {
-    const tp = getConnectionGroup(rail('top_pos', 0));
-    const tn = getConnectionGroup(rail('top_neg', 0));
+    const tp = getConnectionGroup(rail('left_pos', 0));
+    const tn = getConnectionGroup(rail('left_neg', 0));
     expect(tp).not.toBe(tn);
   });
 });
@@ -175,15 +175,15 @@ describe('areConnected', () => {
   });
 
   it('same rail points are connected', () => {
-    expect(areConnected(rail('top_pos', 0), rail('top_pos', 62))).toBe(true);
+    expect(areConnected(rail('left_pos', 0), rail('left_pos', 62))).toBe(true);
   });
 
   it('different rails are not connected', () => {
-    expect(areConnected(rail('top_pos', 0), rail('top_neg', 0))).toBe(false);
+    expect(areConnected(rail('left_pos', 0), rail('left_neg', 0))).toBe(false);
   });
 
   it('terminal and rail are not connected', () => {
-    expect(areConnected(term('a', 1), rail('top_pos', 0))).toBe(false);
+    expect(areConnected(term('a', 1), rail('left_pos', 0))).toBe(false);
   });
 });
 
@@ -206,13 +206,13 @@ describe('isValidPoint', () => {
   });
 
   it('valid rail point', () => {
-    expect(isValidPoint(rail('top_pos', 0))).toBe(true);
-    expect(isValidPoint(rail('bottom_neg', 62))).toBe(true);
+    expect(isValidPoint(rail('left_pos', 0))).toBe(true);
+    expect(isValidPoint(rail('right_neg', 62))).toBe(true);
   });
 
   it('invalid rail index', () => {
-    expect(isValidPoint(rail('top_pos', -1))).toBe(false);
-    expect(isValidPoint(rail('top_pos', 63))).toBe(false);
+    expect(isValidPoint(rail('left_pos', -1))).toBe(false);
+    expect(isValidPoint(rail('left_pos', 63))).toBe(false);
   });
 });
 
@@ -497,7 +497,7 @@ describe('Breadboard3DEngine — wire routing', () => {
 
   it('adds a wire with routed path', () => {
     const e = engine();
-    const wire = e.addWire('w1', 'VCC', term('a', 1), rail('top_pos', 0), 'red');
+    const wire = e.addWire('w1', 'VCC', term('a', 1), rail('left_pos', 0), 'red');
     expect(wire.id).toBe('w1');
     expect(wire.netId).toBe('VCC');
     expect(wire.color).toBe('red');
@@ -507,7 +507,7 @@ describe('Breadboard3DEngine — wire routing', () => {
 
   it('auto-assigns wire color from net name', () => {
     const e = engine();
-    const wire = e.addWire('w1', 'GND', term('a', 1), rail('top_neg', 0));
+    const wire = e.addWire('w1', 'GND', term('a', 1), rail('left_neg', 0));
     expect(wire.color).toBe('black');
   });
 
@@ -545,9 +545,9 @@ describe('Breadboard3DEngine — wire routing', () => {
 
   it('getWiresByNet filters by net', () => {
     const e = engine();
-    e.addWire('w1', 'VCC', term('a', 1), rail('top_pos', 0));
-    e.addWire('w2', 'GND', term('a', 10), rail('top_neg', 0));
-    e.addWire('w3', 'VCC', term('b', 1), rail('top_pos', 5));
+    e.addWire('w1', 'VCC', term('a', 1), rail('left_pos', 0));
+    e.addWire('w2', 'GND', term('a', 10), rail('left_neg', 0));
+    e.addWire('w3', 'VCC', term('b', 1), rail('left_pos', 5));
     expect(e.getWiresByNet('VCC')).toHaveLength(2);
     expect(e.getWiresByNet('GND')).toHaveLength(1);
   });
@@ -586,7 +586,7 @@ describe('Breadboard3DEngine — auto-route', () => {
   it('auto-routes a simple 2-point net', () => {
     const e = engine();
     const nets: NetConnection[] = [
-      { netId: 'VCC', points: [term('a', 1), rail('top_pos', 0)] },
+      { netId: 'VCC', points: [term('a', 1), rail('left_pos', 0)] },
     ];
     const wires = e.autoRoute(nets);
     expect(wires).toHaveLength(1);
@@ -605,8 +605,8 @@ describe('Breadboard3DEngine — auto-route', () => {
   it('auto-routes multiple nets', () => {
     const e = engine();
     const nets: NetConnection[] = [
-      { netId: 'VCC', points: [term('a', 1), rail('top_pos', 0)] },
-      { netId: 'GND', points: [term('a', 5), rail('top_neg', 0)] },
+      { netId: 'VCC', points: [term('a', 1), rail('left_pos', 0)] },
+      { netId: 'GND', points: [term('a', 5), rail('left_neg', 0)] },
     ];
     const wires = e.autoRoute(nets);
     expect(wires).toHaveLength(2);
@@ -672,12 +672,12 @@ describe('Breadboard3DEngine — connectivity queries', () => {
 
   it('getConnectedPoints for rail returns all 63 points on same rail', () => {
     const e = engine();
-    const connected = e.getConnectedPoints(rail('top_pos', 5));
+    const connected = e.getConnectedPoints(rail('left_pos', 5));
     expect(connected).toHaveLength(63);
     for (const p of connected) {
       expect(p.type).toBe('rail');
       if (p.type === 'rail') {
-        expect(p.rail).toBe('top_pos');
+        expect(p.rail).toBe('left_pos');
       }
     }
   });

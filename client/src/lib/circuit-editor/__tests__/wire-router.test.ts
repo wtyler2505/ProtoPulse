@@ -63,7 +63,7 @@ describe('routeWire', () => {
   });
 
   it('returns empty array for non-terminal coordinates', () => {
-    const railCoord: BreadboardCoord = { type: 'rail', rail: 'top_pos', index: 5 };
+    const railCoord: BreadboardCoord = { type: 'rail', rail: 'left_pos', index: 5 };
     const terminal = tp('a', 1);
     expect(routeWire(railCoord, terminal, new Set())).toEqual([]);
     expect(routeWire(terminal, railCoord, new Set())).toEqual([]);

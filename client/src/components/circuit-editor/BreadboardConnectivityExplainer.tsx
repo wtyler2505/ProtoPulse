@@ -81,14 +81,14 @@ function BreadboardConnectivityExplainerInner({
   }
 
   // Power rail extents
-  const topPosStart = coordToPixel({ type: 'rail', rail: 'top_pos', index: 0 });
-  const topPosEnd = coordToPixel({ type: 'rail', rail: 'top_pos', index: BB.ROWS - 1 });
-  const topNegStart = coordToPixel({ type: 'rail', rail: 'top_neg', index: 0 });
-  const topNegEnd = coordToPixel({ type: 'rail', rail: 'top_neg', index: BB.ROWS - 1 });
-  const botPosStart = coordToPixel({ type: 'rail', rail: 'bottom_pos', index: 0 });
-  const botPosEnd = coordToPixel({ type: 'rail', rail: 'bottom_pos', index: BB.ROWS - 1 });
-  const botNegStart = coordToPixel({ type: 'rail', rail: 'bottom_neg', index: 0 });
-  const botNegEnd = coordToPixel({ type: 'rail', rail: 'bottom_neg', index: BB.ROWS - 1 });
+  const topPosStart = coordToPixel({ type: 'rail', rail: 'left_pos', index: 0 });
+  const topPosEnd = coordToPixel({ type: 'rail', rail: 'left_pos', index: BB.ROWS - 1 });
+  const topNegStart = coordToPixel({ type: 'rail', rail: 'left_neg', index: 0 });
+  const topNegEnd = coordToPixel({ type: 'rail', rail: 'left_neg', index: BB.ROWS - 1 });
+  const botPosStart = coordToPixel({ type: 'rail', rail: 'right_pos', index: 0 });
+  const botPosEnd = coordToPixel({ type: 'rail', rail: 'right_pos', index: BB.ROWS - 1 });
+  const botNegStart = coordToPixel({ type: 'rail', rail: 'right_neg', index: 0 });
+  const botNegEnd = coordToPixel({ type: 'rail', rail: 'right_neg', index: BB.ROWS - 1 });
 
   // Center channel coordinates (gap between columns e and f)
   const channelTopLeft = coordToPixel({ type: 'terminal', col: 'e', row: 1 });

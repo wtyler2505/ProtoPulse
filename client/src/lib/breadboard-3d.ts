@@ -21,7 +21,7 @@ export interface Point3D {
 }
 
 export type ColumnLetter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j';
-export type RailId = 'top_pos' | 'top_neg' | 'bottom_pos' | 'bottom_neg';
+export type RailId = 'left_pos' | 'left_neg' | 'right_pos' | 'right_neg';
 
 export interface TerminalPoint {
   type: 'terminal';
@@ -133,10 +133,10 @@ const COL_INDEX: Record<ColumnLetter, number> = {
 };
 
 const RAIL_X: Record<RailId, number> = {
-  top_neg: -2,
-  top_pos: -1,
-  bottom_pos: 12,
-  bottom_neg: 13,
+  left_neg: -2,
+  left_pos: -1,
+  right_pos: 12,
+  right_neg: 13,
 };
 
 /** Standard wire color assignments by net function. */
@@ -243,7 +243,7 @@ function isValidTerminal(p: TerminalPoint): boolean {
 
 /** Validate a rail point. */
 function isValidRail(p: RailPoint): boolean {
-  const validRails: RailId[] = ['top_pos', 'top_neg', 'bottom_pos', 'bottom_neg'];
+  const validRails: RailId[] = ['left_pos', 'left_neg', 'right_pos', 'right_neg'];
   return validRails.includes(p.rail) && p.index >= 0 && p.index < ROWS;
 }
 

@@ -59,7 +59,7 @@ describe('computeMoveResult', () => {
 
   it('returns invalid for rail coordinates', () => {
     const result = computeMoveResult(
-      { type: 'rail', rail: 'top_pos', index: 5 },
+      { type: 'rail', rail: 'left_pos', index: 5 },
       'resistor',
       2,
       [],

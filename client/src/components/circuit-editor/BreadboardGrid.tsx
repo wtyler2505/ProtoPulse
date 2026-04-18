@@ -95,7 +95,7 @@ function buildTerminalPoints(): TiePoint[] {
 }
 
 function buildRailPoints(): RailPoint[] {
-  const rails: RailId[] = ['top_pos', 'top_neg', 'bottom_pos', 'bottom_neg'];
+  const rails: RailId[] = ['left_pos', 'left_neg', 'right_pos', 'right_neg'];
   const pts: RailPoint[] = [];
   for (const rail of rails) {
     for (let i = 0; i < BB.ROWS; i++) {
@@ -287,9 +287,9 @@ function BreadboardGridInner({
   /** Power rail lane backgrounds and labels — vertical stripes along left/right edges */
   const railLanes = useMemo(() => {
     const elements: React.ReactElement[] = [];
-    const rails: RailId[] = ['top_pos', 'top_neg', 'bottom_pos', 'bottom_neg'];
-    const firstY = coordToPixel({ type: 'rail', rail: 'top_pos', index: 0 }).y;
-    const lastY = coordToPixel({ type: 'rail', rail: 'top_pos', index: BB.ROWS - 1 }).y;
+    const rails: RailId[] = ['left_pos', 'left_neg', 'right_pos', 'right_neg'];
+    const firstY = coordToPixel({ type: 'rail', rail: 'left_pos', index: 0 }).y;
+    const lastY = coordToPixel({ type: 'rail', rail: 'left_pos', index: BB.ROWS - 1 }).y;
     const laneHeight = lastY - firstY + BB.PITCH;
 
     for (const rail of rails) {

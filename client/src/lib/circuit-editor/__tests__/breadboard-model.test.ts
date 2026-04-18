@@ -84,19 +84,19 @@ describe('areConnected', () => {
   });
 
   it('same power rail points are connected', () => {
-    expect(areConnected(rail('top_pos', 0), rail('top_pos', 30))).toBe(true);
+    expect(areConnected(rail('left_pos', 0), rail('left_pos', 30))).toBe(true);
   });
 
   it('different power rails are NOT connected', () => {
-    expect(areConnected(rail('top_pos', 5), rail('top_neg', 5))).toBe(false);
+    expect(areConnected(rail('left_pos', 5), rail('left_neg', 5))).toBe(false);
   });
 
   it('top and bottom power rails with same polarity are NOT connected', () => {
-    expect(areConnected(rail('top_pos', 0), rail('bottom_pos', 0))).toBe(false);
+    expect(areConnected(rail('left_pos', 0), rail('right_pos', 0))).toBe(false);
   });
 
   it('a terminal and a rail point are NOT connected (different types)', () => {
-    expect(areConnected(terminal('a', 1), rail('top_pos', 0))).toBe(false);
+    expect(areConnected(terminal('a', 1), rail('left_pos', 0))).toBe(false);
   });
 });
 
@@ -158,7 +158,7 @@ describe('pixelToCoord round-trip', () => {
   });
 
   it('round-trips a rail point exactly', () => {
-    const coord: BreadboardCoord = rail('bottom_neg', 10);
+    const coord: BreadboardCoord = rail('right_neg', 10);
     const px = coordToPixel(coord);
     const back = pixelToCoord(px);
     expect(back).not.toBeNull();
@@ -198,16 +198,16 @@ describe('coordKey', () => {
   });
 
   it('same rail coord produces the same key', () => {
-    expect(coordKey(rail('top_pos', 5))).toBe(coordKey(rail('top_pos', 5)));
+    expect(coordKey(rail('left_pos', 5))).toBe(coordKey(rail('left_pos', 5)));
   });
 
   it('different rail ids produce different keys', () => {
-    expect(coordKey(rail('top_pos', 5))).not.toBe(coordKey(rail('top_neg', 5)));
+    expect(coordKey(rail('left_pos', 5))).not.toBe(coordKey(rail('left_neg', 5)));
   });
 
   it('terminal and rail with superficially similar data produce different keys', () => {
-    // Format is "t:a1" vs "r:top_pos:0"
-    expect(coordKey(terminal('a', 1))).not.toBe(coordKey(rail('top_pos', 0)));
+    // Format is "t:a1" vs "r:left_pos:0"
+    expect(coordKey(terminal('a', 1))).not.toBe(coordKey(rail('left_pos', 0)));
   });
 });
 
@@ -233,16 +233,16 @@ describe('getConnectedPoints', () => {
   });
 
   it('power rail point returns all BB.ROWS points for that rail', () => {
-    const points = getConnectedPoints(rail('top_pos', 0));
+    const points = getConnectedPoints(rail('left_pos', 0));
     expect(points).toHaveLength(BB.ROWS);
     points.forEach((p) => {
       expect(p.type).toBe('rail');
-      expect((p as RailPoint).rail).toBe('top_pos');
+      expect((p as RailPoint).rail).toBe('left_pos');
     });
   });
 
   it('all rail indices 0..BB.ROWS-1 are present in rail connected points', () => {
-    const points = getConnectedPoints(rail('bottom_neg', 5));
+    const points = getConnectedPoints(rail('right_neg', 5));
     const indices = (points as RailPoint[]).map((p) => p.index).sort((a, b) => a - b);
     expect(indices[0]).toBe(0);
     expect(indices[BB.ROWS - 1]).toBe(BB.ROWS - 1);
@@ -838,7 +838,7 @@ describe('getConnectedHoles', () => {
     expect(holes).toHaveLength(BB.ROWS);
     holes.forEach(h => {
       expect(h.type).toBe('rail');
-      expect(h.rail).toBe('top_pos');
+      expect(h.rail).toBe('left_pos');
     });
   });
 
@@ -846,7 +846,7 @@ describe('getConnectedHoles', () => {
     const holes = getConnectedHoles(1, '-t');
     expect(holes).toHaveLength(BB.ROWS);
     holes.forEach(h => {
-      expect(h.rail).toBe('top_neg');
+      expect(h.rail).toBe('left_neg');
     });
   });
 
@@ -854,7 +854,7 @@ describe('getConnectedHoles', () => {
     const holes = getConnectedHoles(1, '+b');
     expect(holes).toHaveLength(BB.ROWS);
     holes.forEach(h => {
-      expect(h.rail).toBe('bottom_pos');
+      expect(h.rail).toBe('right_pos');
     });
   });
 
@@ -862,7 +862,7 @@ describe('getConnectedHoles', () => {
     const holes = getConnectedHoles(1, '-b');
     expect(holes).toHaveLength(BB.ROWS);
     holes.forEach(h => {
-      expect(h.rail).toBe('bottom_neg');
+      expect(h.rail).toBe('right_neg');
     });
   });
 

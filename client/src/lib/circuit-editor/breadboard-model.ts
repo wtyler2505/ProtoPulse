@@ -80,7 +80,7 @@ export type LeftColumn = (typeof BB.LEFT_COLS)[number];
 export type RightColumn = (typeof BB.RIGHT_COLS)[number];
 
 /** Power-rail identifiers */
-export type RailId = 'top_pos' | 'top_neg' | 'bottom_pos' | 'bottom_neg';
+export type RailId = 'left_pos' | 'left_neg' | 'right_pos' | 'right_neg';
 
 // ---------------------------------------------------------------------------
 // Coordinate types
@@ -132,9 +132,8 @@ export function coordToPixel(coord: BreadboardCoord): PixelPos {
     };
   }
 
-  // Rail points — rails run vertically along left/right edges
-  // "top" rails → left side, "bottom" rails → right side
-  const isLeft = coord.rail.startsWith('top');
+  // Rail points — rails run vertically along the left/right edges of the board.
+  const isLeft = coord.rail.startsWith('left');
   const isPos = coord.rail.endsWith('pos');
 
   // Right-side terminal strip edge (column 'j')
@@ -181,7 +180,7 @@ export function pixelToCoord(px: PixelPos, snapRadius = BB.PITCH * 0.6): Breadbo
   }
 
   // Check power rails
-  const rails: RailId[] = ['top_pos', 'top_neg', 'bottom_pos', 'bottom_neg'];
+  const rails: RailId[] = ['left_pos', 'left_neg', 'right_pos', 'right_neg'];
   for (const rail of rails) {
     for (let i = 0; i < BB.ROWS; i++) {
       const rp: RailPoint = { type: 'rail', rail, index: i };
@@ -378,10 +377,10 @@ export interface HolePosition {
 export function getConnectedHoles(row: number, col: string): HolePosition[] {
   // Determine if this is a rail or terminal position
   const railMapping: Record<string, RailId> = {
-    '+t': 'top_pos',
-    '-t': 'top_neg',
-    '+b': 'bottom_pos',
-    '-b': 'bottom_neg',
+    '+t': 'left_pos',
+    '-t': 'left_neg',
+    '+b': 'right_pos',
+    '-b': 'right_neg',
   };
 
   // Check if col is a rail identifier
@@ -415,7 +414,7 @@ export function getConnectedHoles(row: number, col: string): HolePosition[] {
 
 export function getBoardDimensions(): { width: number; height: number } {
   // Right-side outer rail is the widest element
-  const rightOuterRail = coordToPixel({ type: 'rail', rail: 'bottom_pos', index: 0 });
+  const rightOuterRail = coordToPixel({ type: 'rail', rail: 'right_pos', index: 0 });
   const lastTerminalY = coordToPixel({ type: 'terminal', col: 'a', row: BB.ROWS });
   return {
     width: rightOuterRail.x + BB.RAIL_MARGIN_RIGHT,

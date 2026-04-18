@@ -120,7 +120,7 @@ function terminalPixel(col: string, row: number): { x: number; y: number } {
   return { x: px.x, y: px.y };
 }
 
-function railPixel(rail: 'top_pos' | 'top_neg' | 'bottom_pos' | 'bottom_neg', index: number): { x: number; y: number } {
+function railPixel(rail: 'left_pos' | 'left_neg' | 'right_pos' | 'right_neg', index: number): { x: number; y: number } {
   const px = coordToPixel({ type: 'rail', rail, index });
   return { x: px.x, y: px.y };
 }
@@ -320,7 +320,7 @@ describe('runBreadboardDrc — power rail polarity', () => {
     resetIds();
     const nets = [makeNet({ id: 1, name: 'VCC' })];
     const wires = [
-      makeWire({ netId: 1, view: 'breadboard', points: [railPixel('top_neg', 5)] }),
+      makeWire({ netId: 1, view: 'breadboard', points: [railPixel('left_neg', 5)] }),
     ];
     const result = runBreadboardDrc(nets, wires, [], []);
     const polarity = result.violations.filter(v => v.type === 'power_rail_polarity');
@@ -334,7 +334,7 @@ describe('runBreadboardDrc — power rail polarity', () => {
     resetIds();
     const nets = [makeNet({ id: 1, name: 'GND' })];
     const wires = [
-      makeWire({ netId: 1, view: 'breadboard', points: [railPixel('top_pos', 3)] }),
+      makeWire({ netId: 1, view: 'breadboard', points: [railPixel('left_pos', 3)] }),
     ];
     const result = runBreadboardDrc(nets, wires, [], []);
     const polarity = result.violations.filter(v => v.type === 'power_rail_polarity');
@@ -347,7 +347,7 @@ describe('runBreadboardDrc — power rail polarity', () => {
     resetIds();
     const nets = [makeNet({ id: 1, name: 'VCC' })];
     const wires = [
-      makeWire({ netId: 1, view: 'breadboard', points: [railPixel('top_pos', 5)] }),
+      makeWire({ netId: 1, view: 'breadboard', points: [railPixel('left_pos', 5)] }),
     ];
     const result = runBreadboardDrc(nets, wires, [], []);
     const polarity = result.violations.filter(v => v.type === 'power_rail_polarity');
@@ -358,7 +358,7 @@ describe('runBreadboardDrc — power rail polarity', () => {
     resetIds();
     const nets = [makeNet({ id: 1, name: 'GND' })];
     const wires = [
-      makeWire({ netId: 1, view: 'breadboard', points: [railPixel('bottom_neg', 10)] }),
+      makeWire({ netId: 1, view: 'breadboard', points: [railPixel('right_neg', 10)] }),
     ];
     const result = runBreadboardDrc(nets, wires, [], []);
     const polarity = result.violations.filter(v => v.type === 'power_rail_polarity');
@@ -369,18 +369,18 @@ describe('runBreadboardDrc — power rail polarity', () => {
     resetIds();
     const nets = [makeNet({ id: 1, name: 'SIG1' })];
     const wires = [
-      makeWire({ netId: 1, view: 'breadboard', points: [railPixel('top_pos', 0)] }),
+      makeWire({ netId: 1, view: 'breadboard', points: [railPixel('left_pos', 0)] }),
     ];
     const result = runBreadboardDrc(nets, wires, [], []);
     const polarity = result.violations.filter(v => v.type === 'power_rail_polarity');
     expect(polarity).toHaveLength(0);
   });
 
-  it('detects polarity error for 5V on bottom_neg rail', () => {
+  it('detects polarity error for 5V on right_neg rail', () => {
     resetIds();
     const nets = [makeNet({ id: 1, name: '5V' })];
     const wires = [
-      makeWire({ netId: 1, view: 'breadboard', points: [railPixel('bottom_neg', 20)] }),
+      makeWire({ netId: 1, view: 'breadboard', points: [railPixel('right_neg', 20)] }),
     ];
     const result = runBreadboardDrc(nets, wires, [], []);
     const polarity = result.violations.filter(v => v.type === 'power_rail_polarity');

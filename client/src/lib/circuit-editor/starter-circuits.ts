@@ -54,7 +54,7 @@ function tp(col: ColumnLetter, row: number): { x: number; y: number } {
 }
 
 /** Shorthand to get pixel coords for a power-rail point. */
-function rp(rail: 'top_pos' | 'top_neg' | 'bottom_pos' | 'bottom_neg', index: number): { x: number; y: number } {
+function rp(rail: 'left_pos' | 'left_neg' | 'right_pos' | 'right_neg', index: number): { x: number; y: number } {
   return coordToPixel({ type: 'rail', rail, index });
 }
 
@@ -127,11 +127,11 @@ function buildLedBasic(): StarterCircuit {
     ],
     wires: [
       // VCC rail to R1 pin 1
-      wire(rp('top_pos', 9), tp('a', 10), '#e74c3c', 1.5),
+      wire(rp('left_pos', 9), tp('a', 10), '#e74c3c', 1.5),
       // R1 pin 2 to LED anode row
       wire(tp('b', 14), tp('b', 17), '#2ecc71', 1.5),
       // LED cathode to GND rail
-      wire(tp('b', 20), rp('top_neg', 19), '#1a1a2e', 1.5),
+      wire(tp('b', 20), rp('left_neg', 19), '#1a1a2e', 1.5),
     ],
   };
 }
@@ -178,11 +178,11 @@ function buildVoltageDivider(): StarterCircuit {
     ],
     wires: [
       // VCC to R1 top
-      wire(rp('top_pos', 4), tp('a', 5), '#e74c3c', 1.5),
+      wire(rp('left_pos', 4), tp('a', 5), '#e74c3c', 1.5),
       // R1 bottom to R2 top (junction)
       wire(tp('b', 9), tp('b', 12), '#f1c40f', 1.5),
       // R2 bottom to GND
-      wire(tp('b', 16), rp('top_neg', 15), '#1a1a2e', 1.5),
+      wire(tp('b', 16), rp('left_neg', 15), '#1a1a2e', 1.5),
       // Output tap wire (junction to right side for measurement)
       wire(tp('c', 9), tp('c', 12), '#3498db', 1.5),
     ],
@@ -245,14 +245,14 @@ function buildButtonLed(): StarterCircuit {
     ],
     wires: [
       // VCC to button input
-      wire(rp('top_pos', 24), tp('a', 25), '#e74c3c', 1.5),
+      wire(rp('left_pos', 24), tp('a', 25), '#e74c3c', 1.5),
       // Button output to resistor input
       wire(tp('g', 27), tp('g', 30), '#2ecc71', 1.5),
       wire(tp('a', 30), tp('b', 30), '#f1c40f', 1.0),
       // Resistor output to LED anode
       wire(tp('b', 34), tp('b', 37), '#2ecc71', 1.5),
       // LED cathode to GND
-      wire(tp('b', 40), rp('top_neg', 39), '#1a1a2e', 1.5),
+      wire(tp('b', 40), rp('left_neg', 39), '#1a1a2e', 1.5),
     ],
   };
 }
@@ -300,12 +300,12 @@ function buildHBridge(): StarterCircuit {
     ],
     wires: [
       // VCC (pin 16, VS) — top-right of IC at f5
-      wire(rp('top_pos', 4), tp('g', 5), '#e74c3c', 1.5),
+      wire(rp('left_pos', 4), tp('g', 5), '#e74c3c', 1.5),
       // GND (pins 4,5,12,13 — row 8/9 left side)
-      wire(tp('d', 8), rp('top_neg', 7), '#1a1a2e', 1.5),
-      wire(tp('d', 9), rp('top_neg', 8), '#1a1a2e', 1.5),
+      wire(tp('d', 8), rp('left_neg', 7), '#1a1a2e', 1.5),
+      wire(tp('d', 9), rp('left_neg', 8), '#1a1a2e', 1.5),
       // Enable (pin 1 — d5) — wire from VCC for always-on
-      wire(rp('top_pos', 4), tp('d', 5), '#e74c3c', 1.0),
+      wire(rp('left_pos', 4), tp('d', 5), '#e74c3c', 1.0),
       // Motor output 1 (pin 3 — d7) to motor terminal
       wire(tp('g', 7), tp('g', 15), '#e67e22', 1.5),
       // Motor output 2 (pin 6 — d10) to motor terminal

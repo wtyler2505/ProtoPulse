@@ -279,7 +279,7 @@ describe('buildConnectivityMap', () => {
 
   it('expands a rail wire endpoint to all rail points', () => {
     const nets = [makeNet(3, 'GND')];
-    const wires = [makeWire(1, 3, [rail('top_neg', 0), terminal('a', 1)])];
+    const wires = [makeWire(1, 3, [rail('left_neg', 0), terminal('a', 1)])];
     const result = buildConnectivityMap(nets, wires, [], []);
 
     // Rail: all 63 points + terminal row 1 left-group: 5 points = 68
@@ -442,7 +442,7 @@ describe('getCoordLabel', () => {
   });
 
   it('formats rail coordinate with brackets', () => {
-    expect(getCoordLabel(rail('top_pos', 0))).toBe('top_pos[0]');
-    expect(getCoordLabel(rail('bottom_neg', 42))).toBe('bottom_neg[42]');
+    expect(getCoordLabel(rail('left_pos', 0))).toBe('left_pos[0]');
+    expect(getCoordLabel(rail('right_neg', 42))).toBe('right_neg[42]');
   });
 });
