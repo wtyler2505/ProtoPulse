@@ -112,92 +112,16 @@ import { formatSIValue } from '@/lib/simulation/visual-state';
 import type { WireVisualState } from '@/lib/simulation/visual-state';
 import { useCanvasAnnouncer } from '@/lib/use-canvas-announcer';
 import { getCanvasAriaLabel, getActionAnnouncement, getToolChangeAnnouncement, getZoomAnnouncement } from '@/lib/canvas-accessibility';
-import { getDropTypeFromPart } from '../BreadboardView';
-
-// ---------------------------------------------------------------------------
-// Types (canvas-local)
-// ---------------------------------------------------------------------------
-
-type Tool = 'select' | 'wire' | 'delete';
-
-interface WireInProgress {
-  netId: number;
-  points: PixelPos[];
-  coordPath: BreadboardCoord[];
-  endpointPath: Array<SurfaceWireEndpoint | null>;
-  color: string;
-}
-
-interface AutoPlacementPlan {
-  id: number;
-  breadboardX: number;
-  breadboardY: number;
-}
-
-function buildAutoPlacementTemplate(inst: CircuitInstanceRow, part?: ComponentPart): ComponentPlacement {
-  const meta = (part?.meta as Record<string, unknown> | null) ?? null;
-  const properties = (inst.properties as Record<string, unknown> | null) ?? null;
-  const rawType = String(meta?.type ?? properties?.type ?? '').toLowerCase();
-  const pinCount = (part?.connectors as unknown[])?.length ?? 2;
-  const isDipLike = rawType === 'ic' || rawType === 'mcu' || inst.referenceDesignator.startsWith('U');
-  const rowSpan = isDipLike ? Math.max(2, Math.ceil(pinCount / 2)) : Math.max(1, Math.ceil(pinCount / 2));
-
-  return {
-    refDes: inst.referenceDesignator,
-    startCol: isDipLike ? 'e' : 'a',
-    startRow: 1,
-    rowSpan,
-    crossesChannel: isDipLike,
-  };
-}
-
-function findAutoPlacement(
-  template: ComponentPlacement,
-  existingPlacements: ComponentPlacement[],
-): ComponentPlacement | null {
-  const maxStartRow = BB.ROWS - template.rowSpan + 1;
-
-  for (let startRow = 1; startRow <= maxStartRow; startRow += 1) {
-    const candidate: ComponentPlacement = { ...template, startRow };
-    if (!checkCollision(candidate, existingPlacements)) {
-      return candidate;
-    }
-  }
-
-  return null;
-}
-
-function isDipLikeType(type: string): boolean {
-  const lower = type.toLowerCase();
-  return lower === 'ic' || lower === 'mcu' || lower === 'microcontroller';
-}
-
-function buildPlacementForDrop(
-  coord: TiePoint,
-  type: string,
-  pinCount: number,
-): ComponentPlacement {
-  const dipLike = isDipLikeType(type);
-  const rowSpan = dipLike ? Math.max(2, Math.ceil(Math.max(pinCount, 4) / 2)) : Math.max(1, Math.ceil(Math.max(pinCount, 2) / 2));
-  const maxStartRow = Math.max(1, BB.ROWS - rowSpan + 1);
-
-  return {
-    refDes: `${type}-${coord.row}`,
-    startCol: dipLike ? 'e' : coord.col,
-    startRow: Math.min(coord.row, maxStartRow),
-    rowSpan,
-    crossesChannel: dipLike,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Wire color palette (general purpose)
-// ---------------------------------------------------------------------------
-
-const WIRE_COLORS = [
-  '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
-  '#1abc9c', '#e67e22', '#34495e', '#e91e63', '#00bcd4',
-];
+import {
+  buildAutoPlacementTemplate,
+  buildPlacementForDrop,
+  findAutoPlacement,
+  getDropTypeFromPart,
+  WIRE_COLORS,
+  type AutoPlacementPlan,
+  type Tool,
+  type WireInProgress,
+} from './canvas-helpers';
 
 // Wire color presets — sourced from breadboard-model (BL-0591)
 const WIRE_COLOR_PRESETS = MODEL_WIRE_COLOR_PRESETS;
