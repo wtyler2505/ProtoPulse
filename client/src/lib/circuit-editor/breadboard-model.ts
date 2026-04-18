@@ -435,12 +435,13 @@ export function getOccupiedPoints(placement: ComponentPlacement): TiePoint[] {
       points.push({ type: 'terminal', col: 'f', row: r });
     }
   } else {
-    const ci = colIndex[placement.startCol];
-    const group = ci < 5 ? BB.LEFT_COLS : BB.RIGHT_COLS;
-    const colSpan = placement.colSpan ?? 1;
     const startCi = colIndex[placement.startCol];
+    const group = startCi < 5 ? BB.LEFT_COLS : BB.RIGHT_COLS;
+    const colSpan = placement.colSpan ?? 1;
     // Component occupies one side, spanning rows and columns
     for (let r = placement.startRow; r < placement.startRow + placement.rowSpan; r++) {
+      // Iterating `group` (not all 10 cols) naturally clamps the span to the
+      // starting left/right half — colSpan that extends past e or j is truncated.
       for (const col of group) {
         const currentCi = colIndex[col];
         if (currentCi >= startCi && currentCi < startCi + colSpan) {
