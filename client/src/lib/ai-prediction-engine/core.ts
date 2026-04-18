@@ -15,7 +15,6 @@ import { COOLDOWN_MS, DEBOUNCE_MS, MAX_SUGGESTIONS } from './constants';
 import { getAllRules } from './rules';
 import { adjustConfidence, trackFeedback } from './scoring';
 import type {
-import { logger } from '@/lib/logger';
   DismissRecord,
   FeedbackRecord,
   Prediction,
@@ -24,6 +23,7 @@ import { logger } from '@/lib/logger';
   PredictionNode,
   PredictionRule,
 } from './types';
+import { logger } from '@/lib/logger';
 
 export class PredictionEngine {
   private static instance: PredictionEngine | null = null;
