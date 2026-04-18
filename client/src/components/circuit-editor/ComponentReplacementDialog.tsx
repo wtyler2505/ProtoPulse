@@ -71,7 +71,7 @@ export default function ComponentReplacementDialog({
       manufacturer: String(meta.manufacturer || 'Unknown'),
       description: String(meta.description || ''),
       category: String(meta.category || 'generic'),
-      parameters: (meta.parameters ?? {}),
+      parameters: (meta.parameters ?? {}) as Record<string, string | number>,
       package: String(meta.footprint || meta.package || 'Unknown'),
       pinCount: connectors.length,
       pinout: connectors.map(c => c.name),

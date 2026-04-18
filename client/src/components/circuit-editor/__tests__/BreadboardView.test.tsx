@@ -102,6 +102,7 @@ const baseMockParts = [
       properties: [],
       tags: ['microcontroller'],
       type: 'mcu',
+      mpn: '',
     },
     connectors: Array.from({ length: 28 }, (_, index) => {
       const names = ['PB0', 'GND', 'VCC', 'RESET'];

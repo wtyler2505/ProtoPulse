@@ -16,6 +16,7 @@ const POWER_PINS: VerifiedPin[] = [
     role: 'power',
     direction: 'power',
     voltage: 12,
+    functions: [],
     warnings: ['Main motor power input. Technically accepts up to 35V, but typically labeled 12V. Remove 5V-EN jumper if supplying >12V to avoid burning the onboard regulator.'],
   },
   {
@@ -26,6 +27,7 @@ const POWER_PINS: VerifiedPin[] = [
     role: 'ground',
     direction: 'power',
     voltage: 0,
+    functions: [],
     warnings: ['Common ground. Must be connected to the microcontroller ground.'],
   },
   {
@@ -36,26 +38,27 @@ const POWER_PINS: VerifiedPin[] = [
     role: 'power',
     direction: 'bidirectional',
     voltage: 5,
+    functions: [],
     warnings: ['If 5V-EN jumper is present, this is a 5V OUTPUT from the onboard regulator. If jumper is removed, this is a 5V INPUT to power the logic.'],
   },
 ];
 
 const MOTOR_A_PINS: VerifiedPin[] = [
-  { id: 'OUT1', name: 'OUT1', headerGroup: 'motor_a', headerPosition: 0, role: 'power', direction: 'output', voltage: 12, maxCurrent: 2000, warnings: ['Motor A output 1'] },
-  { id: 'OUT2', name: 'OUT2', headerGroup: 'motor_a', headerPosition: 1, role: 'power', direction: 'output', voltage: 12, maxCurrent: 2000, warnings: ['Motor A output 2'] },
+  { id: 'OUT1', name: 'OUT1', headerGroup: 'motor_a', headerPosition: 0, role: 'power', direction: 'output', voltage: 12, maxCurrent: 2000, functions: [], warnings: ['Motor A output 1'] },
+  { id: 'OUT2', name: 'OUT2', headerGroup: 'motor_a', headerPosition: 1, role: 'power', direction: 'output', voltage: 12, maxCurrent: 2000, functions: [], warnings: ['Motor A output 2'] },
 ];
 
 const MOTOR_B_PINS: VerifiedPin[] = [
-  { id: 'OUT3', name: 'OUT3', headerGroup: 'motor_b', headerPosition: 0, role: 'power', direction: 'output', voltage: 12, maxCurrent: 2000, warnings: ['Motor B output 1'] },
-  { id: 'OUT4', name: 'OUT4', headerGroup: 'motor_b', headerPosition: 1, role: 'power', direction: 'output', voltage: 12, maxCurrent: 2000, warnings: ['Motor B output 2'] },
+  { id: 'OUT3', name: 'OUT3', headerGroup: 'motor_b', headerPosition: 0, role: 'power', direction: 'output', voltage: 12, maxCurrent: 2000, functions: [], warnings: ['Motor B output 1'] },
+  { id: 'OUT4', name: 'OUT4', headerGroup: 'motor_b', headerPosition: 1, role: 'power', direction: 'output', voltage: 12, maxCurrent: 2000, functions: [], warnings: ['Motor B output 2'] },
 ];
 
 const LOGIC_PINS: VerifiedPin[] = [
   { id: 'ENA', name: 'ENA', headerGroup: 'logic', headerPosition: 0, role: 'control', direction: 'input', voltage: 5, functions: [{ type: 'pwm', signal: 'PWM' }], warnings: ['Enable A (PWM for Motor A speed). Keep jumper on for full speed.'] },
-  { id: 'IN1', name: 'IN1', headerGroup: 'logic', headerPosition: 1, role: 'control', direction: 'input', voltage: 5, functions: [{ type: 'gpio', signal: 'DIR' }], warnings: ['Direction control 1 for Motor A'] },
-  { id: 'IN2', name: 'IN2', headerGroup: 'logic', headerPosition: 2, role: 'control', direction: 'input', voltage: 5, functions: [{ type: 'gpio', signal: 'DIR' }], warnings: ['Direction control 2 for Motor A'] },
-  { id: 'IN3', name: 'IN3', headerGroup: 'logic', headerPosition: 3, role: 'control', direction: 'input', voltage: 5, functions: [{ type: 'gpio', signal: 'DIR' }], warnings: ['Direction control 1 for Motor B'] },
-  { id: 'IN4', name: 'IN4', headerGroup: 'logic', headerPosition: 4, role: 'control', direction: 'input', voltage: 5, functions: [{ type: 'gpio', signal: 'DIR' }], warnings: ['Direction control 2 for Motor B'] },
+  { id: 'IN1', name: 'IN1', headerGroup: 'logic', headerPosition: 1, role: 'control', direction: 'input', voltage: 5, functions: [{ type: 'interrupt', signal: 'DIR' }], warnings: ['Direction control 1 for Motor A'] },
+  { id: 'IN2', name: 'IN2', headerGroup: 'logic', headerPosition: 2, role: 'control', direction: 'input', voltage: 5, functions: [{ type: 'interrupt', signal: 'DIR' }], warnings: ['Direction control 2 for Motor A'] },
+  { id: 'IN3', name: 'IN3', headerGroup: 'logic', headerPosition: 3, role: 'control', direction: 'input', voltage: 5, functions: [{ type: 'interrupt', signal: 'DIR' }], warnings: ['Direction control 1 for Motor B'] },
+  { id: 'IN4', name: 'IN4', headerGroup: 'logic', headerPosition: 4, role: 'control', direction: 'input', voltage: 5, functions: [{ type: 'interrupt', signal: 'DIR' }], warnings: ['Direction control 2 for Motor B'] },
   { id: 'ENB', name: 'ENB', headerGroup: 'logic', headerPosition: 5, role: 'control', direction: 'input', voltage: 5, functions: [{ type: 'pwm', signal: 'PWM' }], warnings: ['Enable B (PWM for Motor B speed). Keep jumper on for full speed.'] },
 ];
 
@@ -81,19 +84,19 @@ export const L298N_MOTOR_DRIVER: VerifiedBoardDefinition = {
   },
   pins: [...POWER_PINS, ...MOTOR_A_PINS, ...MOTOR_B_PINS, ...LOGIC_PINS],
   headerLayout: [
-    { id: 'power', side: 'bottom', pinCount: 3, pinIds: POWER_PINS.map(p => p.id) },
-    { id: 'motor_a', side: 'left', pinCount: 2, pinIds: MOTOR_A_PINS.map(p => p.id) },
-    { id: 'motor_b', side: 'right', pinCount: 2, pinIds: MOTOR_B_PINS.map(p => p.id) },
-    { id: 'logic', side: 'bottom', pinCount: 6, pinIds: LOGIC_PINS.map(p => p.id) },
+    { id: 'power', name: 'Power Header', side: 'bottom', pinCount: 3, pinIds: POWER_PINS.map(p => p.id) },
+    { id: 'motor_a', name: 'Motor A Output', side: 'left', pinCount: 2, pinIds: MOTOR_A_PINS.map(p => p.id) },
+    { id: 'motor_b', name: 'Motor B Output', side: 'right', pinCount: 2, pinIds: MOTOR_B_PINS.map(p => p.id) },
+    { id: 'logic', name: 'Logic Control', side: 'bottom', pinCount: 6, pinIds: LOGIC_PINS.map(p => p.id) },
   ],
   buses: [
-    { id: 'motor_a_out', name: 'Motor A Output', pinIds: ['OUT1', 'OUT2'] },
-    { id: 'motor_b_out', name: 'Motor B Output', pinIds: ['OUT3', 'OUT4'] },
-    { id: 'motor_a_ctrl', name: 'Motor A Control', pinIds: ['ENA', 'IN1', 'IN2'] },
-    { id: 'motor_b_ctrl', name: 'Motor B Control', pinIds: ['ENB', 'IN3', 'IN4'] }
+    { id: 'motor_a_out', name: 'Motor A Output', type: 'custom', pinIds: ['OUT1', 'OUT2'] },
+    { id: 'motor_b_out', name: 'Motor B Output', type: 'custom', pinIds: ['OUT3', 'OUT4'] },
+    { id: 'motor_a_ctrl', name: 'Motor A Control', type: 'custom', pinIds: ['ENA', 'IN1', 'IN2'] },
+    { id: 'motor_b_ctrl', name: 'Motor B Control', type: 'custom', pinIds: ['ENB', 'IN3', 'IN4'] }
   ],
   evidence: [
-    { type: 'datasheet', title: 'L298 Datasheet', href: 'https://www.st.com/resource/en/datasheet/l298.pdf', confidence: 'high' }
+    { type: 'datasheet', label: 'L298 Datasheet', href: 'https://www.st.com/resource/en/datasheet/l298.pdf', confidence: 'high', supports: ['pins'] }
   ],
   verificationNotes: [
     'Logic pins ENA and ENB are typically jumpered to 5V for 100% duty cycle.',

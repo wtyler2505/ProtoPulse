@@ -395,14 +395,13 @@ export function boardDefinitionToPartState(board: VerifiedBoardDefinition): Part
       },
       {
         id: 'feature-power-jack',
-        type: 'circle' as const,
+        type: 'rect' as const,
         x: widthPx - 16,
         y: 10,
         width: 10,
         height: 10,
-        cx: widthPx - 11,
-        cy: 15,
         rotation: 0,
+        rx: 5,
         style: { fill: '#0f172a', stroke: '#94a3b8', strokeWidth: 0.8 },
       },
     );
@@ -441,7 +440,7 @@ export function boardDefinitionToPartState(board: VerifiedBoardDefinition): Part
   // Aggregate tags from pin functions for searchability
   const functionTags = new Set<string>();
   for (const pin of board.pins) {
-    for (const fn of pin.functions) {
+    for (const fn of (pin.functions ?? [])) {
       functionTags.add(fn.type);
       if (fn.bus) {
         functionTags.add(fn.bus);

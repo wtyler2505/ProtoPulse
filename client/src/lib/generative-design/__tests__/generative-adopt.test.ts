@@ -562,8 +562,6 @@ describe('architectureToCurrentIR', () => {
     const currentIR = architectureToCurrentIR(nodes, []);
     const candidate: CandidateEntry = {
       id: 'cand-x',
-      generation: 1,
-      parentIds: [],
       ir: {
         meta: { name: 'variant', version: '1.0.0' },
         components: [

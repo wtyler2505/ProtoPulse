@@ -1003,7 +1003,7 @@ function BreadboardCanvas({
     const holeEndpoint = getHoleEndpoint(point);
     if (holeEndpoint) {
       return {
-        pixel: coordToPixel({ type: 'terminal', col: holeEndpoint.col, row: holeEndpoint.row }),
+        pixel: coordToPixel({ type: 'terminal', col: holeEndpoint.col as ColumnLetter, row: holeEndpoint.row }),
         meta: holeEndpoint,
       };
     }
@@ -1668,8 +1668,8 @@ function BreadboardCanvas({
         points: wireInProgress.points,
         color: wireInProgress.color,
         wireType: hasBenchPinEndpoint ? 'jump' : 'wire',
-        endpointMeta,
-        provenance: hasBenchPinEndpoint ? 'jumper' : 'manual',
+        endpointMeta: endpointMeta as Record<string, unknown> | null,
+        provenance: (hasBenchPinEndpoint ? 'jumper' : 'manual') as 'manual' | 'synced' | 'coach' | 'jumper',
       });
       setWireInProgress(null);
     }
@@ -1717,8 +1717,8 @@ function BreadboardCanvas({
       circuitId,
       id: wireId,
       points: pts,
-      endpointMeta: nextEndpointMeta,
-      provenance,
+      endpointMeta: nextEndpointMeta as Record<string, unknown> | null,
+      provenance: provenance as 'manual' | 'synced' | 'coach' | 'jumper',
       wireType: isBenchLinked ? 'jump' : 'wire',
     });
   }, [breadboardWires, buildEndpointMeta, resolveInteractiveWireTarget, updateWireMutation, circuitId]);

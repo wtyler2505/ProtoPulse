@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { QueryClient } from '@tanstack/react-query';
 import {
   invalidateAfterToolCalls,
   TOOL_INVALIDATION_MAP,
@@ -10,12 +11,12 @@ import type { ToolCallInfo } from '@/lib/project-context';
 // Test helpers
 // ---------------------------------------------------------------------------
 
-interface MockQueryClient {
+type MockQueryClient = Pick<QueryClient, 'invalidateQueries'> & {
   invalidateQueries: ReturnType<typeof vi.fn>;
-}
+};
 
 function makeClient(): MockQueryClient {
-  return { invalidateQueries: vi.fn().mockResolvedValue(undefined) };
+  return { invalidateQueries: vi.fn().mockResolvedValue(undefined) } as unknown as MockQueryClient;
 }
 
 function makeToolCall(name: string): ToolCallInfo {

@@ -7,8 +7,8 @@
 import type { VerifiedBoardDefinition, VerifiedPin } from './types';
 
 const I2C_PINS: VerifiedPin[] = [
-  { id: 'GND', name: 'GND', headerGroup: 'main', headerPosition: 0, role: 'ground', direction: 'power', voltage: 0, warnings: [] },
-  { id: 'VCC', name: 'VCC', headerGroup: 'main', headerPosition: 1, role: 'power', direction: 'power', voltage: 5, warnings: ['Usually accepts 3.3V to 5V due to onboard regulator'] },
+  { id: 'GND', name: 'GND', headerGroup: 'main', headerPosition: 0, role: 'ground', direction: 'power', voltage: 0, functions: [], warnings: [] },
+  { id: 'VCC', name: 'VCC', headerGroup: 'main', headerPosition: 1, role: 'power', direction: 'power', voltage: 5, functions: [], warnings: ['Usually accepts 3.3V to 5V due to onboard regulator'] },
   { id: 'SCL', name: 'SCL', headerGroup: 'main', headerPosition: 2, role: 'communication', direction: 'input', voltage: 3.3, functions: [{ type: 'i2c', signal: 'SCL' }], warnings: [] },
   { id: 'SDA', name: 'SDA', headerGroup: 'main', headerPosition: 3, role: 'communication', direction: 'bidirectional', voltage: 3.3, functions: [{ type: 'i2c', signal: 'SDA' }], warnings: [] },
 ];
@@ -35,13 +35,13 @@ export const SSD1306_OLED_I2C: VerifiedBoardDefinition = {
   },
   pins: I2C_PINS,
   headerLayout: [
-    { id: 'main', side: 'top', pinCount: 4, pinIds: I2C_PINS.map(p => p.id) },
+    { id: 'main', name: 'Main Header', side: 'top', pinCount: 4, pinIds: I2C_PINS.map(p => p.id) },
   ],
   buses: [
-    { id: 'i2c', name: 'I2C Bus', pinIds: ['SCL', 'SDA'] }
+    { id: 'i2c', name: 'I2C Bus', type: 'i2c', pinIds: ['SCL', 'SDA'] }
   ],
   evidence: [
-    { type: 'datasheet', title: 'SSD1306 Datasheet', href: 'https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf', confidence: 'high' }
+    { type: 'datasheet', label: 'SSD1306 Datasheet', href: 'https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf', confidence: 'high', supports: ['pins'] }
   ],
   verificationNotes: [
     'Some variants swap GND and VCC pins. Always check silkscreen.'

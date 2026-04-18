@@ -61,8 +61,8 @@ export function getBenchConnectorAnchorPositions(
       instanceId: instance.id,
       connectorId: connector.id,
       pinId: connector.id,
-      x: instance.benchX + rotated.x,
-      y: instance.benchY + rotated.y,
+      x: instance.benchX! + rotated.x,
+      y: instance.benchY! + rotated.y,
       localX: localPoint.x,
       localY: localPoint.y,
     };

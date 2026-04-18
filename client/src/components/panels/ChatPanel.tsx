@@ -28,6 +28,7 @@ import FollowUpSuggestions from './chat/FollowUpSuggestions';
 import MessageInput from './chat/MessageInput';
 import { useChatSettings } from '@/hooks/useChatSettings';
 import { useApiKeyStatus } from '@/hooks/useApiKeyStatus';
+import { estimateCost, approximateTokens } from '@shared/model-pricing';
 import { useApiKeys } from '@/hooks/useApiKeys';
 import { useGoogleWorkspaceToken } from '@/hooks/useGoogleWorkspaceToken';
 import { queryClient } from '@/lib/queryClient';
@@ -697,6 +698,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       let finalSources: ToolSource[] = [];
       let finalConfidence: ConfidenceScore | undefined;
       let hasServerToolCalls = false;      let sseErrorCount = 0;
+      let reportedUsage: { model: string; inputTokens: number; outputTokens: number } | undefined;
+      let resolvedModel: string | undefined;
 
       if (reader) {
         let buffer = '';

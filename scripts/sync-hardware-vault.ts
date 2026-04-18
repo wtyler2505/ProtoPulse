@@ -83,7 +83,7 @@ ${board.headerLayout.map(h => `### ${h.id} Header (${h.side} side, ${h.pinCount}
 ## Critical Safety & Verification Notes
 ${(board.warnings || []).map(w => `- **WARNING:** ${w}`).join('\n')}
 ${(board.verificationNotes || []).map(n => `- ${n}`).join('\n')}
-${(board.evidence || []).map(e => `- [${e.title}](${e.href}) (Confidence: ${e.confidence})`).join('\n')}
+${(board.evidence || []).map(e => `- [${e.label}](${e.href}) (Confidence: ${e.confidence})`).join('\n')}
 
 ---
 Related: [[${subMoc}]], [[hardware-components]], [[architecture-decisions]]

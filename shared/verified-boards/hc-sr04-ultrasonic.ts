@@ -7,10 +7,10 @@
 import type { VerifiedBoardDefinition, VerifiedPin } from './types';
 
 const PINS: VerifiedPin[] = [
-  { id: 'VCC', name: 'VCC', headerGroup: 'main', headerPosition: 0, role: 'power', direction: 'power', voltage: 5, warnings: ['Strictly 5V module. Do not use 3.3V.'] },
-  { id: 'TRIG', name: 'Trig', headerGroup: 'main', headerPosition: 1, role: 'control', direction: 'input', voltage: 5, functions: [{ type: 'gpio', signal: 'TRIG' }], warnings: ['Requires a 10us HIGH pulse to trigger measurement'] },
-  { id: 'ECHO', name: 'Echo', headerGroup: 'main', headerPosition: 2, role: 'control', direction: 'output', voltage: 5, functions: [{ type: 'gpio', signal: 'ECHO' }], warnings: ['Outputs a 5V HIGH pulse proportional to distance. Use a voltage divider if connecting to a 3.3V microcontroller.'] },
-  { id: 'GND', name: 'GND', headerGroup: 'main', headerPosition: 3, role: 'ground', direction: 'power', voltage: 0, warnings: [] },
+  { id: 'VCC', name: 'VCC', headerGroup: 'main', headerPosition: 0, role: 'power', direction: 'power', voltage: 5, functions: [], warnings: ['Strictly 5V module. Do not use 3.3V.'] },
+  { id: 'TRIG', name: 'Trig', headerGroup: 'main', headerPosition: 1, role: 'control', direction: 'input', voltage: 5, functions: [{ type: 'interrupt', signal: 'TRIG' }], warnings: ['Requires a 10us HIGH pulse to trigger measurement'] },
+  { id: 'ECHO', name: 'Echo', headerGroup: 'main', headerPosition: 2, role: 'control', direction: 'output', voltage: 5, functions: [{ type: 'interrupt', signal: 'ECHO' }], warnings: ['Outputs a 5V HIGH pulse proportional to distance. Use a voltage divider if connecting to a 3.3V microcontroller.'] },
+  { id: 'GND', name: 'GND', headerGroup: 'main', headerPosition: 3, role: 'ground', direction: 'power', voltage: 0, functions: [], warnings: [] },
 ];
 
 export const HC_SR04_ULTRASONIC: VerifiedBoardDefinition = {
@@ -35,14 +35,14 @@ export const HC_SR04_ULTRASONIC: VerifiedBoardDefinition = {
   },
   pins: PINS,
   headerLayout: [
-    { id: 'main', side: 'bottom', pinCount: 4, pinIds: PINS.map(p => p.id) },
+    { id: 'main', name: 'Main Header', side: 'bottom', pinCount: 4, pinIds: PINS.map(p => p.id) },
   ],
   buses: [
-    { id: 'power', name: 'Power Bus', pinIds: ['VCC', 'GND'] },
-    { id: 'control', name: 'Trigger/Echo', pinIds: ['TRIG', 'ECHO'] }
+    { id: 'power', name: 'Power Bus', type: 'power', pinIds: ['VCC', 'GND'] },
+    { id: 'control', name: 'Trigger/Echo', type: 'custom', pinIds: ['TRIG', 'ECHO'] }
   ],
   evidence: [
-    { type: 'datasheet', title: 'HC-SR04 User Manual', href: 'https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf', confidence: 'high' }
+    { type: 'datasheet', label: 'HC-SR04 User Manual', href: 'https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf', confidence: 'high', supports: ['pins'] }
   ],
   verificationNotes: [
     'The standard HC-SR04 is 5V only. There are variants like HC-SR04+ or RCWL-1601 that support 3.3V, but this definition assumes the classic 5V part.'
