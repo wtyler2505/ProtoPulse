@@ -51,39 +51,55 @@ interface UseApiKeysResult {
 }
 
 /**
- * Reads an API key from localStorage for the given provider, handling the legacy
- * single-key migration.
+ * Drains any legacy plaintext localStorage entries for this provider, returning the
+ * most recent recovered value (if any). The entries are removed in all cases — they
+ * must not survive beyond this call (audit #60).
  */
-function readLocalKey(provider: ApiKeyProvider): string {
+function drainLegacyLocalStorage(provider: ApiKeyProvider): string {
+  let recovered = '';
   try {
-    const legacyKey = localStorage.getItem(LEGACY_KEY);
-    if (legacyKey) {
-      localStorage.setItem(LOCAL_STORAGE_KEYS.gemini, legacyKey);
-      localStorage.removeItem(LEGACY_KEY);
+    for (const legacyKey of LEGACY_LOCALSTORAGE_KEYS[provider]) {
+      const v = localStorage.getItem(legacyKey);
+      if (v) { recovered = v; }
+      try { localStorage.removeItem(legacyKey); } catch { /* ignore */ }
     }
-    return localStorage.getItem(LOCAL_STORAGE_KEYS[provider]) ?? '';
+  } catch { /* localStorage unavailable — nothing to drain */ }
+  return recovered;
+}
+
+/**
+ * Reads the pre-auth scratch API key for the given provider from sessionStorage,
+ * after first draining any legacy localStorage values into the scratch slot.
+ */
+function readScratchKey(provider: ApiKeyProvider): string {
+  const legacyValue = drainLegacyLocalStorage(provider);
+  try {
+    if (legacyValue && !sessionStorage.getItem(SESSION_STORAGE_KEYS[provider])) {
+      sessionStorage.setItem(SESSION_STORAGE_KEYS[provider], legacyValue);
+    }
+    return sessionStorage.getItem(SESSION_STORAGE_KEYS[provider]) ?? '';
   } catch {
-    return '';
+    return legacyValue;
   }
 }
 
-function writeLocalKey(provider: ApiKeyProvider, key: string): void {
+function writeScratchKey(provider: ApiKeyProvider, key: string): void {
   try {
     if (key) {
-      localStorage.setItem(LOCAL_STORAGE_KEYS[provider], key);
+      sessionStorage.setItem(SESSION_STORAGE_KEYS[provider], key);
     } else {
-      localStorage.removeItem(LOCAL_STORAGE_KEYS[provider]);
+      sessionStorage.removeItem(SESSION_STORAGE_KEYS[provider]);
     }
   } catch {
-    // localStorage may be unavailable (private browsing, storage full)
+    // sessionStorage may be unavailable (private browsing, storage full)
   }
 }
 
-function clearLocalKey(provider: ApiKeyProvider): void {
+function clearScratchKey(provider: ApiKeyProvider): void {
   try {
-    localStorage.removeItem(LOCAL_STORAGE_KEYS[provider]);
+    sessionStorage.removeItem(SESSION_STORAGE_KEYS[provider]);
   } catch {
-    // Ignore localStorage errors
+    // Ignore sessionStorage errors
   }
 }
 
