@@ -414,6 +414,77 @@ describe('getDefaultFallbackModel', () => {
 });
 
 // =============================================================================
+// routeToModel — tier distinctness regression (AI audit 01-CORE-HIGH-05)
+// =============================================================================
+//
+// Regression lock for audit triage item 01-CORE-HIGH-05 ("Gemini fast=standard
+// same model"). The three tiers must route to three distinct Gemini model IDs,
+// otherwise the PHASE_COMPLEXITY_MATRIX routing decision is a no-op.
+
+describe('routeToModel — Gemini tier distinctness', () => {
+  const base = {
+    provider: 'gemini' as const,
+    userModel: 'gemini-2.5-flash',
+    messageLength: 50,
+    hasImage: false,
+  };
+
+  it('speed strategy selects the fast tier (flash-lite)', () => {
+    const { model } = routeToModel({ ...base, strategy: 'speed' });
+    expect(model).toBe('gemini-2.5-flash-lite');
+  });
+
+  it('cost strategy selects the fast tier (flash-lite)', () => {
+    const { model } = routeToModel({ ...base, strategy: 'cost' });
+    expect(model).toBe('gemini-2.5-flash-lite');
+  });
+
+  it('quality strategy selects the premium tier (pro)', () => {
+    const { model } = routeToModel({ ...base, strategy: 'quality' });
+    expect(model).toBe('gemini-2.5-pro');
+  });
+
+  it('auto fallback with short message selects the fast tier', () => {
+    const { model } = routeToModel({ ...base, strategy: 'auto', messageLength: 50 });
+    expect(model).toBe('gemini-2.5-flash-lite');
+  });
+
+  it('auto fallback with medium message selects the standard tier (flash)', () => {
+    const { model } = routeToModel({ ...base, strategy: 'auto', messageLength: 800 });
+    expect(model).toBe('gemini-2.5-flash');
+  });
+
+  it('auto fallback with long message selects the premium tier (pro)', () => {
+    const { model } = routeToModel({ ...base, strategy: 'auto', messageLength: 3000 });
+    expect(model).toBe('gemini-2.5-pro');
+  });
+
+  it('fast, standard, and premium tiers are three distinct model IDs', () => {
+    // Exercise each tier and confirm no two return the same model. This is the
+    // durable guard against re-introducing the original duplication bug.
+    const fast = routeToModel({ ...base, strategy: 'speed' }).model;
+    const standard = routeToModel({ ...base, strategy: 'auto', messageLength: 800 }).model;
+    const premium = routeToModel({ ...base, strategy: 'quality' }).model;
+
+    expect(fast).not.toBe(standard);
+    expect(standard).not.toBe(premium);
+    expect(fast).not.toBe(premium);
+    expect(new Set([fast, standard, premium]).size).toBe(3);
+  });
+
+  it('auto with image upgrades fast → standard for vision capability', () => {
+    // Without appState, the image branch returns standard tier directly.
+    const { model, reason } = routeToModel({
+      ...base,
+      strategy: 'auto',
+      hasImage: true,
+    });
+    expect(model).toBe('gemini-2.5-flash');
+    expect(reason).toMatch(/vision/i);
+  });
+});
+
+// =============================================================================
 // redactSecrets
 // =============================================================================
 
