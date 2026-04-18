@@ -388,6 +388,93 @@ URL `/projects/30/knowledge`. 20 articles in card grid. Search articles textbox 
 - **E2E-264 🟢 IDEA** — Articles overlap heavily with the Vault (675 notes). Why two systems? Either consolidate or label this as "Quick Refs" vs "Deep Vault".
 - **E2E-265 🟡 UX** — No "next/previous article" navigation in expanded view. User must scroll back up to grid.
 
+---
+
+## Community — meticulous baby-step
+
+URL `/projects/30/community`. 10 components, 13132 dl, 5 authors. Sub-tabs Browse/Featured/Collections. Filters: All types / Most Popular sort. Cards static text in a11y tree.
+
+### Baby-step: click "USB-C Connector Module" card
+
+→ Card has `cursor:pointer` + onclick handler but click produces NOTHING visible. No dialog, no detail panel, no install/add button appears.
+
+- **E2E-266 🔴 BUG** — Community card onclick is dead. Same pattern as Coach button (E2E-074). User clicks community card to view details / install — nothing happens.
+- **E2E-267 🔴 a11y** — Cards have onclick but no role="button". Same systemic issue as Learn (E2E-261), Dashboard (E2E-068).
+- **E2E-268 🟡 UX** — License badge shown (MIT/CC0/CC-BY) but not filterable.
+- **E2E-269 🟢 IDEA** — No "Submit your component" CTA. Community without contribution path = library only.
+
+---
+
+## Order PCB — meticulous baby-step
+
+URL `/projects/30/ordering`. 5-step wizard (Board Specs / Select Fab / DFM Check / Quotes / Summary). Steps 3-5 properly disabled until prerequisites met. **Excellent gating.** Quantity default 5. Width 100mm × Height 80mm — **THIRD source-of-truth conflict** with PCB (50×40) and 3D View (100×80).
+
+- **E2E-270 🔴 BUG (PATTERN)** — Order PCB Width/Height = 100×80mm matches 3D View (100×80) but NOT PCB tab (50×40). Three different boards in same project: PCB / 3D / Order. Source-of-truth must converge.
+- **E2E-271 🔴 BUG (PATTERN)** — All spinbuttons (Quantity, Width, Height, Min Trace, Min Drill) have `valuemax="0"` — broken constraint (E2E-236 pattern again).
+- **E2E-272 ✅ EXCELLENT** — Wizard steps disable correctly until prerequisites met. Tooltip-style "Next step: Review the board spec, then choose a compatible fab to unlock DFM preflight."
+- **E2E-273 🟢 IDEA** — Special Features checkboxes (Castellated/Impedance/Via-in-Pad/Gold Fingers) — clicking these should warn about cost impact + fab compatibility.
+- **E2E-274 🟢 IDEA** — Solder mask color is button-row (9 options) but no checked/active state shown in a11y. Need `aria-pressed`.
+- **E2E-275 🟡 UX** — Min Trace 0.2mm and Min Drill 0.3mm defaults are conservative for hobby — could auto-set from chosen fab capabilities.
+
+---
+
+## Inventory (Storage) — meticulous baby-step
+
+URL `/projects/30/storage`. Storage Manager. Scan + Labels. Filter input. Empty state "No BOM items to display." Very thin tab.
+
+- **E2E-276 🟡 UX** — Tab name "Inventory" but URL `/storage` and h-text "Storage Manager". Three names again (cf. E2E-053 Learn).
+- **E2E-277 🟢 IDEA** — Empty state should encourage adding BOM items first ("Add BOM in Procurement → Inventory tracks placement here").
+- **E2E-278 🟢 IDEA** — Scan and Labels don't say what they scan/label.
+
+---
+
+## Serial Monitor — meticulous baby-step
+
+URL `/projects/30/serial_monitor`. Disconnected status, Connect button, Monitor/Dashboard sub-views. Board/Baud/Ending dropdowns (Any device / 115,200 / LF). DTR/RTS/Auto-scroll/Timestamps switches all checked. Save button. Comprehensive trust receipt: Device filter / Port / Detected device / Arduino profile / Board safety / Baud / Traffic counters. Safe Commands: Ping / Get Info / Reset (all disabled). Send + Reset board disabled. AI Copilot disabled with helpful explanation "AI Copilot needs sketch code, serial logs, or both before it can diagnose hardware issues."
+
+- **E2E-279 ✅ EXCELLENT** — Serial Monitor disabled-button states are all properly explained via aria-description. Best-in-class gating UX.
+- **E2E-280 🟢 IDEA** — Save button (top toolbar, after switches) — what does "Save" mean here? Save preset? Save log? Add aria-label/description.
+- **E2E-281 🟢 IDEA** — Safe Commands "Add" button — let user define their own safe-command JSON. Could pre-populate from common Arduino sketches.
+
+---
+
+## Calculators — meticulous baby-step
+
+URL `/projects/30/calculators`. 6 calculators: Ohm's Law, LED Resistor (defaults 5V/2V/0.02A), Voltage Divider (Forward/Reverse tabs), RC Time Constant (10kΩ/1µF), Filter Cutoff (RC/Bandpass tabs + Low/High pass), Power Dissipation. Each calculator has Calculate button.
+
+### Baby-step: click Calculate on LED Resistor
+
+→ Result rendered: **Exact R 150Ω, Nearest E24 150Ω, Nearest E96 150Ω, Current (E24) 20 mA, Resistor Power 60 mW.** + `Add to BOM` + `Apply to Component` action buttons.
+
+- **E2E-282 ✅ EXCELLENT** — LED Resistor calculator computes correctly (5-2)/0.02 = 150Ω. Shows nearest standard values from E24 + E96 series. Accurate power calc.
+- **E2E-283 ✅ EXCELLENT** — Add to BOM + Apply to Component create calculator→procurement→architecture link. Killer integration feature.
+- **E2E-284 🔴 BUG (PATTERN)** — All spinbuttons valuemax=0 (E2E-236/271 pattern recurring across many tabs).
+- **E2E-285 🟢 IDEA** — Default 0.02A (20mA) is good for standard LED. Add presets dropdown ("LED" / "High-power LED" / "IR LED" with auto-fill values).
+
+---
+
+## Patterns — meticulous baby-step
+
+URL `/projects/30/design_patterns`. 10 curated patterns (Digital 1, Power 4, Motor 1, Communication 1, Signal 3). Search + Category + Level filters. Sub-tabs Patterns / My Snippets. Cards as static text (no Expand button) — likely click-to-expand but no a11y indicator.
+
+- **E2E-286 🟢 IDEA** — Pattern cards lack Expand button (cf. Starter Circuits which has them). Inconsistent.
+- **E2E-287 🟢 IDEA** — "My Snippets" sub-tab — ability to save user's own pattern is good. Untested.
+- **E2E-288 🟡 UX** — "10 of 10" counter is nice but no breakdown — should match category headers.
+
+---
+
+## Starter Circuits — meticulous baby-step
+
+URL `/projects/30/starter_circuits`. 15/15 starters. Each card has "Expand details" button + tags (level/category/board).
+
+### Baby-step: click "Expand details" on LED Blink
+
+→ Card expanded inline. Shows: **Components Needed** (1× LED 5mm Red + 1× Resistor 220Ω), **What You Will Learn** (digitalWrite, current-limiting resistors, delay), **Arduino Code** (full sketch with comments + Copy button), **Open Circuit** button.
+
+- **E2E-289 ✅ EXCELLENT** — Starter expansion shows components, learning objectives, and full Arduino code with Copy button. Production-quality teaching content.
+- **E2E-290 🟢 IDEA** — "Open Circuit" button — does this create the circuit in this project? Auto-populate BOM + Architecture? Killer integration if so.
+- **E2E-291 🟡 UX** — Code block has Copy but no syntax highlighting in the snapshot. Verify Monaco/Prism is wired.
+
 
 ---
 
