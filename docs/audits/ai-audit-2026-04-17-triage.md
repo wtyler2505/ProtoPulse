@@ -42,7 +42,7 @@ Purpose: classify every CRITICAL / HIGH / MEDIUM finding (plus actionable LOW/IN
 | 3 | 01-core | HIGH | Missing abort signal propagation to Genkit | RESOLVED | `server/ai.ts:1213` `abortSignal: signal` passed to `ai.generateStream()` |  |
 | 4 | 01-core | HIGH | All Genkit tool outputSchema = z.any() | OPEN | `server/genkit.ts:17` still `z.object({})` for registry bridge | Derive output schemas from ToolResult envelope |
 | 5 | 01-core | HIGH | Custom system prompt injection (no sanitization) | RESOLVED | `server/ai.ts:962-966` strips/wraps in `<user-instructions>` with override guard |  |
-| 6 | 01-core | HIGH | Gemini fast=standard (same model) | OPEN | `server/ai.ts:164-165` both `gemini-2.5-flash` | Use `gemini-2.5-flash-lite` for fast, or collapse matrix |
+| 6 | 01-core | HIGH | Gemini fast=standard (same model) | RESOLVED | `server/ai.ts:165-167` — fast=`gemini-2.5-flash-lite`, standard=`gemini-2.5-flash`, premium=`gemini-2.5-pro` (three distinct IDs); regression test in `server/__tests__/ai.test.ts` "routeToModel — Gemini tier distinctness" | — |
 | 7 | 01-core | MEDIUM | System prompt missing 15+ ViewModes | NEEDS-INVESTIGATION | Not directly verified; `buildSystemPrompt` still lists 6 views in header | Expand view section or drive from ViewMode enum |
 | 8 | 01-core | MEDIUM | Missing PCB/3D/simulation view-specific context | OPEN | Same section in `buildSystemPrompt` unchanged | Add view-specific sub-prompts |
 | 9 | 01-core | MEDIUM | Dead Anthropic code (import + client cache) | OPEN | `server/ai.ts:397` "// Anthropic" still, `anthropicClients` likely remains | Strip imports + cache |
