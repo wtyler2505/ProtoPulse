@@ -200,6 +200,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/blocking-typecheck.sh",
+            "timeout": 120
+          },
+          {
+            "type": "command",
             "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/wrap-claudekit-stop.sh lint-project"
           },
           {
