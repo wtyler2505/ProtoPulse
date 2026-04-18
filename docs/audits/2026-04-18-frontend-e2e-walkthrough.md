@@ -475,6 +475,117 @@ URL `/projects/30/starter_circuits`. 15/15 starters. Each card has "Expand detai
 - **E2E-290 🟢 IDEA** — "Open Circuit" button — does this create the circuit in this project? Auto-populate BOM + Architecture? Killer integration if so.
 - **E2E-291 🟡 UX** — Code block has Copy but no syntax highlighting in the snapshot. Verify Monaco/Prism is wired.
 
+---
+
+## Labs — meticulous baby-step
+
+URL `/projects/30/labs`. 5/5 labs: LED Circuit Basics (Beginner 20m Fundamentals), Voltage Divider Lab (Beginner 30m Analog), Arduino Sensor Project (Intermediate 45m MCU), PCB Design Intro (Intermediate 40m PCB), Power Supply Design (Advanced 50m Power). Levels + Categories filters. Has time estimates per lab (good!).
+
+- **E2E-292 ✅ EXCELLENT** — Lab cards include time estimates (20m, 30m, 45m, 40m, 50m). Helps user pick by available time.
+- **E2E-293 🟢 IDEA** — No "Start Lab" button visible — assume cards are clickable but interactive state unclear without click test.
+- **E2E-294 🟢 IDEA** — Add "Completed" tracking like a course platform.
+
+---
+
+## History (Design Version History) — meticulous baby-step
+
+URL `/projects/30/design_history`. 0 snapshots default. Save Snapshot CTA.
+
+### Baby-step: click Save Snapshot → fill name "E2E Snapshot" → click Save
+
+→ Dialog opens (Name + Description optional + Save Snapshot disabled until name filled).
+→ After fill: Save enabled. After click: snapshot list shows "E2E Snapshot — Apr 18, 2026 10:05 AM" + Compare to Current + Delete buttons. **Toast: "Snapshot saved — Architecture state has been captured."**
+
+- **E2E-295 ✅ WORKS** — Snapshot save end-to-end functional. Toast notification on success.
+- **E2E-296 🟢 IDEA** — Name field: required validation works (Save disabled). Description optional. Could include auto-naming ("Snapshot 2026-04-18 10:05").
+- **E2E-297 🟢 IDEA** — Compare to Current is the killer feature here — needs to render diff visualization (cf. E2E-048 sim diff).
+
+---
+
+## Audit Trail — meticulous
+
+URL `/projects/30/audit_trail`. 5 seed entries (Mar 14 2026 dates by Tyler): Motor Controller Created (Architecture Node), ATmega328P Updated (BOM Item), Power Supply Created (Circuit Design), SPI Bus Deleted (Architecture Edge), OmniTrek Nexus Exported (Project). All entries from a different project (OmniTrek Nexus). Filters: All entities / All actions / date range. Export CSV.
+
+- **E2E-298 🔴 BUG** — Audit Trail shows entries from OmniTrek Nexus project on the **Blink LED (Sample) project audit page**. Project scoping broken — leaking other project's audit trail.
+- **E2E-299 🟡 UX** — Date range "to" with no clear from/to inputs visible — needs to look like a date range picker.
+
+---
+
+## Lifecycle — meticulous
+
+URL `/projects/30/lifecycle`. Tracks 0 components. Status counters: Active 0 / NRND 0 / EOL 0 / Obsolete 0 / Unknown 0. Add Component button. Empty state.
+
+- **E2E-300 ⚪ OBS** — Status taxonomy (Active / NRND / EOL / Obsolete / Unknown) is industry standard EDA — good.
+- **E2E-301 🟢 IDEA** — Auto-pull from existing BOM with one click (currently requires manual Add Component).
+
+---
+
+## Comments (Design Review) — meticulous
+
+URL `/projects/30/comments`. 0 comments. Filter button. "Start a design review conversation". Ctrl+Enter to submit hint.
+
+- **E2E-302 🟢 IDEA** — No way to comment on a specific component / wire / DRC issue. Anchor comments to design objects.
+
+---
+
+## Generative — meticulous
+
+URL `/projects/30/generative_design`. Circuit Description input. Budget $25 / Max Power 5W / Max Temp 85C defaults. Population + Generations params. Generate button. "No candidates yet".
+
+- **E2E-303 🟡 UX** — Generate button is enabled even with no description AND no API key. Will fail. Disable until both ready.
+- **E2E-304 🟢 IDEA** — Genetic algorithm params (Population / Generations) are power-user — hide behind "Advanced" disclosure.
+
+---
+
+## Digital Twin — meticulous
+
+URL `/projects/30/digital_twin`. "No device" / Connect button. Live Channel Values (Generate Firmware action). Simulation vs Actual comparison view (empty).
+
+- **E2E-305 🟢 IDEA** — Connect button needs hover hint about hardware requirements (USB device, etc.).
+- **E2E-306 🟢 IDEA** — Generate Firmware in this tab — shouldn't this live in Arduino tab? Cross-tab confusion.
+
+---
+
+## Exports — meticulous
+
+URL `/projects/30/output`. EXPORT CENTER. **17 formats**. Export Release Confidence: "Evidence strong" + blockers (BOM empty, no connections). 30 buttons + 82 testids = rich panel.
+
+- **E2E-307 ⚪ OBS** — 17 formats is generous. Catalog them in next baby-step.
+- **E2E-308 🟡 UX** — Confidence panel says "Evidence strong" yet lists 3 blockers — same paradox as Simulation (E2E-252).
+
+---
+
+## Supply Chain — meticulous
+
+URL `/projects/30/supply_chain`. "Supply Chain Alerts — Check Now — No alerts."
+
+- **E2E-309 🟢 IDEA** — Empty state is fine but add link to Procurement to populate BOM first.
+
+---
+
+## BOM Templates — meticulous
+
+URL `/projects/30/bom_templates`. Save BOM as Template button. "No templates yet."
+
+- **E2E-310 🟢 IDEA** — User has no BOM yet. Should show a sample template ("Common Arduino blink kit", "Power supply starter pack").
+
+---
+
+## My Parts — meticulous
+
+URL `/projects/30/personal_inventory`. Personal Inventory. "0 items — Search above to add parts."
+
+- **E2E-311 🟢 IDEA** — Search above doesn't appear in snapshot — empty state references something not visible.
+
+---
+
+## Alternates / Part Usage — 🔴 BROKEN
+
+- **E2E-312 🔴 BUG (CRITICAL)** — `/projects/30/part_alternates` shows "Failed to load alternates data". Console: 401 Unauthorized on `/api/parts/browse/alternates`.
+- **E2E-313 🔴 BUG (CRITICAL)** — `/projects/30/part_usage` shows "Failed to load usage data". Console: 401 Unauthorized + "[API Query Error] Failed to fetch usage summary".
+- **Root cause:** `/api/parts/browse/alternates` and `/api/parts/browse/usage` endpoints are not registered as public in `server/request-routing.ts:PUBLIC_API_PATHS` AND/OR auth tier doesn't permit them. Same class of bug I fixed for `/api/vault/` last session.
+- **Fix:** Either add `/api/parts/browse/` to PUBLIC_API_PATHS or scope-down requireProjectOwnership to allow self-owned reads.
+
 
 ---
 
