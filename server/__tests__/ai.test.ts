@@ -515,7 +515,7 @@ describe('redactSecrets', () => {
     // Both fixtures updated 2026-04-18 to realistic lengths (≥20 after sk-,
     // ≥35 after AIza) to satisfy the production anti-false-positive gates.
     const skKey = 'sk-abcdefghijklmnopqrstuvwxyz123';
-    const aizaKey = 'AIzaXYZ456789ABCDEFGHIJKLMNOPQRSTUVWX';
+    const aizaKey = 'AIzaXYZ456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const text = `Keys ${skKey} and ${aizaKey} failed`;
     const result = redactSecrets(text);
     expect(result).not.toContain(skKey);

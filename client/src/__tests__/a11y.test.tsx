@@ -127,6 +127,8 @@ vi.mock('@/lib/parts/parts-catalog-context', () => ({
 
 vi.mock('@/lib/dnd-context', () => ({
   DndProviderWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  DndProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useDndState: () => ({ activeDragData: null, setActiveDragData: vi.fn() }),
 }));
 
 vi.mock('@/lib/tutorial-context', () => ({

@@ -71,7 +71,6 @@ import {
   coordKey,
   coordToPixel,
   pixelToCoord,
-  getBoardDimensions,
   getOccupiedPoints,
   getConnectedPoints,
   checkCollision,
@@ -106,9 +105,7 @@ import { CanvasToolbar } from './CanvasToolbar';
 import { CanvasCoordinateReadout } from './CanvasCoordinateReadout';
 import { WireColorMenu } from './WireColorMenu';
 import { CanvasEmptyGuidance } from './CanvasEmptyGuidance';
-
-// Wire color presets — sourced from breadboard-model (BL-0591)
-const WIRE_COLOR_PRESETS = MODEL_WIRE_COLOR_PRESETS;
+import { useCanvasViewport } from './useCanvasViewport';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -160,8 +157,19 @@ export function BreadboardCanvas({
   const [showConnectivityExplainer, setShowConnectivityExplainer] = useState(false);
   const { cursor, handleKeyDown: handleCursorKeyDown } = useBreadboardCursor();
   const [draggingInstanceId, setDraggingInstanceId] = useState<number | null>(null);
-  const [zoom, setZoom] = useState(3);
-  const [panOffset, setPanOffset] = useState<PixelPos>({ x: 20, y: 20 });
+  const {
+    zoom,
+    panOffset,
+    setZoom,
+    setPanOffset,
+    containerRef,
+    svgRef,
+    centerOnBoardPixel,
+    clientToBoardPixel,
+    zoomIn,
+    zoomOut,
+    resetView,
+  } = useCanvasViewport();
   const [hoveredCoord, setHoveredCoord] = useState<BreadboardCoord | null>(null);
   const [highlightedPoints, setHighlightedPoints] = useState<Set<string>>(new Set());
   const [wireInProgress, setWireInProgress] = useState<WireInProgress | null>(null);
@@ -172,8 +180,6 @@ export function BreadboardCanvas({
   const [mouseBoardPos, setMouseBoardPos] = useState<{ x: number; y: number } | null>(null);
   const [contextMenuWireId, setContextMenuWireId] = useState<number | null>(null);
   const [wireColorMenuPos, setWireColorMenuPos] = useState<{ x: number; y: number } | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
   const lastMouse = useRef<PixelPos>({ x: 0, y: 0 });
   const autoPlacementRequests = useRef<Set<number>>(new Set());
@@ -183,35 +189,6 @@ export function BreadboardCanvas({
     () => new Map((parts ?? []).map((part: ComponentPart) => [part.id, part])),
     [parts],
   );
-
-  const centerOnBoardPixel = useCallback((pixel: PixelPos) => {
-    const container = containerRef.current;
-    if (!container) {
-      return;
-    }
-
-    const rect = container.getBoundingClientRect();
-    setPanOffset({
-      x: rect.width / 2 - pixel.x * zoom,
-      y: rect.height / 2 - pixel.y * zoom,
-    });
-  }, [zoom]);
-
-  // BB-01: Center the breadboard on mount
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const { width: containerW, height: containerH } = container.getBoundingClientRect();
-    const board = getBoardDimensions();
-    const boardPixelW = board.width * zoom;
-    const boardPixelH = board.height * zoom;
-    setPanOffset({
-      x: Math.max(20, (containerW - boardPixelW) / 2),
-      y: Math.max(20, (containerH - boardPixelH) / 2),
-    });
-    // Only run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Filter wires to breadboard view only
   const breadboardWires = useMemo(
@@ -1070,17 +1047,6 @@ export function BreadboardCanvas({
     }
   }, [draggingInstanceId, mouseBoardPos, instances, partsMap, instancePlacements, updateInstanceMutation, circuitId]);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      setZoom(prev => Math.max(1, Math.min(8, prev + (e.deltaY > 0 ? -0.3 : 0.3))));
-    };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, []);
-
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') handleEscape();
     if (e.key === 'Delete' || e.key === 'Backspace') handleDeleteWire();
@@ -1102,17 +1068,6 @@ export function BreadboardCanvas({
   }, [handleEscape, handleDeleteWire, announce, handleCursorKeyDown]);
 
   // --- Drag-to-place from component palette ---
-
-  /** Convert a client-space mouse position to board-space pixel coords. */
-  const clientToBoardPixel = useCallback((clientX: number, clientY: number): PixelPos | null => {
-    const svg = svgRef.current;
-    if (!svg) return null;
-    const rect = svg.getBoundingClientRect();
-    return {
-      x: (clientX - rect.left - panOffset.x) / zoom,
-      y: (clientY - rect.top - panOffset.y) / zoom,
-    };
-  }, [panOffset, zoom]);
 
   const [dropPreview, setDropPreview] = useState<{
     coord: BreadboardCoord | null;
@@ -1283,9 +1238,9 @@ export function BreadboardCanvas({
         tool={tool}
         onToolChange={setTool}
         zoom={zoom}
-        onZoomIn={() => setZoom((z) => Math.min(8, z + 0.5))}
-        onZoomOut={() => setZoom((z) => Math.max(1, z - 0.5))}
-        onResetView={() => { setZoom(3); setPanOffset({ x: 20, y: 20 }); }}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onResetView={resetView}
         showDrc={showDrc}
         onToggleDrc={() => setShowDrc((d) => !d)}
         showConnectivityExplainer={showConnectivityExplainer}
