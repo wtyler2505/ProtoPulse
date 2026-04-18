@@ -3,6 +3,7 @@
  * Covers: returns null when no bench position, renders fallback when benched, click handler.
  */
 
+import type { ReactNode } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 

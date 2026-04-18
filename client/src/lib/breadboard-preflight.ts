@@ -200,7 +200,13 @@ function hasDecouplingCapOnNet(
   return false;
 }
 
-// ESP32 ADC2 GPIO pin numbers
+/**
+ * ESP32 ADC2 GPIO pin numbers. Stable data — these ten pins are ADC2-routed
+ * across every ESP32 silicon revision and the list cannot change without a
+ * new chip. The authoritative explanation for why driving ADC2 during WiFi
+ * fails is cited via VAULT_SLUGS.ESP32_ADC2_WIFI on the emitted check.
+ * Wave 2 audit #270.
+ */
 const ESP32_ADC2_GPIOS = [0, 2, 4, 12, 13, 14, 15, 25, 26, 27];
 
 function isEsp32Adc2Pin(pinIdOrName: string): boolean {
