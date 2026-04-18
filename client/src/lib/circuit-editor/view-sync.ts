@@ -261,7 +261,19 @@ function buildBreadboardConnectionSet(
     if (wire.view !== 'breadboard') continue;
     const { from, to } = resolveWireEndpoints(wire, instanceMap, partsMap);
     if (!from || !to) continue;
-    if (!from.pinId || !to.pinId) continue;
+    if (from.pinId == null || to.pinId == null || from.pinId === '' || to.pinId === '') {
+      // Silently-dropped wire visibility (audit #371). Empty-string pinId
+      // typically means a part lacks proper connector definitions — worth
+      // surfacing so the data issue is debuggable.
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[view-sync] dropping wire %s: empty endpoint pinId. from=%s to=%s',
+        String(wire.id),
+        `${from.instanceId}:${from.pinId ?? '<null>'}`,
+        `${to.instanceId}:${to.pinId ?? '<null>'}`,
+      );
+      continue;
+    }
 
     const a = `${from.instanceId}:${from.pinId}`;
     const b = `${to.instanceId}:${to.pinId}`;
@@ -460,8 +472,29 @@ export function syncBreadboardToSchematic(
   for (const wire of breadboardWires) {
     const { from, to } = resolveWireEndpoints(wire, instanceMap, partsMap);
 
-    if (!from || !to || !from.pinId || !to.pinId) {
+    if (!from || !to) {
       // Cannot resolve this wire's endpoints to specific pins
+      result.conflicts.push({
+        netId: wire.netId,
+        netName: `net-${wire.netId}`,
+        description:
+          `Breadboard wire ${wire.id} endpoints could not be resolved to instance pins`,
+        sourceView: 'breadboard',
+        targetView: 'schematic',
+      });
+      continue;
+    }
+    if (from.pinId == null || to.pinId == null || from.pinId === '' || to.pinId === '') {
+      // Silently-dropped wire visibility (audit #371). Empty-string pinId
+      // typically means a part lacks proper connector definitions — worth
+      // surfacing so the data issue is debuggable.
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[view-sync] dropping wire %s: empty endpoint pinId. from=%s to=%s',
+        String(wire.id),
+        `${from.instanceId}:${from.pinId ?? '<null>'}`,
+        `${to.instanceId}:${to.pinId ?? '<null>'}`,
+      );
       result.conflicts.push({
         netId: wire.netId,
         netName: `net-${wire.netId}`,
@@ -695,7 +728,20 @@ export function detectConflicts(
       if (!netIdSet.has(wire.netId)) continue; // Already flagged in Check 2
 
       const { from, to } = resolveWireEndpoints(wire, instanceMap, partsMap);
-      if (!from?.pinId || !to?.pinId) continue;
+      if (!from || !to) continue;
+      if (from.pinId == null || to.pinId == null || from.pinId === '' || to.pinId === '') {
+        // Silently-dropped wire visibility (audit #371). Empty-string pinId
+        // typically means a part lacks proper connector definitions — worth
+        // surfacing so the data issue is debuggable.
+        // eslint-disable-next-line no-console
+        console.warn(
+          '[view-sync] dropping wire %s: empty endpoint pinId. from=%s to=%s',
+          String(wire.id),
+          `${from.instanceId}:${from.pinId ?? '<null>'}`,
+          `${to.instanceId}:${to.pinId ?? '<null>'}`,
+        );
+        continue;
+      }
 
       const a = `${from.instanceId}:${from.pinId}`;
       const b = `${to.instanceId}:${to.pinId}`;
