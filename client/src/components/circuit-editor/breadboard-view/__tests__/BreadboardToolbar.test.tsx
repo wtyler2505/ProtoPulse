@@ -34,8 +34,8 @@ vi.mock('@/lib/contexts/simulation-context', () => ({
 // ---------------------------------------------------------------------------
 
 const mockCircuits: CircuitDesignRow[] = [
-  { id: 1, name: 'Main Circuit', projectId: 1, createdAt: new Date(), updatedAt: new Date() },
-  { id: 2, name: 'Power Supply', projectId: 1, createdAt: new Date(), updatedAt: new Date() },
+  { id: 1, name: 'Main Circuit', projectId: 1, description: null, version: 1, parentDesignId: null, settings: null, createdAt: new Date(), updatedAt: new Date() },
+  { id: 2, name: 'Power Supply', projectId: 1, description: null, version: 1, parentDesignId: null, settings: null, createdAt: new Date(), updatedAt: new Date() },
 ];
 
 function makeProps(overrides: Partial<Parameters<typeof BreadboardToolbar>[0]> = {}) {
