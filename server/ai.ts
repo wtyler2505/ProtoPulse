@@ -1272,6 +1272,15 @@ async function executeStreamForProvider(
 
     const finalResponse = await response;
 
+    // CORE-02: Track every tool-response ref we observe in Genkit's internal
+    // message scans. The last-resort fallback path below will SKIP any id in
+    // this set — that guarantees we never re-execute a tool Genkit already
+    // ran, even when the toolResponse.output couldn't be surfaced into
+    // allToolCalls (e.g., missing requestInfo, deserialization edge cases).
+    // Without this set, path-3 could double-execute non-destructive tools if
+    // path-1 and path-2 fired but produced empty allToolCalls for any reason.
+    const genkitExecutedIds = new Set<string>();
+
     // Extract tool call results from the full conversation history.
     // Genkit's generateStream wraps generate() internally, which auto-executes tools
     // and appends tool-role messages to request.messages. Each tool response contains
@@ -1282,6 +1291,7 @@ async function executeStreamForProvider(
           for (const part of msg.content) {
             if (part.toolResponse) {
               const id = part.toolResponse.ref || crypto.randomUUID();
+              genkitExecutedIds.add(id);
               const requestInfo = streamingToolRequests.get(id);
               allToolCalls.push({
                 id,
@@ -1307,6 +1317,7 @@ async function executeStreamForProvider(
             for (const part of msg.content) {
               if (part.toolResponse) {
                 const id = part.toolResponse.ref || crypto.randomUUID();
+                genkitExecutedIds.add(id);
                 const requestInfo = streamingToolRequests.get(id);
                 allToolCalls.push({
                   id,
@@ -1342,6 +1353,14 @@ async function executeStreamForProvider(
         if (signal?.aborted) {
           logger.info('ai:tool-fallback-aborted', { remaining: streamingToolRequests.size });
           break;
+        }
+        // CORE-02: Skip any tool id Genkit already executed. This is the
+        // double-execution guard for the mid-stream-failure case: if a tool
+        // ran during generateStream but its response couldn't be paired into
+        // allToolCalls (leaving that list empty), we must NOT re-run it here.
+        if (genkitExecutedIds.has(id)) {
+          logger.info('ai:tool-fallback-skip-already-executed', { tool: name, id });
+          continue;
         }
         const toolDef = toolRegistry.get(name);
         if (toolDef && ctxWithSignal) {

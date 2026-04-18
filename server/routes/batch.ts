@@ -80,7 +80,7 @@ export function registerBatchRoutes(app: Express): void {
   // ---- Submit a batch analysis ----
 
   app.post('/api/batch/submit', async (req, res) => {
-    const apiKey = extractApiKey(req.headers['x-anthropic-key']);
+    const apiKey = extractApiKey(req.headers['x-api-key']);
     if (!apiKey) {
       throw new HttpError('Missing X-Anthropic-Key header', 401);
     }
@@ -124,7 +124,7 @@ export function registerBatchRoutes(app: Express): void {
   // BL-0642: Verify caller owns the project this batch belongs to
 
   app.get('/api/batch/:batchId/status', async (req, res) => {
-    const apiKey = extractApiKey(req.headers['x-anthropic-key']);
+    const apiKey = extractApiKey(req.headers['x-api-key']);
     if (!apiKey) {
       throw new HttpError('Missing X-Anthropic-Key header', 401);
     }
@@ -143,7 +143,7 @@ export function registerBatchRoutes(app: Express): void {
   // BL-0642: Verify caller owns the project this batch belongs to
 
   app.get('/api/batch/:batchId/results', async (req, res) => {
-    const apiKey = extractApiKey(req.headers['x-anthropic-key']);
+    const apiKey = extractApiKey(req.headers['x-api-key']);
     if (!apiKey) {
       throw new HttpError('Missing X-Anthropic-Key header', 401);
     }
@@ -180,7 +180,7 @@ export function registerBatchRoutes(app: Express): void {
   // BL-0642: Verify caller owns the project this batch belongs to
 
   app.post('/api/batch/:batchId/cancel', async (req, res) => {
-    const apiKey = extractApiKey(req.headers['x-anthropic-key']);
+    const apiKey = extractApiKey(req.headers['x-api-key']);
     if (!apiKey) {
       throw new HttpError('Missing X-Anthropic-Key header', 401);
     }
