@@ -1,5 +1,104 @@
 # Frontend E2E Walkthrough — 2026-04-18
 
+## PASS 2 — Visual + Flow + Audience Critique
+
+This pass adds visual layout critique, beginner-vs-expert audience analysis, and flow assessment that the text-snapshot pass missed. Screenshots saved to `docs/audits/screenshots-2026-04-18/`. Findings begin at E2E-314.
+
+(See per-tab Pass 2 sections appended below.)
+
+### Pass 2 — Dashboard (visual)
+
+Screenshot: `screenshots-2026-04-18/01-dashboard.png`
+
+- **E2E-314 🔴 P1 visual** — Top toolbar has **32+ icon-only buttons** stacked tight with NO visible labels (sidebar 21 icons + workspace toolbar ~12 icons). Brand-new users will be paralyzed. Need either (a) labels by default with a "compact" toggle, (b) hover-tooltips with delay <200ms, or (c) collapsible group categories.
+- **E2E-315 🔴 BUG (CONTRADICTION)** — Validation card on Dashboard now shows **"Warnings Present — 1 issue to review"** AND **"0 errors, 0 warnings, 1 info"**. "Warnings Present" with 0 warnings is internally contradictory.
+- **E2E-316 🟡 UX label** — Header button "Saved + restore" — incomprehensible label. Means "autosave is on + click to restore from snapshot"? Rename "Autosaved" with a separate Restore action.
+- **E2E-317 🟡 UX redundancy** — Breadcrumb "Architecture > Schematic > PCB Layout > Validation > Export" duplicates the tab strip immediately above. Pick one.
+- **E2E-318 🟢 IDEA** — Stats bar "Components 1 / Connections 0 / BOM Items 0 / Est. Cost $0.00 / Issues 1" is redundant with the Architecture and BOM cards (cf. E2E-016). Collapse stats into card headers.
+- **E2E-319 🟢 IDEA** — Lots of vertical whitespace in Architecture card. Could fit a tiny network preview SVG or recent activity.
+- **E2E-320 🟡 visual hierarchy** — H2 "Blink LED (Sample)" + paragraph description repeats project metadata already visible in the header bar (`workspace-project-name`). Pick one location.
+- **E2E-321 🟡 UX** — Right-side AI Assistant panel collapsed to vertical sidebar with rotated "AI ASSISTANT" text. Clever but easy to miss for first-time users — needs a small icon nudge.
+- **E2E-322 🟢 IDEA** — Bottom-right `1 Design Suggestions` floating button untested. Should toast-preview the suggestion title on hover instead of requiring click to discover.
+- **E2E-323 🟡 visual** — Color palette: black + cyan + zinc. Looks "cyberpunk" / Linear-esque. Accent cyan well-used. **However**: Yellow warning triangle on Validation card has no visible text label until you read carefully. Color-only severity violates WCAG.
+- **E2E-324 🟢 audience-newbie** — A first-time user lands on Dashboard with 0 BOM, 0 connections. Empty cards say "No BOM items yet. Add parts in Procurement." That's text in a card. Should be a big CTA button "Open Procurement →" inline. Cards are clickable (E2E-201) but the text doesn't TELL the user to click.
+- **E2E-325 🟢 audience-expert** — A power user wants to see ALL recent activity at once — currently "Recent Activity" card just says "No activity recorded yet." Power users need actual feed.
+
+### Pass 2 — Architecture (visual)
+
+Screenshot: `02-architecture.png`
+
+- **E2E-326 🔴 visual** — Category icon row at top of Asset Library: just 6 icon glyphs with tiny number badges (12, 2, 3, 2, 3, 2) — **completely opaque to first-time users.** Beginners can't tell if these are filters, counts, or something else. Add labels under each icon.
+- **E2E-327 🟡 visual** — Asset Library's first row of icons (the "All / MCU / Power / Comm / Sensor / Connector" filters) sit right above "Favorites (1)" header — visually they look like part of Favorites. Add separator + spacing.
+- **E2E-328 🟡 UX** — Single BME280 node sits floating in the middle of a vast empty canvas. **No grid background visible** in screenshot (despite Toggle Grid tool). For a beginner, this looks broken — the tiny node lost in a sea of dark.
+- **E2E-329 🟢 IDEA** — Architecture canvas has React Flow attribution bottom-left + Mini Map bottom-right. Both small. Mini Map could include navigation arrows for keyboard users.
+- **E2E-330 🟡 visual** — `1 Design Suggestions` floating button overlaps Mini Map. Z-order conflict.
+- **E2E-331 🟢 audience-newbie** — Beginner sees "Drag a component onto the canvas" hint in asset list — but no visible affordance shows components are draggable (no drag handle icon). Add a `≡` drag-handle icon left of each part name.
+- **E2E-332 🟢 audience-expert** — Expert wants tile-grid view of parts vs the current list view. No view toggle available.
+- **E2E-333 🟢 visual** — The Asset Library is fixed-width 240px. On a 1920px screen, that wastes canvas space. Make resizable like the right chat panel (which already has a resize-handle).
+
+### Pass 2 — Schematic (visual)
+
+Screenshot: `03-schematic.png`
+
+- **E2E-334 🔴 visual** — Toolbar has 12 icon-only tools at top of canvas — **no labels, only icons**. Hover-tooltip required to discover. ATtiny85 sidebar shows tag chips "DIP" and "8 PINS" in cyan — readable. Empty state has icon + "Empty Schematic" + "Add Component" button — well-done.
+- **E2E-335 🟡 UX** — `New Circuit` selector top-left + `New` button + `New Circuit` text label top-right = TRIPLE redundancy. Confusing.
+- **E2E-336 🟡 visual** — Two zoom-control sets visible: top-left toolbar AND bottom-left React Flow controls (+/-/fit/lock). Pick one location (industry standard is bottom-left).
+- **E2E-337 🟢 audience-newbie** — Canvas dot grid is dim (low-contrast). Can a beginner tell where to drop a component? Increase grid contrast in light spots, or add "drop zones" on hover.
+- **E2E-338 🟢 audience-expert** — `45` and `90` angle constraint pills sit naked in toolbar — expert KiCad users would recognize but should be grouped under a "Wire angle" label/icon.
+- **E2E-339 🟡 UX** — Sub-tabs `Parts / Power / Sheets / Sim` are tiny secondary tabs with icons — easy to miss. "Sim" is ambiguous (Simulation? Similar?).
+- **E2E-340 🟢 visual** — Left sidebar takes ~16% width. Could be collapsible like Asset Library on Architecture (this one already collapses).
+
+### Pass 2 — Arduino (visual)
+
+Screenshot: `04-arduino.png`
+
+- **E2E-341 🔴 visual** — Sidebar shows "Board Manager" and "Serial Monitor" labels obscured/cut off — text truncated. Plus there are visual artifacts (icons that look misaligned, e.g. the chevron `>` after Board Manager).
+- **E2E-342 ✅ visual** — "Arduino readiness" trust receipt is the BEST visual on the entire app. Color-coded "Profile required" amber + "SETUP REQUIRED" badge + 8 status fields in 2-column grid. Beautiful and dense without being cluttered.
+- **E2E-343 🟢 audience-newbie** — A beginner sees "Verify" + "Upload" buttons enabled at top right. They'll click them — fail confusingly. Disable until profile selected (cf. E2E-027).
+- **E2E-344 🟡 visual** — Output panel is huge and empty. "No output yet" text only. Could pre-populate with example log explaining what compile output looks like.
+- **E2E-345 🟢 IDEA** — `Verify` is Arduino IDE terminology — beginners may not know what it means. Tooltip: "Verify (compile) sketch without uploading".
+- **E2E-346 🟡 visual** — Right side of header has icon-only buttons: copy/save/format/etc — no labels. Discoverability fail.
+- **E2E-347 🟢 audience-expert** — Expert wants quick-toggle libraries panel from keyboard. No keyboard shortcut hint visible.
+- **E2E-348 🔴 visual** — Sub-tabs OUTPUT / SERIAL MONITOR / LIBRARIES / BOARDS / PIN CONSTANTS / SIMULATE — "SIMULATE" is a tab here AND there's a Simulation TAB at workspace level. Two simulators? Confusing IA.
+
+### Pass 2 — Breadboard (visual)
+
+Screenshot: `05-breadboard.png`
+
+- **E2E-349 ✅ visual EXCELLENT** — Real breadboard grid renders beautifully (columns a-j labeled, center channel split, tie-points as dots). Looks like a physical breadboard. Best canvas in the app.
+- **E2E-350 🟡 visual** — Stats row at top (8 stats: PROJECT PARTS / TRACKED / OWNED / PLACED / BENCH READY / LOW STOCK / MISSING / VERIFIED / STARTER SAFE) is **9 stat cards in a row** — visually overwhelming. Group as I suggested in E2E-035.
+- **E2E-351 🟢 visual** — "Build like a real bench session" hero + 5 colored action buttons (Manage stash / Open schematic / Component editor / Community / Shop missing parts) — buttons look like a primary nav. Color-coded well but no icons on the buttons.
+- **E2E-352 🟢 audience-newbie** — Hint text "Drag a starter part... use the Wire tool (2) to connect real pin pairs. Double-click finishes a wire run." Beginner-friendly explanation. Great.
+- **E2E-353 🟢 audience-expert** — Bench shortcuts: Wire (2), but no shortcut palette for advanced users to discover all available actions.
+- **E2E-354 🟡 visual** — Toolbar above breadboard has 6 tools (icons only). Same labeling problem. "Wire tool (2)" is referenced in hint but not labeled in toolbar. Add label.
+- **E2E-355 🟡 UX flow** — Breadboard tab is **its own canvas**, separate from Schematic and Architecture. User has to mentally map which tab is which. Add an inset breadcrumb "Layouts > Breadboard" to clarify.
+- **E2E-356 🟢 audience-newbie** — A first-timer might not know what "stash" means. Tooltip: "Stash = your inventory of physical parts available to use".
+
+### Pass 2 — PCB (visual)
+
+Screenshot: `06-pcb.png`
+
+- **E2E-357 ✅ visual** — Layer Stack panel uses color-coded dots (red Top, green Inner Ground, red Inner Power, yellow Bottom Signal, etc.) — proper EDA convention. Mil + 1oz spec shown.
+- **E2E-358 🔴 visual** — Board outline (yellow dashed) is rendered tiny in upper-left of huge empty canvas — board is 50x40mm but canvas zoom doesn't auto-fit on load. New users will think "PCB is broken / not showing". Auto-fit board to viewport on tab entry.
+- **E2E-359 🟡 visual** — Layer toggle "F.Cu (Front)" pill is bright red (warning color?). For active layer, red implies danger. Use blue or theme-accent.
+- **E2E-360 🟡 visual** — Layer preset row "2-layer 4-layer 6-layer 8-layer 10-layer 16-layer 32-layer" — 32-layer is impractical for 99% of users. Hide behind "More" disclosure.
+- **E2E-361 🟡 visual** — Layers legend bottom-left shows "F.Cu / B.Cu / Board Outline" with colored bars but doesn't sync with the Layer Stack panel above (which shows 4-layer state with Inner Ground/Power). Two layer concepts displayed.
+- **E2E-362 🟢 audience-newbie** — Beginner sees "Trace: 2.0mm" with slider — what's a sensible value? Add tooltip "Default 2.0mm is fine for power; signal traces use 0.25mm".
+- **E2E-363 🟢 audience-expert** — Expert wants Diff Pair tool + Length matching + Net colors. Diff Pair (D) is in toolbar but no length tuning visible.
+
+### Pass 2 — 3D View (visual)
+
+Screenshot: `07-3dview.png`
+
+- **E2E-364 🔴 visual** — 3D board renders as a flat green parallelogram (no visible thickness). For an iso/perspective view this is wrong — board should show 1.6mm thickness depth.
+- **E2E-365 🟢 visual** — Layer checkboxes use color swatches (green/orange/grey) — good visual key. But Internal layer is uncheckable yet shown (faintly?).
+- **E2E-366 🟡 UX** — Edit Board form sits at right side disconnected from the board itself — should be inline-editable on hover (drag corner to resize).
+- **E2E-367 🟢 audience-newbie** — A first-timer sees a green rectangle and "0 components" — won't realize they need to populate Schematic + PCB before components appear here. Add hint: "Place components in Schematic to see them here".
+- **E2E-368 🟢 audience-expert** — Expert wants STL/STEP export of the 3D model (Export button visible top right but unverified). Also wants pin-1 markers, polarity indicators.
+- **E2E-369 🟡 visual** — View angle buttons (Top/Bottom/Front/Back/Left/Right/Iso) are flat pills — no icon to telegraph each view. Icon (e.g. cube face) would help.
+
+---
+
 ## TL;DR — Top P0/P1 Bugs (action items)
 
 | # | Severity | Tab/Area | Bug | Fix |
