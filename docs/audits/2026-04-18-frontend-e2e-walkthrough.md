@@ -870,6 +870,232 @@ Top recommendation: ship the **5 quick wins** above first — they unblock the w
 
 ---
 
+## PASS 7 — ARCHITECTURE TAB DEEP DIVE (E2E-743+)
+
+Mirroring Pass 4 (Breadboard deep dive) for Architecture. Screenshots: `37-architecture-with-node.png`, `38-architecture-multi-nodes.png`.
+
+### Surface inventory observed
+
+Architecture tab uses React Flow canvas. Major panels:
+
+1. **Asset Library (left sidebar, ~240px)** — Search + Sort + 6 category filters (All/MCU/Power/Comm/Sensor/Connector) + Favorites section + Recently Used (5) + main parts list (12 parts: BME280, ESP32-S3-WROOM-1, JST-PH 2mm, L86 GNSS, LDO 3.3V, SHT40, SIM7000G, STM32L432KC, SX1262 LoRa, TP4056, TPS63020, USB-C Receptacle) + "Add Custom Part" CTA + asset-resize-handle.
+2. **Canvas Toolbar (top, 5 tools)** — `tool-select`, `tool-pan`, `tool-grid`, `tool-fit`, `tool-analyze` (icon-only).
+3. **React Flow Canvas** — `architecture-drop-zone` background + nodes (rendered as cards with category badge "SENSOR/POWER/MCU" + name + 2 pin handles on top/bottom).
+4. **React Flow built-ins** — `rf__background` (dot grid), `rf__controls` (zoom in/out/fit/lock at bottom-left), `rf__minimap` (bottom-right), `rf__wrapper` (root).
+5. **Node Inspector Panel (when node selected)** — Label / Type / Description / Pos X / Pos Y / Connections count / ID (UUID) / Delete.
+6. **Right-click Context Menu** — Add Node, Paste, Select All, Zoom to Fit, Toggle Grid, Run Validation, Copy Summary, Copy JSON, Edit Component, Create Schematic Instance.
+7. **Floating button** — `1 Design Suggestions` bottom-right.
+8. **Workflow nav top** — Architecture > Schematic > PCB Layout > Validation > Export.
+
+### Pass 7 — Visual / hierarchy findings
+
+- **E2E-743 ✅ visual** — React Flow canvas with dot-grid background is **clean and professional**. Nodes have proper category color/icon (SENSOR cyan / POWER orange) + name + pin handles. Best canvas next to Breadboard.
+- **E2E-744 🔴 visual** — Asset Library category icons row at top of sidebar (`A-Z 12 2 3 2 3 2`) is **completely opaque** — bare numbers + sort glyph with no labels. Beginners can't decode.
+- **E2E-745 🟡 visual** — Asset Library sections "Favorites (1)" + "Recently Used (5)" + main list are stacked but main list is unlabeled. Should have header "All Parts (12)" for consistency.
+- **E2E-746 🟡 visual** — Toolbar has 5 unlabeled icon buttons. Same density issue as everywhere. Add hotkey-in-label (`Select (V)`, `Pan (H)`, `Grid (G)`, `Fit (F)`, `Analyze (A)`).
+- **E2E-747 🔴 visual** — On a freshly-loaded canvas with 4 nodes, nodes are spread randomly with no obvious layout. **No auto-layout** triggered after add. Should auto-arrange (force-directed, hierarchical, or grid).
+- **E2E-748 🟡 visual** — Each node has 2 pin handles (top/bottom) — but only 2! Real components have many pins (ATtiny85=8, ESP32=38). Architecture is "abstract block diagram" but limit is unstated. Add a pin count badge on the node.
+- **E2E-749 🟡 visual** — Nodes use color-by-category (SENSOR cyan, POWER orange) but no legend visible. Add a tiny legend in the toolbar or at canvas edge.
+- **E2E-750 🟢 visual** — Node cards are pretty (icon + bold uppercase category + readable name). Could use a description/subtitle line ("Pressure/humidity/temp sensor") on the node itself, not just sidebar.
+- **E2E-751 🟢 visual** — Mini map renders nodes as cyan rectangles but no edge preview when sparse. Add edge tracing in mini map.
+- **E2E-752 🟡 visual** — Empty-state ("Start Building Your Architecture" with Generate button) disappears after first node. But there's no progressive guidance after that ("Now connect 2 nodes by dragging from one handle to another"). Lost teaching moment.
+- **E2E-753 🟢 visual** — Asset Library has a resize handle (`asset-resize-handle`) — great for power users. Verify it works smoothly without breaking React Flow layout.
+- **E2E-754 🟡 visual** — Node inspector panel (when shown) is on the right but text overlaps with collapsed AI Assistant strip. Z-index conflict potential.
+
+### Pass 7 — Functional findings (Architecture)
+
+- **E2E-755 ⚪ NEEDS VERIFY** — Drag-from-handle to another node should create an edge. Verified visually that handles render but synthetic events likely won't trigger React Flow's connection logic. Real DevTools click + drag needed.
+- **E2E-756 🔴 BUG (carries E2E-078)** — `tool-analyze` button does nothing on click. Same dead-button as before.
+- **E2E-757 ⚪ NEEDS VERIFY** — `tool-grid` toggle: visual confirmation that grid rendering changes — verify on/off works.
+- **E2E-758 🟡 UX** — `Generate Architecture` empty-state CTA disappears after first node added. Should remain accessible (keyboard `G` or via toolbar) so users can regenerate from any state.
+- **E2E-759 🟡 UX** — Adding a part via `+` button always drops at fixed position (witness: 4 nodes spawned at offset; second covered the third). Should auto-find empty space or let user click on canvas to choose drop point.
+- **E2E-760 🔴 UX** — Asset Library shows "BME280" THREE times (Favorites, Recently Used, main list) even though same part. Visually noisy.
+- **E2E-761 🔴 UX** — Adding the same part 3x adds 3 separate nodes (verified earlier that Components count went 1→4). Architecture allows duplicate components; Schematic/PCB will multiply pin nets accordingly. Worth clarifying in UI ("Add another instance" vs "Increase quantity").
+- **E2E-762 🟡 UX** — `asset-search` input has placeholder `Search parts… ( / )` — slash-key shortcut implied but unverified. Also implies parts-only search (does it search by part number? manufacturer? tags?).
+- **E2E-763 🟢 UX** — Right-click context menu has 10 items including `Copy JSON` — power-user gold. Document.
+- **E2E-764 🟡 UX** — Inspector panel `pos-x / pos-y` numeric inputs work for keyboard-precise placement. But no unit indicator (px? grid units? mm?).
+- **E2E-765 🟢 UX** — Inspector includes UUID — useful for debugging. Could include Copy-UUID button.
+
+### Pass 7 — Toolbar critique (Architecture)
+
+- **E2E-766 🟡 visual** — `tool-analyze` icon is opaque (looks like a "play" or "graph" — unclear). Need clear label.
+- **E2E-767 🟡 visual** — Tool buttons lack `aria-pressed` to indicate active mode (E2E-079 already noted; restated in context).
+- **E2E-768 🟢 NEW** — Add `tool-auto-layout` (run a force-directed or hierarchical re-layout on all nodes).
+- **E2E-769 🟢 NEW** — Add `tool-add-text` (place a text annotation on the canvas).
+- **E2E-770 🟢 NEW** — Add `tool-group-region` (encircle nodes with a labeled colored region — "Power section", "MCU subsystem").
+
+### Pass 7 — Audience-specific (Architecture)
+
+- **E2E-771 🔴 newbie** — A first-time user sees "drag from sidebar to canvas, click + button" — both work but neither is obvious. Onboarding callout needed.
+- **E2E-772 🟢 newbie** — Categories MCU/Power/Comm/Sensor/Connector are intuitive — beginner-friendly.
+- **E2E-773 🟢 newbie** — Empty state CTA "Generate Architecture" is the perfect AI-first beginner path. But requires API key.
+- **E2E-774 🔴 expert** — Power user wants keyboard-only architecture creation: `N` adds node, arrow keys move, `E` enters edge mode. Currently mouse-required.
+- **E2E-775 🟢 expert** — Expert wants saved layouts ("This is my standard IoT stack template"). Copy JSON helps but no native template manager.
+
+### Pass 7 — Competitive (Architecture vs Lucidchart / draw.io / Figma / Linear)
+
+- **E2E-776 🟢 STRATEGIC vs Lucidchart** — Lucidchart's connector lines auto-bend, label themselves, and can carry traffic icons. ProtoPulse architecture edges are unverified — verify edge-rendering quality.
+- **E2E-777 🟢 STRATEGIC vs Figma** — Figma's auto-layout + smart guides + nudge-by-arrow keys are table stakes. Add to Architecture.
+- **E2E-778 🟢 STRATEGIC vs Linear** — Linear's "Project graph" view shows entity relationships. ProtoPulse Architecture should add a graph view of cross-tab relationships (Architecture node ↔ BOM item ↔ Schematic instance ↔ PCB footprint).
+
+---
+
+## PASS 8 — ARCHITECTURE NODE/EDGE INTERACTION (E2E-779+)
+
+Mirroring Pass 5 for Architecture. Focus: actually creating edges, manipulating nodes, the experimentation loop on the architecture canvas.
+
+### Pass 8 — Edge creation UX
+
+- **E2E-779 🔴 visual GAP** — Pin handles are tiny dots on top/bottom of node (8px). Hard to grab. Should grow to 16px on hover.
+- **E2E-780 🔴 visual GAP** — When hovering near a handle ready to drag-connect, no visible "I can connect from here" indicator. Industry standard: the handle pulses.
+- **E2E-781 🔴 visual GAP** — During edge drag (handle → empty space), no preview line follows the cursor (verified via observation).
+- **E2E-782 🔴 visual GAP** — Edge endpoints hint at "data flow direction" but ProtoPulse has no obvious arrowhead style — undirected vs directed unclear.
+- **E2E-783 🟡 UX** — No way to label an edge (e.g. "I2C", "5V", "SPI MOSI"). Architecture should support edge labels (Lucidchart pattern).
+- **E2E-784 🟡 UX** — No way to color-code edges (signal=blue, power=red, ground=black). Critical for readable big diagrams.
+- **E2E-785 🟢 IDEA** — **Edge-from-handle pulse**: when wire-tool not active but cursor hovers a handle, faint cyan pulse invites drag.
+- **E2E-786 🟢 IDEA** — **Smart connector**: drag from one handle → auto-route to nearest compatible handle on another node.
+- **E2E-787 🟢 IDEA** — **Multi-handle connect**: hold Shift while dragging → spawn parallel edges (e.g. 8 SPI signals at once).
+- **E2E-788 🟢 IDEA** — **Wire-from-AI**: select 2 nodes + click "Suggest connections" → AI proposes typical edges (e.g. "ESP32 → BME280 via SDA/SCL").
+
+### Pass 8 — Node manipulation
+
+- **E2E-789 ⚪ NEEDS VERIFY** — Drag a node — should snap to grid when grid toggled on. Verify smoothness.
+- **E2E-790 ⚪ NEEDS VERIFY** — Resize a node? React Flow supports node resizing but unclear if enabled.
+- **E2E-791 🔴 GAP** — No visible **multi-select marquee**. Same gap as Breadboard (E2E-635).
+- **E2E-792 🔴 GAP** — No **align tools** (left/right/center/distribute) — Figma essentials.
+- **E2E-793 🟢 IDEA** — **Group-as-subsystem**: select N nodes → "Group" → collapses into a single "subsystem" node that shows internal nodes on click. Hierarchical architecture.
+- **E2E-794 🟢 IDEA** — **Hide/show non-critical nodes**: filter "show only Power nodes" temporarily to focus.
+- **E2E-795 🟢 IDEA** — **Pin-mode**: lock a node so it can't be moved (great for the central MCU you don't want shifting).
+
+### Pass 8 — Visualizing relationships
+
+- **E2E-796 🔴 GAP** — No **net browser** for architecture. If 12 nodes share VCC, that's invisible. Add side panel showing all "nets" + click-to-highlight.
+- **E2E-797 🔴 GAP** — No **dependency visualization** — what depends on what? Power flow? Data flow? Add a `tool-dependency-trace`.
+- **E2E-798 🟢 IDEA** — **"Show me power"** mode — highlight only power-related nodes + edges. Same for "data", "signal", "GPIO".
+- **E2E-799 🟢 IDEA** — **Heatmap by node-degree**: nodes with many edges glow brighter. Identifies the "central" components.
+- **E2E-800 🟢 IDEA** — **Critical-path overlay**: AI marks the longest signal path from input to output.
+
+### Pass 8 — Experimentation / play (Architecture)
+
+- **E2E-801 🔴 GAP** — No **"Try alternate component"** — select an LDO, click "Alternates" → see a list of swap candidates with cost/efficiency comparison.
+- **E2E-802 🟢 IDEA** — **What-if branching** for architecture (cf. E2E-538) — "What if I add a BME680 instead of BME280?" — instant comparison.
+- **E2E-803 🟢 IDEA** — **Arch templates as DSL**: type `iot:wifi+temp+display` → instant 4-node architecture appears.
+- **E2E-804 🟢 IDEA** — **Architecture diff vs Schematic diff** — visually highlight nodes that are in arch but not yet in schematic (or vice versa). Cross-tab consistency check.
+- **E2E-805 🟢 IDEA** — **"Why is this architecture good/bad?"** — AI critique button. Lists strengths + risks.
+
+### Pass 8 — Off-canvas play
+
+- **E2E-806 🟢 IDEA** — **Drag node OFF canvas to delete** — drag to a trash zone outside React Flow. Discoverable destruction.
+- **E2E-807 🟢 IDEA** — **Stash slot beside canvas** — temporarily park nodes you removed but might re-add.
+- **E2E-808 🟢 IDEA** — **Library item drag-back**: drag a placed node back into the Asset Library to remove + return inventory.
+
+### Pass 8 — Innovation (Architecture-specific)
+
+- **E2E-809 🚀** — **Animated dataflow during sim**: arch edges pulse in flow direction during a simulated run. Visual debugger of message routing.
+- **E2E-810 🚀** — **3D architecture mode**: nodes float in 3D space (depth = abstraction layer). Cool for huge IoT systems.
+- **E2E-811 🚀** — **Voice annotations**: record a 10s voice memo on a node ("This is where we'll add Bluetooth in v2"). Plays on click.
+- **E2E-812 🚀** — **Node thumbnails**: render a tiny preview of the schematic symbol or 3D model on each node. At-a-glance recognition.
+- **E2E-813 🚀** — **Live BOM cost on edge**: edges show "$0.45" when carrying a BOM-billable signal (e.g. extra cable required). Cost visible in design.
+- **E2E-814 🚀** — **AI architecture critique persona**: "I'm Dr. Kirchhoff, I'll review your architecture" — opens AI chat scoped to your architecture diagram with domain-specific feedback.
+- **E2E-815 🚀** — **Architecture-as-Code DSL editor**: split-pane with YAML/Python representation of the canvas. Edit code, canvas updates live (cf. Mermaid).
+- **E2E-816 🚀** — **Auto-document**: click "Generate spec PDF" → produces a 2-page architecture document with diagram + per-node responsibility + cost summary.
+- **E2E-817 🚀** — **Real-time multiplayer cursors**: each collaborator's cursor visible with name; live edits propagate.
+- **E2E-818 🚀** — **Architecture remixes**: "1,234 people built variations of this; click to see top 5". Crowd-sourced learning.
+
+---
+
+## PASS 9 — ARCHITECTURE ITERATE & INNOVATE (E2E-819+)
+
+Mirroring Pass 6: deeper iterations + wild moonshots + practical packaging for Architecture.
+
+### (A) ITERATE — micro-interactions deeper
+
+- **E2E-819 ⤴ E2E-779** — Pin handle hover: 3-stage progressive reveal — (a) hover within 40px = handle scales 1.2×, (b) within 15px = scales 1.6× + cyan glow ring, (c) cursor on handle = scale 2× + show "from BME280 pin SDA" tooltip.
+- **E2E-820 ⤴ E2E-781** — Edge-drag preview should also display: edge type guess ("looks like an I2C bus"), validity color (green compatible / yellow type-mismatch / red illegal), distance, and predicted signal-integrity warning if route is too long.
+- **E2E-821 ⤴ E2E-783** — Edge labels should support: text, type-tag dropdown (I2C/SPI/UART/Power/GPIO), bidirectional arrows, and a tiny inline icon for each protocol.
+- **E2E-822 ⤴ E2E-784** — Edge color rule: not just by type but by **active-during-sim** state (transmitting=cyan flash, idle=grey, error=red).
+- **E2E-823 ⤴ E2E-789** — Node drag: snap to grid is on/off binary; needs **smart-snap thresholds** (snap to other nodes' edges within 8px, snap to grid otherwise).
+- **E2E-824 ⤴ E2E-791** — Multi-select needs marquee + Shift-click + Ctrl-click + select-by-category ("all sensors") + select-by-degree (>3 connections).
+- **E2E-825 ⤴ E2E-792** — Align tools should appear in a contextual mini-toolbar above selected group (Figma pattern), not buried in toolbar.
+- **E2E-826 ⤴ E2E-793** — Group-as-subsystem: collapsed subsystem node should show a tiny preview of internal layout in its body. Click to expand inline (not navigate away).
+- **E2E-827 ⤴ E2E-796** — Net browser should be **dual-pane**: left = list of nets, right = list of nodes/edges in selected net. Click a net → highlight + zoom to fit.
+- **E2E-828 ⤴ E2E-801** — Try-alternate component: side-by-side panel with **delta highlights** (red strikethrough on changed specs, green on improvements).
+- **E2E-829 🟢 NEW** — **Smart suggestions appearing as ghost nodes**: AI proposes 2 ghost nodes off to the side ("Add a decoupling cap"). Click ghost to accept; auto-wires.
+- **E2E-830 🟢 NEW** — **Zoom-to-relevant**: when DRC fires on an edge, click "Zoom to issue" button on the toast → canvas auto-pans + zooms.
+- **E2E-831 🟢 NEW** — **Mini map magic**: draw a rectangle on mini map → canvas pans there. Standard Figma/Lucidchart move; missing.
+
+### (B) INNOVATE — wild
+
+- **E2E-832 🚀** — **Architecture "Auto-flow"**: hold spacebar → canvas auto-pans to the next "interesting" node (highest-degree, recently-edited, has DRC error). Tour your own design.
+- **E2E-833 🚀** — **Time-lapse "designer's journey"**: replay how the architecture evolved over the last 30 days as a sped-up animation.
+- **E2E-834 🚀** — **Architecture A/B testing**: maintain TWO live architecture variants side-by-side; tweak, compare cost/power, pick winner.
+- **E2E-835 🚀** — **Live cost overlay**: each node shows "$2.45" cost; total in corner. Add/remove a node → see cost recalc in real-time.
+- **E2E-836 🚀** — **Power-budget bar at top**: live progress bar showing "12mA / 500mA budget" — fills red as you exceed.
+- **E2E-837 🚀** — **Generative variants**: "AI: give me 3 alternate architectures for the same requirements" → 3 thumbnails, click to load.
+- **E2E-838 🚀** — **Architecture mood board**: drag in PRD docs / sketches / photos / requirements → AI extracts intent + builds initial architecture.
+- **E2E-839 🚀** — **Reverse-engineer mode**: drag in a competitor's product photo → AI guesses internal architecture.
+- **E2E-840 🚀** — **3D extrude**: convert flat 2D architecture into 3D enclosure preview ("this needs ~80×60×30 mm enclosure based on component sizes").
+- **E2E-841 🚀** — **Zero-architecture mode**: skip Architecture tab entirely; "Just describe what you want" → AI generates Schematic + PCB directly. Architecture becomes optional.
+- **E2E-842 🚀** — **Architecture lints**: Linter rules ("Every MCU should have a decoupling cap on its VCC node", "Power chain shouldn't exceed 4 hops"). Live warnings in canvas.
+- **E2E-843 🚀** — **Cross-project reusability**: select N nodes → "Save as template" → publish to org library. Other projects drag-import it.
+- **E2E-844 🚀** — **Architecture badges/certifications**: AI verifies "Industrial-grade", "RoHS-ready", "Low-power", "Mil-spec" → earns badge displayed on diagram.
+
+### (C) PRACTICAL PACKAGING — Architecture roadmap
+
+**Quick wins (<2 weeks):**
+1. **Pin handle pulse + 3-stage hover scale** (E2E-779/819) — biggest discovery boost.
+2. **Edge labels + protocol type tags** (E2E-783/821).
+3. **Auto-color edges by type** (E2E-784/822).
+4. **Auto-layout button** (E2E-747/768).
+5. **Multi-select marquee** (E2E-791/824).
+
+**1-month investments:**
+6. **Net browser sidebar** (E2E-796/827).
+7. **Group-as-subsystem with inline preview** (E2E-793/826).
+8. **Smart suggestions ghost nodes** (E2E-829).
+9. **Live cost + power-budget overlay** (E2E-835/836).
+10. **Architecture lints** (E2E-842).
+
+**Quarter investments (changes the product):**
+11. **Animated dataflow during sim** (E2E-809) — visual debugging, killer feature.
+12. **Architecture-as-Code DSL editor** (E2E-815) — power user moat.
+13. **AI critique persona** (E2E-814) — pedagogical retention.
+14. **Generative variants** (E2E-837) — Flux Copilot parity.
+15. **Mood-board → architecture** (E2E-838) — magical onboarding for newcomers.
+
+### Pass 9 wrap-up
+
+Architecture passes (7-9) added **101 findings (E2E-743 → E2E-844)**. Total now: **844 findings across 9 passes**.
+
+**Architecture top P0:**
+- `tool-analyze` button is dead (E2E-756 reaffirms E2E-078)
+
+**Architecture top UX gaps:**
+- Pin handles undiscoverable (tiny, no hover affordance, no preview during edge drag)
+- No multi-select marquee + no align tools
+- No edge labels + no auto-color by type
+- No net browser
+- No auto-layout
+- BME280 appears 3× in sidebar (Favorites + Recent + main)
+
+**Architecture top wins:**
+- Clean React Flow canvas with proper category-colored nodes
+- Right-click context menu with 10 power-user actions including Copy JSON
+- Asset Library with Favorites + Recently Used + 12 parts + resize handle
+- Inspector panel with X/Y precise positioning + UUID
+
+**Top innovations:**
+- Animated dataflow during sim (visual debugger)
+- Architecture-as-Code DSL editor (split-pane)
+- AI "Dr. Kirchhoff" critique persona
+- Live cost + power-budget overlay
+- Mood-board → architecture (drop docs/sketches/photos)
+- Reverse-engineer mode (competitor product photo → architecture guess)
+- 3D extrude → enclosure size preview
+- Generative variants ("give me 3 alternate architectures")
+
+---
+
 ## TL;DR — Top P0/P1 Bugs (action items)
 
 | # | Severity | Tab/Area | Bug | Fix |
