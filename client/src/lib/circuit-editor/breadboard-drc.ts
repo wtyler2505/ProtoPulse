@@ -59,6 +59,13 @@ export interface BreadboardDrcViolation {
   netIds?: number[];
   /** Instance ID involved (for floating / unconnected) */
   instanceId?: number;
+  /**
+   * Vault-note slug pointing to the authoritative rule explanation.
+   * Wave 2 audit #292 — DRC violations now cite Ars Contexta notes so the UI
+   * can render a clickable source chip via AnswerSourcePanel. Optional so
+   * existing consumers remain backward compatible.
+   */
+  remediationLink?: string;
 }
 
 /** Result of a full breadboard DRC run */

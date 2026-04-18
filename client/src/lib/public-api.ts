@@ -458,7 +458,12 @@ export class PublicApiManager {
   private save(): void {
     localStorage.setItem(STORAGE_KEY_WEBHOOKS, JSON.stringify(this.webhooks));
     localStorage.setItem(STORAGE_KEY_DELIVERIES, JSON.stringify(this.deliveries));
-    localStorage.setItem(STORAGE_KEY_API_KEYS, JSON.stringify(this.apiKeys));
+    // Audit #60: strip the raw `key` secret before persistence. The full key is
+    // returned once from generateApiKey() (GitHub/Stripe "copy now" pattern) and
+    // lives only in caller memory. Metadata (id, name, prefix, permissions, etc.)
+    // is safe to persist — the prefix alone cannot authenticate a request.
+    const redacted = this.apiKeys.map(({ key: _key, ...rest }) => rest);
+    localStorage.setItem(STORAGE_KEY_API_KEYS, JSON.stringify(redacted));
   }
 
   // -----------------------------------------------------------------------

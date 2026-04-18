@@ -411,12 +411,10 @@ app.use((req, res, next) => {
     dependencies.cache = { status: "up" };
 
     // Check AI provider availability (key configured, not whether API is reachable)
-    const anthropicConfigured = Boolean(process.env.ANTHROPIC_API_KEY);
     const geminiConfigured = Boolean(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
-    dependencies.ai_anthropic = { status: anthropicConfigured ? "up" : "down" };
     dependencies.ai_gemini = { status: geminiConfigured ? "up" : "down" };
 
-    if (!anthropicConfigured && !geminiConfigured) {
+    if (!geminiConfigured) {
       if (overallStatus === "ready") {
         overallStatus = "degraded";
       }

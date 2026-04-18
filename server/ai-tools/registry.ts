@@ -7,7 +7,7 @@
  *
  * 1. **Validation** — parse incoming params against the tool's Zod schema.
  * 2. **Execution** — validate then invoke the tool's async executor.
- * 3. **Format conversion** — serialize all tools to Anthropic or Gemini native
+ * 3. **Format conversion** — serialize all tools to Gemini native
  *    tool/function formats for inclusion in API requests.
  *
  * @module ai-tools/registry

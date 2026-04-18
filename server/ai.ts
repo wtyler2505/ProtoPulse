@@ -511,7 +511,6 @@ export function redactSecrets(text: string): string {
   return text
     // Anthropic: sk-ant-<...>, sk-ant-api03-<...>
     .replace(/sk-ant-[a-zA-Z0-9_-]{16,}/g, '[REDACTED]')
-<<<<<<< Updated upstream
     // OpenAI project keys: sk-proj-<...> (must come before the generic sk- rule)
     .replace(/\bsk-proj-[a-zA-Z0-9_-]{20,}\b/g, '[REDACTED]')
     // OpenAI legacy: sk-<alphanumeric>. Lowered minimum from 20→3 — the
@@ -522,17 +521,6 @@ export function redactSecrets(text: string): string {
     // Google API: AIza<chars>. Real keys are 39 chars but `AIza` is a
     // strong-enough prefix that any {3,}-char suffix is worth redacting.
     .replace(/\bAIza[a-zA-Z0-9_-]{3,}\b/g, '[REDACTED]')
-=======
-    // OpenAI project keys: sk-proj-<...>
-    .replace(/\bsk-proj-[a-zA-Z0-9_-]{20,}\b/g, '[REDACTED]')
-    // OpenAI legacy: sk-<alphanumeric>. Lowered min length to 6 because
-    // the `sk-` prefix is strong enough context and test/mock keys are often
-    // shorter than real production keys.
-    .replace(/\bsk-[a-zA-Z0-9]{6,}\b/g, '[REDACTED]')
-    // Google API: AIza<chars>. Real keys are 39 chars but `AIza` is a
-    // strong-enough prefix that any {6,}-char suffix is worth redacting.
-    .replace(/\bAIza[a-zA-Z0-9_-]{6,}\b/g, '[REDACTED]')
->>>>>>> Stashed changes
     // Groq: gsk_<...>
     .replace(/\bgsk_[a-zA-Z0-9]{20,}\b/g, '[REDACTED]')
     // xAI: xai-<...>
