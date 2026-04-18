@@ -12,7 +12,7 @@ import type { CircuitInstanceRow, CircuitNetRow, CircuitWireRow, ComponentPart }
 import { findVerifiedBoardByAlias } from '@shared/verified-boards';
 import type { VerifiedBoardDefinition, VerifiedPin } from '@shared/verified-boards';
 import { inferTraps } from './heuristic-trap-inference';
-import { VAULT_SLUGS } from './circuit-editor/breadboard-constants';
+import { VAULT_SLUGS } from '@shared/vault-citation';
 
 // ---------------------------------------------------------------------------
 // Public types

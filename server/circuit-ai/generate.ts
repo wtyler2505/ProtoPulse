@@ -46,7 +46,7 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
 
       try {
         const response = await ai.generate({
-          model: googleAI.model('gemini-3-pro-preview'), // Ignore requested anthropic model, use gemini
+          model: googleAI.model('gemini-3-pro-preview'),
           prompt,
           config: {
             temperature: 0.1,
