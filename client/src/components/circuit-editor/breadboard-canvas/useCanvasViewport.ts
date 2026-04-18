@@ -24,8 +24,8 @@ export interface CanvasViewport {
   panOffset: PixelPos;
   setZoom: React.Dispatch<React.SetStateAction<number>>;
   setPanOffset: React.Dispatch<React.SetStateAction<PixelPos>>;
-  containerRef: React.RefObject<HTMLDivElement>;
-  svgRef: React.RefObject<SVGSVGElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  svgRef: React.RefObject<SVGSVGElement | null>;
   centerOnBoardPixel: (pixel: PixelPos) => void;
   clientToBoardPixel: (clientX: number, clientY: number) => PixelPos | null;
   zoomIn: () => void;

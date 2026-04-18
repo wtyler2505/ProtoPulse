@@ -191,8 +191,8 @@ describe('CanvasToolbar', () => {
   it('shows critical count when critical issues exist', () => {
     const audit = makeAudit({
       issues: [
-        { severity: 'critical', id: 'x', title: 't', affectedInstanceIds: [] },
-        { severity: 'warning', id: 'y', title: 't', affectedInstanceIds: [] },
+        { severity: 'critical', id: 'x', title: 't', category: 'power', detail: '', affectedInstanceIds: [], affectedPinIds: [] },
+        { severity: 'warning', id: 'y', title: 't', category: 'power', detail: '', affectedInstanceIds: [], affectedPinIds: [] },
       ] as BoardAuditSummary['issues'],
       score: 40,
     });
