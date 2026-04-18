@@ -581,13 +581,12 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   // a 23-item dependency array. Only setters and the ref itself are deps.
   const handleSend = useCallback(async (messageOverride?: string) => {
     const s = sendStateRef.current;
-    const msgText = messageOverride || s.input;
-    if (!msgText.trim()) return;
-    if (s.isGenerating) return;
+    const msgText = messageOverride ?? s.input;
+    const validation = validateMessageInput(msgText, { isGenerating: s.isGenerating });
+    if (!validation.valid) return;
 
     setInput('');
     setLastUserMessage(msgText);
-    // Capture and clear attached image before async work
     const currentImage = s.attachedImage;
     setAttachedImage(null);
     const userMsg: ChatMessage = {
@@ -602,10 +601,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
     let fetchTimeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
+      // --- No-API-key branch: fall back to local intent parsing -------------
       if (!s.aiApiKey) {
         setShowSetupDialog(true);
         setTimeout(() => {
-          // Re-read ref for latest state inside setTimeout
           const latest = sendStateRef.current;
           const intent = parseLocalIntent(msgText, {
             nodes: latest.nodes, edges: latest.edges, bom: latest.bom,
@@ -628,43 +627,37 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         return;
       }
 
+      // --- Set up abort + timeout ------------------------------------------
       const controller = new AbortController();
       abortRef.current = controller;
       fetchTimeoutId = setTimeout(() => controller.abort('timeout'), 150_000);
-
       setStreamingContent('');
 
-      const changeDiff = s.getChangeDiff();
-
-      // CAPX-API-05: SSE fetch with exponential backoff on network errors
-      // BL-0003: Don't send API key in plaintext when server-stored key is available
-      // Audit #60 (2026-04-17): Google Workspace OAuth token used to be sent in
-      // this body — REMOVED. Server now resolves the token from the user's
-      // encrypted api_keys row (see server/ai.ts tool-context builder). Token
-      // never round-trips through the client after initial paste.
+      // --- Build request body (pure helper) --------------------------------
       const hasSession = !!localStorage.getItem('protopulse-session-id');
-      const fetchRequestBody = JSON.stringify({
-        message: msgText,
-        provider: s.aiProvider,
-        model: s.aiModel,
-        apiKey: hasSession ? '' : s.aiApiKey,
-        projectId: s.projectId,
-        temperature: s.aiTemperature,
-        customSystemPrompt: s.customSystemPrompt,
-        activeView: s.activeView,
-        activeSheetId: s.activeSheetId,
-        selectedNodeId: s.selectedNodeId,
-        changeDiff,
-        routingStrategy: s.routingStrategy,
-        ...(currentImage ? {
-          imageBase64: currentImage.base64,
-          imageMimeType: currentImage.mimeType,
-        } : {}),
-      });
+      const fetchRequestBody = buildChatRequestBody(
+        {
+          aiProvider: s.aiProvider,
+          aiModel: s.aiModel,
+          aiApiKey: s.aiApiKey,
+          aiTemperature: s.aiTemperature,
+          projectId: s.projectId,
+          customSystemPrompt: s.customSystemPrompt,
+          activeView: s.activeView,
+          activeSheetId: s.activeSheetId,
+          selectedNodeId: s.selectedNodeId,
+          routingStrategy: s.routingStrategy,
+          changeDiff: s.getChangeDiff(),
+        },
+        msgText,
+        currentImage,
+        hasSession,
+      );
 
+      // --- Fetch with exponential-backoff retry on network errors ----------
       const fetchWithRetry = async (retries = 0): Promise<Response> => {
         try {
-          const response = await fetch('/api/chat/ai/stream', {
+          return await fetch('/api/chat/ai/stream', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -673,41 +666,29 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             signal: controller.signal,
             body: fetchRequestBody,
           });
-          return response;
         } catch (err: unknown) {
-          // Only retry on network errors (TypeError from fetch), NOT on abort or server errors
-          if (retries >= SSE_MAX_RETRIES || controller.signal.aborted) {
-            throw err;
-          }
-          // TypeError indicates a network failure (DNS, connection refused, etc.)
+          if (retries >= SSE_MAX_RETRIES || controller.signal.aborted) throw err;
           if (err instanceof TypeError) {
             const delay = Math.pow(2, retries) * 1000;
             setStreamingContent(`Reconnecting... (attempt ${String(retries + 2)}/${String(SSE_MAX_RETRIES + 1)})`);
             await new Promise<void>(r => setTimeout(r, delay));
             return fetchWithRetry(retries + 1);
           }
-          // Non-network errors (e.g. AbortError) — don't retry
           throw err;
         }
       };
 
       const response = await fetchWithRetry();
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string };
         throw new Error(errorData.message || `${String(response.status)}: Server error`);
       }
 
+      // --- Drive the SSE stream through the pure reducer -------------------
+      let accum: StreamAccumulator = initialStreamAccumulator();
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let fullText = '';
-      let finalActions: AIAction[] = [];
-      let finalToolCalls: ToolCallInfo[] = [];
-      let finalSources: ToolSource[] = [];
-      let finalConfidence: ConfidenceScore | undefined;
-      let hasServerToolCalls = false;      let sseErrorCount = 0;
-      let reportedUsage: { model: string; inputTokens: number; outputTokens: number } | undefined;
-      let resolvedModel: string | undefined;
+      let sseErrorCount = 0;
 
       if (reader) {
         let buffer = '';
@@ -716,88 +697,22 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
+          buffer = lines.pop() ?? '';
 
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
             try {
-              const data = JSON.parse(line.slice(6));
-              if (data.type === 'text') {
-                // Native tool use: structured text event
-                fullText += data.text;
-                setStreamingContent(fullText);
-              } else if (data.type === 'chunk') {
-                // Legacy: raw text chunk (backward compat)
-                fullText += data.text;
-                setStreamingContent(fullText);
-              } else if (data.type === 'tool_call') {
-                // AI is calling a tool — show in streaming indicator
-                setStreamingContent(fullText + `\n\n_Using tool: ${data.name}..._`);
-              } else if (data.type === 'tool_result') {
-                // Tool finished — update indicator
-                const status = data.result?.success ? 'done' : 'failed';
-                setStreamingContent(fullText + `\n\n_Tool ${data.name}: ${status}_`);
-                hasServerToolCalls = true;
-              } else if (data.type === 'done') {
-                fullText = data.message;
-                finalActions = data.actions || [];
-                finalToolCalls = data.toolCalls || [];
-                if (finalToolCalls.length > 0) {
-                  hasServerToolCalls = true;
-                }
-                
-                // Collect sources and confidence (BL-0160)
-                finalSources = finalToolCalls.flatMap(tc => tc.result.sources || []);
-                // Deduplicate sources by label+id
-                const seenSources = new Set<string>();
-                finalSources = finalSources.filter(s => {
-                  const key = `${s.type}-${s.id || s.label}`;
-                  if (seenSources.has(key)) return false;
-                  seenSources.add(key);
-                  return true;
-                });
-                
-                // Use the last confidence score if multiple tools returned one
-                const lastConfidence = [...finalToolCalls].reverse().find(tc => tc.result.confidence)?.result.confidence;
-                if (lastConfidence) {
-                  finalConfidence = lastConfidence;
-                }
-
-                // Prefer the provider's real token usage (emitted as
-                // `type: 'usage'` earlier in the stream). Fall back to chars/4
-                // approximation when the provider didn't report usage.
-                // AI-audit H-2: previously used stale hardcoded pricing
-                // ($0.00025 in / $0.0005 out per 1K) which was ~10x wrong for
-                // modern Gemini tiers. Now sourced from shared/model-pricing.ts.
-                if (reportedUsage) {
-                  const cost = estimateCost(
-                    reportedUsage.model,
-                    reportedUsage.inputTokens,
-                    reportedUsage.outputTokens,
-                  );
-                  setTokenInfo({
-                    input: reportedUsage.inputTokens,
-                    output: reportedUsage.outputTokens,
-                    cost,
-                    estimated: false,
-                  });
-                } else {
-                  const inputTokens = approximateTokens(msgText);
-                  const outputTokens = approximateTokens(fullText);
-                  const modelForPricing = resolvedModel ?? '';
-                  const cost = estimateCost(modelForPricing, inputTokens, outputTokens);
-                  setTokenInfo({
-                    input: inputTokens,
-                    output: outputTokens,
-                    cost,
-                    estimated: true,
-                  });
-                }
-              } else if (data.type === 'error') {
-                const streamErr = mapStreamErrorToUserMessage(
-                  (data as { message?: string; code?: string }),
-                );
-                fullText = `${streamErr.title}: ${streamErr.description}`;
+              const event = JSON.parse(line.slice(6)) as StreamEvent;
+              const { accum: next, streamingDisplay } = reduceStreamEvent(
+                event,
+                accum,
+                msgText,
+                mapStreamErrorToUserMessage,
+              );
+              accum = next;
+              if (streamingDisplay !== null) setStreamingContent(streamingDisplay);
+              if (event.type === 'done' && accum.tokenInfo) {
+                setTokenInfo(accum.tokenInfo);
               }
             } catch (parseErr: unknown) {
               sseErrorCount++;
@@ -807,7 +722,6 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             }
           }
         }
-
         if (sseErrorCount > 0) {
           console.warn(`[SSE] ${String(sseErrorCount)} parse error(s) during stream`);
         }
@@ -815,103 +729,74 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
       setStreamingContent('');
 
-      // Invalidate caches if server executed tools (data may have changed in DB).
-      // Narrow invalidation by tool name — see client/src/lib/chat-cache-invalidation.ts.
-      // Falls back to a full invalidate for scorched-earth tools (clear_canvas,
-      // generate_architecture) or unknown tool names (fail-safe).
+      const { fullText, finalActions, finalToolCalls, finalSources, finalConfidence, hasServerToolCalls } = accum;
+
+      // --- Cache invalidation for server-side tool effects -----------------
       if (hasServerToolCalls) {
         invalidateAfterToolCalls(queryClient, projectId, finalToolCalls);
       }
 
-      const hasDestructive = finalActions.some((a) => DESTRUCTIVE_ACTIONS.includes(a.type));
-      const hasNonNavigational = finalActions.some((a) => !NAVIGATIONAL_ACTIONS.has(a.type));
-      const needsConfirmation = (hasDestructive || (previewAiChanges && hasNonNavigational)) && finalActions.length > 0;
-      
+      // --- Route decision (pure helper) ------------------------------------
+      const safetyMgr = AISafetyModeManager.getInstance();
+      const route = decideRoute(finalActions, {
+        destructiveActions: DESTRUCTIVE_ACTIONS,
+        previewAiChanges,
+        needsSafetyConfirmation: (t) => safetyMgr.needsConfirmation(t),
+      });
       const msgId = crypto.randomUUID();
-
-      // Re-read ref for latest callbacks (state may have changed during streaming)
       const latest = sendStateRef.current;
+      const assistantMessage: ChatMessage = {
+        id: msgId,
+        clientId: msgId,
+        role: 'assistant',
+        content: fullText,
+        timestamp: Date.now(),
+        actions: finalActions,
+        toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
+        sources: finalSources.length > 0 ? finalSources : undefined,
+        confidence: finalConfidence,
+      };
 
-      if (needsConfirmation) {
+      if (route.kind === 'confirm') {
         setPendingActions(buildPendingActionReview(finalActions, msgId, finalConfidence, finalSources));
-        latest.addMessage({
-          id: msgId,
-          clientId: msgId,
-          role: 'assistant',
-          content: fullText,
-          timestamp: Date.now(),
-          actions: finalActions,
-          toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
-          sources: finalSources.length > 0 ? finalSources : undefined,
-          confidence: finalConfidence,
-        });
+        latest.addMessage(assistantMessage);
+        const hasDestructive = finalActions.some((a) => DESTRUCTIVE_ACTIONS.includes(a.type));
+        const hasNonNavigational = finalActions.some((a) => !NAVIGATIONAL_ACTIONS.has(a.type));
         if (previewAiChanges && hasNonNavigational && !hasDestructive) {
           toast({
             title: 'Review required',
             description: 'The AI has proposed changes to your design. Please review and confirm.',
           });
         }
-      } else {
-        // BL-0161: AI safety mode — check if any actions need safety confirmation
-        const safetyMgr = AISafetyModeManager.getInstance();
-        const firstUnsafe = finalActions.find((a) => safetyMgr.needsConfirmation(a.type));
-
-        if (firstUnsafe && finalActions.length > 0) {
-          // Queue the first unsafe action for safety confirmation
-          const remaining = finalActions.filter((a) => a !== firstUnsafe);
-          setSafetyPending({
-            action: firstUnsafe,
-            remainingActions: remaining,
-            allActions: finalActions,
-            msgId,
+      } else if (route.kind === 'safety') {
+        setSafetyPending({
+          action: route.firstUnsafe,
+          remainingActions: route.remaining,
+          allActions: finalActions,
+          msgId,
           fullText,
           toolCalls: finalToolCalls,
           sources: finalSources,
           confidence: finalConfidence,
         });
-          latest.addMessage({
-            id: msgId,
-            clientId: msgId,
-            role: 'assistant',
-            content: fullText,
-            timestamp: Date.now(),
-            actions: finalActions,
-            toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
-            sources: finalSources.length > 0 ? finalSources : undefined,
-            confidence: finalConfidence,
-          });
-        } else {
-          if (finalActions.length > 0) {
-            latest.executeAIActions(finalActions);
-          }
-          latest.addMessage({
-            id: msgId,
-            clientId: msgId,
-            role: 'assistant',
-            content: fullText,
-            timestamp: Date.now(),
-            actions: finalActions,
-            toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
-            sources: finalSources.length > 0 ? finalSources : undefined,
-            confidence: finalConfidence,
-          });
-        }
+        latest.addMessage(assistantMessage);
+      } else {
+        if (finalActions.length > 0) latest.executeAIActions(finalActions);
+        latest.addMessage(assistantMessage);
       }
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
       const latest = sendStateRef.current;
       if (err.name === 'AbortError') {
-        const isTimeout = abortRef.current?.signal.reason === 'timeout';
+        const { content, isError } = mapAbortToMessage(abortRef.current?.signal.reason);
         const responseId = crypto.randomUUID();
         latest.addMessage({
           id: responseId,
           clientId: responseId,
           role: 'assistant',
-          content: isTimeout
-            ? 'AI response timed out after 150 seconds. Please try again.'
-            : 'Request was cancelled.',
+          content,
           timestamp: Date.now(),
-          isError: isTimeout,
+          isError,
         });
       } else {
         const mapped = mapErrorToUserMessage(err);
@@ -928,16 +813,14 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         });
       }
     } finally {
-      if (fetchTimeoutId !== undefined) {
-        clearTimeout(fetchTimeoutId);
-      }
+      if (fetchTimeoutId !== undefined) clearTimeout(fetchTimeoutId);
       const latest = sendStateRef.current;
       latest.setIsGenerating(false);
       setStreamingContent('');
       abortRef.current = null;
       latest.captureSnapshot();
     }
-  }, [sendStateRef]);
+  }, [sendStateRef, previewAiChanges, buildPendingActionReview, projectId, toast]);
 
   const handleRegenerate = useCallback(() => {
     if (lastUserMessage && !isGenerating) {
