@@ -1008,12 +1008,68 @@ describe('auditBreadboard', () => {
       },
     );
 
-    it('does not fire for safe pin GPIO34 on heuristic ESP32', () => {
+    it('does not fire for truly safe pin GPIO23 on heuristic ESP32', () => {
       const part = makeHeuristicEsp32Part(702, 'ESP32 dev module');
-      const input = makeEsp32AuditInput(702, part, 'GPIO34');
+      const input = makeEsp32AuditInput(702, part, 'GPIO23');
       const result = audit(input);
       const heuristicIssues = result.issues.filter((i) => i.id.startsWith('heuristic-esp32'));
       expect(heuristicIssues).toHaveLength(0);
+    });
+
+    it.each([
+      ['GPIO34', VAULT_SLUGS.ESP32_GPIO34_39_INPUT],
+      ['GPIO35', VAULT_SLUGS.ESP32_GPIO34_39_INPUT],
+      ['GPIO36', VAULT_SLUGS.ESP32_GPIO34_39_INPUT],
+      ['GPIO37', VAULT_SLUGS.ESP32_GPIO34_39_INPUT],
+      ['GPIO38', VAULT_SLUGS.ESP32_GPIO34_39_INPUT],
+      ['GPIO39', VAULT_SLUGS.ESP32_GPIO34_39_INPUT],
+    ])('flags input-only pin %s with the 34-39 vault slug', (pinLabel, slug) => {
+      const part = makeHeuristicEsp32Part(720, 'ESP32 dev module');
+      const input = makeEsp32AuditInput(720, part, pinLabel);
+      const result = audit(input);
+      const issue = result.issues.find((i) => i.id.startsWith('heuristic-esp32-input-only'));
+      expect(issue).toBeDefined();
+      expect(issue!.severity).toBe('warning');
+      expect(issue!.remediationLink).toBe(slug);
+      expect(issue!.detail.toLowerCase()).toMatch(/input[- ]only|no.*pull/);
+    });
+
+    it.each([
+      ['GPIO2', 'gpio2'],
+      ['IO2', 'gpio2'],
+      ['GPIO15', 'gpio15'],
+      ['IO15', 'gpio15'],
+    ])('flags strapping pin %s with warning severity', (pinLabel, idFragment) => {
+      const part = makeHeuristicEsp32Part(730, 'ESP32 dev module');
+      const input = makeEsp32AuditInput(730, part, pinLabel);
+      const result = audit(input);
+      const issue = result.issues.find((i) => i.id.startsWith(`heuristic-esp32-${idFragment}`));
+      expect(issue).toBeDefined();
+      expect(issue!.severity).toBe('warning');
+      expect(issue!.category).toBe('safety');
+    });
+
+    it('emits an info advisory for unknown ESP32 variant (audit #241 conservative fallback)', () => {
+      // "ESP32" with no recognized variant suffix — triggers the unknown-variant advisory.
+      const part = makeHeuristicEsp32Part(740, 'ESP32');
+      const input = makeEsp32AuditInput(740, part, 'GPIO23');
+      const result = audit(input);
+      const advisory = result.issues.find((i) =>
+        i.id.startsWith('heuristic-esp32-unknown-variant'),
+      );
+      expect(advisory).toBeDefined();
+      expect(advisory!.severity).toBe('info');
+      expect(advisory!.remediationLink).toBe(VAULT_SLUGS.ESP32_SAFE_PINS);
+    });
+
+    it('does NOT emit unknown-variant advisory for a recognized ESP32-WROOM title', () => {
+      const part = makeHeuristicEsp32Part(741, 'ESP32-WROOM-32');
+      const input = makeEsp32AuditInput(741, part, 'GPIO23');
+      const result = audit(input);
+      const advisory = result.issues.find((i) =>
+        i.id.startsWith('heuristic-esp32-unknown-variant'),
+      );
+      expect(advisory).toBeUndefined();
     });
 
     it('does not fire for ESP8266 (sibling exclusion)', () => {

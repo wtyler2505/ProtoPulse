@@ -162,6 +162,11 @@ export const POWER_BUDGET = {
 
 /**
  * Stable vault-note slug aliases for audit rules, coach plans, and AI prompts.
+ *
+ * Wave 2 relocation: the canonical table now lives in `shared/vault-citation.ts`
+ * so server-side rules and shared DRC helpers can consume the same data. This
+ * module re-exports it and the `cite()` helper for existing client imports.
+ *
  * Cite these instead of hardcoded rule text so rule updates propagate when
  * vault knowledge changes. Addresses Theme A (magic numbers → vault citations)
  * across findings #252, #269, #270, #283, #292, #356.
@@ -171,7 +176,14 @@ export const POWER_BUDGET = {
  * if a note is renamed/deleted in the vault, the test fails loudly so the
  * slug constant gets updated instead of quietly going stale.
  */
-export const VAULT_SLUGS = {
+export { VAULT_SLUGS, cite, citeSlug, slugToLabel } from '@shared/vault-citation';
+export type { VaultSlugKey, VaultSlug, VaultCitation } from '@shared/vault-citation';
+
+// Historical note: an inline slug table lived here before Wave 2 (see git
+// history pre-2026-04-18). It was moved to `shared/vault-citation.ts` so
+// server-side rules and shared DRC helpers can consume the same data.
+// Consumers MUST import VAULT_SLUGS from the re-export above.
+const _REMOVED_IN_WAVE2 = {
   // --- ESP32 safety-critical rules ---
   ESP32_GPIO6_11_FLASH: 'esp32-six-flash-gpios-must-never-be-used',
   ESP32_GPIO12_STRAPPING: 'esp32-gpio12-must-be-low-at-boot-or-module-crashes',

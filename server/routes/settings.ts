@@ -1,5 +1,4 @@
 import type { Express } from 'express';
-import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
@@ -40,7 +39,7 @@ export function registerSettingsRoutes(app: Express): void {
         return res.status(401).json({ message: 'Authentication required' });
       }
       const schema = z.object({
-        provider: z.enum(['anthropic', 'gemini', 'jlcpcb', 'pcbway', 'oshpark', 'google_workspace']),
+        provider: z.enum(['gemini', 'jlcpcb', 'pcbway', 'oshpark', 'google_workspace']),
         apiKey: z.string().min(1).max(4096),
       });
       const parsed = schema.safeParse(req.body);
@@ -60,7 +59,7 @@ export function registerSettingsRoutes(app: Express): void {
         return res.status(401).json({ message: 'Authentication required' });
       }
       const provider = req.params.provider;
-      if (provider !== 'anthropic' && provider !== 'gemini' && provider !== 'jlcpcb' && provider !== 'pcbway' && provider !== 'oshpark' && provider !== 'google_workspace') {
+      if (provider !== 'gemini' && provider !== 'jlcpcb' && provider !== 'pcbway' && provider !== 'oshpark' && provider !== 'google_workspace') {
         return res.status(400).json({ message: 'Invalid provider' });
       }
       const deleted = await deleteApiKey(req.userId, provider);
@@ -79,7 +78,7 @@ export function registerSettingsRoutes(app: Express): void {
     payloadLimit(4 * 1024),
     async (req, res) => {
       const schema = z.object({
-        provider: z.enum(['anthropic', 'gemini', 'jlcpcb', 'pcbway', 'oshpark', 'google_workspace']),
+        provider: z.enum(['gemini', 'jlcpcb', 'pcbway', 'oshpark', 'google_workspace']),
         apiKey: z.string().max(4096).optional(),
         useStored: z.boolean().optional(),
       });
@@ -114,20 +113,11 @@ export function registerSettingsRoutes(app: Express): void {
           return;
         }
 
-        if (provider === 'anthropic') {
-          const client = new Anthropic({ apiKey });
-          await client.messages.create({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 1,
-            messages: [{ role: 'user', content: 'Hi' }],
-          });
-        } else {
-          const genAI = new GoogleGenAI({ apiKey });
-          await genAI.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: 'Hi',
-          });
-        }
+        const genAI = new GoogleGenAI({ apiKey });
+        await genAI.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: 'Hi',
+        });
         res.json({ valid: true });
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Validation failed';

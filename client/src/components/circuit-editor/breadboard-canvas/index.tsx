@@ -86,7 +86,6 @@ import {
   type ColumnLetter,
   type BreadboardCoord,
   type PixelPos,
-  type TiePoint,
   coordKey,
   coordToPixel,
   pixelToCoord,

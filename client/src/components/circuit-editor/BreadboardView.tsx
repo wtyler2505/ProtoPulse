@@ -184,8 +184,10 @@ function findAutoPlacement(
   return null;
 }
 
-// Re-export for backward-compat (canonical home is breadboard-canvas/canvas-helpers)
-export { getDropTypeFromPart } from './breadboard-canvas/canvas-helpers';
+// Canonical home is breadboard-canvas/canvas-helpers; re-exported here for
+// backward-compat with external importers.
+import { getDropTypeFromPart } from './breadboard-canvas/canvas-helpers';
+export { getDropTypeFromPart };
 
 function isDipLikeType(type: string): boolean {
   const lower = type.toLowerCase();

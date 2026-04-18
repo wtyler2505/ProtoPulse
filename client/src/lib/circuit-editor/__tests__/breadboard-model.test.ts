@@ -833,8 +833,8 @@ describe('getConnectedHoles', () => {
     expect(cols).toEqual(['f', 'g', 'h', 'i', 'j']);
   });
 
-  it('returns entire rail for top positive rail', () => {
-    const holes = getConnectedHoles(1, '+t');
+  it('returns entire rail for left positive rail', () => {
+    const holes = getConnectedHoles(1, '+l');
     expect(holes).toHaveLength(BB.ROWS);
     holes.forEach(h => {
       expect(h.type).toBe('rail');
@@ -842,24 +842,24 @@ describe('getConnectedHoles', () => {
     });
   });
 
-  it('returns entire rail for top negative rail', () => {
-    const holes = getConnectedHoles(1, '-t');
+  it('returns entire rail for left negative rail', () => {
+    const holes = getConnectedHoles(1, '-l');
     expect(holes).toHaveLength(BB.ROWS);
     holes.forEach(h => {
       expect(h.rail).toBe('left_neg');
     });
   });
 
-  it('returns entire rail for bottom positive rail', () => {
-    const holes = getConnectedHoles(1, '+b');
+  it('returns entire rail for right positive rail', () => {
+    const holes = getConnectedHoles(1, '+r');
     expect(holes).toHaveLength(BB.ROWS);
     holes.forEach(h => {
       expect(h.rail).toBe('right_pos');
     });
   });
 
-  it('returns entire rail for bottom negative rail', () => {
-    const holes = getConnectedHoles(1, '-b');
+  it('returns entire rail for right negative rail', () => {
+    const holes = getConnectedHoles(1, '-r');
     expect(holes).toHaveLength(BB.ROWS);
     holes.forEach(h => {
       expect(h.rail).toBe('right_neg');

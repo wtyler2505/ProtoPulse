@@ -24,6 +24,7 @@ import {
   initialStreamAccumulator,
   decideRoute,
   mapAbortToMessage,
+  NAVIGATIONAL_ACTIONS,
   type StreamAccumulator,
   type StreamEvent,
 } from './chat/lib/handleSendHelpers';

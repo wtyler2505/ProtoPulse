@@ -44,7 +44,7 @@ Monolithic Express server serves both the API and the Vite-built SPA. AI chat su
 | LRU cache | `server/cache.ts` |
 | Exporters | `server/export/` (KiCad, Eagle, SPICE, BOM exporters) |
 | Generators | `server/export/` (Gerber, drill, pick-and-place, netlist generators) |
-| AI tools | `server/ai-tools.ts` (barrel → 12 tool modules in `server/ai-tools/`) |
+| AI tools | `server/ai-tools.ts` (barrel → 16 tool modules in `server/ai-tools/`) |
 | BOM comparison | `shared/bom-diff.ts` |
 | Architecture diff | `shared/arch-diff.ts` |
 | Netlist comparison | `shared/netlist-diff.ts` |
