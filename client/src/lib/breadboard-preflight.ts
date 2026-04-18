@@ -28,6 +28,13 @@ export interface PreflightCheck {
   detail: string;
   affectedInstanceIds: number[];
   affectedPinIds: string[];
+  /**
+   * Vault-note slug pointing to the authoritative rule explanation.
+   * Wave 2 audit #270, #276, #292 — preflight checks now cite Ars Contexta
+   * notes so the UI can render clickable source chips. Optional for backward
+   * compatibility with consumers that only read label/detail.
+   */
+  remediationLink?: string;
 }
 
 export interface PreflightResult {
