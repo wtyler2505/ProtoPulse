@@ -46,7 +46,7 @@ function pinRoleDescription(pin: VerifiedPin): string {
   }
 
   // Add alternate function summary
-  const funcTypes = pin.functions.map((fn) => fn.type);
+  const funcTypes = (pin.functions ?? []).map((fn) => fn.type);
   const uniqueTypes = Array.from(new Set(funcTypes));
   if (uniqueTypes.length > 0) {
     parts.push(uniqueTypes.join(', ').toUpperCase());
