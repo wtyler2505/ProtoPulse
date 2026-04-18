@@ -111,7 +111,7 @@ export function useApiKeys(): UseApiKeysResult {
   const activeProvider: ApiKeyProvider = 'gemini';
 
   const [localKeys, setLocalKeys] = useState<Record<ApiKeyProvider, string>>(() => ({
-    gemini: readLocalKey('gemini'),
+    gemini: readScratchKey('gemini'),
   }));
 
   const providersQuery = useQuery<string[]>({
