@@ -178,6 +178,175 @@ Screenshot: `14-orderpcb.png`
 - **E2E-414 🟢 audience-expert** — Expert wants saved fab profiles ("My JLCPCB account", "My PCBWay account") with API key for auto-quote. Untested.
 - **E2E-415 🟡 visual** — Bottom navigation Previous / step-dots / Design Suggestions = floating, low-contrast. Promote to a real footer bar.
 
+### Pass 2 — Tasks (visual)
+
+Screenshot: `15-tasks.png`
+
+- **E2E-416 ✅ visual** — Classic 4-column kanban board. Color-coded status dots per column (orange backlog/todo/in-progress, green done). My E2E Test Task card visible with Medium priority pill. Standard.
+- **E2E-417 🟡 visual** — Each column header has an X button (Remove column) — risky next to a "1 task" badge. Move to overflow menu.
+- **E2E-418 🟡 UX** — "All priorities" filter is the only filter. Add labels, due-date, assignee filters.
+- **E2E-419 🟢 audience-newbie** — Beginner sees an empty kanban with no guidance. Add "What is a kanban board?" tooltip.
+- **E2E-420 🟢 visual** — Lots of empty space below cards. Each column is fixed-width — could be auto-fit-content.
+
+### Pass 2 — Learn (visual)
+
+Screenshot: `16-learn.png`
+
+- **E2E-421 ✅ visual** — 3-column card grid with nice density. Each card: title + difficulty pill (Beginner cyan / Intermediate orange) + category pill (Passive Components green / Active Components red / Power yellow) + description + tag chips + tag overflow `+N`.
+- **E2E-422 🟡 visual** — 4 categories used (Passive/Active/Power) but no legend. Color taxonomy unclear.
+- **E2E-423 🟡 visual** — Same overlap with Vault — vault has `passives` MOC with 62 notes; Learn has "Resistors / Capacitors / Inductors" articles. Learn is a subset / curated wrapper. Add cross-link from Learn article → Vault MOC for deeper dive.
+- **E2E-424 🟢 audience-newbie** — Excellent landing page for beginners — pick a card, learn a concept. Perfect.
+- **E2E-425 🟢 audience-expert** — Expert wants offline copy / PDF export. Untested.
+
+### Pass 2 — Inventory (visual)
+
+Screenshot: `17-inventory.png`
+
+- **E2E-426 🔴 visual** — Tab body is **mostly empty space** (just `Storage Manager` + Scan/Labels buttons + filter input + "No BOM items to display."). Wastes a whole tab. Either consolidate with Procurement → Inventory or load it lazily on first BOM item.
+- **E2E-427 🟡 visual** — Page top-right has Scan + Labels buttons but no descriptions. Scan = barcode? QR? Labels = print? export? Confusing.
+- **E2E-428 🟢 audience-newbie** — Beginners won't know what Storage Manager is. Add headline "Track where your physical parts are stored (drawer, bin, shelf, etc.)".
+
+### Pass 2 — Serial Monitor (visual)
+
+Screenshot: `18-serial.png`
+
+- **E2E-429 ✅ visual EXCELLENT** — Top status row "Disconnected • Connect" + Monitor/Dashboard pills + Board/Baud/Ending dropdowns + 4 toggle switches + Save → consolidated control surface. Clean.
+- **E2E-430 ✅ visual** — Serial device preflight panel mirrors Arduino preflight. Consistent across hardware tabs.
+- **E2E-431 🟡 visual** — Bottom message input "Connect to a device first" placeholder is clear. Send button next to it disabled. Good gating.
+- **E2E-432 🟢 audience-newbie** — Beginner sees baud rate `115,200` — what is baud? Tooltip: "Baud rate = serial communication speed; 115,200 is most common for Arduino".
+- **E2E-433 🟢 audience-expert** — Expert wants RTS/DTR control with hex/binary mode + custom baud. Custom baud not visible.
+- **E2E-434 🟡 visual** — DTR/RTS/Auto-scroll/Timestamps switches use cyan when ON — readable but no labels visible above the switch ("Show timestamps in log") on hover.
+
+### Pass 2 — Calculators (visual)
+
+Screenshot: `19-calculators.png`
+
+- **E2E-435 ✅ visual** — 2-column card grid of calculators. Each card: title + formula + inputs + Calculate button (full-width cyan) + reset icon. Clean, scannable, beautiful.
+- **E2E-436 🟡 visual** — Forward/Reverse and RC Filter/Bandpass tabs inside cards — small text, easy to miss.
+- **E2E-437 🟢 audience-newbie** — Each card states the formula (V = I × R) — beginner-friendly. But should also link to Learn article on the topic for deeper.
+- **E2E-438 🟢 audience-expert** — Expert wants programmatic access — REPL-style command line (`ohm(v=5, i=0.02)` returns 250) for batch design.
+- **E2E-439 🟢 IDEA** — Add unit conversion calculators (mil↔mm, AWG↔mm², dBm↔mW) — common EDA needs.
+- **E2E-440 🟡 visual** — Cards have sharp corners. Soft rounded corners (matches rest of app's `rounded-md`) would feel less stark.
+
+### Pass 2 — Patterns (visual)
+
+Screenshot: `20-patterns.png`
+
+- **E2E-441 ✅ visual** — Patterns/My Snippets sub-tabs + Search + Category + Level filters + grouped sections (Digital(1), Power(4)). Each card: title + level pill (Beginner green / Intermediate yellow / Advanced orange) + chevron expand + description.
+- **E2E-442 🟡 visual** — Cards have chevron on right but click body NOT click chevron. Visual affordance unclear (cf. E2E-286).
+- **E2E-443 🟢 IDEA** — "Apply pattern to project" CTA missing. Should one-click instantiate the pattern (resistor + cap + IC) into Architecture/Schematic.
+- **E2E-444 🟢 audience-newbie** — Tagline "learn the 'why' not just the 'what'" — sets right expectation.
+- **E2E-445 🟢 audience-expert** — Expert wants to author + share custom snippets. "My Snippets" tab serves this; ensure it has good editor UX.
+
+### Pass 2 — Starter Circuits (visual)
+
+Screenshot: `21-starter.png`
+
+- **E2E-446 ✅ visual** — 3-column dense grid. Each card: title + chevron + description + tag chips (level/category/board). Filter pills at top: All / Basics / Sensors / Displays / Motors / Communication; All Levels / Beginner / Intermediate.
+- **E2E-447 🟡 visual** — Filter pills lack active-state styling indicator beyond underline. Hard to tell which filter is selected at a glance.
+- **E2E-448 🟢 audience-newbie** — Card descriptions are perfect for beginners ("classic Hello World", "Simulate a traffic light"). Excellent.
+- **E2E-449 🟢 audience-expert** — Expert wants ESP32, RP2040, STM32 starter variants beyond Arduino Uno only.
+- **E2E-450 🟢 IDEA** — "Open Circuit" button (in expanded view) — should also offer "Send to Schematic" / "Send to Breadboard" / "Send to PCB" multi-target.
+
+### Pass 2 — Labs (visual)
+
+Screenshot: `22-labs.png`
+
+- **E2E-451 ✅ visual** — Single-column list. Each lab: title + description + Beginner/Intermediate pill + clock-icon time estimate + category pill. Time estimate is unique to Labs (cf. Patterns/Starters which lack it).
+- **E2E-452 🔴 visual** — No CTA on each lab card (no "Start Lab" button visible). User doesn't know what to do.
+- **E2E-453 🟢 IDEA** — Add progress bar per lab once started ("Step 3 of 7 done").
+- **E2E-454 🟢 audience-newbie** — Excellent for guided learning. Add "Recommended for first-time" badge on the easiest lab.
+- **E2E-455 🟢 IDEA** — Labs and Patterns and Starter Circuits are 3 different "learning material" tabs. Could merge into one Learn hub with cards filterable by type.
+
+### Pass 2 — History (visual)
+
+Screenshot: `23-history.png`
+
+- **E2E-456 🔴 visual** — Massive empty space. Single snapshot card centered with vast dark area below. Should at least show grid background hint or version timeline placeholder.
+- **E2E-457 🟢 IDEA** — Snapshot cards should show diff stats ("+3 components / 2 nets / -1 BOM item") for at-a-glance change history.
+- **E2E-458 🟢 audience-expert** — Expert wants Git-like branching from snapshots ("Fork from this snapshot → new project"). Untested.
+
+### Pass 2 — Audit Trail (visual)
+
+Screenshot: `24-audit-trail.png`
+
+- **E2E-459 ✅ visual** — Each entry has icon (+/edit/delete) + name + action pill (Created cyan / Updated purple / Deleted red / Exported blue) + entity type pill + timestamp + "by Tyler" + (N fields) link. Excellent timeline.
+- **E2E-460 🔴 BUG REINFORCED (cf. E2E-298)** — Entries are from "OmniTrek Nexus" project but I'm on Blink LED tab. **Project scoping leak confirmed visually.**
+- **E2E-461 🟢 IDEA** — Add ability to revert specific changes from audit trail (Click "Deleted SPI Bus" → "Undo this delete").
+- **E2E-462 🟢 visual** — Date range pickers use native HTML date inputs — looks unstyled compared to the rest of the polished Tailwind components.
+
+### Pass 2 — Lifecycle (visual)
+
+Screenshot: `25-lifecycle.png`
+
+- **E2E-463 ✅ visual** — 5 status cards (Active green / NRND yellow / EOL orange / Obsolete red / Unknown grey) — color-coded lifecycle states. Industry-standard EDA pattern.
+- **E2E-464 🟢 IDEA** — Auto-pull from BOM should be the default workflow ("Track all BOM parts? [Yes]").
+- **E2E-465 🟢 audience-newbie** — NRND = Not Recommended for New Designs. Need tooltip.
+- **E2E-466 🟢 IDEA** — Add "Last checked" timestamp + "Refresh from supplier" action.
+
+### Pass 2 — Comments (skipped repeated screenshot — covered in Pass 1)
+
+- **E2E-467 🟢 IDEA** — Comments need to be anchored to design objects (component, wire, DRC issue). Currently general project chat only.
+
+### Pass 2 — Generative (skipped repeated screenshot — covered in Pass 1)
+
+- **E2E-468 🟡 visual** — Three sliders (Population/Generations) with no current-value labels visible. Need numeric value next to each slider.
+- **E2E-469 🟡 UX** — "Budget: $25 / Max Power: 5W / Max Temp: 85C" defaults are arbitrary — should match common project profiles (Hobby / Industrial / Automotive).
+
+### Pass 2 — Generative (visual updated)
+
+Screenshot: `26-generative.png`
+
+- **E2E-470 ✅ visual** — Sliders DO show current values inline (Budget: $25 / Max Power: 5W / Max Temp: 85C). Population/Generations are number inputs (6/5). Generate button cyan disabled-looking despite being enabled.
+- **E2E-471 🔴 visual** — Generate button has dark teal styling — looks disabled. Should match other primary cyan CTAs (e.g. Schematic's `Add Component`).
+- **E2E-472 🟡 UX** — "Population" + "Generations" without tooltips — beginner won't know these are GA params.
+
+### Pass 2 — Exports (visual)
+
+Screenshot: `27-exports.png`
+
+- **E2E-473 ✅ visual** — EXPORT CENTER + "17 formats" badge + Confidence panel + amber Export preflight receipt with "USE WITH CARE" warning + 4-column trust receipt (Circuit / Formats Ready / PCB Placed / Build Profiles). **Most polished gating UX in the app.**
+- **E2E-474 ✅ visual** — "Quick Export Profiles" with Fab Ready + Sim Bundle cards. Curated bundles for common workflows. Excellent.
+- **E2E-475 🟡 visual** — "Local preflight only" + "USE WITH CARE" amber pills — could include link to remote preflight option (paid feature?).
+- **E2E-476 🟢 IDEA** — Export center should preview file sizes before download ("BOM CSV ~3KB, Gerber ZIP ~120KB").
+- **E2E-477 🟢 audience-newbie** — 17 formats overwhelms newbies. The Quick Profiles partly solve this — promote them above the format list.
+
+### Pass 2 — Supply Chain / BOM Templates / My Parts (visual)
+
+Screenshots: `28-supply-chain.png`, `29-bom-templates.png`, `30-my-parts.png`
+
+- **E2E-478 🟡 visual** — All 3 tabs are vast empty space with single CTA (Check Now / Save BOM as Template / Search). Wastes screen. Bundle into a single "Library" parent tab with 3 sub-tabs.
+- **E2E-479 🟢 IDEA** — Empty states should hint at value: Supply Chain → "Get notified when parts you depend on go EOL"; BOM Templates → "Save successful BOMs as starting points for new projects"; My Parts → "Track your physical parts inventory so AI knows what you have on hand."
+- **E2E-480 🟢 audience-newbie** — Each is presented as a 1st-class workspace tab but they're really backstage utilities. Move to a dropdown / Settings.
+
+### Pass 2 — Alternates / Part Usage (BROKEN)
+
+Screenshots: `31-alternates.png`, `32-part-usage.png`
+
+- **E2E-481 🔴 P0 visual CONFIRMED** — Both tabs render only a red "Failed to load X data" message + huge empty page. **Catastrophic UX failure** — user has no idea what's wrong, no retry, no link to setup. This is worse than the 401 console error (E2E-312/313); it's confirmed visually as broken.
+- **E2E-482 🔴 visual** — Error message is small, centered, and red on dark background — barely visible. Use proper error toast + retry button.
+
+---
+
+## PASS 2 — APP-WIDE CRITIQUE (cross-tab themes)
+
+After visual review of all 32+ tabs:
+
+- **E2E-483 🔴 systemic** — **Top toolbar overload.** ~32 icon-only buttons in tight cluster, no labels, no group separation. New users panic, experts can't tell modes. Group by purpose (workspace / view / collab / help / mode) with inline labels by default + a "Compact" toggle.
+- **E2E-484 🔴 systemic** — **Tab strip overflow.** 35 tabs requires horizontal scroll. Show only top 8-10 + an "All Tabs" overflow drawer, OR collapse into vertical sidebar like VS Code.
+- **E2E-485 🔴 systemic** — **Confidence labels self-contradict** in 4+ places ("Evidence strong" + "SETUP REQUIRED" / "All Checks Passing" + "128 issues"). Pick ONE source of truth.
+- **E2E-486 🟡 systemic** — **Empty-state overuse.** Many tabs are 80%+ empty space. Either prefill with useful demos or merge thin tabs.
+- **E2E-487 🟡 systemic** — **Three Learning surfaces:** Learn / Patterns / Starter Circuits + Vault. All overlap. Merge into a single "Learn Hub" with type filters.
+- **E2E-488 🟡 systemic** — **Three board sources:** PCB tab default 50×40, 3D View 100×80, Order PCB 100×80 (E2E-228/235/270). One source of truth needed.
+- **E2E-489 🟢 systemic** — **Trust receipt + confidence panel pattern is ProtoPulse's superpower.** Replicate to every tab that involves trust (Procurement, Validation, Generative).
+- **E2E-490 🟢 systemic** — **Card → action integration (E2E-283 Calculator → BOM)** should be the universal pattern. Every card across Patterns, Learn, Community, Starter Circuits should have one-click "Use this" CTAs that wire to the rest of the app.
+- **E2E-491 🟡 systemic** — **Color taxonomy untaught.** Cyan = primary action, orange = warning, red = error/critical, green = success, purple = info-pill. But categories also use these colors (Power=red, Passive=green) creating clash. Document the color system.
+- **E2E-492 🔴 systemic** — **Beginner mode (Student) doesn't visibly change UI.** Promised "simpler" but nothing different from Hobbyist mode in this audit. Verify mode actually does something.
+- **E2E-493 🔴 systemic** — **AI Assistant collapsed sidebar** (right side, vertical text "AI ASSISTANT") is a key feature buried as a slim strip. Make it a clear floating chat icon like ChatGPT.
+- **E2E-494 🟡 systemic** — **Accessibility gaps systemic:** role="button" on divs, missing aria-labels on icon-only buttons, color-only state indicators. Run axe-core scan and fix top-50 issues.
+- **E2E-495 🟢 IDEA systemic** — Add a global Command Palette (Ctrl+K) — power user productivity multiplier.
+- **E2E-496 🟢 IDEA systemic** — Add an "Onboarding tour" using the Coach button (when fixed) — guided first-time walkthrough of all major workflows.
+
 ---
 
 ## TL;DR — Top P0/P1 Bugs (action items)
