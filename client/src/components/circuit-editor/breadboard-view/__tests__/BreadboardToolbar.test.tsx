@@ -87,7 +87,9 @@ describe('BreadboardToolbar', () => {
 
   it('shows the active circuit name in the label', () => {
     render(<BreadboardToolbar {...makeProps()} />);
-    expect(screen.getByText(/Main Circuit/)).toBeInTheDocument();
+    // The label span contains "Name — Wiring Bench"; use the full string to avoid
+    // colliding with the circuit name that also appears in the Select option.
+    expect(screen.getByText('Main Circuit — Wiring Bench')).toBeInTheDocument();
   });
 
   it('shows "No circuit selected" when activeCircuit is null', () => {
