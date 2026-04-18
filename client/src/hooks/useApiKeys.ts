@@ -156,12 +156,13 @@ export function useApiKeys(): UseApiKeysResult {
 
     const allProviders: ApiKeyProvider[] = ['gemini'];
     for (const provider of allProviders) {
-      const localKey = readLocalKey(provider);
-      if (localKey && !serverProviders.has(provider)) {
-        storeOnServer({ provider, apiKey: localKey });
-        clearLocalKey(provider);
-      } else if (localKey && serverProviders.has(provider)) {
-        clearLocalKey(provider);
+      // readScratchKey drains legacy localStorage AND returns current sessionStorage scratch.
+      const scratch = readScratchKey(provider);
+      if (scratch && !serverProviders.has(provider)) {
+        storeOnServer({ provider, apiKey: scratch });
+        clearScratchKey(provider);
+      } else if (scratch && serverProviders.has(provider)) {
+        clearScratchKey(provider);
       }
     }
 
