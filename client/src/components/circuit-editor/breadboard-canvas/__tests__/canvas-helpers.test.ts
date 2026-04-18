@@ -160,13 +160,16 @@ describe('buildPlacementForDrop', () => {
   });
 
   it('clamps startRow to keep the placement on-board', () => {
+    // Request a drop near the bottom of the 63-row board.
     const placement = buildPlacementForDrop(
-      { type: 'terminal', col: 'a', row: 30 },
+      { type: 'terminal', col: 'a', row: 63 },
       'ic',
       8,
     );
-    // startRow + rowSpan - 1 must not exceed 30 (BB.ROWS)
-    expect(placement.startRow + placement.rowSpan - 1).toBeLessThanOrEqual(30);
+    // startRow + rowSpan - 1 must not exceed BB.ROWS (63).
+    expect(placement.startRow + placement.rowSpan - 1).toBeLessThanOrEqual(63);
+    // And the clamp actually had to kick in — startRow must be < requested row.
+    expect(placement.startRow).toBeLessThan(63);
   });
 });
 

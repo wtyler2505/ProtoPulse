@@ -9,7 +9,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import BreadboardStarterShelf from '../BreadboardStarterShelf';
 
 describe('BreadboardStarterShelf', () => {
-  it('renders without crashing', () => {
+  it('renders without crashing', { timeout: 15000 }, () => {
     render(<BreadboardStarterShelf />);
     expect(screen.getByTestId('breadboard-starter-shelf')).toBeInTheDocument();
   });

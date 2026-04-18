@@ -616,6 +616,7 @@ function checkStrappingPinConflicts(
             : `Pin ${pinOnThisInstance} is a boot strapping pin. External signal loads can interfere with power-on behavior.`,
           affectedInstanceIds: [inst.id],
           affectedPinIds: [vbPin?.id ?? pinOnThisInstance],
+          remediationLink: VAULT_SLUGS.ESP32_STRAPPING_BUFFER,
         });
       }
     }
