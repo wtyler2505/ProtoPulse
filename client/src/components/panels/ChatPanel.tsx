@@ -58,6 +58,7 @@ import { useReviewQueue } from '@/lib/ai-review-queue';
 import { ACTION_LABELS } from './chat/constants';
 import SafetyConfirmDialog from './SafetyConfirmDialog';
 import { buildChatActionTrustReceipt } from '@/lib/trust-receipts';
+import { logger } from '@/lib/logger';
 
 /** Maximum number of SSE reconnection attempts on network failure. */
 const SSE_MAX_RETRIES = 3;
@@ -717,13 +718,13 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             } catch (parseErr: unknown) {
               sseErrorCount++;
               if (sseErrorCount <= 3) {
-                console.warn('[SSE] Failed to parse event:', line.slice(0, 100), parseErr);
+                logger.warn('[SSE] Failed to parse event:', line.slice(0, 100), parseErr);
               }
             }
           }
         }
         if (sseErrorCount > 0) {
-          console.warn(`[SSE] ${String(sseErrorCount)} parse error(s) during stream`);
+          logger.warn(`[SSE] ${String(sseErrorCount)} parse error(s) during stream`);
         }
       }
 
@@ -875,7 +876,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.warn('Chat export failed:', err);
+      logger.warn('Chat export failed:', err);
       alert('Failed to export chat. Please try again.');
     }
   }, [messages, projectName]);

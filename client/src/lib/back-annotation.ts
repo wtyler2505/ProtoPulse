@@ -11,7 +11,7 @@
  * Usage:
  *   const manager = BackAnnotationManager.getInstance();
  *   manager.addPatch(generateBomBackAnnotationPatch(bomItem, instanceId, designId));
- *   manager.subscribe(() => console.log(manager.getSnapshot()));
+ *   manager.subscribe(() => logger.debug(manager.getSnapshot()));
  */
 
 // ---------------------------------------------------------------------------

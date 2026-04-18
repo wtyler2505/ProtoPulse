@@ -8,7 +8,7 @@
  *
  * Usage:
  *   const conflicts = detectConflicts(installedLibraries);
- *   console.log(formatConflictReport(conflicts));
+ *   logger.debug(formatConflictReport(conflicts));
  *
  *   const includes = parseIncludeDirectives(sketchCode);
  *   const lib = resolveLibraryForInclude('SPI.h', installedLibraries);

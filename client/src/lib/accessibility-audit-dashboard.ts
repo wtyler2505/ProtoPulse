@@ -12,7 +12,7 @@
  * Usage:
  *   const checks: A11yAuditCheck[] = [ ... ];
  *   const result = runAccessibilityAudit(checks);
- *   console.log(result.score, result.grade);
+ *   logger.debug(result.score, result.grade);
  *
  *   // Track a fix over time
  *   const updated = trackFix(result, 'contrast-btn-primary');

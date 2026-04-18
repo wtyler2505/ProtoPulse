@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface ValidationBoundaryProps {
   children: ReactNode;
@@ -22,7 +23,7 @@ export class ValidationErrorBoundary extends Component<ValidationBoundaryProps, 
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.warn('[ValidationView] Error caught by boundary:', error.message, info.componentStack);
+    logger.warn('[ValidationView] Error caught by boundary:', error.message, info.componentStack);
   }
 
   render() {

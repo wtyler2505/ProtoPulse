@@ -17,6 +17,7 @@ import type {
   NetSegmentJSON,
 } from './converters';
 import type { CreateInstanceMutation, UpdateDesignMutation, CreateNetMutation, ToastFn } from './types';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Mutation ref types — uses proper types derived from actual hooks
@@ -174,7 +175,7 @@ export function useSchematicClipboard({
         description: `Added ${insts.length} components and ${bundle.nets?.length || 0} nets.`,
       });
     } catch (err) {
-      console.error('Paste failed', err);
+      logger.error('Paste failed', err);
       mutationRefs.toast.current!({
         variant: 'destructive',
         title: 'Paste failed',
@@ -257,7 +258,7 @@ export function useSchematicClipboard({
         description: `Copied ${bundle.instances.length} components and ${bundle.nets.length} nets.`,
       });
     } catch (err) {
-      console.error('Copy failed', err);
+      logger.error('Copy failed', err);
     }
     return true;
   }, [localNodes, instances, nets, settings, mutationRefs]);

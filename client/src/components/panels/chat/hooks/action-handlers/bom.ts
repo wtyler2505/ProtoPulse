@@ -1,6 +1,7 @@
 import type { BomItem } from '@/lib/project-context';
 import { buildCSV, downloadBlob } from '@/lib/csv';
 import type { ActionHandler } from './types';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Suggest-alternatives database
@@ -180,7 +181,7 @@ const exportBomCsv: ActionHandler = (_action, ctx) => {
       ctx.history.addToHistory('Exported BOM as CSV', 'AI');
       ctx.output.addOutputLog('[AI] Exported BOM as CSV');
     } catch (err) {
-      console.warn('Export failed:', err);
+      logger.warn('Export failed:', err);
     }
   }
 };

@@ -9,13 +9,14 @@
  * Usage:
  *   const assessor = new DamageAssessor();
  *   const report = assessor.assess('capacitor-electrolytic', observations);
- *   console.log(report.overallGrade, report.usable);
+ *   logger.debug(report.overallGrade, report.usable);
  *
  * React hook:
  *   const { assess, getHistory, clearHistory, lastReport } = useDamageAssessment();
  */
 
 import { useCallback, useState } from 'react';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Types

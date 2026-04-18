@@ -1,6 +1,7 @@
 import { nodeData } from '../../chat-types';
 import { downloadBlob } from '@/lib/csv';
 import type { ActionHandler } from './types';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Handlers
@@ -50,7 +51,7 @@ const exportKicad: ActionHandler = (_action, ctx) => {
   try {
     downloadBlob(new Blob([kicadContent.join('\n')], { type: 'text/plain' }), `${ctx.meta.projectName || 'design'}.kicad_sch`);
   } catch (err) {
-    console.warn('KiCad export failed:', err);
+    logger.warn('KiCad export failed:', err);
   }
 
   ctx.history.addToHistory('Exported KiCad schematic', 'AI');
@@ -82,7 +83,7 @@ const exportSpice: ActionHandler = (_action, ctx) => {
   try {
     downloadBlob(new Blob([spiceLines.join('\n')], { type: 'text/plain' }), `${ctx.meta.projectName || 'design'}.cir`);
   } catch (err) {
-    console.warn('SPICE export failed:', err);
+    logger.warn('SPICE export failed:', err);
   }
 
   ctx.history.addToHistory('Exported SPICE netlist', 'AI');
@@ -139,7 +140,7 @@ const exportDesignReport: ActionHandler = (_action, ctx) => {
   try {
     downloadBlob(new Blob([report], { type: 'text/markdown' }), `${ctx.meta.projectName || 'design'}_report.md`);
   } catch (err) {
-    console.warn('Report export failed:', err);
+    logger.warn('Report export failed:', err);
   }
 
   ctx.arch.setActiveView('output');

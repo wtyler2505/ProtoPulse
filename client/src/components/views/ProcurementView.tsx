@@ -52,6 +52,7 @@ import SupplyChainAlertsPanel from './SupplyChainAlertsPanel';
 import BomTemplatesPanel from './BomTemplatesPanel';
 import PersonalInventoryPanel from './PersonalInventoryPanel';
 import type { AssemblyCategory, EnrichedBomItem, EditValues, NewItemValues, CostBreakdown } from './procurement';
+import { logger } from '@/lib/logger';
 
 const BomDiffPanel = lazy(() => import('@/components/views/BomDiffPanel'));
 const AssemblyGroupPanel = lazy(() => import('./procurement/AssemblyGroupPanel').then((m) => ({ default: m.AssemblyGroupPanel })));
@@ -277,7 +278,7 @@ function ProcurementView() {
       downloadBlob(new Blob([csv], { type: 'text/csv' }), 'bom_export.csv');
       toast({ title: 'Export Complete', description: 'BOM exported as CSV file.' });
     } catch (err) {
-      console.warn('Export failed:', err);
+      logger.warn('Export failed:', err);
       toast({ title: 'Export Failed', description: 'Could not export CSV. Please try again.', variant: 'destructive' });
     }
   }, [filteredBom, toast]);

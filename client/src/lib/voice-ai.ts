@@ -15,7 +15,7 @@
  *
  * Usage:
  *   const manager = VoiceAIManager.getInstance();
- *   manager.onTranscript = (text) => console.log(text);
+ *   manager.onTranscript = (text) => logger.debug(text);
  *   await manager.startListening();
  *
  * React hook:

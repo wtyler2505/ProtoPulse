@@ -12,7 +12,7 @@
  *
  * Usage:
  *   const analysis = analyzeBomCost(bomItems, { budget: 150 });
- *   console.log(analysis.suggestions);
+ *   logger.debug(analysis.suggestions);
  *
  * React hook:
  *   const { analyze, lastAnalysis } = useCostOptimizer();
@@ -21,6 +21,7 @@
 import { useCallback, useState } from 'react';
 
 import type { BomItem } from '@/lib/project-context';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Types

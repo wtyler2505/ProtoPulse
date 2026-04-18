@@ -134,7 +134,7 @@ export class SerialLogger {
 
     // Chunk management to prevent infinite memory growth (cap at 50MB for sanity)
     if (this._size + byteSize > 50 * 1024 * 1024) {
-      console.warn('SerialLogger: Recording exceeded 50MB. Auto-stopping.');
+      logger.warn('SerialLogger: Recording exceeded 50MB. Auto-stopping.');
       this.stopRecording();
       return;
     }

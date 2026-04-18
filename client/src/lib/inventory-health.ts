@@ -12,7 +12,7 @@
  * Usage:
  *   const analyzer = new InventoryHealthAnalyzer();
  *   const report = analyzer.analyze(inventory, activeDesignBomIds);
- *   console.log(report.grade, report.overallScore);
+ *   logger.debug(report.grade, report.overallScore);
  */
 
 // ---------------------------------------------------------------------------

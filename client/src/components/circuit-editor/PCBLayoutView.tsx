@@ -120,6 +120,7 @@ import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRo
 import CollaborationCursors, { useCursorEmitter } from './CollaborationCursors';
 import type { CollaborationClient } from '@/lib/collaboration-client';
 import { useDfmHighlights } from '@/lib/dfm-pcb-bridge';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // View3DButton — jumps to viewer_3d ViewMode
@@ -584,7 +585,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
       await navigator.clipboard.writeText(JSON.stringify(bundle, null, 2));
       toast({ title: 'Copied', description: `Copied ${bundle.instances.length} components.` });
     } catch (err) {
-      console.error('Copy failed', err);
+      logger.error('Copy failed', err);
     }
   }, [selectedInstanceIds, selectedInstanceId, instances, toast]);
 
@@ -649,7 +650,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
       }
       toast({ title: 'Pasted successfully', description: `Added ${insts.length} components.` });
     } catch (err) {
-      console.error('Paste failed', err);
+      logger.error('Paste failed', err);
       toast({ variant: 'destructive', title: 'Paste failed', description: 'Error duplicating components.' });
     }
   }, [circuitId, instances, panOffset, zoom, createInstanceMutation, toast]);

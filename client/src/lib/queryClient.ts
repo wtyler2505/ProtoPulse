@@ -1,6 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { mapErrorToUserMessage } from '@/lib/error-messages';
+import { logger } from '@/lib/logger';
 
 const SESSION_KEY = 'protopulse-session-id';
 
@@ -115,7 +116,7 @@ export const queryClient = new QueryClient({
     mutations: {
       retry: false,
       onError: (error: Error) => {
-        console.error('[API Mutation Error]', error.message);
+        logger.error('[API Mutation Error]', error.message);
         const mapped = mapErrorToUserMessage(error);
         toast({
           variant: "destructive",
@@ -130,7 +131,7 @@ export const queryClient = new QueryClient({
 // Global query error handler — catches unhandled query failures and shows a toast.
 // This runs in addition to any per-query onError callbacks.
 queryClient.getQueryCache().config.onError = (error: Error) => {
-  console.error('[API Query Error]', error.message);
+  logger.error('[API Query Error]', error.message);
   const mapped = mapErrorToUserMessage(error);
   toast({
     variant: "destructive",

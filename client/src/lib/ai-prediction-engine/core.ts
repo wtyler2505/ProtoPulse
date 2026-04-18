@@ -15,6 +15,7 @@ import { COOLDOWN_MS, DEBOUNCE_MS, MAX_SUGGESTIONS } from './constants';
 import { getAllRules } from './rules';
 import { adjustConfidence, trackFeedback } from './scoring';
 import type {
+import { logger } from '@/lib/logger';
   DismissRecord,
   FeedbackRecord,
   Prediction,
@@ -233,7 +234,7 @@ export class PredictionEngine {
       return merged;
     } catch (err: unknown) {
       // AI failure is non-fatal — heuristic results still stand
-      console.warn('[PredictionEngine] AI enhancement failed, using heuristic results only:', err instanceof Error ? err.message : String(err));
+      logger.warn('[PredictionEngine] AI enhancement failed, using heuristic results only:', err instanceof Error ? err.message : String(err));
       return heuristicResults;
     } finally {
       this.isAnalyzing = false;

@@ -17,6 +17,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -910,7 +911,7 @@ export class ScanSession {
  *
  * Usage:
  *   const { start, stop, isScanning, lastResult } = useBarcodeScanner({
- *     onScan: (result) => console.log('Scanned:', result),
+ *     onScan: (result) => logger.debug('Scanned:', result),
  *   });
  */
 export function useBarcodeScanner(options?: UseBarcodeScannerOptions) {

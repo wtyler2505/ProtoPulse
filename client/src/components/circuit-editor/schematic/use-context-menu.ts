@@ -7,6 +7,7 @@ import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
 import type { CircuitSettings, PowerSymbol, SchematicTool } from '@shared/circuit-types';
 import type { Connector } from '@shared/component-types';
 import type { CreateInstanceMutation, UpdateDesignMutation, CreateNetMutation, ToastFn } from './types';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Mutation ref types
@@ -178,7 +179,7 @@ export function useSchematicContextMenu({
         description: `Added 100nF and 10uF capacitors to ${inst.referenceDesignator}.`,
       });
     }).catch(err => {
-      console.error('Failed to add decoupling:', err);
+      logger.error('Failed to add decoupling:', err);
       mutationRefs.toast.current!({ title: 'Error', description: 'Failed to add decoupling capacitors.', variant: 'destructive' });
     });
 

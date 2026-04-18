@@ -29,6 +29,7 @@ import { SnippetLibrary } from '@/lib/design-reuse';
 import { placeSnippetAtomic } from '@/lib/snippet-undo';
 import { LibrarySuggestPopover } from '@/components/ui/LibrarySuggestPopover';
 import type { LibrarySuggestion } from '@/lib/library-auto-suggest';
+import { logger } from '@/lib/logger';
 
 const nodeTypes = {
   custom: CustomNode,
@@ -341,7 +342,7 @@ function ArchitectureFlow() {
           await navigator.clipboard.writeText(JSON.stringify(bundle, null, 2));
           addOutputLog(`[ARCH] Copied ${selected.length} node(s) and ${connectedEdges.length} edge(s) to system clipboard`);
         } catch (err) {
-          console.error('Copy failed', err);
+          logger.error('Copy failed', err);
           addOutputLog(`[ARCH] Copied ${selected.length} node(s) and ${connectedEdges.length} edge(s) to internal clipboard only`);
         }
       }

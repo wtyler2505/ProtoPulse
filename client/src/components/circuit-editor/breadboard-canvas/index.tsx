@@ -106,6 +106,7 @@ import { CanvasCoordinateReadout } from './CanvasCoordinateReadout';
 import { WireColorMenu } from './WireColorMenu';
 import { CanvasEmptyGuidance } from './CanvasEmptyGuidance';
 import { useCanvasViewport } from './useCanvasViewport';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -743,7 +744,7 @@ export function BreadboardCanvas({
         description: `Staged ${String(coachActionCount)} bench coach move${coachActionCount === 1 ? '' : 's'} around ${selectedInstanceModel.refDes}.`,
       });
     } catch (error) {
-      console.error('Failed to apply bench coach plan', error);
+      logger.error('Failed to apply bench coach plan', error);
       toast({
         title: 'Bench coach plan failed',
         description: `ProtoPulse could not stage the coach plan around ${selectedInstanceModel.refDes}.`,

@@ -13,7 +13,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
       document.execCommand('copy');
       return true;
     } catch {
-      console.warn('Clipboard write failed');
+      logger.warn('Clipboard write failed');
       return false;
     } finally {
       document.body.removeChild(textarea);

@@ -12,7 +12,7 @@
  * Usage:
  *   const result = scanSketchForSecrets(sketchCode);
  *   if (shouldBlockUpload(result)) {
- *     console.warn(formatFindings(result.findings));
+ *     logger.warn(formatFindings(result.findings));
  *   }
  */
 

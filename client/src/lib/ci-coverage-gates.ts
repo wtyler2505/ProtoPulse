@@ -8,8 +8,8 @@
  *
  * Usage:
  *   const result = evaluateCoverage(fileResults, DEFAULT_THRESHOLDS);
- *   console.log(result.passed, getQualityGrade(result.overallCoverage));
- *   console.log(formatCoverageReport(result));
+ *   logger.debug(result.passed, getQualityGrade(result.overallCoverage));
+ *   logger.debug(formatCoverageReport(result));
  */
 
 // ---------------------------------------------------------------------------

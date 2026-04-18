@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, RefreshCw, Wifi, Usb } from 'lucide-react';
 import type { ArduinoBuildProfile } from '@shared/schema';
 import { BUILT_IN_PRESETS } from '@/lib/arduino/board-settings';
+import { logger } from '@/lib/logger';
 
 interface ProfileSettingsDialogProps {
   open: boolean;
@@ -47,7 +48,7 @@ export default function ProfileSettingsDialog({
       const data = await res.json();
       setNetworkDevices(data.devices || []);
     } catch (e) {
-      console.error('Failed to scan network', e);
+      logger.error('Failed to scan network', e);
     } finally {
       setIsScanning(false);
     }

@@ -1,6 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react';
 import { AlertTriangle, RotateCcw, Trash2, Settings } from 'lucide-react';
 import { queryClient } from '@/lib/queryClient';
+import { logger } from '@/lib/logger';
 
 interface Props {
   children: ReactNode;
@@ -27,7 +28,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     if (error.message?.match(/ResizeObserver loop (limit exceeded|completed with undelivered notifications)/)) return;
-    console.warn('ErrorBoundary caught:', error.message, info.componentStack);
+    logger.warn('ErrorBoundary caught:', error.message, info.componentStack);
   }
 
   private handleRetry = () => {

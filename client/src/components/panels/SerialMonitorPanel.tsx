@@ -39,6 +39,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import TrustReceiptCard from '@/components/ui/TrustReceiptCard';
 import {
+import { logger } from '@/lib/logger';
   Zap,
   ZapOff,
   Trash2,
@@ -462,7 +463,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
           });
         }
       } catch (err) {
-        console.error('Failed to parse replay file', err);
+        logger.error('Failed to parse replay file', err);
       }
       
       // Reset input

@@ -8,13 +8,14 @@
  *
  * Usage:
  *   const usage = parseCompilerOutput(compilerStdout);
- *   console.log(formatRamUsage(usage)); // "1,024 / 2,048 bytes (50.0%) — OK"
+ *   logger.debug(formatRamUsage(usage)); // "1,024 / 2,048 bytes (50.0%) — OK"
  *
  * React hook:
  *   const { usage, update, reset } = useRamMonitor('Arduino Uno');
  */
 
 import { useCallback, useState } from 'react';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Types
