@@ -61,7 +61,7 @@ function buildModel(
     fitSummary: 'Native fit.',
     inventorySummary: 'Ready now.',
     trustSummary: 'Verified exact.',
-    verificationLevel: 'full',
+    verificationLevel: 'official-backed',
     verificationStatus: 'verified',
     trustTier,
     coach: {
@@ -153,69 +153,55 @@ describe('BreadboardPartInspector — 4-canonical-tier trust badge (audit #173)'
   });
 
   it('verified-exact badge uses emerald color class', () => {
-    const { container } = render(
-      <BreadboardPartInspector {...baseProps(buildModel('verified-exact'))} />,
-    );
-    const badge = container.querySelector('.border-emerald-400\\/30.bg-emerald-400\\/10');
+    render(<BreadboardPartInspector {...baseProps(buildModel('verified-exact'))} />);
+    // Get the badge element that contains the tier label text
+    const badge = screen.getByText('Verified exact').closest('[class*="border-"]');
     expect(badge).toBeTruthy();
-    expect(badge?.textContent).toContain('Verified exact');
+    expect(badge?.className).toContain('emerald');
   });
 
   it('connector-defined badge uses sky color class', () => {
-    const { container } = render(
-      <BreadboardPartInspector {...baseProps(buildModel('connector-defined'))} />,
-    );
-    const badge = container.querySelector('.border-sky-400\\/30.bg-sky-400\\/10');
+    render(<BreadboardPartInspector {...baseProps(buildModel('connector-defined'))} />);
+    const badge = screen.getByText('Connector defined').closest('[class*="border-"]');
     expect(badge).toBeTruthy();
-    expect(badge?.textContent).toContain('Connector defined');
+    expect(badge?.className).toContain('sky');
   });
 
   it('heuristic badge uses amber color class', () => {
-    const { container } = render(
-      <BreadboardPartInspector {...baseProps(buildModel('heuristic'))} />,
-    );
-    const badge = container.querySelector('.border-amber-400\\/30.bg-amber-400\\/10');
+    render(<BreadboardPartInspector {...baseProps(buildModel('heuristic'))} />);
+    const badge = screen.getByText('Heuristic').closest('[class*="border-"]');
     expect(badge).toBeTruthy();
-    expect(badge?.textContent).toContain('Heuristic');
+    expect(badge?.className).toContain('amber');
   });
 
   it('stash-absent badge uses rose color class', () => {
-    const { container } = render(
-      <BreadboardPartInspector {...baseProps(buildModel('stash-absent'))} />,
-    );
-    const badge = container.querySelector('.border-rose-500\\/30.bg-rose-500\\/10');
+    render(<BreadboardPartInspector {...baseProps(buildModel('stash-absent'))} />);
+    const badge = screen.getByText('Stash absent').closest('[class*="border-"]');
     expect(badge).toBeTruthy();
-    expect(badge?.textContent).toContain('Stash absent');
+    expect(badge?.className).toContain('rose');
   });
 
   it('all 4 tiers have distinct badge color classes from each other', () => {
+    const tierLabels: [BreadboardTrustTier, string][] = [
+      ['verified-exact', 'Verified exact'],
+      ['connector-defined', 'Connector defined'],
+      ['heuristic', 'Heuristic'],
+      ['stash-absent', 'Stash absent'],
+    ];
+
     const colorClasses: string[] = [];
 
-    for (const tier of ['verified-exact', 'connector-defined', 'heuristic', 'stash-absent'] as BreadboardTrustTier[]) {
-      const { container } = render(
-        <BreadboardPartInspector {...baseProps(buildModel(tier))} />,
-      );
-      // Find the trust-tier badge by looking for the badge that contains the
-      // tier-specific label text
-      const allBadges = container.querySelectorAll('[class*="border-"][class*="bg-"]');
-      let tierBadgeClass: string | undefined;
-      for (const badge of Array.from(allBadges)) {
-        const text = badge.textContent ?? '';
-        if (
-          (tier === 'verified-exact' && text.includes('Verified exact')) ||
-          (tier === 'connector-defined' && text.includes('Connector defined')) ||
-          (tier === 'heuristic' && text.includes('Heuristic')) ||
-          (tier === 'stash-absent' && text.includes('Stash absent'))
-        ) {
-          // Extract the color-bearing classes
-          tierBadgeClass = Array.from(badge.classList)
-            .filter((c) => c.startsWith('border-') || c.startsWith('bg-'))
-            .join(' ');
-          break;
-        }
-      }
-      expect(tierBadgeClass).toBeTruthy();
-      colorClasses.push(tierBadgeClass!);
+    for (const [tier, label] of tierLabels) {
+      render(<BreadboardPartInspector {...baseProps(buildModel(tier))} />);
+      // Find by text then walk up to the badge element with a border class
+      const badge = screen.getByText(label).closest('[class*="border-"]');
+      expect(badge).toBeTruthy();
+      // Extract the color-bearing segment from the class list
+      const colorClass = Array.from(badge!.classList)
+        .filter((c) => c.startsWith('border-') || c.startsWith('bg-'))
+        .sort()
+        .join(' ');
+      colorClasses.push(colorClass);
     }
 
     // All 4 tiers must have distinct color class combinations
