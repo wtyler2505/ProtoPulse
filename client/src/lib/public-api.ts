@@ -441,7 +441,12 @@ export class PublicApiManager {
       }
       const keysJson = localStorage.getItem(STORAGE_KEY_API_KEYS);
       if (keysJson) {
-        this.apiKeys = JSON.parse(keysJson) as ApiKey[];
+        // Audit #60: the raw `key` secret is NEVER persisted (see save()). Rehydrated
+        // records have `key: ''` — they're metadata-only and cannot be used for
+        // validation after a reload. Consumers must copy the key at generation time
+        // (GitHub/Stripe "we won't show it again" pattern).
+        const stored = JSON.parse(keysJson) as Array<Omit<ApiKey, 'key'>>;
+        this.apiKeys = stored.map((k) => ({ ...k, key: '' }));
       }
     } catch {
       this.webhooks = [];

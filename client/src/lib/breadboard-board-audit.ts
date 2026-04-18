@@ -1123,6 +1123,31 @@ function checkHeuristicEsp32RestrictedPins(input: BoardAuditInput): BoardAuditIs
     if (!isHeuristicEsp32(part, inst)) continue;
     if (part && hasVerifiedBoardMatch(part)) continue;
 
+    // Unknown-variant conservative advisory (audit #241). When the part title
+    // doesn't match any recognized ESP32 silicon revision, emit a single
+    // info-level advisory per instance so silent pass-through never happens on
+    // new ESP32 variants.
+    if (part) {
+      const meta = getMeta(part);
+      const title = (typeof meta.title === 'string' ? meta.title : '').toLowerCase();
+      if (!KNOWN_ESP32_VARIANTS.test(title)) {
+        issues.push({
+          id: `heuristic-esp32-unknown-variant-${String(inst.id)}`,
+          severity: 'info',
+          category: 'safety',
+          title: `Unrecognized ESP32 variant on ${inst.referenceDesignator} — pin rules uncertain`,
+          detail:
+            `The part "${meta.title ?? inst.referenceDesignator}" looks like an ESP32 but does ` +
+            `not match any recognized silicon revision. Pin safety rules on this device cannot ` +
+            `be verified against an authoritative profile — treat restricted-pin warnings as ` +
+            `conservative advisory and consult the datasheet.`,
+          affectedInstanceIds: [inst.id],
+          affectedPinIds: [],
+          remediationLink: VAULT_SLUGS.ESP32_SAFE_PINS,
+        });
+      }
+    }
+
     const connectedPins = getConnectedPins(nets, inst.id);
 
     for (const pinKey of Array.from(connectedPins)) {
