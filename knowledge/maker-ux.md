@@ -29,6 +29,10 @@ Knowledge about UX patterns, interaction design, and accessibility principles th
 - [[production-mock-data-in-pricing-tool-causes-hallucinated-prices]] -- fake pricing destroys trust in the one-tool promise
 - [[vite-manual-chunks-defeats-dynamic-import-and-tree-shaking]] -- slow initial load is the first impression for new users
 - [[reactflow-json-stringify-sync-is-on-per-render-and-breaks-at-10k-nodes]] -- canvas stuttering breaks the "seeing" that makers need
+- [[skeleton-loading-without-status-text-reads-as-broken-during-multi-second-waits]] -- blank skeletons past 2s read as failure; status text preserves the user's mental model
+- [[visible-enabled-action-buttons-without-prerequisites-teach-users-to-distrust-the-ui]] -- enabled-but-failing buttons are interface betrayal; disabled+tooltip teaches the prerequisite
+- [[trust-receipts-should-pair-with-a-guided-setup-path-or-they-surface-problems-without-fixing-them]] -- transparency without agency strands beginners at the diagnosis
+- [[empty-state-panes-should-offer-a-one-click-on-ramp-not-just-describe-emptiness]] -- empty states are invitations, not announcements
 
 ## Core Principle
 **If a feature requires the user to already understand electronics to use it, it's not done yet.** Add AI guidance, tooltips, contextual explanations, or a learning mode.
@@ -66,6 +70,10 @@ Knowledge about UX patterns, interaction design, and accessibility principles th
 - Required fields with no guidance (label + example value + tooltip)
 - Error messages that describe the symptom, not the cause or fix
 - Features that only work if you already know the tool exists
+- Enabled action buttons with unmet prerequisites (disable + tooltip the prerequisite instead of letting the user click and fail)
+- Blank skeleton states on multi-second loads (show status text like "Connecting to Arduino CLI…")
+- Empty-state panes that only describe emptiness (offer a one-click on-ramp like "Open Blink example")
+- Transparency without agency — diagnostic panels that list unchecked preconditions without offering a guided path to resolve them
 
 ## Target User Model
 Tyler building his OmniTrek Nexus rover (Arduino Mega, ESP32, motor controllers, hoverboard wheels):
@@ -85,6 +93,7 @@ Tyler building his OmniTrek Nexus rover (Arduino Mega, ESP32, motor controllers,
 
 Agent Notes:
 - 2026-04-06: audit notes revealed 5 maker-impacting quality issues: (1) WCAG keyboard focus broken, (2) voice AI is fake, (3) mock pricing erodes trust, (4) slow initial load, (5) canvas stuttering. These undermine "one tool" promise more than missing features do.
+- 2026-04-18: Arduino tab E2E walkthrough validated the trust-receipt pattern (excellent transparency) but exposed 4 concrete UX gaps: 4s blank skeleton, enabled Verify/Upload with no board profile, trust receipt with no setup-wizard follow-through, and "No File Selected" empty state with no one-click entry. Pattern across all four: the UI describes problems without offering resolution paths. The Arduino surface is a worked example of transparency-without-agency as the dominant failure mode.
 
 Topics:
 - [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring
