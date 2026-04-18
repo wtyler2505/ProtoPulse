@@ -700,6 +700,37 @@ describe('Breadboard3DEngine — board info', () => {
     expect(dims.totalPoints).toBe(882);
   });
 
+  // ── BB830 datasheet assertions (audit #386) ────────────────────
+  // BusBoard BB830: 165.1 × 54.6 × 8.5 mm
+  // Source: https://www.busboard.com/BB830
+
+  it('BOARD_DIMS.length matches BB830 datasheet long axis (165.1 mm)', () => {
+    const dims = engine().getBoardDimensions();
+    expect(dims.length).toBe(165.1);
+  });
+
+  it('BOARD_DIMS.width matches BB830 datasheet short axis (54.6 mm)', () => {
+    const dims = engine().getBoardDimensions();
+    expect(dims.width).toBe(54.6);
+  });
+
+  it('BOARD_DIMS.thickness matches BB830 datasheet (8.5 mm)', () => {
+    const dims = engine().getBoardDimensions();
+    expect(dims.thickness).toBe(8.5);
+  });
+
+  it('sanity: 63 rows × PITCH_MM fits within BOARD_DIMS.length (long axis, with end margins)', () => {
+    const dims = engine().getBoardDimensions();
+    // 63 * 2.54 = 160.02 mm; board is 165.1 mm → ~5 mm of margin for row labels + edges
+    expect(63 * 2.54).toBeLessThan(dims.length);
+  });
+
+  it('sanity: 9-col terminal span + DIP channel gap fits within BOARD_DIMS.width (short axis)', () => {
+    const dims = engine().getBoardDimensions();
+    // 9 * 2.54 + 7.62 = 30.48 mm (outer terminal columns), well within 54.6 mm (rails + margins account for rest)
+    expect(9 * 2.54 + 7.62).toBeLessThan(dims.width);
+  });
+
   it('getPosition returns 3D coordinates', () => {
     const e = engine();
     const pos = e.getPosition(term('c', 10));

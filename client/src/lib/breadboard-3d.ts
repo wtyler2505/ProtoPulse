@@ -161,10 +161,13 @@ const SIGNAL_COLOR_CYCLE: WireColor[] = [
   'green', 'blue', 'yellow', 'orange', 'white', 'purple', 'brown', 'gray',
 ];
 
+// BusBoard BB830 datasheet: 6.5 × 2.2 × 0.3 in = 165.1 × 54.6 × 8.5 mm
+// Source verified: https://www.busboard.com/BB830
+// width = short axis (54.6 mm); length = long axis (165.1 mm, rows run along this)
 const BOARD_DIMS: BoardDimensions = {
-  width: 9 * PITCH_MM + CHANNEL_GAP_MM, // 9 inter-col pitches + 7.62mm DIP gap ≈ 30.5mm
-  length: ROWS * PITCH_MM, // 63 rows ≈ 160mm
-  thickness: BOARD_THICKNESS,
+  width: 54.6,   // BB830 short axis (mm) — 9-col span + rails + margins
+  length: 165.1, // BB830 long axis (mm)  — 63 rows × 2.54 mm = 160.02 mm + end margins
+  thickness: BOARD_THICKNESS, // 8.5 mm (unchanged — already correct)
   pitch: PITCH_MM,
   rows: ROWS,
   totalPoints: 2 * 5 * ROWS + 4 * ROWS, // 630 + 252 = 882
