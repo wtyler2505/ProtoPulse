@@ -1,5 +1,24 @@
 import type { Shape, CircleShape, Connector, DRCRule, DRCViolation, PartState, PcbDrcRuleType } from './component-types';
 import { nanoid } from 'nanoid';
+import type { Length_mil } from './units';
+
+/**
+ * BL-0126 — Shared unit/scale contract.
+ *
+ * DRC interfaces below historically documented length units in comments
+ * (`width: number; // mils`). That left the contract unenforced: a caller
+ * could hand DRC a millimetre value and nothing would catch it until a
+ * clearance check silently disagreed with SPICE. We now tag those fields
+ * with the shared `Length_mil` branded phantom type from `shared/units.ts`.
+ *
+ * Backward-compat: `Length_mil = number & { __unit: 'mil' }` — plain numbers
+ * still satisfy `number | Length_mil`, so existing call sites compile without
+ * changes. Call sites that opt into `asMil()` get compile-time checking.
+ *
+ * Cross-engine parity (SPICE ↔ DRC) is enforced via
+ * `shared/__tests__/cross-engine-parity.test.ts`.
+ */
+export type Mils = Length_mil | number;
 
 interface AABB {
   minX: number;
@@ -805,7 +824,8 @@ export interface PcbTrace {
   id: string;
   netId: string;
   layer: string;
-  width: number; // mils
+  /** Trace width — DRC length space (mils). See BL-0126 shared contract. */
+  width: Mils;
   points: Array<{ x: number; y: number }>;
 }
 
@@ -815,8 +835,10 @@ export interface PcbVia {
   netId: string;
   x: number;
   y: number;
-  drillDiameter: number; // mils
-  outerDiameter: number; // mils
+  /** Drill diameter — DRC length space (mils). See BL-0126 shared contract. */
+  drillDiameter: Mils;
+  /** Outer diameter — DRC length space (mils). See BL-0126 shared contract. */
+  outerDiameter: Mils;
 }
 
 /** A PCB pad belonging to a component instance and net. */

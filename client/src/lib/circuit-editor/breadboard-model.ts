@@ -3,7 +3,7 @@
  *
  * Models a standard 830-point solderless breadboard (internally 882 tie-points — see MODEL_TIE_POINTS vs PHYSICAL_TIE_POINTS):
  *   - Terminal strips: columns a-e (left) and f-j (right), rows 1-63
- *   - Power rails: two pairs running along the top and bottom edges
+ *   - Power rails: two pairs running along the left and right edges
  *   - Center channel (DIP gap) between columns e and f
  *
  * Tie-point connectivity:
@@ -375,12 +375,16 @@ export interface HolePosition {
  * a simpler `HolePosition` format suitable for UI highlight rendering.
  */
 export function getConnectedHoles(row: number, col: string): HolePosition[] {
-  // Determine if this is a rail or terminal position
+  // Determine if this is a rail or terminal position.
+  // Rail short-codes use physical orientation: +l/-l for the left-edge rails
+  // (pos/neg) and +r/-r for the right-edge rails. Renamed from the old
+  // +t/-t/+b/-b ("top/bottom") codes per audit #222/#348 — the MB-102 breadboard
+  // is oriented portrait in ProtoPulse, so rails run along the left/right edges.
   const railMapping: Record<string, RailId> = {
-    '+t': 'left_pos',
-    '-t': 'left_neg',
-    '+b': 'right_pos',
-    '-b': 'right_neg',
+    '+l': 'left_pos',
+    '-l': 'left_neg',
+    '+r': 'right_pos',
+    '-r': 'right_neg',
   };
 
   // Check if col is a rail identifier
