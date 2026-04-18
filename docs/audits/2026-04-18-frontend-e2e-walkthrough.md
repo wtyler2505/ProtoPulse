@@ -97,6 +97,87 @@ Screenshot: `07-3dview.png`
 - **E2E-368 🟢 audience-expert** — Expert wants STL/STEP export of the 3D model (Export button visible top right but unverified). Also wants pin-1 markers, polarity indicators.
 - **E2E-369 🟡 visual** — View angle buttons (Top/Bottom/Front/Back/Left/Right/Iso) are flat pills — no icon to telegraph each view. Icon (e.g. cube face) would help.
 
+### Pass 2 — Component Editor (visual)
+
+Screenshot: `08-component-editor.png`
+
+- **E2E-370 🔴 visual** — 6 sub-tabs (Breadboard/Schematic/PCB/Metadata/Pin Table/SPICE) + 13 toolbar buttons = visually dense top bar. Two rows of tabs+toolbar squeeze into ~80px height. Group toolbar by purpose (cf. E2E-040).
+- **E2E-371 🟢 visual** — Pin Table tab has a 2-line label "Pin Table" wrapping to two lines — looks awkward. Either widen tab or shorten label.
+- **E2E-372 ✅ visual** — Trust strip uses color-coded pills (orange "Candidate exact part" / cyan "ic-package" / cyan "Community-only" / "Authoritative wiring unlocked"). Excellent semantic encoding.
+- **E2E-373 🟡 visual** — Form layout (Title/Family full-width, Manufacturer+MPN side-by-side, Mounting+Package side-by-side, Tags full-width) — well-organized but no visual grouping headers ("Identity" / "Physical" / "Categorization").
+- **E2E-374 🟢 audience-newbie** — Beginner sees "Family", "Mounting Type", "Package Type", "MPN" — needs definitions. Tooltip with hover help.
+- **E2E-375 🟢 audience-expert** — Expert wants bulk-edit across multiple parts (no multi-select visible).
+- **E2E-376 🟡 visual** — PARTS sidebar has just 1 part (ATtiny85). For users with 100+ parts this list will scroll forever — needs search and group-by.
+
+### Pass 2 — Procurement (visual)
+
+Screenshot: `09-procurement.png`
+
+- **E2E-377 🔴 visual** — 17 sub-tabs in Procurement = horizontal-scroll tab strip. Even 11 visible at this width is overwhelming. Group as nested tabs: BOM (Management/Comparison/Templates) / Sourcing (Alternates/Live Pricing/Cost Optimizer/Order History) / Manufacturing (Assembly Cost/Risk/Groups/Mfg Validator/PCB Tracking) / Compliance (Risk Scorecard/AVL/Cross-Project/Supply Chain) / Personal Inventory.
+- **E2E-378 🟡 visual** — Empty BOM has icon + headline + sub-text + "+ Add First Item" button — empty state pattern is clean.
+- **E2E-379 🟡 UX** — `Cost Optimisation`, `ESD`, `Assembly` toggles look like buttons. Active state unclear without click.
+- **E2E-380 🟢 audience-newbie** — "ESD" abbreviation has no explanation. Beginners won't know it = electrostatic discharge filter.
+- **E2E-381 🟡 visual** — Cost summary "$0.00 / unit @ 1k qty" right-aligned, Export CSV next to it. Text is small. Make `$0.00` larger as KPI.
+- **E2E-382 🟢 IDEA** — Sortable column headers (sort icons next to Status / Part Number / Manufacturer / Stock / Qty / Unit Price / Total) — good. But no "save view" so user must reorder every session.
+
+### Pass 2 — Validation (visual)
+
+Screenshot: `10-validation.png`
+
+- **E2E-383 ✅ visual** — System Validation 2-column layout: left = Design Gateway / Manufacturer Rule Compare / BOM Completeness, right = Design Troubleshooter (with vertical scrolling list of 17 issues). Solid structure.
+- **E2E-384 🔴 visual** — Issue rows in Design Gateway use color tags (orange "power" / "signal" / "best-practice" / red severity dot). Hard to scan at a glance — same orange for "power" and severity is confusing.
+- **E2E-385 🟡 visual** — "Run DRC Checks" button is **bright cyan filled** (high-emphasis primary). But there's also "Run" buttons inside Design Gateway and DFM Check sections. Three Run buttons with same visual weight = which is the master?
+- **E2E-386 🟡 visual** — Issue toggle (chevron down) on right of each row is tiny — affordance for collapse unclear.
+- **E2E-387 🟢 audience-newbie** — Design Troubleshooter "Describe symptoms" input is excellent for beginners — they describe what's broken in plain English. Promote to top of validation page.
+- **E2E-388 🟢 audience-expert** — Expert wants to see DRC ruleset diff (current vs preset). No diff view.
+- **E2E-389 🟡 visual** — Severity filter "Errors (32) / Warnings (96) / Info (1)" — filter buttons but can multi-select? Unclear from styling.
+
+### Pass 2 — Simulation (visual)
+
+Screenshot: `11-simulation.png`
+
+- **E2E-390 ✅ visual EXCELLENT** — Simulation Readiness Confidence panel: "Guided build candidate" amber pill + "Evidence strong" cyan pill on same row + paragraph + 2-column TOP BLOCKERS / NEXT ACTIONS. **Best layout in the whole app** — clear, dense, actionable.
+- **E2E-391 ✅ visual** — Simulation trust ladder amber-bordered card with "Need components" + "SETUP REQUIRED" badges. Triple-confirmation that you can't run sim yet — pedagogical.
+- **E2E-392 🟡 UX** — `Start Simulation` green button top-right is BIG but disabled. Disabled green = visual lie (green normally = go).
+- **E2E-393 🟡 visual** — Right ⅓ of viewport empty (white space). Could host live waveform preview placeholder, or last result thumbnail.
+- **E2E-394 🟢 audience-newbie** — Beginner reads "DC Operating Point" in DETECTION row — what's that? Need plain-English mode (per "Use plain labels" workspace toggle, but doesn't seem to apply here).
+- **E2E-395 🟢 audience-expert** — Expert wants Spice netlist editor visible inline. Currently buried in collapsibles further down the page.
+
+### Pass 2 — Vault (visual)
+
+Screenshot: `12-vault.png`
+
+- **E2E-396 ✅ visual EXCELLENT** — 3-column layout (Topic Maps | Notes | Note Detail) is the canonical knowledge-base layout. Tag-Wiki / Notion-database flavor. Beautiful.
+- **E2E-397 🟡 visual** — MOC count badges are small purple pills next to title — could be brighter / larger.
+- **E2E-398 🟡 visual** — Two empty-state panels (Notes + Note Detail) both show book icons. Slightly redundant — could pre-load most-recently-viewed note in detail pane.
+- **E2E-399 🟢 audience-newbie** — "Topic Maps" might confuse beginners — could call them "Categories" or "Topics".
+- **E2E-400 🟢 audience-expert** — Expert wants graph view of vault relationships (like Obsidian). No graph mode visible.
+- **E2E-401 🟡 visual** — Search input is wide and readable. Placeholder "Search the vault (min 3 chars)…" tells the user the threshold up front. Good.
+- **E2E-402 🟢 IDEA** — Expand into a knowledge-graph visualization tab next to Topic Maps. Cf. Obsidian's strength.
+
+### Pass 2 — Community (visual)
+
+Screenshot: `13-community.png`
+
+- **E2E-403 ✅ visual** — 3-column card grid is clean. Each card has: title + author + type-badge top-right + star rating + downloads/version + license badge + tag chips. Industry-standard marketplace layout.
+- **E2E-404 🟡 visual** — Type badges color-coded (PCB Module purple / Footprint green / Snippet orange / Schematic cyan / 3D Model teal) — readable but no visible legend. Beginners can't tell what colors mean.
+- **E2E-405 🟡 UX** — Sub-tabs Browse/Featured/Collections sit centered on a single row. Easy to scan but visually competes with header counts.
+- **E2E-406 🟢 audience-newbie** — License badges (MIT/CC0/CC-BY/CC-BY-SA) — beginners don't know what these mean. Tooltip with plain-English ("Free to use commercially" / "Free to use, must share-alike").
+- **E2E-407 🟢 audience-expert** — Expert wants version-pinning, dependency management, security advisories. None visible.
+- **E2E-408 🟡 visual** — All cards share same star-rating renderer with full + outline stars. Readable but no half-star granularity.
+- **E2E-409 🔴 BUG (cf. E2E-266)** — Cards look interactive but click does nothing. Visual affordance lies.
+
+### Pass 2 — Order PCB (visual)
+
+Screenshot: `14-orderpcb.png`
+
+- **E2E-410 ✅ visual** — Confidence panel + Trust receipt + 5-step wizard footer (1. Board Specs / 2. Select Fab / 3. DFM Check / 4. Quotes / 5. Summary) with Previous + Design Suggestions buttons. Wizard pattern is well-established for purchase flows.
+- **E2E-411 🟡 visual** — Compatible Fabs "4 / 5" stat is shown but not linked to which 5 fabs are checked (cf. E2E-065).
+- **E2E-412 🟡 visual** — Step indicator dots (small dot under each step) at bottom — barely visible. Use larger numbered circles.
+- **E2E-413 🟢 audience-newbie** — A first-timer doesn't know which fab is best for them. Add wizard step "Tell me about your project (cost vs speed vs quality)" → recommend fab.
+- **E2E-414 🟢 audience-expert** — Expert wants saved fab profiles ("My JLCPCB account", "My PCBWay account") with API key for auto-quote. Untested.
+- **E2E-415 🟡 visual** — Bottom navigation Previous / step-dots / Design Suggestions = floating, low-contrast. Promote to a real footer bar.
+
 ---
 
 ## TL;DR — Top P0/P1 Bugs (action items)
