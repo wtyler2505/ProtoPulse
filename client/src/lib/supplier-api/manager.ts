@@ -49,23 +49,24 @@ import type {
 export class SupplierApiManager {
   private static instance: SupplierApiManager | null = null;
 
-  private distributors: SupplierConfig[];
-  private mockParts: PartSearchResult[];
-  private cache: Map<string, CachedSearch>;
-  private cacheExpiryMs: number;
-  private rateLimits: Map<DistributorId, RateLimitState>;
-  private stockAlerts: StockAlert[];
-  private currentCurrency: Currency;
+  /** @internal Accessed by concern-split modules (rate-limit, search, pricing, etc.). Do not use externally. */
+  _distributors: SupplierConfig[];
+  /** @internal */ _mockParts: PartSearchResult[];
+  /** @internal */ _cache: Map<string, CachedSearch>;
+  /** @internal */ _cacheExpiryMs: number;
+  /** @internal */ _rateLimits: Map<DistributorId, RateLimitState>;
+  /** @internal */ _stockAlerts: StockAlert[];
+  /** @internal */ _currentCurrency: Currency;
   private listeners = new Set<Listener>();
 
   constructor() {
-    this.distributors = DEFAULT_DISTRIBUTORS.map((d) => ({ ...d }));
-    this.mockParts = buildMockParts();
-    this.cache = new Map();
-    this.cacheExpiryMs = DEFAULT_CACHE_EXPIRY_MS;
-    this.rateLimits = new Map();
-    this.stockAlerts = [];
-    this.currentCurrency = 'USD';
+    this._distributors = DEFAULT_DISTRIBUTORS.map((d) => ({ ...d }));
+    this._mockParts = buildMockParts();
+    this._cache = new Map();
+    this._cacheExpiryMs = DEFAULT_CACHE_EXPIRY_MS;
+    this._rateLimits = new Map();
+    this._stockAlerts = [];
+    this._currentCurrency = 'USD';
     this.load();
   }
 
