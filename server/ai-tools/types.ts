@@ -136,7 +136,7 @@ export interface ConfidenceScore {
  * Complete definition of a single AI tool.
  *
  * Tools are registered with the {@link ToolRegistry} and converted to
- * Anthropic or Gemini native formats for inclusion in API requests.
+ * Gemini native formats for inclusion in API requests.
  *
  * @typeParam TSchema - Zod raw shape describing the tool's input parameters.
  *

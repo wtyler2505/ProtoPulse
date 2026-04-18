@@ -298,6 +298,7 @@ function checkMissingDecoupling(
         detail: `${meta.title ?? inst.referenceDesignator} should have a 100 nF bypass capacitor within 2 rows to filter power rail noise. Without it, the chip may behave unpredictably.`,
         affectedInstanceIds: [inst.id],
         affectedPinIds: [],
+        remediationLink: VAULT_SLUGS.DECOUPLING_100NF,
       });
     }
   }
