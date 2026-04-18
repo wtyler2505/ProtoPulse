@@ -332,6 +332,62 @@ BOM Management default panel: Search, Cost Optimisation toggle, ESD toggle, Asse
 
 Moving to Validation tab (already deeply documented but baby-step verify Run DRC).
 
+### Validation baby-step: click "Run DRC Checks"
+
+→ Toast appeared: "Validation Running — Design rule and compliance checks initiated." Issue count 128 → 129 (info filter went from (0) to (1)). **Run DRC works.**
+
+- **E2E-247 ✅ WORKS** — Run DRC Checks button fires + toast notification + new issue logged. Real wiring.
+- **E2E-248 🟡 UX** — Toast says "Validation Running" but doesn't show progress or completion notification. Needs "Validation complete: 1 new issue found" follow-up toast.
+- **E2E-249 🟡 BUG** — DRC adds 1 info issue but project state hasn't changed (still 1 BME280 node, no connections). What new info issue was added? Unclear — clicking Info (1) filter would show, but the persistent 128 base count is still there.
+- **E2E-250 🟢 IDEA** — Each "Toggle [issue type]" button presumably mutes the rule. Click should swap to "Toggled off" state with strikethrough.
+
+---
+
+## Simulation — meticulous baby-step
+
+URL `/projects/30/simulation`. Start Simulation properly **DISABLED** when no components placed. Trust ladder says "SETUP REQUIRED — Need components". Run DC Operating Point also disabled. Sub-collapsibles: ANALYSIS TYPE (4), PARAMETERS, PROBES (Add Probe), CORNER ANALYSIS, RESULTS, IMPORT SPICE NETLIST, RESULT HISTORY, PRESETS (SAVE NEW). Top: Start Simulation / Export SPICE / Share.
+
+- **E2E-251 ✅ EXCELLENT** — Start Simulation correctly disabled when circuit empty. Trust ladder explanation cites exact reason ("Simulation is blocked until the selected circuit has at least one placed component").
+- **E2E-252 🟡 UX** — Confidence panel says "Evidence strong" but trust ladder says "SETUP REQUIRED". Two confidence systems give contradictory signal — pick one source-of-truth.
+- **E2E-253 🟡 UX** — Start Simulation has `haspopup="menu"` but is disabled — menu trigger that does nothing is confusing. Either show menu items as disabled, or remove `haspopup` until enabled.
+- **E2E-254 🟢 IDEA** — Export SPICE button is enabled even with no circuit. Should disable until there's something to export.
+
+(Skipping deep simulation testing — needs real circuit. Moving forward.)
+
+---
+
+## Tasks (Kanban) — meticulous baby-step
+
+URL `/projects/30/kanban`. 4 default columns. Click `Add task` → opens Create Task dialog: Title (required), Description (multiline), Column (Backlog default), Priority (Medium default), Tags (comma-separated), Assignee, Due date (Month/Day/Year spin + Show date picker menu). Created button disabled until Title filled.
+
+### Baby-step: create + move task
+
+→ Created "E2E Test Task" successfully. Backlog count 0 → 1. Card shows Title + Priority badge + Move left/right (left disabled in Backlog, right enabled), Edit, Delete.
+→ Click Move task right → moved to "To Do" column (Backlog 0, To Do 1, both move buttons enabled).
+
+- **E2E-255 ✅ WORKS** — Task creation flow is solid: dialog opens, validates required Title, creates, card renders.
+- **E2E-256 ✅ WORKS** — Move task right increments column. Move left now enabled.
+- **E2E-257 🟡 UX** — Date picker spinbuttons have value=0 / valuemin=1 — invalid initial state. Should either start as today's date or empty visual state.
+- **E2E-258 🟢 IDEA** — Move task right/left as separate buttons is screen-reader-friendly but verbose. Add drag-and-drop too (catalogued — not tested via DevTools).
+- **E2E-259 🟢 IDEA** — No way to link Task to a BOM item, DRC issue, or design milestone. This is the killer integration the Tasks panel needs to be more than a generic kanban.
+- **E2E-260 🟡 UX** — Priority "Medium" badge with no color coding — should be color-tagged (Red=critical, Amber=high, Yellow=med, Gray=low).
+
+---
+
+## Learn — meticulous baby-step
+
+URL `/projects/30/knowledge`. 20 articles in card grid. Search articles textbox + category combobox + level combobox. Cards clickable — open inline expanded view (NOT a modal/dialog). Article body shows: prose explanation, sections (Ohm's Law, Color Code, Common Values, Power Rating, Types), Tags, Related Topics (links).
+
+### Baby-step: click "Resistors" card
+
+→ Card expanded inline below all card grid (or replaced grid?). Shows full article body with multiple sub-sections + Tags + Related Topics.
+
+- **E2E-261 🔴 a11y** — Article cards have `onclick` and `cursor:pointer` but **no `role="button"`** and no inner button/link. Invisible to screen readers. Same pattern as Dashboard cards (E2E-068). Systemic issue.
+- **E2E-262 ✅ EXCELLENT** — Article body is rich, structured, with related topics links. Real reference docs.
+- **E2E-263 🟢 IDEA** — "Related Topics" links would benefit from being navigable as `<a>` to `#article-X` anchors with back-button support.
+- **E2E-264 🟢 IDEA** — Articles overlap heavily with the Vault (675 notes). Why two systems? Either consolidate or label this as "Quick Refs" vs "Deep Vault".
+- **E2E-265 🟡 UX** — No "next/previous article" navigation in expanded view. User must scroll back up to grid.
+
 
 ---
 
