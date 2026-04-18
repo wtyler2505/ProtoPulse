@@ -16,6 +16,59 @@ import { findVerifiedBoardByAlias } from '@shared/verified-boards';
 import type { VerifiedBoardDefinition, VerifiedPin as VBPin } from '@shared/verified-boards';
 
 export type BreadboardPinMapConfidence = 'exact' | 'mixed' | 'heuristic';
+
+/**
+ * The 4 canonical trust tiers for a breadboard part (audit #173).
+ *
+ * Precedence (first match wins):
+ *   stash-absent > verified-exact > connector-defined > heuristic
+ */
+export type BreadboardTrustTier =
+  | 'verified-exact'
+  | 'connector-defined'
+  | 'heuristic'
+  | 'stash-absent';
+
+/**
+ * Derive the canonical trust tier for a breadboard part.
+ *
+ * Precedence (first match wins):
+ * - `stash-absent`: user cannot physically build (no stash, none owned). This
+ *   supersedes verification status — a verified-exact part we don't have is
+ *   still unbuildable.
+ * - `verified-exact`: exact-verified pinout from a datasheet-backed profile.
+ * - `connector-defined`: pinout partially inferred (connector schema known,
+ *   some pins mapped exactly, others inferred) OR candidate verification.
+ * - `heuristic`: pinout guessed from part family alone — requires user verification.
+ *
+ * Note: `PartVerificationStatus` values are `'candidate' | 'verified' | 'deprecated'`.
+ * `'deprecated'` is treated as heuristic — was verified, now removed; user must re-verify.
+ *
+ * See `.claude/skills/breadboard-lab/` for the canonical tier semantics.
+ */
+export function deriveTrustTier(input: {
+  verificationStatus: PartVerificationStatus;
+  pinMapConfidence: BreadboardPinMapConfidence;
+  readyNow: boolean;
+  ownedQuantity: number;
+  requiredQuantity: number;
+}): BreadboardTrustTier {
+  // stash-absent wins when user literally cannot build (needs parts but has none)
+  if (!input.readyNow && input.ownedQuantity === 0 && input.requiredQuantity > 0) {
+    return 'stash-absent';
+  }
+  if (input.verificationStatus === 'verified' && input.pinMapConfidence === 'exact') {
+    return 'verified-exact';
+  }
+  // mixed confidence OR candidate verification with non-heuristic pinmap → connector-defined
+  if (
+    input.pinMapConfidence === 'mixed' ||
+    (input.verificationStatus === 'candidate' && input.pinMapConfidence !== 'heuristic')
+  ) {
+    return 'connector-defined';
+  }
+  return 'heuristic';
+}
 export type BreadboardPinRole =
   | 'power'
   | 'ground'
@@ -86,6 +139,8 @@ export interface BreadboardSelectedPartModel {
   trustSummary: string;
   verificationLevel: PartVerificationLevel;
   verificationStatus: PartVerificationStatus;
+  /** The 4-canonical trust tier derived from verification status, pinmap confidence, and inventory state. */
+  trustTier: BreadboardTrustTier;
   coach: BreadboardBenchCoach;
   pins: BreadboardPinMapEntry[];
 
@@ -734,6 +789,13 @@ export function buildBreadboardSelectedPartModel(
     trustSummary: trust.summary,
     verificationLevel,
     verificationStatus,
+    trustTier: deriveTrustTier({
+      verificationStatus,
+      pinMapConfidence,
+      readyNow: insight?.readyNow ?? false,
+      ownedQuantity: insight?.ownedQuantity ?? 0,
+      requiredQuantity: insight?.requiredQuantity ?? 1,
+    }),
     coach: verifiedBoardDef
       ? {
           ...coach,

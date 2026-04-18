@@ -1,4 +1,4 @@
-import { Bot, Lightbulb, MapPin, PackageCheck, ShieldCheck, Sparkles, Wand2 } from 'lucide-react';
+import { Ban, Bot, CircleHelp, Lightbulb, MapPin, PackageCheck, ShieldCheck, Sparkles, Wand2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import type {
   BreadboardPinRole,
   BreadboardPinMapEntry,
   BreadboardSelectedPartModel,
+  BreadboardTrustTier,
 } from '@/lib/breadboard-part-inspector';
 import { cn } from '@/lib/utils';
 
@@ -122,6 +123,51 @@ function pinMapBadgeLabel(confidence: BreadboardSelectedPartModel['pinMapConfide
     case 'heuristic':
     default:
       return 'Heuristic map';
+  }
+}
+
+/**
+ * Returns the visual properties for a trust-tier badge.
+ *
+ * Each tier uses three redundant channels per WCAG 2.2 SC 1.4.1:
+ *   color class + icon + text label — never color alone.
+ *
+ * Tiers (audit #173):
+ *   verified-exact   → emerald  + ShieldCheck
+ *   connector-defined → sky      + PackageCheck
+ *   heuristic         → amber    + CircleHelp
+ *   stash-absent      → rose     + Ban
+ */
+function trustTierBadge(tier: BreadboardTrustTier): {
+  className: string;
+  label: string;
+  Icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+} {
+  switch (tier) {
+    case 'verified-exact':
+      return {
+        className: 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200',
+        label: 'Verified exact',
+        Icon: ShieldCheck,
+      };
+    case 'connector-defined':
+      return {
+        className: 'border-sky-400/30 bg-sky-400/10 text-sky-200',
+        label: 'Connector defined',
+        Icon: PackageCheck,
+      };
+    case 'heuristic':
+      return {
+        className: 'border-amber-400/30 bg-amber-400/10 text-amber-100',
+        label: 'Heuristic',
+        Icon: CircleHelp,
+      };
+    case 'stash-absent':
+      return {
+        className: 'border-rose-500/30 bg-rose-500/10 text-rose-200',
+        label: 'Stash absent',
+        Icon: Ban,
+      };
   }
 }
 
@@ -306,17 +352,18 @@ export default function BreadboardPartInspector({
           <Badge variant="outline" className={cn('text-[10px] uppercase tracking-[0.12em]', pinMapBadgeClass(model.pinMapConfidence))}>
             {pinMapBadgeLabel(model.pinMapConfidence)}
           </Badge>
-          <Badge
-            variant="outline"
-            className={cn(
-              'text-[10px] uppercase tracking-[0.12em]',
-              model.verificationStatus === 'verified'
-                ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
-                : 'border-amber-400/30 bg-amber-400/10 text-amber-100',
-            )}
-          >
-            {model.verificationStatus === 'verified' ? 'Verified exact' : 'Candidate exact'}
-          </Badge>
+          {(() => {
+            const { className, label, Icon } = trustTierBadge(model.trustTier);
+            return (
+              <Badge
+                variant="outline"
+                className={cn('inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.12em]', className)}
+              >
+                <Icon className="h-3 w-3 shrink-0" aria-hidden />
+                {label}
+              </Badge>
+            );
+          })()}
           <Badge variant="outline" className="border-border/70 bg-background/60 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
             {model.pinCount} pins
           </Badge>

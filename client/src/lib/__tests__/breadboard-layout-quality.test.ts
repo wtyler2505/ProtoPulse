@@ -82,6 +82,7 @@ function buildModel(
     type: 'mcu',
     verificationLevel: 'community-only',
     verificationStatus: 'verified',
+    trustTier: 'verified-exact',
     ...overrides,
   };
 }
