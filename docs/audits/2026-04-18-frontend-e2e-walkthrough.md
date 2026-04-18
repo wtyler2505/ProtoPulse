@@ -1096,6 +1096,335 @@ Architecture passes (7-9) added **101 findings (E2E-743 → E2E-844)**. Total no
 
 ---
 
+## PASS 10 — SCHEMATIC TAB DEEP DIVE (E2E-845+)
+
+Mirroring Pass 4/7 for Schematic. Screenshot: `39-schematic-fullpage.png`.
+
+### Surface inventory observed
+
+Schematic uses React Flow canvas (separate from Architecture's). Major panels:
+
+1. **Top circuit bar** — Circuit selector (`select-circuit`, value="New Circuit") + New (button) + AI Generate (with description tooltip) + Push to PCB (disabled with hover-tooltip "No components to push…") + circuit name read-out + Toggle ERC panel + Toggle parts panel.
+2. **Sub-panel tabs (left)** — Parts / Power / Sheets / Sim (4 panels).
+3. **Component placer (Parts panel)** — Search + grouped list ("MICROCONTROLLER 1") + ATtiny85 with DIP / 8 PINS chips + "Drag a component onto the canvas" hint.
+4. **Schematic toolbar (canvas top)** — `schematic-tool-select` (V), `schematic-tool-pan` (H), `schematic-tool-draw-net` (W), `schematic-tool-place-component` (disabled — "drag from Parts panel"), `schematic-tool-place-power` (disabled — "drag from Power panel"), `schematic-tool-place-annotation` (T), Undo/Redo (Ctrl+Z/Shift+Z, both disabled), `schematic-tool-snap`, `schematic-tool-grid-visible`, angle-constraint radio group (Free/45°/90°), `schematic-tool-fit`, Keyboard Shortcuts dialog button, `schematic-toggle-net-browser`.
+5. **Empty state** — icon + "Empty Schematic" + "Your schematic is empty…" + Add Component CTA.
+6. **React Flow controls** — Zoom in / Zoom out / Fit View / Toggle Interactivity at bottom-left.
+7. **Mini map** — bottom-right.
+8. **Bottom hint** — "Drag a component onto the canvas" in left footer.
+9. **Top-right of canvas** — Net browser toggle + circuit-name readout + small "New Circuit" tag.
+
+### Pass 10 — Visual / hierarchy findings
+
+- **E2E-845 ✅ visual** — Two zoom-control sets (top toolbar + React Flow bottom-left controls). Same E2E-336 issue noted before — pick ONE location.
+- **E2E-846 🔴 visual** — Sub-panel tabs `Parts / Power / Sheets / Sim` are tiny (text-xs cyan icons) and easy to miss. They control ENTIRE panel content but visually look incidental. Make them prominent like Procurement's sub-tabs.
+- **E2E-847 🟡 visual** — `Sim` ambiguous — Simulation? Similar? Add `(Simulation)` parenthetical or use distinct icon.
+- **E2E-848 🔴 visual** — Toolbar has 14+ controls (6 tools + undo/redo + snap + grid + 3 angle radios + fit + kbd-shortcuts + net-browser). All cramped into one ~480px row. Group as `[Tools | Edit | View | Help]` separated by visible dividers.
+- **E2E-849 🔴 visual** — `Place Component` and `Place Power` buttons appear in toolbar BUT are perma-disabled with description "drag from Parts/Power panel". These are vestigial UI — either wire them up to enter "place mode" or remove from toolbar.
+- **E2E-850 🟡 visual** — Angle constraint radio group (`Free / 45 / 90`) uses just numbers; beginner won't grok "what does 45 do?". Add tooltip "Constrain wire bends to 45° angles".
+- **E2E-851 ✅ visual** — Empty state with prominent cyan `Add Component` button is the cleanest empty-state in the app.
+- **E2E-852 🟡 visual** — "Drag a component onto the canvas" hint sits BELOW the parts panel as small grey text. Should pulse/animate as the user hovers a part to make drag affordance obvious.
+- **E2E-853 🟢 visual** — Parts panel groups by category ("MICROCONTROLLER 1") — better hierarchy than Architecture's flat list.
+- **E2E-854 🟡 visual** — `Push to PCB` button has hover-tooltip explaining disabled reason — excellent. But the button is `disabled gray` with no other visual cue. Add a small `🔒` icon to make the disabled-with-reason state more obvious.
+- **E2E-855 🟢 visual** — Top circuit selector is a real combo with "+ New" button next to it — supports multi-sheet design. Power-user friendly.
+
+### Pass 10 — Functional findings
+
+- **E2E-856 🔴 BUG (E2E-225 confirmed)** — `Add Component` empty-state button enters a click-to-place mode (X:600 Y:400 readout appears) BUT no part is pre-selected, so clicking the canvas places nothing. Confirmed during this pass: clicked part-34 in placer THEN Add Component THEN canvas — still 0 nodes. The "Add Component" CTA is **functionally broken** without a pre-selected part.
+- **E2E-857 🔴 GAP** — Component placer has a `cursor-grab` class on each part item — indicates drag IS the intended interaction. But there's no click-to-add fallback like Architecture's `+` button. Inconsistent with Arch.
+- **E2E-858 🟢 UX** — Net-browser toggle exists (`schematic-toggle-net-browser`). Untested but present — would visualize all nets in the design. Critical feature for schematic readability.
+- **E2E-859 🟡 UX** — `AI Generate` requires API key, button is enabled regardless. Same gating problem (E2E-303).
+- **E2E-860 🟡 UX** — Sub-panel `Sheets` implies multi-sheet hierarchical schematics. Not verified. If real, a major pro feature should be highlighted.
+- **E2E-861 🟢 UX** — `Parts` placer search has placeholder "Search components" — works incrementally.
+- **E2E-862 🔴 GAP** — No way to **import existing schematic** from the Schematic tab itself. Empty state suggests "or import an existing design" but no import button visible.
+- **E2E-863 🟡 UX** — `New` button creates a new circuit. But what happens to the current circuit? Saved automatically? Confirmation needed if unsaved changes.
+
+### Pass 10 — Toolbar critique
+
+- **E2E-864 🟡 visual** — Tool icons: `Select (V)` arrow, `Pan (H)` hand, `Draw Net (W)` zigzag — all standard. `Annotation (T)` text-T — clear. `Snap` magnet, `Grid` dots. Active tool shows cyan tint (consistent with Breadboard).
+- **E2E-865 🟢 ✅** — Keyboard shortcut hotkey-in-label pattern (`Select (V)`, `Pan (H)`, `Draw Net (W)`) is best-in-class. Other tabs (Architecture, PCB) should adopt.
+
+### Pass 10 — Audience
+
+- **E2E-866 🔴 newbie** — Beginners hitting Schematic for first time face: "Drag a component", but can't tell which icon means draw-wire. Add a callout "Pull pins out into wires by dragging from the pin handles" for first-time visitors.
+- **E2E-867 🟢 newbie** — `AI Generate` empty-state CTA is the magic shortcut. Promote with "✨ Skip the manual: let AI generate" copy.
+- **E2E-868 🟢 expert** — Hotkey-in-label means experts can learn shortcuts naturally. Add `?` overlay showing all shortcuts in a single keymap diagram.
+- **E2E-869 🟢 expert** — Sub-panel `Sheets` is a pro feature. Verify Eagle/KiCad-class hierarchy depth.
+
+### Pass 10 — Competitive (vs KiCad / Eagle / EasyEDA)
+
+- **E2E-870 🟢 STRATEGIC vs KiCad 9** — KiCad 9 has Selection Filter (filter what's clickable on dense schematics). ProtoPulse Schematic has none.
+- **E2E-871 🟢 STRATEGIC vs KiCad** — KiCad has "highlight net" via right-click → all wires of that net glow. ProtoPulse has net-browser toggle but unverified depth.
+- **E2E-872 🟢 STRATEGIC vs Eagle** — Eagle has explicit ground/power symbol library with auto-routing to nearest power rail. ProtoPulse Power sub-panel may have this; verify.
+- **E2E-873 🟢 STRATEGIC vs EasyEDA** — EasyEDA renders 3D model preview from schematic. ProtoPulse has separate 3D View tab (cf. E2E-364).
+
+---
+
+## PASS 11 — SCHEMATIC WIRING + COMPONENT PLAY (E2E-874+)
+
+Mirroring Pass 5 for Schematic. Focus: actually wiring components on schematic, the experimentation loop.
+
+### Pass 11 — Wire (net) creation UX
+
+- **E2E-874 🟡 UX** — Wire tool hotkey is `W` on Schematic but `2` on Breadboard. Inconsistency (E2E-612 again, but explicit).
+- **E2E-875 ⚪ NEEDS VERIFY** — Click pin handle to start wire → drag to next pin → click to commit. Industry standard.
+- **E2E-876 🔴 GAP** — When wire tool active, no visible **net-name dropdown** above cursor. KiCad shows "VCC" / "GND" / "NET-NAME" autocomplete for naming the net being drawn.
+- **E2E-877 🔴 GAP** — Wire color: schematic wires are typically uniform colored (industry standard: thin black line). But during sim should color-by-signal-state (high=red, low=blue). Verify.
+- **E2E-878 🟡 UX** — Angle constraint (Free/45/90) — what angle is currently in use? Verify visual indicator on the active radio.
+- **E2E-879 🔴 GAP** — Schematic doesn't visualize **bus** wires (multiple parallel signals as a single fat line). Industry standard for ribbon/SPI/data buses.
+- **E2E-880 🟢 IDEA** — **Net auto-name**: when wire connects to a power pin, auto-name VCC/GND. When connects to MCU GPIO, auto-name "GPIO5_NET" with renaming dialog.
+- **E2E-881 🟢 IDEA** — **Net validator**: warn when 2 wires have same auto-name but different topology (split nets that should be one).
+- **E2E-882 🟢 IDEA** — **Wire as art**: support gentle arcs / 90°-rounded corners as cosmetic options. Cf. KiCad's curved wires for vintage-feel schematics.
+
+### Pass 11 — Component placement
+
+- **E2E-883 🔴 GAP** — Click on Parts placer item (verified by `cursor-grab` class) suggests drag-only. **Same as Breadboard E2E-571** — no click-to-place fallback.
+- **E2E-884 🔴 GAP** — During drag of a part, no **ghost preview** of where it will land + no rotation preview.
+- **E2E-885 🔴 GAP** — Parts panel's group header "MICROCONTROLLER 1" — clicking should filter list to only that category. Untested.
+- **E2E-886 🟢 IDEA** — **Component palette by usage**: top of placer auto-promotes most-used parts in this project. Recently dropped resistor → resistor pinned to top.
+- **E2E-887 🟢 IDEA** — **Quick-place hotkey**: `R` for resistor, `C` for capacitor (KiCad pattern). Type → cursor enters place-mode for that part.
+
+### Pass 11 — Manipulating instances
+
+- **E2E-888 ⚪ NEEDS VERIFY** — Rotate `R`, Mirror `M`, Delete `Del` (per kbd dialog). Verify these work on a placed component.
+- **E2E-889 🔴 GAP** — No **multi-select marquee** verified. KiCad essential.
+- **E2E-890 🔴 GAP** — No **align tools** for components.
+- **E2E-891 🟢 IDEA** — **Pin-by-pin labeling**: hover a pin → tooltip shows pin name + net name + voltage in sim.
+- **E2E-892 🟢 IDEA** — **Reference-designator auto-numbering**: dropping 3 resistors auto-names R1, R2, R3.
+- **E2E-893 🟢 IDEA** — **Per-instance value**: 220Ω vs 1kΩ resistors visually distinct (color band, value label).
+
+### Pass 11 — ERC (Electrical Rule Check)
+
+- **E2E-894 ⚪ NEEDS VERIFY** — `Toggle ERC panel` button exists. Click should open a panel listing all ERC violations (floating pins, multiple drivers, no-connection markers).
+- **E2E-895 🔴 GAP** — On empty schematic, ERC presumably says "0 violations" — same false-positive risk as Audit (E2E-572).
+- **E2E-896 🟢 IDEA** — **ERC as you wire**: live yellow squiggle under a floating input pin the moment you draw it. (Like a spell-checker for electrical correctness.)
+
+### Pass 11 — Visualizing nets
+
+- **E2E-897 🟢 IDEA** — **Net spotlight**: click a wire → all wires/pins on that net glow. Right-click → "select all instances of this net".
+- **E2E-898 🟢 IDEA** — **Net browser sidebar** (verified `schematic-toggle-net-browser` exists): list nets with click-to-highlight + filter "show only nets with errors".
+- **E2E-899 🟢 IDEA** — **Cross-probe to Breadboard/PCB**: select a wire on schematic → corresponding wire highlights on Breadboard tab + PCB trace highlights on PCB tab.
+
+### Pass 11 — Live sim experimentation
+
+- **E2E-900 ⚪ NEEDS VERIFY** — Sim sub-panel — what does it do? Run SPICE? Show waveforms? Verify.
+- **E2E-901 🟢 IDEA** — **Probe placement**: click a pin during sim → adds a virtual oscilloscope probe → opens a waveform viewer.
+- **E2E-902 🟢 IDEA** — **Tweak-and-watch**: change a resistor value → see waveform update in real-time.
+
+### Pass 11 — Off-canvas play
+
+- **E2E-903 🟢 IDEA** — **Tray** for unused parts (cf. Breadboard E2E-640). Stage components beside canvas before committing to canvas placement.
+- **E2E-904 🟢 IDEA** — **Drag-to-Architecture**: drag a Schematic instance back to Architecture tab → registers as a new arch node. Cross-tab linkage.
+
+### Pass 11 — Innovation (Schematic-specific)
+
+- **E2E-905 🚀** — **Schematic auto-tidy**: button "Tidy" → app re-flows all components into a clean horizontal layout with crossings minimized. Like `prettier` for circuits.
+- **E2E-906 🚀** — **Schematic-to-spoken-narration**: AI reads your schematic aloud — "ATtiny85 with VCC tied to 5V via decoupling cap, OUTPUT pin to LED in series with 220Ω". Accessibility win.
+- **E2E-907 🚀** — **Hand-drawn capture**: photograph hand-drawn schematic → AI digitizes to ProtoPulse format.
+- **E2E-908 🚀** — **Schematic styles**: render in IEEE 315 (US), IEC 60617 (EU), JIC (industrial), or hand-drawn whiteboard styles. Same circuit, different aesthetics.
+- **E2E-909 🚀** — **Animated current-flow on wires** during sim (cf. Breadboard E2E-591). For schematic — flowing dashed pattern.
+- **E2E-910 🚀** — **Sim probe scope**: built-in inline waveform viewer attached to every probe. Drop probe → mini Waveform widget renders inline.
+- **E2E-911 🚀** — **Schematic diff**: two snapshots side by side with color-coded changes (added wire green, removed red, modified yellow).
+- **E2E-912 🚀** — **Schematic → simulator preset**: one-click "Set up SPICE simulation" auto-configures probes + analysis type from schematic intent.
+- **E2E-913 🚀** — **Datasheet auto-attach**: every IC instance gets a tiny 📄 icon → click → opens manufacturer datasheet PDF inline.
+- **E2E-914 🚀** — **AI net naming**: AI looks at the topology and auto-names cryptic nets ("NET-(R1-Pad1-C2-Pad1)" → "Vout_filtered").
+
+### Pass 11 — TL;DR Schematic wiring + play
+
+**Critical wiring UX gaps:**
+- W vs 2 hotkey inconsistency between tabs
+- No net-name autocomplete/dropdown during wire draw
+- No bus wire visualization
+- No live ERC squiggles
+- Add Component CTA is broken without preselected part
+
+**Top wins:**
+- Hotkey-in-label pattern (best-in-class)
+- Net-browser toggle present
+- Sub-panels Parts/Power/Sheets/Sim cover full schematic spectrum
+- Push to PCB button has hover-tooltip explanation
+
+---
+
+## PASS 12 — SCHEMATIC ITERATE & INNOVATE (E2E-915+)
+
+Mirroring Pass 6/9. Deeper iterations + wild moonshots + practical packaging for Schematic.
+
+### (A) ITERATE — micro-interactions deeper
+
+- **E2E-915 ⤴ E2E-849** — Vestigial disabled `Place Component` / `Place Power` buttons should either:
+  (a) become click-to-enter-place-mode (cursor → "click on a part in placer to begin", then click canvas), OR
+  (b) be removed entirely. Current state is a UX trap.
+- **E2E-916 ⤴ E2E-876** — Net naming dropdown during wire draw: smart auto-suggestions in priority — (1) "VCC/GND" if connecting to obvious power, (2) signal-name from connected pin function ("SDA", "SCL", "TX"), (3) numeric "NET17" fallback. Also `+ Add to project nets…` for explicit naming.
+- **E2E-917 ⤴ E2E-878** — Active angle constraint: highlight the chosen radio with a cyan border + show a tiny example diagram beside the radio ("Free = any angle, 45 = bend at 45°, 90 = right-angle only").
+- **E2E-918 ⤴ E2E-883** — Click-to-place fallback for Schematic: same pattern as Architecture's `+ button` per part. Eliminates the drag-only requirement.
+- **E2E-919 ⤴ E2E-885** — Group header click should toggle filter to that category. Add a `+` button on the group header to add a new part of that family inline.
+- **E2E-920 ⤴ E2E-892** — Reference designators: auto-name with smart-skip ("R1, R2, R5" if R3/R4 deleted) AND allow batch-renumber ("Renumber R1..Rn left-to-right").
+- **E2E-921 ⤴ E2E-893** — Resistor visual variants: render with appropriate color bands (220Ω = Red-Red-Brown), capacitor with electrolytic vs ceramic body shapes.
+- **E2E-922 ⤴ E2E-896** — Live ERC "spell-checker": yellow squiggle under floating pins, red under shorts. Hover shows fix suggestion. Updates as user wires.
+- **E2E-923 ⤴ E2E-897** — Net spotlight: click net → also shows in a tooltip the net's voltage during sim, current draw, list of all connected pins ("VCC: 4 pins, 12mA").
+- **E2E-924 ⤴ E2E-898** — Net browser dual-pane (left = nets, right = pins on selected net) + filter "Floating", "Multi-driver", "VCC", "GND", custom regex.
+- **E2E-925 🟢 NEW** — **"Cleanup" action**: select messy section → "Auto-arrange" reflows components left-to-right with minimum wire crossings.
+- **E2E-926 🟢 NEW** — **Visual hierarchy import**: drop a sketched whiteboard PNG behind the canvas as a tracing template; place components over the sketch.
+
+### (B) INNOVATE — wild moonshots (Schematic)
+
+- **E2E-927 🚀** — **Schematic karaoke mode**: highlight components in sequence as the AI explains them. ("Now we have R1 a current-limiting resistor… now we add C1 a decoupling cap…"). Self-paced learning.
+- **E2E-928 🚀** — **Time-travel scrubber for sim**: slider at top of canvas to scrub through the last 10 ms of simulation. See LED brightness pulse, debounce ringing, etc.
+- **E2E-929 🚀** — **Schematic "lint as you type"**: like ESLint for circuits — fires rules in real-time. "I2C without pull-ups", "Unused MCU pin", "Missing decoupling cap on IC1".
+- **E2E-930 🚀** — **Schematic-to-narrative**: paste a schematic image → AI describes it as a paragraph for documentation.
+- **E2E-931 🚀** — **Schematic-to-code**: AI generates Arduino sketch starter code from the schematic's pin assignments.
+- **E2E-932 🚀** — **Schematic A/B testing**: maintain two schematic variants; toggle between them; compare BOM cost / parts count / signal integrity.
+- **E2E-933 🚀** — **AI design review session**: chat with AI persona that critiques your schematic decisions in real-time. "Why did you choose 220Ω here? With Vf=2V on a 3.3V rail you'd get 5.9mA, not 20mA."
+- **E2E-934 🚀** — **Lab-bench stream integration**: connect a real oscilloscope/multimeter via USB-Serial → live readings overlay onto schematic probe icons.
+- **E2E-935 🚀** — **Schematic VR mode**: "fly through" a 3D rendering of your schematic — components float in space connected by glowing nets. Cool factor + spatial debugging.
+- **E2E-936 🚀** — **Schematic time-machine** (cf. Architecture E2E-833): replay how the schematic evolved over time.
+- **E2E-937 🚀** — **Schematic-as-LaTeX**: export schematic as TikZ / CircuiTikZ for academic papers. Nobody currently makes this easy.
+- **E2E-938 🚀** — **Auto-fault-injection**: AI introduces a deliberate failure (open R1, short C2) and asks "What will happen?" — Socratic teaching tool.
+- **E2E-939 🚀** — **Schematic mood**: theme entire Schematic in retro Tek green-on-black, vintage Tektronix, blueprint, modern dark, etc. Skin packs (cf. E2E-738).
+- **E2E-940 🚀** — **Multi-modal AI**: speak "add a low-pass filter at 1kHz between OUT and AMP_IN" → AI generates the RC pair + wires it.
+- **E2E-941 🚀** — **Smart hierarchical sheets**: auto-detect repeating patterns (e.g. 4 identical motor-driver branches) → suggest collapse to a sub-sheet.
+
+### (C) PRACTICAL PACKAGING — Schematic roadmap
+
+**Quick wins (<2 weeks):**
+1. **Click-to-place fallback** (E2E-883/918) — fix drag-only requirement.
+2. **Net-name autocomplete during wire draw** (E2E-876/916).
+3. **Live ERC squiggles** (E2E-896/922).
+4. **Auto-name reference designators** (E2E-892/920).
+5. **Vestigial Place Component / Place Power buttons** (E2E-849/915) — fix or remove.
+
+**1-month investments:**
+6. **Net browser dual-pane + filters** (E2E-898/924).
+7. **Net spotlight + sim voltage tooltip** (E2E-897/923).
+8. **Resistor color-band rendering + capacitor body variants** (E2E-893/921).
+9. **Auto-tidy / Cleanup action** (E2E-905/925).
+10. **Multi-select marquee + align tools** (E2E-889/890).
+
+**Quarter investments (changes the product):**
+11. **Schematic-to-Arduino code AI** (E2E-931).
+12. **Schematic karaoke / narrative AI** (E2E-927/906).
+13. **Live oscilloscope/multimeter USB integration** (E2E-934).
+14. **Schematic A/B testing** (E2E-932).
+15. **Multi-modal AI ("add a low-pass filter at 1kHz")** (E2E-940).
+
+### Pass 12 wrap-up
+
+Schematic passes (10-12) added **97 findings (E2E-845 → E2E-941)**. Total now: **941 findings across 12 passes**.
+
+**Schematic top P0/P1:**
+- Add Component empty-state CTA broken without preselected part (E2E-856)
+- Vestigial Place Component / Place Power perma-disabled buttons (E2E-849)
+
+**Schematic top UX gaps:**
+- No net-name autocomplete during wire
+- No bus wire visualization
+- No live ERC
+- W vs 2 hotkey inconsistency
+- Sim sub-panel ambiguous
+
+**Schematic top wins:**
+- Hotkey-in-label pattern (Select(V), Pan(H), Draw Net(W), Annotation(T)) — best-in-class
+- Hierarchical sheets sub-panel
+- Net browser toggle present
+- Push to PCB hover-tooltip excellent
+- Empty state with prominent Add Component button
+
+**Top innovations:**
+- Schematic karaoke mode (sequenced AI explainer)
+- Schematic-to-Arduino code AI
+- Schematic-to-LaTeX (TikZ/CircuiTikZ academic export)
+- Live oscilloscope integration via USB
+- Schematic VR fly-through
+- Multi-modal AI ("speak the circuit")
+- Schematic A/B variant comparison
+- Auto-fault-injection (Socratic teaching)
+
+---
+
+## PASS 12B — SCHEMATIC RE-DO (ON A POPULATED CANVAS) (E2E-942+)
+
+**Confession:** Passes 10-12 were authored against an EMPTY schematic. Tyler called this out. This pass re-runs against a populated schematic (drag-placed an ATtiny85 via real DevTools `drag` tool). Screenshot: `40-schematic-with-attiny85.png`.
+
+### Real component placement observations
+
+The drag from sidebar ATtiny85 → canvas WORKED on real DevTools `drag` (not synthetic JS). Result was a beautifully rendered DIP-8 schematic symbol. **Earlier "drag-only is broken" critique partly retracted** — drag works; the broken one is the click-to-place fallback (E2E-883).
+
+What actually rendered:
+- White DIP-8 rectangle body
+- 8 pin handles (cyan dots) at 4 left + 4 right
+- Pin numbers (1-8) just outside the body
+- Pin function names INSIDE the body adjacent to each pin: `VCC` `PB0` `PB1` `PB2` (left) and `PB5` `GND` `PB4` `PB3` (right)
+- Component reference "ATtiny85" centered in body
+- Component label "ATtiny85" below body
+- Toast notification "Add U1 to BOM? Place 'ATtiny85' in your bill of materials." with `Add to BOM` button
+- `Push to PCB` button immediately enabled (was disabled when empty — verified the dynamic gate)
+
+### Pass 12B — Visual findings on populated schematic
+
+- **E2E-942 ✅ visual** — Pin labeling is industry-quality: pin number outside, pin function inside. Matches IEEE 315 / IEC 60617. Better than Eagle defaults.
+- **E2E-943 ✅ visual** — Cyan pin handles are clearly visible (~10px wide rectangles, not the smaller dots in Architecture). Easier to grab than Architecture's handles (E2E-779).
+- **E2E-944 🟡 visual** — Reference designator inside body is "ATtiny85" — should be "U1" (per the toast which suggests "Add U1 to BOM"). Industry: refs are R1/C1/U1, NOT the part name. Clash between display label and BOM ref.
+- **E2E-945 🟡 visual** — Component label "ATtiny85" below body duplicates body-text "ATtiny85". One should be the value (e.g. nothing for IC, or 220Ω for resistor) and the other the reference (U1).
+- **E2E-946 🟡 visual** — Pins on RIGHT side show pin function FIRST then number ("PB5 [box] 8") whereas pins on LEFT show "1 [box] VCC". Asymmetric reading order. Verify this is by-design (it actually is industry-standard for IC schematics, but worth confirming).
+- **E2E-947 🔴 visual** — No power-symbol annotation on VCC/GND pins. Standard schematics show a `▲` "5V" or `⏚` ground symbol next to the pin. Missing visual cue makes new users confused which pins are power.
+- **E2E-948 🟡 visual** — Toast notification "Add U1 to BOM?" assumes user wants the BOM auto-populated — great UX. But sits in bottom-right and doesn't auto-dismiss. After 30s if ignored, what happens?
+- **E2E-949 🟢 visual** — The `Add to BOM` toast button is inline in the toast, not requiring user to navigate to BOM. Excellent integration pattern (cf. Calculator → Add to BOM).
+- **E2E-950 🟡 visual** — Empty-state heading "Empty Schematic" is STILL VISIBLE in the snapshot tree even though component placed. **Bug: empty-state didn't dismiss after first component.** Screenshot confirms heading IS gone visually so it's hidden but still in DOM — minor a11y leak (screen reader will announce "Empty Schematic" misleadingly).
+- **E2E-951 🟡 visual** — Two sets of "ATtiny85" metadata text appear in DOM (uid 62_148 + uid 62_156) — the rendered placement + a hover-tooltip remnant from sidebar. Verify single rendering source.
+
+### Pass 12B — Functional findings on populated schematic
+
+- **E2E-952 ✅ WORKS** — Drag-from-sidebar to canvas creates a real schematic instance with full IC body + pins.
+- **E2E-953 ✅ WORKS** — Push to PCB button enables when ≥1 component placed (dynamic gate works correctly).
+- **E2E-954 ✅ WORKS** — Toast offers BOM auto-population — closed-loop schematic→BOM workflow.
+- **E2E-955 ⚪ NEEDS VERIFY** — Drawing a wire from pin VCC to another component's VCC pin. Wire tool active state confirmed earlier (E2E-611) but actual wire creation needs real pointer-event drag.
+- **E2E-956 ⚪ NEEDS VERIFY** — Right-click on placed component → context menu (rotate, mirror, delete, edit value).
+- **E2E-957 🔴 GAP** — Coordinate readout "X: 750 Y: 400" appeared at canvas bottom — useful for power users but unlabeled (px? grid units?). Add unit suffix.
+- **E2E-958 🟢 IDEA** — When user drags second instance of same part, auto-name to U2 (R2, C2, etc.). Verify this happens.
+
+### Pass 12B — Real wiring/play findings (now possible with components)
+
+- **E2E-959 🟢 IDEA** — Pin handles should accept **drag-from-pin to start a wire** (Eagle/KiCad pattern). Verify this works without explicit wire-tool activation — current state is wire-tool-then-click but pins should auto-enter wire-mode on hover-and-drag.
+- **E2E-960 🟢 IDEA** — When dragging a wire from a power pin (VCC/GND), auto-suggest creating a power symbol at the end if user releases over empty canvas.
+- **E2E-961 🟢 IDEA** — Hover a pin → tooltip shows "PIN 1 (VCC), 2.7-5.5V, recommended decoupling 100nF". Per-pin pedagogical context from Vault.
+- **E2E-962 🟢 IDEA** — Pin handles should have **directional arrows** indicating signal flow direction (input/output/bidirectional/power). Industry standard for high-quality schematics.
+- **E2E-963 🟢 IDEA** — Click a pin name (PB0, PB1) → opens MCU pin-detail dialog with alternate functions ("PB0 also serves as: AIN0, MOSI, OC0A, PCINT0").
+
+### Pass 12B — Validation/correction of earlier Pass 10-12 findings
+
+- **E2E-964 ⚠ CORRECTION** to E2E-883 — Drag from sidebar to canvas WORKS via real pointer events (DevTools drag tool). The "drag-only" complaint stands but the "drag is broken" insinuation was wrong. Drag is functional; click-fallback is missing.
+- **E2E-965 ⚠ CORRECTION** to E2E-862 — Empty-state copy mentions "import an existing design" — but no import button visible. Re-confirmed even on populated state. Still a gap.
+- **E2E-966 ⚠ NEW BUG** to E2E-950 — Empty-state heading remains in DOM after first component placed. Screen-reader users will hear "Empty Schematic" announced as a heading on a non-empty schematic.
+- **E2E-967 ⚠ CORRECTION** to E2E-779 — Schematic pin handles are 10px (verified on screenshot) — bigger than Architecture's. Still could be larger. Architecture should match Schematic's handle size.
+
+### Pass 12B — Quick wins re-prioritized
+
+After seeing the populated schematic, prioritized Quick wins for Schematic update:
+
+1. **Click-to-place fallback** (E2E-883/918) — still gap.
+2. **Power-symbol annotation on VCC/GND pins** (E2E-947) — better than schematic standards, learning aid.
+3. **Reference designator separate from part name** (E2E-944/945) — show "U1" big, "ATtiny85" small.
+4. **Empty-state DOM cleanup** (E2E-950/966) — fix screen-reader leak.
+5. **Pin tooltip with Vault context** (E2E-961) — already a Pass 5 idea but doubly important here with real pins visible.
+
+### Pass 12B wrap-up
+
+26 new findings (E2E-942 → E2E-967). Total: **967 findings across 13 (sub-)passes**.
+
+**Key correction:** Schematic placement DOES work via real drag — earlier critique was based on synthetic events failing. The real bugs remain:
+- Click-to-place fallback missing (drag-only)
+- Empty-state stays in DOM
+- Reference designator clash with part name
+- No power-symbol annotation on VCC/GND
+- AI Generate enabled without API key
+
+**Earlier critiques retracted/clarified:** drag works; but it requires a real mouse, which makes it inaccessible to keyboard-only users. The accessibility critique stands.
+
+---
+
+
+
 ## TL;DR — Top P0/P1 Bugs (action items)
 
 | # | Severity | Tab/Area | Bug | Fix |
