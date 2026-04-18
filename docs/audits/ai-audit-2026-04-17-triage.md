@@ -64,7 +64,7 @@ Purpose: classify every CRITICAL / HIGH / MEDIUM finding (plus actionable LOW/IN
 | 25 | 02-tools | P1 | `update_bom_item` uses `z.unknown()` | RESOLVED | `server/ai-tools/bom.ts:163-175` now has typed fields (string/number/int) |  |
 | 26 | 02-tools | P1 | `err: any` in 3 Google Workspace export tools | NEEDS-INVESTIGATION | Not re-verified in this pass | grep `err: any` in `server/ai-tools/export.ts` |
 | 27 | 02-tools | P1 | ToolCategory 10 values vs 16 modules | OPEN | `types.ts` ToolCategory unchanged | Expand or document mismatch |
-| 28 | 02-tools | P1 | Doc claims 118 tools, actual 125 | NEEDS-INVESTIGATION | AGENTS.md unchecked in this pass | Update AGENTS.md + project-dna |
+| 28 | 02-tools | P1 | Doc claims 118 tools, actual 125 | RESOLVED | AGENTS.md has no tool-count claim; `.ref/project-dna.md` updated from 125 → 134 (current registered count from `grep -c registry.register server/ai-tools/*.ts`) |  |
 | 29 | 02-tools | P2 | Vision tools are prompt-only (no real vision) | OPEN | Documentation gap only | Add module-level JSDoc + README note |
 | 30 | 02-tools | P2 | IPC standard cross-ref fragile string splitting | OPEN | `manufacturing.ts` explain_dfm_violation unchanged | Use direct ruleId→key map |
 | 31 | 02-tools | P2 | project.ts JSDoc says "9 total", has 10 | OPEN | Header unchanged | Update header comment |

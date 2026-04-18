@@ -1,9 +1,9 @@
 /**
  * Batch analysis API routes.
  *
- * Exposes Anthropic's Message Batches API for running background analysis
- * tasks (architecture review, DRC deep-dive, BOM optimization, etc.)
- * at 50% cost via asynchronous batch processing.
+ * Exposes a local batch-analysis API (Gemini-backed, see
+ * `server/batch-analysis.ts`) for running background analysis tasks
+ * (architecture review, DRC deep-dive, BOM optimization, etc.).
  */
 
 import type { Express } from 'express';
@@ -82,7 +82,7 @@ export function registerBatchRoutes(app: Express): void {
   app.post('/api/batch/submit', async (req, res) => {
     const apiKey = extractApiKey(req.headers['x-api-key']);
     if (!apiKey) {
-      throw new HttpError('Missing X-Anthropic-Key header', 401);
+      throw new HttpError('Missing X-Api-Key header', 401);
     }
 
     const body = submitSchema.parse(req.body);
@@ -126,7 +126,7 @@ export function registerBatchRoutes(app: Express): void {
   app.get('/api/batch/:batchId/status', async (req, res) => {
     const apiKey = extractApiKey(req.headers['x-api-key']);
     if (!apiKey) {
-      throw new HttpError('Missing X-Anthropic-Key header', 401);
+      throw new HttpError('Missing X-Api-Key header', 401);
     }
 
     const batchId = req.params.batchId as string;
@@ -145,7 +145,7 @@ export function registerBatchRoutes(app: Express): void {
   app.get('/api/batch/:batchId/results', async (req, res) => {
     const apiKey = extractApiKey(req.headers['x-api-key']);
     if (!apiKey) {
-      throw new HttpError('Missing X-Anthropic-Key header', 401);
+      throw new HttpError('Missing X-Api-Key header', 401);
     }
 
     const batchId = req.params.batchId as string;
@@ -182,7 +182,7 @@ export function registerBatchRoutes(app: Express): void {
   app.post('/api/batch/:batchId/cancel', async (req, res) => {
     const apiKey = extractApiKey(req.headers['x-api-key']);
     if (!apiKey) {
-      throw new HttpError('Missing X-Anthropic-Key header', 401);
+      throw new HttpError('Missing X-Api-Key header', 401);
     }
 
     const batchId = req.params.batchId as string;

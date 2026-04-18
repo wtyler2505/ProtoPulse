@@ -8,6 +8,13 @@
 import { z } from 'zod';
 import type { ToolRegistry } from '../registry';
 import { guardCircuitInProject, type ConnectorRecord, type NetSegmentRecord } from './shared';
+import {
+  autoroute,
+  extractObstaclesFromCircuit,
+  type Layer,
+  type NetLike,
+  type InstanceLike,
+} from '../../lib/autorouter';
 
 /**
  * Register advanced PCB-related circuit tools.
