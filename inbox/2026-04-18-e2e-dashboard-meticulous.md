@@ -4,7 +4,7 @@ description: Frontend E2E findings for 'Dashboard — meticulous' chunk from 202
 captured_date: 2026-04-18
 parent_source: 2026-04-18-frontend-e2e-walkthrough
 extraction_status: pending
-triage_status: pending
+triage_status: complete_p1_backlog_BL-0785-0785
 severity_counts:
   p1_bug: 1
   ux: 7

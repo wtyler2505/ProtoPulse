@@ -4,7 +4,7 @@ description: Frontend E2E findings for 'Alternates / Part Usage — 🔴 BROKEN'
 captured_date: 2026-04-18
 parent_source: 2026-04-18-frontend-e2e-walkthrough
 extraction_status: pending
-triage_status: pending
+triage_status: complete_p1_backlog_BL-0774-0776
 severity_counts:
   p1_bug: 3
   ux: 0

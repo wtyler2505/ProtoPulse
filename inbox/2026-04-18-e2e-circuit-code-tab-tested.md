@@ -4,7 +4,7 @@ description: Frontend E2E findings for 'Circuit Code tab — TESTED' chunk from 
 captured_date: 2026-04-18
 parent_source: 2026-04-18-frontend-e2e-walkthrough
 extraction_status: pending
-triage_status: pending
+triage_status: complete_p1_backlog_BL-0782-0782
 severity_counts:
   p1_bug: 1
   ux: 1

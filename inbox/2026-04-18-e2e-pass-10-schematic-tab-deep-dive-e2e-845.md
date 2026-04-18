@@ -4,7 +4,7 @@ description: Frontend E2E findings for 'PASS 10 — SCHEMATIC TAB DEEP DIVE (E2E
 captured_date: 2026-04-18
 parent_source: 2026-04-18-frontend-e2e-walkthrough
 extraction_status: pending
-triage_status: pending
+triage_status: complete_p1_backlog_BL-0791-0797
 severity_counts:
   p1_bug: 7
   ux: 8

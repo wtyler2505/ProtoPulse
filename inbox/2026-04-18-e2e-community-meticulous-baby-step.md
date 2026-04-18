@@ -4,7 +4,7 @@ description: Frontend E2E findings for 'Community — meticulous baby-step' chun
 captured_date: 2026-04-18
 parent_source: 2026-04-18-frontend-e2e-walkthrough
 extraction_status: pending
-triage_status: pending
+triage_status: complete_p1_backlog_BL-0783-0784
 severity_counts:
   p1_bug: 2
   ux: 1
