@@ -47,8 +47,32 @@ export const BB = {
   RAIL_MARGIN_LEFT: 20,
   RAIL_MARGIN_RIGHT: 20,
 
-  /** Total tie-points: 2 groups × 5 cols × 63 rows + 4 rails × 63 points */
-  TOTAL_TIE_POINTS: 2 * 5 * 63 + 4 * 63,  // 630 + 252 = 882 (real-world ≈ 830)
+  /**
+   * Model tie-point count: terminals + rail-model points.
+   *
+   * 2 groups × 5 cols × 63 rows = 630 terminal tie-points.
+   * 4 rails × 63 points per rail (model alignment with terminal rows) = 252.
+   * Total = 882.
+   *
+   * Note: this differs from PHYSICAL_TIE_POINTS. ProtoPulse models each power
+   * rail as 63 contiguous points for alignment with terminal rows. Real BB830
+   * breadboards break each rail into two 50-point halves separated by a
+   * mid-rail gap (4 × 50 = 200 rail points + 630 terminals = 830 total).
+   */
+  MODEL_TIE_POINTS: 2 * 5 * 63 + 4 * 63,  // 882
+
+  /**
+   * Physical tie-point count for a standard BB830 solderless breadboard.
+   *
+   * 630 terminal tie-points (63 rows × 10 cols) + 200 rail tie-points
+   * (4 rails × 50 points each, split by mid-rail gap) = 830 total.
+   *
+   * Sources:
+   * - BusBoard BB830 datasheet: http://busboard.com/BB830T
+   * - Adafruit product 239: https://www.adafruit.com/product/239
+   * - Jameco datasheet: https://www.jameco.com/Jameco/Products/ProdDS/2125026.pdf
+   */
+  PHYSICAL_TIE_POINTS: 630 + 4 * 50,  // 830
 } as const;
 
 export type ColumnLetter = (typeof BB.ALL_COLS)[number];
