@@ -1,9 +1,10 @@
 ---
 title: "Mocking window URL createObjectURL resolves TypeErrors in tests involving browser-native object URL creation"
 description: "JSDOM and Happy-DOM do not implement window.URL.createObjectURL, so code that produces blob or file URLs must stub it in test setup or fail with TypeError."
-topics: [[[dev-infrastructure]]]
-type: implementation-patterns
+type: claim
+topics: ["[[dev-infrastructure]]"]
 tags: [testing, vitest, jsdom, mocking]
+confidence: proven
 ---
 
 # Mocking window URL createObjectURL resolves TypeErrors in tests involving browser-native object URL creation
