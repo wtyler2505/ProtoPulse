@@ -1183,6 +1183,43 @@ function checkHeuristicEsp32RestrictedPins(input: BoardAuditInput): BoardAuditIs
         continue;
       }
 
+      if (HEURISTIC_ESP32_GPIO15.test(normalized)) {
+        issues.push({
+          id: `heuristic-esp32-gpio15-${String(inst.id)}-${pinKey}`,
+          severity: 'warning',
+          category: 'safety',
+          title: 'ESP32 GPIO15 is a strapping pin — external loads can silence boot log',
+          detail:
+            `GPIO15 (MTDO) is a boot-log strapping pin. Pulling pin "${pinKey}" on ` +
+            `${inst.referenceDesignator} LOW at power-on silences boot messages on UART0; ` +
+            `leaving it HIGH enables them. External active drivers here can also disturb JTAG. ` +
+            `Keep any load weak (>10 kΩ) or connect after boot.`,
+          affectedInstanceIds: [inst.id],
+          affectedPinIds: [pinKey],
+          remediationLink: VAULT_SLUGS.ESP32_STRAPPING_BUFFER,
+        });
+        continue;
+      }
+
+      if (HEURISTIC_ESP32_GPIO2.test(normalized)) {
+        issues.push({
+          id: `heuristic-esp32-gpio2-${String(inst.id)}-${pinKey}`,
+          severity: 'warning',
+          category: 'safety',
+          title: 'ESP32 GPIO2 is a strapping pin — must be LOW/floating at boot',
+          detail:
+            `GPIO2 is a strapping pin used in combination with GPIO0 to select download ` +
+            `mode on the ESP32. Pin "${pinKey}" on ${inst.referenceDesignator} must be ` +
+            `LOW or floating at power-on — an external pull-up here can prevent the ` +
+            `module from entering flashing mode and on many dev boards this pin also ` +
+            `drives the on-board LED.`,
+          affectedInstanceIds: [inst.id],
+          affectedPinIds: [pinKey],
+          remediationLink: VAULT_SLUGS.ESP32_STRAPPING_BUFFER,
+        });
+        continue;
+      }
+
       if (HEURISTIC_ESP32_GPIO0.test(normalized)) {
         issues.push({
           id: `heuristic-esp32-gpio0-${String(inst.id)}-${pinKey}`,
@@ -1200,6 +1237,48 @@ function checkHeuristicEsp32RestrictedPins(input: BoardAuditInput): BoardAuditIs
         });
         continue;
       }
+
+      if (HEURISTIC_ESP32_INPUT_ONLY.test(normalized)) {
+        issues.push({
+          id: `heuristic-esp32-input-only-${String(inst.id)}-${pinKey}`,
+          severity: 'warning',
+          category: 'safety',
+          title: `ESP32 ${pinKey} is input-only — cannot drive outputs, no pull resistors`,
+          detail:
+            `GPIO 34-39 on the ESP32 are input-only with NO internal pull-up/pull-down ` +
+            `resistors. Pin "${pinKey}" on ${inst.referenceDesignator} cannot drive loads ` +
+            `or LEDs, and any switch/button connected here needs an external pull resistor. ` +
+            `Use GPIO 0-33 for outputs.`,
+          affectedInstanceIds: [inst.id],
+          affectedPinIds: [pinKey],
+          remediationLink: VAULT_SLUGS.ESP32_GPIO34_39_INPUT,
+        });
+        continue;
+      }
+    }
+
+    // Unknown-variant conservative advisory (audit #241).
+    // If this is a heuristic ESP32 but the title doesn't match any known
+    // variant suffix, emit a single per-instance info note so unknown silicon
+    // never silently passes. Pin-specific rules above still fire when
+    // matched — this is an additional global caveat, not a replacement.
+    const meta = part ? getMeta(part) : {};
+    const titleForVariant = (typeof meta.title === 'string' ? meta.title : '').toLowerCase();
+    if (!KNOWN_ESP32_VARIANTS.test(titleForVariant)) {
+      issues.push({
+        id: `heuristic-esp32-unknown-variant-${String(inst.id)}`,
+        severity: 'info',
+        category: 'safety',
+        title: `Unverified ESP32 variant on ${inst.referenceDesignator} — pin rules are approximate`,
+        detail:
+          `${titleForVariant || 'This ESP32-family part'} does not match a known variant ` +
+          `(WROOM/WROVER/S2/S3/C3/C6/…). Flash/strapping/input-only rules were applied with ` +
+          `classic ESP32 assumptions. Swap in a verified board profile for pin-accurate safety ` +
+          `data before trusting this circuit on hardware.`,
+        affectedInstanceIds: [inst.id],
+        affectedPinIds: [],
+        remediationLink: VAULT_SLUGS.ESP32_SAFE_PINS,
+      });
     }
   }
 
