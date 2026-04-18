@@ -36,7 +36,6 @@ import FollowUpSuggestions from './chat/FollowUpSuggestions';
 import MessageInput from './chat/MessageInput';
 import { useChatSettings } from '@/hooks/useChatSettings';
 import { useApiKeyStatus } from '@/hooks/useApiKeyStatus';
-import { estimateCost, approximateTokens } from '@shared/model-pricing';
 import { useApiKeys } from '@/hooks/useApiKeys';
 import { useGoogleWorkspaceToken } from '@/hooks/useGoogleWorkspaceToken';
 import { queryClient } from '@/lib/queryClient';
