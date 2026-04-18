@@ -671,6 +671,7 @@ function checkAdcWifiConflict(
           detail: `Pin ${matchingPin?.name ?? pinKey} is on the ADC2 peripheral, which becomes unavailable when WiFi is active. Use ADC1 pins instead if you need analog reads during WiFi operation.`,
           affectedInstanceIds: [inst.id],
           affectedPinIds: [matchingPin?.id ?? pinKey],
+          remediationLink: VAULT_SLUGS.ESP32_ADC2_WIFI,
         });
       }
     }
