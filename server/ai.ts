@@ -1109,7 +1109,7 @@ export async function processAIMessage(params: {
   userId?: number;
   /** AI-AUDIT #191: optional abort signal for non-streaming AI requests. */
   signal?: AbortSignal;
-}): Promise<{ message: string; actions: AIAction[]; provider?: 'anthropic' | 'gemini' }> {
+}): Promise<{ message: string; actions: AIAction[]; provider?: 'gemini' }> {
   try {
     const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, imageContent, fallback, projectId, userId, signal } = params;
 
@@ -1152,7 +1152,7 @@ export async function processAIMessage(params: {
     const existing = activeRequests.get(dedupeKey);
     if (existing) return existing;
 
-    const promise = (async (): Promise<{ message: string; actions: AIAction[]; provider?: 'anthropic' | 'gemini' }> => {
+    const promise = (async (): Promise<{ message: string; actions: AIAction[]; provider?: 'gemini' }> => {
       try {
         const result = await callGenkit(apiKey, model, systemPrompt, recentHistory, message, temperature, maxTokens, imageContent);
         return { ...result, provider };
