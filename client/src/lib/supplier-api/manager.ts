@@ -67,7 +67,7 @@ export class SupplierApiManager {
     this._rateLimits = new Map();
     this._stockAlerts = [];
     this._currentCurrency = 'USD';
-    this.load();
+    this._load();
   }
 
   /** Get or create the singleton instance. */
@@ -95,7 +95,8 @@ export class SupplierApiManager {
     };
   }
 
-  private notify(): void {
+  /** @internal Exposed for concern-split helpers (stock-alerts, persistence, etc.). */
+  _notify(): void {
     this.listeners.forEach((l) => {
       l();
     });
@@ -121,8 +122,8 @@ export class SupplierApiManager {
     const d = this._distributors.find((d) => d.distributorId === id);
     if (d && !d.enabled) {
       d.enabled = true;
-      this.save();
-      this.notify();
+      this._save();
+      this._notify();
     }
   }
 
@@ -131,8 +132,8 @@ export class SupplierApiManager {
     const d = this._distributors.find((d) => d.distributorId === id);
     if (d && d.enabled) {
       d.enabled = false;
-      this.save();
-      this.notify();
+      this._save();
+      this._notify();
     }
   }
 
@@ -399,7 +400,7 @@ export class SupplierApiManager {
   /** Set the cache expiry duration in milliseconds. */
   setCacheExpiry(ms: number): void {
     this._cacheExpiryMs = ms;
-    this.save();
+    this._save();
   }
 
   /** Clear all cached search results. */
@@ -450,8 +451,8 @@ export class SupplierApiManager {
     } else {
       this._stockAlerts.push({ mpn, threshold });
     }
-    this.save();
-    this.notify();
+    this._save();
+    this._notify();
   }
 
   /** Get all stock alerts. */
@@ -464,8 +465,8 @@ export class SupplierApiManager {
     const initialLength = this._stockAlerts.length;
     this._stockAlerts = this._stockAlerts.filter((a) => a.mpn !== mpn);
     if (this._stockAlerts.length !== initialLength) {
-      this.save();
-      this.notify();
+      this._save();
+      this._notify();
     }
   }
 
@@ -497,8 +498,8 @@ export class SupplierApiManager {
   setCurrency(currency: Currency): void {
     if (this._currentCurrency !== currency) {
       this._currentCurrency = currency;
-      this.save();
-      this.notify();
+      this._save();
+      this._notify();
     }
   }
 
@@ -599,8 +600,8 @@ export class SupplierApiManager {
       this._stockAlerts = validAlerts;
     }
 
-    this.save();
-    this.notify();
+    this._save();
+    this._notify();
     return { imported, errors };
   }
 
@@ -616,8 +617,8 @@ export class SupplierApiManager {
     this._rateLimits.clear();
     this._stockAlerts = [];
     this._currentCurrency = 'USD';
-    this.save();
-    this.notify();
+    this._save();
+    this._notify();
   }
 
   // -----------------------------------------------------------------------
@@ -710,7 +711,8 @@ export class SupplierApiManager {
   // Persistence
   // -----------------------------------------------------------------------
 
-  private save(): void {
+  /** @internal Exposed for concern-split helpers (stock-alerts, etc.) that mutate state requiring persistence. */
+  _save(): void {
     try {
       if (typeof window === 'undefined') {
         return;
@@ -727,7 +729,8 @@ export class SupplierApiManager {
     }
   }
 
-  private load(): void {
+  /** @internal */
+  _load(): void {
     try {
       if (typeof window === 'undefined') {
         return;

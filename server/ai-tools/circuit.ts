@@ -46,6 +46,5 @@ export {
 export function registerCircuitCodeTools(registry: ToolRegistry): void {
   registerCircuitCodeDslTools(registry);
   registerPcbAdvancedTools(registry);
-  registerPcbAutorouteTools(registry);
   registerNetExplainTool(registry);
 }
