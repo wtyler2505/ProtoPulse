@@ -107,18 +107,18 @@ export class SupplierApiManager {
 
   /** Get all distributor configurations. */
   getDistributors(): SupplierConfig[] {
-    return this.distributors.map((d) => ({ ...d }));
+    return this._distributors.map((d) => ({ ...d }));
   }
 
   /** Get a single distributor configuration. */
   getDistributor(id: DistributorId): SupplierConfig | undefined {
-    const d = this.distributors.find((d) => d.distributorId === id);
+    const d = this._distributors.find((d) => d.distributorId === id);
     return d ? { ...d } : undefined;
   }
 
   /** Enable a distributor. */
   enableDistributor(id: DistributorId): void {
-    const d = this.distributors.find((d) => d.distributorId === id);
+    const d = this._distributors.find((d) => d.distributorId === id);
     if (d && !d.enabled) {
       d.enabled = true;
       this.save();
@@ -128,7 +128,7 @@ export class SupplierApiManager {
 
   /** Disable a distributor. */
   disableDistributor(id: DistributorId): void {
-    const d = this.distributors.find((d) => d.distributorId === id);
+    const d = this._distributors.find((d) => d.distributorId === id);
     if (d && d.enabled) {
       d.enabled = false;
       this.save();
@@ -138,7 +138,7 @@ export class SupplierApiManager {
 
   /** Check if a distributor is enabled. */
   isEnabled(id: DistributorId): boolean {
-    const d = this.distributors.find((d) => d.distributorId === id);
+    const d = this._distributors.find((d) => d.distributorId === id);
     return d?.enabled ?? false;
   }
 
@@ -166,7 +166,7 @@ export class SupplierApiManager {
     });
 
     const mpnLower = mpn.toLowerCase();
-    let results = this.mockParts.filter((p) => p.mpn.toLowerCase().includes(mpnLower));
+    let results = this._mockParts.filter((p) => p.mpn.toLowerCase().includes(mpnLower));
     results = this.applySearchOptions(results, options);
 
     // Cache the results
@@ -199,7 +199,7 @@ export class SupplierApiManager {
     });
 
     const kwLower = keyword.toLowerCase();
-    let results = this.mockParts.filter(
+    let results = this._mockParts.filter(
       (p) =>
         p.mpn.toLowerCase().includes(kwLower) ||
         p.manufacturer.toLowerCase().includes(kwLower) ||
@@ -418,7 +418,7 @@ export class SupplierApiManager {
 
   /** Get the number of remaining requests within the rate limit window for a distributor. */
   getRemainingRequests(distributorId: DistributorId): number {
-    const config = this.distributors.find((d) => d.distributorId === distributorId);
+    const config = this._distributors.find((d) => d.distributorId === distributorId);
     if (!config) {
       return 0;
     }
@@ -519,7 +519,7 @@ export class SupplierApiManager {
   /** Export configuration as a JSON string. */
   exportConfig(): string {
     const state: PersistedState = {
-      enabledDistributors: this.distributors.filter((d) => d.enabled).map((d) => d.distributorId),
+      enabledDistributors: this._distributors.filter((d) => d.enabled).map((d) => d.distributorId),
       currency: this.currentCurrency,
       cacheExpiryMs: this.cacheExpiryMs,
       stockAlerts: this.stockAlerts.map((a) => ({ ...a })),
@@ -547,13 +547,13 @@ export class SupplierApiManager {
 
     // Import enabled distributors
     if (Array.isArray(data.enabledDistributors)) {
-      const validIds = this.distributors.map((d) => d.distributorId);
-      this.distributors.forEach((d) => {
+      const validIds = this._distributors.map((d) => d.distributorId);
+      this._distributors.forEach((d) => {
         d.enabled = false;
       });
       (data.enabledDistributors as unknown[]).forEach((id) => {
         if (typeof id === 'string' && validIds.includes(id as DistributorId)) {
-          const dist = this.distributors.find((d) => d.distributorId === id);
+          const dist = this._distributors.find((d) => d.distributorId === id);
           if (dist) {
             dist.enabled = true;
             imported++;
@@ -610,7 +610,7 @@ export class SupplierApiManager {
 
   /** Clear all state and reset to defaults. */
   clear(): void {
-    this.distributors = DEFAULT_DISTRIBUTORS.map((d) => ({ ...d }));
+    this._distributors = DEFAULT_DISTRIBUTORS.map((d) => ({ ...d }));
     this.cache.clear();
     this.cacheExpiryMs = DEFAULT_CACHE_EXPIRY_MS;
     this.rateLimits.clear();
@@ -625,7 +625,7 @@ export class SupplierApiManager {
   // -----------------------------------------------------------------------
 
   private getEnabledDistributorIds(filter?: DistributorId[]): DistributorId[] {
-    let dists = this.distributors.filter((d) => d.enabled);
+    let dists = this._distributors.filter((d) => d.enabled);
     if (filter && filter.length > 0) {
       dists = dists.filter((d) => filter.includes(d.distributorId));
     }
@@ -716,7 +716,7 @@ export class SupplierApiManager {
         return;
       }
       const state: PersistedState = {
-        enabledDistributors: this.distributors.filter((d) => d.enabled).map((d) => d.distributorId),
+        enabledDistributors: this._distributors.filter((d) => d.enabled).map((d) => d.distributorId),
         currency: this.currentCurrency,
         cacheExpiryMs: this.cacheExpiryMs,
         stockAlerts: this.stockAlerts.map((a) => ({ ...a })),
@@ -746,7 +746,7 @@ export class SupplierApiManager {
       // Restore enabled distributors
       if (Array.isArray(data.enabledDistributors)) {
         const enabledSet = new Set(data.enabledDistributors as string[]);
-        this.distributors.forEach((d) => {
+        this._distributors.forEach((d) => {
           d.enabled = enabledSet.has(d.distributorId);
         });
       }
