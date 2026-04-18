@@ -7,6 +7,8 @@ import './breadboard-animations.css';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { BreadboardToolbar } from './breadboard-view/BreadboardToolbar';
 import { BreadboardEmptyState } from './breadboard-view/BreadboardEmptyState';
+import { BreadboardDialogs } from './breadboard-view/BreadboardDialogs';
+import { useBreadboardDialogState } from './breadboard-view/useBreadboardDialogState';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import {
   useCircuitDesigns,
@@ -35,10 +37,7 @@ import { useBreadboardCursor } from '@/lib/circuit-editor/useBreadboardCursor';
 import { computeMoveResult } from '@/lib/circuit-editor/breadboard-drag-move';
 import { syncSchematicToBreadboard } from '@/lib/circuit-editor/view-sync';
 import BreadboardDrcOverlay from './BreadboardDrcOverlay';
-import BreadboardInventoryDialog from './BreadboardInventoryDialog';
-import BreadboardShoppingList, { type ShoppingListItem } from './BreadboardShoppingList';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import BreadboardExactPartRequestDialog from './BreadboardExactPartRequestDialog';
+import { type ShoppingListItem } from './BreadboardShoppingList';
 import BreadboardPartInspector from './BreadboardPartInspector';
 import BreadboardWorkbenchSidebar from './BreadboardWorkbenchSidebar';
 import BreadboardWireEditor from './BreadboardWireEditor';
@@ -75,7 +74,6 @@ import ToolButton from './ToolButton';
 import { Button } from '@/components/ui/button';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import ExactPartDraftModal from '@/components/views/component-editor/ExactPartDraftModal';
 import { useToast } from '@/hooks/use-toast';
 import { generateRefDes, nextRefdes } from '@/lib/circuit-editor/ref-des';
 import {
@@ -242,10 +240,8 @@ export default function BreadboardView() {
   const createInstanceMutation = useCreateCircuitInstance();
   const expandMutation = useExpandArchitecture();
   const [activeCircuitId, setActiveCircuitId] = useState<number | null>(null);
-  const [exactDraftModalOpen, setExactDraftModalOpen] = useState(false);
+  const dialogState = useBreadboardDialogState();
   const [exactDraftSeed, setExactDraftSeed] = useState<ExactPartDraftSeed | null>(null);
-  const [exactPartDialogOpen, setExactPartDialogOpen] = useState(false);
-  const [inventoryDialogOpen, setInventoryDialogOpen] = useState(false);
   const [workbenchOpen, setWorkbenchOpen] = useState(true);
 
   const activeCircuit = circuits?.find(c => c.id === activeCircuitId) ?? circuits?.[0] ?? null;
@@ -289,7 +285,6 @@ export default function BreadboardView() {
   }, [activeCircuit, breadboardWires, instances, nets, parts]);
   const boardAudit = boardAuditEnabled ? computedBoardAudit : null;
   const [preflightResult, setPreflightResult] = useState<PreflightResult | null>(null);
-  const [shoppingListOpen, setShoppingListOpen] = useState(false);
   const shoppingListItems = useMemo(() => {
     const missingInsights = benchSummary.insights.filter((insight) => insight.missingQuantity > 0);
     if (missingInsights.length === 0) {
@@ -560,14 +555,13 @@ export default function BreadboardView() {
   }, [instances, breadboardWires, nets, parts, toast]);
 
   const handleShopMissing = useCallback(() => {
-    setShoppingListOpen(true);
-  }, []);
+    dialogState.open('shopping-list');
+  }, [dialogState]);
 
   const handleLaunchExactDraft = useCallback((seed: ExactPartDraftSeed) => {
-    setExactPartDialogOpen(false);
     setExactDraftSeed(seed);
-    setExactDraftModalOpen(true);
-  }, []);
+    dialogState.open('exact-draft');
+  }, [dialogState]);
 
   const handleStageExactPartOnBench = useCallback(async (part: ComponentPart) => {
     const nextCircuit = activeCircuit ?? await handleCreateCircuit();
@@ -589,7 +583,7 @@ export default function BreadboardView() {
       },
     });
 
-    setExactPartDialogOpen(false);
+    dialogState.close();
     toast({
       title: activeCircuit ? 'Exact part staged for the bench' : 'Canvas created and exact part staged',
       description: `${partMeta.title ?? 'The selected part'} will auto-place onto the breadboard workspace.`,
@@ -601,11 +595,13 @@ export default function BreadboardView() {
   }, [handleStageExactPartOnBench]);
 
   const handleExactDraftOpenChange = useCallback((open: boolean) => {
-    setExactDraftModalOpen(open);
-    if (!open) {
+    if (open) {
+      dialogState.open('exact-draft');
+    } else {
+      dialogState.close();
       setExactDraftSeed(null);
     }
-  }, []);
+  }, [dialogState]);
 
   if (loadingCircuits) {
     return (
@@ -630,10 +626,10 @@ export default function BreadboardView() {
           projectPartCount={parts?.length ?? 0}
           wireCount={breadboardWireCount}
           onCreateCircuit={() => void handleCreateCircuit()}
-          onOpenInventory={() => setInventoryDialogOpen(true)}
+          onOpenInventory={() => dialogState.open('inventory')}
           onOpenBenchChat={handleOpenBenchChat}
           onOpenBenchPlanner={handleOpenBenchPlanner}
-          onOpenExactPartRequest={() => setExactPartDialogOpen(true)}
+          onOpenExactPartRequest={() => dialogState.open('exact-part')}
           onExpandArchitecture={() => void handleExpandArchitecture()}
           onOpenComponentEditor={() => setActiveView('component_editor')}
           onOpenCommunity={() => setActiveView('community')}
@@ -647,53 +643,24 @@ export default function BreadboardView() {
         />
       )}
 
-      <BreadboardExactPartRequestDialog
-        activeCircuitReady={Boolean(activeCircuit)}
-        open={exactPartDialogOpen}
-        parts={parts ?? []}
-        onCreateExactDraft={handleLaunchExactDraft}
-        onOpenChange={setExactPartDialogOpen}
-        onOpenComponentEditor={() => {
-          setExactPartDialogOpen(false);
-          setActiveView('component_editor');
-        }}
-        onPlaceResolvedPart={(part) => void handleStageExactPartOnBench(part)}
-      />
-
-      <ExactPartDraftModal
-        open={exactDraftModalOpen}
+      <BreadboardDialogs
+        dialogState={dialogState}
         projectId={projectId}
-        initialSeed={exactDraftSeed ?? undefined}
-        onCreated={handleExactDraftCreated}
-        onOpenChange={handleExactDraftOpenChange}
-      />
-
-      <BreadboardInventoryDialog
+        parts={parts ?? []}
+        activeCircuitReady={Boolean(activeCircuit)}
+        shoppingListItems={shoppingListItems}
         insights={benchSummary.insights}
-        open={inventoryDialogOpen}
+        exactDraftSeed={exactDraftSeed}
+        onCreateExactDraft={handleLaunchExactDraft}
+        onOpenComponentEditor={() => setActiveView('component_editor')}
+        onPlaceResolvedPart={(part) => void handleStageExactPartOnBench(part)}
+        onExactDraftCreated={handleExactDraftCreated}
+        onExactDraftOpenChange={handleExactDraftOpenChange}
         onOpenAiReconcile={() => handleOpenBenchPlanner('reconcile_inventory')}
-        onOpenChange={setInventoryDialogOpen}
-        onOpenStorageView={() => {
-          setInventoryDialogOpen(false);
-          setActiveView('storage');
-        }}
+        onOpenStorageView={() => setActiveView('storage')}
         onTrackPart={handleTrackBenchPart}
         onUpdateTrackedPart={handleUpdateTrackedBenchPart}
       />
-
-      <Dialog open={shoppingListOpen} onOpenChange={setShoppingListOpen}>
-        <DialogContent data-testid="breadboard-shopping-list-dialog" className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Shopping List — Missing Parts</DialogTitle>
-            <DialogDescription>
-              Consolidated list of parts needed to build your circuit. Export as CSV or use supplier links.
-            </DialogDescription>
-          </DialogHeader>
-          <BreadboardShoppingList
-            missingParts={shoppingListItems}
-          />
-        </DialogContent>
-      </Dialog>
 
       <div className="flex min-w-0 flex-1 flex-col">
         {circuits && circuits.length > 0 ? (
