@@ -23,7 +23,9 @@ import {
   getConnectedHoles,
   WireColorManager,
   WIRE_COLOR_PRESETS,
+  placementToBodyBounds,
 } from '../breadboard-model';
+import { getBodyBounds } from '../body-bounds';
 import type {
   BreadboardCoord,
   TiePoint,
@@ -913,5 +915,45 @@ describe('getAvailableZones', () => {
     for (const zone of zones) {
       expect(zone.startRow + zone.rowSpan - 1).toBeLessThanOrEqual(BB.ROWS);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// placementToBodyBounds height vs width (regression for audit #352)
+// ---------------------------------------------------------------------------
+
+describe('placementToBodyBounds height vs width (regression for audit #352)', () => {
+  it('DIP-8 IC: body Y is centered on footprintCenterY using baseBounds.height, not width', () => {
+    // DIP-8: 8 pins, 4 per side → rowSpan = 4, crossesChannel = true
+    const placement: ComponentPlacement = {
+      refDes: 'U1',
+      startCol: 'e',
+      startRow: 10,
+      rowSpan: 4,
+      crossesChannel: true,
+    };
+
+    // Compute footprintCenterY the same way placementToBodyBounds does internally
+    const firstPoint = { type: 'terminal' as const, col: 'e' as const, row: 10 };
+    const lastPoint = { type: 'terminal' as const, col: 'e' as const, row: 13 }; // startRow + rowSpan - 1
+    const origin = coordToPixel(firstPoint);
+    const end = coordToPixel(lastPoint);
+    const footprintCenterY = (origin.y + end.y) / 2;
+
+    // Get the real body bounds so we don't hardcode dimensions
+    const baseBounds = getBodyBounds('ic', 8);
+
+    // For a non-square IC body (width != height), the bug produces y = footprintCenterY - width/2
+    // The fix produces y = footprintCenterY - height/2
+    // These diverge whenever baseBounds.width !== baseBounds.height
+    expect(baseBounds.width).not.toBeCloseTo(baseBounds.height, 1); // confirm non-square fixture
+
+    const bounds = placementToBodyBounds(placement, 'ic', 8);
+
+    // The body must be centered on footprintCenterY using height (not width)
+    expect(bounds.y).toBeCloseTo(footprintCenterY - baseBounds.height / 2, 5);
+
+    // Equivalently: the vertical center of the returned bounds equals footprintCenterY
+    expect(bounds.y + bounds.height / 2).toBeCloseTo(footprintCenterY, 5);
   });
 });

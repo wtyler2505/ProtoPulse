@@ -469,7 +469,7 @@ export function checkCollision(
  * Convert a ComponentPlacement to a positioned BodyBounds in board-local pixels.
  * The body is centered on the component's occupied footprint.
  */
-function placementToBodyBounds(
+export function placementToBodyBounds(
   placement: ComponentPlacement,
   componentType: string,
   pinCount: number,
@@ -494,7 +494,7 @@ function placementToBodyBounds(
 
   return {
     x: footprintCenterX - baseBounds.width / 2,
-    y: footprintCenterY - baseBounds.width / 2, // use width for Y extent (depth)
+    y: footprintCenterY - baseBounds.height / 2,
     width: baseBounds.width,
     height: baseBounds.height,
   };
