@@ -120,13 +120,16 @@ const RIGHT_COLS: readonly ColumnLetter[] = ['f', 'g', 'h', 'i', 'j'];
 const ALL_COLS: readonly ColumnLetter[] = [...LEFT_COLS, ...RIGHT_COLS];
 
 const PITCH_MM = 2.54; // 0.1 inch standard
+const CHANNEL_GAP_MM = 7.62; // 0.3 inch DIP straddle — physical e-to-f center distance
 const BOARD_THICKNESS = 8.5;
 const WIRE_HEIGHT_MM = 5; // default wire routing height above board
 const COMPONENT_BASE_HEIGHT = 3; // minimum component protrusion height
 
+/** Logical column indices 0-9 (a=0 … j=9). Physical X is computed in toPoint3D,
+ *  which adds CHANNEL_GAP_MM for right-group columns (ci >= 5). */
 const COL_INDEX: Record<ColumnLetter, number> = {
   a: 0, b: 1, c: 2, d: 3, e: 4,
-  f: 6, g: 7, h: 8, i: 9, j: 10, // gap at index 5 for DIP channel
+  f: 5, g: 6, h: 7, i: 8, j: 9,
 };
 
 const RAIL_X: Record<RailId, number> = {
@@ -159,7 +162,7 @@ const SIGNAL_COLOR_CYCLE: WireColor[] = [
 ];
 
 const BOARD_DIMS: BoardDimensions = {
-  width: (10 + 2) * PITCH_MM, // 10 cols + DIP gap ≈ 30.5mm
+  width: 9 * PITCH_MM + CHANNEL_GAP_MM, // 9 inter-col pitches + 7.62mm DIP gap ≈ 30.5mm
   length: ROWS * PITCH_MM, // 63 rows ≈ 160mm
   thickness: BOARD_THICKNESS,
   pitch: PITCH_MM,
@@ -182,11 +185,19 @@ function point3DKey(p: Point3D): string {
   return `${Math.round(p.x * 10)},${Math.round(p.y * 10)},${Math.round(p.z * 10)}`;
 }
 
-/** Convert a breadboard point to 3D coordinates (mm). */
+/** Convert a breadboard point to 3D coordinates (mm).
+ *  Right-group columns (f-j, ci >= 5) are offset by CHANNEL_GAP_MM so
+ *  the e-to-f spacing equals the physical 7.62 mm (0.3") DIP straddle.
+ *  Formula: x = ci * PITCH_MM + (ci >= 5 ? CHANNEL_GAP_MM - PITCH_MM : 0)
+ *  which simplifies to: left group → ci*PITCH, right group → ci*PITCH + 5.08
+ *  giving e(ci=4)=10.16mm, f(ci=5)=17.78mm, spacing = 7.62mm ✓
+ */
 export function toPoint3D(p: BreadboardPoint, z?: number): Point3D {
   if (p.type === 'terminal') {
+    const ci = COL_INDEX[p.col];
+    const channelOffset = ci >= 5 ? CHANNEL_GAP_MM - PITCH_MM : 0;
     return {
-      x: COL_INDEX[p.col] * PITCH_MM,
+      x: ci * PITCH_MM + channelOffset,
       y: (p.row - 1) * PITCH_MM,
       z: z ?? 0,
     };

@@ -56,9 +56,35 @@ describe('toPoint3D', () => {
   it('converts right-side column with DIP gap', () => {
     const pa = toPoint3D(term('a', 1));
     const pf = toPoint3D(term('f', 1));
-    // f is at index 6, a at 0; gap at index 5
+    // f (ci=5) is separated from e (ci=4) by the 7.62mm DIP straddle,
+    // not a single pitch — x = 5*2.54 + (7.62-2.54) = 17.78mm
     expect(pf.x).toBeGreaterThan(pa.x);
-    expect(pf.x).toBeCloseTo(6 * 2.54);
+    expect(pf.x).toBeCloseTo(5 * 2.54 + (7.62 - 2.54)); // 17.78mm
+  });
+
+  it('e-to-f spacing equals CHANNEL_GAP_MM (7.62mm physical DIP straddle)', () => {
+    const pe = toPoint3D(term('e', 1));
+    const pf = toPoint3D(term('f', 1));
+    // Physical e-to-f center distance must be exactly 7.62mm (0.3")
+    expect(pf.x - pe.x).toBeCloseTo(7.62);
+  });
+
+  it('same-group (a-to-c) spacing has no channel offset — difference = 2 * PITCH_MM', () => {
+    const pa = toPoint3D(term('a', 1));
+    const pc = toPoint3D(term('c', 1));
+    expect(pc.x - pa.x).toBeCloseTo(2 * 2.54);
+  });
+
+  it('cross-channel wire midpoint is in the channel space (not clipping through it)', () => {
+    const pe = toPoint3D(term('e', 1));
+    const pf = toPoint3D(term('f', 1));
+    // Visual center of the channel should be between e.x and f.x
+    const channelCenter = (pe.x + pf.x) / 2;
+    expect(channelCenter).toBeGreaterThan(pe.x);
+    expect(channelCenter).toBeLessThan(pf.x);
+    // midpoint = (e.x + f.x) / 2 = (10.16 + 17.78) / 2 = 13.97mm
+    // e.x = 4*2.54 = 10.16, f.x = 5*2.54 + (7.62-2.54) = 17.78
+    expect(channelCenter).toBeCloseTo((4 * 2.54 + (5 * 2.54 + (7.62 - 2.54))) / 2);
   });
 
   it('converts rail point to 3D coordinates', () => {
