@@ -23,6 +23,14 @@ import {
   getMinPrice,
   getPriceForQuantity,
 } from './helpers';
+import {
+  disableDistributor as disableDistributorFn,
+  enableDistributor as enableDistributorFn,
+  getDistributor as getDistributorFn,
+  getDistributors as getDistributorsFn,
+  getEnabledDistributorIds as getEnabledDistributorIdsFn,
+  isEnabled as isEnabledFn,
+} from './distributor-config';
 import { buildMockParts } from './mock-data';
 import {
   getRemainingRequests as getRemainingRequestsFn,
@@ -119,39 +127,27 @@ export class SupplierApiManager {
 
   /** Get all distributor configurations. */
   getDistributors(): SupplierConfig[] {
-    return this._distributors.map((d) => ({ ...d }));
+    return getDistributorsFn(this);
   }
 
   /** Get a single distributor configuration. */
   getDistributor(id: DistributorId): SupplierConfig | undefined {
-    const d = this._distributors.find((d) => d.distributorId === id);
-    return d ? { ...d } : undefined;
+    return getDistributorFn(this, id);
   }
 
   /** Enable a distributor. */
   enableDistributor(id: DistributorId): void {
-    const d = this._distributors.find((d) => d.distributorId === id);
-    if (d && !d.enabled) {
-      d.enabled = true;
-      this._save();
-      this._notify();
-    }
+    enableDistributorFn(this, id);
   }
 
   /** Disable a distributor. */
   disableDistributor(id: DistributorId): void {
-    const d = this._distributors.find((d) => d.distributorId === id);
-    if (d && d.enabled) {
-      d.enabled = false;
-      this._save();
-      this._notify();
-    }
+    disableDistributorFn(this, id);
   }
 
   /** Check if a distributor is enabled. */
   isEnabled(id: DistributorId): boolean {
-    const d = this._distributors.find((d) => d.distributorId === id);
-    return d?.enabled ?? false;
+    return isEnabledFn(this, id);
   }
 
   // -----------------------------------------------------------------------
@@ -172,7 +168,7 @@ export class SupplierApiManager {
     }
 
     // Record rate limit hit for all enabled distributors
-    const enabledDists = this.getEnabledDistributorIds(options?.distributors);
+    const enabledDists = getEnabledDistributorIdsFn(this,options?.distributors);
     enabledDists.forEach((distId) => {
       recordRequestFn(this, distId);
     });
@@ -205,7 +201,7 @@ export class SupplierApiManager {
       return this.applySearchOptions(cached.results, options);
     }
 
-    const enabledDists = this.getEnabledDistributorIds(options?.distributors);
+    const enabledDists = getEnabledDistributorIdsFn(this,options?.distributors);
     enabledDists.forEach((distId) => {
       recordRequestFn(this, distId);
     });
@@ -249,7 +245,7 @@ export class SupplierApiManager {
     const part = results[0];
     let bestOffer: { distributor: DistributorId; unitPrice: number; totalPrice: number } | null = null;
 
-    const enabledDists = this.getEnabledDistributorIds(options?.distributors);
+    const enabledDists = getEnabledDistributorIdsFn(this,options?.distributors);
 
     part.offers.forEach((offer) => {
       if (!enabledDists.includes(offer.distributorId)) {
@@ -318,7 +314,7 @@ export class SupplierApiManager {
       }
 
       const part = results[0];
-      const enabledDists = this.getEnabledDistributorIds(options?.distributors);
+      const enabledDists = getEnabledDistributorIdsFn(this,options?.distributors);
       const filteredOffers = part.offers.filter((o) => enabledDists.includes(o.distributorId));
 
       // Check stock
@@ -596,14 +592,6 @@ export class SupplierApiManager {
   // -----------------------------------------------------------------------
   // Private Helpers
   // -----------------------------------------------------------------------
-
-  private getEnabledDistributorIds(filter?: DistributorId[]): DistributorId[] {
-    let dists = this._distributors.filter((d) => d.enabled);
-    if (filter && filter.length > 0) {
-      dists = dists.filter((d) => filter.includes(d.distributorId));
-    }
-    return dists.map((d) => d.distributorId);
-  }
 
   private applySearchOptions(results: PartSearchResult[], options?: SearchOptions): PartSearchResult[] {
     let filtered = [...results];
