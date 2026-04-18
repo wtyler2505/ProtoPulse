@@ -1,7 +1,7 @@
 /**
  * Breadboard grid coordinate system.
  *
- * Models a standard 830-point solderless breadboard:
+ * Models a standard 830-point solderless breadboard (internally 882 tie-points — see MODEL_TIE_POINTS vs PHYSICAL_TIE_POINTS):
  *   - Terminal strips: columns a-e (left) and f-j (right), rows 1-63
  *   - Power rails: two pairs running along the top and bottom edges
  *   - Center channel (DIP gap) between columns e and f
@@ -64,15 +64,15 @@ export const BB = {
   /**
    * Physical tie-point count for a standard BB830 solderless breadboard.
    *
-   * 630 terminal tie-points (63 rows × 10 cols) + 200 rail tie-points
+   * 2 groups × 5 cols × 63 rows = 630 terminal tie-points + 200 rail tie-points
    * (4 rails × 50 points each, split by mid-rail gap) = 830 total.
    *
    * Sources:
-   * - BusBoard BB830 datasheet: http://busboard.com/BB830T
+   * - BusBoard BB830 datasheet: https://www.busboard.com/BB830
    * - Adafruit product 239: https://www.adafruit.com/product/239
    * - Jameco datasheet: https://www.jameco.com/Jameco/Products/ProdDS/2125026.pdf
    */
-  PHYSICAL_TIE_POINTS: 630 + 4 * 50,  // 830
+  PHYSICAL_TIE_POINTS: 2 * 5 * 63 + 4 * 50,  // 830
 } as const;
 
 export type ColumnLetter = (typeof BB.ALL_COLS)[number];

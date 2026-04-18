@@ -21,13 +21,17 @@ describe('BB tie-point constants (regression for audit #347)', () => {
     expect(BB.PHYSICAL_TIE_POINTS).toBe(830);
   });
 
-  it('MODEL_TIE_POINTS is greater than PHYSICAL_TIE_POINTS (model abstraction is intentional)', () => {
-    expect(BB.MODEL_TIE_POINTS).toBeGreaterThan(BB.PHYSICAL_TIE_POINTS);
+  it('couples to structural inputs (ROWS, LEFT_COLS, RIGHT_COLS)', () => {
+    // If anyone changes ROWS or column counts, the derived totals must track.
+    const terminalCount = (BB.LEFT_COLS.length + BB.RIGHT_COLS.length) * BB.ROWS;
+    expect(terminalCount).toBe(630);
+    expect(BB.MODEL_TIE_POINTS).toBe(terminalCount + 4 * BB.ROWS);
+    expect(BB.PHYSICAL_TIE_POINTS).toBe(terminalCount + 4 * 50);
   });
 
   it('delta between MODEL and PHYSICAL equals exactly 4 × (63 − 50): no other math drift', () => {
     // 4 rails × (63 model points − 50 physical points) = 52
-    expect(BB.MODEL_TIE_POINTS - BB.PHYSICAL_TIE_POINTS).toBe(4 * (63 - 50));
+    expect(BB.MODEL_TIE_POINTS - BB.PHYSICAL_TIE_POINTS).toBe(4 * (BB.ROWS - 50));
   });
 
   it('terminal count (630) is consistent across both constants', () => {
