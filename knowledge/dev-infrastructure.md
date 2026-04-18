@@ -73,6 +73,13 @@ The configuration that wires all components into a coherent system.
 - [[context-compaction-erases-skill-routing-knowledge-causing-capability-amnesia]] -- long session degradation
 - [[infrastructure-maintenance-follows-audit-debug-create-improve-cycle]] -- the maintenance workflow
 
+## Session & Testing Patterns
+
+Patterns that keep long sessions and their tests honest.
+
+- [[session-transcript-recovery-from-disk-enables-seamless-resumption-of-work-without-user-context-re-explanation]] -- `/resume` reads session JSON + git state to rebuild context after compaction or crash
+- [[mocking-window-url-createobjecturl-resolves-typeerrors-in-tests-involving-browser-native-object-url-creation]] -- JSDOM lacks blob-URL API, Vitest setup must stub it for export-oriented views
+
 ## Known Issues
 
 - [[combined-claude-md-exceeds-800-lines-creating-context-pressure]] -- every session pays ~8600 tokens for instructions alone
