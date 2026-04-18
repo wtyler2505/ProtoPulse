@@ -252,5 +252,3 @@ const _REMOVED_IN_WAVE2_ARCHIVE = {
   L298N_NO_FLYBACK:
     'l298n-has-no-internal-flyback-diodes-unlike-l293d-making-external-protection-mandatory',
 } as const;
-
-export type VaultSlugKey = keyof typeof VAULT_SLUGS;
