@@ -1050,8 +1050,9 @@ describe('auditBreadboard', () => {
     });
 
     it('emits an info advisory for unknown ESP32 variant (audit #241 conservative fallback)', () => {
-      // "ESP32" with no recognized variant suffix — triggers the unknown-variant advisory.
-      const part = makeHeuristicEsp32Part(740, 'ESP32');
+      // Title avoids substring-matching any verified board alias AND avoids
+      // any known variant suffix — triggers the unknown-variant advisory.
+      const part = makeHeuristicEsp32Part(740, 'ESP32 generic clone chip');
       const input = makeEsp32AuditInput(740, part, 'GPIO23');
       const result = audit(input);
       const advisory = result.issues.find((i) =>
