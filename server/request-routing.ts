@@ -9,6 +9,7 @@ export const PUBLIC_API_PATHS = [
   '/api/docs',
   '/api/metrics',
   '/api/settings/chat',
+  '/api/vault/', // Ars Contexta vault — read-only public content (rate-limited)
 ] as const;
 
 const SSE_ROUTE_PATTERNS = [
