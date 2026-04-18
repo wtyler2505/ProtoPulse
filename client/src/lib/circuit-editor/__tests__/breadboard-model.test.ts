@@ -310,6 +310,104 @@ describe('getOccupiedPoints', () => {
 });
 
 // ---------------------------------------------------------------------------
+// getOccupiedPoints multi-column placements (regression for audit #351)
+// ---------------------------------------------------------------------------
+
+describe('getOccupiedPoints multi-column placements (regression for audit #351)', () => {
+  it('3-column horizontal resistor spans cols a, b, c (primary regression)', () => {
+    const placement: ComponentPlacement = {
+      refDes: 'R1',
+      startCol: 'a',
+      startRow: 10,
+      rowSpan: 1,
+      crossesChannel: false,
+      colSpan: 3,
+    };
+    const points = getOccupiedPoints(placement);
+    expect(points).toHaveLength(3);
+    expect(points).toContainEqual({ type: 'terminal', col: 'a', row: 10 });
+    expect(points).toContainEqual({ type: 'terminal', col: 'b', row: 10 });
+    expect(points).toContainEqual({ type: 'terminal', col: 'c', row: 10 });
+  });
+
+  it('placement without colSpan (undefined) returns exactly 1 point (default behavior preserved)', () => {
+    const placement: ComponentPlacement = {
+      refDes: 'R2',
+      startCol: 'a',
+      startRow: 10,
+      rowSpan: 1,
+      crossesChannel: false,
+    };
+    const points = getOccupiedPoints(placement);
+    expect(points).toHaveLength(1);
+    expect(points).toContainEqual({ type: 'terminal', col: 'a', row: 10 });
+  });
+
+  it('explicit colSpan=1 returns exactly 1 point (matches undefined behavior)', () => {
+    const placement: ComponentPlacement = {
+      refDes: 'R3',
+      startCol: 'a',
+      startRow: 10,
+      rowSpan: 1,
+      crossesChannel: false,
+      colSpan: 1,
+    };
+    const points = getOccupiedPoints(placement);
+    expect(points).toHaveLength(1);
+    expect(points).toContainEqual({ type: 'terminal', col: 'a', row: 10 });
+  });
+
+  it('right-group span: startCol=h, colSpan=2 returns cols h and i', () => {
+    const placement: ComponentPlacement = {
+      refDes: 'R4',
+      startCol: 'h',
+      startRow: 5,
+      rowSpan: 1,
+      crossesChannel: false,
+      colSpan: 2,
+    };
+    const points = getOccupiedPoints(placement);
+    expect(points).toHaveLength(2);
+    expect(points).toContainEqual({ type: 'terminal', col: 'h', row: 5 });
+    expect(points).toContainEqual({ type: 'terminal', col: 'i', row: 5 });
+  });
+
+  it('group boundary: startCol=d, colSpan=3 clamps to d and e only (not f — right group)', () => {
+    // colIndex: a=0,b=1,c=2,d=3,e=4,f=5,g=6,h=7,i=8,j=9
+    // d is in left group (index 3 < 5). startCi=3, span=3 → ci in [3,6)
+    // left group is a-e (indices 0-4). Only d(3) and e(4) satisfy 3<=ci<6 within left group.
+    const placement: ComponentPlacement = {
+      refDes: 'R5',
+      startCol: 'd',
+      startRow: 15,
+      rowSpan: 1,
+      crossesChannel: false,
+      colSpan: 3,
+    };
+    const points = getOccupiedPoints(placement);
+    expect(points).toHaveLength(2);
+    expect(points).toContainEqual({ type: 'terminal', col: 'd', row: 15 });
+    expect(points).toContainEqual({ type: 'terminal', col: 'e', row: 15 });
+    expect(points.some(p => p.col === 'f')).toBe(false);
+  });
+
+  it('DIP IC (crossesChannel=true) is unaffected by colSpan field — still returns 8 points', () => {
+    const placement: ComponentPlacement = {
+      refDes: 'U1',
+      startCol: 'e',
+      startRow: 1,
+      rowSpan: 4,
+      crossesChannel: true,
+    };
+    const points = getOccupiedPoints(placement);
+    // DIP branch: 4 rows × cols e+f = 8 points (colSpan is ignored)
+    expect(points).toHaveLength(8);
+    expect(points.filter(p => p.col === 'e')).toHaveLength(4);
+    expect(points.filter(p => p.col === 'f')).toHaveLength(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // checkCollision
 // ---------------------------------------------------------------------------
 

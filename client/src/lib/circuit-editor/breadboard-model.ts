@@ -412,6 +412,11 @@ export interface ComponentPlacement {
   startRow: number;
   /** Number of rows the component spans */
   rowSpan: number;
+  /**
+   * Number of columns the component spans (within its left or right group).
+   * Defaults to 1 at the use-site. Ignored for DIP ICs that cross the channel.
+   */
+  colSpan?: number;
   /** Whether it crosses the center channel (DIP ICs) */
   crossesChannel: boolean;
 }
@@ -432,11 +437,13 @@ export function getOccupiedPoints(placement: ComponentPlacement): TiePoint[] {
   } else {
     const ci = colIndex[placement.startCol];
     const group = ci < 5 ? BB.LEFT_COLS : BB.RIGHT_COLS;
-    // Component occupies one side, spanning rows
+    const colSpan = placement.colSpan ?? 1;
+    const startCi = colIndex[placement.startCol];
+    // Component occupies one side, spanning rows and columns
     for (let r = placement.startRow; r < placement.startRow + placement.rowSpan; r++) {
       for (const col of group) {
-        if (colIndex[col] >= colIndex[placement.startCol]
-          && colIndex[col] < colIndex[placement.startCol] + 1) {
+        const currentCi = colIndex[col];
+        if (currentCi >= startCi && currentCi < startCi + colSpan) {
           points.push({ type: 'terminal', col, row: r });
         }
       }
