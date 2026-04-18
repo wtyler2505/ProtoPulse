@@ -216,8 +216,9 @@
             "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/wrap-claudekit-stop.sh check-todos"
           },
           {
-            "type": "prompt",
-            "prompt": "Self-review before stopping. If this session produced code changes: verify TypeScript errors are fixed, relevant tests pass, and new files are integrated consistently with codebase patterns. If this session was read-only (status gathering like /resume or /status, research, analysis, /architect in plan mode, documentation): verify the deliverable actually answered the question and no speculative claims were left unverified. If this session was infrastructure or vault work: verify the target files were actually written and committed. In all cases: only raise concerns if there is a concrete issue you can name — do not produce generic 'cannot verify' responses when the criteria don't apply. If the work is complete for its type, say so and stop."
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/smart-stop-gate.sh",
+            "timeout": 10
           },
           {
             "type": "command",
@@ -264,8 +265,9 @@
       {
         "hooks": [
           {
-            "type": "prompt",
-            "prompt": "Before marking this task complete, run checks that match the task type. If the task produced code changes: verify TypeScript compiles clean, relevant tests pass, and new files are integrated consistently with codebase patterns. If the task was read-only or informational (status, research, analysis, planning): verify the deliverable answered the question and all claims are grounded. If the task was infrastructure or documentation work: verify the target files were actually written, saved, and committed where applicable. Do NOT block completion with a generic 'cannot verify' response when the criteria don't apply to this task type — that produces noise without catching real problems. Only block if there is a concrete issue you can name."
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/smart-stop-gate.sh",
+            "timeout": 10
           }
         ]
       }
@@ -274,8 +276,9 @@
       {
         "hooks": [
           {
-            "type": "prompt",
-            "prompt": "An agent-teams teammate just went idle. Check whether they finished all assigned tasks. If they produced code changes: did they leave TypeScript errors or untested changes? If their task was read-only or research: did they actually return findings? Send feedback if work is incomplete or trivially empty. Approve idle if the tasks are genuinely complete for their type. Do not ask for TypeScript/test verification when the teammate's work didn't touch code."
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/smart-stop-gate.sh",
+            "timeout": 10
           }
         ]
       }

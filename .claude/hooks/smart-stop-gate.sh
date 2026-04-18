@@ -114,6 +114,107 @@ if [ -d "$NEEDS_ATTN_DIR" ]; then
   fi
 fi
 
+# ── Signal 5: npm run check cached exit-code ──────────────────────────────
+# blocking-typecheck.sh + check-cache updater writes to .claude/.check-status
+# with single line: "<exit-code> <timestamp> <err-count>". If non-zero exit
+# and recent (< 20 min), fire.
+CHECK_STATUS="$PROJECT_ROOT/.claude/.check-status"
+if [ -f "$CHECK_STATUS" ]; then
+  read -r check_exit check_ts check_errs < "$CHECK_STATUS" 2>/dev/null || true
+  if [ -n "${check_exit:-}" ] && [ "$check_exit" -ne 0 ] 2>/dev/null; then
+    now=$(date +%s)
+    age_min=$(( (now - ${check_ts:-0}) / 60 ))
+    if [ "$age_min" -lt 20 ]; then
+      issues+=("npm run check last exited $check_exit (${check_errs:-?} errors, ${age_min}m ago) — fix TS errors before stopping")
+    fi
+  fi
+fi
+
+# ── Signal 6: orphan source/test pairs from current uncommitted diff ──────
+# When a new production source file appears without matching __tests__/basename.test.ts,
+# or a test file appears without matching source, that's likely mid-work or a miss.
+# Only check files added in current uncommitted diff (??  or A ).
+orphan_sources=()
+orphan_tests=()
+while IFS= read -r line; do
+  status="${line:0:2}"
+  file="${line:3}"
+  # Only new-file statuses
+  case "$status" in
+    "??"|"A ") ;;
+    *) continue ;;
+  esac
+  # Restrict to project source trees
+  case "$file" in
+    client/src/lib/*.ts|client/src/hooks/*.ts|server/lib/*.ts|server/routes/*.ts|server/ai-tools/*.ts|shared/*.ts)
+      ;;
+    *)
+      continue
+      ;;
+  esac
+  # Skip if file is itself a test
+  case "$file" in
+    *.test.ts|*.test.tsx|*__tests__/*) continue ;;
+    *.d.ts) continue ;;
+  esac
+  # Skip barrel/index files — reasonable for those to have no direct test
+  case "$(basename "$file")" in
+    index.ts|types.ts) continue ;;
+  esac
+  base=$(basename "$file" .ts)
+  dir=$(dirname "$file")
+  # Look for sibling __tests__/basename.test.ts — NO orphan if found
+  if [ ! -f "$PROJECT_ROOT/$dir/__tests__/$base.test.ts" ] && \
+     [ ! -f "$PROJECT_ROOT/$dir/__tests__/$base.test.tsx" ]; then
+    orphan_sources+=("$file")
+  fi
+done < <(git status --porcelain 2>/dev/null)
+
+if [ "${#orphan_sources[@]}" -gt 0 ]; then
+  count="${#orphan_sources[@]}"
+  sample="${orphan_sources[0]}"
+  if [ "$count" -gt 1 ]; then
+    issues+=("$count new source file(s) without tests, e.g.: $sample")
+  else
+    issues+=("New source file without test: $sample")
+  fi
+fi
+
+# ── Signal 7: pattern regression in this session's edits ──────────────────
+# Look for newly-ADDED `: any`, `as any`, `console.log/warn/error` lines in
+# uncommitted production code — these are usually mistakes snuck past lint.
+# Uses `git diff` against HEAD to limit to this session's line additions.
+if command -v git &>/dev/null; then
+  # Get only ADDED lines (+) excluding the diff header `+++` line
+  any_adds=$(git diff --unified=0 HEAD -- \
+    'client/src/**/*.ts' 'client/src/**/*.tsx' \
+    'server/**/*.ts' 'shared/**/*.ts' 2>/dev/null \
+    | grep -E "^\+[^+]" \
+    | grep -cE ":\s*any\b|<any>|\bas\s+any\b" 2>/dev/null || echo 0)
+  if [ "${any_adds:-0}" -gt 0 ] 2>/dev/null; then
+    issues+=("$any_adds new \`any\` type(s) added in this session — prefer proper types or \`unknown\`")
+  fi
+
+  console_adds=$(git diff --unified=0 HEAD -- \
+    'client/src/**/*.ts' 'client/src/**/*.tsx' \
+    'server/**/*.ts' 2>/dev/null \
+    | grep -E "^\+[^+]" \
+    | grep -vE "^\+\s*\*|^\+\s*//" \
+    | grep -cE "console\.(log|warn|error|debug|info)\s*\(" 2>/dev/null || echo 0)
+  if [ "${console_adds:-0}" -gt 0 ] 2>/dev/null; then
+    issues+=("$console_adds new \`console.*\` call(s) in production code — route through logger")
+  fi
+
+  tsignore_adds=$(git diff --unified=0 HEAD -- \
+    'client/src/**/*.ts' 'client/src/**/*.tsx' \
+    'server/**/*.ts' 'shared/**/*.ts' 2>/dev/null \
+    | grep -E "^\+[^+]" \
+    | grep -cE "@ts-ignore|@ts-expect-error" 2>/dev/null || echo 0)
+  if [ "${tsignore_adds:-0}" -gt 0 ] 2>/dev/null; then
+    issues+=("$tsignore_adds new \`@ts-ignore\` / \`@ts-expect-error\` line(s) added — fix the type instead")
+  fi
+fi
+
 # ── Output ────────────────────────────────────────────────────────────────
 if [ "${#issues[@]}" -eq 0 ]; then
   # Silent exit — no feedback, no noise
