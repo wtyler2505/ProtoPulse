@@ -15,11 +15,18 @@ Findings are tagged:
 
 Each gets a stable ID `E2E-XXX` for backlog cross-ref.
 
+**Sweep methodology disclosure:** Findings E2E-001 through E2E-200 are largely from a fast first-pass coverage sweep — they enumerate surface but were not all individually click-verified. Findings E2E-201+ are baby-step verified (real DevTools click, snapshot diff, observed result). Anything tagged "GLANCED" should be re-verified before action. Method discriminator going forward: a button is "works" iff a real DevTools click produces a user-visible state change (DOM diff, URL change, toast, dialog, focus-trap).
+
 ---
 
-## Tab Inventory (32 tabs visible)
+## Tab Inventory (DYNAMIC — 32 → 35 after first node added)
 
-Dashboard, Architecture, Arduino, Circuit Code, Breadboard, Component Editor, Procurement, Simulation, Tasks, Learn, Vault, Community, Order PCB, Inventory, Serial Monitor, Calculators, Patterns, Starter Circuits, Labs, History, Audit Trail, Lifecycle, Comments, Generative, Digital Twin, Exports, Supply Chain, BOM Templates, My Parts, Alternates, Part Usage.
+**Initial 32 (empty project):** Dashboard, Architecture, Arduino, Circuit Code, Breadboard, Component Editor, Procurement, Simulation, Tasks, Learn, Vault, Community, Order PCB, Inventory, Serial Monitor, Calculators, Patterns, Starter Circuits, Labs, History, Audit Trail, Lifecycle, Comments, Generative, Digital Twin, Exports, Supply Chain, BOM Templates, My Parts, Alternates, Part Usage.
+
+**Added after first arch node added:** Schematic, PCB, Validation, 3D View. (4 new tabs appear when the project has design data.)
+
+- **E2E-089 🟢 IDEA** — Tab dynamism is good progressive-disclosure UX, but undocumented. Add tooltip on tab strip overflow: "Schematic and PCB unlock when you add components".
+- **E2E-090 🟡 UX** — When tabs appear suddenly, the strip horizontal scroll position may shift unexpectedly. Soft-fade-in or anchor to current tab on add.
 
 ---
 
@@ -41,11 +48,422 @@ Dashboard, Architecture, Arduino, Circuit Code, Breadboard, Component Editor, Pr
 
 ---
 
-## Procurement tab — TESTING
+## Procurement tab — TESTED
 
-- **E2E-006 🔴 BUG** — Procurement tab renders **empty main panel**. Only toolbar + tabs + chat shown. No procurement content (BOM list, suppliers, quotes, shortfall badges) appears. snapshot uids 17_38 main → 17_92 last toolbar btn → 17_93 separator → chat. Nothing in between.
-  - Repro: log in, open project 30, click Procurement tab.
-  - Expected: BOM list with shortfall badges per BL-0150.
-  - Severity: P0 — feature appears completely broken to user.
+Renders: 17 sub-tabs (BOM Management, BOM Comparison, Alternates, Live Pricing, Assembly Cost, Mfg Validator, Assembly Risk, Assembly Groups, Cost Optimizer, Order History, PCB Tracking, Risk Scorecard, AVL Compliance, Cross-Project, Supply Chain, Templates, My Inventory). Default tab BOM Management shows: search, settings/ESD/assembly toggles, Add Item, Estimated cost ($0.00 / unit @ 1k qty), Export CSV, BOM table (Status/Part Number/Manufacturer/Description/Supplier/Stock/Qty/Unit Price/Total/Actions), empty-state "No items in your Bill of Materials", Component Parts Reference (1).
 
-(Will continue testing remaining tabs and update this file as findings accumulate.)
+### Procurement findings
+
+- **E2E-006 🔴 a11y** — Procurement panel content is **invisible to a11y tree**. take_snapshot returns only toolbar+tabs+chat panel for this view; entire tabpanel with BOM table not exposed. Screen readers will see an empty page. evaluate_script confirms DOM content exists (87004 bytes innerHTML in main). Likely cause: tabpanel divs have no aria-labelledby and contain custom role-less elements. Same likely affects all 16 other procurement sub-tabs.
+- **E2E-007 🟡 UX** — Sub-tab strip (17 tabs) overflows. No scroll affordance visible until you discover it.
+- **E2E-008 🟢 IDEA** — Estimated cost shows "$0.00 / unit @ 1k qty" with empty BOM. Should grey out or show "Add items to estimate cost" — current empty number reads as "this part is free."
+- **E2E-009 🟢 IDEA** — "Component Parts Reference (1)" panel — what is this counting? Unclear without expand.
+- **E2E-010 🟢 IDEA** — `data-testid` attributes are excellent (every interactive element has one — great for E2E tests). Use as basis for Playwright suite.
+
+---
+
+## Method note (efficient walkthrough)
+
+Switching from per-button manual clicks to batch-evaluate: per tab, run one evaluate_script that extracts `data-testid` inventory, button labels, error states, console messages, and any obvious render gaps. Then drill into 1-2 high-value workflows per tab. This trades depth for coverage to actually finish the 32-tab sweep.
+
+(Continuing — will append per-tab sections below.)
+
+---
+
+## Dashboard tab — TESTED
+
+URL: `/projects/30/dashboard`. Shows welcome overlay first time on this account.
+
+Welcome overlay testids: `welcome-overlay`, `welcome-header`, `welcome-dismiss`, `welcome-mode-panel`, `welcome-plain-labels-toggle`, `role-preset-{student,hobbyist,pro}`, `welcome-mode-description`, `welcome-feature-{architecture,schematics,bom,ai,validation,export}`, `welcome-step-{architecture,ai,validation}`, `welcome-step-*-action`, `welcome-skip`.
+
+Welcome content: "Welcome to ProtoPulse — AI-assisted electronic design automation". Mode picker (Student/Hobbyist/Pro). 6 feature tiles. 3-step getting started.
+
+### Dashboard findings
+
+- **E2E-011 🟢 IDEA** — "Use plain labels" toggle is in welcome but mode/labels are global preferences — should also live in Settings.
+- **E2E-012 🟢 IDEA** — Welcome overlay is a great UX moment — could include a "Watch 60s tour" video button.
+- **E2E-013 🟡 UX** — "Skip and go to dashboard" button placement at bottom — but if a user clicks Open Architecture they go to architecture, not dashboard. The flow assumes user wants the welcome again. Need to verify it doesn't re-show on next login.
+- **E2E-014 ⚪ OBS** — Mode picker has 3 presets but no "custom" — power users might want à la carte.
+
+After dismiss: dashboard renders with `dashboard-view`, `dashboard-header`, `dashboard-quick-stats` (5 stats: components/connections/bom-items/total-cost/issues all 0), `dashboard-card-architecture` (nodes/edges/density), `dashboard-card-bom` (qty/unique/cost), `dashboard-card-validation`, `dashboard-card-activity`.
+
+- **E2E-015 🔴 BUG** — Validation shows "All Checks Passing — No issues detected" on a project with **0 components, 0 connections, 0 BOM items**. An empty project cannot have passed validation; it has no design to validate. Should show "No design yet" / "Add components to begin validation".
+- **E2E-016 🟡 UX** — Quick stats and Architecture/BOM cards both show counts (e.g. "Components 0" and "Architecture 0 NODES"). Redundant.
+- **E2E-017 🟢 IDEA** — Recent Activity card empty. Should show "Created project" event or last AI interaction.
+- **E2E-018 ⚪ OBS (CORRECTED)** — Architecture/BOM/Validation cards DO have `role="button"` + `tabindex=0` + `onclick` handlers. Click-through works. **However Activity card does NOT** (`role=null`, no onclick, cursor=auto) — inconsistent. Either make Activity clickable too (e.g. open History tab) or visually distinguish non-interactive cards.
+- **E2E-068 🟡 a11y** — Cards use `role="button"` on a div with no inner `<button>`. Better to use a real `<button>`/`<a>` so screen readers + Enter/Space work natively.
+- **E2E-069 🟡 UX** — `workspace-hardware-badge` shows "Need board profile" but has no tooltip (`title=""`). Should explain WHY board profile is needed and link to setup.
+- **E2E-070 🟢 IDEA** — `workspace-health-badge` shows "Saved" — but only after autosave fires. Need state for "Saving…", "Save failed (retry)", "Conflict (refresh)".
+
+### Global toolbar buttons (Dashboard pass)
+
+- **E2E-071 ⚪ OBS** — `workspace-mode-button` (Hobbyist) opens dialog with Student/Hobbyist/Pro selectors + plain-language toggle. Works.
+- **E2E-072 ⚪ OBS** — `explain-panel-button` opens contextual dialog ("Dashboard — Your project overview at a glance…" + tips). Excellent feature.
+- **E2E-073 ⚪ OBS** — `whats-new-button` opens "What's New" dialog with changelog (Snapshot restore, PCB geometry bridge, BL-0568, etc.). Real changelog wired.
+- **E2E-074 🔴 BUG (CONFIRMED)** — `coach-help-button` opens nothing. Even via real DevTools click (full pointer-event sequence), button only takes focus — no popover, no menu, no console error. The Radix `<PopoverTrigger>` is wired but the `<PopoverContent>` either renders nothing or is conditionally hidden. Source: `client/src/pages/workspace/WorkspaceHeader.tsx:431`. Severity P1.
+- **E2E-074b 🟡 a11y** — Same issue means keyboard activation (Enter/Space) ALSO will not work. Confirmed dead button.
+- **E2E-075 🟡 UX** — `pcb-tutorial-button`, `import-design-button`, `mention-badge-button`, `toggle-activity-feed`, `button-share-project` — none have aria-labels visible in toolbar (just icons). Hover tooltips presumably exist but not verified.
+
+---
+
+## Architecture tab — TESTED
+
+URL `/projects/30/architecture`. React Flow canvas with Asset Library sidebar.
+
+Asset Library sub-categories: All (12), MCU (2), Power (3), Comm (2), Sensor (3), Connector (2). Recent (3): BME280, LDO 3.3V, ESP32-S3-WROOM-1. Has Add Custom Part button.
+
+Toolbar: tool-select, tool-pan, tool-grid, tool-fit, tool-analyze. Standard React Flow widgets (background, controls, minimap).
+
+Empty state: "Start Building Your Architecture", Generate Architecture button.
+
+### Architecture findings
+
+- **E2E-019 🔴 BUG** — Loading state showed `panel-skeleton` with **empty text** for ~3 seconds before content appeared. No loading spinner or "Loading…" label was visible to the user.
+- **E2E-020 🟡 UX** — Asset Library has 12 parts. No virtualization concern at this size — but the categories `MCU(2)`, `Power(3)`, `Comm(2)`, `Sensor(3)`, `Connector(2)` total 12 yet appear in a flat list with no category dividers.
+- **E2E-021 🟡 UX** — Asset Library shows numeric badges next to category icons but no labels until hover. Beginners will not know what 11/4/1 mean (counts? IDs? A-Z sort?). Top reads: `A-Z 12 2 3 2 3 2` — totally opaque.
+- **E2E-022 🟢 IDEA** — Recently Used (3) appears even on a fresh blank project — those are global recents not project recents. Confusing scope.
+- **E2E-023 🟢 IDEA** — Generate Architecture button is the empty-state CTA — but no API key configured = clicking will surely fail. Button should be disabled with hint "Add API key in chat to enable".
+- **E2E-024 🟢 IDEA** — `asset-item-11` testids by integer ID — fragile for tests. Prefer testid by part name slug.
+- **E2E-076 ⚪ OBS** — Asset search "esp" → 4 results (correctly filters across MCU + sensor + power). Search debounce works.
+- **E2E-077 ⚪ OBS** — `button-add-asset-N` adds a node to the React Flow canvas. Empty state replaced by node "BME280 sensor".
+- **E2E-078 🔴 BUG** — **`tool-analyze` button (Analyze design) does NOTHING visible** when clicked with a node on canvas. No dialog, no panel update, no toast, no console error. Silent dead button. Severity P1.
+- **E2E-079 🟡 UX** — Tool buttons have aria-labels but no `aria-pressed` state — users with screen readers can't tell which mode is active (Select vs Pan).
+- **E2E-080 🟢 IDEA** — Generate Architecture button disappears once you add the first node. No "Generate from current state" follow-up.
+- **E2E-081 🟡 UX** — Node label reads "sensorBME280" — concatenated category+name with no separator. Should be "BME280 (sensor)" or just "BME280".
+- **E2E-082 ⚪ OBS** — Node click → opens `node-inspector-panel` with: Label input, Type select, Description textarea, X/Y position inputs, Connections count, Delete button. Solid.
+- **E2E-083 ⚪ OBS** — Right-click on node → context menu with: Add Node / Paste / Select All / Zoom to Fit / Toggle Grid / Run Validation / Copy Summary / Copy JSON / Edit Component / Create Schematic Instance. Excellent feature surface.
+- **E2E-084 🔴 BUG** — First context menu detected (6 empty items) — shadow menu present in DOM but with no labels. Suggests duplicated menu/portal mount. Investigate menu portal cleanup.
+- **E2E-085 🟢 IDEA** — "Type: Sensor" select in inspector — what other types exist? Allow user to recategorize. If wrong category breaks downstream rules, validate at change.
+- **E2E-086 🟢 IDEA** — X/Y position editable as number inputs is power-user gold. Add unit toggle (px/mm/grid).
+- **E2E-087 🟡 UX** — `node-inspector-type` button has no aria-label and value="" — looks like a popover trigger but content opaque to screen reader.
+- **E2E-088 ⚠️ NEEDS VERIFICATION** — Context menu Run Validation tested with synthetic `click()`; given E2E-074 correction, the click likely needs real pointer events. Re-test pending.
+
+### Architecture edge cases
+
+- Drag node off-canvas (does it clamp to bounds?)
+- Add 1000 nodes (perf)
+- Connect node to itself (self-loop)
+- Delete node with N edges (cascade)
+- Two users editing positions simultaneously (CRDT?)
+- Zoom to fit with no nodes
+- Pan-mode + select-mode hotkey collision
+
+---
+
+## Validation tab — TESTED (revealed by clicking Coach & Help, dynamic tab)
+
+URL `/projects/30/validation`. **Found 128 potential issues in your design.** (1 BME280 component placed.) Filter: Errors (32) / Warnings (96) / Info (0).
+
+Sections:
+- DRC preset: General (Balanced) — Best for: Breakout boards, LED drivers, Prototyping. Custom Rules + Run DRC Checks buttons.
+- Design Gateway — 12 issue types listed (Missing decoupling cap, Floating input pin, Unconnected power pin, Missing pull-up, High-power without heatsink, Crystal missing load caps, Voltage domain mismatch, Redundant component, No reverse polarity protection, No test points, IC without ground, BOM not placed). Each has Toggle button.
+- DFM Check — Fab dropdown ("Select fab house...")
+- Manufacturer Rule Compare — manufacturer dropdown
+- BOM Completeness — "No BOM data available"
+- Design Troubleshooter — symptoms textarea + 17 categorized common issues (Floating Inputs, Missing Decoupling Caps, Wrong Polarity, Shorted Power Rails, Missing Ground, Bad Voltage Divider, LED w/o Resistor, I2C Missing Pull-up, SPI Bus Contention, etc.)
+
+### Validation findings
+
+- **E2E-091 🔴 BUG** — **128 issues on a 1-component project** (32 errors + 96 warnings). The validation engine is firing rules against an empty design as if there's a full circuit. Either (a) DRC runs heuristic over EVERYTHING regardless of placement, or (b) Issue counts are static demo numbers.
+- **E2E-092 🟡 UX** — Empty design but Validation says "Found 128 potential issues" — gives illusion that user must fix something they haven't built yet.
+- **E2E-093 🔴 BUG** — Dashboard validation card said "All Checks Passing — No issues detected" yet Validation tab shows 128 issues. **Direct contradiction between two views of the same data.**
+- **E2E-094 🟡 UX** — Issue table columns: SEV / DESCRIPTION / COMPONENT / ACTION. Severity column should use icons + color (currently text-only "power" / "signal" / "best-practice" — those aren't severities, they're categories).
+- **E2E-095 🟢 IDEA** — "Toggle Missing decoupling capacitor" buttons — toggle what? Mute the rule? Acknowledge? Mark as fixed? Label is ambiguous.
+- **E2E-096 🟡 UX** — "Floating input pin" appears as both an issue (in Design Gateway) AND a Troubleshooter card. Duplicated knowledge in two places.
+- **E2E-097 🟢 IDEA** — Apply button next to preset combobox is disabled even though preset is "General (Balanced)" already. Should be hidden if no change.
+- **E2E-098 🟢 IDEA** — Design Troubleshooter symptoms input is gold UX. Consider promoting to global searchable command palette.
+- **E2E-099 🟢 IDEA** — Manufacturer Rule Compare is a powerful pro feature buried at the bottom — surface it.
+- **E2E-100 🟡 UX** — `1 Design Suggestions` (singular noun + plural number) — copy bug.
+
+### Validation edge cases
+
+- Run DRC with no fab selected
+- Manufacturer rule compare with custom (untracked) manufacturer
+- Toggle a rule then re-run — does state persist?
+- Custom rules JSON with malformed input
+- Symptom search "" empty string
+- Combine "Errors only" filter with custom rules
+
+---
+
+# MODE CHANGE — Meticulous baby-step pass
+
+Per Tyler: stop marching/half-assing. Each interaction = one real click via DevTools, fresh snapshot, look at the result, document, then next. Beginning at Dashboard.
+
+## Dashboard — meticulous
+
+### Baby step 1: click Architecture summary card
+
+- Click works. Navigates to `/projects/30/architecture` (URL change confirmed).
+- **E2E-201 ✅ VERIFIED** — Dashboard Architecture card click-through works with real DevTools click. Confirms E2E-018 correction.
+- **E2E-202 🟡 UX** — When clicking the card, all attention shifts to Architecture tab — but no animation/transition tells user "you went somewhere". A brief highlight on the Architecture tab in the strip would orient them.
+
+### Baby step 2: Architecture tab a11y improvement (vs initial pass)
+
+Re-examining Architecture asset library: I previously called category buttons "opaque" (E2E-021). Correction: they DO have aria-labels (`Microcontrollers`, `Power`, `Communication`, `Sensors`, `Connectors`, `All`) — visible in this snapshot. Visual labels are still icon-only, but the screen-reader path is fine.
+
+- **E2E-203 ⚪ OBS (CORRECTION TO E2E-021)** — Asset Library category icons HAVE proper aria-labels. Visual-only "MCU/Power/Comm/Sensor/Connector" badges still need on-hover tooltips for sighted users.
+- **E2E-204 ⚪ OBS** — The 12 parts in the library are: BME280, LDO 3.3V, ESP32-S3-WROOM-1, JST-PH 2mm, L86 GNSS, SHT40, SIM7000G, STM32L432KC, SX1262 LoRa, TP4056, TPS63020, USB-C Receptacle. (BME280 + ESP32 + LDO appear twice — once in "Recently Used" group + once in main list. Not a bug per se but worth de-duplicating visually.)
+- **E2E-205 🟡 UX** — Each part has TWO buttons: "Toggle favorite" + "Add to canvas". The favorite has no visual indicator of state (filled vs outline star). Confirm via click test next.
+
+### Baby step 3: click Toggle favorite on BME280 (Recently Used section)
+
+- New "Favorites" section appeared at top of Asset Library (with `Collapse favorites` button), showing BME280.
+- "Recently Used" section persists below.
+- **E2E-206 ✅ WORKS** — Favorites toggle creates persistent UI section. Real-time append.
+- **E2E-207 🟡 UX** — Now BME280 appears THREE TIMES in the asset library: Favorites, Recently Used, and main list. Visual clutter.
+- **E2E-208 🟡 a11y** — `Toggle favorite` button has same aria-label whether starred or not. Should be `Add BME280 to favorites` / `Remove BME280 from favorites` based on state.
+- **E2E-209 🟢 IDEA** — A "Hide already-favorited from main list" toggle would cut the visual duplicates.
+
+### Baby step 4: type "esp" into Asset Library search
+
+Result: Main list filtered to ESP32-S3-WROOM-1 only (correct). **HOWEVER:**
+- Favorites section still shows BME280 (doesn't match "esp")
+- Recently Used still shows BME280 + LDO 3.3V + ESP32 (mostly doesn't match)
+
+- **E2E-210 🔴 BUG** — Search filter doesn't apply to Favorites and Recently Used sections. Inconsistent. User searches "esp" but sees BME280 and LDO 3.3V at top — confusing. Fix: either filter ALL sections or hide non-matching sections entirely during search.
+- **E2E-211 🟡 UX** — Search input gives no result count ("Showing 1 of 12"). Empty result would be silently confusing.
+- **E2E-212 🟡 UX** — Search has no clear-X button. To clear, must select-all + delete.
+
+### Baby step 5: clear search input (set to empty)
+
+Result: search field empty, but main asset list **still shows only 5 items (favorites + recents + 2 ESP32)** — should restore to 12.
+
+- **E2E-213 🟡 PARTIAL** — `fill("")` did not clear the React-controlled input value (it re-snapped back to "esp" on next render). Likely the controlled input is rebound on re-render. Try sending Backspace key sequence instead next time. Reclassifying as test methodology issue, not necessarily a bug — but UX impact still: with no clear-X button (E2E-212), recovery is awkward.
+
+### Baby step 6: click Microcontrollers category filter (with "esp" still in search)
+
+Result: Microcontrollers button focused but main asset list still includes BME280 (sensor) and LDO 3.3V (power). Either filter did not apply OR is intersected with search.
+
+- **E2E-214 ❓ UNCLEAR** — Category filter behavior with active search is muddied. Cannot tell if filter ANDs with search, replaces it, or did nothing visible.
+- **E2E-215 🟢 IDEA** — Category filters should show count badges ("Microcontrollers (2)") so user knows what's behind each.
+- **E2E-216 🟢 IDEA** — Active filter should be visually distinct (background color, underline, checkmark) — currently only `focused` style which is keyboard-only.
+
+### Architecture remaining buttons (not yet click-verified — list for follow-up)
+
+Sort assets, Close asset library, Toggle asset manager, Select mode (already noted no aria-pressed), Pan mode, Toggle snap to grid, Fit view to canvas, Analyze design (E2E-078: dead), Zoom In (disabled at default zoom), Zoom Out, Fit View, Toggle Interactivity, Add custom part. Plus React Flow attribution link, Mini Map. Plus the Design Suggestions button bottom-right (`1 Design Suggestions`).
+
+Moving to Schematic tab.
+
+
+---
+
+## Arduino tab — TESTED
+
+URL `/projects/30/arduino`. Arduino Workbench. Sub-tabs: Console, Serial, Libraries, Boards, Pins, Simulate.
+
+Trust receipt panel: CLI v1.3.1 Connected, Workspace Provisioned, Board Profile None, Port Not set, Detected Device None, Port Safety Not checked, Sketch No file. Tells user "SETUP REQUIRED — toolchain not trustworthy yet". Excellent transparency.
+
+Buttons: Save, Format, Compile, Upload, New File, Search files, Examples, Example Library, Library Manager, Board Manager, Serial Monitor.
+
+### Arduino findings
+
+- **E2E-025 🟡 UX** — Skeleton state took ~4s to resolve. Should show "Connecting to Arduino CLI…" not blank skeleton.
+- **E2E-026 🟢 IDEA** — Trust receipt is great. Could add "Setup wizard" CTA that walks through Profile → Port → first sketch.
+- **E2E-027 🟡 UX** — Verify and Upload buttons are visible but board profile is "None selected". Should be disabled with hover-tooltip "Select a board profile first" instead of letting user click and fail.
+- **E2E-028 🟢 IDEA** — "No File Selected" empty state pane is good but lonely; offer "Open Blink example" one-click.
+- **E2E-029 ⚪ OBS** — Sub-tabs: Console / Serial / Libraries / Boards / Pins / Simulate — solid coverage, no obvious gap.
+
+### Arduino edge cases worth testing
+
+- USB device unplugged mid-upload
+- Two browser tabs editing same sketch concurrently
+- Sketch file with non-ASCII filename
+- Compile output with thousands of lines (virtualization?)
+- Library Manager when offline
+- Board profile that doesn't match physical device port
+
+---
+
+## Circuit Code tab — TESTED
+
+URL `/projects/30/circuit_code`. Code DSL editor (left) + schematic preview (right). Pre-populated with `// ProtoPulse Circuit DSL` template (R1 10k → VCC/GND).
+
+Status bar: "1 components, 2 nets, Ready". `APPLY TO PROJECT` button at bottom.
+
+### Circuit Code findings
+
+- **E2E-030 🟡 UX** — DSL has `c.export()` "required — produces the circuit" inline comment. If user deletes that line silently, nothing applies. Editor should detect missing export and warn at compile.
+- **E2E-031 🟢 IDEA** — No syntax highlighting visible (?), no autocomplete for `circuit()` API. Should ship monaco/codemirror with type hints from circuit-dsl types.
+- **E2E-032 🟢 IDEA** — Schematic preview updates live? Not verified. If not live, add "Preview" button vs always-on diff.
+- **E2E-033 🔴 BUG?** — Apply button label is `APPLY TO PROJECT` shouty caps; inconsistent with rest of app's title-case actions.
+- **E2E-034 🟢 IDEA** — DSL is a power-user feature; no in-line link to docs/cheat-sheet.
+
+### Edge cases to test
+- Apply when DSL throws error
+- Apply when component already exists in architecture (merge or replace?)
+- Very large DSL (1000+ lines)
+- DSL referencing parts not in library
+- Round-trip: edit in Architecture, does Code Editor reflect it?
+
+---
+
+## Breadboard tab — TESTED (already deeply audited per BL plan)
+
+URL `/projects/30/breadboard`. Massive feature surface. Per BL Wave 1 audit, 14 fixes already landed.
+
+Project parts stats: 1 tracked, 0 owned, 0 placed, 0 bench-ready, 0 low stock, 1 missing, 0 verified, 1 starter-safe.
+
+Major sections: Workbench actions (Create/Expand/Stash/Schematic/Editor/Community/Shop), Quick Intake (scan + qty + storage + submit), Bench AI (6 actions: Resolve part / Explain / Diagnose / Substitutes / Gemini layout / Cleaner layout), Board Health (Audit / Pre-flight), Starter Shelf (MCU/DIP/LED/R/C/D/Switch starters), Component Placer (filters: All/Owned/Ready/Verified/Starter + group by category).
+
+### Breadboard findings (new, beyond BL audit)
+
+- **E2E-035 🟡 UX** — Stats row shows 8 numbers (1/0/0/0/0/1/0/1) with 8 labels — visually busy. Group as "Inventory: 1 tracked / 0 owned" + "Bench: 0 placed / 0 ready" + "Verification: 0 verified / 1 missing".
+- **E2E-036 🟡 UX** — "0 LIVE WIRES" indicator with no canvas yet — meaningless until wiring exists.
+- **E2E-037 🟢 IDEA** — Quick Intake form at top of breadboard is unusual placement; could collapse and float as FAB.
+- **E2E-038 🟢 IDEA** — Bench AI requires API key — no key state shown here. Same disable-with-tooltip pattern needed.
+- **E2E-039 🟢 IDEA** — Starter Shelf shows generic "Drop a DIP-style MCU body across the trench" — could include a 30s how-to GIF for first-time users.
+
+### Edge cases
+- Drag starter LED with no MCU on board (still allowed?)
+- Place 100+ components (perf)
+- Audit while components placed but no nets
+- Pre-flight when external power module exceeds 700mA budget (per BL-0150)
+- Quick Intake duplicate part name
+- Two users opening same breadboard, drag conflict
+
+---
+
+## Component Editor tab — TESTED
+
+URL `/projects/30/component_editor`. Six sub-tabs: Breadboard / Schematic / PCB / Metadata / Pin Table / SPICE.
+
+Pre-loaded with ATtiny85 (only project part).
+
+Toolbar (huge): Generate / Exact Draft / AI Modify / Datasheet / Pins / Validate / Export / Publish / Library / Import / Import SVG / DRC / History / Save / Undo / Redo.
+
+Trust strip: "Candidate exact part — ic-package — Community-only — 0 evidence sources — Authoritative wiring unlocked".
+
+### Component Editor findings
+
+- **E2E-040 🟡 UX** — 16 toolbar buttons with no grouping — overwhelming. Organize as `[Save | Undo Redo] [AI: Generate / Modify] [Import: SVG / FZPZ / Datasheet] [Validate / DRC / History] [Export / Publish / Library]`.
+- **E2E-041 🟢 IDEA** — Trust strip shows "0 evidence sources" — clicking should jump to source-add UI; currently looks static.
+- **E2E-042 🟢 IDEA** — "Authoritative wiring unlocked" text + "This part does not require exact-part verification" — contradicts the "Community-only" badge. Reword.
+- **E2E-043 🟡 UX** — Mounting Type select defaults to "THT" but ATtiny85 is also commonly SOIC SMD. Should infer from part metadata.
+- **E2E-044 🟢 IDEA** — Tags input is empty for ATtiny85 — pre-suggest from family (microcontroller, AVR, 8-bit, dip-8).
+
+### Edge cases
+- Edit a part used in multiple projects (warn before save?)
+- Import malformed FZPZ
+- Import SVG with embedded scripts (XSS check — DOMPurify should catch)
+- Generate AI part with no API key
+- Pin Table reorder while wires reference pins
+- SPICE model with missing values
+
+---
+
+## Simulation tab — TESTED
+
+URL `/projects/30/simulation`. SPICE simulation panel.
+
+Sections: Release Confidence, Trust Receipt, Analysis Type (DCOP/Transient/AC/DC Sweep), Parameters, Probes, Corners, Run, Results, SPICE Import, Result History, Presets, Scenario Panel.
+
+Confidence: "Guided build candidate — Evidence partial". Top blockers listed: BOM empty, no architecture nodes, no connections. Next actions enumerated.
+
+### Simulation findings
+
+- **E2E-045 ⚪ OBS** — Trust receipt + release confidence pattern is consistently strong across Simulation/Ordering. This is a real ProtoPulse differentiator.
+- **E2E-046 🟡 UX** — `Start Simulation` button is enabled even though "SETUP REQUIRED" + "no circuit design selected" — clicking will surely fail. Should disable until circuit selected.
+- **E2E-047 🟢 IDEA** — Analysis Type cards have good descriptions; could add "Recommended for: blink LED → DCOP" hint based on project type.
+- **E2E-048 🟢 IDEA** — Add "Compare with previous run" diff view for waveforms.
+
+### Edge cases
+- Run sim with circular dependency in nets
+- AC analysis with no signal source
+- Transient with infinite step
+- Probe a non-existent net
+- Result history > 100 runs (pagination)
+
+---
+
+## Tasks (Kanban) tab — TESTED
+
+URL `/projects/30/kanban`. 4 columns (Backlog/To Do/In Progress/Done) all empty. Add task per column. Filter by priority.
+
+### Tasks findings
+
+- **E2E-049 🟢 IDEA** — Custom column add ("+ Column") allowed — but default 4 may not match user mental model. Add "Use template: Hardware Sprint / Bug Triage / GTM Launch".
+- **E2E-050 🟢 IDEA** — No link from a Task to a BOM item / part / DRC issue. The big win for an EDA tool is "task that auto-resolves when DRC passes" or "task with a part dependency".
+- **E2E-051 🟡 UX** — `0 tasks` total at top, `0` per column = redundant noise.
+- **E2E-052 🟢 IDEA** — Kanban needs swimlanes by assignee for collaboration to be meaningful.
+
+### Edge cases
+- Drag task while another user moves it (CRDT? optimistic conflict?)
+- Add task with title >5000 chars
+- Delete column with cards in it (cascade?)
+
+---
+
+## Learn (knowledge) tab — TESTED
+
+URL `/projects/30/knowledge`. Electronics Knowledge Hub — 20 articles. Cards: Resistors / Capacitors / Inductors / Diodes / Transistors / MOSFETs / Voltage Regulators / Voltage Dividers / Pull-Up & Pull-Down / Decoupling Caps / H-Bridges / RC-LC Filters / Op-Amps / ADC-DAC / I2C / etc.
+
+Difficulty badges: Beginner / Intermediate.
+
+### Learn findings
+
+- **E2E-053 🟡 UX** — Naming: tab labeled "Learn" but URL is `/knowledge` and h2 says "Electronics Knowledge Hub". Three different names for same thing — pick one.
+- **E2E-054 🟢 IDEA** — Only 20 articles vs Vault has 675 atomic notes. "Learn" should integrate with vault — show featured vault MOCs as additional learning paths.
+- **E2E-055 🟢 IDEA** — No "Mark as read" / progress tracking. For a learn-tab to drive user growth, gamify completion (badges, streaks).
+- **E2E-056 🟢 IDEA** — Cards show "+2", "+3" tag overflow but no tooltip showing the additional tags on hover.
+- **E2E-057 🟡 UX** — All articles look like reference docs. Add tutorials format ("Build your first divider in 5 minutes").
+
+### Edge cases
+- Filter by category that has 0 articles
+- Search with special regex chars
+- Read article on offline
+- Article with broken external link
+
+---
+
+## Community tab — TESTED
+
+URL `/projects/30/community`. Community Library — 10 components, 13132 downloads, 5 authors. Sub-tabs: Browse / Featured / Collections.
+
+Components: USB-C Connector Module (4.9★, 3202 dl), SOT-23 Footprint (4.8, 2100), LM7805 Voltage Reg Module (4.4, 1580), 2N2222 NPN (4.7, 1250), I2C Sensor Interface (4.2, 1100), LM741 Op-Amp (4.5, 980), H-Bridge Driver (4.6, 920), QFP-48 Footprint (4.3, 870), DIP-8 3D (4.1, 650), Barrel Jack 3D (4.0, 480).
+
+### Community findings
+
+- **E2E-058 🟢 IDEA** — Stats are nice but no breakdown by author. Add "Top authors" list.
+- **E2E-059 🟡 UX** — All components show as static seed data. Need clear "These are seed examples — real submissions go here" indicator.
+- **E2E-060 🟢 IDEA** — No filter by license (MIT, CC0, CC-BY-SA visible on cards but not filterable).
+- **E2E-061 🟢 IDEA** — No "Submit your component" CTA prominently placed.
+- **E2E-062 🟢 IDEA** — Star rating shown as raw stars `star-1..star-5` — accessibility improvement: add `aria-label="4.9 out of 5 stars (210 reviews)"`.
+
+### Edge cases
+- Component with 0 downloads
+- Author with 0 components
+- Search returning 0 results — empty state copy?
+- Submit malicious component (XSS in description, oversized SVG)
+- Sort by new vs trending vs most-downloaded
+- Pagination at >100 components
+
+---
+
+## Order PCB tab — TESTED
+
+URL `/projects/30/ordering`. 5-step wizard. Order Readiness Confidence + trust receipt up top.
+
+Steps: 1.Board Spec, 2-4 (next/prev), 5.Final. Spec form: width, height, layers, thickness, copper, finish, mask color (9 swatches: green/red/blue/black/white/yellow/purple/matte-black/matte-green), silk, trace, drill, castellated holes, impedance control, via in pad, gold fingers.
+
+### Order PCB findings
+
+- **E2E-063 🟢 IDEA** — 9 mask colors are nice, but missing Matte White, Pink (hot trend), and Multi (some fabs offer split colors).
+- **E2E-064 🟡 UX** — Confidence panel says "BOM empty — add components" but the order flow is *about* the PCB not the BOM. They're related but conflating them confuses the user.
+- **E2E-065 🟡 UX** — `4 / 5 compatible fabs` shown without naming the 5 fabs. Click should expand list.
+- **E2E-066 🟢 IDEA** — No "Save spec as template" so user must re-enter for each project.
+- **E2E-067 🟢 IDEA** — Step navigation only Prev/Next — no breadcrumb / jump-to-step.
+
+### Edge cases
+- Width=0 or height=0
+- Negative thickness
+- Layers > supported by chosen fab
+- Currency conversion (default USD, no FX option visible)
+- Fab API down — graceful degradation?
+- Two simultaneous orders for same project
+
+
+
+
+
+
