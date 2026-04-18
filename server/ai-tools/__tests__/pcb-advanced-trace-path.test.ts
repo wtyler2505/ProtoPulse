@@ -36,12 +36,18 @@ function makeStorage(overrides: MockStorageOverrides = {}): IStorage {
       {
         id: 100,
         referenceDesignator: 'R1',
-        pcbPosition: { x: 10, y: 10, rotation: 0, side: 'front' },
+        pcbX: 10,
+        pcbY: 10,
+        pcbRotation: 0,
+        pcbSide: 'front',
       },
       {
         id: 200,
         referenceDesignator: 'R2',
-        pcbPosition: { x: 40, y: 10, rotation: 0, side: 'front' },
+        pcbX: 40,
+        pcbY: 10,
+        pcbRotation: 0,
+        pcbSide: 'front',
       },
     ]),
     ...overrides,
@@ -124,8 +130,8 @@ describe('suggest_trace_path — tool wiring', () => {
   it('fails cleanly when endpoints are not placed on the PCB', async () => {
     const storage = makeStorage({
       getCircuitInstances: vi.fn().mockResolvedValue([
-        { id: 100, referenceDesignator: 'R1' }, // no pcbPosition
-        { id: 200, referenceDesignator: 'R2', pcbPosition: { x: 40, y: 10, rotation: 0, side: 'front' } },
+        { id: 100, referenceDesignator: 'R1' }, // no pcb position fields
+        { id: 200, referenceDesignator: 'R2', pcbX: 40, pcbY: 10, pcbRotation: 0, pcbSide: 'front' },
       ]),
     });
     const result = await tool.execute({ circuitId: 1, netId: 10, layer: 'front' }, createCtx(storage));
@@ -171,15 +177,18 @@ describe('suggest_trace_path — tool wiring', () => {
           blockers.push({
             id: 500 + blockers.length,
             referenceDesignator: `B${blockers.length}`,
-            pcbPosition: { x: bx + dx, y: by + dy, rotation: 0, side: 'front' as const },
+            pcbX: bx + dx,
+            pcbY: by + dy,
+            pcbRotation: 0,
+            pcbSide: 'front' as const,
           });
         }
       }
     }
     const storage = makeStorage({
       getCircuitInstances: vi.fn().mockResolvedValue([
-        { id: 100, referenceDesignator: 'R1', pcbPosition: { x: 10, y: 10, rotation: 0, side: 'front' } },
-        { id: 200, referenceDesignator: 'R2', pcbPosition: { x: bx, y: by, rotation: 0, side: 'front' } },
+        { id: 100, referenceDesignator: 'R1', pcbX: 10, pcbY: 10, pcbRotation: 0, pcbSide: 'front' },
+        { id: 200, referenceDesignator: 'R2', pcbX: bx, pcbY: by, pcbRotation: 0, pcbSide: 'front' },
         ...blockers,
       ]),
     });
