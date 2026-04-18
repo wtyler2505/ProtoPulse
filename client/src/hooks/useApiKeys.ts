@@ -40,9 +40,9 @@ interface UseApiKeysResult {
   apiKey: string;
   /** Local keys map */
   localKeys: Record<string, string>;
-  /** Update the API key for a provider. Stores server-side when authenticated, localStorage otherwise. */
+  /** Update the API key for a provider. Stores server-side when authenticated, sessionStorage scratch otherwise (audit #60). */
   updateLocalKey: (provider: ApiKeyProvider, key: string) => void;
-  /** Clear the API key for a provider from both server and localStorage. */
+  /** Clear the API key for a provider from both server and sessionStorage scratch. */
   clearApiKey: (provider: ApiKeyProvider) => void;
   /** Whether server-side key data is still loading. */
   isLoading: boolean;

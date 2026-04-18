@@ -308,6 +308,7 @@ function checkMissingDecoupling(
     check.status = 'warn';
     check.detail = `${String(missingIds.length)} IC(s) without a decoupling capacitor on their power rail. Add 100 nF ceramic caps near each IC's VCC/GND pins.`;
     check.affectedInstanceIds = missingIds;
+    check.remediationLink = VAULT_SLUGS.DECOUPLING_100NF;
   }
 
   return check;

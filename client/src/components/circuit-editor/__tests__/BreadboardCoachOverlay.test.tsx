@@ -6,6 +6,7 @@
  * Tests cover the pure helper + smoke render of each overlay with minimal fixtures.
  */
 
+import type { ReactNode } from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
@@ -18,7 +19,7 @@ import {
 import type { BreadboardCoachPlan } from '@/lib/breadboard-coach-plan';
 import type { BreadboardSelectedPartModel } from '@/lib/breadboard-part-inspector';
 
-const svgWrap = (ui: React.ReactNode) => (
+const svgWrap = (ui: ReactNode) => (
   <svg data-testid="svg-root" width={1000} height={500} viewBox="0 0 1000 500">
     {ui}
   </svg>
