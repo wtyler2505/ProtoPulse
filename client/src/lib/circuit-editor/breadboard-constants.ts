@@ -183,7 +183,8 @@ export type { VaultSlugKey, VaultSlug, VaultCitation } from '@shared/vault-citat
 // history pre-2026-04-18). It was moved to `shared/vault-citation.ts` so
 // server-side rules and shared DRC helpers can consume the same data.
 // Consumers MUST import VAULT_SLUGS from the re-export above.
-const _REMOVED_IN_WAVE2 = {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _REMOVED_IN_WAVE2_ARCHIVE = {
   // --- ESP32 safety-critical rules ---
   ESP32_GPIO6_11_FLASH: 'esp32-six-flash-gpios-must-never-be-used',
   ESP32_GPIO12_STRAPPING: 'esp32-gpio12-must-be-low-at-boot-or-module-crashes',

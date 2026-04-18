@@ -489,23 +489,37 @@ describe('routeToModel — Gemini tier distinctness', () => {
 // =============================================================================
 
 describe('redactSecrets', () => {
-  it('redacts Anthropic API keys (sk-...)', () => {
-    const text = 'Failed with key sk-ant1234567890abcdef in request';
-    expect(redactSecrets(text)).not.toContain('sk-ant1234567890abcdef');
+  it('redacts Anthropic API keys (sk-ant-...)', () => {
+    // Real Anthropic keys look like `sk-ant-api03-<64 chars>` — the
+    // sk-ant- regex requires the literal hyphen after `sk-ant` and
+    // ≥16 chars after that. Fixture updated 2026-04-18 to match the
+    // real production shape.
+    const realKey = 'sk-ant-api03-1234567890abcdefghijk';
+    const text = `Failed with key ${realKey} in request`;
+    expect(redactSecrets(text)).not.toContain(realKey);
     expect(redactSecrets(text)).toContain('[REDACTED]');
   });
 
   it('redacts Google API keys (AIza...)', () => {
-    const text = 'Key AIzaSyA1B2C3D4E5F6G7H8I9 is invalid';
-    expect(redactSecrets(text)).not.toContain('AIzaSyA1B2C3D4E5F6G7H8I9');
+    // Real Google API keys are AIza + 35 alphanumeric chars (39 total).
+    // Mock fixture updated 2026-04-18 to realistic length so the production
+    // regex (which gates on ≥35 chars to avoid innocuous-string false
+    // positives) actually matches — previous fixture was only 20 chars.
+    const realKey = 'AIzaSyA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q';
+    const text = `Key ${realKey} is invalid`;
+    expect(redactSecrets(text)).not.toContain(realKey);
     expect(redactSecrets(text)).toContain('[REDACTED]');
   });
 
   it('redacts multiple keys in one string', () => {
-    const text = 'Keys sk-abc123 and AIzaXYZ456 failed';
+    // Both fixtures updated 2026-04-18 to realistic lengths (≥20 after sk-,
+    // ≥35 after AIza) to satisfy the production anti-false-positive gates.
+    const skKey = 'sk-abcdefghijklmnopqrstuvwxyz123';
+    const aizaKey = 'AIzaXYZ456789ABCDEFGHIJKLMNOPQRSTUVWX';
+    const text = `Keys ${skKey} and ${aizaKey} failed`;
     const result = redactSecrets(text);
-    expect(result).not.toContain('sk-abc123');
-    expect(result).not.toContain('AIzaXYZ456');
+    expect(result).not.toContain(skKey);
+    expect(result).not.toContain(aizaKey);
     expect(result.match(/\[REDACTED\]/g)).toHaveLength(2);
   });
 

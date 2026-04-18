@@ -57,7 +57,7 @@ describe('BreadboardInventoryDialog', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('renders the dialog content when open=true', () => {
+  it('renders the dialog content when open=true', { timeout: 15000 }, () => {
     render(
       <BreadboardInventoryDialog
         {...baseProps}

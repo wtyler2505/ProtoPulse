@@ -152,13 +152,18 @@ export TIER ESTIMATE CATEGORY RECOMMEND SAFE UNSAFE
 python3 <<'PY'
 import json, os
 msg_parts = [
-    f"BACKGROUND TASK STARTED ({os.environ['TIER']}, est {os.environ['ESTIMATE']}) — {os.environ['CATEGORY']}. DO NOT SIT IDLE. {os.environ['RECOMMEND']}",
+    f"BACKGROUND TASK STARTED ({os.environ['TIER']}, est {os.environ['ESTIMATE']}) — {os.environ['CATEGORY']}. Use wait time intelligently — NOT as pressure to manufacture work. {os.environ['RECOMMEND']}",
     "",
     os.environ['SAFE'],
     "",
     os.environ['UNSAFE'],
     "",
-    "Rule of thumb: READ don't WRITE. 'Blocked on <specific thing>' in one sentence is acceptable — silent idle is NOT. Full guardrails: memory/feedback_never_idle_while_waiting.md + ops/methodology/never-sit-idle-while-subagents-or-teammates-are-running.md.",
+    "DECISION LADDER (updated 2026-04-18 after the 17-agent overdispatch incident):",
+    "  1. BEST — clean in-session work that doesn't overlap with the running task: close finished tasks, triage audit findings, document to MASTER_BACKLOG, read next-phase files.",
+    "  2. OK — at agent cap (6) AND no clean fit? One-sentence status ('waiting on <X>') and wait. Silent poll-wait is acceptable.",
+    "  3. BAD — dispatching more agents past the 6-cap, manufacturing filler work, redundant status dumps to 'prove' you're busy.",
+    "",
+    "Rule of thumb: READ don't WRITE during waits. 'Blocked on <specific thing>' is fine. Full guardrails: memory/feedback_never_idle_while_waiting.md + memory/feedback_document_findings_to_backlog.md + memory/feedback_agent_count_cap.md.",
 ]
 print(json.dumps({"systemMessage": "\n".join(msg_parts)}))
 PY

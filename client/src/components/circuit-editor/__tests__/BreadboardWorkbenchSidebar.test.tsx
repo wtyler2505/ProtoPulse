@@ -4,6 +4,7 @@
  * createCircuit button invokes callback.
  */
 
+import type { ReactElement } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
@@ -12,7 +13,7 @@ import type { BreadboardBenchSummary } from '@/lib/breadboard-bench';
 import { ProjectIdProvider } from '@/lib/contexts/project-id-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-function renderWithProviders(ui: React.ReactElement) {
+function renderWithProviders(ui: ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>

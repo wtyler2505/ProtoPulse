@@ -511,16 +511,12 @@ export function redactSecrets(text: string): string {
   return text
     // Anthropic: sk-ant-<...>, sk-ant-api03-<...>
     .replace(/sk-ant-[a-zA-Z0-9_-]{16,}/g, '[REDACTED]')
-    // OpenAI project keys: sk-proj-<...> (must come before the generic sk- rule)
+    // OpenAI legacy: sk-<alphanumeric>
+    .replace(/\bsk-[a-zA-Z0-9]{20,}\b/g, '[REDACTED]')
+    // OpenAI project keys: sk-proj-<...>
     .replace(/\bsk-proj-[a-zA-Z0-9_-]{20,}\b/g, '[REDACTED]')
-    // OpenAI legacy: sk-<alphanumeric>. Lowered minimum from 20→3 — the
-    // `sk-` prefix is a strong enough signal that any suffix is worth
-    // redacting. Real production keys are 20+ chars; shorter matches are
-    // typically mock/test keys but redacting them is safer.
-    .replace(/\bsk-[a-zA-Z0-9]{3,}\b/g, '[REDACTED]')
-    // Google API: AIza<chars>. Real keys are 39 chars but `AIza` is a
-    // strong-enough prefix that any {3,}-char suffix is worth redacting.
-    .replace(/\bAIza[a-zA-Z0-9_-]{3,}\b/g, '[REDACTED]')
+    // Google API: AIza<39 chars>
+    .replace(/\bAIza[a-zA-Z0-9_-]{35}\b/g, '[REDACTED]')
     // Groq: gsk_<...>
     .replace(/\bgsk_[a-zA-Z0-9]{20,}\b/g, '[REDACTED]')
     // xAI: xai-<...>

@@ -79,14 +79,35 @@ export interface BreadboardDrcResult {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Classify net name as power, ground, or signal */
+/**
+ * Classify net name as power, ground, or signal.
+ *
+ * Wave 2 audit #356: extended the power-name list with vendor and IO-domain
+ * rails (VCCIO, VDD_IO, VREF, AVCC, VCC_ANA) plus sub-volt rail aliases
+ * (1V8, 1.8V, 2V5, 2.5V). Without these, DRC silently misclassifies power
+ * rails as generic signal nets and fails to emit polarity violations.
+ */
 function classifyNetName(name: string): 'power' | 'ground' | 'signal' {
   const upper = name.toUpperCase().trim();
-  const powerNames = ['VCC', 'VDD', '5V', '3V3', '3.3V', '12V', '9V', 'VBAT', 'VIN', 'VBUS', 'V+'];
+  const powerNames = [
+    // Core digital rails
+    'VCC', 'VDD', 'VIN', 'VBAT', 'VBUS', 'V+',
+    // Common fixed voltages
+    '5V', '3V3', '3.3V', '12V', '9V',
+    // Analog / reference rails (audit #356)
+    'AVCC', 'VREF', 'VCC_ANA', 'AVDD',
+    // IO-domain rails for mixed-voltage MCUs (audit #356)
+    'VCCIO', 'VDD_IO', 'VDDIO', 'VIO',
+    // Sub-1V and sub-3.3V domain rails (audit #356)
+    '1V8', '1.8V', '2V5', '2.5V',
+  ];
   const groundNames = ['GND', 'VSS', 'AGND', 'DGND', 'GND0', 'PGND', 'V-'];
   if (powerNames.includes(upper)) { return 'power'; }
   if (groundNames.includes(upper)) { return 'ground'; }
+  // Bare-volt pattern: "5V", "+3.3V", "12V", "1.8V", etc.
   if (/^\+?\d+\.?\d*V$/i.test(upper)) { return 'power'; }
+  // Letter-decimal pattern used in datasheets: "1V8", "2V5", "3V3" (already covered) — audit #356
+  if (/^\+?\d+V\d+$/i.test(upper)) { return 'power'; }
   return 'signal';
 }
 

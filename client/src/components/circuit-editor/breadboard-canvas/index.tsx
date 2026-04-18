@@ -102,6 +102,10 @@ import {
   type Tool,
   type WireInProgress,
 } from './canvas-helpers';
+import { CanvasToolbar } from './CanvasToolbar';
+import { CanvasCoordinateReadout } from './CanvasCoordinateReadout';
+import { WireColorMenu } from './WireColorMenu';
+import { CanvasEmptyGuidance } from './CanvasEmptyGuidance';
 
 // Wire color presets — sourced from breadboard-model (BL-0591)
 const WIRE_COLOR_PRESETS = MODEL_WIRE_COLOR_PRESETS;
@@ -1273,67 +1277,25 @@ export function BreadboardCanvas({
     });
   }, [clientToBoardPixel, createInstanceMutation, circuitId, instancePlacements, instances, partsMap]);
 
-  const auditCriticalCount = boardAudit?.issues.filter((issue) => issue.severity === 'critical').length ?? 0;
-  const auditWarningCount = boardAudit?.issues.filter((issue) => issue.severity === 'warning').length ?? 0;
-  const auditToolbarLabel = boardAudit == null
-    ? 'Run audit'
-    : auditCriticalCount > 0
-      ? `${String(auditCriticalCount)} critical`
-      : auditWarningCount > 0
-        ? `${String(auditWarningCount)} warning${auditWarningCount === 1 ? '' : 's'}`
-        : 'Healthy';
-  const auditToolbarTone = boardAudit == null
-    ? 'border-border text-muted-foreground'
-    : auditCriticalCount > 0
-      ? 'border-red-500/40 bg-red-500/10 text-red-300'
-      : auditWarningCount > 0
-        ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-300'
-        : 'border-green-500/40 bg-green-500/10 text-green-300';
-
   return (
     <div className="flex-1 flex flex-col overflow-hidden" data-testid="breadboard-canvas-container">
-      {/* Tool bar */}
-      <div className="h-8 border-b border-border bg-card/40 flex items-center px-2 gap-1 shrink-0">
-        <ToolButton icon={MousePointer2} label="Select (1)" active={tool === 'select'} onClick={() => setTool('select')} testId="tool-select" />
-        <ToolButton icon={Pencil} label="Wire (2)" active={tool === 'wire'} onClick={() => setTool('wire')} testId="tool-wire" />
-        <ToolButton icon={Trash2} label="Delete (3)" active={tool === 'delete'} onClick={() => setTool('delete')} testId="tool-delete" />
-        <div className="w-px h-4 bg-border mx-1" />
-        <ToolButton icon={ZoomIn} label="Zoom in" onClick={() => setZoom(z => Math.min(8, z + 0.5))} testId="tool-zoom-in" />
-        <ToolButton icon={ZoomOut} label="Zoom out" onClick={() => setZoom(z => Math.max(1, z - 0.5))} testId="tool-zoom-out" />
-        <ToolButton icon={RotateCcw} label="Reset view" onClick={() => { setZoom(3); setPanOffset({ x: 20, y: 20 }); }} testId="tool-reset-view" />
-        <div className="w-px h-4 bg-border mx-1" />
-        <ToolButton icon={ShieldAlert} label="DRC Check" active={showDrc} onClick={() => setShowDrc(d => !d)} testId="tool-drc-toggle" />
-        <ToolButton icon={HelpCircle} label="How a breadboard works" active={showConnectivityExplainer} onClick={() => setShowConnectivityExplainer(v => !v)} testId="tool-connectivity-explainer-toggle" />
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          data-testid="button-run-audit-inline"
-          onClick={onRunBoardAudit}
-          className={cn('ml-1 h-6 gap-1.5 px-2 text-[10px] uppercase tracking-[0.14em]', auditToolbarTone)}
-        >
-          <ShieldAlert className="h-3 w-3" />
-          <span>{auditToolbarLabel}</span>
-          {boardAudit && (
-            <span className="tabular-nums opacity-90">{String(boardAudit.score)}</span>
-          )}
-        </Button>
-        <div className="flex-1" />
-        <span className="text-[10px] text-muted-foreground tabular-nums">
-          {zoom.toFixed(1)}x
-          {hoveredCoord && (
-            <> | {hoveredCoord.type === 'terminal'
-              ? `${hoveredCoord.col}${hoveredCoord.row}`
-              : `${hoveredCoord.rail}[${hoveredCoord.index}]`
-            }</>
-          )}
-        </span>
-        {wireInProgress && (
-          <span className="text-[10px] text-primary ml-2">
-            Drawing wire ({wireInProgress.points.length} pts) — dbl-click to finish, Esc to cancel
-          </span>
-        )}
-      </div>
+      <CanvasToolbar
+        tool={tool}
+        onToolChange={setTool}
+        zoom={zoom}
+        onZoomIn={() => setZoom((z) => Math.min(8, z + 0.5))}
+        onZoomOut={() => setZoom((z) => Math.max(1, z - 0.5))}
+        onResetView={() => { setZoom(3); setPanOffset({ x: 20, y: 20 }); }}
+        showDrc={showDrc}
+        onToggleDrc={() => setShowDrc((d) => !d)}
+        showConnectivityExplainer={showConnectivityExplainer}
+        onToggleConnectivityExplainer={() => setShowConnectivityExplainer((v) => !v)}
+        boardAudit={boardAudit}
+        onRunBoardAudit={onRunBoardAudit}
+        hoveredCoord={hoveredCoord}
+        wireInProgress={wireInProgress}
+      />
+
 
       {/* SVG canvas */}
       <div
@@ -1707,41 +1669,14 @@ export function BreadboardCanvas({
           </g>
         </svg>
 
-        {/* Coordinate readout */}
-        {mouseBoardPos && (
-          <div
-            className="absolute bottom-3 right-3 z-10 bg-card/70 backdrop-blur-sm border border-border px-2 py-1 pointer-events-none select-none"
-            data-testid="coordinate-readout"
-          >
-            <span className="text-[11px] font-mono tabular-nums text-[var(--color-editor-accent)]">
-              X: {mouseBoardPos.x} &nbsp; Y: {mouseBoardPos.y}
-            </span>
-          </div>
-        )}
+        <CanvasCoordinateReadout mouseBoardPos={mouseBoardPos} />
 
-        {/* BL-0591: Wire color picker context menu */}
-        {contextMenuWireId != null && wireColorMenuPos && (
-          <div
-            className="absolute z-20 bg-card border border-border rounded-md shadow-lg p-1.5"
-            style={{ left: wireColorMenuPos.x, top: wireColorMenuPos.y }}
-            data-testid="wire-color-menu"
-            onMouseLeave={closeWireColorMenu}
-          >
-            <div className="text-[10px] text-muted-foreground px-1.5 py-0.5 mb-1 font-medium">Wire Color</div>
-            <div className="grid grid-cols-4 gap-1">
-              {WIRE_COLOR_PRESETS.map((preset) => (
-                <button
-                  key={preset.hex}
-                  className="w-6 h-6 rounded-sm border border-border hover:border-primary transition-colors cursor-pointer"
-                  style={{ backgroundColor: preset.hex }}
-                  title={preset.name}
-                  onClick={() => handleWireColorChange(contextMenuWireId, preset.hex)}
-                  data-testid={`wire-color-${preset.name.toLowerCase()}`}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        <WireColorMenu
+          wireId={contextMenuWireId}
+          position={wireColorMenuPos}
+          onColorChange={handleWireColorChange}
+          onClose={closeWireColorMenu}
+        />
 
         {selectedInstanceModel && (
           <BreadboardPartInspector
@@ -1768,21 +1703,7 @@ export function BreadboardCanvas({
           />
         )}
 
-        {/* BB-02 / BB-03: Empty state guidance when no components are placed */}
-        {(!instances || instances.filter(i => i.breadboardX != null).length === 0) && (
-          <div
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-card/80 backdrop-blur-xl border border-border px-4 py-2.5 shadow-lg max-w-sm text-center"
-            data-testid="breadboard-empty-guidance"
-          >
-            <div className="flex items-center gap-2 justify-center mb-1">
-              <Info className="w-4 h-4 text-primary shrink-0" />
-              <span className="text-xs font-medium text-foreground">Start Wiring</span>
-            </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Drag a starter part or a project library component onto the board, then use the <strong>Wire tool (2)</strong> to connect real pin rows. <strong>Double-click</strong> finishes a wire run.
-            </p>
-          </div>
-        )}
+        <CanvasEmptyGuidance instances={instances} />
       </div>
     </div>
   );

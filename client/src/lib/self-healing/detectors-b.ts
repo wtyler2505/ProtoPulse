@@ -12,6 +12,7 @@ import {
   isConnector,
   isIcOrMcu,
   isLevelShifter,
+  isProtectionDiode,
   isRegulator,
   netsShareInstance,
   parseCurrent,
