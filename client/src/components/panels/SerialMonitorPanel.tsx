@@ -39,7 +39,6 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import TrustReceiptCard from '@/components/ui/TrustReceiptCard';
 import {
-import { logger } from '@/lib/logger';
   Zap,
   ZapOff,
   Trash2,
@@ -62,6 +61,7 @@ import { logger } from '@/lib/logger';
   Wand2,
   Loader2,
 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 const TroubleshootWizard = lazy(() => import('@/components/arduino/TroubleshootWizard'));
 const TelemetryDashboard = lazy(() => import('@/components/arduino/TelemetryDashboard'));

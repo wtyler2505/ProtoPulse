@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 export type LineDirection = 'tx' | 'rx';
 
 export interface SerialLogEntry {
