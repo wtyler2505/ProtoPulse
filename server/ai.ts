@@ -156,11 +156,6 @@ export type DesignPhase = 'architecture' | 'schematic' | 'pcb' | 'validation' | 
 export type TaskComplexity = 'simple' | 'moderate' | 'complex';
 
 const MODEL_TIERS: Record<string, { fast: string; standard: string; premium: string }> = {
-  anthropic: {
-    fast: 'claude-haiku-4-5-20251001',
-    standard: 'claude-sonnet-4-5-20250514',
-    premium: 'claude-opus-4-5-20250514',
-  },
   gemini: {
     fast: 'gemini-2.5-flash-lite',
     standard: 'gemini-2.5-flash',

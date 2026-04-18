@@ -370,40 +370,141 @@ export function registerPcbAdvancedTools(registry: ToolRegistry): void {
         return { success: false, message: `Net ${String(params.netId)} does not belong to circuit ${String(params.circuitId)}.` };
       }
 
-      // Honest implementation: autorouter is not implemented server-side yet.
-      // If the net already has segments (e.g., user hand-routed or upstream
-      // tool placed them), return those as the current path. If not, return
-      // an explicit not-implemented error instead of hardcoded fake points —
-      // surfacing the real state to the AI agent and the user.
-      const existingSegments = Array.isArray(net.segments) ? net.segments : [];
-      if (existingSegments.length === 0) {
+      // Real autorouter (A* on a 0.5mm grid with 2-layer support).
+      //
+      // Scope / simplifications (documented in server/lib/autorouter.ts):
+      //   - single-net at a time (no rip-up-and-retry)
+      //   - no length matching / differential pairs / impedance control
+      //   - component footprints approximated to a default 5x5 mm rect unless
+      //     the instance carries explicit dimensions
+      //   - pin positions are approximated by the instance's PCB center
+      //     (accurate pin offsets live in the part footprint library)
+      const allSegments = Array.isArray(net.segments) ? net.segments : [];
+      const existingSegments = allSegments as Array<{
+        fromInstanceId: number;
+        fromPin: string;
+        toInstanceId: number;
+        toPin: string;
+        waypoints: { x: number; y: number }[];
+      }>;
+
+      // Pick the first connection without waypoints, else route the first
+      // declared connection (re-routing).
+      const targetConnection = existingSegments.find(
+        s => !Array.isArray(s.waypoints) || s.waypoints.length < 2,
+      ) ?? existingSegments[0];
+
+      if (!targetConnection) {
         return {
           success: false,
-          message:
-            `Autorouter not yet implemented. Net "${net.name}" has no existing segments. ` +
-            `Use the PCB layout view to route manually, or invoke auto_route for client-side routing.`,
+          message: `Net "${net.name}" has no connections declared. Add pin-to-pin segments before routing.`,
           data: {
             type: 'trace_path_unavailable',
             netId: net.id,
             layer: params.layer,
-            reason: 'autorouter-not-implemented',
+            reason: 'no-connections',
             connectedInstanceCount: instances.length,
+          },
+        };
+      }
+
+      const fromInst = instances.find(i => i.id === targetConnection.fromInstanceId);
+      const toInst = instances.find(i => i.id === targetConnection.toInstanceId);
+      if (!fromInst?.pcbPosition || !toInst?.pcbPosition) {
+        return {
+          success: false,
+          message: `Both endpoints must be placed on the PCB before routing. Place instances first.`,
+          data: {
+            type: 'trace_path_unavailable',
+            netId: net.id,
+            reason: 'endpoints-unplaced',
+          },
+        };
+      }
+
+      // Build obstacle grid from other nets + all placed instances (except
+      // the two endpoints we need to reach).
+      const otherNetsRaw = await ctx.storage.getCircuitNets(params.circuitId);
+      const otherNets: NetLike[] = otherNetsRaw
+        .filter(n => n.id !== net.id)
+        .map(n => ({
+          id: n.id,
+          segments: (Array.isArray(n.segments) ? n.segments : []) as Array<{
+            waypoints: { x: number; y: number }[];
+          }>,
+        }));
+
+      const obstacleInstances: InstanceLike[] = instances
+        .filter(i => i.id !== fromInst.id && i.id !== toInst.id)
+        .map(i => ({
+          id: i.id,
+          pcbPosition: i.pcbPosition,
+        }));
+
+      const obstacles = extractObstaclesFromCircuit({
+        instances: obstacleInstances,
+        otherNets,
+      });
+
+      // Compute bounding box with a 10mm margin around both endpoints.
+      const xs = [fromInst.pcbPosition.x, toInst.pcbPosition.x];
+      const ys = [fromInst.pcbPosition.y, toInst.pcbPosition.y];
+      for (const inst of instances) {
+        if (inst.pcbPosition) {
+          xs.push(inst.pcbPosition.x);
+          ys.push(inst.pcbPosition.y);
+        }
+      }
+      const margin = 10;
+      const bounds = {
+        minX: Math.min(...xs) - margin,
+        minY: Math.min(...ys) - margin,
+        maxX: Math.max(...xs) + margin,
+        maxY: Math.max(...ys) + margin,
+      };
+
+      const layerHint: Layer = params.layer === 'back' || params.layer === 'bottom' ? 'bottom' : 'top';
+
+      const result = autoroute({
+        bounds,
+        start: { x: fromInst.pcbPosition.x, y: fromInst.pcbPosition.y, layer: layerHint },
+        end: { x: toInst.pcbPosition.x, y: toInst.pcbPosition.y, layer: layerHint },
+        obstacles,
+      });
+
+      if (!result.success) {
+        return {
+          success: false,
+          message: `Autorouter could not find a path for net "${net.name}" (reason: ${result.reason}).`,
+          data: {
+            type: 'trace_path_unavailable',
+            netId: net.id,
+            layer: params.layer,
+            reason: result.reason,
+            visited: result.visited,
           },
         };
       }
 
       return {
         success: true,
-        message: `Existing routing path for net "${net.name}" (${existingSegments.length} segment${existingSegments.length === 1 ? '' : 's'}).`,
+        message: `Routed net "${net.name}" from ${fromInst.referenceDesignator}.${targetConnection.fromPin} to ${toInst.referenceDesignator}.${targetConnection.toPin} (${result.path.length} waypoints, ${result.viaCount} via${result.viaCount === 1 ? '' : 's'}).`,
         data: {
-          type: 'trace_path_existing',
+          type: 'trace_path_suggestion',
           netId: net.id,
           layer: params.layer,
-          segments: existingSegments,
+          fromInstanceId: fromInst.id,
+          fromPin: targetConnection.fromPin,
+          toInstanceId: toInst.id,
+          toPin: targetConnection.toPin,
+          path: result.path,
+          viaCount: result.viaCount,
+          visited: result.visited,
         },
         sources: [
           { type: 'net', label: net.name, id: net.id },
-          ...instances.map(i => ({ type: 'node' as const, label: i.referenceDesignator, id: i.id })),
+          { type: 'node', label: fromInst.referenceDesignator, id: fromInst.id },
+          { type: 'node', label: toInst.referenceDesignator, id: toInst.id },
         ],
       };
     },

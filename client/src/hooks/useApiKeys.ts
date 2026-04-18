@@ -12,13 +12,28 @@ export type ApiKeyProvider = 'gemini';
  */
 export const STORED_KEY_SENTINEL = '********';
 
-/** localStorage keys used before server-side migration. */
-const LOCAL_STORAGE_KEYS: Record<ApiKeyProvider, string> = {
-  gemini: 'protopulse-ai-api-key-gemini',
+/**
+ * sessionStorage keys for pre-auth scratch values (audit #60 — plaintext-at-rest XSS fix).
+ *
+ * Security model: API keys are sensitive secrets. Per OWASP ASVS v4 §8.3.4 guidance on
+ * short-lived secrets, pre-auth scratch uses `sessionStorage` (tab-scoped) instead of
+ * `localStorage` (origin-wide + indefinite) to bound XSS exfiltration blast radius.
+ * Authenticated users have their key stored server-side encrypted (AES-256-GCM via
+ * `storeApiKey`); the plaintext never lingers client-side after migration.
+ */
+const SESSION_STORAGE_KEYS: Record<ApiKeyProvider, string> = {
+  gemini: 'protopulse-ai-api-key-gemini-scratch',
 };
 
-/** Legacy single-key storage from before per-provider keys. */
-const LEGACY_KEY = 'protopulse-ai-api-key';
+/**
+ * Legacy localStorage keys scrubbed on every hook mount — audit #60 plaintext-at-rest fix.
+ * - `protopulse-ai-api-key` : v1 single-provider key (pre per-provider keys)
+ * - `protopulse-ai-api-key-gemini` : v2 per-provider localStorage key (pre audit #60)
+ * Values are migrated (to server if authenticated, otherwise to sessionStorage) then removed.
+ */
+const LEGACY_LOCALSTORAGE_KEYS: Record<ApiKeyProvider, readonly string[]> = {
+  gemini: ['protopulse-ai-api-key', 'protopulse-ai-api-key-gemini'],
+};
 
 interface UseApiKeysResult {
   /** Current API key for the active provider. Empty string if none stored. */
