@@ -35,8 +35,11 @@ import { buildMockParts } from './mock-data';
 import {
   getRemainingRequests as getRemainingRequestsFn,
   isRateLimited as isRateLimitedFn,
-  recordRequest as recordRequestFn,
 } from './rate-limit';
+import {
+  searchByKeyword as searchByKeywordFn,
+  searchPart as searchPartFn,
+} from './search';
 import {
   checkAlerts as checkAlertsFn,
   getStockAlerts as getStockAlertsFn,
@@ -156,75 +159,12 @@ export class SupplierApiManager {
 
   /** Search for a part by manufacturer part number (MPN). */
   searchPart(mpn: string, options?: SearchOptions): PartSearchResult[] {
-    if (!mpn.trim()) {
-      return [];
-    }
-
-    // Check cache
-    const cacheKey = `mpn:${mpn.toLowerCase()}`;
-    const cached = this.getCachedSearch(cacheKey);
-    if (cached) {
-      return this.applySearchOptions(cached.results, options);
-    }
-
-    // Record rate limit hit for all enabled distributors
-    const enabledDists = getEnabledDistributorIdsFn(this,options?.distributors);
-    enabledDists.forEach((distId) => {
-      recordRequestFn(this, distId);
-    });
-
-    const mpnLower = mpn.toLowerCase();
-    let results = this._mockParts.filter((p) => p.mpn.toLowerCase().includes(mpnLower));
-    results = this.applySearchOptions(results, options);
-
-    // Cache the results
-    const now = Date.now();
-    this._cache.set(cacheKey, {
-      query: cacheKey,
-      results,
-      timestamp: now,
-      expiresAt: now + this._cacheExpiryMs,
-    });
-
-    return results;
+    return searchPartFn(this, mpn, options);
   }
 
   /** Search for parts by keyword (matches MPN, manufacturer, description, category). */
   searchByKeyword(keyword: string, options?: SearchOptions): PartSearchResult[] {
-    if (!keyword.trim()) {
-      return [];
-    }
-
-    const cacheKey = `kw:${keyword.toLowerCase()}`;
-    const cached = this.getCachedSearch(cacheKey);
-    if (cached) {
-      return this.applySearchOptions(cached.results, options);
-    }
-
-    const enabledDists = getEnabledDistributorIdsFn(this,options?.distributors);
-    enabledDists.forEach((distId) => {
-      recordRequestFn(this, distId);
-    });
-
-    const kwLower = keyword.toLowerCase();
-    let results = this._mockParts.filter(
-      (p) =>
-        p.mpn.toLowerCase().includes(kwLower) ||
-        p.manufacturer.toLowerCase().includes(kwLower) ||
-        p.description.toLowerCase().includes(kwLower) ||
-        p.category.toLowerCase().includes(kwLower),
-    );
-    results = this.applySearchOptions(results, options);
-
-    const now = Date.now();
-    this._cache.set(cacheKey, {
-      query: cacheKey,
-      results,
-      timestamp: now,
-      expiresAt: now + this._cacheExpiryMs,
-    });
-
-    return results;
+    return searchByKeywordFn(this, keyword, options);
   }
 
   // -----------------------------------------------------------------------
@@ -588,70 +528,6 @@ export class SupplierApiManager {
     this._save();
     this._notify();
   }
-
-  // -----------------------------------------------------------------------
-  // Private Helpers
-  // -----------------------------------------------------------------------
-
-  private applySearchOptions(results: PartSearchResult[], options?: SearchOptions): PartSearchResult[] {
-    let filtered = [...results];
-
-    if (options?.distributors && options.distributors.length > 0) {
-      const allowedDists = options.distributors;
-      filtered = filtered.map((part) => ({
-        ...part,
-        offers: part.offers.filter((o) => allowedDists.includes(o.distributorId)),
-      }));
-      // Remove parts with no offers after filtering
-      filtered = filtered.filter((p) => p.offers.length > 0);
-    }
-
-    if (options?.inStockOnly) {
-      filtered = filtered.map((part) => ({
-        ...part,
-        offers: part.offers.filter((o) => o.stockStatus !== 'out-of-stock'),
-      }));
-      filtered = filtered.filter((p) => p.offers.length > 0);
-    }
-
-    // Sort
-    if (options?.sortBy) {
-      switch (options.sortBy) {
-        case 'price':
-          filtered.sort((a, b) => {
-            const aMin = getMinPrice(a.offers);
-            const bMin = getMinPrice(b.offers);
-            return aMin - bMin;
-          });
-          break;
-        case 'stock':
-          filtered.sort((a, b) => {
-            const aStock = a.offers.reduce((sum, o) => sum + o.stock, 0);
-            const bStock = b.offers.reduce((sum, o) => sum + o.stock, 0);
-            return bStock - aStock; // Higher stock first
-          });
-          break;
-        case 'leadTime':
-          filtered.sort((a, b) => {
-            const aLead = getMinLeadTime(a.offers);
-            const bLead = getMinLeadTime(b.offers);
-            return aLead - bLead;
-          });
-          break;
-        case 'relevance':
-        default:
-          // Keep original order (relevance is default)
-          break;
-      }
-    }
-
-    if (options?.maxResults !== undefined && options.maxResults > 0) {
-      filtered = filtered.slice(0, options.maxResults);
-    }
-
-    return filtered;
-  }
-
 
   // -----------------------------------------------------------------------
   // Persistence
