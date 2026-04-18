@@ -3,12 +3,13 @@
  * Covers: hidden when visible=false, empty state with no violations, no crash on empty data.
  */
 
+import type { ReactNode } from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import BreadboardDrcOverlay from '../BreadboardDrcOverlay';
 
-const svgWrap = (ui: React.ReactNode) => (
+const svgWrap = (ui: ReactNode) => (
   <svg data-testid="svg-root" width={1000} height={500} viewBox="0 0 1000 500">
     {ui}
   </svg>
