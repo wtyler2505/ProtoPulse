@@ -425,6 +425,7 @@ function checkAdc2WifiConflict(
     check.detail = `ESP32 ADC2 pin(s) [${affectedPins.join(', ')}] are wired to signal nets. ADC2 is unavailable when WiFi is active — use ADC1 channels instead.`;
     check.affectedInstanceIds = affectedInstIds;
     check.affectedPinIds = affectedPins;
+    check.remediationLink = VAULT_SLUGS.ESP32_ADC2_WIFI;
   }
 
   return check;

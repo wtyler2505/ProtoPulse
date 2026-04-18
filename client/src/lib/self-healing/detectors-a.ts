@@ -10,6 +10,7 @@ import { nextId } from './id';
 import {
   getIcVoltage,
   isCapacitor,
+  isConnector,
   isIcOrMcu,
   isProtectionDiode,
   isResistor,

@@ -9,6 +9,17 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 import BreadboardWorkbenchSidebar from '../BreadboardWorkbenchSidebar';
 import type { BreadboardBenchSummary } from '@/lib/breadboard-bench';
+import { ProjectIdProvider } from '@/lib/contexts/project-id-context';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+function renderWithProviders(ui: React.ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <ProjectIdProvider projectId={1}>{ui}</ProjectIdProvider>
+    </QueryClientProvider>,
+  );
+}
 
 function emptySummary(): BreadboardBenchSummary {
   return {
@@ -52,7 +63,7 @@ function baseProps() {
 
 describe('BreadboardWorkbenchSidebar', () => {
   it('renders root aside container', () => {
-    render(<BreadboardWorkbenchSidebar {...baseProps()} />);
+    renderWithProviders(<BreadboardWorkbenchSidebar {...baseProps()} />);
     expect(screen.getByTestId('breadboard-workbench')).toBeInTheDocument();
   });
 
@@ -61,7 +72,7 @@ describe('BreadboardWorkbenchSidebar', () => {
     props.benchSummary.totals.trackedCount = 7;
     props.benchSummary.totals.missingCount = 3;
     props.projectPartCount = 12;
-    render(<BreadboardWorkbenchSidebar {...props} />);
+    renderWithProviders(<BreadboardWorkbenchSidebar {...props} />);
     expect(screen.getByText('Project Parts')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument();
@@ -69,14 +80,14 @@ describe('BreadboardWorkbenchSidebar', () => {
   });
 
   it('shows empty-state CTA when hasCircuits=false', () => {
-    render(<BreadboardWorkbenchSidebar {...baseProps()} />);
+    renderWithProviders(<BreadboardWorkbenchSidebar {...baseProps()} />);
     expect(screen.getByText(/No wiring canvas yet/i)).toBeInTheDocument();
     expect(screen.getByTestId('button-create-workbench-circuit')).toBeInTheDocument();
   });
 
   it('invokes onCreateCircuit when the create button is clicked', () => {
     const props = baseProps();
-    render(<BreadboardWorkbenchSidebar {...props} />);
+    renderWithProviders(<BreadboardWorkbenchSidebar {...props} />);
     fireEvent.click(screen.getByTestId('button-create-workbench-circuit'));
     expect(props.onCreateCircuit).toHaveBeenCalledTimes(1);
   });
@@ -84,7 +95,7 @@ describe('BreadboardWorkbenchSidebar', () => {
   it('hides empty-state CTA when hasCircuits=true', () => {
     const props = baseProps();
     props.hasCircuits = true;
-    render(<BreadboardWorkbenchSidebar {...props} />);
+    renderWithProviders(<BreadboardWorkbenchSidebar {...props} />);
     expect(screen.queryByText(/No wiring canvas yet/i)).toBeNull();
   });
 });

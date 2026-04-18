@@ -58,28 +58,10 @@ import {
   getCoachHookupColor,
 } from '../useBreadboardCoachPlan';
 import { BreadboardCoachPlanOverlay, BreadboardPinAnchorOverlay } from '../BreadboardCoachOverlay';
-import ToolButton from '../ToolButton';
-import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { generateRefDes, nextRefdes } from '@/lib/circuit-editor/ref-des';
-import {
-  MousePointer2,
-  Pencil,
-  Trash2,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Info,
-  Activity,
-  Square,
-  ShieldAlert,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Sparkles,
-  HelpCircle,
-} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   BB,
@@ -95,7 +77,6 @@ import {
   checkCollision,
   checkBodyCollision,
   getDefaultColorForNet,
-  WIRE_COLOR_PRESETS as MODEL_WIRE_COLOR_PRESETS,
   type ComponentPlacement,
 } from '@/lib/circuit-editor/breadboard-model';
 import type { CircuitInstanceRow, CircuitWireRow, ComponentPart } from '@shared/schema';
