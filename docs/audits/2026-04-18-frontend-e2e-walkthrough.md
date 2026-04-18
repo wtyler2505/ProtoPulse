@@ -245,6 +245,93 @@ Sort assets, Close asset library, Toggle asset manager, Select mode (already not
 
 Moving to Schematic tab.
 
+---
+
+## Schematic — meticulous
+
+Empty "New Circuit" pre-created. Toolbar: Select(V), Pan(H), Draw Net(W), Place Component (disabled — drag from Parts), Place Power (disabled — drag from Power), Place Annotation(T), Undo/Redo (disabled), Snap, Grid, Angle: Free/45/90 (radio group, Free checked), Fit View, Keyboard Shortcuts, Net browser. Top: combobox circuit selector + New + AI Generate + Push to PCB (disabled with hover-tooltip "No components to push…"). Sub-panels: Parts (search + ATtiny85), Power, Sheets, Sim.
+
+- **E2E-217 ✅ GOOD** — Push to PCB button is disabled WITH explanatory aria-description. Excellent.
+- **E2E-218 ✅ GOOD** — Tools have keyboard shortcuts in label `(V)`, `(H)`, `(W)`, `(T)`, undo `Ctrl+Z`. Excellent.
+- **E2E-219 🟡 UX** — Parts panel "Drag a component onto the canvas" hint is good. But for users without mouse (touch / keyboard), there's no alternative path. "Add Component" CTA in empty state might be that — verify.
+- **E2E-220 🟡 a11y** — Tool buttons are `radio`-grouped only for angle. Select/Pan should also be a radio group (mutually exclusive). They're standalone buttons currently which lacks group semantics.
+- **E2E-221 ✅ Keyboard Shortcuts dialog opens.** GLOBAL section: Ctrl+Shift+P palette / Ctrl+K find / Ctrl+S save / Ctrl+Z undo / Ctrl+Shift+Z redo / ? toggle. SCHEMATIC section: R rotate / M mirror / W wire / Del / V select / H pan / G snap / F fit / Esc cancel. **Real shortcuts dialog. Excellent feature.**
+- **E2E-222 🟢 IDEA** — Add a "Print this list" button on shortcuts dialog (or copy as table). Power users will want a wall-pinnable cheat sheet.
+- **E2E-223 🟢 IDEA** — Add ability to remap shortcuts. (Many EDA users are coming from KiCad/Altium with muscle memory.)
+- **E2E-224 🟡 UX** — Shortcut keys shown without OS variant (Mac users see Ctrl, expect ⌘). Detect platform.
+- **E2E-225 🟡 UX** — `Add Component` empty-state CTA → no component placed, just shows X:600 Y:400 coordinate readout in toolbar. Likely entered "click-to-place mode" but no part is pre-selected from Parts panel, so clicking the canvas would place… what? Either auto-select first part, or label CTA `Pick a part to place` and disable until selection.
+
+### Schematic remaining buttons (catalogued, not click-verified)
+
+Toggle parts panel, New (circuit), AI Generate (needs API key), Push to PCB (disabled correctly), Toggle ERC panel, Parts/Power/Sheets/Sim tabs, Search components, ATtiny85 group, all 6 toolbar tools (Select/Pan/Net/Component/Power/Annotation), Snap, Grid, 3 angle radios, Fit view, Toggle net browser, Zoom controls, Mini Map.
+
+---
+
+## PCB — meticulous
+
+URL `/projects/30/pcb`. Tools (each with hotkey label): Select(1), Trace(2), Delete(3), Via(4), Pour(P), Keepout(K), Keepin (no hotkey), Cutout(X), Diff Pair(D), Comment(C). Layer: "Active layer: Front Copper. Click to toggle." (toggle hotkey F). Trace width slider 0.5-8 (current 2.0mm) + presets 0.15/0.25/0.5/1/2. Zoom in/out/reset. Board width/height spinbuttons (10-500mm, current 50x40). View in 3D button. Layer Stack panel: Top 1oz 1.4mil / Core FR4 59.2mil / Bottom 1oz 1.4mil = Total 62 mil. Surface: HASL. Layer presets 2/4/6/8/10/16/32-layer with descriptive aria-descriptions. Empty PCB Board with helpful hint about Trace tool + F to toggle layers.
+
+- **E2E-226 ✅ EXCELLENT** — PCB tool buttons all have hotkeys in label + aria-description. Layer preset buttons have informative aria-descriptions (e.g. "8-layer: Sig-Gnd-Sig-Pwr-Pwr-Sig-Gnd-Sig"). Industry-quality EDA UX.
+- **E2E-227 🟡 UX** — `Keepin` button has NO hotkey label (others do). Inconsistent. Either give it K2 or document why.
+- **E2E-228 🔴 BUG (board size mismatch)** — PCB tab shows board 50×40 mm. 3D View tab default board 100×80 mm. **Two different defaults for same project's board.**
+- **E2E-229 🟡 UX** — Trace width slider default 2.0mm — that's a chunky power trace, not a signal default. Better default: 0.25mm for signal.
+- **E2E-230 🟢 IDEA** — Layer Stack panel shows Top/Core/Bottom — but doesn't list dielectric thickness for inner layers when 4+ layers selected. Verify when changing preset.
+- **E2E-231 🟡 UX** — `Active layer: Front Copper. Click to toggle.` aria-label is verbose; visible text just says "F.Cu (Front)". Aria differs from visible. OK if they convey same meaning, but redundancy potential.
+
+### PCB remaining buttons (catalogued)
+
+10 tool buttons + layer toggle + 5 trace presets + 7 layer presets (2/4/6/8/10/16/32) + zoom×3 + width spinbutton + height spinbutton + "View in 3D" + Layer Stack collapse + 1 Design Suggestions.
+
+### Baby step: click 4-layer preset
+
+Layer stack updated to: Top (Signal) / Prepreg 1 / Inner 1 (Ground) / Core / Inner 2 (Power) / Prepreg 2 / Bottom (Signal). Total 61.6 mil. **Stack updates correctly.**
+
+- **E2E-232 ✅ WORKS** — 4-layer preset properly applies signal-ground-power-signal stackup with descriptive layer roles.
+- **E2E-233 🔴 BUG** — After switching to 4-layer, the right-side "Layers" visibility panel **still shows only F.Cu / B.Cu / Board Outline**. The 2 new inner layers (Ground, Power) are not toggleable. User can't visualize/hide internal layers.
+- **E2E-234 🟡 UX** — `Top (Signal)` in stack panel — should match the visibility panel's `F.Cu (Front Copper)` naming. Two terminologies for same thing within one tab.
+
+---
+
+## 3D View — meticulous
+
+URL `/projects/30/viewer_3d`. Board 100×80mm × 1.6mm thick × 0mm corner radius. View angles: Top/Bottom/Front/Back/Left/Right/Iso. Export/Import buttons. Layer checkboxes: Top Silkscreen ✓, Top Solder Mask ✓, Top Copper ✓, Substrate ✓, **Internal ☐ (unchecked)**, Bottom Copper ✓, Bottom Solder Mask ✓, Bottom Silkscreen ✓. Edit Board section with Width/Height/Thickness spinbuttons + Apply.
+
+- **E2E-235 🔴 BUG (CONFIRMED)** — 3D View board = 100×80 mm. PCB tab board = 50×40 mm. Same project, same circuit, two different board sizes. Source-of-truth split.
+- **E2E-236 🔴 BUG** — Edit Board spinbuttons have `valuemax="0"` and `valuemin="0"` — invalid constraint range. Spinner up/down buttons disabled effectively. User can only manually type values; even then no validation.
+- **E2E-237 ⚪ OBS** — 3D View HAS Internal layer visibility (PCB tab does not — E2E-233 is PCB-only).
+- **E2E-238 🟡 UX** — Internal layer is unchecked by default but stack only has substrate at this point (board hasn't synced from PCB tab's 4-layer setting). Confusing.
+- **E2E-239 🟢 IDEA** — No "Reset board to defaults" button.
+- **E2E-240 🟡 UX** — `Iso` button (isometric view) is great. But no perspective vs orthographic toggle.
+
+(Skipping further 3D click-tests — 3D canvas requires WebGL pointer interaction which is outside snapshot tooling.)
+
+Moving to Procurement tab.
+
+---
+
+## Procurement — meticulous
+
+URL `/projects/30/procurement`. Render confirmed (correcting initial snapshot-based false positive E2E-006). Top-level tablist with 17 sub-tabs visible: BOM Management (default selected) / BOM Comparison / Alternates / Live Pricing / Assembly Cost / Mfg Validator / Assembly Risk / Assembly Groups / Cost Optimizer / Order History / PCB Tracking / Risk Scorecard / AVL Compliance / Cross-Project / Supply Chain / Templates / My Inventory.
+
+BOM Management default panel: Search, Cost Optimisation toggle, ESD toggle, Assembly toggle, Add Item. Estimated cost $0.00 / unit @ 1k qty. Export CSV. Sortable columns: Status / Part Number / Manufacturer / Description / Supplier / Stock / Qty / Unit Price / Total / Actions. Empty state with Add First Item CTA. Component Parts Reference (1) collapsed pane.
+
+### Baby step: Click "Add First Item"
+
+→ Opens `Add BOM Item` dialog with proper accessibility (`role="dialog"`, description). Fields: Part Number (required), Manufacturer, Supplier (combobox default "Digi-Key"), Description, Quantity (1-999999), Unit Price (0-99999.99). Cancel + Add to BOM + Close buttons.
+
+- **E2E-241 ✅ WORKS** — Add BOM Item dialog renders correctly with proper a11y (dialog role + aria-description).
+- **E2E-242 🟡 UX** — Supplier defaults to "Digi-Key". Add toggle to remember user's preferred supplier (or use last-used).
+- **E2E-243 🟢 IDEA** — Form fields don't auto-suggest from existing project parts. Adding BME280 to BOM should pre-fill from architecture node.
+- **E2E-244 🔴 BUG (test methodology)** — Sequential `fill_form` of 5 fields timed out and produced corrupted state ("oBrME280" — keystrokes interleaved). May indicate a React controlled-input race or the testing tool issue. To re-verify with manual keystrokes.
+- **E2E-245 🟢 IDEA** — Description field accepts only ~35 chars before truncation? Need to verify max length.
+- **E2E-246 🟢 IDEA** — No validation feedback on Part Number (required) until submit. Could mark required ones with red asterisk.
+
+### Procurement remaining (catalogued)
+
+17 sub-tabs (each with own surface), Compare Suppliers button, Cost Optimisation/ESD/Assembly toggles, Sort buttons (Status/Part Number/Manufacturer/Stock/Qty/Unit Price/Total), Export CSV, Component Parts Reference collapsible.
+
+Moving to Validation tab (already deeply documented but baby-step verify Run DRC).
+
 
 ---
 
