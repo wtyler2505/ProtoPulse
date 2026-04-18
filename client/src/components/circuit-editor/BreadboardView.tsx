@@ -5,6 +5,8 @@
 
 import './breadboard-animations.css';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { BreadboardToolbar } from './breadboard-view/BreadboardToolbar';
+import { BreadboardEmptyState } from './breadboard-view/BreadboardEmptyState';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import {
   useCircuitDesigns,
@@ -716,129 +718,15 @@ export default function BreadboardView() {
             ) : null}
           </>
         ) : (
-          <div className="flex flex-1 items-center justify-center p-6" data-testid="breadboard-empty">
-            <div className="max-w-2xl rounded-[28px] border border-primary/15 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),rgba(15,23,42,0.78)_55%,rgba(15,23,42,0.96))] p-8 text-center shadow-[0_40px_120px_rgba(0,0,0,0.34)]">
-              <span className="inline-flex h-16 w-16 items-center justify-center rounded-[22px] border border-primary/20 bg-background/50 text-primary">
-                <CircuitBoard className="h-8 w-8" />
-              </span>
-              <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary/85">Breadboard Lab</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">Build the wiring canvas first, then start placing parts immediately</h3>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                ProtoPulse can already render interactive breadboard parts and wires here. This screen now lets you create the canvas directly, drag starter parts, and then graduate into project-linked components with real pin-aware metadata.
-              </p>
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <Button
-                  type="button"
-                  data-testid="button-create-first-breadboard-circuit"
-                  onClick={() => void handleCreateCircuit()}
-                  disabled={createCircuitMutation.isPending}
-                  className="gap-2"
-                >
-                  <CircuitBoard className="h-4 w-4" />
-                  {createCircuitMutation.isPending ? 'Creating…' : 'Create wiring canvas'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  data-testid="button-expand-architecture-to-breadboard"
-                  onClick={() => void handleExpandArchitecture()}
-                  disabled={expandMutation.isPending}
-                  className="gap-2"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  {expandMutation.isPending ? 'Expanding…' : 'Expand from architecture'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  data-testid="button-open-schematic-from-empty-breadboard"
-                  onClick={() => setActiveView('schematic')}
-                  className="gap-2"
-                >
-                  <PanelLeftOpen className="h-4 w-4" />
-                  Open schematic
-                </Button>
-              </div>
-            </div>
-          </div>
+          <BreadboardEmptyState
+            onCreateCircuit={() => void handleCreateCircuit()}
+            isCreating={createCircuitMutation.isPending}
+            onExpandArchitecture={() => void handleExpandArchitecture()}
+            isExpanding={expandMutation.isPending}
+            onOpenSchematic={() => setActiveView('schematic')}
+          />
         )}
       </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Toolbar
-// ---------------------------------------------------------------------------
-
-function BreadboardToolbar({
-  circuits,
-  activeCircuit,
-  onSelectCircuit,
-  workbenchOpen,
-  onToggleWorkbench,
-}: {
-  circuits: CircuitDesignRow[];
-  activeCircuit: CircuitDesignRow | null;
-  onSelectCircuit: (id: number) => void;
-  workbenchOpen: boolean;
-  onToggleWorkbench: () => void;
-}) {
-  const { isLive, setIsLive, clearStates } = useSimulation();
-
-  return (
-    <div className="h-10 border-b border-border bg-card/60 backdrop-blur-xl flex items-center px-3 gap-2 shrink-0" data-testid="breadboard-toolbar">
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        data-testid="button-toggle-breadboard-bench"
-        onClick={onToggleWorkbench}
-        className="h-7 px-1.5 text-muted-foreground hover:text-foreground"
-      >
-        {workbenchOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
-      </Button>
-      <div className="w-px h-4 bg-border" />
-      <Select
-        value={String(activeCircuit?.id ?? '')}
-        onValueChange={v => onSelectCircuit(Number(v))}
-      >
-        <SelectTrigger className="h-7 w-48 text-xs" data-testid="select-breadboard-circuit">
-          <SelectValue placeholder="Select circuit" />
-        </SelectTrigger>
-        <SelectContent>
-          {circuits.map((c: CircuitDesignRow) => (
-            <SelectItem key={c.id} value={String(c.id)}>
-              {c.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <div className="w-px h-4 bg-border mx-1" />
-
-      <Button
-        variant="outline"
-        size="sm"
-        className={cn(
-          "h-7 gap-1.5 px-2.5 text-[10px] font-bold uppercase tracking-wider transition-all",
-          isLive
-            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20"
-            : "text-muted-foreground hover:text-foreground"
-        )}
-        onClick={() => {
-          if (isLive) clearStates();
-          setIsLive(!isLive);
-        }}
-      >
-        {isLive ? <Square className="w-3 h-3 fill-current" /> : <Activity className="w-3 h-3" />}
-        {isLive ? 'Stop Simulation' : 'Live Simulation'}
-      </Button>
-
-      <div className="flex-1" />
-      <span className="text-xs text-muted-foreground">
-        {activeCircuit ? activeCircuit.name : 'No circuit selected'} — Wiring Bench
-      </span>
     </div>
   );
 }
