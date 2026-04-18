@@ -2,6 +2,13 @@
  * Supplier API — SupplierApiManager singleton.
  * Split from supplier-api.ts. Coordinates distributors, caching, rate limiting,
  * stock alerts, currency, and persistence.
+ *
+ * Cohesive state manager, intentionally not split further. All methods operate on
+ * 8 shared private fields (distributors, mockParts, cache, cacheExpiryMs, rateLimits,
+ * stockAlerts, currentCurrency, listeners). Further splitting would either leak
+ * internal state across modules or lose `this`-typing on free functions — both
+ * strictly worse than the single-file shape. No per-supplier adapter code exists
+ * to extract (suppliers are data, not behavior, in this implementation).
  */
 
 import {
