@@ -1,5 +1,32 @@
 # Frontend E2E Walkthrough — 2026-04-18
 
+## TL;DR — Top P0/P1 Bugs (action items)
+
+| # | Severity | Tab/Area | Bug | Fix |
+|---|---|---|---|---|
+| E2E-298 | 🔴 P0 | Audit Trail | Leaks audit entries from OTHER projects (OmniTrek Nexus shown on Blink LED tab) | Add project_id filter in `/api/audit/*` query |
+| E2E-312 | 🔴 P0 | Alternates | "Failed to load" — 401 on `/api/parts/browse/alternates` | Add `/api/parts/browse/` to `PUBLIC_API_PATHS` (server/request-routing.ts) OR scope auth |
+| E2E-313 | 🔴 P0 | Part Usage | "Failed to load" — 401 on `/api/parts/browse/usage` | Same fix as E2E-312 |
+| E2E-091/093 | 🔴 P0 | Validation/Dashboard | Validation reports 128 issues on a 1-component project; Dashboard simultaneously says "All Checks Passing" | Two distinct bugs: (a) DRC false positives at empty-design state, (b) reconcile dashboard summary with validation engine |
+| E2E-074 | 🔴 P1 | Workspace toolbar | Coach & Help button popover renders nothing (TutorialMenu Suspense fallback or empty?) | Investigate `client/src/pages/workspace/WorkspaceHeader.tsx:431` + `TutorialMenu` lazy chunk |
+| E2E-078 | 🔴 P1 | Architecture | `tool-analyze` button is dead | Wire up Analyze tool handler |
+| E2E-228/235/270 | 🔴 P1 | PCB/3D View/Order PCB | THREE different default board sizes for same project (50×40 / 100×80 / 100×80) | Single source-of-truth for board geometry |
+| E2E-236/271/284 | 🔴 P1 | 3D View/Order PCB/Calculators | Spinbutton constraints `valuemax=0` system-wide — can't increment | Audit all spinbutton wiring; valid range needed |
+| E2E-233 | 🔴 P1 | PCB | Layer visibility panel doesn't show inner layers when 4+ layer preset selected | Sync visibility panel with stack layer count |
+| E2E-266 | 🔴 P1 | Community | Card click is dead — no detail / install / add | Wire onclick to detail dialog or `/api/community/component/:id` route |
+| E2E-068/261/267 | 🟡 a11y | Multiple | `role="button"` on divs without keyboard handler — Dashboard, Learn, Community, Patterns | Use real `<button>`/`<a>` (systemic) |
+
+## TL;DR — Top opportunities (UX/IDEA)
+
+- **Inconsistent tab/route/heading naming** — Learn=knowledge, Inventory=storage, Tasks=kanban (E2E-053, E2E-276)
+- **Trust receipt pattern is GOLD** — present in Sim/Order/Arduino/SerialMonitor; expand to Dashboard.
+- **Card-click integration** — Calculator → Add to BOM / Apply to Component (E2E-283) is the killer pattern. Replicate everywhere.
+- **API key gating** — many AI buttons enabled without key, will fail. Disable + tooltip universally.
+- **Confidence labels paradox** — "Evidence strong" + "SETUP REQUIRED" sent contradictory signals (Sim, Order, Exports).
+
+---
+
+
 **Tester:** Claude (Chrome DevTools MCP, user perspective)
 **Build:** main branch, dev server localhost:5000
 **Account:** e2e_test_user / TestPass123!SecureE2E
