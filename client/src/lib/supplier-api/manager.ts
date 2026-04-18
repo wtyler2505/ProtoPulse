@@ -24,6 +24,17 @@ import {
   getPriceForQuantity,
 } from './helpers';
 import { buildMockParts } from './mock-data';
+import {
+  getRemainingRequests as getRemainingRequestsFn,
+  isRateLimited as isRateLimitedFn,
+  recordRequest as recordRequestFn,
+} from './rate-limit';
+import {
+  checkAlerts as checkAlertsFn,
+  getStockAlerts as getStockAlertsFn,
+  removeStockAlert as removeStockAlertFn,
+  setStockAlert as setStockAlertFn,
+} from './stock-alerts';
 import type {
   BomPricingResult,
   BomQuote,
@@ -163,7 +174,7 @@ export class SupplierApiManager {
     // Record rate limit hit for all enabled distributors
     const enabledDists = this.getEnabledDistributorIds(options?.distributors);
     enabledDists.forEach((distId) => {
-      this.recordRequest(distId);
+      recordRequestFn(this, distId);
     });
 
     const mpnLower = mpn.toLowerCase();
@@ -196,7 +207,7 @@ export class SupplierApiManager {
 
     const enabledDists = this.getEnabledDistributorIds(options?.distributors);
     enabledDists.forEach((distId) => {
-      this.recordRequest(distId);
+      recordRequestFn(this, distId);
     });
 
     const kwLower = keyword.toLowerCase();
@@ -419,24 +430,12 @@ export class SupplierApiManager {
 
   /** Get the number of remaining requests within the rate limit window for a distributor. */
   getRemainingRequests(distributorId: DistributorId): number {
-    const config = this._distributors.find((d) => d.distributorId === distributorId);
-    if (!config) {
-      return 0;
-    }
-
-    const state = this._rateLimits.get(distributorId);
-    if (!state) {
-      return config.rateLimit;
-    }
-
-    const windowStart = Date.now() - 60_000; // 1-minute window
-    const recentRequests = state.requests.filter((t) => t > windowStart);
-    return Math.max(0, config.rateLimit - recentRequests.length);
+    return getRemainingRequestsFn(this, distributorId);
   }
 
   /** Check if a distributor is currently rate-limited. */
   isRateLimited(distributorId: DistributorId): boolean {
-    return this.getRemainingRequests(distributorId) <= 0;
+    return isRateLimitedFn(this, distributorId);
   }
 
   // -----------------------------------------------------------------------
@@ -445,49 +444,22 @@ export class SupplierApiManager {
 
   /** Set a stock alert — notify when stock drops below threshold. */
   setStockAlert(mpn: string, threshold: number): void {
-    const existing = this._stockAlerts.find((a) => a.mpn === mpn);
-    if (existing) {
-      existing.threshold = threshold;
-    } else {
-      this._stockAlerts.push({ mpn, threshold });
-    }
-    this._save();
-    this._notify();
+    setStockAlertFn(this, mpn, threshold);
   }
 
   /** Get all stock alerts. */
   getStockAlerts(): Array<{ mpn: string; threshold: number }> {
-    return this._stockAlerts.map((a) => ({ ...a }));
+    return getStockAlertsFn(this);
   }
 
   /** Remove a stock alert. */
   removeStockAlert(mpn: string): void {
-    const initialLength = this._stockAlerts.length;
-    this._stockAlerts = this._stockAlerts.filter((a) => a.mpn !== mpn);
-    if (this._stockAlerts.length !== initialLength) {
-      this._save();
-      this._notify();
-    }
+    removeStockAlertFn(this, mpn);
   }
 
   /** Check all stock alerts against current mock data. Returns triggered alerts. */
   checkAlerts(): Array<{ mpn: string; currentStock: number; threshold: number; triggered: boolean }> {
-    return this._stockAlerts.map((alert) => {
-      const results = this.searchPart(alert.mpn);
-      let totalStock = 0;
-      if (results.length > 0) {
-        results[0].offers.forEach((offer) => {
-          totalStock += offer.stock;
-        });
-      }
-
-      return {
-        mpn: alert.mpn,
-        currentStock: totalStock,
-        threshold: alert.threshold,
-        triggered: totalStock < alert.threshold,
-      };
-    });
+    return checkAlertsFn(this);
   }
 
   // -----------------------------------------------------------------------
@@ -692,20 +664,6 @@ export class SupplierApiManager {
     return filtered;
   }
 
-  /** @internal exposed for helpers.getMinPrice — kept for legacy shape. */
-
-  private recordRequest(distributorId: DistributorId): void {
-    let state = this._rateLimits.get(distributorId);
-    if (!state) {
-      state = { requests: [] };
-      this._rateLimits.set(distributorId, state);
-    }
-
-    const now = Date.now();
-    // Clean up old entries outside the 1-minute window
-    state.requests = state.requests.filter((t) => t > now - 60_000);
-    state.requests.push(now);
-  }
 
   // -----------------------------------------------------------------------
   // Persistence
