@@ -551,6 +551,92 @@ describe('auditBreadboard', () => {
   });
 
   // -------------------------------------------------------------------------
+  // checkMissingGroundReturn message format (audit #289)
+  // -------------------------------------------------------------------------
+
+  describe('checkMissingGroundReturn message format (audit #289)', () => {
+    it('includes "name (id)" when pin name differs from pin id', () => {
+      // Part where ground pin has id="pin-2" but name="GND" — distinct values.
+      const part = makePart({
+        id: 300,
+        meta: { family: 'ic', title: 'TestIC' },
+        connectors: [
+          { id: 'VCC', name: 'VCC', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'pin-2', name: 'GND', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+        ],
+      });
+      const inst = makeInstance({ id: 300, partId: 300, referenceDesignator: 'U300' });
+
+      const powerNet = makeNet({
+        name: 'VCC',
+        netType: 'power',
+        segments: [{ fromInstanceId: 300, fromPin: 'VCC', toInstanceId: 99, toPin: 'VCC' }],
+      });
+
+      const result = audit({ instances: [inst], parts: [part], nets: [powerNet] });
+
+      const groundIssues = result.issues.filter((i) => i.id.startsWith('missing-ground'));
+      expect(groundIssues).toHaveLength(1);
+      expect(groundIssues[0].detail).toContain('GND (pin-2)');
+    });
+
+    it('shows name only (no redundant parens) when pin name equals pin id', () => {
+      // Part where ground pin has id="GND" and name="GND" — same values.
+      const part = makePart({
+        id: 301,
+        meta: { family: 'ic', title: 'TestIC2' },
+        connectors: [
+          { id: 'VCC', name: 'VCC', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'GND', name: 'GND', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+        ],
+      });
+      const inst = makeInstance({ id: 301, partId: 301, referenceDesignator: 'U301' });
+
+      const powerNet = makeNet({
+        name: 'VCC',
+        netType: 'power',
+        segments: [{ fromInstanceId: 301, fromPin: 'VCC', toInstanceId: 99, toPin: 'VCC' }],
+      });
+
+      const result = audit({ instances: [inst], parts: [part], nets: [powerNet] });
+
+      const groundIssues = result.issues.filter((i) => i.id.startsWith('missing-ground'));
+      expect(groundIssues).toHaveLength(1);
+      // Should contain "GND" but NOT "GND (GND)" — no redundant parens.
+      expect(groundIssues[0].detail).toContain('GND');
+      expect(groundIssues[0].detail).not.toContain('GND (GND)');
+    });
+
+    it('includes both name-id pairs when a part has 2 missing ground pins', () => {
+      // Part with two distinct ground pins: id="pin-2"/name="GND" and id="pin-4"/name="AGND".
+      // Both names match the isGroundConnector heuristic; IDs differ from names.
+      const part = makePart({
+        id: 302,
+        meta: { family: 'ic', title: 'DualGndIC' },
+        connectors: [
+          { id: 'VCC', name: 'VCC', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'pin-2', name: 'GND', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'pin-4', name: 'AGND', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+        ],
+      });
+      const inst = makeInstance({ id: 302, partId: 302, referenceDesignator: 'U302' });
+
+      const powerNet = makeNet({
+        name: 'VCC',
+        netType: 'power',
+        segments: [{ fromInstanceId: 302, fromPin: 'VCC', toInstanceId: 99, toPin: 'VCC' }],
+      });
+
+      const result = audit({ instances: [inst], parts: [part], nets: [powerNet] });
+
+      const groundIssues = result.issues.filter((i) => i.id.startsWith('missing-ground'));
+      expect(groundIssues).toHaveLength(1);
+      expect(groundIssues[0].detail).toContain('GND (pin-2)');
+      expect(groundIssues[0].detail).toContain('AGND (pin-4)');
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Check 6: Wire density hotspots
   // -------------------------------------------------------------------------
 

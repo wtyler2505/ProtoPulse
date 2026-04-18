@@ -499,12 +499,23 @@ function checkMissingGroundReturn(
 
     if (powerConnected && !groundConnected) {
       const meta = getMeta(part);
+
+      // Build "Name (id)" labels for each ground pin; suppress the parenthesized ID
+      // when it is identical to the name (case-insensitive) to avoid "GND (GND)".
+      const groundConnectors = connectors.filter((c) => isGroundConnector(c.name ?? ''));
+      const groundPinLabels = groundConnectors.map((c) => {
+        const name = c.name ?? '';
+        const id = c.id ?? '';
+        return name.toLowerCase() === id.toLowerCase() ? name : `${name} (${id})`;
+      });
+      const groundPinList = groundPinLabels.join(', ');
+
       issues.push({
         id: `missing-ground-${String(inst.id)}`,
         severity: 'critical',
         category: 'power',
         title: `No ground return for ${inst.referenceDesignator}`,
-        detail: `${meta.title ?? inst.referenceDesignator} has power connected but no ground return path. Without a ground reference, the part cannot function and current has nowhere to go.`,
+        detail: `${meta.title ?? inst.referenceDesignator} has power connected but no ground return path on ${groundPinList}. Without a ground reference, the part cannot function and current has nowhere to go.`,
         affectedInstanceIds: [inst.id],
         affectedPinIds: groundPinNames,
       });
