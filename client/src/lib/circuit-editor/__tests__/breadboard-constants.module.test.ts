@@ -11,7 +11,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   PHYSICAL,
   UI,
@@ -20,6 +21,7 @@ import {
   POWER_BUDGET,
   VAULT_SLUGS,
 } from '../breadboard-constants';
+import { BB } from '../breadboard-model';
 
 // ---------------------------------------------------------------------------
 // PHYSICAL — datasheet-authoritative breadboard geometry
@@ -54,6 +56,10 @@ describe('PHYSICAL', () => {
   it('TIE_POINTS is 830', () => {
     expect(PHYSICAL.TIE_POINTS).toBe(830);
   });
+
+  it('PHYSICAL.TIE_POINTS === BB.PHYSICAL_TIE_POINTS (cross-file drift guard)', () => {
+    expect(PHYSICAL.TIE_POINTS).toBe(BB.PHYSICAL_TIE_POINTS);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -81,8 +87,8 @@ describe('UI', () => {
     expect(UI.PIN_SNAP_TOLERANCE_PX).toBeGreaterThan(UI.SNAP_RADIUS_PX);
   });
 
-  it('ORIGIN_X_PX is positive (canvas has left margin for row labels)', () => {
-    expect(UI.ORIGIN_X_PX).toBeGreaterThan(0);
+  it('ORIGIN_X_PX >= one-hole-radius (room for row labels)', () => {
+    expect(UI.ORIGIN_X_PX).toBeGreaterThanOrEqual(UI.HOLE_RADIUS_TERMINAL_FRACTION * UI.PITCH_PX);
   });
 
   it('ORIGIN_Y_PX is positive (canvas has top margin)', () => {
@@ -179,6 +185,10 @@ describe('POWER_BUDGET', () => {
   it('EXTERNAL_MODULE_FAIL_MA is 700 (breadboard power module limit)', () => {
     expect(POWER_BUDGET.EXTERNAL_MODULE_FAIL_MA).toBe(700);
   });
+
+  it('USB_WARN_MA is 80% of USB_FAIL_MA (documented threshold contract)', () => {
+    expect(POWER_BUDGET.USB_WARN_MA / POWER_BUDGET.USB_FAIL_MA).toBeCloseTo(0.8, 2);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -186,8 +196,11 @@ describe('POWER_BUDGET', () => {
 // ---------------------------------------------------------------------------
 
 describe('VAULT_SLUGS', () => {
-  const repoRoot = resolve(process.cwd());
-  const knowledgeDir = resolve(repoRoot, 'knowledge');
+  // This file lives at client/src/lib/circuit-editor/__tests__/breadboard-constants.module.test.ts
+  // Traverse up 5 levels to reach the repo root, then into knowledge/.
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const knowledgeDir = resolve(__dirname, '..', '..', '..', '..', '..', 'knowledge');
 
   it('all 36 entries are present', () => {
     expect(Object.keys(VAULT_SLUGS)).toHaveLength(36);
