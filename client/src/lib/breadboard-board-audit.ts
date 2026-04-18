@@ -343,6 +343,158 @@ function checkRestrictedPinUsage(
   return issues;
 }
 
+// ---------------------------------------------------------------------------
+// Strapping-pin net classification (audit #283)
+// ---------------------------------------------------------------------------
+
+/**
+ * Families that are considered purely passive for the purpose of
+ * strapping-pin net classification. Switches/buttons are included because
+ * a reset-button pull-up circuit (GPIO → button → resistor → VCC) is a
+ * CORRECT and COMMON configuration — the switch is a passive mechanical
+ * element, not an active signal driver.
+ */
+const PASSIVE_FAMILIES = new Set([
+  'resistor',
+  'capacitor',
+  'capacitor',
+  'inductor',
+  'ferrite',
+  'switch',
+  'button',
+  'cap',
+]);
+
+/**
+ * Return true if the part's family is a passive component that cannot
+ * actively drive a strapping pin to an unsafe level.
+ */
+function isPassivePart(part: ComponentPart | undefined): boolean {
+  if (!part) return false;
+  const family = getFamily(getMeta(part));
+  if (PASSIVE_FAMILIES.has(family)) return true;
+  // Also accept type-keyword aliases in the part type field.
+  const title = (typeof getMeta(part).title === 'string' ? getMeta(part).title as string : '').toLowerCase();
+  return title.includes('resistor') || title.includes('capacitor') || title.includes('inductor');
+}
+
+type StrappingNetClass = 'pullup-to-vcc' | 'pulldown-to-gnd' | 'active-signal';
+
+/**
+ * Walks the net graph through chains of passive components (resistors,
+ * capacitors, inductors, ferrites, switches/buttons) looking for a path
+ * to VCC or GND. An active device found anywhere in the reachable set
+ * causes an immediate `active-signal` classification.
+ *
+ * The walk is bounded to MAX_PASSIVE_HOPS hops to avoid infinite loops
+ * while still handling real-world reset-button circuits:
+ *   GPIO → (signal net) → button → (intermediate net) → resistor → (VCC net)
+ * which requires 2 hops through passives.
+ */
+const MAX_PASSIVE_HOPS = 4; // covers any realistic pull-up chain
+
+function classifyStrappingNetFull(
+  net: CircuitNetRow,
+  mcuInstanceId: number,
+  allNets: CircuitNetRow[],
+  instances: CircuitInstanceRow[],
+  partIndex: Map<number, ComponentPart>,
+): StrappingNetClass {
+  // Build instanceId → partId from the instances array.
+  const instancePartIdMap = new Map<number, number | null>();
+  for (const inst of instances) {
+    instancePartIdMap.set(inst.id, inst.partId ?? null);
+  }
+
+  // Build a quick net lookup: instanceId → nets that touch it.
+  const instanceToNets = new Map<number, CircuitNetRow[]>();
+  for (const n of allNets) {
+    for (const seg of parseNetSegments(n)) {
+      for (const id of [seg.fromInstanceId, seg.toInstanceId]) {
+        if (!instanceToNets.has(id)) instanceToNets.set(id, []);
+        instanceToNets.get(id)!.push(n);
+      }
+    }
+  }
+
+  // BFS through passive-component chains starting from the strapping-pin net.
+  // Each queue entry is an instance ID to explore. We track visited nets to
+  // avoid revisiting (prevents cycles through shared passives).
+  const visitedNets = new Set<number>([net.id]);
+  // Frontier is instance IDs reachable through passive hops.
+  const queue: Array<{ instanceId: number; hop: number }> = [];
+
+  // Seed the queue with direct neighbors on the GPIO net (excluding the MCU).
+  const seedSegments = parseNetSegments(net);
+  for (const seg of seedSegments) {
+    for (const id of [seg.fromInstanceId, seg.toInstanceId]) {
+      if (id !== mcuInstanceId) {
+        queue.push({ instanceId: id, hop: 0 });
+      }
+    }
+  }
+
+  let foundPullupToVcc = false;
+  let foundPulldownToGnd = false;
+
+  const visitedInstances = new Set<number>([mcuInstanceId]);
+
+  while (queue.length > 0) {
+    const entry = queue.shift()!;
+    const { instanceId, hop } = entry;
+
+    if (visitedInstances.has(instanceId)) continue;
+    visitedInstances.add(instanceId);
+
+    const partId = instancePartIdMap.get(instanceId) ?? null;
+    const part = partId != null ? partIndex.get(partId) : undefined;
+
+    if (!isPassivePart(part)) {
+      // Non-passive (active) device reachable from the strapping pin.
+      // Active source wins — no pull-up can suppress this warning.
+      return 'active-signal';
+    }
+
+    // Passive found. Check all nets connected to this passive (excluding the
+    // net we arrived on) for power/GND classification or further passives.
+    const neighborNets = instanceToNets.get(instanceId) ?? [];
+    for (const neighborNet of neighborNets) {
+      if (visitedNets.has(neighborNet.id)) continue;
+      visitedNets.add(neighborNet.id);
+
+      if (isPowerOrGroundNet(neighborNet)) {
+        const netName = (neighborNet.name ?? '').toLowerCase();
+        const netType = (neighborNet.netType ?? '').toLowerCase();
+        if (netType === 'ground' || /\b(gnd|ground|vss|agnd|pgnd)\b/.test(netName)) {
+          foundPulldownToGnd = true;
+        } else {
+          foundPullupToVcc = true;
+        }
+        // Don't continue exploring beyond a power/GND net.
+        continue;
+      }
+
+      // Non-power net: enqueue instances on this net for further exploration
+      // (if we haven't exceeded the hop depth limit).
+      if (hop < MAX_PASSIVE_HOPS) {
+        for (const seg of parseNetSegments(neighborNet)) {
+          for (const nextId of [seg.fromInstanceId, seg.toInstanceId]) {
+            if (!visitedInstances.has(nextId)) {
+              queue.push({ instanceId: nextId, hop: hop + 1 });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (foundPullupToVcc) return 'pullup-to-vcc';
+  if (foundPulldownToGnd) return 'pulldown-to-gnd';
+
+  // No active device found, no power/GND path found either — be conservative.
+  return 'active-signal';
+}
+
 /** Check 3: Strapping/boot pin signal routing. */
 function checkStrappingPinConflicts(
   instances: CircuitInstanceRow[],
@@ -362,6 +514,11 @@ function checkStrappingPinConflicts(
     const bootPinIds = new Set(board.bootPins.map((bp) => bp.pinId.toLowerCase()));
     const pinIndex = buildVerifiedPinIndex(board);
 
+    // Track emitted issue IDs to avoid duplicates when the same net has multiple
+    // segments that all touch the same MCU pin (e.g., a mixed net with both a
+    // pull-up resistor and an active MCU output on separate segments).
+    const emittedIssueIds = new Set<string>();
+
     // Check if any non-power net connects to a boot pin.
     const instanceSegments = getSegmentsForInstance(nets, inst.id);
     for (const { net, segment } of instanceSegments) {
@@ -374,12 +531,31 @@ function checkStrappingPinConflicts(
       const pinLower = pinOnThisInstance.toLowerCase();
 
       if (bootPinIds.has(pinLower)) {
+        const issueId = `strapping-pin-${String(inst.id)}-${pinOnThisInstance}`;
+
+        // Skip if we already emitted for this exact instance+pin combination
+        // (can happen when a net has multiple segments all touching the same pin).
+        if (emittedIssueIds.has(issueId)) {
+          continue;
+        }
+
+        // Classify the net to distinguish safe pull-ups/pull-downs from active drives.
+        const netClass = classifyStrappingNetFull(net, inst.id, nets, instances, partIndex);
+
+        // Pull-up to VCC and pull-down to GND through passive components are
+        // CORRECT and COMMON configurations (e.g., GPIO0 + 10kΩ to 3V3 is how
+        // a reset button works). Only warn on active-signal connections.
+        if (netClass === 'pullup-to-vcc' || netClass === 'pulldown-to-gnd') {
+          continue;
+        }
+
         const vbPin = pinIndex.get(pinLower);
         const bootConfig = board.bootPins.find(
           (bp) => bp.pinId.toLowerCase() === pinLower,
         );
+        emittedIssueIds.add(issueId);
         issues.push({
-          id: `strapping-pin-${String(inst.id)}-${pinOnThisInstance}`,
+          id: issueId,
           severity: 'warning',
           category: 'safety',
           title: `Signal on strapping pin ${vbPin?.name ?? pinOnThisInstance} (${inst.referenceDesignator})`,

@@ -1049,4 +1049,308 @@ describe('auditBreadboard', () => {
       expect(issue!.detail.toLowerCase()).toMatch(/hardware damage/);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // checkStrappingPinConflicts net classification (audit #283)
+  // -------------------------------------------------------------------------
+
+  describe('checkStrappingPinConflicts net classification (audit #283)', () => {
+    /**
+     * Build a verified ESP32 part suitable for strapping-pin checks.
+     * Uses the nodemcu-esp32s alias so verified-boards resolves it and
+     * bootPins are populated.
+     */
+    function makeEsp32Part(id: number): ComponentPart {
+      return makePart({
+        id,
+        meta: {
+          family: 'mcu',
+          title: 'NodeMCU ESP32-S',
+          verificationStatus: 'verified',
+          partFamily: 'board-module',
+          mpn: 'nodemcu-esp32s',
+        },
+        connectors: [
+          { id: 'VCC', name: 'VCC', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'GND', name: 'GND', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'GPIO0', name: 'IO0', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'GPIO12', name: 'IO12', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'GPIO2', name: 'IO2', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+        ],
+      });
+    }
+
+    function makeResistorPart(id: number, value = '10k'): ComponentPart {
+      return makePart({
+        id,
+        meta: { family: 'resistor', title: `${value} pull-up resistor` },
+        connectors: [
+          { id: 'pin-1', name: 'pin-1', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'pin-2', name: 'pin-2', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+        ],
+      });
+    }
+
+    function makeButtonPart(id: number): ComponentPart {
+      return makePart({
+        id,
+        meta: { family: 'switch', title: 'Tactile Push Button' },
+        connectors: [
+          { id: 'pin-1', name: 'pin-1', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'pin-2', name: 'pin-2', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+        ],
+      });
+    }
+
+    /**
+     * Case 1: GPIO0 wired directly to another MCU digital output → FIRES.
+     * Signal net: esp32.gpio0 ↔ otherMcu.D0
+     */
+    it('fires when GPIO0 is connected directly to an MCU digital output', () => {
+      const esp32Part = makeEsp32Part(800);
+      const mcuPart = makeIcPart(801, 'ATmega328P');
+
+      const esp32Inst = makeInstance({ id: 810, partId: 800, referenceDesignator: 'U10' });
+      const mcuInst = makeInstance({ id: 811, partId: 801, referenceDesignator: 'U11' });
+
+      // Direct signal wire: GPIO0 → MCU output pin
+      const signalNet = makeNet({
+        name: 'gpio0_signal',
+        netType: 'signal',
+        segments: [
+          { fromInstanceId: 810, fromPin: 'gpio0', toInstanceId: 811, toPin: 'D0' },
+        ],
+      });
+
+      const result = audit({
+        instances: [esp32Inst, mcuInst],
+        parts: [esp32Part, mcuPart],
+        nets: [signalNet],
+      });
+
+      const strappingIssues = result.issues.filter((i) => i.id.startsWith('strapping-pin'));
+      expect(strappingIssues).toHaveLength(1);
+      expect(strappingIssues[0].severity).toBe('warning');
+      expect(strappingIssues[0].category).toBe('safety');
+    });
+
+    /**
+     * Case 2: GPIO0 wired through 10kΩ resistor to 3V3 rail → DOES NOT FIRE.
+     * Net A (signal): esp32.gpio0 ↔ R1.pin-1
+     * Net B (power): R1.pin-2 ↔ VCC-rail (netType='power')
+     */
+    it('does NOT fire when GPIO0 is connected through a resistor to VCC (pull-up)', () => {
+      const esp32Part = makeEsp32Part(800);
+      const resPart = makeResistorPart(802);
+
+      const esp32Inst = makeInstance({ id: 810, partId: 800, referenceDesignator: 'U10' });
+      const resInst = makeInstance({ id: 812, partId: 802, referenceDesignator: 'R1' });
+
+      // Signal net: GPIO0 → R1.pin-1
+      const signalNet = makeNet({
+        name: 'gpio0_pullup',
+        netType: 'signal',
+        segments: [
+          { fromInstanceId: 810, fromPin: 'gpio0', toInstanceId: 812, toPin: 'pin-1' },
+        ],
+      });
+
+      // Power net: R1.pin-2 → VCC rail
+      const vccNet = makeNet({
+        name: 'VCC',
+        netType: 'power',
+        segments: [
+          { fromInstanceId: 812, fromPin: 'pin-2', toInstanceId: 999, toPin: 'VCC' },
+        ],
+      });
+
+      const result = audit({
+        instances: [esp32Inst, resInst],
+        parts: [esp32Part, resPart],
+        nets: [signalNet, vccNet],
+      });
+
+      const strappingIssues = result.issues.filter((i) => i.id.startsWith('strapping-pin'));
+      expect(strappingIssues).toHaveLength(0);
+    });
+
+    /**
+     * Case 3: GPIO0 wired through 10kΩ resistor to GND (pull-down) → DOES NOT FIRE.
+     * Net A (signal): esp32.gpio0 ↔ R1.pin-1
+     * Net B (ground): R1.pin-2 ↔ GND rail
+     */
+    it('does NOT fire when GPIO0 is connected through a resistor to GND (pull-down)', () => {
+      const esp32Part = makeEsp32Part(800);
+      const resPart = makeResistorPart(802);
+
+      const esp32Inst = makeInstance({ id: 810, partId: 800, referenceDesignator: 'U10' });
+      const resInst = makeInstance({ id: 812, partId: 802, referenceDesignator: 'R1' });
+
+      const signalNet = makeNet({
+        name: 'gpio0_pulldown',
+        netType: 'signal',
+        segments: [
+          { fromInstanceId: 810, fromPin: 'gpio0', toInstanceId: 812, toPin: 'pin-1' },
+        ],
+      });
+
+      const gndNet = makeNet({
+        name: 'GND',
+        netType: 'ground',
+        segments: [
+          { fromInstanceId: 812, fromPin: 'pin-2', toInstanceId: 999, toPin: 'GND' },
+        ],
+      });
+
+      const result = audit({
+        instances: [esp32Inst, resInst],
+        parts: [esp32Part, resPart],
+        nets: [signalNet, gndNet],
+      });
+
+      const strappingIssues = result.issues.filter((i) => i.id.startsWith('strapping-pin'));
+      expect(strappingIssues).toHaveLength(0);
+    });
+
+    /**
+     * Case 4: GPIO0 wired to a reset button (button → resistor → VCC, button → pin)
+     * → DOES NOT FIRE (passive path to VCC through switch+resistor).
+     *
+     * Net A (signal): esp32.gpio0 ↔ SW1.pin-1
+     * Net B (signal): SW1.pin-2 ↔ R1.pin-1
+     * Net C (power): R1.pin-2 ↔ VCC
+     *
+     * A switch is treated as a passive for classification purposes.
+     */
+    it('does NOT fire when GPIO0 is connected through a reset button + pull-up resistor to VCC', () => {
+      const esp32Part = makeEsp32Part(800);
+      const buttonPart = makeButtonPart(803);
+      const resPart = makeResistorPart(804);
+
+      const esp32Inst = makeInstance({ id: 810, partId: 800, referenceDesignator: 'U10' });
+      const buttonInst = makeInstance({ id: 813, partId: 803, referenceDesignator: 'SW1' });
+      const resInst = makeInstance({ id: 814, partId: 804, referenceDesignator: 'R2' });
+
+      // GPIO0 → button.pin-1
+      const signalNet = makeNet({
+        name: 'gpio0_btn',
+        netType: 'signal',
+        segments: [
+          { fromInstanceId: 810, fromPin: 'gpio0', toInstanceId: 813, toPin: 'pin-1' },
+        ],
+      });
+
+      // button.pin-2 → R2.pin-1 (intermediate passive link)
+      const midNet = makeNet({
+        name: 'btn_res_link',
+        netType: 'signal',
+        segments: [
+          { fromInstanceId: 813, fromPin: 'pin-2', toInstanceId: 814, toPin: 'pin-1' },
+        ],
+      });
+
+      // R2.pin-2 → VCC
+      const vccNet = makeNet({
+        name: 'VCC',
+        netType: 'power',
+        segments: [
+          { fromInstanceId: 814, fromPin: 'pin-2', toInstanceId: 999, toPin: 'VCC' },
+        ],
+      });
+
+      const result = audit({
+        instances: [esp32Inst, buttonInst, resInst],
+        parts: [esp32Part, buttonPart, resPart],
+        nets: [signalNet, midNet, vccNet],
+      });
+
+      const strappingIssues = result.issues.filter((i) => i.id.startsWith('strapping-pin'));
+      expect(strappingIssues).toHaveLength(0);
+    });
+
+    /**
+     * Case 5: GPIO0 connected to pull-up resistor to VCC AND to another MCU output pin.
+     * Active source wins → FIRES.
+     *
+     * Net A (signal): esp32.gpio0 ↔ R1.pin-1  AND  esp32.gpio0 ↔ otherMcu.D0
+     */
+    it('fires when GPIO0 has both a pull-up resistor AND an active MCU output', () => {
+      const esp32Part = makeEsp32Part(800);
+      const mcuPart = makeIcPart(801, 'ATmega328P');
+      const resPart = makeResistorPart(802);
+
+      const esp32Inst = makeInstance({ id: 810, partId: 800, referenceDesignator: 'U10' });
+      const mcuInst = makeInstance({ id: 811, partId: 801, referenceDesignator: 'U11' });
+      const resInst = makeInstance({ id: 812, partId: 802, referenceDesignator: 'R1' });
+
+      // Mixed net: GPIO0 ↔ R1.pin-1 AND GPIO0 ↔ MCU.D0 (two segments on same net)
+      const mixedNet = makeNet({
+        name: 'gpio0_mixed',
+        netType: 'signal',
+        segments: [
+          { fromInstanceId: 810, fromPin: 'gpio0', toInstanceId: 812, toPin: 'pin-1' },
+          { fromInstanceId: 810, fromPin: 'gpio0', toInstanceId: 811, toPin: 'D0' },
+        ],
+      });
+
+      // Power net: R1.pin-2 → VCC (pull-up exists but shouldn't suppress warning)
+      const vccNet = makeNet({
+        name: 'VCC',
+        netType: 'power',
+        segments: [
+          { fromInstanceId: 812, fromPin: 'pin-2', toInstanceId: 999, toPin: 'VCC' },
+        ],
+      });
+
+      const result = audit({
+        instances: [esp32Inst, mcuInst, resInst],
+        parts: [esp32Part, mcuPart, resPart],
+        nets: [mixedNet, vccNet],
+      });
+
+      const strappingIssues = result.issues.filter((i) => i.id.startsWith('strapping-pin'));
+      expect(strappingIssues).toHaveLength(1);
+      expect(strappingIssues[0].severity).toBe('warning');
+    });
+
+    /**
+     * Case 6: GPIO12 wired through a capacitor to GND (bypass/filter cap) → DOES NOT FIRE.
+     * Capacitor is a passive component; this is a safe bypass configuration.
+     *
+     * Net A (signal): esp32.gpio12 ↔ C1.pin-1
+     * Net B (ground): C1.pin-2 ↔ GND
+     */
+    it('does NOT fire when GPIO12 is connected through a capacitor to GND (bypass filter)', () => {
+      const esp32Part = makeEsp32Part(800);
+      const capPart = makeCapPart(805);
+
+      const esp32Inst = makeInstance({ id: 810, partId: 800, referenceDesignator: 'U10' });
+      const capInst = makeInstance({ id: 815, partId: 805, referenceDesignator: 'C1' });
+
+      const signalNet = makeNet({
+        name: 'gpio12_bypass',
+        netType: 'signal',
+        segments: [
+          { fromInstanceId: 810, fromPin: 'gpio12', toInstanceId: 815, toPin: 'pin-1' },
+        ],
+      });
+
+      const gndNet = makeNet({
+        name: 'GND',
+        netType: 'ground',
+        segments: [
+          { fromInstanceId: 815, fromPin: 'pin-2', toInstanceId: 999, toPin: 'GND' },
+        ],
+      });
+
+      const result = audit({
+        instances: [esp32Inst, capInst],
+        parts: [esp32Part, capPart],
+        nets: [signalNet, gndNet],
+      });
+
+      const strappingIssues = result.issues.filter((i) => i.id.startsWith('strapping-pin'));
+      expect(strappingIssues).toHaveLength(0);
+    });
+  });
 });
