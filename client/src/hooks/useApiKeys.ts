@@ -180,7 +180,7 @@ export function useApiKeys(): UseApiKeysResult {
           deleteOnServer(provider);
         }
       } else {
-        writeLocalKey(provider, key);
+        writeScratchKey(provider, key);
       }
     },
     [isAuthenticated, storeOnServer, deleteOnServer],
@@ -191,7 +191,7 @@ export function useApiKeys(): UseApiKeysResult {
       if (isAuthenticated) {
         deleteOnServer(provider);
       }
-      clearLocalKey(provider);
+      clearScratchKey(provider);
       setLocalKeys((prev) => ({ ...prev, [provider]: '' }));
     },
     [isAuthenticated, deleteOnServer],
