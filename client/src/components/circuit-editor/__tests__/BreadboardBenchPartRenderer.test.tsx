@@ -68,6 +68,7 @@ describe('BreadboardBenchPartRenderer', () => {
   it('displays reference designator text', () => {
     const instance = makeInstance({ referenceDesignator: 'R7' });
     render(svgWrap(<BreadboardBenchPartRenderer instance={instance} />));
-    expect(screen.getByText('R7')).toBeInTheDocument();
+    // Ref-des may appear in multiple SVG text nodes (fallback card shows it twice).
+    expect(screen.getAllByText('R7').length).toBeGreaterThan(0);
   });
 });

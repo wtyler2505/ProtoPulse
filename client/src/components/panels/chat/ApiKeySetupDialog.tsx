@@ -12,13 +12,6 @@ interface ApiKeySetupDialogProps {
 }
 
 const PROVIDER_CONFIG = {
-  anthropic: {
-    name: 'Anthropic',
-    url: 'https://console.anthropic.com/settings/keys',
-    urlLabel: 'console.anthropic.com',
-    placeholder: 'sk-ant-...',
-    instructions: 'Sign in to your Anthropic account and create a new API key.',
-  },
   gemini: {
     name: 'Google AI',
     url: 'https://aistudio.google.dev/apikeys',
