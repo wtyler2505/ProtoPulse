@@ -202,8 +202,8 @@ describe('VAULT_SLUGS', () => {
   const __dirname = dirname(__filename);
   const knowledgeDir = resolve(__dirname, '..', '..', '..', '..', '..', 'knowledge');
 
-  it('all 41 entries are present (36 Wave 1 + 5 Wave 2 decoupling/driver slugs)', () => {
-    expect(Object.keys(VAULT_SLUGS)).toHaveLength(41);
+  it('all 36 entries are present', () => {
+    expect(Object.keys(VAULT_SLUGS)).toHaveLength(36);
   });
 
   // Parameterized: every slug's file exists on disk

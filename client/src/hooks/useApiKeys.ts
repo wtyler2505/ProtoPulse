@@ -114,6 +114,15 @@ export function useApiKeys(): UseApiKeysResult {
     gemini: readScratchKey('gemini'),
   }));
 
+  // Audit #60: scrub any legacy plaintext localStorage entries once per hook lifetime,
+  // even for unauthenticated users. readScratchKey drained them into the initial state
+  // above; this belt-and-suspenders call covers late-arriving writes and StrictMode.
+  useEffect(() => {
+    for (const provider of ['gemini'] as ApiKeyProvider[]) {
+      drainLegacyLocalStorage(provider);
+    }
+  }, []);
+
   const providersQuery = useQuery<string[]>({
     queryKey: ['/api/settings/api-keys'],
     queryFn: async () => {

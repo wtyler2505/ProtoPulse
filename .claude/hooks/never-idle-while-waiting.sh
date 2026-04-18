@@ -125,13 +125,13 @@ classify
 
 case "$TIER" in
   SHORT)
-    RECOMMEND="SHORT wait — micro-work only. Pick ONE: (a) Read/Grep one file for upcoming phase, (b) check git status/log, (c) draft 1-2 sentences of a next-phase scratch note. Do NOT start writing a knowledge note or plan section — you will be interrupted mid-draft. If you genuinely have nothing sub-30s to do, say 'waiting on <estimate>' in one sentence and wait."
+    RECOMMEND="SHORT wait — micro-work only. Pick ONE: (a) Read/Grep one file for upcoming phase, (b) check git status/log, (c) document ONE finding as a BL-XXXX entry in docs/MASTER_BACKLOG.md. Do NOT dispatch agents, do NOT start writing a knowledge note or plan section. If you genuinely have nothing sub-30s to do, say 'waiting on <estimate>' in one sentence and wait."
     ;;
   MEDIUM)
-    RECOMMEND="MEDIUM wait — focused work sized to finish in $ESTIMATE. Pick ONE substantial item: (a) write ONE knowledge note about what you just built, (b) draft the next phase in a NEW scratch file, (c) read all relevant source files for Phase N+1 so you can start immediately when this completes, (d) run ONE read-only gap-analysis script and summarize, (e) research via Context7/WebSearch for upcoming work. Do NOT start a 10-minute research arc or multi-file plan."
+    RECOMMEND="MEDIUM wait — focused work sized to finish in $ESTIMATE. PREFERRED: document findings to docs/MASTER_BACKLOG.md as BL-XXXX entries so Gemini/Codex can pick them up across sessions. Also OK: (a) write ONE knowledge note about what you just built, (b) read source files for next phase, (c) triage existing BL items against current codebase state. Do NOT dispatch new agents (cap is 6 concurrent — see agent_count_cap rule). Do NOT start a 10-min research arc."
     ;;
   LONG)
-    RECOMMEND="LONG wait — substantive work. Pick multiple items or one big one: (a) write full knowledge notes for every non-trivial change in the current phase, (b) draft the next phase plan from scratch with file lists and TDD tasks, (c) deep research arc via Context7 + WebSearch on upcoming tech, (d) Improvements Radar on every file you touched this phase, (e) run gap-analysis.sh + competitive-gaps.sh + idea-generator.sh and synthesize into a queue note, (f) review recent commits for cleanup opportunities. You have real time — use it."
+    RECOMMEND="LONG wait — substantive work. PRIMARY: convert accumulated findings to BL-XXXX entries in docs/MASTER_BACKLOG.md. Durable backlog = any agent (Claude/Gemini/Codex) can pick it up across sessions; task-manager entries vaporize on rate limit. Also OK: (a) write full knowledge notes for recent changes, (b) draft next plan from scratch, (c) deep research via Context7/WebSearch, (d) triage stale audit docs. Do NOT dispatch new agents unless existing count <6 and Tyler explicitly requested more."
     ;;
 esac
 
