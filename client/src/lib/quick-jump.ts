@@ -120,7 +120,7 @@ export const QUICK_JUMP_REGISTRY: readonly QuickJumpTarget[] = [
 
   // -- Settings -------------------------------------------------------------
   { id: 'setting:theme', type: 'setting', label: 'Theme Settings', description: 'Configure application theme', keywords: ['theme', 'dark', 'light', 'color', 'appearance'] },
-  { id: 'setting:api-keys', type: 'setting', label: 'API Key Settings', description: 'Manage AI provider API keys', keywords: ['api', 'key', 'anthropic', 'gemini', 'openai', 'credential'] },
+  { id: 'setting:api-keys', type: 'setting', label: 'API Key Settings', description: 'Manage AI provider API keys', keywords: ['api', 'key', 'gemini', 'credential'] },
   { id: 'setting:shortcuts', type: 'setting', label: 'Keyboard Shortcuts', description: 'View and customize keyboard shortcuts', keywords: ['keyboard', 'shortcut', 'keybinding', 'hotkey'] },
   { id: 'setting:grid', type: 'setting', label: 'Grid Settings', description: 'Configure snap grid and grid display', keywords: ['grid', 'snap', 'align', 'spacing'] },
 ];

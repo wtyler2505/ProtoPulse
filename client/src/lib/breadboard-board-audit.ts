@@ -748,6 +748,7 @@ function checkMissingGroundReturn(
         detail: `${meta.title ?? inst.referenceDesignator} has power connected but no ground return path on ${groundPinList}. Without a ground reference, the part cannot function and current has nowhere to go.`,
         affectedInstanceIds: [inst.id],
         affectedPinIds: groundPinNames,
+        remediationLink: VAULT_SLUGS.BLDC_COMMON_GROUND,
       });
     }
   }
