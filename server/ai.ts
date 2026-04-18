@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { GoogleGenAI } from "@google/genai";
-import type { MessageData } from "@genkit-ai/ai/model";
+import type { MessageData } from "genkit";
 import { LRUClientCache } from "./lib/lru-cache";
 import { logger } from "./logger";
 import { toolRegistry, DESTRUCTIVE_TOOLS, type ToolResult, type ToolContext } from "./ai-tools";

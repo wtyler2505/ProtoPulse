@@ -6,8 +6,8 @@ Purpose: classify every CRITICAL / HIGH / MEDIUM finding (plus actionable LOW/IN
 ## Totals
 
 - **Triaged:** 71
-- **RESOLVED:** 31
-- **OPEN:** 32
+- **RESOLVED:** 32
+- **OPEN:** 31
 - **OBSOLETE:** 3
 - **NEEDS-INVESTIGATION:** 5
 
@@ -16,7 +16,7 @@ Purpose: classify every CRITICAL / HIGH / MEDIUM finding (plus actionable LOW/IN
 | Severity | Resolved | Open | Obsolete | Needs-Invest | Total |
 |---|---|---|---|---|---|
 | CRITICAL | 5 | 2 | 0 | 0 | 7 |
-| HIGH     | 9 | 9 | 1 | 1 | 20 |
+| HIGH     | 10 | 8 | 1 | 1 | 20 |
 | MEDIUM   | 14 | 17 | 2 | 3 | 36 |
 | LOW/INFO | 3 | 4 | 0 | 1 | 8 |
 
