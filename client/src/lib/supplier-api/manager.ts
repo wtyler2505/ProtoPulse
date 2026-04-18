@@ -171,11 +171,11 @@ export class SupplierApiManager {
 
     // Cache the results
     const now = Date.now();
-    this.cache.set(cacheKey, {
+    this._cache.set(cacheKey, {
       query: cacheKey,
       results,
       timestamp: now,
-      expiresAt: now + this.cacheExpiryMs,
+      expiresAt: now + this._cacheExpiryMs,
     });
 
     return results;
@@ -209,11 +209,11 @@ export class SupplierApiManager {
     results = this.applySearchOptions(results, options);
 
     const now = Date.now();
-    this.cache.set(cacheKey, {
+    this._cache.set(cacheKey, {
       query: cacheKey,
       results,
       timestamp: now,
-      expiresAt: now + this.cacheExpiryMs,
+      expiresAt: now + this._cacheExpiryMs,
     });
 
     return results;
@@ -385,12 +385,12 @@ export class SupplierApiManager {
 
   /** Get a cached search result if it exists and hasn't expired. */
   getCachedSearch(query: string): CachedSearch | null {
-    const entry = this.cache.get(query);
+    const entry = this._cache.get(query);
     if (!entry) {
       return null;
     }
     if (Date.now() > entry.expiresAt) {
-      this.cache.delete(query);
+      this._cache.delete(query);
       return null;
     }
     return { ...entry };
@@ -398,18 +398,18 @@ export class SupplierApiManager {
 
   /** Set the cache expiry duration in milliseconds. */
   setCacheExpiry(ms: number): void {
-    this.cacheExpiryMs = ms;
+    this._cacheExpiryMs = ms;
     this.save();
   }
 
   /** Clear all cached search results. */
   clearCache(): void {
-    this.cache.clear();
+    this._cache.clear();
   }
 
   /** Get the number of cached entries. */
   getCacheSize(): number {
-    return this.cache.size;
+    return this._cache.size;
   }
 
   // -----------------------------------------------------------------------
@@ -521,7 +521,7 @@ export class SupplierApiManager {
     const state: PersistedState = {
       enabledDistributors: this._distributors.filter((d) => d.enabled).map((d) => d.distributorId),
       currency: this.currentCurrency,
-      cacheExpiryMs: this.cacheExpiryMs,
+      cacheExpiryMs: this._cacheExpiryMs,
       stockAlerts: this.stockAlerts.map((a) => ({ ...a })),
     };
     return JSON.stringify(state);
@@ -574,7 +574,7 @@ export class SupplierApiManager {
 
     // Import cache expiry
     if (typeof data.cacheExpiryMs === 'number' && data.cacheExpiryMs > 0) {
-      this.cacheExpiryMs = data.cacheExpiryMs;
+      this._cacheExpiryMs = data.cacheExpiryMs;
       imported++;
     } else if (data.cacheExpiryMs !== undefined) {
       errors.push(`Invalid cacheExpiryMs: ${String(data.cacheExpiryMs)}`);
@@ -611,8 +611,8 @@ export class SupplierApiManager {
   /** Clear all state and reset to defaults. */
   clear(): void {
     this._distributors = DEFAULT_DISTRIBUTORS.map((d) => ({ ...d }));
-    this.cache.clear();
-    this.cacheExpiryMs = DEFAULT_CACHE_EXPIRY_MS;
+    this._cache.clear();
+    this._cacheExpiryMs = DEFAULT_CACHE_EXPIRY_MS;
     this.rateLimits.clear();
     this.stockAlerts = [];
     this.currentCurrency = 'USD';
@@ -718,7 +718,7 @@ export class SupplierApiManager {
       const state: PersistedState = {
         enabledDistributors: this._distributors.filter((d) => d.enabled).map((d) => d.distributorId),
         currency: this.currentCurrency,
-        cacheExpiryMs: this.cacheExpiryMs,
+        cacheExpiryMs: this._cacheExpiryMs,
         stockAlerts: this.stockAlerts.map((a) => ({ ...a })),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -758,7 +758,7 @@ export class SupplierApiManager {
 
       // Restore cache expiry
       if (typeof data.cacheExpiryMs === 'number' && data.cacheExpiryMs > 0) {
-        this.cacheExpiryMs = data.cacheExpiryMs;
+        this._cacheExpiryMs = data.cacheExpiryMs;
       }
 
       // Restore stock alerts

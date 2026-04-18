@@ -9,299 +9,64 @@
  * 4 board profiles: Arduino Uno, Mega, Nano, ESP32.
  * Singleton + subscribe pattern for useSyncExternalStore integration.
  * Pure module — no React/DOM dependencies.
+ *
+ * Types, board profiles, constants, and the sketch parser live in
+ * ./code-simulator/. This file hosts the CodeSimulator runtime class
+ * and re-exports the split modules to preserve the public API.
  */
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import type {
+  BoardProfile,
+  BreakpointInfo,
+  ExecContext,
+  InterruptHandler,
+  McuState,
+  ParsedSketch,
+  PinMode,
+  PinState,
+  SensorInput,
+  SerialBuffer,
+  SimulatorError,
+  SimulatorSnapshot,
+  SimulatorStatus,
+  SimVariable,
+  SimVariableType,
+  Listener,
+} from './code-simulator/types';
+import {
+  BOARD_PROFILES,
+  DEFAULT_BAUD,
+  DEFAULT_BOARD,
+  HIGH,
+  LED_BUILTIN,
+  LOW,
+  MAX_EXECUTION_STEPS,
+  MAX_SERIAL_LINES,
+} from './code-simulator/board-profiles';
+import { parseSketch } from './code-simulator/parser';
 
-type Listener = () => void;
-
-export type PinMode = 'INPUT' | 'OUTPUT' | 'INPUT_PULLUP';
-
-export interface PinState {
-  mode: PinMode;
-  digital: 0 | 1;
-  analog: number; // 0-1023 for ADC, 0-255 for PWM
-  pwm: boolean;
-}
-
-export interface SerialBuffer {
-  baudRate: number;
-  output: string[];
-  input: string[];
-  enabled: boolean;
-}
-
-export interface McuState {
-  pins: Map<number, PinState>;
-  serial: SerialBuffer;
-  serial1: SerialBuffer;
-  millis: number;
-  micros: number;
-  variables: Map<string, SimVariable>;
-  interrupts: Map<number, InterruptHandler>;
-  interruptsEnabled: boolean;
-}
-
-export type SimVariableType = 'int' | 'float' | 'bool' | 'string' | 'byte' | 'long' | 'unsigned int' | 'unsigned long' | 'char' | 'double';
-
-export interface SimVariable {
-  name: string;
-  type: SimVariableType;
-  value: number | string | boolean;
-  scope: 'global' | 'local';
-}
-
-export interface InterruptHandler {
-  pin: number;
-  mode: 'RISING' | 'FALLING' | 'CHANGE' | 'LOW' | 'HIGH';
-  functionName: string;
-}
-
-export type SimulatorStatus = 'idle' | 'running' | 'paused' | 'stopped' | 'error';
-
-export interface BreakpointInfo {
-  line: number;
-  enabled: boolean;
-  condition?: string;
-}
-
-export interface SimulatorError {
-  line: number;
-  message: string;
-  type: 'syntax' | 'runtime' | 'type';
-}
-
-export interface SensorInput {
-  pin: number;
-  value: number;
-  timestamp: number;
-}
-
-export interface BoardProfile {
-  name: string;
-  fqbn: string;
-  digitalPins: number;
-  analogPins: number;
-  pwmPins: readonly number[];
-  interruptPins: readonly number[];
-  flashKB: number;
-  sramKB: number;
-  clockMHz: number;
-  hasSerial1: boolean;
-  analogReadMax: number;
-  analogWriteMax: number;
-}
-
-export interface SimulatorSnapshot {
-  status: SimulatorStatus;
-  currentLine: number;
-  totalLines: number;
-  mcu: McuState;
-  errors: SimulatorError[];
-  executionCount: number;
-  breakpoints: BreakpointInfo[];
-  board: BoardProfile;
-  sketchName: string;
-  elapsedMs: number;
-}
-
-export interface ParsedSketch {
-  globals: string[];
-  setupBody: string[];
-  loopBody: string[];
-  functions: Map<string, ParsedFunction>;
-  rawLines: string[];
-}
-
-export interface ParsedFunction {
-  name: string;
-  params: string[];
-  body: string[];
-  startLine: number;
-}
-
-// ---------------------------------------------------------------------------
-// Board profiles
-// ---------------------------------------------------------------------------
-
-export const BOARD_PROFILES: Record<string, BoardProfile> = {
-  'arduino:avr:uno': {
-    name: 'Arduino Uno',
-    fqbn: 'arduino:avr:uno',
-    digitalPins: 14,
-    analogPins: 6,
-    pwmPins: [3, 5, 6, 9, 10, 11],
-    interruptPins: [2, 3],
-    flashKB: 32,
-    sramKB: 2,
-    clockMHz: 16,
-    hasSerial1: false,
-    analogReadMax: 1023,
-    analogWriteMax: 255,
-  },
-  'arduino:avr:mega': {
-    name: 'Arduino Mega',
-    fqbn: 'arduino:avr:mega',
-    digitalPins: 54,
-    analogPins: 16,
-    pwmPins: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-    interruptPins: [2, 3, 18, 19, 20, 21],
-    flashKB: 256,
-    sramKB: 8,
-    clockMHz: 16,
-    hasSerial1: true,
-    analogReadMax: 1023,
-    analogWriteMax: 255,
-  },
-  'arduino:avr:nano': {
-    name: 'Arduino Nano',
-    fqbn: 'arduino:avr:nano',
-    digitalPins: 14,
-    analogPins: 8,
-    pwmPins: [3, 5, 6, 9, 10, 11],
-    interruptPins: [2, 3],
-    flashKB: 32,
-    sramKB: 2,
-    clockMHz: 16,
-    hasSerial1: false,
-    analogReadMax: 1023,
-    analogWriteMax: 255,
-  },
-  'esp32:esp32:esp32': {
-    name: 'ESP32',
-    fqbn: 'esp32:esp32:esp32',
-    digitalPins: 40,
-    analogPins: 18,
-    pwmPins: [0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27],
-    interruptPins: [0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27],
-    flashKB: 4096,
-    sramKB: 520,
-    clockMHz: 240,
-    hasSerial1: true,
-    analogReadMax: 4095,
-    analogWriteMax: 255,
-  },
-} as const;
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const DEFAULT_BOARD = 'arduino:avr:uno';
-const MAX_SERIAL_LINES = 500;
-const MAX_EXECUTION_STEPS = 100_000;
-const DEFAULT_BAUD = 9600;
-
-// Arduino constants
-const HIGH = 1;
-const LOW = 0;
-const LED_BUILTIN = 13;
-
-// ---------------------------------------------------------------------------
-// Sketch parser
-// ---------------------------------------------------------------------------
-
-/**
- * Parse an Arduino sketch into structured sections.
- * Handles setup(), loop(), global declarations, and user-defined functions.
- */
-export function parseSketch(source: string): ParsedSketch {
-  const rawLines = source.split('\n');
-  const globals: string[] = [];
-  const functions = new Map<string, ParsedFunction>();
-  let setupBody: string[] = [];
-  let loopBody: string[] = [];
-
-  let i = 0;
-  while (i < rawLines.length) {
-    const line = rawLines[i].trim();
-
-    // Skip blank lines and single-line comments at top level
-    if (line === '' || line.startsWith('//') || line.startsWith('#include')) {
-      globals.push(rawLines[i]);
-      i++;
-      continue;
-    }
-
-    // Block comment
-    if (line.startsWith('/*')) {
-      while (i < rawLines.length && !rawLines[i].includes('*/')) {
-        globals.push(rawLines[i]);
-        i++;
-      }
-      if (i < rawLines.length) {
-        globals.push(rawLines[i]);
-        i++;
-      }
-      continue;
-    }
-
-    // Detect function definitions
-    const funcMatch = line.match(/^(\w[\w\s*]*?)\s+(\w+)\s*\(([^)]*)\)\s*\{?\s*$/);
-    if (funcMatch) {
-      const [, , funcName, params] = funcMatch;
-      const startLine = i;
-      const body: string[] = [];
-      let braceCount = line.includes('{') ? 1 : 0;
-
-      if (braceCount === 0) {
-        i++;
-        // Next line should have opening brace
-        if (i < rawLines.length && rawLines[i].trim() === '{') {
-          braceCount = 1;
-          i++;
-        }
-      } else {
-        i++;
-      }
-
-      while (i < rawLines.length && braceCount > 0) {
-        const bodyLine = rawLines[i];
-        const trimmed = bodyLine.trim();
-        for (const ch of trimmed) {
-          if (ch === '{') {
-            braceCount++;
-          }
-          if (ch === '}') {
-            braceCount--;
-          }
-        }
-        if (braceCount > 0) {
-          body.push(trimmed);
-        }
-        i++;
-      }
-
-      const paramList = params.split(',').map((p) => p.trim()).filter((p) => p !== '');
-
-      if (funcName === 'setup') {
-        setupBody = body;
-      } else if (funcName === 'loop') {
-        loopBody = body;
-      } else {
-        functions.set(funcName, { name: funcName, params: paramList, body, startLine });
-      }
-      continue;
-    }
-
-    // Global variable/constant declarations
-    globals.push(rawLines[i]);
-    i++;
-  }
-
-  return { globals, setupBody, loopBody, functions, rawLines };
-}
-
-// ---------------------------------------------------------------------------
-// Execution context — holds variables and call stack for one execution scope
-// ---------------------------------------------------------------------------
-
-interface ExecContext {
-  locals: Map<string, SimVariable>;
-  returnValue?: number | string | boolean;
-}
+// Re-export the public type surface + constants + parser so existing
+// imports from './code-simulator' keep working unchanged.
+export type {
+  Listener,
+  PinMode,
+  PinState,
+  SerialBuffer,
+  McuState,
+  SimVariableType,
+  SimVariable,
+  InterruptHandler,
+  SimulatorStatus,
+  BreakpointInfo,
+  SimulatorError,
+  SensorInput,
+  BoardProfile,
+  SimulatorSnapshot,
+  ParsedSketch,
+} from './code-simulator/types';
+export type { ParsedFunction } from './code-simulator/types';
+export { BOARD_PROFILES } from './code-simulator/board-profiles';
+export { parseSketch } from './code-simulator/parser';
 
 // ---------------------------------------------------------------------------
 // CodeSimulator — singleton

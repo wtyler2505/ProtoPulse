@@ -17,6 +17,7 @@
 import type { ToolRegistry } from './registry';
 import { registerCircuitCodeDslTools } from './circuit/code-dsl';
 import { registerPcbAdvancedTools } from './circuit/pcb-advanced';
+import { registerPcbAutorouteTools } from './circuit/pcb-autoroute';
 import { registerNetExplainTool } from './circuit/net-explain';
 
 export { registerCircuitTools } from './circuit/schematic';
