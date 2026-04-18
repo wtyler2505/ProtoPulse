@@ -323,7 +323,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   // api_keys); sessionStorage scratch for pre-auth. Never round-trips through request bodies.
   const { token: googleWorkspaceToken, setToken: setGoogleWorkspaceToken } = useGoogleWorkspaceToken();
   const { status: keyStatus, errorMessage: keyErrorMessage, validate: validateKey, reset: resetKeyStatus } = useApiKeyStatus();
-  // BL-0005: API keys managed by useApiKeys — server-side when authenticated, localStorage fallback
+  // BL-0005 / audit #60: API keys managed by useApiKeys — server-side (AES-256-GCM) when authenticated, sessionStorage scratch otherwise
   const { apiKey: aiApiKey, updateLocalKey: setApiKeyForProvider, clearApiKey: clearApiKeyForProvider } = useApiKeys();
   const setAiApiKey = useCallback((key: string) => { setApiKeyForProvider(aiProvider, key); }, [setApiKeyForProvider, aiProvider]);
   const [isListening, setIsListening] = useState(false);
