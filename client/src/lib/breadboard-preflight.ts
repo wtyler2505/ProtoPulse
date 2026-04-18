@@ -13,6 +13,7 @@
 
 import type { Connector, PartMeta } from '@shared/component-types';
 import type { CircuitInstanceRow, CircuitNetRow, ComponentPart } from '@shared/schema';
+import { VAULT_SLUGS } from '@shared/vault-citation';
 
 // ---------------------------------------------------------------------------
 // Public types

@@ -950,6 +950,7 @@ function checkMotorDriverTraps(
           'BLDC controllers often use inverted logic: STOP is active-LOW, BRAKE is active-HIGH. Swapping these leaves the motor running or permanently braked. Verify polarity against the datasheet before wiring.',
         affectedInstanceIds: [inst.id],
         affectedPinIds: [],
+        remediationLink: VAULT_SLUGS.BLDC_STOP_BRAKE,
       });
     }
 
@@ -963,6 +964,7 @@ function checkMotorDriverTraps(
           'H-bridge drivers require flyback diodes across motor terminals to absorb back-EMF during deceleration. Without protection, voltage spikes can destroy the driver IC.',
         affectedInstanceIds: [inst.id],
         affectedPinIds: [],
+        remediationLink: VAULT_SLUGS.L298N_NO_FLYBACK,
       });
     }
   }

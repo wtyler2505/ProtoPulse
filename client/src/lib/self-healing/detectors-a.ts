@@ -2,8 +2,7 @@
  * Self-Healing Assistant — hazard detectors (part 1 of 2).
  * Split from self-healing.ts. Contains:
  *   detectVoltageMismatch, detectMissingDecoupling, detectUnprotectedIo,
- *   detectFloatingInputs, detectReversePolarity, detectOvercurrent,
- *   detectEsdExposure.
+ *   detectFloatingInputs, detectReversePolarity, detectOvercurrent.
  */
 
 import { DEFAULT_APPROVAL_EXPIRY_MS } from './config';
@@ -11,7 +10,6 @@ import { nextId } from './id';
 import {
   getIcVoltage,
   isCapacitor,
-  isConnector,
   isIcOrMcu,
   isProtectionDiode,
   isResistor,
@@ -376,63 +374,6 @@ export function detectOvercurrent(
       detectedAt: now,
       dismissed: false,
     });
-  }
-
-  return hazards;
-}
-
-/** 7. ESD exposure — external connectors without TVS/ESD clamp. */
-export function detectEsdExposure(
-  instances: AnalysisInstance[],
-  nets: AnalysisNet[],
-): Hazard[] {
-  const hazards: Hazard[] = [];
-  const now = Date.now();
-  const connectors = instances.filter(isConnector);
-  const protectionDiodes = instances.filter(isProtectionDiode);
-
-  for (const conn of connectors) {
-    // Check signal nets on this connector
-    const signalNets = conn.connectedNets.filter((n) => {
-      const net = nets.find((nn) => nn.name === n);
-      return !net || net.netType !== 'power';
-    });
-
-    if (signalNets.length === 0) {
-      continue;
-    }
-
-    const hasEsd = signalNets.some((sNet) =>
-      protectionDiodes.some((d) => d.connectedNets.includes(sNet)),
-    );
-
-    if (!hasEsd) {
-      const hzId = nextId('hz');
-      hazards.push({
-        id: hzId,
-        type: 'esd_exposure',
-        severity: 'info',
-        message: `Connector ${conn.refDes} (${conn.label}) has signal lines without ESD protection`,
-        affectedRefs: [conn.refDes],
-        affectedNets: signalNets,
-        fix: {
-          id: nextId('fix'),
-          hazardId: hzId,
-          description: `Add TVS diode array on ${conn.refDes}'s signal lines`,
-          components: [{
-            description: 'TVS diode array (e.g. PRTR5V0U2X for USB)',
-            refDes: `D_esd_${conn.refDes}`,
-            placement: `Close to ${conn.refDes}`,
-            connections: [...signalNets, 'GND'],
-          }],
-          status: 'pending',
-          createdAt: now,
-          expiresAt: now + DEFAULT_APPROVAL_EXPIRY_MS,
-        },
-        detectedAt: now,
-        dismissed: false,
-      });
-    }
   }
 
   return hazards;
