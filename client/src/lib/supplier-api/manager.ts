@@ -1,41 +1,39 @@
 /**
  * Supplier API — SupplierApiManager singleton.
- * Split from supplier-api.ts. Coordinates distributors, caching, rate limiting,
- * stock alerts, currency, and persistence.
+ * Coordinates the concern-split modules (search, pricing, bom-quote, rate-limit,
+ * stock-alerts, distributor-config, persistence) over 7 shared state fields.
  *
- * Cohesive state manager, intentionally not split further. All methods operate on
- * 8 shared private fields (distributors, mockParts, cache, cacheExpiryMs, rateLimits,
- * stockAlerts, currentCurrency, listeners). Further splitting would either leak
- * internal state across modules or lose `this`-typing on free functions — both
- * strictly worse than the single-file shape. No per-supplier adapter code exists
- * to extract (suppliers are data, not behavior, in this implementation).
+ * Each concern lives in its own file and takes this instance as its first
+ * argument, reading / mutating state through the `_`-prefixed @internal fields.
+ * The class itself is a thin delegator that preserves the external API shape
+ * callers and tests depend on.
  */
 
 import {
   DEFAULT_CACHE_EXPIRY_MS,
   DEFAULT_DISTRIBUTORS,
-  EXCHANGE_RATES,
-  STORAGE_KEY,
 } from './config';
-import {
-  convertCurrency as convertCurrencyFn,
-  getMinLeadTime,
-  getMinPrice,
-  getPriceForQuantity,
-} from './helpers';
 import {
   disableDistributor as disableDistributorFn,
   enableDistributor as enableDistributorFn,
   getDistributor as getDistributorFn,
   getDistributors as getDistributorsFn,
-  getEnabledDistributorIds as getEnabledDistributorIdsFn,
   isEnabled as isEnabledFn,
 } from './distributor-config';
+import { convertCurrency as convertCurrencyFn } from './helpers';
 import { buildMockParts } from './mock-data';
+import {
+  exportConfig as exportConfigFn,
+  importConfig as importConfigFn,
+  load as loadFn,
+  save as saveFn,
+} from './persistence';
+import { getBestPrice as getBestPriceFn, getPricingTiers as getPricingTiersFn } from './pricing';
 import {
   getRemainingRequests as getRemainingRequestsFn,
   isRateLimited as isRateLimitedFn,
 } from './rate-limit';
+import { quoteBom as quoteBomFn } from './bom-quote';
 import {
   searchByKeyword as searchByKeywordFn,
   searchPart as searchPartFn,
@@ -47,15 +45,12 @@ import {
   setStockAlert as setStockAlertFn,
 } from './stock-alerts';
 import type {
-  BomPricingResult,
   BomQuote,
   CachedSearch,
   Currency,
   DistributorId,
-  DistributorOffer,
   Listener,
   PartSearchResult,
-  PersistedState,
   PricingTier,
   RateLimitState,
   SearchOptions,
@@ -105,9 +100,7 @@ export class SupplierApiManager {
     SupplierApiManager.instance = null;
   }
 
-  // -----------------------------------------------------------------------
-  // Subscription
-  // -----------------------------------------------------------------------
+  // Subscription -----------------------------------------------------------
 
   /** Subscribe to state changes. Returns an unsubscribe function. */
   subscribe(listener: Listener): () => void {
@@ -117,219 +110,60 @@ export class SupplierApiManager {
     };
   }
 
-  /** @internal Exposed for concern-split helpers (stock-alerts, persistence, etc.). */
+  /** @internal Fire all listeners. Called by concern-split helpers after mutations. */
   _notify(): void {
     this.listeners.forEach((l) => {
       l();
     });
   }
 
-  // -----------------------------------------------------------------------
-  // Distributor Management
-  // -----------------------------------------------------------------------
+  // Distributor management -------------------------------------------------
 
-  /** Get all distributor configurations. */
   getDistributors(): SupplierConfig[] {
     return getDistributorsFn(this);
   }
-
-  /** Get a single distributor configuration. */
   getDistributor(id: DistributorId): SupplierConfig | undefined {
     return getDistributorFn(this, id);
   }
-
-  /** Enable a distributor. */
   enableDistributor(id: DistributorId): void {
     enableDistributorFn(this, id);
   }
-
-  /** Disable a distributor. */
   disableDistributor(id: DistributorId): void {
     disableDistributorFn(this, id);
   }
-
-  /** Check if a distributor is enabled. */
   isEnabled(id: DistributorId): boolean {
     return isEnabledFn(this, id);
   }
 
-  // -----------------------------------------------------------------------
-  // Part Search
-  // -----------------------------------------------------------------------
+  // Part search ------------------------------------------------------------
 
-  /** Search for a part by manufacturer part number (MPN). */
   searchPart(mpn: string, options?: SearchOptions): PartSearchResult[] {
     return searchPartFn(this, mpn, options);
   }
-
-  /** Search for parts by keyword (matches MPN, manufacturer, description, category). */
   searchByKeyword(keyword: string, options?: SearchOptions): PartSearchResult[] {
     return searchByKeywordFn(this, keyword, options);
   }
 
-  // -----------------------------------------------------------------------
-  // Pricing
-  // -----------------------------------------------------------------------
+  // Pricing ----------------------------------------------------------------
 
-  /** Get the best price for a part across enabled distributors. */
   getBestPrice(
     mpn: string,
     quantity: number,
     options?: SearchOptions,
   ): { distributor: DistributorId; unitPrice: number; totalPrice: number } | null {
-    const results = this.searchPart(mpn, options);
-    if (results.length === 0) {
-      return null;
-    }
-
-    const part = results[0];
-    let bestOffer: { distributor: DistributorId; unitPrice: number; totalPrice: number } | null = null;
-
-    const enabledDists = getEnabledDistributorIdsFn(this,options?.distributors);
-
-    part.offers.forEach((offer) => {
-      if (!enabledDists.includes(offer.distributorId)) {
-        return;
-      }
-      if (options?.inStockOnly && offer.stockStatus === 'out-of-stock') {
-        return;
-      }
-
-      const tierPrice = getPriceForQuantity(offer.pricing, quantity);
-      if (tierPrice === null) {
-        return;
-      }
-
-      const convertedPrice = this.convertCurrency(tierPrice, 'USD', this._currentCurrency);
-      const totalPrice = convertedPrice * quantity;
-
-      if (!bestOffer || convertedPrice < bestOffer.unitPrice) {
-        bestOffer = {
-          distributor: offer.distributorId,
-          unitPrice: convertedPrice,
-          totalPrice,
-        };
-      }
-    });
-
-    return bestOffer;
+    return getBestPriceFn(this, mpn, quantity, options);
   }
-
-  /** Get pricing tiers for a part from a specific distributor. */
   getPricingTiers(mpn: string, distributorId: DistributorId): PricingTier[] {
-    const results = this.searchPart(mpn);
-    if (results.length === 0) {
-      return [];
-    }
-
-    const part = results[0];
-    const offer = part.offers.find((o) => o.distributorId === distributorId);
-    if (!offer) {
-      return [];
-    }
-
-    return offer.pricing.map((t) => ({ ...t }));
+    return getPricingTiersFn(this, mpn, distributorId);
   }
 
-  // -----------------------------------------------------------------------
-  // BOM Quoting
-  // -----------------------------------------------------------------------
+  // BOM quoting ------------------------------------------------------------
 
-  /** Quote an entire BOM — find best prices for each line item. */
   quoteBom(items: Array<{ mpn: string; quantity: number }>, options?: SearchOptions): BomQuote {
-    const currency = options?.currency ?? this._currentCurrency;
-    const bomItems: BomPricingResult[] = items.map((item) => {
-      const results = this.searchPart(item.mpn, options);
-      const warnings: string[] = [];
-
-      if (results.length === 0) {
-        return {
-          mpn: item.mpn,
-          quantity: item.quantity,
-          bestPrice: null,
-          allOffers: [],
-          inStock: false,
-          warnings: [`Part "${item.mpn}" not found in any distributor`],
-        };
-      }
-
-      const part = results[0];
-      const enabledDists = getEnabledDistributorIdsFn(this,options?.distributors);
-      const filteredOffers = part.offers.filter((o) => enabledDists.includes(o.distributorId));
-
-      // Check stock
-      const hasStock = filteredOffers.some((o) => o.stock >= item.quantity);
-      if (!hasStock) {
-        const anyStock = filteredOffers.some((o) => o.stock > 0);
-        if (anyStock) {
-          warnings.push(`Insufficient stock for quantity ${item.quantity}`);
-        } else {
-          warnings.push('Out of stock at all distributors');
-        }
-      }
-
-      // Check lifecycle
-      if (part.lifecycle === 'nrnd') {
-        warnings.push('Part is Not Recommended for New Designs (NRND)');
-      } else if (part.lifecycle === 'eol') {
-        warnings.push('Part is End of Life (EOL)');
-      } else if (part.lifecycle === 'obsolete') {
-        warnings.push('Part is obsolete');
-      }
-
-      // Find best price
-      let bestPrice: BomPricingResult['bestPrice'] = null;
-
-      filteredOffers.forEach((offer) => {
-        if (options?.inStockOnly && offer.stockStatus === 'out-of-stock') {
-          return;
-        }
-
-        const tierPrice = getPriceForQuantity(offer.pricing, item.quantity);
-        if (tierPrice === null) {
-          return;
-        }
-
-        const convertedPrice = this.convertCurrency(tierPrice, 'USD', currency);
-        const totalPrice = convertedPrice * item.quantity;
-
-        if (!bestPrice || convertedPrice < bestPrice.unitPrice) {
-          bestPrice = {
-            distributor: offer.distributorId,
-            unitPrice: convertedPrice,
-            totalPrice,
-            sku: offer.sku,
-          };
-        }
-      });
-
-      return {
-        mpn: item.mpn,
-        quantity: item.quantity,
-        bestPrice,
-        allOffers: filteredOffers,
-        inStock: hasStock,
-        warnings,
-      };
-    });
-
-    const totalCost = bomItems.reduce((sum, item) => sum + (item.bestPrice?.totalPrice ?? 0), 0);
-    const itemsFound = bomItems.filter((item) => item.bestPrice !== null).length;
-    const itemsMissing = bomItems.length - itemsFound;
-
-    return {
-      items: bomItems,
-      totalCost,
-      currency,
-      itemsFound,
-      itemsMissing,
-      timestamp: Date.now(),
-    };
+    return quoteBomFn(this, items, options);
   }
 
-  // -----------------------------------------------------------------------
-  // Cache
-  // -----------------------------------------------------------------------
+  // Cache ------------------------------------------------------------------
 
   /** Get a cached search result if it exists and hasn't expired. */
   getCachedSearch(query: string): CachedSearch | null {
@@ -360,47 +194,31 @@ export class SupplierApiManager {
     return this._cache.size;
   }
 
-  // -----------------------------------------------------------------------
-  // Rate Limiting
-  // -----------------------------------------------------------------------
+  // Rate limiting ----------------------------------------------------------
 
-  /** Get the number of remaining requests within the rate limit window for a distributor. */
   getRemainingRequests(distributorId: DistributorId): number {
     return getRemainingRequestsFn(this, distributorId);
   }
-
-  /** Check if a distributor is currently rate-limited. */
   isRateLimited(distributorId: DistributorId): boolean {
     return isRateLimitedFn(this, distributorId);
   }
 
-  // -----------------------------------------------------------------------
-  // Stock Alerts
-  // -----------------------------------------------------------------------
+  // Stock alerts -----------------------------------------------------------
 
-  /** Set a stock alert — notify when stock drops below threshold. */
   setStockAlert(mpn: string, threshold: number): void {
     setStockAlertFn(this, mpn, threshold);
   }
-
-  /** Get all stock alerts. */
   getStockAlerts(): Array<{ mpn: string; threshold: number }> {
     return getStockAlertsFn(this);
   }
-
-  /** Remove a stock alert. */
   removeStockAlert(mpn: string): void {
     removeStockAlertFn(this, mpn);
   }
-
-  /** Check all stock alerts against current mock data. Returns triggered alerts. */
   checkAlerts(): Array<{ mpn: string; currentStock: number; threshold: number; triggered: boolean }> {
     return checkAlertsFn(this);
   }
 
-  // -----------------------------------------------------------------------
-  // Currency
-  // -----------------------------------------------------------------------
+  // Currency ---------------------------------------------------------------
 
   /** Set the active currency. */
   setCurrency(currency: Currency): void {
@@ -421,101 +239,16 @@ export class SupplierApiManager {
     return convertCurrencyFn(amount, from, to);
   }
 
-  // -----------------------------------------------------------------------
-  // Import / Export
-  // -----------------------------------------------------------------------
+  // Import / Export --------------------------------------------------------
 
-  /** Export configuration as a JSON string. */
   exportConfig(): string {
-    const state: PersistedState = {
-      enabledDistributors: this._distributors.filter((d) => d.enabled).map((d) => d.distributorId),
-      currency: this._currentCurrency,
-      cacheExpiryMs: this._cacheExpiryMs,
-      stockAlerts: this._stockAlerts.map((a) => ({ ...a })),
-    };
-    return JSON.stringify(state);
+    return exportConfigFn(this);
   }
-
-  /** Import configuration from a JSON string. Returns import result. */
   importConfig(json: string): { imported: number; errors: string[] } {
-    const errors: string[] = [];
-    let imported = 0;
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(json);
-    } catch {
-      return { imported: 0, errors: ['Invalid JSON'] };
-    }
-
-    if (typeof parsed !== 'object' || parsed === null) {
-      return { imported: 0, errors: ['Config must be an object'] };
-    }
-
-    const data = parsed as Record<string, unknown>;
-
-    // Import enabled distributors
-    if (Array.isArray(data.enabledDistributors)) {
-      const validIds = this._distributors.map((d) => d.distributorId);
-      this._distributors.forEach((d) => {
-        d.enabled = false;
-      });
-      (data.enabledDistributors as unknown[]).forEach((id) => {
-        if (typeof id === 'string' && validIds.includes(id as DistributorId)) {
-          const dist = this._distributors.find((d) => d.distributorId === id);
-          if (dist) {
-            dist.enabled = true;
-            imported++;
-          }
-        } else {
-          errors.push(`Unknown distributor: ${String(id)}`);
-        }
-      });
-    }
-
-    // Import currency
-    if (typeof data.currency === 'string' && data.currency in EXCHANGE_RATES) {
-      this._currentCurrency = data.currency as Currency;
-      imported++;
-    } else if (data.currency !== undefined) {
-      errors.push(`Invalid currency: ${String(data.currency)}`);
-    }
-
-    // Import cache expiry
-    if (typeof data.cacheExpiryMs === 'number' && data.cacheExpiryMs > 0) {
-      this._cacheExpiryMs = data.cacheExpiryMs;
-      imported++;
-    } else if (data.cacheExpiryMs !== undefined) {
-      errors.push(`Invalid cacheExpiryMs: ${String(data.cacheExpiryMs)}`);
-    }
-
-    // Import stock alerts
-    if (Array.isArray(data.stockAlerts)) {
-      const validAlerts: StockAlert[] = [];
-      (data.stockAlerts as unknown[]).forEach((alert) => {
-        if (
-          typeof alert === 'object' &&
-          alert !== null &&
-          typeof (alert as StockAlert).mpn === 'string' &&
-          typeof (alert as StockAlert).threshold === 'number'
-        ) {
-          validAlerts.push({ mpn: (alert as StockAlert).mpn, threshold: (alert as StockAlert).threshold });
-          imported++;
-        } else {
-          errors.push(`Invalid stock alert: ${JSON.stringify(alert)}`);
-        }
-      });
-      this._stockAlerts = validAlerts;
-    }
-
-    this._save();
-    this._notify();
-    return { imported, errors };
+    return importConfigFn(this, json);
   }
 
-  // -----------------------------------------------------------------------
-  // Clear / Reset
-  // -----------------------------------------------------------------------
+  // Clear / Reset ----------------------------------------------------------
 
   /** Clear all state and reset to defaults. */
   clear(): void {
@@ -529,75 +262,15 @@ export class SupplierApiManager {
     this._notify();
   }
 
-  // -----------------------------------------------------------------------
-  // Persistence
-  // -----------------------------------------------------------------------
+  // Persistence thin delegators -------------------------------------------
 
-  /** @internal Exposed for concern-split helpers (stock-alerts, etc.) that mutate state requiring persistence. */
+  /** @internal Persist manager state to localStorage. Called by concern-split helpers. */
   _save(): void {
-    try {
-      if (typeof window === 'undefined') {
-        return;
-      }
-      const state: PersistedState = {
-        enabledDistributors: this._distributors.filter((d) => d.enabled).map((d) => d.distributorId),
-        currency: this._currentCurrency,
-        cacheExpiryMs: this._cacheExpiryMs,
-        stockAlerts: this._stockAlerts.map((a) => ({ ...a })),
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      // localStorage may be unavailable or quota exceeded
-    }
+    saveFn(this);
   }
 
-  /** @internal */
+  /** @internal Restore manager state from localStorage. Called from constructor. */
   _load(): void {
-    try {
-      if (typeof window === 'undefined') {
-        return;
-      }
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        return;
-      }
-      const parsed: unknown = JSON.parse(raw);
-      if (typeof parsed !== 'object' || parsed === null) {
-        return;
-      }
-
-      const data = parsed as Record<string, unknown>;
-
-      // Restore enabled distributors
-      if (Array.isArray(data.enabledDistributors)) {
-        const enabledSet = new Set(data.enabledDistributors as string[]);
-        this._distributors.forEach((d) => {
-          d.enabled = enabledSet.has(d.distributorId);
-        });
-      }
-
-      // Restore currency
-      if (typeof data.currency === 'string' && data.currency in EXCHANGE_RATES) {
-        this._currentCurrency = data.currency as Currency;
-      }
-
-      // Restore cache expiry
-      if (typeof data.cacheExpiryMs === 'number' && data.cacheExpiryMs > 0) {
-        this._cacheExpiryMs = data.cacheExpiryMs;
-      }
-
-      // Restore stock alerts
-      if (Array.isArray(data.stockAlerts)) {
-        this._stockAlerts = (data.stockAlerts as unknown[]).filter(
-          (a): a is StockAlert =>
-            typeof a === 'object' &&
-            a !== null &&
-            typeof (a as StockAlert).mpn === 'string' &&
-            typeof (a as StockAlert).threshold === 'number',
-        );
-      }
-    } catch {
-      // Corrupt data — keep defaults
-    }
+    loadFn(this);
   }
 }
