@@ -66,4 +66,13 @@ Answer: two forward-pointing references were missing because the consumer notes 
 **MOC updates:** [[power-systems]] already lists this note under "Batteries + BMS" with an accurate contribution phrase. The new downstream connections are captured in the note body rather than the MOC (the MOC describes what the note is, not everything it now cites).
 
 ## Verify
-(to be filled by verify phase)
+
+**Target note:** `knowledge/130k-to-10k-voltage-divider-scales-42v-battery-maximum-to-3v-adc-input-with-safety-margin.md`
+
+**Gate 1 — Description quality:** PASS. Description ("A 130K top-leg and 10K bottom-leg divider maps 42V full-charge battery voltage to 3.0V at the ESP32 ADC pin, leaving 10 percent headroom below the 3.3V rail...") predicts the title and adds specifics beyond it (voltage-math numbers, 10 percent headroom rationale, transient survival). Cold reader could reconstruct the claim from description alone.
+
+**Gate 2 — Schema compliance:** PASS. Frontmatter has `description`, `type: claim`, `created: 2026-04-14`, `source`, `confidence: proven`, `topics` (power-systems, eda-fundamentals), `related_components` (esp32, hoverboard-10s-battery-pack). All required fields present.
+
+**Gate 3 — Graph integrity:** PASS. All 14 wiki-links resolve to existing vault files. Inline links (esp32-adc-nonlinear, esp32-adc-attenuation, 10s-lithium-ion-range, linear-voltage-percent, gpio34-39) and topics ([[power-systems]], [[eda-fundamentals]]) all found in knowledge/.
+
+**Result:** All gates PASS. No gaps.
