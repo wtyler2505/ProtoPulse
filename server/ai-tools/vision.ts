@@ -153,7 +153,7 @@ export function registerVisionTools(registry: ToolRegistry): void {
         whiteboard: 'This is a whiteboard diagram of a circuit. Identify functional blocks, signal flow, and interconnections.',
       };
 
-      const analysisPrompt = `${(typePrompts as any)[params.type]} 
+      const analysisPrompt = `${typePrompts[params.type]}
 Return a structured JSON result with the following format:
 {
   "components": [{ "name": "Component Name", "type": "resistor|capacitor|ic|etc", "value": "10k|100nF|etc", "refDes": "R1|C1|U1|etc" }],

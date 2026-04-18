@@ -2,6 +2,88 @@
 
 The Ars Contexta vault (`knowledge/*.md`) is **the source of truth** for breadboard layout rules, verified-board quirks, and bench-coach claims. Before hardcoding a rule in code, grep the vault — there's usually already a claim there.
 
+## ⚠️ Slug Durability — READ THIS FIRST
+
+**Vault note slugs are NOT stable long-term.** Notes get:
+- Renamed when titles change for clarity
+- Split when a single note covers two distinct concepts
+- Merged when duplicates surface
+- Superseded when a better claim replaces them
+
+This means any slug listed below **may not match tomorrow's vault**. Treat the tables in this file as:
+- **A topic index**, not a pinned reference
+- **A discovery aid**, not a hardcoded dependency
+
+### The Durable Pattern: Find-Then-Cite
+
+When you need a vault claim in code, don't hardcode the slug. Instead:
+
+**1. Search by concept at build time (code-side):**
+```typescript
+// BAD — slug hardcoded, rots on rename
+const vaultRef = 'esp32-gpio12-must-be-low-at-boot-or-module-crashes';
+
+// GOOD — concept-indexed lookup at build or runtime
+const vaultRef = await findVaultNote({
+  concept: 'esp32 gpio12 strapping boot',
+  mustContainAll: ['esp32', 'gpio12', 'boot'],
+  fallbackSlug: 'esp32-gpio12-must-be-low-at-boot-or-module-crashes',
+});
+```
+
+**2. Search by concept at work time (agent-side):**
+Before wiring a vault note into code, run:
+```bash
+# Semantic search via qmd (returns best-match slugs)
+qmd search "esp32 gpio12 strapping" --collection protopulse-vault
+
+# Or via MCP
+mcp__qmd__qmd_vector_search({ collection: "protopulse-vault", query: "esp32 gpio12 strapping", limit: 5 })
+```
+
+**3. When you DO hardcode a slug** (e.g., in a test fixture or a one-off audit rule):
+- Include a comment with the search keywords:
+  ```typescript
+  // Vault: esp32 + gpio12 + strapping + boot
+  const vaultRef = 'esp32-gpio12-must-be-low-at-boot-or-module-crashes';
+  ```
+- Add a test that verifies the slug resolves to a live note:
+  ```typescript
+  it('esp32-gpio12 vault ref resolves', async () => {
+    const note = await loadVaultNote(ESP32_GPIO12_VAULT_SLUG);
+    expect(note).toBeDefined();
+    expect(note.body).toMatch(/gpio.?12/i);
+  });
+  ```
+  If this test fails after a vault rename, the developer fixes the slug OR switches to concept lookup.
+
+### How To Check If This File Is Stale
+
+Run this check periodically (or before relying on the tables below):
+```bash
+# List every slug mentioned in this file
+grep -oE '\w+-\w+(-\w+)*\.md' .claude/skills/breadboard-lab/breadboard-knowledge-vault-links.md | sort -u > /tmp/mentioned-slugs.txt
+
+# List every actual knowledge/ file
+ls knowledge/*.md | xargs -n1 basename | sort > /tmp/actual-slugs.txt
+
+# Show mentioned-but-missing
+comm -23 /tmp/mentioned-slugs.txt /tmp/actual-slugs.txt
+```
+
+Any output = broken references in this file. Fix via search:
+```bash
+for slug in $(cat /tmp/broken-slugs.txt); do
+  echo "=== $slug ==="
+  concept=$(echo "$slug" | tr '-' ' ' | sed 's/\.md$//')
+  qmd search "$concept" --collection protopulse-vault | head -3
+done
+```
+
+### Tables Below Are Snapshot Only
+
+The tables that follow are a **2026-04-17 snapshot** of vault structure. If you're reading this more than ~30 days after that date, verify before citing.
+
 ## MOC (Topic Map)
 
 **`knowledge/breadboard-intelligence.md`** — the Breadboard MOC. Contains:

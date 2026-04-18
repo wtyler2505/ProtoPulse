@@ -70,41 +70,10 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 - [[pico-vsys-accepts-1v8-to-5v5-enabling-direct-battery-operation]] -- buck-boost regulator accepts 1.8-5.5V
 - [[pico-3v3-en-pin-disables-regulator-for-external-sleep-control]] -- regulator disable for hardware sleep
 
-## Sub-Topics (to be populated)
-
-### Component Knowledge
-- For a full list of physical parts and specifications, see [[hardware-components]]
-- Passive components (R, C, L) — values, tolerances, packages
-- Active components (BJT, MOSFET, op-amp) — Ebers-Moll, Level-1 MOSFET models
-- ICs and microcontrollers — [[hardware-component-atmega328p|ATmega328P]], [[hardware-component-esp32-wroom-32|ESP32]], STM32 specifics
-- ESD sensitivity — handling classes, flagging rules
-
-### Protocols
-- I2C — pull-up sizing, address conflicts, clock stretching
-- SPI — CPOL/CPHA modes, daisy-chaining
-- UART — baud rate, framing, flow control
-- USB — differential pair requirements, ESD protection
-
-### PCB Design Rules
-- Clearance and creepage (IPC-2221, IEC 60950)
-- Trace width vs. current capacity (IPC-2152)
-- Via models — inductance, resistance, thermal
-- Copper pour — thermal relief, hatched vs. solid
-- Differential pair routing — length matching, impedance control
-
-### Simulation
-- MNA (Modified Nodal Analysis) — DC operating point
-- Nonlinear solvers — Newton-Raphson convergence
-- Transient — BE/Trapezoidal integration, adaptive timestep
-- AC small-signal — frequency sweep, Bode plot
-- Monte Carlo — tolerance analysis, sensitivity
-- [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- JS solver needs Wasm-ngspice migration
-
-### Standards
-- IPC-2221 — PCB design standard
-- IPC-7351 — land pattern standard (footprint dimensions)
-- RoHS — restricted substances in electronics
-- WEEE — waste electronics regulations
+## Sub-Domains
+- [[eda-schematic-capture]] -- Core concepts and constraints for schematic capture, symbol generation, and electrical rules checking (ERC).
+- [[eda-pcb-routing]] -- PCB layout rules, trace width calculations, clearance standards, and physical routing constraints.
+- [[eda-simulation-engines]] -- SPICE algorithms, matrix solvers, and discrete-time simulation integration.
 
 ## Key Resources
 - `server/export/` — Gerber, drill, pick-and-place generators

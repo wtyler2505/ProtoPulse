@@ -12,6 +12,18 @@ function sanitizeFilename(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
+function getSubMoc(category: string, family: string, tags: string[] = []): string {
+  const combined = [category, family, ...tags].join(' ').toLowerCase();
+  if (combined.includes('passive') || combined.includes('resistor') || combined.includes('capacitor') || combined.includes('inductor') || combined.includes('diode')) return 'hardware-components-passives';
+  if (combined.includes('display') || combined.includes('led') || combined.includes('lcd') || combined.includes('oled') || combined.includes('screen')) return 'hardware-components-displays';
+  if (combined.includes('sensor') || combined.includes('measure') || combined.includes('detect')) return 'hardware-components-sensors';
+  if (combined.includes('actuator') || combined.includes('motor') || combined.includes('servo') || combined.includes('relay') || combined.includes('switch')) return 'hardware-components-actuators';
+  if (combined.includes('comm') || combined.includes('wireless') || combined.includes('radio') || combined.includes('rf') || combined.includes('bluetooth') || combined.includes('wifi') || combined.includes('nrf') || combined.includes('lora')) return 'hardware-components-communication';
+  if (combined.includes('power') || combined.includes('battery') || combined.includes('regulator') || combined.includes('converter') || combined.includes('supply') || combined.includes('lipo')) return 'hardware-components-power';
+  if (combined.includes('mcu') || combined.includes('board') || combined.includes('esp') || combined.includes('arduino') || combined.includes('microcontroller') || combined.includes('processor') || combined.includes('pico')) return 'hardware-components-mcu';
+  return 'hardware-components';
+}
+
 function writeMarkdownNote(filename: string, content: string) {
   const filePath = path.join(KNOWLEDGE_DIR, `${filename}.md`);
   fs.writeFileSync(filePath, content, 'utf8');
@@ -22,13 +34,15 @@ function generateVerifiedBoardNote(board: VerifiedBoardDefinition) {
   const filename = `hardware-board-${board.id}`;
   const dims = board.dimensions;
   const visual = board.visual;
+  const subMoc = getSubMoc('', board.family, [board.description, board.title]);
   
   let content = `---
 description: "Exact physical and electrical specifications for ${board.title}."
 type: domain-knowledge
 category: hardware-components
 status: verified
-tags: [board, hardware, ${board.manufacturer.toLowerCase().replace(/\\s+/g, '-')}]
+topics: [${subMoc}]
+tags: [board, hardware, ${board.manufacturer.toLowerCase().replace(/\s+/g, '-')}]
 ---
 
 # ${board.title} Specifications
@@ -72,7 +86,7 @@ ${(board.verificationNotes || []).map(n => `- ${n}`).join('\n')}
 ${(board.evidence || []).map(e => `- [${e.title}](${e.href}) (Confidence: ${e.confidence})`).join('\n')}
 
 ---
-Related: [[hardware-components]], [[architecture-decisions]]
+Related: [[${subMoc}]], [[hardware-components]], [[architecture-decisions]]
 `;
 
   writeMarkdownNote(filename, content);
@@ -82,14 +96,15 @@ function generateStandardLibraryNote(component: StandardComponentDef) {
   const filename = `hardware-component-${sanitizeFilename(component.title)}`;
   const meta = component.meta || {};
   const dims = meta.dimensions as any;
+  const subMoc = getSubMoc(component.category, '', component.tags.concat(component.title));
   
   let content = `---
 description: "Standard library specifications for ${component.title}."
 type: domain-knowledge
 category: hardware-components
 status: verified
-topics: [hardware-components]
-tags: [component, hardware, ${component.category.toLowerCase().replace(/\\s+/g, '-')}]
+topics: [${subMoc}]
+tags: [component, hardware, ${component.category.toLowerCase().replace(/\s+/g, '-')}]
 ---
 
 # ${component.title}
@@ -112,7 +127,7 @@ ${dims ? `- **Length:** ${dims.length ?? dims.diameter ?? 'N/A'} mm\n- **Width:*
 ${component.connectors.map(c => `- **${c.name}** (${c.id}): ${c.description}`).join('\n')}
 
 ---
-Related: [[hardware-components]]
+Related: [[${subMoc}]], [[hardware-components]]
 `;
 
   writeMarkdownNote(filename, content);

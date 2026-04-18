@@ -180,7 +180,7 @@ export const queryEdgesTool = ai.defineTool({
   name: 'queryEdges',
   description: 'Fetch all connections between components in the architecture diagram.',
   inputSchema: z.object({}),
-  outputSchema: z.array(z.unknown())
+  outputSchema: z.array(architectureEdgeOutputSchema)
 }, async () => {
   const ctx = ai.currentContext() as ToolContext;
   if (!ctx?.projectId) {

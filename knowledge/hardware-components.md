@@ -13,4 +13,13 @@ This topic map aggregates all verified hardware, their exact physical specificat
 - The system enforces exact physical dimensions to ensure breadboard and PCB layouts match reality.
 - Dual-write synchronization guarantees that TypeScript components update their Ars Contexta note representations.
 
+## Categories (Sub-MOCs)
+- [[hardware-components-mcu]]
+- [[hardware-components-passives]]
+- [[hardware-components-sensors]]
+- [[hardware-components-displays]]
+- [[hardware-components-communication]]
+- [[hardware-components-power]]
+- [[hardware-components-actuators]]
+
 ## Components & Boards
