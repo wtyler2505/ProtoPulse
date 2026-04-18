@@ -12,6 +12,31 @@ import type { z, ZodObject, ZodRawShape } from 'zod';
 import type { IStorage } from '../storage';
 
 /**
+ * Throw a DOMException('AbortError') if the given AbortSignal has been aborted.
+ *
+ * Centralized helper used by long-running tool loops to cooperatively yield
+ * to upstream cancellations (SSE disconnect, request timeout). Loops should
+ * call this every N iterations (N=1 for cheap loops over user data, N=100+
+ * for tight inner loops). The thrown error is caught at the tool boundary
+ * (server/ai.ts) and logged at info level — never as an error.
+ *
+ * Uses `signal.throwIfAborted()` when available (Node 18.17+), otherwise
+ * falls back to manually constructing a DOMException for cross-runtime safety.
+ *
+ * Related: AI audit findings #68 / #191 — long-running loops without abort polling.
+ */
+export function checkAborted(signal?: AbortSignal): void {
+  if (!signal) return;
+  if (typeof signal.throwIfAborted === 'function') {
+    signal.throwIfAborted();
+    return;
+  }
+  if (signal.aborted) {
+    throw new DOMException('The operation was aborted.', 'AbortError');
+  }
+}
+
+/**
  * Discriminated category tag for grouping related AI tools.
  *
  * Each tool belongs to exactly one category, used for:
