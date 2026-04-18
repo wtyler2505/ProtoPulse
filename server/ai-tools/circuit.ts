@@ -17,8 +17,9 @@
 import type { ToolRegistry } from './registry';
 import { registerCircuitCodeDslTools } from './circuit/code-dsl';
 import { registerPcbAdvancedTools } from './circuit/pcb-advanced';
-import { registerPcbAutorouteTools } from './circuit/pcb-autoroute';
 import { registerNetExplainTool } from './circuit/net-explain';
+
+export { registerPcbAutorouteTools } from './circuit/pcb-autoroute';
 
 export { registerCircuitTools } from './circuit/schematic';
 export { registerPcbTools } from './circuit/pcb';
@@ -38,11 +39,13 @@ export {
  *
  * Tools registered:
  *  - generate_circuit_code, explain_circuit_code  (code-dsl)
- *  - auto_stitch_vias, generate_teardrops, suggest_net_names, suggest_trace_path  (pcb-advanced)
+ *  - auto_stitch_vias, generate_teardrops, suggest_net_names  (pcb-advanced)
+ *  - suggest_trace_path  (pcb-autoroute)
  *  - explain_net  (net-explain)
  */
 export function registerCircuitCodeTools(registry: ToolRegistry): void {
   registerCircuitCodeDslTools(registry);
   registerPcbAdvancedTools(registry);
+  registerPcbAutorouteTools(registry);
   registerNetExplainTool(registry);
 }

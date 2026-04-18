@@ -252,7 +252,7 @@ export class SupplierApiManager {
         return;
       }
 
-      const convertedPrice = this.convertCurrency(tierPrice, 'USD', this.currentCurrency);
+      const convertedPrice = this.convertCurrency(tierPrice, 'USD', this._currentCurrency);
       const totalPrice = convertedPrice * quantity;
 
       if (!bestOffer || convertedPrice < bestOffer.unitPrice) {
@@ -289,7 +289,7 @@ export class SupplierApiManager {
 
   /** Quote an entire BOM — find best prices for each line item. */
   quoteBom(items: Array<{ mpn: string; quantity: number }>, options?: SearchOptions): BomQuote {
-    const currency = options?.currency ?? this.currentCurrency;
+    const currency = options?.currency ?? this._currentCurrency;
     const bomItems: BomPricingResult[] = items.map((item) => {
       const results = this.searchPart(item.mpn, options);
       const warnings: string[] = [];
@@ -423,7 +423,7 @@ export class SupplierApiManager {
       return 0;
     }
 
-    const state = this.rateLimits.get(distributorId);
+    const state = this._rateLimits.get(distributorId);
     if (!state) {
       return config.rateLimit;
     }
@@ -444,11 +444,11 @@ export class SupplierApiManager {
 
   /** Set a stock alert — notify when stock drops below threshold. */
   setStockAlert(mpn: string, threshold: number): void {
-    const existing = this.stockAlerts.find((a) => a.mpn === mpn);
+    const existing = this._stockAlerts.find((a) => a.mpn === mpn);
     if (existing) {
       existing.threshold = threshold;
     } else {
-      this.stockAlerts.push({ mpn, threshold });
+      this._stockAlerts.push({ mpn, threshold });
     }
     this.save();
     this.notify();
@@ -456,14 +456,14 @@ export class SupplierApiManager {
 
   /** Get all stock alerts. */
   getStockAlerts(): Array<{ mpn: string; threshold: number }> {
-    return this.stockAlerts.map((a) => ({ ...a }));
+    return this._stockAlerts.map((a) => ({ ...a }));
   }
 
   /** Remove a stock alert. */
   removeStockAlert(mpn: string): void {
-    const initialLength = this.stockAlerts.length;
-    this.stockAlerts = this.stockAlerts.filter((a) => a.mpn !== mpn);
-    if (this.stockAlerts.length !== initialLength) {
+    const initialLength = this._stockAlerts.length;
+    this._stockAlerts = this._stockAlerts.filter((a) => a.mpn !== mpn);
+    if (this._stockAlerts.length !== initialLength) {
       this.save();
       this.notify();
     }
@@ -471,7 +471,7 @@ export class SupplierApiManager {
 
   /** Check all stock alerts against current mock data. Returns triggered alerts. */
   checkAlerts(): Array<{ mpn: string; currentStock: number; threshold: number; triggered: boolean }> {
-    return this.stockAlerts.map((alert) => {
+    return this._stockAlerts.map((alert) => {
       const results = this.searchPart(alert.mpn);
       let totalStock = 0;
       if (results.length > 0) {
@@ -495,8 +495,8 @@ export class SupplierApiManager {
 
   /** Set the active currency. */
   setCurrency(currency: Currency): void {
-    if (this.currentCurrency !== currency) {
-      this.currentCurrency = currency;
+    if (this._currentCurrency !== currency) {
+      this._currentCurrency = currency;
       this.save();
       this.notify();
     }
@@ -504,7 +504,7 @@ export class SupplierApiManager {
 
   /** Get the active currency. */
   getCurrency(): Currency {
-    return this.currentCurrency;
+    return this._currentCurrency;
   }
 
   /** Convert an amount between currencies using hardcoded exchange rates. */
@@ -520,9 +520,9 @@ export class SupplierApiManager {
   exportConfig(): string {
     const state: PersistedState = {
       enabledDistributors: this._distributors.filter((d) => d.enabled).map((d) => d.distributorId),
-      currency: this.currentCurrency,
+      currency: this._currentCurrency,
       cacheExpiryMs: this._cacheExpiryMs,
-      stockAlerts: this.stockAlerts.map((a) => ({ ...a })),
+      stockAlerts: this._stockAlerts.map((a) => ({ ...a })),
     };
     return JSON.stringify(state);
   }
@@ -566,7 +566,7 @@ export class SupplierApiManager {
 
     // Import currency
     if (typeof data.currency === 'string' && data.currency in EXCHANGE_RATES) {
-      this.currentCurrency = data.currency as Currency;
+      this._currentCurrency = data.currency as Currency;
       imported++;
     } else if (data.currency !== undefined) {
       errors.push(`Invalid currency: ${String(data.currency)}`);
@@ -596,7 +596,7 @@ export class SupplierApiManager {
           errors.push(`Invalid stock alert: ${JSON.stringify(alert)}`);
         }
       });
-      this.stockAlerts = validAlerts;
+      this._stockAlerts = validAlerts;
     }
 
     this.save();
@@ -613,9 +613,9 @@ export class SupplierApiManager {
     this._distributors = DEFAULT_DISTRIBUTORS.map((d) => ({ ...d }));
     this._cache.clear();
     this._cacheExpiryMs = DEFAULT_CACHE_EXPIRY_MS;
-    this.rateLimits.clear();
-    this.stockAlerts = [];
-    this.currentCurrency = 'USD';
+    this._rateLimits.clear();
+    this._stockAlerts = [];
+    this._currentCurrency = 'USD';
     this.save();
     this.notify();
   }
@@ -694,10 +694,10 @@ export class SupplierApiManager {
   /** @internal exposed for helpers.getMinPrice — kept for legacy shape. */
 
   private recordRequest(distributorId: DistributorId): void {
-    let state = this.rateLimits.get(distributorId);
+    let state = this._rateLimits.get(distributorId);
     if (!state) {
       state = { requests: [] };
-      this.rateLimits.set(distributorId, state);
+      this._rateLimits.set(distributorId, state);
     }
 
     const now = Date.now();
@@ -717,9 +717,9 @@ export class SupplierApiManager {
       }
       const state: PersistedState = {
         enabledDistributors: this._distributors.filter((d) => d.enabled).map((d) => d.distributorId),
-        currency: this.currentCurrency,
+        currency: this._currentCurrency,
         cacheExpiryMs: this._cacheExpiryMs,
-        stockAlerts: this.stockAlerts.map((a) => ({ ...a })),
+        stockAlerts: this._stockAlerts.map((a) => ({ ...a })),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
@@ -753,7 +753,7 @@ export class SupplierApiManager {
 
       // Restore currency
       if (typeof data.currency === 'string' && data.currency in EXCHANGE_RATES) {
-        this.currentCurrency = data.currency as Currency;
+        this._currentCurrency = data.currency as Currency;
       }
 
       // Restore cache expiry
@@ -763,7 +763,7 @@ export class SupplierApiManager {
 
       // Restore stock alerts
       if (Array.isArray(data.stockAlerts)) {
-        this.stockAlerts = (data.stockAlerts as unknown[]).filter(
+        this._stockAlerts = (data.stockAlerts as unknown[]).filter(
           (a): a is StockAlert =>
             typeof a === 'object' &&
             a !== null &&

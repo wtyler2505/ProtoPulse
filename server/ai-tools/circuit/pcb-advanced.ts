@@ -12,23 +12,27 @@
 import { z } from 'zod';
 import type { ToolRegistry } from '../registry';
 import { guardCircuitInProject, type ConnectorRecord, type NetSegmentRecord } from './shared';
+import { registerPcbAutorouteTools } from './pcb-autoroute';
 
 export { registerPcbAutorouteTools } from './pcb-autoroute';
 
 /**
  * Register advanced PCB-related circuit tools.
  *
- * Tools registered (3):
+ * Tools registered (4 total — 3 here + 1 from pcb-autoroute):
  * - `auto_stitch_vias`    — Fill a copper pour zone with a grid of stitching vias.
  * - `generate_teardrops`  — Generate teardrops where traces meet pads/vias.
  * - `suggest_net_names`   — Suggest descriptive names for auto-generated nets.
+ * - `suggest_trace_path`  — (delegated to registerPcbAutorouteTools)
  *
- * `suggest_trace_path` is registered separately via
- * `registerPcbAutorouteTools` in `./pcb-autoroute.ts`.
+ * The autoroute tool lives in `./pcb-autoroute.ts` but is composed here so
+ * existing consumers calling `registerPcbAdvancedTools` keep all four tools
+ * registered (behaviour-preserving split).
  *
  * @param registry - The {@link ToolRegistry} instance to register tools into.
  */
 export function registerPcbAdvancedTools(registry: ToolRegistry): void {
+  registerPcbAutorouteTools(registry);
   /**
    * auto_stitch_vias — Automatically generate stitching vias for a copper pour zone.
    */
