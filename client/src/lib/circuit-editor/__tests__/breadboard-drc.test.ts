@@ -664,3 +664,120 @@ describe('runBreadboardDrc — edge cases', () => {
     expect(shorts).toHaveLength(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// DIP pin column derivation (audit #361)
+// ---------------------------------------------------------------------------
+
+describe('runBreadboardDrc — DIP pin column derivation', () => {
+  it('DIP-16 at e/f (standard channel straddle) produces 16 pin positions, 8 per side', () => {
+    resetIds();
+    // DIP-16: 16 pins, 8 per side, placed at col 'e' → crosses channel → 'e'+'f' for 8 rows
+    const px = terminalPixel('e', 5);
+    const part = makePart({
+      connectors: Array.from({ length: 16 }, (_, i) => ({ id: String(i + 1) })) as unknown[],
+      meta: { type: 'ic' },
+    });
+    const inst = makeInstance({
+      referenceDesignator: 'U1',
+      breadboardX: px.x,
+      breadboardY: px.y,
+      partId: part.id,
+      properties: { type: 'ic' },
+    });
+    const nets = [makeNet({ id: 1, name: 'VCC' })];
+    // Wire all 8 left-side rows (col e, rows 5-12) and all 8 right-side rows (col f, rows 5-12)
+    const wires = [
+      // Left side — col 'e' is in the left group (a-e)
+      makeWire({ netId: 1, view: 'breadboard', points: [terminalPixel('e', 5), terminalPixel('e', 6)] }),
+      makeWire({ netId: 1, view: 'breadboard', points: [terminalPixel('e', 7), terminalPixel('e', 8)] }),
+      makeWire({ netId: 1, view: 'breadboard', points: [terminalPixel('e', 9), terminalPixel('e', 10)] }),
+      makeWire({ netId: 1, view: 'breadboard', points: [terminalPixel('e', 11), terminalPixel('e', 12)] }),
+      // Right side — col 'f' is in the right group (f-j)
+      makeWire({ netId: 1, view: 'breadboard', points: [terminalPixel('f', 5), terminalPixel('f', 6)] }),
+      makeWire({ netId: 1, view: 'breadboard', points: [terminalPixel('f', 7), terminalPixel('f', 8)] }),
+      makeWire({ netId: 1, view: 'breadboard', points: [terminalPixel('f', 9), terminalPixel('f', 10)] }),
+      makeWire({ netId: 1, view: 'breadboard', points: [terminalPixel('f', 11), terminalPixel('f', 12)] }),
+    ];
+    const result = runBreadboardDrc(nets, wires, [inst], [part]);
+    // All 16 pins are connected — no floating or unconnected violations for U1
+    const floating = result.violations.filter(v => v.type === 'floating_component' && v.instanceId === inst.id);
+    const unconnected = result.violations.filter(v => v.type === 'unconnected_pin' && v.instanceId === inst.id);
+    expect(floating).toHaveLength(0);
+    expect(unconnected).toHaveLength(0);
+  });
+
+  it('DIP-14 at startCol c (non-channel-crossing) produces pin positions on left side only, no crash', () => {
+    resetIds();
+    // DIP placed at col 'c' — does not cross the channel, sits on left side
+    // With colSpan=2, pins occupy cols c+d for each of the 7 rows (14 pins total)
+    const px = terminalPixel('c', 1);
+    const part = makePart({
+      connectors: Array.from({ length: 14 }, (_, i) => ({ id: String(i + 1) })) as unknown[],
+      meta: { type: 'ic' },
+    });
+    const inst = makeInstance({
+      referenceDesignator: 'U2',
+      breadboardX: px.x,
+      breadboardY: px.y,
+      partId: part.id,
+      properties: { type: 'ic' },
+    });
+    // No wires — all pins unconnected, but it should not crash
+    const result = runBreadboardDrc([], [], [inst], [part]);
+    // Component should be flagged as floating (no nets connected)
+    const floating = result.violations.filter(v => v.type === 'floating_component' && v.instanceId === inst.id);
+    expect(floating).toHaveLength(1);
+    // No crash — result is always defined
+    expect(Array.isArray(result.violations)).toBe(true);
+  });
+
+  it('DIP at startCol b (non-standard col) does not crash and is reported as floating', () => {
+    resetIds();
+    const px = terminalPixel('b', 3);
+    const part = makePart({
+      connectors: Array.from({ length: 8 }, (_, i) => ({ id: String(i + 1) })) as unknown[],
+      meta: { type: 'mcu' },
+    });
+    const inst = makeInstance({
+      referenceDesignator: 'U3',
+      breadboardX: px.x,
+      breadboardY: px.y,
+      partId: part.id,
+      properties: { type: 'mcu' },
+    });
+    const result = runBreadboardDrc([], [], [inst], [part]);
+    // Must not throw; component is floating (no wires)
+    expect(() => result).not.toThrow();
+    const floating = result.violations.filter(v => v.type === 'floating_component' && v.instanceId === inst.id);
+    expect(floating).toHaveLength(1);
+  });
+
+  it('non-e/f DIP-14 reports unconnected_pin violations (not just floating) when partially wired', () => {
+    resetIds();
+    const px = terminalPixel('c', 1);
+    const part = makePart({
+      connectors: Array.from({ length: 14 }, (_, i) => ({ id: String(i + 1) })) as unknown[],
+      meta: { type: 'ic' },
+    });
+    const inst = makeInstance({
+      referenceDesignator: 'U4',
+      breadboardX: px.x,
+      breadboardY: px.y,
+      partId: part.id,
+      properties: { type: 'ic' },
+    });
+    const nets = [makeNet({ id: 1, name: 'SIG1' })];
+    // Wire only col c, row 1 — one pin connected out of 14
+    const wires = [
+      makeWire({ netId: 1, view: 'breadboard', points: [terminalPixel('a', 1), terminalPixel('c', 1)] }),
+    ];
+    const result = runBreadboardDrc(nets, wires, [inst], [part]);
+    // At least some unconnected_pin violations for U4 (not all 14 pins are wired)
+    const unconnected = result.violations.filter(v => v.type === 'unconnected_pin' && v.instanceId === inst.id);
+    expect(unconnected.length).toBeGreaterThan(0);
+    // Not reported as floating because at least one pin has a net
+    const floating = result.violations.filter(v => v.type === 'floating_component' && v.instanceId === inst.id);
+    expect(floating).toHaveLength(0);
+  });
+});

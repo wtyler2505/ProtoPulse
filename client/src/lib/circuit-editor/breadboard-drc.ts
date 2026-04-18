@@ -18,8 +18,10 @@ import {
   coordToPixel,
   pixelToCoord,
   getConnectedPoints,
+  getOccupiedPoints,
   type BreadboardCoord,
   type ColumnLetter,
+  type ComponentPlacement,
   type TiePoint,
   type RailPoint,
   type PixelPos,
@@ -276,10 +278,21 @@ export function runBreadboardDrc(
     // Compute all pin positions
     const pinCoords: TiePoint[] = [];
     if (isDIP) {
-      for (let r = 0; r < rowSpan; r++) {
-        pinCoords.push({ type: 'terminal', col: 'e' as ColumnLetter, row: instCoord.row + r });
-        pinCoords.push({ type: 'terminal', col: 'f' as ColumnLetter, row: instCoord.row + r });
-      }
+      // Derive pin columns from placement geometry instead of hardcoding 'e'/'f'.
+      // A standard 0.3" DIP straddles the channel when seated at col 'e' (left side
+      // touching the channel). Any other startCol means the DIP sits entirely on one
+      // side and occupies two adjacent columns (colSpan=2).
+      const crossesChannel = instCoord.col === 'e';
+      const dipPlacement: ComponentPlacement = {
+        refDes: inst.referenceDesignator ?? 'U?',
+        startCol: instCoord.col as ColumnLetter,
+        startRow: instCoord.row,
+        rowSpan,
+        colSpan: crossesChannel ? undefined : 2,
+        crossesChannel,
+      };
+      // getOccupiedPoints is the canonical source of truth for physical tie-point occupancy
+      pinCoords.push(...getOccupiedPoints(dipPlacement));
     } else {
       // Non-DIP: pins go down a single column
       for (let r = 0; r < rowSpan; r++) {
