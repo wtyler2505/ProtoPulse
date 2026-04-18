@@ -305,7 +305,13 @@ function checkMissingDecoupling(
   return issues;
 }
 
-/** Check 2: Restricted pin usage (e.g. ESP32 GPIO 6-11 connected to internal flash). */
+/** Check 2: Restricted pin usage (e.g. ESP32 GPIO 6-11 connected to internal flash).
+ *
+ * Also flags pins whose `warnings` contain "flash pin" (critical) or
+ * "input only" (warning) even when `restricted` is unset — audit #256.
+ * Strapping-pin warnings are intentionally skipped here because
+ * `checkStrappingPinConflicts` already classifies those nets (board.bootPins).
+ */
 function checkRestrictedPinUsage(
   instances: CircuitInstanceRow[],
   nets: CircuitNetRow[],
@@ -323,10 +329,16 @@ function checkRestrictedPinUsage(
 
     const pinIndex = buildVerifiedPinIndex(board);
     const connectedPins = getConnectedPins(nets, inst.id);
+    const bootPinIds = new Set(
+      (board.bootPins ?? []).map((bp) => bp.pinId.toLowerCase()),
+    );
 
     for (const pinKey of Array.from(connectedPins)) {
       const vbPin = pinIndex.get(pinKey);
-      if (vbPin?.restricted) {
+      if (!vbPin) continue;
+
+      // Path A — the explicit `restricted` flag (e.g. flash-connected pins).
+      if (vbPin.restricted) {
         issues.push({
           id: `restricted-pin-${String(inst.id)}-${vbPin.id}`,
           severity: 'critical',
@@ -336,6 +348,45 @@ function checkRestrictedPinUsage(
           affectedInstanceIds: [inst.id],
           affectedPinIds: [vbPin.id],
         });
+        continue;
+      }
+
+      // Path B — warnings-based detection (audit #256).
+      // Some verified boards carry hazard info only in `warnings` without the
+      // explicit `restricted` flag. Scan for "flash" (critical) and
+      // "input only" (warning). Skip strapping warnings — bootPins handles those.
+      const warnings = vbPin.warnings ?? [];
+      if (warnings.length === 0) continue;
+      if (bootPinIds.has(vbPin.id.toLowerCase())) continue;
+
+      const joined = warnings.join(' ').toLowerCase();
+
+      if (/\bflash pin\b|internal spi flash|flash-connected/.test(joined)) {
+        issues.push({
+          id: `restricted-pin-warn-flash-${String(inst.id)}-${vbPin.id}`,
+          severity: 'critical',
+          category: 'safety',
+          title: `Flash-connected pin ${vbPin.name} wired on ${inst.referenceDesignator}`,
+          detail: warnings.join(' '),
+          affectedInstanceIds: [inst.id],
+          affectedPinIds: [vbPin.id],
+        });
+        continue;
+      }
+
+      if (/input only\b|input-only\b/.test(joined)) {
+        issues.push({
+          id: `restricted-pin-warn-input-only-${String(inst.id)}-${vbPin.id}`,
+          severity: 'warning',
+          category: 'safety',
+          title: `Input-only pin ${vbPin.name} wired on ${inst.referenceDesignator}`,
+          detail:
+            `${warnings.join(' ')} Driving this pin as an output will have no effect ` +
+            `and external circuits expecting a pull-up/pull-down must supply one externally.`,
+          affectedInstanceIds: [inst.id],
+          affectedPinIds: [vbPin.id],
+        });
+        continue;
       }
     }
   }
