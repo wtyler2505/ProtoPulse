@@ -36,7 +36,7 @@ function makeInstance(overrides: Partial<CircuitInstanceRow> = {}): CircuitInsta
   } as unknown as CircuitInstanceRow;
 }
 
-const svgWrap = (ui: React.ReactNode) => (
+const svgWrap = (ui: ReactNode) => (
   <svg data-testid="svg-root" width={1000} height={600} viewBox="0 0 1000 600">
     {ui}
   </svg>
