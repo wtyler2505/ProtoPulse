@@ -1120,8 +1120,12 @@ function checkHeuristicEsp32RestrictedPins(input: BoardAuditInput): BoardAuditIs
     const part = inst.partId != null ? partIndex.get(inst.partId) : undefined;
 
     // Only heuristic ESP32 parts with no verified-board match.
-    if (!isHeuristicEsp32(part, inst)) continue;
-    if (part && hasVerifiedBoardMatch(part)) continue;
+    const isEsp = isHeuristicEsp32(part, inst);
+    const hasMatch = part ? hasVerifiedBoardMatch(part) : false;
+    // eslint-disable-next-line no-console
+    if (process.env.DEBUG_ESP32) console.log('DEBUG esp32', { title: part ? (getMeta(part).title) : null, isEsp, hasMatch });
+    if (!isEsp) continue;
+    if (part && hasMatch) continue;
 
     const connectedPins = getConnectedPins(nets, inst.id);
 
