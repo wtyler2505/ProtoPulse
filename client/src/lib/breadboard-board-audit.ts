@@ -12,6 +12,7 @@ import type { CircuitInstanceRow, CircuitNetRow, CircuitWireRow, ComponentPart }
 import { findVerifiedBoardByAlias } from '@shared/verified-boards';
 import type { VerifiedBoardDefinition, VerifiedPin } from '@shared/verified-boards';
 import { inferTraps } from './heuristic-trap-inference';
+import { VAULT_SLUGS } from './circuit-editor/breadboard-constants';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -25,6 +26,8 @@ export interface BoardAuditIssue {
   detail: string;
   affectedInstanceIds: number[];
   affectedPinIds: string[];
+  /** Vault slug for the relevant design rule — Wave 2 finding #292 scaffold. */
+  remediationLink?: string;
 }
 
 export interface BoardAuditSummary {
@@ -806,6 +809,154 @@ function scoreLabel(score: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// Check 9: ESP32 heuristic restricted-pin fallback (audit #241, #256)
+// Fires when an ESP32 part does NOT match any verified-boards profile.
+// Verified-path (checkRestrictedPinUsage) is authoritative; this covers the
+// large set of generic "ESP32 dev module" library entries that have no
+// verified-boards entry.
+// ---------------------------------------------------------------------------
+
+/** Patterns for restricted ESP32 pins — kept as named constants. */
+const HEURISTIC_ESP32_FLASH_PINS = /^(gpio|io|d)\s*(6|7|8|9|10|11)\b/i;
+const HEURISTIC_ESP32_GPIO12 = /^(gpio|io|d)\s*12\b/i;
+const HEURISTIC_ESP32_GPIO5 = /^(gpio|io|d)\s*5\b/i;
+const HEURISTIC_ESP32_GPIO0 = /^(gpio|io|d)\s*0\b/i;
+
+/**
+ * Return true when the part looks like an ESP32 family member but is NOT
+ * an ESP8266. Uses title/family/type soft-matching — no verified-boards lookup.
+ */
+function isHeuristicEsp32(
+  part: ComponentPart | undefined,
+  instance: CircuitInstanceRow,
+): boolean {
+  if (!part) return false;
+  const meta = getMeta(part);
+  const title = (typeof meta.title === 'string' ? meta.title : '').toLowerCase();
+  const family = getFamily(meta);
+  const props = getProperties(instance);
+  const instanceType = (
+    typeof (props as Record<string, unknown> | null)?.['type'] === 'string'
+      ? (props as Record<string, string>)['type']
+      : ''
+  ).toLowerCase();
+
+  const combined = `${title} ${family} ${instanceType}`;
+  return combined.includes('esp32') && !combined.includes('esp8266');
+}
+
+/**
+ * Return true when a verified-boards alias matches this part — meaning the
+ * authoritative verified path will handle it, so the heuristic must skip it.
+ */
+function hasVerifiedBoardMatch(part: ComponentPart): boolean {
+  const meta = getMeta(part);
+  const mpn = typeof meta.mpn === 'string' ? meta.mpn : '';
+  const title = typeof meta.title === 'string' ? meta.title : '';
+  return !!(findVerifiedBoardByAlias(mpn) ?? findVerifiedBoardByAlias(title));
+}
+
+/** Check 9: Heuristic ESP32 restricted-pin fallback. */
+function checkHeuristicEsp32RestrictedPins(input: BoardAuditInput): BoardAuditIssue[] {
+  const { instances, nets, parts } = input;
+  const issues: BoardAuditIssue[] = [];
+  const partIndex = buildPartIndex(parts);
+
+  const breadboardInstances = instances.filter(
+    (inst) => inst.breadboardX != null && inst.breadboardY != null,
+  );
+
+  for (const inst of breadboardInstances) {
+    const part = inst.partId != null ? partIndex.get(inst.partId) : undefined;
+
+    // Only heuristic ESP32 parts with no verified-board match.
+    if (!isHeuristicEsp32(part, inst)) continue;
+    if (part && hasVerifiedBoardMatch(part)) continue;
+
+    const connectedPins = getConnectedPins(nets, inst.id);
+
+    for (const pinKey of Array.from(connectedPins)) {
+      const normalized = pinKey.trim().toLowerCase();
+
+      if (HEURISTIC_ESP32_FLASH_PINS.test(normalized)) {
+        issues.push({
+          id: `heuristic-esp32-flash-${String(inst.id)}-${pinKey}`,
+          severity: 'critical',
+          category: 'safety',
+          title: 'ESP32 flash GPIO wired — must never be used for I/O',
+          detail:
+            `GPIO6-11 on the ESP32 are connected directly to the internal SPI flash chip. ` +
+            `Driving these pins from external circuitry will corrupt the flash, cause random ` +
+            `crashes, or permanently brick the module. Pin "${pinKey}" on ${inst.referenceDesignator} ` +
+            `must be left completely unconnected.`,
+          affectedInstanceIds: [inst.id],
+          affectedPinIds: [pinKey],
+          remediationLink: VAULT_SLUGS.ESP32_GPIO6_11_FLASH,
+        });
+        continue;
+      }
+
+      if (HEURISTIC_ESP32_GPIO12.test(normalized)) {
+        issues.push({
+          id: `heuristic-esp32-gpio12-${String(inst.id)}-${pinKey}`,
+          severity: 'critical',
+          category: 'safety',
+          title: 'ESP32 GPIO12 must be LOW at boot or module will not start',
+          detail:
+            `GPIO12 (MTDI) is a flash-voltage strapping pin on the ESP32. If GPIO12 is pulled HIGH ` +
+            `at power-on, the chip selects 1.8 V flash supply. On modules with 3.3 V flash (the vast ` +
+            `majority of dev boards), this causes immediate hardware damage — the module will draw ` +
+            `excessive current and the flash die can be destroyed. Pin "${pinKey}" on ` +
+            `${inst.referenceDesignator} must be LOW or floating at boot.`,
+          affectedInstanceIds: [inst.id],
+          affectedPinIds: [pinKey],
+          remediationLink: VAULT_SLUGS.ESP32_GPIO12_STRAPPING,
+        });
+        continue;
+      }
+
+      if (HEURISTIC_ESP32_GPIO5.test(normalized)) {
+        issues.push({
+          id: `heuristic-esp32-gpio5-${String(inst.id)}-${pinKey}`,
+          severity: 'warning',
+          category: 'safety',
+          title: 'ESP32 GPIO5 is a strapping pin — external loads can affect boot',
+          detail:
+            `GPIO5 controls SDIO slave timing during boot on the ESP32. An external pull-down or ` +
+            `active-low driver on pin "${pinKey}" (${inst.referenceDesignator}) can alter boot ` +
+            `message routing and occasionally prevent clean startup. Keep external loads weak ` +
+            `(>10 kΩ) or conditional on the chip being fully booted.`,
+          affectedInstanceIds: [inst.id],
+          affectedPinIds: [pinKey],
+          remediationLink: VAULT_SLUGS.ESP32_GPIO5_STRAPPING,
+        });
+        continue;
+      }
+
+      if (HEURISTIC_ESP32_GPIO0.test(normalized)) {
+        issues.push({
+          id: `heuristic-esp32-gpio0-${String(inst.id)}-${pinKey}`,
+          severity: 'warning',
+          category: 'safety',
+          title: 'ESP32 GPIO0 is a boot-mode strapping pin — verify pull-up at boot',
+          detail:
+            `GPIO0 selects boot mode: HIGH = normal boot, LOW = serial programming mode. An ` +
+            `external pull-down or open-drain driver on pin "${pinKey}" (${inst.referenceDesignator}) ` +
+            `that is asserted at power-on will hold the ESP32 in download mode. Ensure the pin is ` +
+            `HIGH (or floating with on-board pull-up) during normal power-on.`,
+          affectedInstanceIds: [inst.id],
+          affectedPinIds: [pinKey],
+          remediationLink: VAULT_SLUGS.ESP32_GPIO5_STRAPPING,
+        });
+        continue;
+      }
+    }
+  }
+
+  return issues;
+}
+
+// ---------------------------------------------------------------------------
 // Main audit function
 // ---------------------------------------------------------------------------
 
@@ -845,6 +996,9 @@ export function auditBreadboard(params: BoardAuditInput): BoardAuditSummary {
   const unconnectedPowerIssues = checkUnconnectedPowerPins(instances, nets, partIndex);
   const motorDriverIssues = checkMotorDriverTraps(instances, partIndex);
   const heuristicIssues = checkHeuristicTraps(breadboardInstances, partIndex);
+  // Heuristic ESP32 fallback fires AFTER the verified path so that verified
+  // parts are already excluded (hasVerifiedBoardMatch check inside the fn).
+  const heuristicEsp32Issues = checkHeuristicEsp32RestrictedPins(params);
 
   // Combine and sort by severity (critical first, then warning, then info).
   const severityOrder: Record<BoardAuditIssue['severity'], number> = {
@@ -862,6 +1016,7 @@ export function auditBreadboard(params: BoardAuditInput): BoardAuditSummary {
     ...unconnectedPowerIssues,
     ...motorDriverIssues,
     ...heuristicIssues,
+    ...heuristicEsp32Issues,
   ].sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
 
   // Compute stats.

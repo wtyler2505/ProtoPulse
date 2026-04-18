@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { VAULT_SLUGS } from '@/lib/circuit-editor/breadboard-constants';
 
 import { auditBreadboard } from '@/lib/breadboard-board-audit';
 import type { BoardAuditInput, BoardAuditIssue, BoardAuditSummary } from '@/lib/breadboard-board-audit';
@@ -851,6 +852,115 @@ describe('auditBreadboard', () => {
       const result = audit({ instances: [res], parts: [resPart] });
       const motorIssues = result.issues.filter((i) => i.id.includes('motor-'));
       expect(motorIssues).toHaveLength(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Check 9: Heuristic ESP32 restricted-pin fallback (audit #241, #256)
+  // -------------------------------------------------------------------------
+
+  describe('checkHeuristicEsp32RestrictedPins (audit #241, #256)', () => {
+    /** Build a minimal unverified ESP32 part with the given title. */
+    function makeHeuristicEsp32Part(id: number, title: string): ComponentPart {
+      return makePart({
+        id,
+        meta: { family: 'mcu', title },
+        connectors: [],
+      });
+    }
+
+    /** Build a verified ESP32 part (has a recognized alias so heuristic skips it). */
+    function makeVerifiedEsp32PartLocal(id: number): ComponentPart {
+      return makePart({
+        id,
+        meta: {
+          family: 'mcu',
+          title: 'NodeMCU ESP32-S',
+          verificationStatus: 'verified',
+          partFamily: 'board-module',
+          mpn: 'nodemcu-esp32s',
+        },
+        connectors: [],
+      });
+    }
+
+    /** Build a single-wire audit input for one instance + one pin connection. */
+    function makeEsp32AuditInput(
+      partId: number,
+      part: ComponentPart,
+      pinLabel: string,
+    ): Parameters<typeof audit>[0] {
+      const instance = makeInstance({ id: 700, partId, breadboardX: 50, breadboardY: 50 });
+      const net = makeNet({
+        segments: [{ fromInstanceId: 700, fromPin: pinLabel, toInstanceId: 999, toPin: 'D0' }],
+      });
+      return { instances: [instance], parts: [part], nets: [net] };
+    }
+
+    it.each([
+      // positive cases — should fire
+      ['ESP32 dev module', 'GPIO6', 'critical', VAULT_SLUGS.ESP32_GPIO6_11_FLASH],
+      ['ESP32 dev module', 'GPIO11', 'critical', VAULT_SLUGS.ESP32_GPIO6_11_FLASH],
+      ['ESP32 dev module', 'GPIO12', 'critical', VAULT_SLUGS.ESP32_GPIO12_STRAPPING],
+      ['ESP32 dev module', 'GPIO5', 'warning', VAULT_SLUGS.ESP32_GPIO5_STRAPPING],
+      ['ESP32 dev module', 'GPIO0', 'warning', VAULT_SLUGS.ESP32_GPIO5_STRAPPING],
+      // numeric-label variants
+      ['ESP32 module', 'IO12', 'critical', VAULT_SLUGS.ESP32_GPIO12_STRAPPING],
+      ['ESP32 board', 'D12', 'critical', VAULT_SLUGS.ESP32_GPIO12_STRAPPING],
+    ] as const)(
+      'title="%s" pin="%s" → severity=%s, remediationLink=%s',
+      (title, pinLabel, expectedSeverity, expectedSlug) => {
+        const part = makeHeuristicEsp32Part(701, title);
+        const input = makeEsp32AuditInput(701, part, pinLabel);
+        const result = audit(input);
+
+        const heuristicIssues = result.issues.filter((i) => i.id.startsWith('heuristic-esp32'));
+        expect(heuristicIssues).toHaveLength(1);
+        expect(heuristicIssues[0].severity).toBe(expectedSeverity);
+        expect(heuristicIssues[0].category).toBe('safety');
+        expect(heuristicIssues[0].remediationLink).toBe(expectedSlug);
+      },
+    );
+
+    it('does not fire for safe pin GPIO34 on heuristic ESP32', () => {
+      const part = makeHeuristicEsp32Part(702, 'ESP32 dev module');
+      const input = makeEsp32AuditInput(702, part, 'GPIO34');
+      const result = audit(input);
+      const heuristicIssues = result.issues.filter((i) => i.id.startsWith('heuristic-esp32'));
+      expect(heuristicIssues).toHaveLength(0);
+    });
+
+    it('does not fire for ESP8266 (sibling exclusion)', () => {
+      const part = makeHeuristicEsp32Part(703, 'ESP8266 dev');
+      const input = makeEsp32AuditInput(703, part, 'GPIO6');
+      const result = audit(input);
+      const heuristicIssues = result.issues.filter((i) => i.id.startsWith('heuristic-esp32'));
+      expect(heuristicIssues).toHaveLength(0);
+    });
+
+    it('does not fire for generic MCU that is not ESP32', () => {
+      const part = makeHeuristicEsp32Part(704, 'Generic uC');
+      const input = makeEsp32AuditInput(704, part, 'GPIO12');
+      const result = audit(input);
+      const heuristicIssues = result.issues.filter((i) => i.id.startsWith('heuristic-esp32'));
+      expect(heuristicIssues).toHaveLength(0);
+    });
+
+    it('does not fire when verified-boards profile matches (verified path is authoritative)', () => {
+      const part = makeVerifiedEsp32PartLocal(705);
+      const input = makeEsp32AuditInput(705, part, 'GPIO12');
+      const result = audit(input);
+      const heuristicIssues = result.issues.filter((i) => i.id.startsWith('heuristic-esp32'));
+      expect(heuristicIssues).toHaveLength(0);
+    });
+
+    it('GPIO12 detail mentions hardware damage risk', () => {
+      const part = makeHeuristicEsp32Part(706, 'ESP32 dev module');
+      const input = makeEsp32AuditInput(706, part, 'GPIO12');
+      const result = audit(input);
+      const issue = result.issues.find((i) => i.id.startsWith('heuristic-esp32-gpio12'));
+      expect(issue).toBeDefined();
+      expect(issue!.detail.toLowerCase()).toMatch(/hardware damage/);
     });
   });
 });
