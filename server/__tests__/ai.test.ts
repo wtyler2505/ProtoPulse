@@ -9,7 +9,7 @@ vi.mock('../google-workspace', () => ({
   exportProjectToDrive: vi.fn(),
 }));
 
-import { parseActionsFromResponse, categorizeError, isRetryableError, getDefaultFallbackModel, redactSecrets } from '../ai';
+import { parseActionsFromResponse, categorizeError, isRetryableError, getDefaultFallbackModel, redactSecrets, routeToModel } from '../ai';
 
 // =============================================================================
 // parseActionsFromResponse

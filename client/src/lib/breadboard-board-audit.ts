@@ -1070,7 +1070,7 @@ const HEURISTIC_ESP32_INPUT_ONLY = /^(gpio|io|d)\s*(34|35|36|37|38|39)\b/i;
  * on unknown ESP32 silicon revisions.
  */
 const KNOWN_ESP32_VARIANTS =
-  /esp32[\s-]*(wroom|wrover|c3|s2|s3|c6|h2|pico|solo|d0|d2|u4|-?12|-?32|module|devkit|devkitc|nodemcu|wroom-32|-?32d|-?32u)/i;
+  /esp32[\s-]*(wroom|wrover|c3|s2|s3|c6|h2|pico|solo|d0|d2|u4|-?12|-?32|module|devkit|devkitc|nodemcu|wroom-32|-?32d|-?32u|dev\s*module|dev\s*board|dev\s*kit|board)\b/i;
 
 /**
  * Return true when the part looks like an ESP32 family member but is NOT

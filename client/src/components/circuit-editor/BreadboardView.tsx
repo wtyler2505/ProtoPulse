@@ -184,11 +184,8 @@ function findAutoPlacement(
   return null;
 }
 
-export function getDropTypeFromPart(part: ComponentPart | undefined, fallbackType: string): string {
-  const meta = (part?.meta ?? {}) as Partial<PartMeta> & Record<string, unknown>;
-  const candidate = meta.type ?? meta.family ?? fallbackType;
-  return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate : fallbackType;
-}
+// Re-export for backward-compat (canonical home is breadboard-canvas/canvas-helpers)
+export { getDropTypeFromPart } from './breadboard-canvas/canvas-helpers';
 
 function isDipLikeType(type: string): boolean {
   const lower = type.toLowerCase();
