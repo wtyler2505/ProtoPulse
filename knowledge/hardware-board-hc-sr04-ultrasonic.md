@@ -4,6 +4,10 @@ type: domain-knowledge
 category: hardware-components
 status: verified
 tags: [board, hardware, generic]
+topics:
+  - "[[hardware-components-sensors]]"
+  - "[[hardware-components]]"
+  - "[[eda-hardware-components]]"
 ---
 
 # HC-SR04 Ultrasonic Sensor Specifications

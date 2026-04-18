@@ -67,7 +67,7 @@ The app will be available at `http://localhost:5000`.
 |---|---|---|
 | `npm run dev` | `NODE_ENV=development tsx server/index.ts` | Start dev server with Vite HMR |
 | `npm run dev:client` | Vite only | Vite dev server on port 5000 |
-| `npm run build` | `tsx script/build.ts` | Production build (esbuild backend + Vite frontend) |
+| `npm run build` | `tsx scripts/build.ts` | Production build (esbuild backend + Vite frontend) |
 | `npm run start` | `NODE_ENV=production node dist/index.cjs` | Run production server |
 | `npm run check` | `tsc` | TypeScript type checking — must pass with zero errors |
 | `npm run db:push` | `drizzle-kit push` | Sync Drizzle schema to PostgreSQL |

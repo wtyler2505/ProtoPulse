@@ -125,7 +125,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "^9.39.4",
     "@playwright/test": "^1.58.2",
     "@replit/vite-plugin-cartographer": "^0.4.4",
     "@replit/vite-plugin-dev-banner": "^0.1.1",
@@ -150,7 +150,7 @@
     "dependency-cruiser": "^17.3.9",
     "drizzle-kit": "^0.31.9",
     "esbuild": "^0.25.0",
-    "eslint": "^10.2.0",
+    "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import-x": "^4.16.2",
     "eslint-plugin-react": "^7.37.5",

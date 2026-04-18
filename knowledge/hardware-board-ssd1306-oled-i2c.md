@@ -4,6 +4,10 @@ type: domain-knowledge
 category: hardware-components
 status: verified
 tags: [board, hardware, generic]
+topics:
+  - "[[hardware-components-displays]]"
+  - "[[hardware-components]]"
+  - "[[eda-hardware-components]]"
 ---
 
 # SSD1306 0.96" OLED I2C Display Specifications

@@ -4,6 +4,10 @@ type: domain-knowledge
 category: hardware-components
 status: verified
 tags: [board, hardware, generic]
+topics:
+  - "[[hardware-components-actuators]]"
+  - "[[hardware-components]]"
+  - "[[eda-hardware-components]]"
 ---
 
 # L298N Dual Motor Driver Module Specifications

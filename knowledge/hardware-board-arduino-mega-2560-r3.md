@@ -4,6 +4,10 @@ type: domain-knowledge
 category: hardware-components
 status: verified
 tags: [board, hardware, arduino]
+topics:
+  - "[[hardware-components-mcu]]"
+  - "[[hardware-components]]"
+  - "[[eda-avr-constraints]]"
 ---
 
 # Arduino Mega 2560 R3 Specifications

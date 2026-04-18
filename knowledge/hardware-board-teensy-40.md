@@ -4,6 +4,10 @@ type: domain-knowledge
 category: hardware-components
 status: verified
 tags: [board, hardware, pjrc]
+topics:
+  - "[[hardware-components-mcu]]"
+  - "[[hardware-components]]"
+  - "[[eda-arm-constraints]]"
 ---
 
 # Teensy 4.0 Specifications

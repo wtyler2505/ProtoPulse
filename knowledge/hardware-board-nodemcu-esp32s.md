@@ -4,6 +4,10 @@ type: domain-knowledge
 category: hardware-components
 status: verified
 tags: [board, hardware, espressif (module) / ai-thinker (dev board)]
+topics:
+  - "[[hardware-components-mcu]]"
+  - "[[hardware-components]]"
+  - "[[eda-esp-constraints]]"
 ---
 
 # NodeMCU ESP32-S Specifications

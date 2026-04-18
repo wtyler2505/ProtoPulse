@@ -76,7 +76,7 @@
 | Database | PostgreSQL |
 | ORM | Drizzle ORM |
 | AI providers | Google Genkit |
-| Build | Vite (client), esbuild (server via `tsx script/build.ts`) |
+| Build | Vite (client), esbuild (server via `tsx scripts/build.ts`) |
 | Testing | Vitest 4, happy-dom, @testing-library/react, @vitest/coverage-v8 |
 
 ---
@@ -1281,7 +1281,7 @@ npx vitest run -t "test name"               # By test name
 |--------|---------|---------|
 | `npm run dev` | `NODE_ENV=development tsx server/index.ts` | Start dev server with HMR (port 5000) |
 | `npm run dev:client` | Vite dev server | Client only (port 5000) |
-| `npm run build` | `tsx script/build.ts` | Production build |
+| `npm run build` | `tsx scripts/build.ts` | Production build |
 | `npm start` | `NODE_ENV=production node dist/index.cjs` | Start production server |
 | `npm run check` | `tsc` | TypeScript type checking (must pass clean) |
 | `npm test` | `vitest run` | Run all tests (server + client) |

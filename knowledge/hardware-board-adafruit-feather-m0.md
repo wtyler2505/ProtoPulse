@@ -4,6 +4,10 @@ type: domain-knowledge
 category: hardware-components
 status: verified
 tags: [board, hardware, adafruit]
+topics:
+  - "[[hardware-components-mcu]]"
+  - "[[hardware-components]]"
+  - "[[eda-arm-constraints]]"
 ---
 
 # Adafruit Feather M0 Basic Proto Specifications

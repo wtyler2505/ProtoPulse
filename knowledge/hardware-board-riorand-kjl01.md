@@ -4,6 +4,10 @@ type: domain-knowledge
 category: hardware-components
 status: verified
 tags: [board, hardware, riorand]
+topics:
+  - "[[hardware-components-actuators]]"
+  - "[[hardware-components]]"
+  - "[[eda-hardware-components]]"
 ---
 
 # RioRand KJL-01 BLDC Controller Specifications

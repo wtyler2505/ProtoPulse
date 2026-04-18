@@ -13,7 +13,7 @@ Method: Code + test-surface inspection only (no runtime test suite execution).
 - Schema and contract definitions:
   - `shared/schema.ts`
   - `shared/api-types.generated.ts`
-  - `script/generate-api-types.ts`
+  - `scripts/generate-api-types.ts`
 - Migration and snapshot surface:
   - `migrations/0000_green_prodigy.sql`
   - `migrations/0001_add_enum_constraints.sql`
@@ -61,7 +61,7 @@ Method: Code + test-surface inspection only (no runtime test suite execution).
   - `chat_messages`: `branch_id`, `parent_message_id`
   - `circuit_designs`: `parent_design_id`, `version`
 - Generator/entity coverage:
-  - `script/generate-api-types.ts` entity catalog: `19`
+  - `scripts/generate-api-types.ts` entity catalog: `19`
   - `shared/api-types.generated.ts` patch types: `17`
 
 ## Severity Key
@@ -121,7 +121,7 @@ Fix recommendation:
 
 ### 3) `P1` Generated API contract file is stale and misses newer schema entities
 Evidence:
-- `script/generate-api-types.ts` uses a manual entity catalog capped at 19 entries (`script/generate-api-types.ts:31-51`).
+- `scripts/generate-api-types.ts` uses a manual entity catalog capped at 19 entries (`scripts/generate-api-types.ts:31-51`).
 - `shared/api-types.generated.ts` only re-exports those legacy entities (`shared/api-types.generated.ts:4-48`, `shared/api-types.generated.ts:143`).
 - Missing from generated API types despite being in schema:
   - `HierarchicalPortRow` / `InsertHierarchicalPort`

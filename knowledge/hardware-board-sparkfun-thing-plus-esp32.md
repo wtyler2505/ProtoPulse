@@ -4,6 +4,10 @@ type: domain-knowledge
 category: hardware-components
 status: verified
 tags: [board, hardware, sparkfun]
+topics:
+  - "[[hardware-components-mcu]]"
+  - "[[hardware-components]]"
+  - "[[eda-esp-constraints]]"
 ---
 
 # SparkFun Thing Plus ESP32 WROOM Specifications

@@ -70,10 +70,19 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 - [[pico-vsys-accepts-1v8-to-5v5-enabling-direct-battery-operation]] -- buck-boost regulator accepts 1.8-5.5V
 - [[pico-3v3-en-pin-disables-regulator-for-external-sleep-control]] -- regulator disable for hardware sleep
 
+## AI Component Generation Methodology
+- [[ai-component-generation-requires-rigorous-dimension-and-electrical-limit-research-instead-of-hallucinated-approximations]] -- datasheet verification is mandatory for AI-generated components; hallucinated dimensions/limits produce invalid footprints
+- [[enforcing-impossible-fit-and-off-board-only-rules-prevents-invalid-physical-layouts-of-over-sized-modules-in-virtual-breadboards]] -- virtual breadboards must enforce physical fit rules to stay faithful to real-world assembly
+
 ## Sub-Domains
 - [[eda-schematic-capture]] -- Core concepts and constraints for schematic capture, symbol generation, and electrical rules checking (ERC).
 - [[eda-pcb-routing]] -- PCB layout rules, trace width calculations, clearance standards, and physical routing constraints.
 - [[eda-simulation-engines]] -- SPICE algorithms, matrix solvers, and discrete-time simulation integration.
+- [[eda-arm-constraints]] -- ARM, RP2040, and Pico constraints, PIO, and peripheral mapping.
+- [[eda-avr-constraints]] -- AVR microcontroller constraints, Uno and Mega gotchas.
+- [[eda-esp-constraints]] -- ESP32 and ESP8266 constraints, strapping pins, and power budgets.
+- [[eda-hardware-components]] -- Component wiring, motor logic polarities, and component interactions.
+- [[eda-pcb-design]] -- PCB layout, EDA tool specifics, design rules, and simulation gotchas.
 
 ## Key Resources
 - `server/export/` — Gerber, drill, pick-and-place generators

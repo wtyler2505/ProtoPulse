@@ -4,6 +4,10 @@ type: domain-knowledge
 category: hardware-components
 status: verified
 tags: [board, hardware, stmicroelectronics]
+topics:
+  - "[[hardware-components-mcu]]"
+  - "[[hardware-components]]"
+  - "[[eda-arm-constraints]]"
 ---
 
 # STM32 Nucleo-64 (F401RE) Specifications

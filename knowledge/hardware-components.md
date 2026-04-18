@@ -3,6 +3,9 @@ description: "Master topic map for all physical hardware components and boards."
 type: moc
 created: 2026-04-17
 status: active
+topics:
+  - "[[eda-hardware-components]]"
+  - "[[eda-fundamentals]]"
 ---
 
 # Hardware Components MOC

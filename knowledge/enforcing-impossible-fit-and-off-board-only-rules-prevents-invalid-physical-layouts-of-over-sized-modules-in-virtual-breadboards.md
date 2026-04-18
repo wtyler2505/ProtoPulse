@@ -1,7 +1,10 @@
 ---
 title: "Enforcing impossible-fit and off-board-only rules prevents invalid physical layouts of over-sized modules in virtual breadboards"
 description: "Analysis of enforcing impossible-fit and off-board-only rules prevents invalid physical layouts of over-sized modules in virtual breadboards"
-topics: []
+topics:
+  - "[[breadboard-intelligence]]"
+  - "[[hardware-components]]"
+  - "[[eda-fundamentals]]"
 ---
 
 # Enforcing impossible-fit and off-board-only rules prevents invalid physical layouts of over-sized modules in virtual breadboards
