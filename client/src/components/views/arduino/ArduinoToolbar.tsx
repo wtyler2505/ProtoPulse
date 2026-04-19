@@ -10,8 +10,10 @@ import {
   Download,
   Square,
   Wand2,
+  BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { VaultHoverCard } from '@/components/ui/vault-hover-card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -162,16 +164,27 @@ export default function ArduinoToolbar({
             <Wand2 className="w-3.5 h-3.5" />
           </Button>
 
-          <Button
-            size="sm"
-            className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20"
-            disabled={!workspace || !!activeJob || !selectedProfile}
-            onClick={onCompile}
-            data-testid="button-arduino-compile"
-          >
-            {activeJob?.jobType === 'compile' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            <span>Verify</span>
-          </Button>
+          <div className="inline-flex items-center gap-1">
+            <Button
+              size="sm"
+              className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20"
+              disabled={!workspace || !!activeJob || !selectedProfile}
+              onClick={onCompile}
+              data-testid="button-arduino-compile"
+            >
+              {activeJob?.jobType === 'compile' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+              <span>Verify</span>
+            </Button>
+            <VaultHoverCard topic="arduino-build-pipeline-verify-vs-upload-compilation-only">
+              <span
+                data-testid="arduino-verify-vault-info"
+                aria-label="About Arduino Verify vs Upload"
+                className="inline-flex items-center cursor-help opacity-60 hover:opacity-100 transition-opacity"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+              </span>
+            </VaultHoverCard>
+          </div>
 
           <Button
             size="sm"

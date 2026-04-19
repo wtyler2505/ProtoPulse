@@ -20,10 +20,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertTriangle,
+  BookOpen,
   Loader2,
   Search,
   Zap,
 } from 'lucide-react';
+import { VaultHoverCard } from '@/components/ui/vault-hover-card';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -179,6 +181,16 @@ export default function BaudRateSelector({
             </SelectItem>
           </SelectContent>
         </Select>
+
+        <VaultHoverCard topic="serial-baud-rates-standard-values-and-arduino-default-115200">
+          <span
+            data-testid="baud-rate-vault-info"
+            aria-label="About serial baud rates"
+            className="inline-flex items-center cursor-help opacity-60 hover:opacity-100 transition-opacity"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+          </span>
+        </VaultHoverCard>
 
         {/* Quick-pick buttons */}
         {quickRates.map((rate) => (
