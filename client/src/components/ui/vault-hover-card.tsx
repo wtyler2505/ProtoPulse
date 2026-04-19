@@ -132,12 +132,12 @@ export const VaultHoverCard = React.memo(function VaultHoverCard({
           </div>
         )}
 
-        {!loading && !notFound && error && (
+        {!loading && !notFound && Boolean(error) && (
           <div className="flex items-start gap-2 text-xs text-destructive">
             <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" aria-hidden="true" />
             <span>
               Failed to load vault note:{' '}
-              {error instanceof Error ? error.message : String(error)}
+              {error instanceof Error ? error.message : String(error ?? 'unknown')}
             </span>
           </div>
         )}
