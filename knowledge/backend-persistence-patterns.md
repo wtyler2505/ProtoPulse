@@ -1,38 +1,49 @@
 ---
-description: "Auto-stub (awaiting Core Ideas) — seeded from [[drizzle-schema-defines-the-column-the-zod-validator-and-the-typescript-type-from-one-source]] on 2026-04-19T06:46:48Z"
+description: "How ProtoPulse persists state — Drizzle schema conventions, node-postgres pool, transaction pattern, jsonb usage, and FK-cascade strategy. Entry point for anyone touching `shared/schema.ts` or `server/storage/`."
 type: moc
-auto_generated: true
-auto_generated_source: "drizzle-schema-defines-the-column-the-zod-validator-and-the-typescript-type-from-one-source"
-auto_generated_at: "2026-04-19T06:46:48Z"
 topics:
-  - "[[index]]"
+  - "[[architecture-decisions]]"
+  - "[[implementation-patterns]]"
 ---
 
 # backend-persistence-patterns
 
-**Auto-generated stub.** A sibling note (`drizzle-schema-defines-the-column-the-zod-validator-and-the-typescript-type-from-one-source`) referenced this
-topic map in its `topics:` field, but the MOC did not exist yet. This stub
-was created by `.claude/hooks/auto-create-parent-moc.sh` to keep the
-navigation layer in sync with atomic knowledge.
+ProtoPulse's persistence layer is Drizzle ORM over PostgreSQL via the `node-postgres` pool. The backend carries 46 tables, 132 `jsonb` columns, and zero uses of Drizzle's `relations()` helper. This MOC indexes the patterns that make that shape work.
 
-**Next steps for a human:**
+## Core pattern
 
-1. Decide whether this topic is a genuine MOC (then write Core Ideas and a
-   real description) or a typo in the source note (then `rm` this file and
-   fix the source).
-2. Remove the `auto_generated: true` frontmatter flag once Core Ideas are
-   populated.
-3. Consider whether additional parent topics belong in the `topics:` field.
+- [[drizzle-orm-was-chosen-for-type-safe-zod-integration]] — the original decision; schema → Zod → TS from one source
+- [[drizzle-schema-defines-the-column-the-zod-validator-and-the-typescript-type-from-one-source]] — the mechanical four-line idiom that realizes the decision
+- [[drizzle-uses-foreign-keys-with-on-delete-cascade-instead-of-the-relations-helper]] — FK-only convention; joins are explicit
 
-## Knowledge Notes
+## Infrastructure
 
-_Populated by `/connect` or manual curation._
+- [[protopulse-uses-node-postgres-pool-not-neon-serverless-and-configures-pool-limits-explicitly]] — real TCP pool, not the Neon-serverless assumption most Drizzle docs make
+- [[drizzle-transactions-wrap-read-modify-write-sequences-with-tx-scoped-queries]] — the `db.transaction(async (tx) => ...)` pattern in storage layers
 
-## Open Questions
+## State modeling
 
-_(populated by /extract)_
+- [[jsonb-columns-model-flexible-graph-state-while-typed-columns-handle-queryable-invariants]] — when to reach for `jsonb` vs a typed column
+- [[jsonb-columns-lack-gin-indexes-forcing-sequential-scans]] — the cost when `jsonb` fields get queried without GIN support (current debt)
 
----
+## Known debt adjacent to this area
+
+- [[no-database-migration-skill-despite-drizzle-being-core]] — gap in the skills layer
+- [[risk-analysis-tool-references-nonexistent-schema-columns]] — symptom of schema drift in AI-facing tools
+
+## Migration commands
+
+- Development: `npm run db:push` (drizzle-kit push, fast schema sync)
+- Production: `npm run db:migrate` (drizzle-kit migrate, applies SQL files from `migrations/`)
+- Generation: `npm run db:generate` after schema edits
+- Studio: `npm run db:studio`
+
+Baseline 19 tables (2026-02-28). Constraint pass 2026-03-01. +8 tables + column additions 2026-03-08.
+
+## When to extend this MOC
+
+Any new pattern that touches `shared/schema.ts`, `server/db.ts`, or `server/storage/` belongs here. Decisions about Drizzle versions, driver choice (node-postgres vs neon-serverless vs postgres-js), or migration workflow go under Infrastructure. New idioms for encoding data (soft delete, audit trail, JSONB shapes) go under State modeling. Keep individual patterns atomic; this MOC grows by adding wiki-links, not prose.
 
 Topics:
-- [[index]]
+- [[architecture-decisions]]
+- [[implementation-patterns]]
