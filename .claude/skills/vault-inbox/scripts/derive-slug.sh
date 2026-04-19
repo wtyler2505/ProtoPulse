@@ -25,15 +25,9 @@ fi
 
 topic="$*"
 
-# Defensive path-traversal rejection (spec: "Never trust user input for filenames")
-case "$topic" in
-  *..*|*/*|*\\*)
-    echo "ERROR: topic contains path-traversal characters (.. / \\)" >&2
-    exit 3
-    ;;
-esac
-
-# lowercase + non-alphanumeric → dash, collapse dashes, trim
+# lowercase + non-alphanumeric → dash, collapse dashes, trim.
+# The [^a-z0-9]+ reduction already strips '/', '\', '.', so path-traversal
+# characters cannot survive into the output slug. We still double-check below.
 slug=$(echo "$topic" \
   | tr '[:upper:]' '[:lower:]' \
   | sed -E 's/[^a-z0-9]+/-/g' \
@@ -44,6 +38,12 @@ slug=$(echo "$topic" \
 if [[ -z "$slug" ]]; then
   echo "ERROR: topic produced empty slug" >&2
   exit 4
+fi
+
+# Post-derivation sanity check — slug must be alphanumeric + dashes only
+if [[ ! "$slug" =~ ^[a-z0-9-]+$ ]]; then
+  echo "ERROR: derived slug contains illegal characters: $slug" >&2
+  exit 3
 fi
 
 # Cap at 80 chars at last word boundary
