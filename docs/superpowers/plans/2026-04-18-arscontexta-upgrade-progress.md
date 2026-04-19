@@ -71,21 +71,30 @@ Task list (in TaskList tool): 22 tasks total — T1 complete, T2-T15 pending, pl
 
 ---
 
-## Next session — start here
+## Session 2 update (2026-04-18 late) — T1 + T2 + T15 shipped
 
-### Priority 1: Complete T1 residual (1 tool call)
+**Also shipped this session:**
+- T1 residual asset: `.claude/skills/vault-gap/assets/gap-stub.schema.json`
+- **T2 complete** as skill `.claude/skills/vault-validate/`:
+  - `SKILL.md` (9.3KB, v1.0, `context: fork`)
+  - `assets/frontmatter-v2.schema.json` (full JSON Schema: name/description≤140/type/topics required; audience/reviewed/confidence/claims/related/supersedes/provenance/used-by-surface optional; conditional `confidence: verified → provenance` required)
+  - `scripts/parse-frontmatter.py` (YAML extractor; stdin or file; json/yaml emit; `--key` selector)
+  - `scripts/validate.py` (full validator — schema check, cross-link integrity, MOC membership, description quality, freshness, provenance presence; `--fix`/`--json`/`--strict`/`--fail-on`)
+  - `scripts/migrate-v1-to-v2.py` (writes `inbox/migration-v2-<slug>.md` remediation stubs — never directly edits notes; `--write`/`--limit`/`--require`/`--json`)
+  - `templates/v2-note-template.md` (exemplar frontmatter + body scaffold)
+- **T15 complete** as skill `.claude/skills/vault-extract-priority/`:
+  - `SKILL.md` (scoring formula: 5×unblocks + 3×recency + 2×tier + 1×missing + 0.5×plan_ref_count)
+  - `scripts/rank.py` (parses `ops/queue/gap-stubs.md`, reads each stub's `unblocks:`, emits ranked JSON or human list)
+  - `scripts/mark-extracted.sh` (atomic row-update helper)
 
-Write `.claude/skills/vault-gap/assets/gap-stub.schema.json` — JSON Schema for inbox-gap-stub.md frontmatter. Template + scoring rubric reference it, so the asset closes the loop for `/vault-validate` (T2) to consume later.
+**Settings + infrastructure shipped this session:**
+- Skill-list context reduction applied to `.claude/settings.local.json`: `skillOverrides` (39 non-ProtoPulse skills set `off`) + `skillListingMaxDescChars: 256` + `skillListingBudgetFraction: 0.005`. Memory note at `memory/reference_skill_context_levers.md` + MEMORY.md link. Backup at `~/claude-backup-20260418-231549.tar.gz` + `settings.local.json.pre-skill-cleanup.bak`.
 
-### Priority 2: T2 — Frontmatter schema + validator + migration (3 days)
+**Status progress:** T1 ✓, T2 ✓, T15 ✓, T17 (scope confirm) ✓. **4 of 15 upgrade items shipped.**
 
-This unblocks T3, T5, T6, T11, T13, T14, T15. Plan in system-upgrades doc. Scope:
-- Define upgraded frontmatter schema (audience, claims, provenance stub, related, supersedes, reviewed, used-by-surface, description ≤140).
-- Write `/vault-validate` skill that fails CI when a note is missing required fields.
-- Write migration script across 683 notes (auto-fill where possible, flag rest).
-- Ship as `.claude/skills/vault-validate/` with full directory structure.
+## Next session — start here (UPDATED)
 
-### Priority 3: T5 — /vault-suggest-for-plan (2 days)
+### Priority 1: T5 — /vault-suggest-for-plan (2 days)
 
 Reads a plan file, loops qmd_deep_search per task description, emits structured suggestion report. Consumes T1's `/vault-gap`. Drop-in replacement for the manual enhancement work.
 
