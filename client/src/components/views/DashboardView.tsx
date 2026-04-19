@@ -21,6 +21,7 @@ import { useValidation } from '@/lib/contexts/validation-context';
 import { useHistory } from '@/lib/contexts/history-context';
 import { useProjectMeta } from '@/lib/project-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { VaultHoverCard } from '@/components/ui/vault-hover-card';
 import { cn } from '@/lib/utils';
 import WelcomeOverlay, { isOnboardingDismissed, dismissOnboarding } from './WelcomeOverlay';
 import type { ViewMode } from '@/lib/project-context';
@@ -266,18 +267,22 @@ export default function DashboardView() {
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                     Node Types
                   </div>
+                  {/* TODO(plan-04-wave-3): map arch node types to canonical vault MOC slugs (microcontroller → moc-microcontrollers, sensor → moc-sensors, etc.) instead of relying on primitive's slugifier. Requires a type→slug registry in a shared constants file. */}
                   <div className="flex flex-wrap gap-1.5">
                     {Object.entries(archStats.typeMap)
                       .sort((a, b) => b[1] - a[1])
                       .map(([type, count]) => (
-                        <span
-                          key={type}
-                          data-testid={`arch-type-${type}`}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono bg-primary/10 text-primary border border-primary/20 rounded"
-                        >
-                          {type}
-                          <span className="text-muted-foreground">{count}</span>
-                        </span>
+                        <VaultHoverCard key={type} topic={type}>
+                          <span
+                            data-testid={`arch-type-${type}`}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono bg-primary/10 text-primary border border-primary/20 rounded cursor-help"
+                          >
+                            {type}
+                            <span className="text-muted-foreground">{count}</span>
+                          </span>
+                        </VaultHoverCard>
                       ))}
                   </div>
                 </div>
