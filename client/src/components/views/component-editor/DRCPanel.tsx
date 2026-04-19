@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, XCircle, PlayCircle, Eye, EyeOff, Shield, ChevronDown, ChevronRight, Download } from 'lucide-react';
 import type { DRCViolation, DRCRule } from '@shared/component-types';
+import { VaultExplainer } from '@/components/ui/vault-explainer';
 
 interface DRCPanelProps {
   violations: DRCViolation[];
@@ -198,19 +199,31 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
         ) : (
           <div className="py-1">
             {sortedViolations.map(v => (
-              <button
+              <div
                 key={v.id}
                 data-testid={`drc-violation-${v.id}`}
-                onClick={() => onHighlight(v.shapeIds)}
-                className="w-full text-left px-3 py-1.5 flex items-start gap-2 hover:bg-muted/50 transition-colors cursor-pointer"
+                className="px-3 py-1.5 flex flex-col gap-1.5 hover:bg-muted/50 transition-colors"
               >
-                {v.severity === 'error' ? (
-                  <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
-                ) : (
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                )}
-                <span className="text-[11px] text-foreground/80 leading-tight">{v.message}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => onHighlight(v.shapeIds)}
+                  className="w-full text-left flex items-start gap-2 cursor-pointer"
+                  data-testid={`drc-violation-${v.id}-highlight`}
+                >
+                  {v.severity === 'error' ? (
+                    <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  )}
+                  <span className="text-[11px] text-foreground/80 leading-tight">{v.message}</span>
+                </button>
+                <VaultExplainer
+                  topic={v.ruleType}
+                  className="ml-5"
+                >
+                  Why is this wrong?
+                </VaultExplainer>
+              </div>
             ))}
           </div>
         )}
