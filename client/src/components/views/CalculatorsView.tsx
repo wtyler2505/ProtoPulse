@@ -15,7 +15,9 @@ import {
   Zap,
   ChevronDown,
   RotateCcw,
+  BookOpen,
 } from 'lucide-react';
+import { VaultHoverCard } from '@/components/ui/vault-hover-card';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -104,6 +106,14 @@ function OhmsLawCard() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Calculator className="w-4 h-4 text-[var(--color-editor-accent)]" />
           {"Ohm's Law"}
+          <VaultHoverCard slug="ohms-law-v-equals-i-times-r-derivation">
+            <span
+              data-testid="calc-ohms-vault-info"
+              className="ml-auto inline-flex cursor-help opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <BookOpen className="w-3 h-3" />
+            </span>
+          </VaultHoverCard>
         </CardTitle>
         <CardDescription>V = I x R — enter any 2 values</CardDescription>
       </CardHeader>
@@ -211,6 +221,14 @@ function LedResistorCard() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Lightbulb className="w-4 h-4 text-[var(--color-editor-accent)]" />
           LED Resistor
+          <VaultHoverCard slug="led-current-limiting-resistor-sizing-and-thermal-derating">
+            <span
+              data-testid="calc-led-vault-info"
+              className="ml-auto inline-flex cursor-help opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <BookOpen className="w-3 h-3" />
+            </span>
+          </VaultHoverCard>
         </CardTitle>
         <CardDescription>R = (Vs - Vf) / If</CardDescription>
       </CardHeader>
@@ -342,6 +360,14 @@ function VoltageDividerCard() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <GitFork className="w-4 h-4 text-[var(--color-editor-accent)]" />
           Voltage Divider
+          <VaultHoverCard slug="voltage-divider-formula-and-loading-effect">
+            <span
+              data-testid="calc-divider-vault-info"
+              className="ml-auto inline-flex cursor-help opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <BookOpen className="w-3 h-3" />
+            </span>
+          </VaultHoverCard>
         </CardTitle>
         <CardDescription>Vout = Vin x R2 / (R1 + R2)</CardDescription>
       </CardHeader>
@@ -532,6 +558,14 @@ function RcTimeConstantCard() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Timer className="w-4 h-4 text-[var(--color-editor-accent)]" />
           RC Time Constant
+          <VaultHoverCard slug="rc-lowpass-cutoff-frequency-1-over-2-pi-rc">
+            <span
+              data-testid="calc-rc-vault-info"
+              className="ml-auto inline-flex cursor-help opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <BookOpen className="w-3 h-3" />
+            </span>
+          </VaultHoverCard>
         </CardTitle>
         <CardDescription>{'\u03C4 = R \u00D7 C, fc = 1/(2\u03C0RC)'}</CardDescription>
       </CardHeader>
@@ -656,6 +690,14 @@ function FilterCutoffCard() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Radio className="w-4 h-4 text-[var(--color-editor-accent)]" />
           Filter Cutoff
+          <VaultHoverCard slug="rc-lowpass-cutoff-frequency-1-over-2-pi-rc">
+            <span
+              data-testid="calc-filter-vault-info"
+              className="ml-auto inline-flex cursor-help opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <BookOpen className="w-3 h-3" />
+            </span>
+          </VaultHoverCard>
         </CardTitle>
         <CardDescription>Low-pass, high-pass, and bandpass</CardDescription>
       </CardHeader>
@@ -849,6 +891,14 @@ function PowerDissipationCard() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Zap className="w-4 h-4 text-[var(--color-editor-accent)]" />
           Power Dissipation
+          <VaultHoverCard slug="ohms-law-v-equals-i-times-r-derivation">
+            <span
+              data-testid="calc-power-vault-info"
+              className="ml-auto inline-flex cursor-help opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <BookOpen className="w-3 h-3" />
+            </span>
+          </VaultHoverCard>
         </CardTitle>
         <CardDescription>P=IV, P=I{'\u00B2'}R, P=V{'\u00B2'}/R — enter any 2</CardDescription>
       </CardHeader>
