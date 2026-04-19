@@ -92,9 +92,31 @@ Task list (in TaskList tool): 22 tasks total — T1 complete, T2-T15 pending, pl
 
 **Status progress:** T1 ✓, T2 ✓, T15 ✓, T17 (scope confirm) ✓. **4 of 15 upgrade items shipped.**
 
-## Next session — start here (UPDATED)
+## Session 3 update (2026-04-18 post-restart) — T5 + T3 + T7 shipped
 
-### Priority 1: T5 — /vault-suggest-for-plan (2 days)
+With skill-list echo shrunk by prior session's settings, this session shipped 3 more T-items:
+
+- **T5 complete** as skill `.claude/skills/vault-suggest-for-plan/`:
+  - `SKILL.md` — scans plan files, extracts Goal/Task/Coverage units, batch-queries qmd per unit, emits Markdown or JSON report for plan Research log
+  - `scripts/extract-tasks.py` — the plan parser. Live-tested on 01-p0-bugs.md → 24 units (1 goal + 1 arch + 16 coverage + 6 waves) ✓
+  - Handles: ignores code blocks, deduplicates Task matches, compresses task description to ≤12-word qmd queries
+
+- **T3 complete** as skill `.claude/skills/vault-index/`:
+  - `SKILL.md` — builds `ops/index/plan-vault-backlinks.json` (schema v1)
+  - `scripts/build-index.py` — scans plans + `client/src` + `server/` + knowledge frontmatter; emits notes, orphans, broken-refs, stats
+  - **Live-tested on real vault**: 682 notes indexed, 28 plans scanned, 1900 code files scanned, 90 backlinks found, 669 orphans, 0 broken refs
+  - Output written to `ops/index/plan-vault-backlinks.json` ✓
+
+- **T7 complete** as skill `.claude/skills/vault-health/`:
+  - `SKILL.md` — consumes T3 index + T1 queue + T2 validator output, emits weekly report
+  - `scripts/report.py` — builds heatmap (top-consumed + top-orphaned), demand-gap queue, schema drift, trend-vs-prior, recommended actions; writes to `ops/health/YYYY-MM-DD-report.md`
+  - **Live-tested**: generated `ops/health/2026-04-18-report.md` with current vault metrics ✓
+
+**Cumulative status: T1 ✓, T2 ✓, T3 ✓, T5 ✓, T7 ✓, T15 ✓, T17 ✓. 7 of 15 upgrade items shipped (47%).**
+
+## Next session — start here (UPDATED AGAIN)
+
+### Priority 1: T6 — Provenance + /vault-source (3 days)
 
 Reads a plan file, loops qmd_deep_search per task description, emits structured suggestion report. Consumes T1's `/vault-gap`. Drop-in replacement for the manual enhancement work.
 
