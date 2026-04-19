@@ -20,6 +20,7 @@ Relevant Notes:
 - [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- both block the main thread: stringify per render, MNA per simulation
 - [[vite-manual-chunks-defeats-dynamic-import-and-tree-shaking]] -- combined: bloated initial load + O(N) per render = compounding perf degradation
 - [[monolithic-context-causes-quadratic-render-complexity]] -- the stringify runs inside the monolithic re-render cascade
+- [[compile-output-panels-need-virtualization-at-the-line-count-real-sketches-produce-not-at-demo-sketch-scale]] -- same virtualization-by-default pattern applied to log lines instead of canvas nodes
 
 Topics:
 - [[architecture-decisions]]

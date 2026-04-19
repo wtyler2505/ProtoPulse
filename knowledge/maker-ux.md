@@ -33,6 +33,9 @@ Knowledge about UX patterns, interaction design, and accessibility principles th
 - [[visible-enabled-action-buttons-without-prerequisites-teach-users-to-distrust-the-ui]] -- enabled-but-failing buttons are interface betrayal; disabled+tooltip teaches the prerequisite
 - [[trust-receipts-should-pair-with-a-guided-setup-path-or-they-surface-problems-without-fixing-them]] -- transparency without agency strands beginners at the diagnosis
 - [[empty-state-panes-should-offer-a-one-click-on-ramp-not-just-describe-emptiness]] -- empty states are invitations, not announcements
+- [[usb-device-unplugged-mid-upload-is-the-failure-mode-that-defines-whether-arduino-tooling-feels-robust-or-fragile]] -- hardware-layer disturbances are core workflow, not edge cases
+- [[compile-output-panels-need-virtualization-at-the-line-count-real-sketches-produce-not-at-demo-sketch-scale]] -- benchmark at real-sketch scale, not Blink scale
+- [[library-manager-offline-behavior-should-show-the-local-cache-not-an-error-because-makers-often-work-without-internet]] -- offline-first is a maker concept, not a mobile concept
 
 ## Core Principle
 **If a feature requires the user to already understand electronics to use it, it's not done yet.** Add AI guidance, tooltips, contextual explanations, or a learning mode.
@@ -94,6 +97,8 @@ Tyler building his OmniTrek Nexus rover (Arduino Mega, ESP32, motor controllers,
 Agent Notes:
 - 2026-04-06: audit notes revealed 5 maker-impacting quality issues: (1) WCAG keyboard focus broken, (2) voice AI is fake, (3) mock pricing erodes trust, (4) slow initial load, (5) canvas stuttering. These undermine "one tool" promise more than missing features do.
 - 2026-04-18: Arduino tab E2E walkthrough validated the trust-receipt pattern (excellent transparency) but exposed 4 concrete UX gaps: 4s blank skeleton, enabled Verify/Upload with no board profile, trust receipt with no setup-wizard follow-through, and "No File Selected" empty state with no one-click entry. Pattern across all four: the UI describes problems without offering resolution paths. The Arduino surface is a worked example of transparency-without-agency as the dominant failure mode.
+- 2026-04-18 (edge cases): Walkthrough also surfaced 3 resilience gaps worth engineering-in-advance: USB-unplug-mid-upload (the canonical Arduino stress test — recovery state matters as much as the error), compile-output scaling (virtualize at real-sketch size, not Blink size), and Library Manager offline behavior (show cached index + installed libraries instead of erroring). All three are "benches are not clean rooms" problems — makers hit them routinely and switch IDEs when they're unhandled.
+- 2026-04-18 (reflect pass): The 7 Arduino-tab notes form a tight cluster around a single meta-claim — **transparency-without-agency is the dominant UX failure mode** — where each note instantiates it at a different layer: skeleton (loading layer), enabled-buttons (action layer), trust-receipt (diagnosis layer), empty-state (first-run layer), usb-unplug (hardware-event layer), compile-output (scale layer), library-manager (network layer). This suggests a future synthesis note naming that pattern explicitly. Also cross-linked compile-output ↔ reactflow-stringify — same virtualization-by-default pattern applied to log lines vs canvas nodes.
 
 Topics:
 - [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring

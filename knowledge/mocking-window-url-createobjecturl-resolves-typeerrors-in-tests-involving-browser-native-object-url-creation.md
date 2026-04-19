@@ -27,7 +27,7 @@ Object.defineProperty(window.URL, 'revokeObjectURL', {
 
 This is not a workaround — it is the correct pattern whenever the test boundary sits below the browser's URL API. The same shape applies to other JSDOM gaps (`ResizeObserver`, `IntersectionObserver`, `matchMedia`), so a single setup file typically accumulates a stable list of mocks. Keeping those mocks centralized also avoids the failure mode where two test files register conflicting stubs mid-run.
 
-For ProtoPulse specifically this hits export-oriented views: [[bom-csv-round-trip-preserves-header-order-through-parser-serializer-symmetry]]-style tests, schematic SVG sanitization, and any future share-link generator that serializes canvas state to a downloadable blob.
+For ProtoPulse specifically this hits export-oriented views: BOM CSV round-trip tests, schematic SVG sanitization, and any future share-link generator that serializes canvas state to a downloadable blob.
 
 ---
 Related:

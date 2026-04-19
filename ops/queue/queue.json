@@ -30,7 +30,7 @@
       "priority": "session",
       "status": "done",
       "condition_key": "dangling_links",
-      "target": "8 dangling [[links]] in knowledge/index.md (identity, methodology, goals, eda-fundamentals, architecture-decisions, competitive-landscape, breadboard-intelligence, maker-ux) — targets don't exist in knowledge/",
+      "target": "8 dangling [[links]] in knowledge/index.md (identity, methodology, goals, eda-fundamentals, architecture-decisions, competitive-landscape, breadboard-intelligence, maker-ux) \u2014 targets don't exist in knowledge/",
       "action": "/seed or /extract to create initial topic maps",
       "auto_generated": true,
       "created": "2026-04-06T03:52:00Z"
@@ -776,7 +776,7 @@
       "type": "enrichment",
       "status": "pending",
       "target": "txs0108e-oe-pin-is-active-high-and-floating-by-default-silently-disabling-all-outputs",
-      "source_detail": "Add Hall-sensor wiring as worked example — OE tied to VCCA (3.3V) with pin-19/pin-11 callouts in BLDC Hall readback topology",
+      "source_detail": "Add Hall-sensor wiring as worked example \u2014 OE tied to VCCA (3.3V) with pin-19/pin-11 callouts in BLDC Hall readback topology",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
       "file": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-051.md",
       "created": "2026-04-14T08:13:01Z",
@@ -788,7 +788,7 @@
       "type": "enrichment",
       "status": "pending",
       "target": "esp32-gpio34-39-are-input-only-with-no-internal-pull-resistors",
-      "source_detail": "Add positive-case allocation rationale — ADC1 WiFi-safe + no-strapping conflict + read-only matches Hall topology + TXS-provides-pullups exception",
+      "source_detail": "Add positive-case allocation rationale \u2014 ADC1 WiFi-safe + no-strapping conflict + read-only matches Hall topology + TXS-provides-pullups exception",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
       "file": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-052.md",
       "created": "2026-04-14T08:13:01Z",
@@ -800,7 +800,7 @@
       "type": "enrichment",
       "status": "pending",
       "target": "bldc-controller-hall-sensor-outputs-are-push-pull-digital-making-txs-class-shifters-the-correct-bridge-to-3v3-mcus",
-      "source_detail": "Add concrete RioRand→TXS0108E→ESP32 pin mapping table (Hall A/B/C/Temp through B1-B4/A1-A4 to GPIO 34/35/36/39)",
+      "source_detail": "Add concrete RioRand\u2192TXS0108E\u2192ESP32 pin mapping table (Hall A/B/C/Temp through B1-B4/A1-A4 to GPIO 34/35/36/39)",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
       "file": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md",
       "created": "2026-04-14T08:13:01Z",
@@ -957,6 +957,586 @@
       "file": "historical-session-friction.md",
       "created": "2026-04-17T21:43:58.189969Z",
       "completed": "2026-04-17T21:43:58.189969Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-3d-view-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-3d-view-meticulous/2026-04-18-e2e-3d-view-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-3d-view-meticulous.md",
+      "file": "2026-04-18-e2e-3d-view-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-alternates-part-usage-broken",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-alternates-part-usage-broken/2026-04-18-e2e-alternates-part-usage-broken.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-alternates-part-usage-broken.md",
+      "file": "2026-04-18-e2e-alternates-part-usage-broken.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-architecture-tab-tested",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-architecture-tab-tested/2026-04-18-e2e-architecture-tab-tested.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-architecture-tab-tested.md",
+      "file": "2026-04-18-e2e-architecture-tab-tested.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-audit-trail-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-audit-trail-meticulous/2026-04-18-e2e-audit-trail-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-audit-trail-meticulous.md",
+      "file": "2026-04-18-e2e-audit-trail-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-bom-templates-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-bom-templates-meticulous/2026-04-18-e2e-bom-templates-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-bom-templates-meticulous.md",
+      "file": "2026-04-18-e2e-bom-templates-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-breadboard-tab-tested-already-deeply-audited-per-bl-plan",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-breadboard-tab-tested-already-deeply-audited-per-bl-plan/2026-04-18-e2e-breadboard-tab-tested-already-deeply-audited-per-bl-plan.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-breadboard-tab-tested-already-deeply-audited-per-bl-plan.md",
+      "file": "2026-04-18-e2e-breadboard-tab-tested-already-deeply-audited-per-bl-plan.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-calculators-meticulous-baby-step",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-calculators-meticulous-baby-step/2026-04-18-e2e-calculators-meticulous-baby-step.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-calculators-meticulous-baby-step.md",
+      "file": "2026-04-18-e2e-calculators-meticulous-baby-step.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-circuit-code-tab-tested",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-circuit-code-tab-tested/2026-04-18-e2e-circuit-code-tab-tested.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-circuit-code-tab-tested.md",
+      "file": "2026-04-18-e2e-circuit-code-tab-tested.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-comments-design-review-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-comments-design-review-meticulous/2026-04-18-e2e-comments-design-review-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-comments-design-review-meticulous.md",
+      "file": "2026-04-18-e2e-comments-design-review-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-community-meticulous-baby-step",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-community-meticulous-baby-step/2026-04-18-e2e-community-meticulous-baby-step.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-community-meticulous-baby-step.md",
+      "file": "2026-04-18-e2e-community-meticulous-baby-step.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-community-tab-tested",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-community-tab-tested/2026-04-18-e2e-community-tab-tested.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-community-tab-tested.md",
+      "file": "2026-04-18-e2e-community-tab-tested.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-component-editor-tab-tested",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-component-editor-tab-tested/2026-04-18-e2e-component-editor-tab-tested.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-component-editor-tab-tested.md",
+      "file": "2026-04-18-e2e-component-editor-tab-tested.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-dashboard-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-dashboard-meticulous/2026-04-18-e2e-dashboard-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-dashboard-meticulous.md",
+      "file": "2026-04-18-e2e-dashboard-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-dashboard-tab-tested",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-dashboard-tab-tested/2026-04-18-e2e-dashboard-tab-tested.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-dashboard-tab-tested.md",
+      "file": "2026-04-18-e2e-dashboard-tab-tested.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-digital-twin-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-digital-twin-meticulous/2026-04-18-e2e-digital-twin-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-digital-twin-meticulous.md",
+      "file": "2026-04-18-e2e-digital-twin-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-exports-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-exports-meticulous/2026-04-18-e2e-exports-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-exports-meticulous.md",
+      "file": "2026-04-18-e2e-exports-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-generative-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-generative-meticulous/2026-04-18-e2e-generative-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-generative-meticulous.md",
+      "file": "2026-04-18-e2e-generative-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-history-design-version-history-meticulous-baby-step",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-history-design-version-history-meticulous-baby-step/2026-04-18-e2e-history-design-version-history-meticulous-baby-step.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-history-design-version-history-meticulous-baby-step.md",
+      "file": "2026-04-18-e2e-history-design-version-history-meticulous-baby-step.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-inventory-storage-meticulous-baby-step",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-inventory-storage-meticulous-baby-step/2026-04-18-e2e-inventory-storage-meticulous-baby-step.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-inventory-storage-meticulous-baby-step.md",
+      "file": "2026-04-18-e2e-inventory-storage-meticulous-baby-step.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-labs-meticulous-baby-step",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-labs-meticulous-baby-step/2026-04-18-e2e-labs-meticulous-baby-step.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-labs-meticulous-baby-step.md",
+      "file": "2026-04-18-e2e-labs-meticulous-baby-step.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-learn-knowledge-tab-tested",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-learn-knowledge-tab-tested/2026-04-18-e2e-learn-knowledge-tab-tested.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-learn-knowledge-tab-tested.md",
+      "file": "2026-04-18-e2e-learn-knowledge-tab-tested.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-learn-meticulous-baby-step",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-learn-meticulous-baby-step/2026-04-18-e2e-learn-meticulous-baby-step.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-learn-meticulous-baby-step.md",
+      "file": "2026-04-18-e2e-learn-meticulous-baby-step.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-lifecycle-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-lifecycle-meticulous/2026-04-18-e2e-lifecycle-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-lifecycle-meticulous.md",
+      "file": "2026-04-18-e2e-lifecycle-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-method-note-efficient-walkthrough",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-method-note-efficient-walkthrough/2026-04-18-e2e-method-note-efficient-walkthrough.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-method-note-efficient-walkthrough.md",
+      "file": "2026-04-18-e2e-method-note-efficient-walkthrough.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-my-parts-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-my-parts-meticulous/2026-04-18-e2e-my-parts-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-my-parts-meticulous.md",
+      "file": "2026-04-18-e2e-my-parts-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-order-pcb-meticulous-baby-step",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-order-pcb-meticulous-baby-step/2026-04-18-e2e-order-pcb-meticulous-baby-step.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-order-pcb-meticulous-baby-step.md",
+      "file": "2026-04-18-e2e-order-pcb-meticulous-baby-step.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-order-pcb-tab-tested",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-order-pcb-tab-tested/2026-04-18-e2e-order-pcb-tab-tested.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-order-pcb-tab-tested.md",
+      "file": "2026-04-18-e2e-order-pcb-tab-tested.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-10-schematic-tab-deep-dive-e2e-845",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-10-schematic-tab-deep-dive-e2e-845/2026-04-18-e2e-pass-10-schematic-tab-deep-dive-e2e-845.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-10-schematic-tab-deep-dive-e2e-845.md",
+      "file": "2026-04-18-e2e-pass-10-schematic-tab-deep-dive-e2e-845.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-11-schematic-wiring-component-play-e2e-874",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-11-schematic-wiring-component-play-e2e-874/2026-04-18-e2e-pass-11-schematic-wiring-component-play-e2e-874.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-11-schematic-wiring-component-play-e2e-874.md",
+      "file": "2026-04-18-e2e-pass-11-schematic-wiring-component-play-e2e-874.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-12-schematic-iterate-innovate-e2e-915",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-12-schematic-iterate-innovate-e2e-915/2026-04-18-e2e-pass-12-schematic-iterate-innovate-e2e-915.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-12-schematic-iterate-innovate-e2e-915.md",
+      "file": "2026-04-18-e2e-pass-12-schematic-iterate-innovate-e2e-915.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-12b-schematic-re-do-on-a-populated-canvas-e2e-942",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-12b-schematic-re-do-on-a-populated-canvas-e2e-942/2026-04-18-e2e-pass-12b-schematic-re-do-on-a-populated-canvas-e2e-942.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-12b-schematic-re-do-on-a-populated-canvas-e2e-942.md",
+      "file": "2026-04-18-e2e-pass-12b-schematic-re-do-on-a-populated-canvas-e2e-942.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-13-ui-ux-design-system-deep-dive-e2e-968",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-13-ui-ux-design-system-deep-dive-e2e-968/2026-04-18-e2e-pass-13-ui-ux-design-system-deep-dive-e2e-968.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-13-ui-ux-design-system-deep-dive-e2e-968.md",
+      "file": "2026-04-18-e2e-pass-13-ui-ux-design-system-deep-dive-e2e-968.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-2-app-wide-critique-cross-tab-themes",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-2-app-wide-critique-cross-tab-themes/2026-04-18-e2e-pass-2-app-wide-critique-cross-tab-themes.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-2-app-wide-critique-cross-tab-themes.md",
+      "file": "2026-04-18-e2e-pass-2-app-wide-critique-cross-tab-themes.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-2-visual-flow-audience-critique",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-2-visual-flow-audience-critique/2026-04-18-e2e-pass-2-visual-flow-audience-critique.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-2-visual-flow-audience-critique.md",
+      "file": "2026-04-18-e2e-pass-2-visual-flow-audience-critique.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-3-missed-sections-competitive-innovation-e2e-497-onwards",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-3-missed-sections-competitive-innovation-e2e-497-onwards/2026-04-18-e2e-pass-3-missed-sections-competitive-innovation-e2e-497-onwards.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-3-missed-sections-competitive-innovation-e2e-497-onwards.md",
+      "file": "2026-04-18-e2e-pass-3-missed-sections-competitive-innovation-e2e-497-onwards.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-4-breadboard-lab-deep-dive-e2e-562-onwards",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-4-breadboard-lab-deep-dive-e2e-562-onwards/2026-04-18-e2e-pass-4-breadboard-lab-deep-dive-e2e-562-onwards.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-4-breadboard-lab-deep-dive-e2e-562-onwards.md",
+      "file": "2026-04-18-e2e-pass-4-breadboard-lab-deep-dive-e2e-562-onwards.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-5-breadboard-wiring-component-play-workflow-e2e-611",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-5-breadboard-wiring-component-play-workflow-e2e-611/2026-04-18-e2e-pass-5-breadboard-wiring-component-play-workflow-e2e-611.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-5-breadboard-wiring-component-play-workflow-e2e-611.md",
+      "file": "2026-04-18-e2e-pass-5-breadboard-wiring-component-play-workflow-e2e-611.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-6-iterate-innovate-e2e-676",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-6-iterate-innovate-e2e-676/2026-04-18-e2e-pass-6-iterate-innovate-e2e-676.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-6-iterate-innovate-e2e-676.md",
+      "file": "2026-04-18-e2e-pass-6-iterate-innovate-e2e-676.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-7-architecture-tab-deep-dive-e2e-743",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-7-architecture-tab-deep-dive-e2e-743/2026-04-18-e2e-pass-7-architecture-tab-deep-dive-e2e-743.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-7-architecture-tab-deep-dive-e2e-743.md",
+      "file": "2026-04-18-e2e-pass-7-architecture-tab-deep-dive-e2e-743.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-8-architecture-node-edge-interaction-e2e-779",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-8-architecture-node-edge-interaction-e2e-779/2026-04-18-e2e-pass-8-architecture-node-edge-interaction-e2e-779.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-8-architecture-node-edge-interaction-e2e-779.md",
+      "file": "2026-04-18-e2e-pass-8-architecture-node-edge-interaction-e2e-779.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pass-9-architecture-iterate-innovate-e2e-819",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-9-architecture-iterate-innovate-e2e-819/2026-04-18-e2e-pass-9-architecture-iterate-innovate-e2e-819.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-9-architecture-iterate-innovate-e2e-819.md",
+      "file": "2026-04-18-e2e-pass-9-architecture-iterate-innovate-e2e-819.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-patterns-meticulous-baby-step",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-patterns-meticulous-baby-step/2026-04-18-e2e-patterns-meticulous-baby-step.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-patterns-meticulous-baby-step.md",
+      "file": "2026-04-18-e2e-patterns-meticulous-baby-step.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-pcb-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pcb-meticulous/2026-04-18-e2e-pcb-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pcb-meticulous.md",
+      "file": "2026-04-18-e2e-pcb-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-procurement-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-procurement-meticulous/2026-04-18-e2e-procurement-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-procurement-meticulous.md",
+      "file": "2026-04-18-e2e-procurement-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-procurement-tab-tested",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-procurement-tab-tested/2026-04-18-e2e-procurement-tab-tested.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-procurement-tab-tested.md",
+      "file": "2026-04-18-e2e-procurement-tab-tested.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-schematic-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-schematic-meticulous/2026-04-18-e2e-schematic-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-schematic-meticulous.md",
+      "file": "2026-04-18-e2e-schematic-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-serial-monitor-meticulous-baby-step",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-serial-monitor-meticulous-baby-step/2026-04-18-e2e-serial-monitor-meticulous-baby-step.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-serial-monitor-meticulous-baby-step.md",
+      "file": "2026-04-18-e2e-serial-monitor-meticulous-baby-step.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-simulation-meticulous-baby-step",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-simulation-meticulous-baby-step/2026-04-18-e2e-simulation-meticulous-baby-step.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-simulation-meticulous-baby-step.md",
+      "file": "2026-04-18-e2e-simulation-meticulous-baby-step.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-simulation-tab-tested",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-simulation-tab-tested/2026-04-18-e2e-simulation-tab-tested.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-simulation-tab-tested.md",
+      "file": "2026-04-18-e2e-simulation-tab-tested.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-starter-circuits-meticulous-baby-step",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-starter-circuits-meticulous-baby-step/2026-04-18-e2e-starter-circuits-meticulous-baby-step.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-starter-circuits-meticulous-baby-step.md",
+      "file": "2026-04-18-e2e-starter-circuits-meticulous-baby-step.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-supply-chain-meticulous",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-supply-chain-meticulous/2026-04-18-e2e-supply-chain-meticulous.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-supply-chain-meticulous.md",
+      "file": "2026-04-18-e2e-supply-chain-meticulous.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-tab-inventory-dynamic-32-35-after-first-node-added",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-tab-inventory-dynamic-32-35-after-first-node-added/2026-04-18-e2e-tab-inventory-dynamic-32-35-after-first-node-added.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-tab-inventory-dynamic-32-35-after-first-node-added.md",
+      "file": "2026-04-18-e2e-tab-inventory-dynamic-32-35-after-first-node-added.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-tasks-kanban-meticulous-baby-step",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-tasks-kanban-meticulous-baby-step/2026-04-18-e2e-tasks-kanban-meticulous-baby-step.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-tasks-kanban-meticulous-baby-step.md",
+      "file": "2026-04-18-e2e-tasks-kanban-meticulous-baby-step.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-tasks-kanban-tab-tested",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-tasks-kanban-tab-tested/2026-04-18-e2e-tasks-kanban-tab-tested.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-tasks-kanban-tab-tested.md",
+      "file": "2026-04-18-e2e-tasks-kanban-tab-tested.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-tl-dr-top-opportunities-ux-idea",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-tl-dr-top-opportunities-ux-idea/2026-04-18-e2e-tl-dr-top-opportunities-ux-idea.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-tl-dr-top-opportunities-ux-idea.md",
+      "file": "2026-04-18-e2e-tl-dr-top-opportunities-ux-idea.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-tl-dr-top-p0-p1-bugs-action-items",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-tl-dr-top-p0-p1-bugs-action-items/2026-04-18-e2e-tl-dr-top-p0-p1-bugs-action-items.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-tl-dr-top-p0-p1-bugs-action-items.md",
+      "file": "2026-04-18-e2e-tl-dr-top-p0-p1-bugs-action-items.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-validation-tab-tested-revealed-by-clicking-coach-help-dynamic-tab",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-validation-tab-tested-revealed-by-clicking-coach-help-dynamic-tab/2026-04-18-e2e-validation-tab-tested-revealed-by-clicking-coach-help-dynamic-tab.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-validation-tab-tested-revealed-by-clicking-coach-help-dynamic-tab.md",
+      "file": "2026-04-18-e2e-validation-tab-tested-revealed-by-clicking-coach-help-dynamic-tab.md",
+      "created": "2026-04-18T00:00:00Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "2026-04-18-e2e-vault-tab-tested",
+      "type": "extract",
+      "status": "pending",
+      "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-vault-tab-tested/2026-04-18-e2e-vault-tab-tested.md",
+      "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-vault-tab-tested.md",
+      "file": "2026-04-18-e2e-vault-tab-tested.md",
+      "created": "2026-04-18T00:00:00Z",
       "next_claim_start": 63
     }
   ],
