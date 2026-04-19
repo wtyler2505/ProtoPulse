@@ -2,7 +2,16 @@
 name: "ARIA grid pattern for SVG canvas with 830 cells (breadboard) — vault-gap stub"
 description: "Gap flagged by 03-a11y-systemic.md Wave 10 Task 10.3 + Phase 7 (breadboard tie-points). Seed for /extract."
 captured_date: 2026-04-19
-extraction_status: pending
+extraction_status: extracted
+extracted_date: 2026-04-19
+extracted_notes:
+  - aria-grid-pattern-fits-breadboard-terminal-strips-but-not-the-full-canvas-because-power-rails-lack-row-column-semantics
+  - breadboard-keyboard-nav-contract-arrow-keys-within-zones-tab-between-zones
+  - aria-grid-role-is-an-anti-pattern-for-anything-that-is-not-a-spreadsheet
+  - role-application-suppresses-screen-reader-browse-mode-and-should-be-avoided-for-mixed-content
+  - roving-tabindex-is-more-reliable-than-aria-activedescendant-for-grid-focus-management
+  - aria-rowindex-and-aria-colindex-let-sparse-grids-announce-position-without-rendering-all-cells
+  - highly-interactive-items-without-meaningful-row-column-relationships-are-not-grids
 triage_status: gap-stub
 source_type: vault-gap-seed
 origin:
