@@ -1,6 +1,7 @@
-import { Search, SlidersHorizontal, Plus, Download, Zap, Layers } from 'lucide-react';
+import { Search, SlidersHorizontal, Plus, Download, Zap, Layers, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
+import { VaultHoverCard } from '@/components/ui/vault-hover-card';
 import { cn } from '@/lib/utils';
 
 export interface BomToolbarProps {
@@ -59,6 +60,7 @@ export function BomToolbar({
             Cost Optimisation
           </Button>
         </StyledTooltip>
+        {/* TODO(plan-10-wave-2): add vault info icon on Cost Optimisation + Assembly toggles */}
         <StyledTooltip content={esdFilterOnly ? 'Show all components' : `Show ESD-sensitive only (${esdCount})`} side="bottom">
           <Button
             variant="outline"
@@ -69,6 +71,15 @@ export function BomToolbar({
           >
             <Zap className="w-4 h-4 mr-2" />
             ESD{esdCount > 0 && <span className="ml-1 text-[10px] font-mono">({esdCount})</span>}
+            <VaultHoverCard topic="electrostatic-discharge-esd-protection-filter-definition">
+              <span
+                className="ml-1 inline-flex items-center opacity-60 hover:opacity-100 transition-opacity"
+                data-testid="esd-vault-info"
+                aria-label="About ESD filter"
+              >
+                <Info className="w-3 h-3" />
+              </span>
+            </VaultHoverCard>
           </Button>
         </StyledTooltip>
         <StyledTooltip content={showAssemblyGroups ? 'Show flat BOM list' : 'Group by assembly category'} side="bottom">
