@@ -1,15 +1,14 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "dBm is power expressed as a logarithmic ratio against a fixed 1 mW reference: dBm = 10·log₁₀(P/1mW), so 0 dBm ≡ 1 mW, +10 dBm = 10 mW, +20 dBm = 100 mW, and +3 dBm ≈ ×2 power; the log-scale exists because RF chains add gains and losses additively in dB where they would multiply in linear units"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: 'dBm is power expressed as a logarithmic ratio against a fixed 1 mW reference: dBm = 10·log₁₀(P/1mW), so 0 dBm ≡ 1 mW, +10 dBm = 10 mW...'
+type: reference
 confidence: proven
 topics:
-  - "[[moc-electronics-math]]"
-  - "[[eda-fundamentals]]"
+- moc-electronics-math
+- eda-fundamentals
 ---
-
 # dbm vs mw rf power unit ratio
 
 **[beginner]** dBm is the unit RF engineers use for power. It is decibels relative to 1 milliwatt. The conversion formulas are:

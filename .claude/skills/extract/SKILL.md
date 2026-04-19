@@ -477,12 +477,37 @@ Bad: "context management strategies" (topic label, not a claim)
 
 **b. Write the {vocabulary.note}**
 
+> **v2 frontmatter schema (canonical — enforced by `/vault-quality-gate`):**
+> `.claude/skills/vault-validate/assets/frontmatter-v2.schema.json`
+>
+> Hard rules:
+> - `description` MUST be ≤140 characters (tooltip-grade — it powers `<VaultHoverCard>`)
+> - `type` MUST be one of `{claim, pattern, reference, moc, meta}`. Map nuanced categories:
+>   - methodology / implementation-pattern / architecture-decision / convention / gotcha / ux-pattern → `pattern`
+>   - concept / definition / taxonomy / open-question → `reference`
+>   - tension → `claim`
+>   - topic-map → `moc`
+> - `topics` MUST be an array of bare slugs (NOT wiki-linked). At least one topic MUST resolve to an existing `knowledge/<slug>.md` MOC file.
+> - `confidence: verified` MUST be accompanied by a `provenance` array with at least one source. Use `supported` if you cannot cite.
+
 ```markdown
 ---
-description: [~150 chars elaborating the claim, adds info beyond title]
-type: [claim | methodology | problem | learning | tension]
+name: [file-stem slug — must match filename]
+description: [≤140 chars elaborating the claim, adds info beyond title — tooltip-grade]
+type: claim | pattern | reference | moc | meta
+topics:
+  - [bare-slug-of-existing-moc]       # at least one MUST resolve to knowledge/<slug>.md
+  - [additional-bare-slug]             # no [[brackets]], lowercase-kebab-case
+audience:                               # optional; powers progressive disclosure
+  - beginner | intermediate | expert
+confidence: speculative | emerging | supported | verified | established
+provenance:                             # REQUIRED when confidence == verified
+  - source: datasheet | standard | community | vendor-doc | textbook | paper | experiment | code | other
+    url: https://...                    # optional but preferred
+    page: [integer or section id]       # optional
+related:                                # optional; mirrors wiki-links in body
+  - [bare-slug]
 created: YYYY-MM-DD
-[domain-specific fields from derivation-manifest]
 ---
 
 # [prose-as-title proposition]
@@ -494,25 +519,36 @@ Acknowledge uncertainty where appropriate.
 Consider the strongest counterargument.
 Show the path to the conclusion, not just the conclusion.
 
+## Evidence
+
+[Cite primary sources inline or via URL links. If you listed provenance in frontmatter, cross-reference here.]
+
+## Application
+
+[When to use this claim / how it applies in practice. Pedagogy lives here.]
+
 ---
 
-Source: [[source filename]]
+Source: [[source-file-stem]]
 
 Relevant Notes:
-- [[related claim]] — [why it relates: extends, contradicts, builds on]
-
-Topics:
-- [[relevant {vocabulary.topic_map}]]
+- [[related-claim-bare-slug]] — [why it relates: extends, contradicts, builds on]
 ```
 
-**c. Verify before writing**
+**c. Verify before writing (v2-compliance checklist)**
 
-- Title passes the claim test ("this {vocabulary.note} argues that [title]")
-- Description adds information beyond the title (not a restatement)
-- Body shows reasoning, not just assertion
-- At least one relevant {vocabulary.note} connection identified
-- At least one {vocabulary.topic_map} link
-- Source attribution present
+- [ ] Title passes the claim test ("this note argues that [title]")
+- [ ] `name` matches the file stem exactly (no extension, no brackets)
+- [ ] `description` is ≤140 chars AND adds information beyond the title (not a restatement)
+- [ ] `type` is one of `{claim, pattern, reference, moc, meta}` (map per table above)
+- [ ] `topics` is an array of bare slugs (no `[[...]]` wrapping)
+- [ ] At least one topic resolves to an existing `knowledge/<topic>.md` file (run `ls knowledge/ | grep -F "<topic>"` to verify)
+- [ ] If `confidence: verified`, `provenance` has ≥1 entry with `source` + ideally `url`
+- [ ] Body has ≥2 cross-links (`[[wiki]]` or `knowledge/<slug>.md`)
+- [ ] Body has either `## Evidence` / `## Why` section OR at least one URL citation OR a provenance entry
+- [ ] Source attribution present
+
+**Fallback if uncertain:** use `type: reference` and `confidence: supported` — these are the safest defaults and won't block the gate.
 
 **d. Create the file**
 

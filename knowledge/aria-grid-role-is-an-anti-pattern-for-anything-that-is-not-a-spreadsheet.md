@@ -1,13 +1,12 @@
 ---
-description: "Roselli's rule: `role=\"grid\"` is designed for Excel-class editing surfaces, and applying it to lists, tables-with-clickable-rows, or layout grids actively breaks screen-reader table navigation and confuses keyboard users who expect Tab to move between controls."
+description: 'Roselli''s rule: `role="grid"` is designed for Excel-class editing surfaces, and applying it to lists, tables-with-clickable-rows...'
 type: claim
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[architecture-decisions]]"
-  - "[[ux-patterns]]"
+- a11y
+- architecture-decisions
+- ux-patterns
 ---
-
 # ARIA grid role is an anti-pattern for anything that is not a spreadsheet
 
 The most common misuse of WAI-ARIA is reaching for `role="grid"` because a UI *looks* gridlike or because the author wants to collapse many tab stops into one. Both motivations produce worse accessibility than doing nothing. Adrian Roselli's empirical testing shows that when a table or list gets `role="grid"` bolted on, screen readers simultaneously announce "grid" and "table" semantics (confusing), lose row/column-position announcements inconsistently (per NVDA/JAWS version), and force keyboard users into arrow-key-only navigation that contradicts the universal "Tab moves to the next control" expectation.

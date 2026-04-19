@@ -1,21 +1,22 @@
 ---
-description: "WCAG 2.4.3 Focus Order (Level A) is often summarized as 'Tab order matches visual order' — but the criterion actually says Tab order must match the content's MEANING, which is usually but not always visual order, and CSS flex/grid reordering can create cases where visual and DOM order intentionally diverge in ways that still pass the criterion."
+description: WCAG 2.4.3 Focus Order (Level A) is often summarized as 'Tab order matches visual order'...
 type: claim
-audience: [intermediate, expert]
+audience:
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "W3C WCAG 2.1 Understanding SC 2.4.3 Focus Order"
-    url: "https://www.w3.org/WAI/WCAG21/Understanding/focus-order.html"
-  - source: "W3C WCAG 2.1 Understanding SC 2.4.7 Focus Visible"
-    url: "https://www.w3.org/WAI/WCAG21/Understanding/focus-visible.html"
+- source: W3C WCAG 2.1 Understanding SC 2.4.3 Focus Order
+  url: https://www.w3.org/WAI/WCAG21/Understanding/focus-order.html
+- source: W3C WCAG 2.1 Understanding SC 2.4.7 Focus Visible
+  url: https://www.w3.org/WAI/WCAG21/Understanding/focus-visible.html
 ---
-
 # WCAG 2.4.3 Focus Order mandates Tab sequence matches meaning and visual order is not the test
 
 SC 2.4.3 Focus Order (Level A) is widely summarized as "Tab order should match visual order" but the criterion text is more precise: "If a Web page can be navigated sequentially and the navigation sequences affect meaning or operation, focusable components receive focus in an order that preserves meaning and operability." The subject is **meaning**, not visual sequence. For the common case of a linear document, meaning and visual order coincide and "Tab matches visual" is a useful proxy. But CSS flex-direction:reverse, CSS grid placement, and `order` properties can legitimately reverse visual order for presentation reasons while DOM order continues to reflect meaning — in which case Tab should follow DOM (meaningful) order, not visual (presentational) order.

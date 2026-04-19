@@ -1,16 +1,15 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "The RC lowpass cutoff f_c = 1/(2πRC) comes from two layered facts: the angular cutoff is ω_c = 1/τ = 1/RC rad/s, and the 2π converts rad/s to Hz; cutoff is defined at the −3 dB (half-power) point where output amplitude is 1/√2 of input and phase lag is exactly 45°"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: 'The RC lowpass cutoff f_c = 1/(2πRC) comes from two layered facts: the angular cutoff is ω_c = 1/τ = 1/RC rad/s...'
+type: reference
 confidence: proven
 topics:
-  - "[[moc-electronics-math]]"
-  - "[[eda-fundamentals]]"
-  - "[[passives]]"
+- moc-electronics-math
+- eda-fundamentals
+- passives
 ---
-
 # rc lowpass cutoff frequency 1 over 2 pi rc
 
 **[beginner]** An RC lowpass filter (one resistor in series, one capacitor from output to ground) passes slow signals and blocks fast ones. The cutoff frequency — the boundary between "passed" and "blocked" — is **f_c = 1 / (2π · R · C)**. Calculator card example: R = 10 kΩ, C = 100 nF gives f_c = 1 / (2π · 10000 · 100e-9) = 159 Hz. Below 159 Hz, the signal gets through mostly intact. Above 159 Hz, it gets attenuated at 20 dB/decade (a factor of 10 for every 10× increase in frequency). Typical use cases: smoothing a PWM signal into analog voltage, debouncing a button, anti-aliasing before an ADC.

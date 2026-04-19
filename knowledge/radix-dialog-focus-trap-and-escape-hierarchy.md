@@ -1,17 +1,16 @@
 ---
-description: "Radix Dialog's focus trap is implemented by FocusScope — it captures focus inside Content on open, cycles Tab/Shift+Tab within the trap, and on Escape fires onEscapeKeyDown → onOpenChange(false) → onCloseAutoFocus, which returns focus to the element that triggered open."
+description: Radix Dialog's focus trap is implemented by FocusScope — it captures focus inside Content on open, cycles Tab/Shift+Tab within the trap...
 type: claim
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[maker-ux]]"
-  - "[[architecture-decisions]]"
-  - "[[ux-patterns]]"
+- a11y
+- maker-ux
+- architecture-decisions
+- ux-patterns
 related_components:
-  - "client/src/components/ui/dialog.tsx"
-  - "client/src/components/ui/popover.tsx"
+- client/src/components/ui/dialog.tsx
+- client/src/components/ui/popover.tsx
 ---
-
 # Radix Dialog focus trap and Escape hierarchy
 
 Radix `Dialog.Content` wraps its children in a `FocusScope` with `trapped` and `loop` enabled by default. The lifecycle is deterministic and every step is overridable — which is what makes it both the right default and a landmine when teams reach for the override props without understanding the sequence.

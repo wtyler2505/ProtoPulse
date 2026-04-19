@@ -1,14 +1,13 @@
 ---
-description: WCAG 2.1 Level A criterion forbids color as the only visual means of conveying information, indicating action, prompting response, or distinguishing elements — a second channel is required.
+description: WCAG 2.1 Level A criterion forbids color as the only visual means of conveying information, indicating action, prompting response...
 type: claim
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 ---
-
 # WCAG 2.1 SC 1.4.1 says color cannot be the sole channel for meaning
 
 The criterion text, verbatim: "Color is not used as the only visual means of conveying information, indicating an action, prompting a response, or distinguishing a visual element." It is Level **A** — the lowest conformance tier, meaning an interface that violates it is not merely imperfect; it fails baseline accessibility.

@@ -1,25 +1,26 @@
 ---
-description: "APG splits tabs into two variants — automatic activation (panel shown on arrow-key focus) and manual activation (panel shown only on Enter/Space) — and the choice is not cosmetic: manual is mandatory whenever panels are lazy-loaded, fetch data, or would cause layout thrash, because auto-activation under those conditions creates announcement storms and perceived lag for keyboard users."
+description: APG splits tabs into two variants — automatic activation (panel shown on arrow-key focus) and manual activation (panel shown only on...
 type: claim
-audience: [intermediate, expert]
+audience:
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "W3C WAI-ARIA Authoring Practices Guide — Tabs Pattern"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/tabs/"
-  - source: "W3C APG — Tabs with Manual Activation Example"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/tabs/examples/tabs-manual/"
-  - source: "W3C APG — Tabs with Automatic Activation Example"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/tabs/examples/tabs-automatic/"
-  - source: "Radix UI Primitives — Tabs"
-    url: "https://www.radix-ui.com/primitives/docs/components/tabs"
+- source: W3C WAI-ARIA Authoring Practices Guide — Tabs Pattern
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/tabs/
+- source: W3C APG — Tabs with Manual Activation Example
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/tabs/examples/tabs-manual/
+- source: W3C APG — Tabs with Automatic Activation Example
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/tabs/examples/tabs-automatic/
+- source: Radix UI Primitives — Tabs
+  url: https://www.radix-ui.com/primitives/docs/components/tabs
 ---
-
 # ARIA tabs pattern requires manual activation when panel content is not instantly available
 
 The APG defines three coordinating roles — `tablist` (the strip), `tab` (each clickable header, owned by tablist), and `tabpanel` (the content region). The wiring runs both directions: each `tab` has `aria-controls` pointing at its `tabpanel`'s id, and each `tabpanel` has `aria-labelledby` pointing at its `tab`'s id. Exactly one tab has `aria-selected="true"` at any time; the others have `aria-selected="false"`. This is where most hand-rolled implementations drift — they either omit `aria-selected` entirely (relying on visual highlight, failing SC 4.1.2 Name, Role, Value) or leave stale `aria-selected` values during animated transitions.

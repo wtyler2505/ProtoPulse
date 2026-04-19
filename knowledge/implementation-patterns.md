@@ -1,11 +1,10 @@
 ---
-description: "Topic map for ProtoPulse implementation patterns — reusable code recipes (focus management, sparse-grid announcements, Drizzle transactions, jsonb+typed-column hybrids, FK-cascade deletes) that apply across features; the 'how we build things here' layer below architecture decisions and above component code."
+description: Topic map for ProtoPulse implementation patterns — reusable code recipes (focus management, sparse-grid announcements...
 type: moc
 topics:
-  - "[[index]]"
-  - "[[architecture-decisions]]"
+- index
+- architecture-decisions
 ---
-
 # implementation-patterns
 
 Implementation patterns are the codified "how" of ProtoPulse: the code recipes that recur across features, the conventions every new contributor needs to recognize, and the anti-patterns avoided often enough to warrant written capture. They sit between [[architecture-decisions]] (why we chose X) and feature code (this specific implementation).

@@ -1,21 +1,23 @@
 ---
-description: "SC 3.2.1 On Focus (Level A) forbids any 'significant change' triggered solely by focus (no auto-submit, no navigation, no popup) because focus is not a user decision it is a navigational consequence — and SC 3.3.2 Labels or Instructions (Level A) requires every form input to have a persistent label (placeholder-only fails because it disappears on input) so users who tab back can confirm what they are filling in."
+description: SC 3.2.1 On Focus (Level A) forbids any 'significant change' triggered solely by focus (no auto-submit, no navigation...
 type: claim
-audience: [beginner, intermediate, expert]
+audience:
+- beginner
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "W3C WCAG 2.1 Understanding SC 3.2.1 On Focus"
-    url: "https://www.w3.org/WAI/WCAG21/Understanding/on-focus.html"
-  - source: "W3C WCAG 2.1 Understanding SC 3.3.2 Labels or Instructions"
-    url: "https://www.w3.org/WAI/WCAG21/Understanding/labels-or-instructions.html"
+- source: W3C WCAG 2.1 Understanding SC 3.2.1 On Focus
+  url: https://www.w3.org/WAI/WCAG21/Understanding/on-focus.html
+- source: W3C WCAG 2.1 Understanding SC 3.3.2 Labels or Instructions
+  url: https://www.w3.org/WAI/WCAG21/Understanding/labels-or-instructions.html
 ---
-
 # WCAG 3.2.1 and 3.3.2 prevent surprise no context change on focus alone and every input must be labeled
 
 SC 3.2.1 On Focus (Level A) prohibits any significant change of context that is triggered "automatically when any user interface component receives focus." The spec enumerates context changes: launching a new window, focusing a different element, moving to a different web page, rearranging the page structure. Focus is not a user decision in the intentional sense — users tab through elements as a navigational consequence, not as a commitment. A dropdown that auto-expands when it receives focus (rather than on click or Enter) is a 3.2.1 violation because keyboard users who are merely tabbing-past get an unexpected popup. A form that auto-submits when the last field is tabbed-out-of is a 3.2.1 violation because the tab-away is not a submission intent.

@@ -1,12 +1,11 @@
 ---
-description: "Higley's rule: a surface only deserves `role=\"grid\"` if BOTH conditions hold — interaction is the primary purpose AND there is a meaningful row-column relationship users navigate along both axes; visually 2D but semantically 1D layouts (photo galleries, app launchers, card grids) are lists or landmarks, not grids."
+description: 'Higley''s rule: a surface only deserves `role="grid"` if BOTH conditions hold...'
 type: claim
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[architecture-decisions]]"
+- a11y
+- architecture-decisions
 ---
-
 # Highly interactive items without meaningful row-column relationships are not grids
 
 Sarah Higley's grids-vs-tables framework resolves the most common author confusion: "my UI has rows and columns visually, so it's a grid, right?" The answer is no, and the missing test is whether the row/column axes *mean* something the user needs to navigate along. A grid is two-dimensional navigation over two-dimensional semantics. Visually-2D-but-semantically-1D surfaces are lists with a CSS grid layout, not ARIA grids.

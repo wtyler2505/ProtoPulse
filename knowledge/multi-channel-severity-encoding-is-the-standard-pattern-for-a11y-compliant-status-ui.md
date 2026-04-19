@@ -1,14 +1,13 @@
 ---
-description: Severity indicators must carry meaning on at least two of {color, icon/shape, text label, pattern, position} so the signal survives any single channel failing — this is the operational contract that satisfies WCAG 1.4.1.
-type: methodology
+description: Severity indicators must carry meaning on at least two of {color, icon/shape, text label, pattern...
+type: pattern
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[ux-patterns]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- ux-patterns
+- architecture-decisions
+- maker-ux
 ---
-
 # Multi-channel severity encoding is the standard pattern for a11y-compliant status UI
 
 Given that [[WCAG 2.1 SC 1.4.1 says color cannot be the sole channel for meaning]], the question shifts from "is color allowed?" to "which second channel should ride alongside it?" The standard answer is a layered encoding: color + icon + text label, with shape/position/pattern as fallback channels when text is impractical (dense canvases, chart legends, PCB layer stacks).

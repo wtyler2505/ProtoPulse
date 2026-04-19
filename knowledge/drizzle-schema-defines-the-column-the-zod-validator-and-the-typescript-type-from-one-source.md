@@ -1,16 +1,15 @@
 ---
-description: "ProtoPulse's canonical Drizzle pattern: one pgTable() call produces the migration, the Zod validator (via createInsertSchema), and the TS types ($inferSelect) — with .omit()/.extend() narrowing server-managed fields and tightening enums."
-type: implementation-pattern
-source: "shared/schema.ts, server/db.ts"
-confidence: verified
+description: 'ProtoPulse''s canonical Drizzle pattern: one pgTable() call produces the migration, the Zod validator (via createInsertSchema)...'
+type: pattern
+source: shared/schema.ts, server/db.ts
+confidence: supported
 topics:
-  - "[[backend-persistence-patterns]]"
-  - "[[architecture-decisions]]"
+- backend-persistence-patterns
+- architecture-decisions
 related_components:
-  - shared/schema.ts
-  - server/storage/
+- shared/schema.ts
+- server/storage/
 ---
-
 # Drizzle schema defines the column, the Zod validator, and the TypeScript type from one source
 
 Every table in `shared/schema.ts` follows the same four-line contract: declare the `pgTable`, derive the insert validator with `createInsertSchema(table).omit({...}).extend({...})`, export `type InsertX = z.infer<typeof insertXSchema>`, and export `type X = typeof table.$inferSelect`. The column list is the only place where shape lives — migrations, validation, and compile-time types are all projections of that single declaration.

@@ -1,23 +1,25 @@
 ---
-description: "The ARIA disclosure pattern is the simplest APG widget — a native <button> with aria-expanded and aria-controls — and its power is that it explicitly is NOT a menu, popover, or tooltip, so developers who reach for role=menu to build a disclosure are over-engineering and importing keyboard-interaction bugs that disclosure does not have."
+description: The ARIA disclosure pattern is the simplest APG widget — a native <button> with aria-expanded and aria-controls...
 type: claim
-audience: [beginner, intermediate, expert]
+audience:
+- beginner
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "W3C WAI-ARIA Authoring Practices Guide — Disclosure Pattern"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/"
-  - source: "W3C APG — Disclosure Navigation Menu Example"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/examples/disclosure-navigation/"
-  - source: "Radix UI Primitives — Collapsible"
-    url: "https://www.radix-ui.com/primitives/docs/components/collapsible"
+- source: W3C WAI-ARIA Authoring Practices Guide — Disclosure Pattern
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/
+- source: W3C APG — Disclosure Navigation Menu Example
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/examples/disclosure-navigation/
+- source: Radix UI Primitives — Collapsible
+  url: https://www.radix-ui.com/primitives/docs/components/collapsible
 ---
-
 # ARIA disclosure is button plus aria-expanded and anything more complex is a different pattern
 
 The APG disclosure pattern has exactly four requirements: (1) the toggle element is a native `<button>` (not a `<div>` with `role="button"` unless native button is impossible — which it almost never is), (2) `aria-expanded="true"` when content is visible and `aria-expanded="false"` when hidden, (3) `aria-controls` pointing at the id of the disclosed region, and (4) Enter and Space both toggle the button. That is the entire pattern. There is no arrow-key handling, no focus trap, no popup, no portal, no `aria-haspopup`, no role on the disclosed content. The disclosed region is just a regular container — a `<div>`, a `<section>`, whatever — with no special ARIA role and no focus management.

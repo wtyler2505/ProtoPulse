@@ -1,16 +1,15 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "Series resistors add (R_total = ΣR); parallel resistors combine as reciprocal-of-sum-of-reciprocals (1/R_total = Σ 1/Rᵢ), with the two-resistor shortcut R_total = R1·R2/(R1+R2); the invariant that matters is parallel combinations are always smaller than the smallest contributor and series are always larger than the largest"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: Series resistors add (R_total = ΣR); parallel resistors combine as reciprocal-of-sum-of-reciprocals (1/R_total = Σ 1/Rᵢ)...
+type: reference
 confidence: proven
 topics:
-  - "[[moc-electronics-math]]"
-  - "[[eda-fundamentals]]"
-  - "[[passives]]"
+- moc-electronics-math
+- eda-fundamentals
+- passives
 ---
-
 # resistor series and parallel combining formulas
 
 **[beginner]** Two resistors in series (end-to-end): add them. 10 kΩ + 4.7 kΩ = 14.7 kΩ. Two resistors in parallel (side-by-side, both ends connected): use the product-over-sum shortcut, R1·R2/(R1+R2). 10 kΩ in parallel with 10 kΩ = 100/20 = 5 kΩ — two equal resistors in parallel always equal half. The calculator card takes any list of resistors and a mode (series or parallel) and returns the equivalent single resistance. You reach for these whenever you need a value you do not have in stock: need 15 kΩ, have 10 k and 4.7 k — series them. Need 5 kΩ, have two 10 kΩ — parallel them.

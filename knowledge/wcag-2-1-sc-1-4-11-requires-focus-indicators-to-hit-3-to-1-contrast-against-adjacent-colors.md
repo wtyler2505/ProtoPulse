@@ -1,21 +1,24 @@
 ---
-description: "SC 1.4.11 Non-text Contrast mandates a 3:1 ratio between the focus indicator and whatever colors touch it — a single solid outline fails whenever the background sits near the indicator's hue, so a dual-outline cage is the only pattern that survives arbitrary backgrounds"
+description: SC 1.4.11 Non-text Contrast mandates a 3:1 ratio between the focus indicator and whatever colors touch it...
 type: claim
-audience: [intermediate, expert]
+audience:
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
-topics: ["[[maker-ux]]", "[[architecture-decisions]]"]
+topics:
+- maker-ux
+- architecture-decisions
 provenance:
-  - source: "W3C WCAG 2.1 Understanding SC 1.4.11 Non-text Contrast"
-    url: "https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast.html"
-  - source: "W3C WCAG 2.2 Understanding SC 2.4.11 Focus Not Obscured (Minimum)"
-    url: "https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html"
-  - source: "W3C WCAG 2.2 Understanding SC 2.4.13 Focus Appearance (AAA)"
-    url: "https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance.html"
-  - source: "Sara Soueidan — A Guide to Designing Accessible, WCAG-Compliant Focus Indicators"
-    url: "https://www.sarasoueidan.com/blog/focus-indicators/"
+- source: W3C WCAG 2.1 Understanding SC 1.4.11 Non-text Contrast
+  url: https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast.html
+- source: W3C WCAG 2.2 Understanding SC 2.4.11 Focus Not Obscured (Minimum)
+  url: https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html
+- source: W3C WCAG 2.2 Understanding SC 2.4.13 Focus Appearance (AAA)
+  url: https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance.html
+- source: Sara Soueidan — A Guide to Designing Accessible, WCAG-Compliant Focus Indicators
+  url: https://www.sarasoueidan.com/blog/focus-indicators/
 ---
-
 # WCAG 2.1 SC 1.4.11 requires focus indicators to hit 3:1 contrast against adjacent colors
 
 SC 1.4.11 Non-text Contrast treats the focus ring as a user-interface component state and demands at least a **3:1 contrast ratio** between the indicator and every color it sits against. The computed ratio is not rounded — 2.999:1 fails. When the indicator is drawn *outside* a control (the common `outline` case) the ratio is measured against the **background the control sits on**, not the control itself. When drawn *inside* the control it is measured against the control's own fill. Partial indicators that straddle the boundary pass if *either* of the two regions clears 3:1.

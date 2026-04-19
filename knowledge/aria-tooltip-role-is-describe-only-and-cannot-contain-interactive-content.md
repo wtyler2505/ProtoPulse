@@ -1,27 +1,28 @@
 ---
-description: "ARIA role=tooltip is strictly a description carrier referenced via aria-describedby — it cannot contain buttons, links, or any focusable children, must dismiss on blur AND on Escape, and must appear on BOTH hover and keyboard focus (never hover-only) — which is why 'rich tooltips' with actions are structurally different widgets that should use role=dialog or a popover instead."
+description: ARIA role=tooltip is strictly a description carrier referenced via aria-describedby — it cannot contain buttons, links...
 type: claim
-audience: [intermediate, expert]
+audience:
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "W3C WAI-ARIA Authoring Practices Guide — Tooltip Pattern"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/"
-  - source: "MDN — ARIA: tooltip role"
-    url: "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/tooltip_role"
-  - source: "Vispero — Tooltips are presentational"
-    url: "https://vispero.com/resources/tooltips-are-presentational/"
-  - source: "Radix UI Primitives — Tooltip"
-    url: "https://www.radix-ui.com/primitives/docs/components/tooltip"
-  - source: "W3C — WCAG 2.1 SC 1.4.13 Content on Hover or Focus"
-    url: "https://www.w3.org/WAI/WCAG21/Understanding/content-on-hover-or-focus.html"
+- source: W3C WAI-ARIA Authoring Practices Guide — Tooltip Pattern
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/
+- source: 'MDN — ARIA: tooltip role'
+  url: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/tooltip_role
+- source: Vispero — Tooltips are presentational
+  url: https://vispero.com/resources/tooltips-are-presentational/
+- source: Radix UI Primitives — Tooltip
+  url: https://www.radix-ui.com/primitives/docs/components/tooltip
+- source: W3C — WCAG 2.1 SC 1.4.13 Content on Hover or Focus
+  url: https://www.w3.org/WAI/WCAG21/Understanding/content-on-hover-or-focus.html
 ---
-
 # ARIA tooltip role is describe-only and cannot contain interactive content
 
 The APG tooltip pattern is the most commonly misused widget in modern UI libraries because its constraints are stricter than the name suggests. A tooltip is **purely descriptive** — it supplements the accessible name of the element it describes, is referenced via `aria-describedby` on the owning element (not `aria-labelledby`, and not on the tooltip itself), and must contain no interactive children. No buttons. No links. No form fields. The moment a "tooltip" contains something focusable, it is structurally a different widget — typically a popover or non-modal dialog — and should carry that role instead.

@@ -1,21 +1,20 @@
 ---
-description: "Multi-statement writes in ProtoPulse (replaceNodes, replaceEdges, seed, project-io) live inside `db.transaction(async (tx) => ...)`, where every query uses the tx handle so a thrown error rolls the entire diff back atomically."
-type: implementation-pattern
-source: "server/storage/architecture.ts, server/storage/projects.ts, server/storage/parts.ts, server/routes/seed.ts"
-confidence: verified
+description: Multi-statement writes in ProtoPulse (replaceNodes, replaceEdges, seed, project-io) live inside `db.transaction(async (tx) => ...)`...
+type: pattern
+source: server/storage/architecture.ts, server/storage/projects.ts, server/storage/parts.ts, server/routes/seed.ts
+confidence: supported
 topics:
-  - "[[backend-persistence-patterns]]"
-  - "[[implementation-patterns]]"
+- backend-persistence-patterns
+- implementation-patterns
 related_components:
-  - server/storage/architecture.ts
-  - server/storage/projects.ts
-  - server/storage/parts.ts
-  - server/storage/validation.ts
-  - server/routes/components.ts
-  - server/routes/seed.ts
-  - server/routes/project-io.ts
+- server/storage/architecture.ts
+- server/storage/projects.ts
+- server/storage/parts.ts
+- server/storage/validation.ts
+- server/routes/components.ts
+- server/routes/seed.ts
+- server/routes/project-io.ts
 ---
-
 # Drizzle transactions wrap read-modify-write sequences with tx-scoped queries
 
 The pattern recurs in at least eight storage and route files. `await this.db.transaction(async (tx) => { ... })` opens a transaction; every `tx.select()`, `tx.update()`, `tx.insert().values().returning()` inside the closure reuses the same connection; throwing rolls everything back. Using the module-level `db` inside the closure would execute against a different connection, breaking isolation — that's the footgun `tx` exists to prevent.

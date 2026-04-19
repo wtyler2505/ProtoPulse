@@ -1,16 +1,15 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "Ohm's Law V = I·R is the definition of resistance, not an empirical law discovered by experiment; it says that for ohmic materials, the ratio of voltage to current is a constant we call resistance, and that ratio is what a multimeter's resistance mode actually measures"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: Ohm's Law V = I·R is the definition of resistance, not an empirical law discovered by experiment; it says that for ohmic materials...
+type: reference
 confidence: proven
 topics:
-  - "[[moc-electronics-math]]"
-  - "[[eda-fundamentals]]"
-  - "[[passives]]"
+- moc-electronics-math
+- eda-fundamentals
+- passives
 ---
-
 # ohms law v equals i times r derivation
 
 **[beginner]** If you push 1 volt across a 1-ohm resistor, 1 amp flows. Double the voltage, double the current. Half the voltage, half the current. The formula V = I·R (or its rearrangements I = V/R, R = V/I) is the single most-used equation in electronics because every current-limiting, voltage-dividing, power-calculating problem reduces to it. A concrete example the Calculators tab uses: push 5 V across a 1 kΩ resistor, the current is 5 V / 1000 Ω = 5 mA — safely under any MCU GPIO budget.

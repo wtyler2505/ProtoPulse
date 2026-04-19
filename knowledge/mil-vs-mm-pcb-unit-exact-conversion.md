@@ -1,16 +1,15 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "1 mil = 0.0254 mm exactly — the inch was redefined to exactly 25.4 mm in the 1959 international yard and pound agreement, so mil↔mm conversions are exact rational numbers with zero rounding error, and this is why PCB grids like 100-mil headers work out to clean 2.54 mm pitch"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: 1 mil = 0.0254 mm exactly — the inch was redefined to exactly 25.4 mm in the 1959 international yard and pound agreement...
+type: reference
 confidence: proven
 topics:
-  - "[[moc-electronics-math]]"
-  - "[[eda-fundamentals]]"
-  - "[[eda-pcb-design]]"
+- moc-electronics-math
+- eda-fundamentals
+- eda-pcb-design
 ---
-
 # mil vs mm pcb unit exact conversion
 
 **[beginner]** A "mil" in PCB and mechanical engineering is one-thousandth of an inch (not a millimeter — the name is confusing). The conversion is **1 mil = 0.0254 mm** exactly. Calculator card example: a trace specified at 10 mil width is 0.254 mm; a 0.4 mm fine-pitch QFP package converts to 15.75 mil pitch. The most-used conversion in through-hole work: **100 mil = 2.54 mm**, which is the standard pitch of DIP headers, breadboard rows, and 0.1" prototyping board holes.

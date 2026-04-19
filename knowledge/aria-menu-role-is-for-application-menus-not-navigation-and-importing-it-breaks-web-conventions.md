@@ -1,25 +1,26 @@
 ---
-description: "APG draws a sharp line between menus (application-only, arrow-key mandated, Tab exits entirely) and navigation (use role=navigation with list of links, Tab cycles through links) — and putting role=menu on a site nav forces desktop-app keyboard semantics onto content that users expect to Tab through, breaking both keyboard users and screen-reader navigation modes."
+description: APG draws a sharp line between menus (application-only, arrow-key mandated...
 type: claim
-audience: [intermediate, expert]
+audience:
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "W3C WAI-ARIA Authoring Practices Guide — Menu and Menubar Pattern"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/menubar/"
-  - source: "W3C WAI-ARIA Authoring Practices Guide — Menu Button Pattern"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/"
-  - source: "MDN — ARIA: menu role"
-    url: "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/menu_role"
-  - source: "Radix UI Primitives — DropdownMenu"
-    url: "https://www.radix-ui.com/primitives/docs/components/dropdown-menu"
+- source: W3C WAI-ARIA Authoring Practices Guide — Menu and Menubar Pattern
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/menubar/
+- source: W3C WAI-ARIA Authoring Practices Guide — Menu Button Pattern
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/
+- source: 'MDN — ARIA: menu role'
+  url: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/menu_role
+- source: Radix UI Primitives — DropdownMenu
+  url: https://www.radix-ui.com/primitives/docs/components/dropdown-menu
 ---
-
 # ARIA menu role is for application menus not navigation and importing it breaks web conventions
 
 The APG is unambiguous on when `role="menu"` and `role="menubar"` are appropriate: they model **desktop application menus** — File, Edit, View, Tools — where each item invokes a command or toggles state. They are **not** appropriate for site navigation, which should use `<nav>` (implicit `role="navigation"`) wrapping a list of links. The difference is not decorative; it imposes opposite keyboard contracts. In a menu, arrow keys mandatorily navigate between items, Tab **exits** the menu entirely (it does not cycle through menu items), and type-ahead (single printable character jumps to item whose label begins with that character) is required. In navigation, Tab cycles through each link, arrow keys do nothing special, and type-ahead is not implemented.

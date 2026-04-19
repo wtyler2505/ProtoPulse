@@ -1,16 +1,15 @@
 ---
-description: "ProtoPulse connects Drizzle through `drizzle-orm/node-postgres` with a long-lived `pg.Pool` (max 20, 30s idle, 5s connect, conditional SSL) plus exponential-backoff `checkConnection`, not the Neon serverless driver many Drizzle examples assume."
-type: architecture-decision
-source: "server/db.ts, drizzle.config.ts, package.json"
-confidence: verified
+description: ProtoPulse connects Drizzle through `drizzle-orm/node-postgres` with a long-lived `pg.Pool` (max 20, 30s idle, 5s connect...
+type: pattern
+source: server/db.ts, drizzle.config.ts, package.json
+confidence: supported
 topics:
-  - "[[backend-persistence-patterns]]"
-  - "[[architecture-decisions]]"
+- backend-persistence-patterns
+- architecture-decisions
 related_components:
-  - server/db.ts
-  - drizzle.config.ts
+- server/db.ts
+- drizzle.config.ts
 ---
-
 # ProtoPulse uses node-postgres pool, not Neon serverless, and configures pool limits explicitly
 
 `server/db.ts` imports `drizzle` from `drizzle-orm/node-postgres`, wraps a `pg.Pool` with `max: 20, idleTimeoutMillis: 30000, connectionTimeoutMillis: 5000`, and toggles `ssl: { rejectUnauthorized: false }` only when `NODE_ENV === "production"`. The `dialect: "postgresql"` in `drizzle.config.ts` is generic Postgres — there is no Neon serverless driver, no HTTP fetch adapter, no `neon-http` import. A standard TCP pool holds 20 persistent connections per Node process.

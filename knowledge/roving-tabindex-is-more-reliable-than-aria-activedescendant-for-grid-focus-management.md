@@ -1,12 +1,11 @@
 ---
-description: "Roving tabindex (set tabindex=0 on the focused cell, tabindex=-1 on all others) gives screen readers a real DOM focus event and lets the browser auto-scroll the cell into view; aria-activedescendant only moves a virtual pointer and has known VoiceOver bugs on grid/combobox roles."
+description: Roving tabindex (set tabindex=0 on the focused cell...
 type: claim
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[implementation-patterns]]"
+- a11y
+- implementation-patterns
 ---
-
 # Roving tabindex is more reliable than aria-activedescendant for grid focus management
 
 Both techniques solve the same problem — how to let arrow keys move an "active" cell around a grid while keeping the grid as a single tab stop in the page sequence — but they take different contracts with the browser and screen reader.

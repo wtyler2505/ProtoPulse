@@ -1,15 +1,14 @@
 ---
-description: "Focus-trap correctness cannot be validated in jsdom — Tab/Shift+Tab key events do not move focus in jsdom the way they do in real browsers — so every focus-management assertion must run in Playwright with real page.keyboard.press('Tab') sequences and document.activeElement polling."
+description: Focus-trap correctness cannot be validated in jsdom...
 type: claim
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[testing-patterns]]"
-  - "[[architecture-decisions]]"
+- a11y
+- testing-patterns
+- architecture-decisions
 related_components:
-  - "tests/e2e/a11y/*.spec.ts"
+- tests/e2e/a11y/*.spec.ts
 ---
-
 # Playwright focus-trap testing requires real Tab sequences not jsdom
 
 jsdom implements the DOM specification but does not implement the browser's focus-management algorithm. `element.focus()` works. `element.tabIndex = 0` works. But firing a `KeyboardEvent({key: 'Tab'})` does NOT move focus in jsdom — focus only moves via explicit `.focus()` calls or user-agent shell interaction, neither of which jsdom simulates.

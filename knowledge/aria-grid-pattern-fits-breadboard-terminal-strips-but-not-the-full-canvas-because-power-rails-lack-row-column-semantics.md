@@ -1,17 +1,16 @@
 ---
-description: "The breadboard's ~830 tie-points split into six zones — 4 linear power rails and 2 terminal strips (63 rows × 5 columns each); only the terminal strips pass Higley's two-axis semantic test, so grid role applies per-zone, not canvas-wide."
-type: architecture-decision
+description: The breadboard's ~830 tie-points split into six zones — 4 linear power rails and 2 terminal strips (63 rows × 5 columns each)...
+type: pattern
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[breadboard-intelligence]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- breadboard-intelligence
+- architecture-decisions
+- maker-ux
 related_components:
-  - "client/src/components/breadboard/BreadboardCanvas.tsx"
-  - "client/src/components/breadboard/TiePoint.tsx"
+- client/src/components/breadboard/BreadboardCanvas.tsx
+- client/src/components/breadboard/TiePoint.tsx
 ---
-
 # ARIA grid pattern fits breadboard terminal strips but not the full canvas because power rails lack row-column semantics
 
 The breadboard canvas renders ~830 SVG tie-point holes, and the instinctive fix for the Wave 10 a11y gap is to slap `role="grid"` on the `<svg>` root and be done with it. That fix is wrong on inspection: the breadboard is not a single 2D grid. It is six zones, and only two of them pass the grid-role test.

@@ -1,25 +1,26 @@
 ---
-description: "The ARIA combobox role is a container contract, not a widget — it requires a focusable text input plus a separate popup element (listbox, grid, tree, or dialog) wired via aria-controls + aria-expanded + aria-activedescendant, and Radix ships no combobox primitive so ProtoPulse must compose it from Popover + an input or adopt Downshift/Base UI."
+description: The ARIA combobox role is a container contract, not a widget...
 type: claim
-audience: [intermediate, expert]
+audience:
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "W3C WAI-ARIA Authoring Practices Guide — Combobox Pattern"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/combobox/"
-  - source: "W3C APG — Editable Combobox With List Autocomplete Example"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/combobox/examples/combobox-autocomplete-list/"
-  - source: "MDN — ARIA: combobox role"
-    url: "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/combobox_role"
-  - source: "Radix UI Primitives — Select component (NOT a combobox)"
-    url: "https://www.radix-ui.com/primitives/docs/components/select"
+- source: W3C WAI-ARIA Authoring Practices Guide — Combobox Pattern
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/combobox/
+- source: W3C APG — Editable Combobox With List Autocomplete Example
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/combobox/examples/combobox-autocomplete-list/
+- source: 'MDN — ARIA: combobox role'
+  url: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/combobox_role
+- source: Radix UI Primitives — Select component (NOT a combobox)
+  url: https://www.radix-ui.com/primitives/docs/components/select
 ---
-
 # ARIA combobox requires input plus popup because the role alone does not describe the widget
 
 The ARIA combobox role is the most commonly botched widget in the APG because developers treat `role="combobox"` as a self-contained component, when the spec defines it as a **coordination contract** between two distinct elements: a focusable input that carries the combobox role, and a separate popup that presents suggestions. The popup's own role determines the variant — `listbox` (the 95% case), `grid` (tabular suggestions), `tree` (hierarchical), or `dialog` (rich composite). The combobox role without a popup is meaningless; the popup without the wiring is an orphan. This is why single-node "combobox" components ship broken.

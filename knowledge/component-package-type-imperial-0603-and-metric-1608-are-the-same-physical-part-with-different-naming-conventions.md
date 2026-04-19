@@ -1,17 +1,16 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "Passive package codes like 0603 and 1206 are imperial inch-based (0.06\" × 0.03\"), while metric codes like 1608 and 3216 describe the same bodies in millimeters (1.6mm × 0.8mm) — IC packages (SOIC, QFN, BGA, TO-92) instead use JEDEC or IPC names that encode pitch, lead style, and pin count"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: Passive package codes like 0603 and 1206 are imperial inch-based (0.06" × 0.03")...
+type: reference
 confidence: proven
 topics:
-  - "[[moc-component-metadata-fields]]"
-  - "[[eda-fundamentals]]"
-  - "[[eda-pcb-design]]"
+- moc-component-metadata-fields
+- eda-fundamentals
+- eda-pcb-design
 related_components: []
 ---
-
 # component package type imperial 0603 and metric 1608 are the same physical part with different naming conventions
 
 Package type is the physical body specification. It is the single biggest source of beginner confusion because two completely different naming systems are used side-by-side and nobody tells you which is which.

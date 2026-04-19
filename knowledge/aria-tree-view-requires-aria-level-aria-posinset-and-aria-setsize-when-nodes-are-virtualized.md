@@ -1,23 +1,24 @@
 ---
-description: "Tree views that render all nodes in DOM can rely on browsers to compute aria-level, aria-posinset, and aria-setsize from structure — but the moment virtualization or lazy-loading enters, authors MUST specify all three explicitly on every rendered node or screen readers announce meaningless position data, because browser computation only works for complete DOM trees."
+description: Tree views that render all nodes in DOM can rely on browsers to compute aria-level, aria-posinset, and aria-setsize from structure...
 type: claim
-audience: [intermediate, expert]
+audience:
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "W3C WAI-ARIA Authoring Practices Guide — Tree View Pattern"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/treeview/"
-  - source: "W3C APG — Navigation Treeview Example"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/treeview/examples/treeview-navigation/"
-  - source: "MDN — ARIA states and properties"
-    url: "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes"
+- source: W3C WAI-ARIA Authoring Practices Guide — Tree View Pattern
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/treeview/
+- source: W3C APG — Navigation Treeview Example
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/treeview/examples/treeview-navigation/
+- source: MDN — ARIA states and properties
+  url: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes
 ---
-
 # ARIA tree view requires aria-level aria-posinset and aria-setsize when nodes are virtualized
 
 The APG tree view pattern splits cleanly into two implementation styles based on how nodes are rendered. For "all nodes always in DOM" trees, the browser's accessibility-tree computation derives `aria-level`, `aria-posinset`, and `aria-setsize` automatically from the structural nesting and sibling relationships — authors need only set `role="tree"` on the container, `role="treeitem"` on each node, and `aria-expanded` on parent nodes (never on leaf nodes, which would misleadingly mark them as having children). The tree container needs `role="tree"`; its immediate `role="treeitem"` children form level 1, their nested children form level 2, and so on.

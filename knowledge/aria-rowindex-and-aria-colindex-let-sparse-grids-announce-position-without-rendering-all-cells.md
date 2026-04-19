@@ -1,12 +1,11 @@
 ---
-description: "When a grid does not render every logical cell in the DOM — virtualized, collapsed, or intentionally partial — `aria-rowindex`/`aria-colindex` on the cells that DO exist tell the screen reader the cell's position in the *logical* grid, and `aria-rowcount`/`aria-colcount` on the grid container tell it the total size; missing or inconsistent values silently break screen-reader row-skip commands."
+description: When a grid does not render every logical cell in the DOM — virtualized, collapsed, or intentionally partial...
 type: claim
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[implementation-patterns]]"
+- a11y
+- implementation-patterns
 ---
-
 # aria-rowindex and aria-colindex let sparse grids announce position without rendering all cells
 
 A grid is "sparse" when the DOM does not contain every cell of the logical grid — either because the grid is virtualized for performance (only the visible rows are rendered), collapsed for density (zoom level hides the non-selected rows), or intentionally partial (only the cells that currently hold a component get rendered to SVG). The problem is that a screen reader computes "cell 5 of 63" by counting DOM siblings, and if only 12 of 63 rows are in the DOM, the count is wrong.

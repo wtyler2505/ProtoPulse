@@ -1,16 +1,15 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "Decoupling cap sizing has two tiers: the rule-of-thumb (100 nF ceramic per IC VCC pin, plus 10 μF bulk per supply rail) handles 99% of digital designs; the impedance-curve method (Z_target = V_ripple / I_transient, then select caps whose parallel impedance stays below Z_target across the IC's switching spectrum) is required for high-speed, low-noise, or power-integrity-critical designs"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: 'Decoupling cap sizing has two tiers: the rule-of-thumb (100 nF ceramic per IC VCC pin...'
+type: reference
 confidence: proven
 topics:
-  - "[[moc-electronics-math]]"
-  - "[[eda-fundamentals]]"
-  - "[[passives]]"
+- moc-electronics-math
+- eda-fundamentals
+- passives
 ---
-
 # decoupling cap sizing rule of thumb vs impedance curve
 
 **[beginner]** Decoupling capacitors (also called bypass caps) sit between an IC's VCC pin and ground, as close to the pin as possible. Their job is to supply the fast transient currents the IC draws when it switches internally, so those currents do not have to travel back up the power trace and cause voltage dips. The universal rule of thumb: **100 nF (0.1 μF) ceramic per VCC pin** on every IC, plus one **10 μF bulk cap** per power rail somewhere near where the rail enters the board. That is the first-pass answer 99% of hobby and most commercial digital designs use, and it is what the Calculators tab suggests by default. Calculator card example: an ATmega328P has one VCC pin and one AVCC pin, so 2 × 100 nF plus 1 × 10 μF on the 5 V rail — three capacitors total.

@@ -1,17 +1,16 @@
 ---
-description: "ProtoPulse convention: every modal overlay that blocks the page (component property editor, delete confirm, import wizard) uses Radix Dialog; every transient overlay anchored to a trigger (tool tooltips, mini inspectors, quick-pickers) uses Radix Popover — Dialog traps focus and dims the page, Popover does neither."
+description: 'ProtoPulse convention: every modal overlay that blocks the page (component property editor, delete confirm...'
 type: claim
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
-  - "[[ux-patterns]]"
+- a11y
+- architecture-decisions
+- maker-ux
+- ux-patterns
 related_components:
-  - "client/src/components/ui/dialog.tsx"
-  - "client/src/components/ui/popover.tsx"
+- client/src/components/ui/dialog.tsx
+- client/src/components/ui/popover.tsx
 ---
-
 # ProtoPulse uses Dialog for modal and Popover for anchored overlays
 
 The choice between Dialog and Popover is not stylistic — it's a behavioral contract. Dialog says "the rest of the page is blocked until you dismiss me." Popover says "I'm floating near my trigger, click anywhere else to dismiss me." Mixing these gets teams into the `modal={false}` escape hatch, which is almost always the wrong fix.

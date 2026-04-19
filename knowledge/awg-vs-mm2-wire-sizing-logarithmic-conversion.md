@@ -1,15 +1,14 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "AWG is a logarithmic 39-step scale between two fixed anchors (36 AWG = 0.005 in, 0000 AWG = 0.46 in, ratio 92), so area in mm² = 0.012668 · 92^((36-AWG)/19.5); every 3-gauge step halves or doubles cross-sectional area, which is the only number most people need to remember"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: AWG is a logarithmic 39-step scale between two fixed anchors (36 AWG = 0.005 in, 0000 AWG = 0.46 in, ratio 92)...
+type: reference
 confidence: proven
 topics:
-  - "[[moc-electronics-math]]"
-  - "[[eda-fundamentals]]"
+- moc-electronics-math
+- eda-fundamentals
 ---
-
 # awg vs mm2 wire sizing logarithmic conversion
 
 **[beginner]** American Wire Gauge (AWG) is the US system for wire thickness. Lower number = thicker wire: 10 AWG is thick (power wiring), 30 AWG is thin (wire-wrap prototyping). The exact conversion to cross-sectional area in mm² is **area = 0.012668 × 92^((36 − AWG) / 19.5) mm²**, which is the formula the Calculator card uses. The number everyone should memorize instead is the shortcut: **every 3 AWG steps doubles the area** (and every 6 steps doubles the diameter). So 12 AWG is twice the area of 15 AWG, four times 18 AWG, eight times 21 AWG. Going the other way, 20 AWG is half of 17 AWG, a quarter of 14 AWG. Typical maker-scale numbers: 22 AWG ≈ 0.33 mm² (breadboard jumper), 18 AWG ≈ 0.82 mm² (screw terminals), 14 AWG ≈ 2.08 mm² (motor phase wiring), 10 AWG ≈ 5.26 mm² (high-current battery leads).

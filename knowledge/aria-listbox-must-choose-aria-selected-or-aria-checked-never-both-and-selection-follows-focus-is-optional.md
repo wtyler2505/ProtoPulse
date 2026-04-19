@@ -1,23 +1,24 @@
 ---
-description: "The APG listbox pattern forces a pick-one choice between aria-selected (selection is tracked separately from focus) and aria-checked (each option is independently toggleable) — the two cannot coexist on the same listbox, and 'selection follows focus' is an explicit opt-in variant, not the default behavior."
+description: The APG listbox pattern forces a pick-one choice between aria-selected (selection is tracked separately from focus) and aria-checked...
 type: claim
-audience: [intermediate, expert]
+audience:
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "W3C WAI-ARIA Authoring Practices Guide — Listbox Pattern"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/listbox/"
-  - source: "W3C APG — Listbox Grouped Options Example"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/listbox/examples/listbox-grouped/"
-  - source: "W3C APG — Scrollable Listbox Example"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/listbox/examples/listbox-scrollable/"
+- source: W3C WAI-ARIA Authoring Practices Guide — Listbox Pattern
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/listbox/
+- source: W3C APG — Listbox Grouped Options Example
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/listbox/examples/listbox-grouped/
+- source: W3C APG — Scrollable Listbox Example
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/listbox/examples/listbox-scrollable/
 ---
-
 # ARIA listbox must choose aria-selected or aria-checked never both and selection follows focus is optional
 
 The APG listbox pattern has a less-known but load-bearing constraint: an implementation MUST pick exactly one of two conventions for encoding selection state, and mixing them is a bug that screen readers report inconsistently. Option A: use `aria-selected` on each option, with the listbox carrying `aria-multiselectable="true"` when more than one can be selected. Option B: use `aria-checked` on each option, modeling each as an independent toggle (and omitting `aria-multiselectable`). The APG explicitly recommends "aria-selected for single-select, aria-checked for multi-select" as a default convention but emphasizes this is preference, not mandate — the hard rule is **never specify both attributes on the same listbox**. Implementations that set both (common in libraries that defensively add "all the attributes") produce "selected and checked" double-announcements on NVDA and state confusion on VoiceOver.

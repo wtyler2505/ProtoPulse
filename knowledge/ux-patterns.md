@@ -1,12 +1,11 @@
 ---
-description: "Topic map for ProtoPulse UX patterns — accessibility-grounded interaction design where every visual affordance has a keyboard path, every status has a non-color channel, and every overlay has a dismiss contract; organized by pattern family rather than by component."
+description: Topic map for ProtoPulse UX patterns — accessibility-grounded interaction design where every visual affordance has a keyboard path...
 type: moc
 topics:
-  - "[[index]]"
-  - "[[a11y]]"
-  - "[[architecture-decisions]]"
+- index
+- a11y
+- architecture-decisions
 ---
-
 # ux-patterns
 
 ProtoPulse UX patterns codify the ways interactions are composed in this codebase. The organizing principle is that UX and a11y are the same decision, not parallel concerns — every interaction pattern captured here resolves both the sighted-maker ergonomics and the assistive-tech contract in one move. Patterns live here when they are reusable across at least two surfaces; single-surface quirks go in [[gotchas]].

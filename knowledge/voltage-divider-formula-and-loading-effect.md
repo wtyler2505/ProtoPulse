@@ -1,16 +1,15 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "Voltage divider Vout = Vin · R2/(R1+R2) is a direct Ohm's Law consequence that holds only when downstream load impedance is at least 10× R2; when load Z approaches R2, the load appears in parallel with R2 and collapses the ratio, which is why ADC inputs are usually fine (high-Z) but driving LEDs through a divider is not"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: Voltage divider Vout = Vin · R2/(R1+R2) is a direct Ohm's Law consequence that holds only when downstream load impedance is at least 10×...
+type: reference
 confidence: proven
 topics:
-  - "[[moc-electronics-math]]"
-  - "[[eda-fundamentals]]"
-  - "[[passives]]"
+- moc-electronics-math
+- eda-fundamentals
+- passives
 ---
-
 # voltage divider formula and loading effect
 
 **[beginner]** A voltage divider is two resistors in series from your supply to ground, with the output tapped between them. The formula is **Vout = Vin · R2/(R1+R2)** where R2 is the resistor on the ground side. Calculator card example: Vin = 12 V, R1 = 10 kΩ, R2 = 5 kΩ, so Vout = 12 · 5000/15000 = 4.0 V. The divider is the universal "how do I turn a 12 V battery signal into something a 3.3 V ADC can read?" answer, and it is the pattern behind every resistive sensor (thermistor, LDR, potentiometer) where one of the two resistors is the sensor.

@@ -1,25 +1,26 @@
 ---
-description: "Radix UI Toast's default aria-live='off' on the Viewport (open issue #3634) means toast announcements never reach screen readers unless each Root explicitly overrides — silent WCAG 4.1.3 Status Messages failure that passes axe-core because axe only validates presence, not effective announcement behavior."
+description: 'Radix UI Toast''s default aria-live=''off'' on the Viewport (open issue #3634) means toast announcements never reach screen readers unless...'
 type: claim
-audience: [intermediate, expert]
+audience:
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "GitHub — radix-ui/primitives Issue #3634: Toast not announced to screen readers due to aria-live='off'"
-    url: "https://github.com/radix-ui/primitives/issues/3634"
-  - source: "MDN — ARIA live regions"
-    url: "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Guides/Live_regions"
-  - source: "W3C WCAG 2.1 Understanding SC 4.1.3 Status Messages"
-    url: "https://www.w3.org/WAI/WCAG21/Understanding/status-messages.html"
-  - source: "Sara Soueidan — Accessible notifications with ARIA Live Regions"
-    url: "https://www.sarasoueidan.com/blog/accessible-notifications-with-aria-live-regions-part-1/"
+- source: 'GitHub — radix-ui/primitives Issue #3634: Toast not announced to screen readers due to aria-live=''off'''
+  url: https://github.com/radix-ui/primitives/issues/3634
+- source: MDN — ARIA live regions
+  url: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Guides/Live_regions
+- source: W3C WCAG 2.1 Understanding SC 4.1.3 Status Messages
+  url: https://www.w3.org/WAI/WCAG21/Understanding/status-messages.html
+- source: Sara Soueidan — Accessible notifications with ARIA Live Regions
+  url: https://www.sarasoueidan.com/blog/accessible-notifications-with-aria-live-regions-part-1/
 ---
-
 # Radix Toast ships aria-live='off' by default which silently hides notifications from screen readers
 
 Radix UI's `Toast` primitive has a known and unresolved accessibility defect as of April 2026: the `Toast.Viewport` root element is rendered with `aria-live="off"` regardless of the Toast.Root's `type` prop, which means toasts announced by the library never reach screen readers unless each individual `Toast.Root` overrides `aria-live` or `role="status"` manually. GitHub issue #3634 documents the bug with reproductions against NVDA, JAWS, and VoiceOver. The issue is open because fixing it at the Viewport level would regress users who intentionally suppress announcements by setting `type="foreground"` per-toast, and the Radix API doesn't currently expose a Viewport-level `aria-live` override. The practical consequence is that every ProtoPulse surface that renders toasts today is in silent WCAG 4.1.3 Status Messages violation.

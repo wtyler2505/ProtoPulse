@@ -53,6 +53,10 @@ TYPE_ALIASES = {
     "tension-note": "claim",
     "open-question": "reference",
     "question": "reference",
+    "concept": "reference",
+    "definition": "reference",
+    "taxonomy": "reference",
+    "topic-map": "moc",
     "pattern,": "pattern",
     # Already-valid values are passthrough below.
 }

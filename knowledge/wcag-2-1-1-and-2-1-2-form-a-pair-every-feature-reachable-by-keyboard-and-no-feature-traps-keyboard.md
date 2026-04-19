@@ -1,21 +1,23 @@
 ---
-description: "WCAG 2.1.1 Keyboard (Level A) demands every interactive feature be operable without a pointer, and 2.1.2 No Keyboard Trap (Level A) demands the keyboard path have no dead ends — the two are paired because either alone is insufficient: a fully-keyboard-operable widget that traps focus is still inaccessible, and a trap-free page that requires a mouse is equally failing."
+description: WCAG 2.1.1 Keyboard (Level A) demands every interactive feature be operable without a pointer...
 type: claim
-audience: [beginner, intermediate, expert]
+audience:
+- beginner
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "W3C WCAG 2.1 Understanding SC 2.1.1 Keyboard"
-    url: "https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html"
-  - source: "W3C WCAG 2.1 Understanding SC 2.1.2 No Keyboard Trap"
-    url: "https://www.w3.org/WAI/WCAG21/Understanding/no-keyboard-trap.html"
+- source: W3C WCAG 2.1 Understanding SC 2.1.1 Keyboard
+  url: https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html
+- source: W3C WCAG 2.1 Understanding SC 2.1.2 No Keyboard Trap
+  url: https://www.w3.org/WAI/WCAG21/Understanding/no-keyboard-trap.html
 ---
-
 # WCAG 2.1.1 and 2.1.2 form a pair every feature reachable by keyboard and no feature traps keyboard
 
 These two Level A criteria are the bedrock of keyboard accessibility and they must be read together because either alone is insufficient for conformance. SC 2.1.1 Keyboard requires that "all functionality of the content is operable through a keyboard interface without requiring specific timings for individual keystrokes" — every button, link, form control, drag-and-drop interaction, and custom widget must have a keyboard path. The exception is "where the underlying function requires input that depends on the path of the user's movement and not just the endpoints" — which covers freehand drawing and is almost never invoked correctly. Most features developers think are "mouse-essential" (drag-reordering, node-positioning, zoom-to-fit) have well-established keyboard equivalents (Space to grab, arrows to move, Space to drop; Alt+number shortcuts; Home/End/= for zoom reset/fit/100%).

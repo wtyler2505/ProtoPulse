@@ -1,16 +1,15 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "LED current-limiting resistor is R = (V_source − V_f) / I_f — the source voltage minus the LED's forward voltage drop, divided by the target current; first-pass math ignores thermal derating, MCU GPIO current budget, and the LED's Vf vs temperature drift, all of which matter for a 20,000-hour-lifetime design"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: LED current-limiting resistor is R = (V_source − V_f) / I_f — the source voltage minus the LED's forward voltage drop...
+type: reference
 confidence: proven
 topics:
-  - "[[moc-electronics-math]]"
-  - "[[eda-fundamentals]]"
-  - "[[passives]]"
+- moc-electronics-math
+- eda-fundamentals
+- passives
 ---
-
 # led current limiting resistor sizing and thermal derating
 
 **[beginner]** An LED in series with a resistor, driven from a voltage source, needs the resistor sized so that the LED current is safe. The formula is **R = (V_source − V_f) / I_f**, where V_f is the LED's forward voltage drop (color-dependent — see below) and I_f is the current you want. Calculator card example: a red LED (V_f ≈ 2.0 V) on a 5 V supply at 20 mA target current needs R = (5 − 2) / 0.020 = 150 Ω. Picking the next-larger standard value (150 Ω or 180 Ω) is safer than going down. Typical V_f by color: red/yellow ~2.0 V, green ~2.2 V, blue/white ~3.2 V. Typical I_f: indicator LEDs 10–20 mA, high-brightness 30+ mA (data-sheet-specified).

@@ -1,11 +1,10 @@
 ---
-description: "Topic map for ProtoPulse testing patterns — the test-strategy layer catalog: which concerns need real-browser Playwright vs Vitest+JSDOM vs integration-against-Postgres, and why JSDOM-level assertions silently pass on effective failures."
+description: Topic map for ProtoPulse testing patterns...
 type: moc
 topics:
-  - "[[index]]"
-  - "[[architecture-decisions]]"
+- index
+- architecture-decisions
 ---
-
 # testing-patterns
 
 Testing patterns codify which test harness answers which question. The common failure mode is running every test in JSDOM because it is fast — and missing the entire class of effective failures (focus order, ARIA announcement, real-layout hit-testing) that JSDOM simply does not simulate. This MOC catalogs the ProtoPulse rules for picking the right harness.

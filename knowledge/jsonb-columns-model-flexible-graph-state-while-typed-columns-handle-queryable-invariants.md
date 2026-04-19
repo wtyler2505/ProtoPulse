@@ -1,15 +1,14 @@
 ---
-description: "ProtoPulse stores open-ended graph state (node `data`, edge `style`, design snapshots, SPICE parameters, schematic/breadboard JSON) in `jsonb` columns, but any field that must be filtered, indexed, or joined stays typed — and the Zod layer uses `.passthrough()` on jsonb schemas for forward compatibility."
-type: implementation-pattern
-source: "shared/schema.ts, server/storage/"
-confidence: verified
+description: ProtoPulse stores open-ended graph state (node `data`, edge `style`, design snapshots, SPICE parameters...
+type: pattern
+source: shared/schema.ts, server/storage/
+confidence: supported
 topics:
-  - "[[backend-persistence-patterns]]"
-  - "[[implementation-patterns]]"
+- backend-persistence-patterns
+- implementation-patterns
 related_components:
-  - shared/schema.ts
+- shared/schema.ts
 ---
-
 # jsonb columns model flexible graph state while typed columns handle queryable invariants
 
 `shared/schema.ts` contains 132 `jsonb()` column references across 46 tables, and they all obey the same rule: if the backend or the DB ever has to filter, join, or index on a field, that field is typed; if the field is payload that the frontend owns end-to-end, it goes into a `jsonb` column. `architectureNodes` is the canonical example — `projectId`, `nodeId`, `nodeType`, `label`, `positionX`, `positionY`, `version`, `deletedAt` are typed scalars with indexes, while `data` is a `jsonb` grab bag with `.passthrough().nullable().optional()` on the Zod side. Queries like "all nodes for this project" stay cheap; node-type-specific content evolves without schema churn.

@@ -1,17 +1,16 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "Manufacturer Part Number (MPN) is a manufacturer-assigned identifier that uniquely resolves device + package + spec grade; supplier SKUs (Digi-Key, Mouser, LCSC, Arrow) are distributor-scoped and not portable — canonical BOMs must key off MPN and carry SKU as a per-supplier resolution, never the other way around"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: Manufacturer Part Number (MPN) is a manufacturer-assigned identifier that uniquely resolves device + package + spec grade...
+type: reference
 confidence: proven
 topics:
-  - "[[moc-component-metadata-fields]]"
-  - "[[eda-fundamentals]]"
-  - "[[procurement]]"
+- moc-component-metadata-fields
+- eda-fundamentals
+- procurement
 related_components: []
 ---
-
 # component MPN is the manufacturer contract and supplier SKU is the distributor contract and only MPN is stable across sources
 
 MPN (Manufacturer Part Number) is the identifier the component's *maker* assigns. Supplier SKU is the identifier a *distributor* assigns to a listing of that part in their catalog. These get conflated constantly and the conflation corrupts BOMs, inventory, and procurement.

@@ -1,16 +1,15 @@
 ---
 _schema:
-  entity_type: "topic-map"
-  applies_to: "knowledge/*.md"
-description: "Topic map for the four canonical component-editor metadata fields — family, mounting type, package type, MPN — explaining what each field means, why they are tracked separately, and how they combine to uniquely identify a part in the ProtoPulse parts model"
+  entity_type: topic-map
+  applies_to: knowledge/*.md
+description: Topic map for the four canonical component-editor metadata fields — family, mounting type, package type, MPN...
 type: moc
 topics:
-  - "[[eda-fundamentals]]"
-  - "[[eda-schematic-capture]]"
-  - "[[eda-pcb-design]]"
-  - "[[index]]"
+- eda-fundamentals
+- eda-schematic-capture
+- eda-pcb-design
+- index
 ---
-
 # moc-component-metadata-fields
 
 The ProtoPulse component editor exposes four top-level metadata fields on every part: **Family**, **Mounting Type**, **Package Type**, and **MPN**. These are deliberately separate axes. They look overlapping to beginners, but each one resolves a different question and each one drives different downstream behavior.

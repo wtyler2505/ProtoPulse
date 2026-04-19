@@ -1,17 +1,16 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "Mounting type (THT / SMT / mixed / press-fit / socketed) decides hole-vs-pad footprints, assembly order, and rework difficulty, but does not change a part's schematic symbol or electrical model — an SMT 0603 resistor and a THT axial resistor simulate identically"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: Mounting type (THT / SMT / mixed / press-fit / socketed) decides hole-vs-pad footprints, assembly order, and rework difficulty...
+type: reference
 confidence: proven
 topics:
-  - "[[moc-component-metadata-fields]]"
-  - "[[eda-fundamentals]]"
-  - "[[eda-pcb-design]]"
+- moc-component-metadata-fields
+- eda-fundamentals
+- eda-pcb-design
 related_components: []
 ---
-
 # component mounting type separates THT from SMT and governs assembly workflow not electrical behavior
 
 Mounting type answers *how does this part physically attach to the board*. The canonical values in most EDA parts models are:

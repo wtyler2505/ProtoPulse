@@ -1,12 +1,11 @@
 ---
-description: "Topic map for ProtoPulse procurement — identifiers and contracts that let a design cross the boundary from schematic intent to physically purchased parts: MPN as the manufacturer contract, supplier SKU as the disposable distributor contract, and the BOM-export flow that resolves one into the other."
+description: Topic map for ProtoPulse procurement — identifiers and contracts that let a design cross the boundary from schematic intent to...
 type: moc
 topics:
-  - "[[index]]"
-  - "[[eda-fundamentals]]"
-  - "[[architecture-decisions]]"
+- index
+- eda-fundamentals
+- architecture-decisions
 ---
-
 # procurement
 
 Procurement is the layer that converts "I want a 10k 0603 resistor" into "ship this reel to this address." It is where EDA meets supply chain, and where the identity rules become load-bearing: a design that works in simulation means nothing if it cannot be BOM-exported to a real distributor.

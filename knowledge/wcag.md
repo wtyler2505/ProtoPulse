@@ -1,13 +1,12 @@
 ---
-description: "Auto-stub (awaiting Core Ideas) — seeded from [[wcag-2-1-sc-1-4-1-color-cannot-be-sole-channel-for-meaning]] on 2026-04-19T06:30:36Z"
+description: Auto-stub (awaiting Core Ideas) — seeded from [[wcag-2-1-sc-1-4-1-color-cannot-be-sole-channel-for-meaning]] on 2026-04-19T06:30:36Z
 type: moc
 auto_generated: true
-auto_generated_source: "wcag-2-1-sc-1-4-1-color-cannot-be-sole-channel-for-meaning"
-auto_generated_at: "2026-04-19T06:30:36Z"
+auto_generated_source: wcag-2-1-sc-1-4-1-color-cannot-be-sole-channel-for-meaning
+auto_generated_at: '2026-04-19T06:30:36Z'
 topics:
-  - "[[index]]"
+- index
 ---
-
 # wcag
 
 **Auto-generated stub.** A sibling note (`wcag-2-1-sc-1-4-1-color-cannot-be-sole-channel-for-meaning`) referenced this

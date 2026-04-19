@@ -1,12 +1,11 @@
 ---
-description: "`role=\"application\"` tells NVDA/JAWS to disable their virtual cursor and forward every keystroke to the page, which turns off screen-reader navigation commands users depend on — so it is only safe for surfaces that are 100% focusable interactive widgets with zero browseable content."
+description: '`role="application"` tells NVDA/JAWS to disable their virtual cursor and forward every keystroke to the page...'
 type: claim
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[architecture-decisions]]"
+- a11y
+- architecture-decisions
 ---
-
 # role=application suppresses screen reader browse mode and should be avoided for mixed content
 
 `role="application"` is the most dangerous ARIA role because it is *silent when misused*. When NVDA or JAWS encounter an element with this role, they drop out of browse mode (virtual cursor) into focus mode for the duration of that subtree. That means the screen-reader shortcuts users rely on — H to jump heading-to-heading, K for links, T for tables, arrow keys to read line-by-line — all stop working. Every keystroke gets forwarded to the page's own event handlers, which had better be expecting them.

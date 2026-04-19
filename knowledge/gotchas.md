@@ -1,11 +1,10 @@
 ---
-description: "Topic map for ProtoPulse gotchas — surface-specific traps where a supposedly reusable pattern, primitive, or library API silently fails or changes semantics; written down so the same regression is not rediscovered by each contributor."
+description: Topic map for ProtoPulse gotchas — surface-specific traps where a supposedly reusable pattern, primitive...
 type: moc
 topics:
-  - "[[index]]"
-  - "[[architecture-decisions]]"
+- index
+- architecture-decisions
 ---
-
 # gotchas
 
 Gotchas are single-surface landmines that do not generalize into patterns. They are worth capturing because they are invisible in documentation, pass type-checks, pass linters, and only fail at runtime when a specific composition or prop combination collides. Every note here answers "what broke unexpectedly, and what should I look for next time?"

@@ -1,16 +1,15 @@
 ---
-description: "ProtoPulse's schema declares relationships only via `.references(() => parent.id, { onDelete: 'cascade' })` — the `relations()` helper is not imported anywhere in server/shared code, so joins are explicit `eq(child.parentId, parent.id)` calls and deletes cascade through Postgres, not through Drizzle."
-type: convention
-source: "shared/schema.ts, server/storage/"
-confidence: verified
+description: 'ProtoPulse''s schema declares relationships only via `.references(() => parent.id, { onDelete: ''cascade'' })`...'
+type: pattern
+source: shared/schema.ts, server/storage/
+confidence: supported
 topics:
-  - "[[backend-persistence-patterns]]"
-  - "[[implementation-patterns]]"
+- backend-persistence-patterns
+- implementation-patterns
 related_components:
-  - shared/schema.ts
-  - server/storage/
+- shared/schema.ts
+- server/storage/
 ---
-
 # Drizzle uses foreign keys with on-delete-cascade instead of the relations helper
 
 Drizzle ships two relationship mechanisms: the column-level `.references()` call that emits a real SQL foreign key, and the separate `relations()` helper that builds an in-TS graph enabling `db.query.projects.findMany({ with: { members: true } })` eager loading. ProtoPulse uses the first exclusively. `.references(() => projects.id, { onDelete: "cascade" })` appears on nearly every child-table foreign key in `shared/schema.ts`. The `relations()` import from `drizzle-orm` does not appear in any server or shared file — only in one client file (`client/src/lib/ai-root-cause.ts`) where it refers to a different concept.

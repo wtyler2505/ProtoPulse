@@ -1,12 +1,11 @@
 ---
-description: "Core EDA domain hub -- MCU pin constraints, protocol fundamentals, simulation algorithms, PCB design rules, and standards; cross-links to all hardware topic maps"
+description: Core EDA domain hub -- MCU pin constraints, protocol fundamentals, simulation algorithms, PCB design rules, and standards...
 type: moc
 topics:
-  - "[[index]]"
-  - "[[breadboard-intelligence]]"
-  - "[[architecture-decisions]]"
+- index
+- breadboard-intelligence
+- architecture-decisions
 ---
-
 # eda-fundamentals
 
 Core electronics and EDA knowledge. Claims here are verifiable facts about components, protocols, design rules, and simulation fundamentals.

@@ -1,21 +1,22 @@
 ---
-description: "NVDA (Windows, free, 40%+ share), VoiceOver (macOS/iOS, built-in, ~30%), and JAWS (Windows, commercial, ~40%) are the three screen readers teams must test against — and they have documented behavioral differences on aria-live timing, aria-activedescendant tracking, and role=application scope that mean 'works on NVDA' is not 'works for all screen-reader users'."
+description: NVDA (Windows, free, 40%+ share), VoiceOver (macOS/iOS, built-in, ~30%), and JAWS (Windows, commercial...
 type: claim
-audience: [intermediate, expert]
+audience:
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "WebAIM — Screen Reader User Survey #10 (2024)"
-    url: "https://webaim.org/projects/screenreadersurvey10/"
-  - source: "TPGi — Screen reader support for ARIA live regions"
-    url: "https://www.tpgi.com/screen-reader-support-aria-live-regions/"
+- source: 'WebAIM — Screen Reader User Survey #10 (2024)'
+  url: https://webaim.org/projects/screenreadersurvey10/
+- source: TPGi — Screen reader support for ARIA live regions
+  url: https://www.tpgi.com/screen-reader-support-aria-live-regions/
 ---
-
 # Screen reader testing must cover NVDA and VoiceOver minimum because JAWS and NVDA disagree on aria-live timing
 
 Screen reader behavior is not standardized — the ARIA spec defines attribute semantics but leaves implementation to each AT vendor. NVDA (NonVisual Desktop Access, Windows, free and open-source, ~41% market share per WebAIM's 2024 survey), JAWS (Windows, commercial, ~41%), and VoiceOver (Apple macOS and iOS, built-in, ~31% combined across desktop and mobile) are the three screen readers any testing protocol must cover. TalkBack (Android) is a fourth if the product has mobile support; Narrator (Windows, built-in) is a distant fifth. Testing on only one is insufficient because each has documented behavioral divergences on the most load-bearing ARIA features.

@@ -1,17 +1,16 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "Component family is the electrical-role taxonomy — resistor / capacitor / BJT / MOSFET / microcontroller / connector — that decides which symbol, which simulation model, and which DRC rules apply, and it is deliberately independent of package, manufacturer, and MPN"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: Component family is the electrical-role taxonomy — resistor / capacitor / BJT / MOSFET / microcontroller / connector...
+type: reference
 confidence: proven
 topics:
-  - "[[moc-component-metadata-fields]]"
-  - "[[eda-fundamentals]]"
-  - "[[eda-schematic-capture]]"
+- moc-component-metadata-fields
+- eda-fundamentals
+- eda-schematic-capture
 related_components: []
 ---
-
 # component family groups parts by electrical role not by manufacturer or package
 
 In an EDA parts model, **family** is the top-level taxonomic bucket that answers the question *what kind of thing is this, electrically?* A 10kΩ 0603 resistor and a 1MΩ 1206 resistor are the same family (resistor) even though they share no MPN, no package, and no supplier. Conversely, a 2N3904 BJT in TO-92 and a BSS138 MOSFET in SOT-23 are both three-terminal through-hole-ish transistors, but they are **different families** because they obey different Ohm-vs-square-law equations, need different SPICE models, and trigger different DRC polarity rules.

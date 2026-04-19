@@ -1,25 +1,26 @@
 ---
-description: "Sliders and spinbuttons share the range-widget ARIA contract (aria-valuenow / aria-valuemin / aria-valuemax) but differ in keyboard interaction — slider uses arrow keys with page-up/down for large steps, spinbutton uses up/down arrows with no large-step convention — and both require aria-valuetext when the numeric value needs human-readable formatting (units, dates, enumerations)."
+description: Sliders and spinbuttons share the range-widget ARIA contract (aria-valuenow / aria-valuemin...
 type: claim
-audience: [intermediate, expert]
+audience:
+- intermediate
+- expert
 confidence: verified
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 provenance:
-  - source: "W3C WAI-ARIA Authoring Practices Guide — Slider Pattern"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/slider/"
-  - source: "W3C WAI-ARIA Authoring Practices Guide — Spinbutton Pattern"
-    url: "https://www.w3.org/WAI/ARIA/apg/patterns/spinbutton/"
-  - source: "W3C APG — Range-Related Properties guidance"
-    url: "https://www.w3.org/WAI/ARIA/apg/practices/range-related-properties/"
-  - source: "MDN — aria-valuenow attribute"
-    url: "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-valuenow"
+- source: W3C WAI-ARIA Authoring Practices Guide — Slider Pattern
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/slider/
+- source: W3C WAI-ARIA Authoring Practices Guide — Spinbutton Pattern
+  url: https://www.w3.org/WAI/ARIA/apg/patterns/spinbutton/
+- source: W3C APG — Range-Related Properties guidance
+  url: https://www.w3.org/WAI/ARIA/apg/practices/range-related-properties/
+- source: MDN — aria-valuenow attribute
+  url: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-valuenow
 ---
-
 # ARIA slider and spinbutton both require aria-valuenow aria-valuemin aria-valuemax and a valuetext fallback for non-numeric values
 
 Slider and spinbutton are siblings in the APG "range widget" family along with progressbar and scrollbar, and they share the same three required ARIA attributes: `aria-valuenow` (current value, required and must update live), `aria-valuemin` (minimum, required), `aria-valuemax` (maximum, required). Omitting any of the three fails WCAG 4.1.2 Name, Role, Value because screen readers cannot announce the widget's current state relative to its range. The APG is explicit that these properties have **no default values** — if not set, range information is not exposed, period. This is the single most common range-widget bug: a slider renders, the thumb moves, `aria-valuenow` updates, but `aria-valuemin` and `aria-valuemax` were never set, so screen readers announce "slider, 47" with no context about whether 47 is small or large in the scale.

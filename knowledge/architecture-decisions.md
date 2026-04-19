@@ -2,11 +2,10 @@
 description: Why ProtoPulse is built the way it is — trade-offs, constraints, and key architectural choices
 type: moc
 topics:
-  - "[[index]]"
-  - "[[goals]]"
-  - "[[eda-fundamentals]]"
+- index
+- goals
+- eda-fundamentals
 ---
-
 # architecture-decisions
 
 Recorded decisions about ProtoPulse's technical architecture. See `docs/adr/` for formal ADRs.

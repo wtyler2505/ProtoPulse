@@ -1,15 +1,14 @@
 ---
 _schema:
-  entity_type: "topic-map"
-  applies_to: "knowledge/*.md"
-description: "Topic map indexing the foundational formulas used by every calculator card in the ProtoPulse Calculators tab — Ohm's Law, voltage divider, RC cutoff, resistor combinations, unit conversions, LED sizing, flyback, decoupling — each with beginner/intermediate/expert framing for Learn-article backlinks"
+  entity_type: topic-map
+  applies_to: knowledge/*.md
+description: Topic map indexing the foundational formulas used by every calculator card in the ProtoPulse Calculators tab — Ohm's Law...
 type: moc
 topics:
-  - "[[eda-fundamentals]]"
-  - "[[passives]]"
-  - "[[index]]"
+- eda-fundamentals
+- passives
+- index
 ---
-
 # moc-electronics-math
 
 The ProtoPulse Calculators tab exposes a fixed set of everyday electronics formulas: Ohm's Law, voltage divider, RC cutoff, series/parallel resistor combining, mil↔mm, AWG↔mm², dBm↔mW, LED current-limiting resistor, inductor flyback, and decoupling cap sizing. Each calculator card links into this MOC, which in turn points at the atomic derivation note for each formula.

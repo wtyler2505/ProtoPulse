@@ -1,14 +1,13 @@
 ---
-description: "Topic map for accessibility in ProtoPulse — organized by WAI-ARIA widget pattern, WCAG success criteria, screen-reader testing, and Radix-specific gotchas — with a 'pattern selection' decision tree for picking the narrowest correct primitive."
+description: Topic map for accessibility in ProtoPulse — organized by WAI-ARIA widget pattern, WCAG success criteria, screen-reader testing...
 type: moc
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[wcag]]"
-  - "[[architecture-decisions]]"
-  - "[[maker-ux]]"
+- a11y
+- wcag
+- architecture-decisions
+- maker-ux
 ---
-
 # Topic map: A11y, WCAG, and ARIA patterns
 
 Accessibility is one of ProtoPulse's first-class quality dimensions. This topic map organizes the vault's ARIA-pattern, WCAG-criterion, and screen-reader knowledge into a decision-graph agents can traverse when implementing or auditing any interactive component. The organizing principle is **pick the narrowest correct primitive**: the ARIA pattern that imposes the fewest contracts on its consumers is almost always the right choice, because fewer contracts means fewer ways to regress.

@@ -1,11 +1,10 @@
 ---
-description: "How ProtoPulse persists state — Drizzle schema conventions, node-postgres pool, transaction pattern, jsonb usage, and FK-cascade strategy. Entry point for anyone touching `shared/schema.ts` or `server/storage/`."
+description: How ProtoPulse persists state — Drizzle schema conventions, node-postgres pool, transaction pattern, jsonb usage...
 type: moc
 topics:
-  - "[[architecture-decisions]]"
-  - "[[implementation-patterns]]"
+- architecture-decisions
+- implementation-patterns
 ---
-
 # backend-persistence-patterns
 
 ProtoPulse's persistence layer is Drizzle ORM over PostgreSQL via the `node-postgres` pool. The backend carries 46 tables, 132 `jsonb` columns, and zero uses of Drizzle's `relations()` helper. This MOC indexes the patterns that make that shape work.

@@ -1,15 +1,14 @@
 ---
-description: "Radix FocusScope instances stack LIFO when dialogs nest — the innermost scope has exclusive event handling, Escape closes only the top dialog, and app-level Escape shortcuts must check event.defaultPrevented or register at document level to avoid closing everything at once."
+description: Radix FocusScope instances stack LIFO when dialogs nest — the innermost scope has exclusive event handling...
 type: claim
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[architecture-decisions]]"
-  - "[[ux-patterns]]"
+- a11y
+- architecture-decisions
+- ux-patterns
 related_components:
-  - "client/src/components/ui/dialog.tsx"
+- client/src/components/ui/dialog.tsx
 ---
-
 # Nested Radix dialogs stack focus traps LIFO and Escape unwinds one level
 
 Multiple Radix `FocusScope` instances can coexist at runtime. Each scope maintains a stack pointer, and only the topmost (most recently mounted) scope is "active": it receives Tab cycling, Escape handling, and pointer-down-outside events. Lower scopes are paused — their traps are still logically in place, but they don't react until the scope above them unmounts.

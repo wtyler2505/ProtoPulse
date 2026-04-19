@@ -1,16 +1,15 @@
 ---
 _schema:
-  entity_type: "knowledge-note"
-  applies_to: "knowledge/*.md"
-description: "V = −L · di/dt says an inductor opposes change in current by generating a voltage proportional to how fast current changes, so suddenly interrupting current in a relay coil or motor winding produces an unbounded voltage spike that arcs contacts or punches through transistor junctions; the flyback diode gives that spike a safe path"
-type: concept
+  entity_type: knowledge-note
+  applies_to: knowledge/*.md
+description: V = −L · di/dt says an inductor opposes change in current by generating a voltage proportional to how fast current changes...
+type: reference
 confidence: proven
 topics:
-  - "[[moc-electronics-math]]"
-  - "[[eda-fundamentals]]"
-  - "[[passives]]"
+- moc-electronics-math
+- eda-fundamentals
+- passives
 ---
-
 # inductor flyback voltage v equals l di dt
 
 **[beginner]** An inductor (coil of wire, relay coil, motor winding, solenoid) resists changes in the current flowing through it. If you try to turn that current off suddenly — by opening a switch or turning off a transistor — the inductor "fights back" by generating a voltage spike that tries to keep the current flowing. The formula is **V = L · di/dt**, where L is inductance in henries and di/dt is how fast the current is changing in amps-per-second. The minus sign (V = −L · di/dt in textbooks) indicates the spike *opposes* the change and thus opposes the supply polarity — that is where "flyback" comes from. Calculator card example: a 100 mH relay coil carrying 50 mA interrupted in 1 μs generates V = 0.1 · (0.05 / 0.000001) = 5000 V theoretical peak. In practice, the spike is clamped by whatever path it finds — an arc in the switch contacts, a zener diode, a flyback diode, or a transistor's breakdown voltage (destructively). This is why every relay, motor, and solenoid drive circuit needs a **flyback diode** across the coil: it gives the spike a safe return path.

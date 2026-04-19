@@ -1,17 +1,16 @@
 ---
-description: "The breadboard's keyboard contract: Tab cycles through the six zones (4 rails + 2 terminal strips); within a zone, arrow keys move focus between tie-points; Home/End jump to zone endpoints; Escape returns focus to the canvas toolbar — never trapping the user."
-type: methodology
+description: 'The breadboard''s keyboard contract: Tab cycles through the six zones (4 rails + 2 terminal strips); within a zone...'
+type: pattern
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[breadboard-intelligence]]"
-  - "[[maker-ux]]"
-  - "[[ux-patterns]]"
+- a11y
+- breadboard-intelligence
+- maker-ux
+- ux-patterns
 related_components:
-  - "client/src/components/breadboard/BreadboardCanvas.tsx"
-  - "client/src/components/breadboard/useGridKeyboard.ts"
+- client/src/components/breadboard/BreadboardCanvas.tsx
+- client/src/components/breadboard/useGridKeyboard.ts
 ---
-
 # Breadboard keyboard nav contract: arrow keys within zones, Tab between zones
 
 The breadboard canvas is divided into six zones (see [[aria-grid-pattern-fits-breadboard-terminal-strips-but-not-the-full-canvas-because-power-rails-lack-row-column-semantics]]), and the keyboard contract has to serve two audiences simultaneously: the keyboard-only sighted user who wants to place a component without touching the mouse, and the screen-reader user who needs every move announced in electrical-topology terms. Both audiences share the same key bindings; the difference is what the screen reader says after each move.

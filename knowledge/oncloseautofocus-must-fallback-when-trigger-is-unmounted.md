@@ -1,15 +1,14 @@
 ---
-description: "Radix's default onCloseAutoFocus returns focus to the element that was focused before the dialog opened — if that element was unmounted during the dialog's lifetime (destructive delete flows, route changes, parent re-renders), focus silently falls to document.body and keyboard users are stranded."
+description: Radix's default onCloseAutoFocus returns focus to the element that was focused before the dialog opened...
 type: claim
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[gotchas]]"
-  - "[[maker-ux]]"
+- a11y
+- gotchas
+- maker-ux
 related_components:
-  - "client/src/components/ui/dialog.tsx"
+- client/src/components/ui/dialog.tsx
 ---
-
 # onCloseAutoFocus must fallback when trigger is unmounted
 
 Radix's `FocusScope` captures `document.activeElement` at mount and restores it at unmount. This works perfectly when the trigger stays in the DOM for the dialog's entire lifetime — which is most cases. It fails silently in three situations that all occur in ProtoPulse:

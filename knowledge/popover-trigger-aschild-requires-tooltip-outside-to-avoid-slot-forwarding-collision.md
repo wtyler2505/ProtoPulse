@@ -1,17 +1,16 @@
 ---
-description: "When wrapping a Popover in a Tooltip, the Tooltip.Trigger asChild must be the OUTER layer with Popover.Trigger asChild nested inside — reversing the order (Popover outside, Tooltip inside) causes Radix's Slot to forward refs and props to the same child element twice, silently losing one primitive's event handlers."
+description: When wrapping a Popover in a Tooltip, the Tooltip.Trigger asChild must be the OUTER layer with Popover.Trigger asChild nested inside...
 type: claim
 created: 2026-04-19
 topics:
-  - "[[a11y]]"
-  - "[[architecture-decisions]]"
-  - "[[gotchas]]"
-  - "[[ux-patterns]]"
+- a11y
+- architecture-decisions
+- gotchas
+- ux-patterns
 related_components:
-  - "client/src/components/ui/popover.tsx"
-  - "client/src/components/ui/tooltip.tsx"
+- client/src/components/ui/popover.tsx
+- client/src/components/ui/tooltip.tsx
 ---
-
 # PopoverTrigger asChild requires Tooltip outside to avoid Slot forwarding collision
 
 Radix primitives that accept `asChild` use `@radix-ui/react-slot` to merge their own props (refs, `onClick`, `aria-*`, `data-state`) onto a single child element. `Slot` is designed to merge ONE parent's props onto ONE child. When two Radix primitives both try to `asChild` the same element at different nesting depths, the inner Slot wins for ref forwarding and one primitive's state management silently stops working.
