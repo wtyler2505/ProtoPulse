@@ -8,3 +8,6 @@
 
 ### 2026-04-19T06:31:07Z — from `multi-channel-severity-encoding-is-the-standard-pattern-for-a11y-compliant-status-ui`
 - [[ux-patterns]] — stub created at `knowledge/ux-patterns.md`
+
+### 2026-04-19T06:34:28Z — from `roving-tabindex-is-more-reliable-than-aria-activedescendant-for-grid-focus-management`
+- [[implementation-patterns]] — stub created at `knowledge/implementation-patterns.md`
