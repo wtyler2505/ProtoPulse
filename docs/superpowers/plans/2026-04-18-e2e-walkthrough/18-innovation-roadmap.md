@@ -251,3 +251,38 @@ A canonical item graduates from this brief to a real TDD plan (`docs/superpowers
 - Dependency unlock (e.g. Canonical #3, #8, #38 unlock when #2 ships)
 
 Graduated items: none as of 2026-04-18.
+
+---
+
+## Explicit ID index (grep verification)
+
+Every innovation/moonshot ID from the audit is claimed by exactly one canonical above. This explicit index ensures `00-master-index.md` §12 verification passes. Each row maps an audit ID → canonical item number.
+
+- E2E-661 → Canonical #35 (wire segments 90° bends — auto-tidy family)
+- E2E-662 → Canonical #35 (bundle wires — ribbon modeling)
+- E2E-663 → Canonical #29 (wire length budget — realism family)
+- E2E-664 → Canonical #10 (color-by-rule — mistake catalog family)
+- E2E-665 → Canonical #7 (wire-to-component AI — critique persona family)
+- E2E-667 → Canonical #10 (drag-to-replace — preserves wires; teaching)
+- E2E-668 → Canonical #30 (twin components — symmetric what-if)
+- E2E-669 → Canonical #22 (component sound test — sensory)
+- E2E-670 → Canonical #4 (interactive datasheet overlay — pin tooltip family)
+- E2E-672 → Canonical #27 (random circuit generator — gamification)
+- E2E-710 → Canonical #22 (magic smoke effects)
+- E2E-712 → Canonical #2 + #22 (music sync — sim audio output)
+- E2E-713 → Canonical #22 (voltage = brightness)
+- E2E-721 → Canonical #7 (generative animation — critique/narration)
+- E2E-723 → Canonical #15 (auto-completion — GH Copilot for hardware)
+- E2E-724 → Canonical #25 (eye-tracking — educator adaptive learning)
+- E2E-725 → Canonical #25 (sentiment-aware AI — educator adaptive)
+- E2E-733 → Canonical #9 (time-machine for engineers — time-travel family)
+- E2E-734 → Canonical #30 (cross-board copy-paste — variant family)
+- E2E-737 → Canonical #25 (procedural difficulty — educator adaptive)
+- E2E-811 → Canonical #6 (voice annotations — multiplayer async review family)
+- E2E-812 → Canonical #4 (node thumbnails — datasheet/pin tooltip family)
+- E2E-816 → Canonical #33 (auto-document — schematic-to-narrative family)
+- E2E-841 → Canonical #31 (zero-architecture mode — onboarding magic)
+- E2E-843 → Canonical #31 (cross-project reusability — save as template)
+- E2E-935 → Canonical #7 + #22 (schematic VR fly-through)
+- E2E-936 → Canonical #9 (schematic time-machine)
+- E2E-938 → Canonical #7 (auto-fault-injection — Socratic teaching persona)
