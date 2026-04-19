@@ -57,6 +57,48 @@
 - [ ] Task 4.7 — NumberInput aria-valuemax fix (E2E-284) — consumed from 02 Phase 7.
 - [ ] Task 4.8 — Tests + commit.
 
+## Vault integration (added 2026-04-19)
+
+Per master-index §7 + §13. Calculators are pure formulas — every one is a pedagogical moment. Generative is GA-based so parameter notes matter.
+
+### Planned insertions
+
+| Task | Insertion site | Target vault slug | Status |
+|------|----------------|-------------------|--------|
+| Wave 1 Task 1.4 (Population/Generations tooltips, E2E-472) | Slider labels + Learn cross-link | `genetic-algorithm-parameters-population-and-generations-explained` | 🟡 seed gap |
+| Wave 1 Task 1.2 (Preset profiles, E2E-469) | Profile dropdown — each preset has `vaultSlug` justification | `ga-preset-hobby-vs-industrial-vs-automotive-constraints` | 🟡 seed gap |
+| Wave 3 Task 3.5 (KiCad Jobsets, E2E-529) | Jobset template descriptions | `kicad-9-jobsets-release-bundle-orchestration` | 🟡 seed gap |
+| Wave 4 Task 4.3 (Calculator formula → Learn, E2E-437) | Every calculator card has `vaultSlug` for the underlying physics | `ohms-law-v-equals-i-times-r`, `rc-lowpass-cutoff-frequency`, `voltage-divider-formula`, `resistor-parallel-series-combining` | 🟡 seed gaps |
+| Wave 4 Task 4.4 (Unit conversion, E2E-439) | Conversion card — "why this matters" | `mil-vs-mm-pcb-unit-convention`, `awg-vs-mm2-wire-sizing`, `dbm-vs-mw-rf-power-units` | 🟡 seed gaps |
+| Wave 2 Task 2.2 (Digital Twin trust receipt) | Trust receipt body | `digital-twin-simulation-fidelity-limits` | 🟡 seed gap |
+
+### Gap stubs to seed
+
+```
+/vault-gap "genetic algorithm parameters population and generations explained" --origin-plan 15-generative-digital-twin-exports.md --origin-task 1.4
+/vault-gap "GA preset hobby vs industrial vs automotive constraints" --origin-plan 15-generative-digital-twin-exports.md --origin-task 1.2
+/vault-gap "KiCad 9 jobsets release bundle orchestration Gerbers BOM P&P" --origin-plan 15-generative-digital-twin-exports.md --origin-task 3.5
+/vault-gap "Ohms law V equals I times R derivation and intuition" --origin-plan 15-generative-digital-twin-exports.md --origin-task 4.3
+/vault-gap "RC lowpass filter cutoff frequency 1 over 2 pi RC" --origin-plan 15-generative-digital-twin-exports.md --origin-task 4.3
+/vault-gap "voltage divider formula two resistor ratio derivation" --origin-plan 15-generative-digital-twin-exports.md --origin-task 4.3
+/vault-gap "resistor parallel series combining formulas" --origin-plan 15-generative-digital-twin-exports.md --origin-task 4.3
+/vault-gap "mil vs mm PCB unit convention 1000 mil equals 25.4mm" --origin-plan 15-generative-digital-twin-exports.md --origin-task 4.4
+/vault-gap "AWG to mm squared wire sizing conversion" --origin-plan 15-generative-digital-twin-exports.md --origin-task 4.4
+/vault-gap "dBm to mW RF power units conversion" --origin-plan 15-generative-digital-twin-exports.md --origin-task 4.4
+/vault-gap "digital twin simulation fidelity limits what it cannot model" --origin-plan 15-generative-digital-twin-exports.md --origin-task 2.2
+```
+
+### Consumption pattern
+
+```tsx
+<CalculatorCard formula="V = I × R">
+  <FormulaDisplay>V = I × R</FormulaDisplay>
+  <VaultHoverCard slug="ohms-law-v-equals-i-times-r">
+    Learn about Ohm's Law →
+  </VaultHoverCard>
+</CalculatorCard>
+```
+
 ## Checklist
 
 ```

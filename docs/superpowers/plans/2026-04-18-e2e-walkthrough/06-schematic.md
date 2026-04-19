@@ -122,6 +122,32 @@ Detailed coverage TSV (Task 0): `coverage/06-schematic-coverage.tsv`.
 - [ ] Task 6.7 — Drag-to-Architecture cross-tab (E2E-904): drag schematic instance → Architecture tab drops as new arch node (via shared drag data mime-type).
 - [ ] Task 6.8 — Tests + commit.
 
+## Vault integration (added 2026-04-19)
+
+Schematic is a primary consumer. Pins, nets, ERC rules all map directly to vault content.
+
+### Planned insertions
+
+| Task | Insertion site | Target vault slug | Status |
+|------|----------------|-------------------|--------|
+| Wave 2 Task 2.2 (Net-name autocomplete, E2E-876) | Net-name Combobox suggestion list | `power-net-naming-conventions-vcc-vdd-vbat-vin` + `ground-net-conventions-gnd-agnd-dgnd-pgnd` + `signal-net-naming-sda-scl-mosi-tx-rx` | 🟡 first two may exist in `communication` MOC; third likely seed gap |
+| Wave 2 Task 2.7 (Live ERC, E2E-896) | Each ERC rule has `vaultSlug`; "Why?" button → VaultExplainer | Per-rule (shared with 11-validation-simulation's DRC registry pattern) | 🟡 seed gaps per rule |
+| Wave 5 Task 5.1 (Power-symbol annotation, E2E-947) | VCC/GND pin renderer | `ieee-315-iec-60617-power-symbol-glyphs-for-schematic` | 🟡 seed gap |
+| Wave 5 Task 5.9 (Pin alternate-function dialog, E2E-963) | Click pin name → modal | Per-pin vault slug (e.g. `attiny85-pb0-alternate-functions-ain0-mosi-oc0a-pcint0`, `esp32-gpio12-must-be-low-at-boot-or-module-crashes`) | 🟡 mostly exists in `microcontrollers` MOC — inventory |
+
+### Gap stubs
+
+```
+/vault-gap "signal net naming conventions SDA SCL MOSI MISO TX RX" --origin-plan 06-schematic.md --origin-task 2.2
+/vault-gap "IEEE 315 IEC 60617 power symbol glyphs for schematic VCC GND" --origin-plan 06-schematic.md --origin-task 5.1
+/vault-gap "ERC rule floating input pin noise antenna" --origin-plan 06-schematic.md --origin-task 2.7
+/vault-gap "ERC rule multiple drivers on one net output conflict" --origin-plan 06-schematic.md --origin-task 2.7
+```
+
+### Per-pin slug lookup pattern
+
+Pin dialog body fetches via `<VaultExplainer slug={`${mcu.slug}-${pinName.toLowerCase()}-alternate-functions`}>`. When slug not found, VaultInboxCta offers "Suggest a note for MCU pin X".
+
 ## Team Execution Checklist
 
 ```

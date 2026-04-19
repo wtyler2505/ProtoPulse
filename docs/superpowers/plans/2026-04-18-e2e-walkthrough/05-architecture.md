@@ -110,6 +110,38 @@ TSV: `coverage/05-architecture-coverage.tsv`.
 - [ ] Task 5.12 — Architecture diff vs Schematic diff (E2E-804): visually highlight nodes in arch but not schematic (or vice versa). Consumes cross-tab state.
 - [ ] Task 5.13 — Tests + commit.
 
+## Vault integration (added 2026-04-19)
+
+Per master-index §7 + §13.
+
+### Planned insertions
+
+| Task | Insertion site | Target vault slug | Status |
+|------|----------------|-------------------|--------|
+| Wave 1 Task 1.1b (Asset Library part tooltips) | Each asset card → hover shows pin summary + caveats | Per-part slug (e.g. `bme280-humidity-pressure-sensor-i2c-interface`, `esp32-s3-wroom-1-mcu-with-wifi`) | 🟡 mostly exists in `components`/`microcontrollers`/`sensors` MOCs — inventory via `/vault-suggest-for-plan` |
+| Wave 3 Task 3.5 (AI wire-from-suggest, E2E-788) | `/api/arch/suggest-edges` prompt — `buildVaultContext` already on; ensure used | `bus-suggestions-i2c-spi-uart-when-to-use` (per-bus) | 🟡 seed gap per bus type |
+| Wave 5 Task 5.5 (Try-alternate component, E2E-801) | Delta panel "Why this alternate?" | Per-alternate reasoning slug | 🟡 planned — consumption pattern |
+| Wave 5 Task 5.9 (Architecture lints, E2E-842) | Each arch-lint rule has a `vaultSlug` | E.g. `every-mcu-needs-decoupling-cap-on-vcc-linting-rule`, `power-chain-hop-limit-4-architectural-pattern` | 🟡 seed gaps |
+| Wave 5 Task 5.11 (AI critique "Dr. Kirchhoff", E2E-805) | Critique prompt pre-injection | `architecture-review-critique-checklist-for-hobbyist-grade-iot-boards` | 🟡 seed gap |
+
+### Gap stubs
+
+```
+/vault-gap "every MCU needs decoupling cap on VCC architectural lint rule" --origin-plan 05-architecture.md --origin-task 5.9
+/vault-gap "power chain hop limit architectural pattern 4 hops max" --origin-plan 05-architecture.md --origin-task 5.9
+/vault-gap "architecture review critique checklist for IoT hobbyist boards" --origin-plan 05-architecture.md --origin-task 5.11
+```
+
+### Consumption pattern
+
+```tsx
+<AssetCard part={part}>
+  <VaultHoverCard slug={part.vaultSlug} fallback={<VaultInboxCta topic={part.slug}/>}>
+    <PartIcon /> {part.name}
+  </VaultHoverCard>
+</AssetCard>
+```
+
 ## Team Execution Checklist
 
 ```

@@ -431,6 +431,41 @@ for (const vp of VIEWPORTS) { /* assert no horizontal overflow, nav reachable */
 
 ---
 
+## Vault integration (added 2026-04-19)
+
+Per master-index §7 + §13. Shell surfaces are pedagogically thin, but Settings > Appearance + Welcome tour + First-PCB wizard ARE teaching moments.
+
+### Planned insertions
+
+| Phase/Task | Insertion site | Target vault slug | Status |
+|------------|----------------|-------------------|--------|
+| Phase 6 Task 6.4 (TutorialMenu checklist) | Each tutorial step has optional `vaultSlug`; "Learn more" at step end | Per-step; `getting-started-proto-pulse-workflow-overview` | 🟡 seed gap |
+| Phase 6 Task 6.5 (First-PCB wizard) | Each wizard step has a side explainer pane | `first-pcb-end-to-end-workflow-architecture-to-gerbers` | 🟡 seed gap |
+| Phase 7 Task 7.2 (Appearance — Print mode) | Preset description — link to print-optimization note | `pcb-print-mode-1-to-1-scale-paper-mockup-technique` | 🟡 seed gap |
+| Phase 7 (Workspace mode switch — student/pro/expert) | Mode description tooltip | `workspace-mode-student-vs-pro-vs-expert-feature-gating` | 🟡 seed gap |
+| Phase 6 Task 6.1 (Command palette) | Each command entry optionally has `vaultSlug` for "Why use this?" | Per-command | ✅ existing content for most |
+| Phase 4 (AI Chat floating bubble) | Chat system prompt consumes `buildVaultContext()` (already shipped) | N/A — infrastructure | ✅ existing infrastructure |
+
+### Gap stubs to seed
+
+```
+/vault-gap "getting started ProtoPulse workflow overview Architecture to Order" --origin-plan 17-shell-header-nav.md --origin-task 6.4
+/vault-gap "first PCB end to end workflow architecture to gerbers beginner walkthrough" --origin-plan 17-shell-header-nav.md --origin-task 6.5
+/vault-gap "PCB print mode 1 to 1 scale paper mockup technique" --origin-plan 17-shell-header-nav.md --origin-task 7.2
+/vault-gap "workspace mode student vs pro vs expert feature gating rationale" --origin-plan 17-shell-header-nav.md --origin-task 7.2
+```
+
+### Consumption pattern
+
+```tsx
+<SettingsSection title="Print mode">
+  <Toggle onCheckedChange={setPrintMode} />
+  <VaultHoverCard slug="pcb-print-mode-1-to-1-scale-paper-mockup-technique">
+    Why print 1:1? →
+  </VaultHoverCard>
+</SettingsSection>
+```
+
 ## Team Execution Checklist
 
 ```

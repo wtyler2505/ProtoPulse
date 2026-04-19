@@ -495,6 +495,163 @@ Add `.theme-vibe` class with subtle scan-lines + 1px CRT bloom on cyan elements.
 
 ---
 
+## Phase 8 — Vault primitives (FOUNDATIONAL — consumed by plans 02, 04-15, 17)
+
+> **Added 2026-04-19 per master-index §13.** This phase ships ONE component + ONE hook that all per-tab plans consume instead of reinventing vault-backed tooltip/explainer UX. Built on top of the already-shipped `useVaultNote` / `useVaultSearch` hooks (client/src/hooks/useVaultSearch.ts) and `/api/vault/` HTTP routes (server/routes/knowledge-vault.ts). BLOCKS Tiers D-G plans that cite `<VaultHoverCard>` / `<VaultExplainer>`.
+
+### Infrastructure already shipped (do not reinvent)
+
+| Artifact | Location | Role |
+|----------|----------|------|
+| `useVaultNote(slug)` | `client/src/hooks/useVaultSearch.ts` | React Query wrapper — `GET /api/vault/note/:slug` |
+| `useVaultSearch(query, limit)` | `client/src/hooks/useVaultSearch.ts` | Fuzzy search |
+| `useVaultMocs()` | `client/src/hooks/useVaultSearch.ts` | List MOCs |
+| `GET /api/vault/search?q=&limit=` | `server/routes/knowledge-vault.ts` | Rate-limited 60/min; whitelisted in PUBLIC_API_PATHS |
+| `GET /api/vault/note/:slug` | `server/routes/knowledge-vault.ts` | Full note body |
+| `buildVaultContext(message)` | `server/lib/vault-context.ts` | AI prompt auto-inject |
+| `/vault-gap` slash | `.claude/skills/vault-gap/` | Queue gap stubs — used by plan gap-stub blocks |
+| `/vault-validate` slash | `.claude/skills/vault-validate/` | Frontmatter v2 check |
+| `/vault-index` slash | `.claude/skills/vault-index/` | Backlink index builder |
+| T3 backlink index | `ops/index/plan-vault-backlinks.json` | Source for Graph tab (13 Wave 2 Task 2.9) |
+
+### Tasks
+
+- [ ] **Task 8.1 — `useVaultQuickFetch(slug)` hook**
+
+```tsx
+// client/src/hooks/useVaultQuickFetch.ts
+export function useVaultQuickFetch(slug: string | undefined) {
+  const { data, isLoading, error } = useVaultNote(slug);
+  return useMemo(() => ({
+    title: data?.title ?? slug,
+    summary: data ? truncate(stripMarkdown(data.body), 140) : "",
+    body: data?.body ?? "",
+    topics: data?.frontmatter?.topics ?? [],
+    loading: isLoading,
+    error,
+  }), [slug, data, isLoading, error]);
+}
+```
+
+Memoized per-slug with React Query's default `staleTime: 10min`. Failing test: `useVaultQuickFetch('nonexistent-slug')` returns `{ loading: false, error: <404>, title: slug }`.
+
+- [ ] **Task 8.2 — `<VaultHoverCard>` primitive**
+
+Radix HoverCard. Props: `{ slug?: string; topic?: string; fallback?: ReactNode; children: ReactNode }`. On open, fetches via `useVaultQuickFetch`. Renders title + 140-char summary + "Read more in Vault →" deep link to `/vault?slug=<slug>`. States: loading (skeleton), error 404 (file-inbox-stub CTA wired to `/vault-inbox` skill), success (title + summary + link).
+
+```tsx
+<VaultHoverCard slug="esp32-gpio12-must-be-low-at-boot-or-module-crashes">
+  <BoardPin data-pin="GPIO12" />
+</VaultHoverCard>
+```
+
+- [ ] **Task 8.3 — `<VaultExplainer>` primitive**
+
+Inline expandable panel (NOT popover). Props: `{ slug?: string; topic?: string; defaultOpen?: boolean; children?: ReactNode }`. For DRC error rows, Component Editor fields, Simulation plain-English labels. Same data source as HoverCard; different layout.
+
+- [ ] **Task 8.4 — Audience-tier rendering (consumes T11)**
+
+Both primitives read the note's `audience` tier markers (`### [beginner]` / `### [intermediate]` / `### [expert]`) and render the user's workspace mode section (`useWorkspaceMode()`). Fall back to first section if the user's mode has no matching marker.
+
+- [ ] **Task 8.5 — "Suggest a note" 404 CTA (consumes T8 vault-inbox skill)**
+
+When a slug 404s, render a CTA button "No note on this yet — suggest one?" that opens a VaultInbox dialog seeding an `inbox/<slug>.md` stub via the `/vault-inbox` skill template.
+
+- [ ] **Task 8.6 — Storybook stories**
+
+Add stories for `VaultHoverCard` (success / loading / 404-with-CTA) and `VaultExplainer` (all three audience tiers). Live-fetches mocked via MSW.
+
+- [ ] **Task 8.7 — CI primitive-bypass guard**
+
+```bash
+# Assert no per-tab code consumes useVaultNote / useVaultSearch directly.
+# Only the primitive files may.
+BYPASSERS=$(rg -l "useVaultNote|useVaultSearch" client/src \
+  | grep -v -E "components/ui/vault-hover-card.tsx|components/ui/vault-explainer.tsx|hooks/useVaultQuickFetch.ts|hooks/useVaultSearch.ts|views/VaultView.tsx")
+if [ -n "$BYPASSERS" ]; then
+  echo "ERROR: direct vault hook consumers bypassing primitive:"
+  echo "$BYPASSERS"
+  exit 1
+fi
+```
+
+Run in CI via `scripts/ci/check-vault-primitive.sh`. Allowed exceptions: `VaultView.tsx` (the tab itself).
+
+- [ ] **Task 8.8 — Docs**
+
+`docs/design-system/vault-primitives.md` — usage, slug conventions, audience-tier pattern, inbox pipeline reminder ("NEVER write directly to knowledge/").
+
+- [ ] **Task 8.9 — Tests + commit**
+
+Vitest suites: `__tests__/useVaultQuickFetch.test.tsx`, `__tests__/VaultHoverCard.test.tsx`, `__tests__/VaultExplainer.test.tsx`. Playwright smoke: hover on a known breadboard pin triggers HoverCard with vault content.
+
+### Gate
+
+- Phase 8 MUST merge before Tiers D-G plans execute. CI primitive-bypass guard blocks non-compliant consumers.
+- Every per-tab plan's Vault Integration subsection cites `<VaultHoverCard>` or `<VaultExplainer>` — not direct hook usage.
+
+---
+
+## Phase 9 — Vault graph visualization (added 2026-04-19, owns T9 + 13 Wave 2 Task 2.9)
+
+> **Cross-ref:** 13-learning-surfaces.md Wave 2 Task 2.9 names the feature; this phase owns implementation spec. Consumes T3 backlink index (`ops/index/plan-vault-backlinks.json`).
+
+### Architecture
+
+- **Data source:** `/api/vault/graph` — new route. Returns `{ nodes: [{ id, slug, title, topics, moc }], edges: [{ source, target, type: 'wiki'|'backlink'|'moc-member' }] }`. Built from T3 index + vault frontmatter.
+- **Render:** force-directed graph via `d3-force` + SVG. NOT canvas — SVG for a11y (nodes are `<circle role="button">` with aria-labels, edges are `<line>`).
+- **Filters:** by MOC membership (multi-select), by topic, by confidence tier (from v2 frontmatter), by audience tier.
+- **Zoom/pan:** `d3-zoom`. Click node → side panel with full note (reuses `<VaultExplainer>`).
+
+### Tasks
+
+- [ ] **Task 9.1 — Server route `GET /api/vault/graph`** (server/routes/knowledge-vault.ts). Rate-limited. Cache 5min (graph rebuilds rarely).
+- [ ] **Task 9.2 — `<VaultGraph>` component** (client/src/components/vault/VaultGraph.tsx). Props: `{ focusSlug?, filterMocs?, filterTopics? }`. Uses `d3-force` with `forceManyBody(-200) + forceLink(80) + forceCenter`.
+- [ ] **Task 9.3 — Keyboard navigation** — focus ring cycles through nearest nodes; Tab/Shift-Tab; Enter opens detail; Escape clears focus. Reuses a11y patterns from 03 Phase 6.
+- [ ] **Task 9.4 — Orphan highlight mode** — toggle to color orphan nodes (no backlinks) red. Consumes T7 `/vault-health` data (682 notes, 669 orphans baseline; drops as plans execute).
+- [ ] **Task 9.5 — Integration with 13 Vault tab** — register as `?view=graph` sub-tab of VaultView.
+- [ ] **Task 9.6 — Storybook + Playwright smoke** — load graph with 100 mock nodes, assert renders + keyboard nav works.
+- [ ] **Task 9.7 — Tests + commit.**
+
+### Gate
+
+- Must render ≥682 real vault nodes without jank (60fps target; fall back to simplified layout if >1000 nodes).
+- Every node must be keyboard-reachable (axe + Playwright keyboard suite).
+
+---
+
+## Phase 10 — Plan↔Vault↔Code traceability panel (added 2026-04-19, owns T12)
+
+> **Purpose:** close the loop between an implementation plan task, the vault notes it cites, and the code files the task touches. Makes the vault integration investment auditable and grep-able.
+
+### Data flow
+
+```
+Plan file (e.g. 07-breadboard.md Task 6.1)
+    ↓ Vault Integration subsection declares vaultSlug
+ops/index/plan-vault-backlinks.json  (T3 output)
+    ↓ augmented with code-path mapping
+ops/index/plan-vault-code.json       (Phase 10 output)
+    ↓
+<TraceabilityPanel> UI  →  opens for any plan task, shows: cited vault slugs + code files + current status
+```
+
+### Tasks
+
+- [ ] **Task 10.1 — Extend T3 indexer** to also scan plan tasks for code-path hints (e.g. `client/src/components/...`) and produce `ops/index/plan-vault-code.json` with `{ planId, taskId, vaultSlugs[], codeFiles[], status }`.
+- [ ] **Task 10.2 — `/api/traceability/:planId/:taskId` route** (server/routes/traceability.ts). Returns full trace object + last-modified timestamps from git.
+- [ ] **Task 10.3 — `<TraceabilityPanel>` component** (client/src/components/vault/TraceabilityPanel.tsx). Three-column layout: Plan task (left) | Vault slugs cited (center) | Code files touched (right). Each center cell is a `<VaultHoverCard>`; each right cell is a file link (opens in VS Code via `vscode://` URL on dev, file tree navigation in prod).
+- [ ] **Task 10.4 — Render surface** — Settings > Developer has a "Traceability" panel. Plan dropdown → Task dropdown → full trace.
+- [ ] **Task 10.5 — Dashboard widget** (optional) — small "Vault coverage this sprint" KPI: % of active-plan tasks that cite ≥1 vault slug. Clicks into full panel.
+- [ ] **Task 10.6 — CI enforcement** — for each plan file's Vault Integration subsection, every `<VaultHoverCard slug=...>` example slug MUST resolve (T2 validator). Every cited `origin-task` MUST match a real task in the plan.
+- [ ] **Task 10.7 — Tests + commit.**
+
+### Gate
+
+- Traceability panel MUST show ≥80% coverage for plans marked `status: in-progress` before a plan can merge. This prevents the "vault subsection existed but nobody wired it" failure mode.
+
+---
+
 ## Team Execution Checklist
 
 ```

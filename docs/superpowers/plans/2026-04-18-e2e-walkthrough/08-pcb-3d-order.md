@@ -72,6 +72,44 @@
 - [ ] Task 3.5 — Real footer nav (E2E-415): promote Previous/Next bar from floating to sticky footer.
 - [ ] Task 3.6 — Tests + commit.
 
+## Vault integration (added 2026-04-19)
+
+Per master-index §7 + §13.
+
+### Planned insertions
+
+| Task | Insertion site | Target vault slug | Status |
+|------|----------------|-------------------|--------|
+| Wave 1 Task 1.5 (trace slider tooltips) | PCB trace-width slider — `<VaultExplainer slug="trace-width-vs-current-carrying-capacity">` | `trace-width-vs-current-carrying-capacity-ipc-2221` | 🟡 seed gap |
+| Wave 1 Task 1.4 (layer stack sync) | Each layer row "?" icon → `<VaultHoverCard topic="copper-prepreg-soldermask-stackup">` | `pcb-layer-stack-copper-prepreg-soldermask-silkscreen` | 🟡 seed gap |
+| Wave 3 Task 3.3 (project-type recommendation) | AI recommendation engine reads MOC `pcb-fabrication-comparison` | `moc-pcb-fabrication-comparison-jlc-oshpark-pcbway-tradeoffs` | 🟡 seed gap (create MOC) |
+| Wave 3 Task 3.4 (fab profile cards) | Each fab card (JLC/OSH Park/PCBWay) has `vaultSlug` metadata | `jlcpcb-capability-matrix`, `osh-park-capability-matrix`, `pcbway-capability-matrix` | 🟡 seed gaps |
+| Wave 2 Task 2.5 (pin-1 markers + polarity indicators) | 3D view polarity overlay — "Why pin 1?" tooltip | `pin-1-marker-conventions-dot-notch-bevel` | 🟡 seed gap |
+
+### Gap stubs to seed
+
+```
+/vault-gap "PCB trace width vs current carrying capacity IPC-2221" --origin-plan 08-pcb-3d-order.md --origin-task 1.5
+/vault-gap "PCB layer stack copper prepreg soldermask silkscreen" --origin-plan 08-pcb-3d-order.md --origin-task 1.4
+/vault-gap "PCB fabrication comparison JLCPCB OSH Park PCBWay tradeoffs" --origin-plan 08-pcb-3d-order.md --origin-task 3.3
+/vault-gap "JLCPCB capability matrix minimum trace via tolerance" --origin-plan 08-pcb-3d-order.md --origin-task 3.4
+/vault-gap "OSH Park capability matrix purple 2-layer 4-layer stackup" --origin-plan 08-pcb-3d-order.md --origin-task 3.4
+/vault-gap "PCBWay capability matrix HDI flex rigid-flex" --origin-plan 08-pcb-3d-order.md --origin-task 3.4
+/vault-gap "pin 1 marker conventions dot notch bevel IC polarity" --origin-plan 08-pcb-3d-order.md --origin-task 2.5
+```
+
+### Consumption pattern
+
+```tsx
+<Slider value={traceWidth} onValueChange={setTraceWidth}>
+  <TooltipTrigger>
+    <VaultExplainer slug="trace-width-vs-current-carrying-capacity-ipc-2221">
+      Trace width determines current capacity. 10mil ≈ 0.5A at 10°C rise.
+    </VaultExplainer>
+  </TooltipTrigger>
+</Slider>
+```
+
 ## Team Execution Checklist
 
 ```

@@ -514,6 +514,38 @@ Modify `components/ui/button.tsx`: `active:scale-[0.98] active:brightness-95 tra
 
 ---
 
+## Wave 10 — Seed vault a11y notes (added 2026-04-19)
+
+> Per master-index §7 + §13. Vault only has ~16 a11y notes and most are thin. Before Phases 3/7/9 rely on "what does WCAG actually say?", seed the canonical notes via the `inbox/` pipeline. **NEVER write directly to `knowledge/`** — stubs route through `/extract` during execution.
+
+### Tasks
+
+- [x] Task 10.1 — Create `inbox/2026-04-19-wcag-focus-ring-3to1-contrast.md` stub (seeded 2026-04-19)
+- [x] Task 10.2 — Create `inbox/2026-04-19-wcag-1-4-1-use-of-color.md` stub (seeded 2026-04-19)
+- [x] Task 10.3 — Create `inbox/2026-04-19-aria-grid-for-svg-canvas-830-cells.md` stub (seeded 2026-04-19)
+- [x] Task 10.4 — Create `inbox/2026-04-19-keyboard-nav-radix-dialog-focus-trap.md` stub (seeded 2026-04-19)
+- [ ] **Task 10.5 — Run `/extract`** on the four stubs during execution; verify notes land under `knowledge/` with v2 frontmatter (pass `/vault-validate`).
+- [ ] **Task 10.6 — Back-reference from Phases 3/7/9** — once notes are extracted, each phase task that relates consumes the vault slug via `<VaultExplainer>` (Phase 8 primitive from 16) or adds the slug to axe-result "Why this matters" toasts.
+- [ ] **Task 10.7 — Additional gap stubs to seed as audit surfaces more needs:**
+
+```
+/vault-gap "WCAG 2.1 SC 1.4.11 non-text contrast focus indicator 3:1 ratio" --origin-plan 03-a11y-systemic.md --origin-task 10.7
+/vault-gap "WCAG 2.1 SC 2.4.7 focus visible requirement" --origin-plan 03-a11y-systemic.md --origin-task 10.7
+/vault-gap "ARIA grid vs application pattern for SVG canvas with many cells" --origin-plan 03-a11y-systemic.md --origin-task 10.7
+/vault-gap "Radix dialog focus trap keyboard nav Tab Shift-Tab Escape" --origin-plan 03-a11y-systemic.md --origin-task 10.7
+/vault-gap "jest-axe integration patterns per-component accessibility testing" --origin-plan 03-a11y-systemic.md --origin-task 10.7
+/vault-gap "role button on div antipattern semantic HTML requirement" --origin-plan 03-a11y-systemic.md --origin-task 10.7
+```
+
+- [ ] **Task 10.8 — Commit stubs + extracted notes** in a single "feat(vault): a11y foundations" commit post-`/extract`.
+
+### Gate
+
+- Pipeline discipline: `git log -- knowledge/` after Wave 10 shows only `/extract`-authored commits. No direct `knowledge/` writes.
+- Phases 3/7/9 cannot merge until at least the top 4 extracted notes exist (Tasks 10.1-10.4 → 10.5 complete).
+
+---
+
 ## Team Execution Checklist
 
 ```

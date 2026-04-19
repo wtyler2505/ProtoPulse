@@ -70,6 +70,38 @@
 - [ ] Task 4.3 — Verify Alternates / Part Usage render (E2E-481-482 post-01 fix): Playwright e2e confirming tabs show data, not error.
 - [ ] Task 4.4 — Tests + commit.
 
+## Vault integration (added 2026-04-19)
+
+Per master-index §7 + §13.
+
+### Planned insertions
+
+| Task | Insertion site | Target vault slug | Status |
+|------|----------------|-------------------|--------|
+| Wave 2 Task 2.7 (ESD tooltip, E2E-380) | BOM row Cost Optimisation/ESD/Assembly toggle labels | `electrostatic-discharge-esd-protection-filter-definition` | 🟡 planned — seed gap |
+| Wave 3 Task 3.2 (empty-state hints, E2E-479) | Supply Chain / Templates / My Parts empty states | Three separate slugs: `supply-chain-eol-planning-workflow`, `bom-templates-reusability-pattern`, `personal-inventory-tracking-discipline` | 🟡 planned — seed gaps |
+| Wave 4 Task 4.1 (alternate row reason, E2E-524) | Alternate suggestions dropdown in BOM editor | `<VaultExplainer slug={alternate.reasonSlug}>` per-alternate reasoning (cost, lifecycle, sourcing, spec-match) | 🟡 planned — may use existing MOC `power-systems` / `passives` |
+
+### Gap stubs to seed
+
+```
+/vault-gap "electrostatic discharge ESD protection filter in BOM" --origin-plan 10-procurement-suite.md --origin-task 2.7
+/vault-gap "supply chain EOL planning for parts you depend on" --origin-plan 10-procurement-suite.md --origin-task 3.2
+/vault-gap "BOM template reusability pattern save successful BOMs" --origin-plan 10-procurement-suite.md --origin-task 3.2
+/vault-gap "personal parts inventory tracking discipline maker on-hand" --origin-plan 10-procurement-suite.md --origin-task 3.2
+```
+
+### Consumption pattern
+
+```tsx
+<Toggle aria-label="ESD protection filter">
+  ESD
+  <VaultHoverCard topic="electrostatic-discharge-esd-protection-filter-definition">
+    <InfoIcon size={14} />
+  </VaultHoverCard>
+</Toggle>
+```
+
 ## Checklist
 
 ```

@@ -76,6 +76,50 @@
 - [ ] Task 3.9 — ESP32/RP2040/STM32 starter variants (E2E-449) → backlog entry; skip from this plan.
 - [ ] Task 3.10 — Tests + commit.
 
+## Vault integration (added 2026-04-19)
+
+Per master-index §7 + §13. Learning surfaces are where vault content surfaces MOST heavily — the Vault IS the root of the knowledge graph for Learn/Patterns/Starters/Labs.
+
+### Planned insertions
+
+| Task | Insertion site | Target vault slug | Status |
+|------|----------------|-------------------|--------|
+| Wave 1 Task 1.3 (Learn → Vault MOC cross-link) | Every Learn article frontmatter MUST include `vaultMoc: <slug>`; card footer link to MOC | 54 MOCs already in vault — `moc-microcontrollers`, `moc-passives`, `moc-power-systems`, etc. | ✅ existing content; CI assertion needed |
+| Wave 3 Task 3.2 (Apply pattern to project) | Pattern card has `vaultSlug`; instantiating also inserts a comment node `<VaultHoverCard>` | Per-pattern (e.g. `rc-lowpass-filter-cutoff-derivation`, `esp32-boot-mode-strapping-pins`) | ✅ existing content |
+| Wave 3 Task 3.4 (Starter Open Circuit multi-target) | Each starter has `vaultSlug` in frontmatter; preserved across Schematic/Breadboard/PCB targets | Per-starter (e.g. `arduino-blink-canonical-starter-wiring`) | 🟡 seed gaps per starter |
+| Wave 2 Task 2.9 (Graph view sub-tab) | Force-directed graph reads T3 backlink index (`ops/index/plan-vault-backlinks.json`) as edge source | N/A — consumes infrastructure | ✅ T3 shipped |
+| Wave 3 Task 3.5-3.7 (Labs pedagogy) | Each lab step has `vaultSlug`; "Why this step?" → `<VaultExplainer>` | Per-lab-step | 🟡 seed gaps per lab |
+
+### Gap stubs to seed
+
+```
+/vault-gap "Arduino blink canonical starter wiring LED resistor ESP32" --origin-plan 13-learning-surfaces.md --origin-task 3.4
+/vault-gap "RC lowpass filter cutoff frequency derivation and canonical pattern" --origin-plan 13-learning-surfaces.md --origin-task 3.2
+/vault-gap "ESP32 boot mode strapping pins pattern reference" --origin-plan 13-learning-surfaces.md --origin-task 3.2
+```
+
+### CI assertion (add to 16 Phase 8)
+
+```bash
+# Every Learn article, Pattern, Starter, Lab frontmatter MUST have a vaultSlug
+for f in client/src/data/learn/*.md client/src/data/patterns/*.md client/src/data/starters/*.json client/src/data/labs/*.json; do
+  grep -qE "vaultSlug|vaultMoc" "$f" || { echo "MISSING vault backlink: $f"; exit 1; }
+done
+```
+
+### Consumption pattern
+
+```tsx
+<Card>
+  <CardHeader>{article.title}</CardHeader>
+  <CardFooter>
+    <VaultHoverCard slug={article.vaultMoc}>
+      Read more in Vault →
+    </VaultHoverCard>
+  </CardFooter>
+</Card>
+```
+
 ## Checklist
 
 ```

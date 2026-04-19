@@ -41,6 +41,41 @@ Pass 1 Arduino: E2E-026-028 + E2E-051-052 tab-naming. Pass 2 Arduino: E2E-341-34
 - [ ] Task 3.2 — Editor shortcuts documented.
 - [ ] Task 3.3 — Tests + commit.
 
+## Vault integration (added 2026-04-19)
+
+### Planned insertions
+
+| Task | Insertion site | Target vault slug | Status |
+|------|----------------|-------------------|--------|
+| Wave 1 Task 1.3 (Verify tooltip, E2E-345) | Arduino toolbar Verify button | `arduino-build-pipeline-verify-vs-upload-compilation-only` | 🟡 seed gap |
+| Wave 1 Task 1.7 (SIMULATE disambiguation, E2E-348) | Sub-tab rename + deep-link | `arduino-in-sketch-simulation-vs-full-spice-simulation-when-to-use` | 🟡 seed gap |
+| Wave 2 Task 2.2 (Baud rate tooltip, E2E-432) | Serial Monitor baud dropdown | `serial-baud-rates-standard-values-and-arduino-default-115200` | 🟡 seed gap |
+| Wave 2 Task 2.3 (Custom baud + RTS/DTR) | Serial controls | `serial-rts-dts-flow-control-pulse-semantics` | 🟡 seed gap |
+
+### Gap stubs
+
+```
+/vault-gap "Arduino build pipeline verify vs upload compilation only" --origin-plan 12-arduino-serial-code.md --origin-task 1.3
+/vault-gap "Arduino in-sketch simulation vs full SPICE when to use" --origin-plan 12-arduino-serial-code.md --origin-task 1.7
+/vault-gap "serial baud rates standard values 9600 115200 and Arduino default" --origin-plan 12-arduino-serial-code.md --origin-task 2.2
+/vault-gap "serial RTS DTR flow control pulse semantics" --origin-plan 12-arduino-serial-code.md --origin-task 2.3
+```
+
+### Consumption pattern
+
+```tsx
+<StyledTooltip content={
+  <>
+    Verify (compile) sketch without uploading.
+    <VaultHoverCard topic="arduino-build-pipeline-verify-vs-upload-compilation-only">
+      <LinkIcon />Learn more
+    </VaultHoverCard>
+  </>
+}>
+  <Button data-testid="btn-verify">Verify</Button>
+</StyledTooltip>
+```
+
 ## Checklist
 
 ```

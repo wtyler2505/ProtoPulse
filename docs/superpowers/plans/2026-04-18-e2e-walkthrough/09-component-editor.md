@@ -36,6 +36,56 @@ Pass 1: E2E-040. Pass 2: E2E-370-376.
 - [ ] Task 3.3 — Multi-select for expert bulk edit (E2E-375): shift-click selects range; bulk edit dialog.
 - [ ] Task 3.4 — Tests + commit.
 
+## Vault integration (added 2026-04-19)
+
+Per master-index §7 + §13. Component Editor is THE highest-leverage place for vault-backed tooltips — every field definition is an on-ramp to domain knowledge.
+
+### Run order
+
+1. Kickoff: `/vault-suggest-for-plan docs/superpowers/plans/2026-04-18-e2e-walkthrough/09-component-editor.md`.
+2. Per-field, check vault for definition notes. Missing ones get `/vault-gap` stubs in one pass.
+
+### Planned insertions
+
+| Task | Insertion site | Target vault slug | Status |
+|------|----------------|-------------------|--------|
+| Wave 2 Task 2.2 (Family HoverCard, E2E-374) | ComponentEditor form, `<Label>` for Family | `component-field-family-taxonomy-mcu-passive-power-sensor-etc` | 🟡 planned — seed gap |
+| Wave 2 Task 2.2 (Mounting Type HoverCard) | same form, Mounting Type label | `component-mounting-type-smd-vs-through-hole-definitions` | 🟡 planned — seed gap |
+| Wave 2 Task 2.2 (Package Type HoverCard) | same form, Package label | `component-package-types-soic-sop-qfn-qfp-bga-dip-definitions` | 🟡 planned — likely partial vault coverage; /vault-gap to verify |
+| Wave 2 Task 2.2 (MPN HoverCard) | same form, MPN label | `manufacturer-part-number-mpn-vs-generic-part-definition` | 🟡 planned — seed gap |
+| Wave 3 Task 3.1 (parts sidebar subtitle) | Sidebar `<PartCard>` subtitle line | Per-part vault note via `fm.name === partSlug` lookup | 🟡 planned — consumption pattern |
+| Wave 3 Task 3.3 (bulk edit pre-check) | Before bulk edit applies, validate target field knowledge exists | `component-field-bulk-edit-safety-pattern` | 🟢 low-priority |
+
+### Gap stubs to seed
+
+Single `/vault-gap` run per field batch:
+
+```
+/vault-gap "component Family taxonomy MCU passive power sensor" --origin-plan 09-component-editor.md --origin-task 2.2
+/vault-gap "component mounting type SMD through-hole definitions" --origin-plan 09-component-editor.md --origin-task 2.2
+/vault-gap "component package types SOIC SOP QFN QFP BGA DIP TO definitions" --origin-plan 09-component-editor.md --origin-task 2.2
+/vault-gap "manufacturer part number MPN vs generic part definition" --origin-plan 09-component-editor.md --origin-task 2.2
+```
+
+### Consumption pattern
+
+```tsx
+<FormField name="family">
+  <FormLabel>
+    Family
+    <VaultHoverCard topic="component-field-family-taxonomy-mcu-passive-power-sensor-etc">
+      <InfoIcon size={14} />
+    </VaultHoverCard>
+  </FormLabel>
+  <FormControl>...</FormControl>
+</FormField>
+```
+
+### Gate
+
+- `/vault-quality-gate` runs on each new field-definition note before it lands in `knowledge/`.
+- Field tooltips should render `confidence: supported` minimum (a field definition shouldn't be speculative).
+
 ## Checklist
 
 ```

@@ -384,6 +384,50 @@ Split tools / view / mode into visual groups with vertical dividers.
 
 ---
 
+## Vault integration (added 2026-04-19)
+
+Per master-index §7 + §13. Breadboard is THE richest pedagogical surface — every pin hover, mistake catalog rule, and saved pattern is a vault-backed teaching moment.
+
+### Planned insertions
+
+| Task | Insertion site | Target vault slug | Status |
+|------|----------------|-------------------|--------|
+| Wave 6 Task 6.1 (hover-pin Vault tooltip) | Each MCU pin on the board — `<VaultHoverCard slug={pin.vaultSlug}>` | `esp32-gpio12-must-be-low-at-boot-or-module-crashes` + one slug per strapping pin | ✅ existing content |
+| Wave 6 Task 6.2 (mistake catalog rule alerts) | Each `MistakeRule.message` gets a `vaultSlug`; toast gets "Learn more" | `drc-should-flag-direct-gpio-to-inductive-load-connections-and-suggest-driver-plus-flyback-subcircuit` + per-rule slugs | ✅ partial — inventory per rule |
+| Wave 6 Task 6.7 (saved pattern cards) | Pattern card metadata `vaultSlug` linking to canonical circuit notes | `555-timer-astable-oscillator`, `h-bridge-mosfet-layout`, `i2c-pullup-sizing` | 🟡 seed gaps |
+| Wave 4 Task 4.1 (connectivity explainer rail math) | Rail trace popover — `<VaultExplainer slug="breadboard-power-rail-topology">` | `breadboard-power-rail-topology-dual-side-vs-single` | 🟡 seed gap |
+| Wave 2 Task 2.1 (wire color conventions) | Color picker — inline definitions + vault deep link | `wire-color-code-conventions-red-vcc-black-gnd` | 🟡 seed gap |
+| Wave 4 Task 4.3 (voltage probe readings) | Probe HUD — "Why this voltage?" link | `voltage-divider-math-and-probing-methodology` | 🟡 seed gap |
+
+### Gap stubs to seed
+
+```
+/vault-gap "breadboard power rail topology dual side vs single" --origin-plan 07-breadboard.md --origin-task 4.1
+/vault-gap "wire color code conventions red VCC black GND yellow clock" --origin-plan 07-breadboard.md --origin-task 2.1
+/vault-gap "voltage divider math and probing methodology" --origin-plan 07-breadboard.md --origin-task 4.3
+/vault-gap "555 timer astable oscillator canonical breadboard pattern" --origin-plan 07-breadboard.md --origin-task 6.7
+/vault-gap "h-bridge MOSFET breadboard layout canonical pattern" --origin-plan 07-breadboard.md --origin-task 6.7
+/vault-gap "i2c pullup sizing for breadboard vs production" --origin-plan 07-breadboard.md --origin-task 6.7
+```
+
+### Consumption pattern
+
+```tsx
+<Tooltip>
+  <TooltipTrigger asChild><BoardPin data-pin={pin.label} /></TooltipTrigger>
+  <TooltipContent>
+    <VaultHoverCard slug={pin.vaultSlug} fallback={`${pin.label} — no vault note yet`}>
+      <PinSummary pin={pin} />
+    </VaultHoverCard>
+  </TooltipContent>
+</Tooltip>
+```
+
+### Gate
+
+- Every MistakeRule added MUST include a `vaultSlug` (registry enforced in CI via T3 backlink index).
+- Every saved pattern card MUST include a `vaultSlug` OR an inbox stub with the pattern's origin.
+
 ## Team Execution Checklist
 
 ```

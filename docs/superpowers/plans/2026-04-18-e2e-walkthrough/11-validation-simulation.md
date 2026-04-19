@@ -42,6 +42,51 @@ Pass 1: validation items referenced across passes. Pass 2 Validation: E2E-383-38
 - [ ] Task 3.1 — Validation + Simulation trust receipts fully consume `useConfidence()` from 16 Phase 5. No more contradicting strings.
 - [ ] Task 3.2 — Tests + commit.
 
+## Vault integration (added 2026-04-19)
+
+Per master-index §7 + §13. Validation + Simulation is the RICHEST plan for vault consumption because every DRC rule + SPICE concept is a pedagogical moment.
+
+### Planned insertions
+
+| Task | Insertion site | Target vault slug | Status |
+|------|----------------|-------------------|--------|
+| Wave 1 Task 1.4 (Design Troubleshooter prompt) | Symptoms input — `buildVaultContext` auto-inject already lives in `server/ai.ts` (post 2026-04-14) | N/A — already consumes vault | ✅ existing infrastructure |
+| Wave 2 Task 2.4 (DC Operating Point plain-English, E2E-394) | Simulation result table — Student-mode label substitution | `dc-operating-point-analysis-definition-and-interpretation` | 🟡 planned — seed gap |
+| Wave 2 Task 2.2 (Start Simulation disabled tooltip, E2E-392) | `disabledReason` on Button | `simulation-readiness-preconditions-spice-model-plus-placed-components` | 🟡 planned — seed gap |
+| Wave 1 Task 1.1 (DRC severity colors, E2E-384) | Validation row icon + color | `drc-severity-taxonomy-error-warning-info-and-how-to-triage` | 🟡 planned — seed gap |
+| Every DRC rule (systemic per T10 quality gate) | Each rule has a `vaultSlug` field; "Why is this wrong?" button → `<VaultExplainer slug={rule.vaultSlug}>` | Many — e.g. `drc-should-flag-direct-gpio-to-inductive-load-...` already exists | ✅ partially covered; inventory via `/vault-suggest-for-plan` |
+
+### Gap stubs to seed
+
+```
+/vault-gap "DC operating point analysis definition and interpretation" --origin-plan 11-validation-simulation.md --origin-task 2.4
+/vault-gap "simulation readiness preconditions SPICE model placed components" --origin-plan 11-validation-simulation.md --origin-task 2.2
+/vault-gap "DRC severity taxonomy error warning info triage priority" --origin-plan 11-validation-simulation.md --origin-task 1.1
+```
+
+### DRC rule → vault slug registry
+
+Create (in this plan's work): a JSON at `server/services/drc/rule-registry.json` mapping each rule ID to a vault slug. When a new rule is added, the registry requires a vault slug too. CI asserts every rule has a resolvable slug (via T3 backlink index).
+
+```json
+{
+  "gpio-inductive-load-missing-flyback": {
+    "severity": "error",
+    "vaultSlug": "drc-should-flag-direct-gpio-to-inductive-load-connections-and-suggest-driver-plus-flyback-subcircuit",
+    "shortMessage": "GPIO → inductive load without driver",
+    "category": "power"
+  },
+  "decoupling-cap-missing": {
+    "vaultSlug": "drc-should-flag-missing-decoupling-cap-on-ic-vcc-pin",
+    "...": "..."
+  }
+}
+```
+
+### Gate
+
+- Every new DRC rule commit MUST include its vault slug (in the registry) AND pass `/vault-validate <slug>` AND pass `/vault-quality-gate` on the associated vault note if new.
+
 ## Checklist
 
 ```

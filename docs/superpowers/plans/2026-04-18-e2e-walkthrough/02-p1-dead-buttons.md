@@ -617,6 +617,53 @@ git commit -m "fix(schematic): place-component/place-power toolbar buttons open 
 □ advisor() called ≥2× (Task 1.5, Task 4.3)
 ```
 
+## Vault integration (added 2026-04-19)
+
+Per master-index §7 (upgraded research protocol) and §13 (vault integration commitment). Tooling ready: `/vault-gap`, `/vault-validate`, `/vault-suggest-for-plan`, `/vault-quality-gate`.
+
+### Run order
+
+1. At sub-plan kickoff: `/vault-suggest-for-plan docs/superpowers/plans/2026-04-18-e2e-walkthrough/02-p1-dead-buttons.md --json > .vault-suggest-02.json`. Paste the Markdown report into this Research log.
+2. For each `missing`/`thin` task → `/vault-gap` with `--origin-plan` + `--origin-task` flags. Stubs land in `inbox/`.
+3. Pre-consume: run `/vault-validate <slug>` before citing a slug in code.
+
+### Planned insertions (seed set — expand via `/vault-suggest-for-plan`)
+
+| Task | Insertion site | Target vault slug | Status |
+|------|----------------|-------------------|--------|
+| Phase 1 Task 1.3 (Coach popover root-cause fix) | in-code comment at `WorkspaceHeader.tsx:427-444` + `docs/design-system/radix-composition.md` | `popover-trigger-aschild-slot-forwarding-gotcha` | 🆕 seeded-inbox pending (Plan 03 Wave 10.4 shares this) |
+| Phase 5 Task 5.5b (Community card detail dialog) | Dialog body — tag MOC HoverCards | `<VaultHoverCard topic={card.license}>` (MIT/CC-BY/etc.) — depends on `/vault-gap license-mit-plain-english` etc. | 🟡 planned |
+| Phase 4 Task 4.3 (board schema migration advisor) | Advisor prompt context | `projects-board-geometry-single-source-of-truth-pattern` | 🟡 planned — may already exist in `architecture-decisions` MOC |
+
+### Gap stubs to seed when running this plan
+
+- `popover-trigger-aschild-slot-forwarding-gotcha` — documents the E2E-074 root cause (Radix Slot composition with nested primitives). Also referenced from Plan 03 Wave 10.4's keyboard-nav stub.
+- `projects-board-geometry-single-source-of-truth-pattern` — the `useProjectBoard()` hook pattern lives in ProtoPulse but isn't in vault yet.
+- `license-mit-plain-english` / `license-cc-by-plain-english` / `license-cc0-plain-english` — plain-English tooltips for the Community card licenses.
+
+### Gate before commit
+
+- `/vault-quality-gate <any-new-knowledge-note>` — MUST pass before notes land in `knowledge/`.
+
+### Consuming pattern in code
+
+When this plan's UI changes land (Coach popover fixed dialog, Community detail dialog), wire them to consume vault context:
+
+```tsx
+// inside Community card detail dialog
+<DialogContent>
+  <DialogHeader>
+    <DialogTitle>{card.title}</DialogTitle>
+    <LicenseBadge license={card.license}>
+      <VaultHoverCard topic={`license-${card.license.toLowerCase()}-plain-english`}>
+        {card.license}
+      </VaultHoverCard>
+    </LicenseBadge>
+  </DialogHeader>
+  {/* ... */}
+</DialogContent>
+```
+
 ## Research log
 
 - Context7 `@radix-ui/react-popover` — pending at Task 1.1

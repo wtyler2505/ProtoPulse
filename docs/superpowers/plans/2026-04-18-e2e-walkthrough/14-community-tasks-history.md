@@ -58,6 +58,44 @@
 - [ ] Task 3.4 — Comments anchored to design objects (E2E-467): component/wire/DRC issue anchor. Schema change: add `anchorType` + `anchorId` columns to `comments` table. Display on the anchor object as a tiny badge.
 - [ ] Task 3.5 — Tests + commit.
 
+## Vault integration (added 2026-04-19)
+
+Per master-index §7 + §13.
+
+### Planned insertions
+
+| Task | Insertion site | Target vault slug | Status |
+|------|----------------|-------------------|--------|
+| Wave 1 Task 1.3 (license plain-English, E2E-406) | License badge HoverCard | Per-license: `license-mit-plain-english`, `license-cc0-plain-english`, `license-cc-by-plain-english`, `license-cc-by-sa-plain-english` | 🟡 seed gaps |
+| Wave 2 Task 2.3 ("What is a kanban board?", E2E-419) | Kanban column header "?" icon | `kanban-board-workflow-methodology` | 🟡 seed gap |
+| Wave 2 Task 2.9 (NRND tooltips, E2E-465) | Lifecycle badge | `lifecycle-active-definition`, `lifecycle-nrnd-not-recommended-for-new-designs`, `lifecycle-eol-end-of-life`, `lifecycle-obsolete`, `lifecycle-unknown` | 🟡 seed gaps |
+| Wave 3 Task 3.4 (comments anchored, E2E-467) | Anchor badge hover | `design-review-commenting-discipline` | 🟡 seed gap |
+| Wave 1 Task 1.1 (community detail dialog — consumed from 02) | Tag chips on detail dialog | Per-tag MOCs (existing) | ✅ existing content |
+
+### Gap stubs to seed
+
+```
+/vault-gap "open source license MIT plain English summary" --origin-plan 14-community-tasks-history.md --origin-task 1.3
+/vault-gap "open source license CC0 public domain plain English" --origin-plan 14-community-tasks-history.md --origin-task 1.3
+/vault-gap "open source license CC-BY attribution plain English" --origin-plan 14-community-tasks-history.md --origin-task 1.3
+/vault-gap "open source license CC-BY-SA share-alike plain English" --origin-plan 14-community-tasks-history.md --origin-task 1.3
+/vault-gap "kanban board workflow methodology for hardware projects" --origin-plan 14-community-tasks-history.md --origin-task 2.3
+/vault-gap "component lifecycle NRND not recommended new designs meaning" --origin-plan 14-community-tasks-history.md --origin-task 2.9
+/vault-gap "component lifecycle EOL end of life supply implications" --origin-plan 14-community-tasks-history.md --origin-task 2.9
+/vault-gap "component lifecycle active NRND EOL obsolete taxonomy" --origin-plan 14-community-tasks-history.md --origin-task 2.9
+/vault-gap "design review commenting discipline anchor to object" --origin-plan 14-community-tasks-history.md --origin-task 3.4
+```
+
+### Consumption pattern
+
+```tsx
+<Badge variant="lifecycle">
+  <VaultHoverCard topic={`lifecycle-${status}`}>
+    {status}
+  </VaultHoverCard>
+</Badge>
+```
+
 ## Checklist
 
 ```
