@@ -2,7 +2,14 @@
 name: "Component editor field definitions — vault-gap stub"
 description: "Gap flagged by T4 Directed MOC Expansion + 09-component-editor.md. Family / Mounting / Package / MPN each need plain-English vault notes."
 captured_date: 2026-04-19
-extraction_status: pending
+extraction_status: extracted
+extracted_date: 2026-04-19
+extracted_notes:
+  - moc-component-metadata-fields
+  - component-family-groups-parts-by-electrical-role-not-by-manufacturer-or-package
+  - component-mounting-type-separates-tht-from-smt-and-governs-assembly-workflow-not-electrical-behavior
+  - component-package-type-imperial-0603-and-metric-1608-are-the-same-physical-part-with-different-naming-conventions
+  - component-mpn-is-the-manufacturer-contract-and-supplier-sku-is-the-distributor-contract-and-only-mpn-is-stable-across-sources
 triage_status: gap-stub
 source_type: vault-gap-seed
 origin:

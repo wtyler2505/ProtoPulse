@@ -74,6 +74,9 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 - [[ai-component-generation-requires-rigorous-dimension-and-electrical-limit-research-instead-of-hallucinated-approximations]] -- datasheet verification is mandatory for AI-generated components; hallucinated dimensions/limits produce invalid footprints
 - [[enforcing-impossible-fit-and-off-board-only-rules-prevents-invalid-physical-layouts-of-over-sized-modules-in-virtual-breadboards]] -- virtual breadboards must enforce physical fit rules to stay faithful to real-world assembly
 
+## Component Metadata
+- [[moc-component-metadata-fields]] -- the four canonical component-editor fields (family, mounting, package, MPN), why they are tracked separately, and how they combine to identify a part
+
 ## Sub-Domains
 - [[eda-schematic-capture]] -- Core concepts and constraints for schematic capture, symbol generation, and electrical rules checking (ERC).
 - [[eda-pcb-routing]] -- PCB layout rules, trace width calculations, clearance standards, and physical routing constraints.
