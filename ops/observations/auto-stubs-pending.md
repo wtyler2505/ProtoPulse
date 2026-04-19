@@ -20,3 +20,6 @@
 
 ### 2026-04-19T06:46:48Z — from `drizzle-schema-defines-the-column-the-zod-validator-and-the-typescript-type-from-one-source`
 - [[backend-persistence-patterns]] — stub created at `knowledge/backend-persistence-patterns.md`
+
+### 2026-04-19T06:50:59Z — from `component-family-groups-parts-by-electrical-role-not-by-manufacturer-or-package`
+- [[moc-component-metadata-fields]] — stub created at `knowledge/moc-component-metadata-fields.md`
