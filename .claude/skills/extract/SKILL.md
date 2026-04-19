@@ -1162,3 +1162,47 @@ After extraction completes, output the next step based on `ops/config.yaml` pipe
 - **automatic:** Queue entries created and processing continues immediately via orchestration
 
 The chaining output uses domain-native command names from the derivation manifest.
+
+---
+
+## Queue-Aware Batch Mode (added 2026-04-19, BL-0855)
+
+When invoked without a specific file (e.g., `/extract --batch` or `/extract --batch --include-user-queue`), consume pending stubs from the queue files in **priority order**:
+
+### Priority ladder
+
+1. **`ops/queue/gap-stubs.md`** (HIGH) — agent-detected gaps surfaced by `/vault-gap`. Trustworthy origin. Process first.
+2. **`ops/queue/user-suggestions.md`** (LOW, gated) — user-submitted suggestions captured by `/vault-inbox`. Each row's corresponding inbox stub has `triage_status: pending-review` and requires **explicit moderation approval** before extraction. Only consumed when `--include-user-queue` is passed.
+
+### Moderation gate for user-suggestions
+
+For every user-suggestion stub before extraction:
+
+1. **Read the inbox stub** referenced in the `inbox_path` column.
+2. **Apply the moderation checklist:**
+   - [ ] Does the suggestion describe a real gap in the vault (not a duplicate, not already covered)?
+   - [ ] Is the topic in-domain for ProtoPulse (EDA/hardware/UI/agent-infra)?
+   - [ ] Does it include enough research context to let `/extract` proceed without hallucination?
+   - [ ] Does `unblocks:` in frontmatter point to a real plan or code path?
+3. **If ALL checkboxes pass:** promote `triage_status: pending-review` → `triage_status: approved`, proceed to extract.
+4. **If ANY checkbox fails:** promote to `triage_status: rejected` with a one-line reason in the stub frontmatter (`rejection_reason:`); skip extraction; leave the queue row marked for human review.
+
+### Post-extract queue update
+
+After extracting a stub, update its queue row status:
+- `gap-stubs.md`: `status: extracted` + `extracted_date`
+- `user-suggestions.md`: `status: extracted` (or `rejected` if moderation blocked it)
+
+Never mutate queue rows mid-batch — collect all state changes, write at the end in a single atomic pass.
+
+### Invocation examples
+
+```bash
+/extract --batch                       # gap-stubs.md only (default — high-trust only)
+/extract --batch --include-user-queue  # gap-stubs.md then user-suggestions.md (with moderation)
+/extract --batch --limit 5             # process at most 5 pending stubs this run
+```
+
+### Non-blocking rule
+
+User-suggestion extraction failures MUST NOT halt gap-stub processing. If a user suggestion fails moderation, log and continue to the next item.
