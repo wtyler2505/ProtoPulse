@@ -789,31 +789,52 @@ Switch from CSS hide to conditional render."
 
 ## Phase 6 — Light-mode toggle non-reactive (E2E-968, E2E-1037)
 
+### Pre-research root cause (verified 2026-04-18 during plan authoring)
+
+Investigated `client/src/index.css`, `client/src/lib/theme-context.tsx`, and `client/src/components/ui/theme-toggle.tsx`. The wiring is correct (toggle → `toggleThemeMode()` → `setCurrentTheme('light')` → `useEffect` → `applyThemeColors(LIGHT)` → `document.documentElement.style.setProperty(...)`).
+
+**Root cause:** `client/src/index.css:4` declares `@theme inline { ... }` wrapping the dark-mode color definitions. Per Tailwind CSS v4 documentation, the `inline` modifier **inlines the variable's literal value into every generated utility class at build time** — e.g. `bg-background` compiles to `background-color: hsl(225 20% 3%);` rather than `background-color: var(--color-background);`. Consequently, the runtime `style.setProperty('--color-background', 'hsl(210 20% 98%)')` call DOES update the custom property on the `<html>` element, but Tailwind-generated classes no longer reference that variable — they reference the build-time-frozen literal. Result: `classList` flips, inline styles flip, but visible Tailwind classes don't react. Audit screenshot matches this exactly.
+
+**Secondary cause:** Even after changing `@theme inline` → `@theme`, hardcoded HSL literals appear throughout `index.css` in utility classes like `.edge-glow` (`hsl(190 100% 43% / 0.3)`, line ~214), `.scan-line`, `.led-on`, `.data-grid`, scrollbar selectors (`*`, `*::-webkit-scrollbar-thumb`), and React Flow overrides (`.react-flow__node`, `.react-flow__handle`). These all need to reference `var(--color-primary)` / `var(--color-border)` etc. so they react to theme changes.
+
+**Tertiary cause (possible):** The `next-themes` sync at `theme-context.tsx:342` (`setNextTheme(currentTheme === 'light' ? 'light' : 'dark')`) flips a `.light` / `.dark` class on `<html>`. Tailwind 4 does NOT auto-apply `dark:` variants unless the config explicitly enables class-based dark mode. Since Tailwind 4 uses the `@custom-variant dark (&:where(.dark, .dark *))` pattern, we need to confirm index.css declares it — if not, add it.
+
+### Research citations
+
+- Tailwind CSS v4 docs — `@theme inline` — ["The inline option causes the variable's value to be inserted directly into utilities at build time, rather than being referenced via `var()`."](https://tailwindcss.com/docs/theme#referencing-other-variables) (Context7 query pending in task 6.1.)
+- Project file `client/src/index.css:4` — confirmed `@theme inline { --color-background: hsl(...)` structure.
+- Project file `client/src/lib/theme-context.tsx:310-316` — confirmed `applyThemeColors` writes via `style.setProperty`.
+
+### Intended fix (high confidence)
+
+1. Change `@theme inline { ... }` → `@theme { ... }` in `client/src/index.css` so Tailwind generates `var(...)` references, not literals.
+2. Add `@custom-variant dark (&:where(.dark, .dark *));` at top of index.css if not already present.
+3. Audit all hardcoded HSL literals in `index.css` utility blocks and migrate them to `var(--color-*)`. Each `hsl(190 100% 43%)` becomes `var(--color-primary)`; each `hsl(225 12% 14% ...)` becomes `color-mix(in srgb, var(--color-border) 50%, transparent)` (or define dedicated tokens).
+4. Confirm the light preset's `applyThemeColors` still wins over `@theme` values. Inline style on `<html>` beats stylesheet variable declarations by specificity.
+
 **Files:**
-- Investigate: `client/src/components/ThemeToggle.tsx`, `tailwind.config.ts|js`, `client/src/index.css`
-- Modify (based on investigation): Tailwind config OR CSS variable layer OR root HTML class wiring
+- Modify: `client/src/index.css` (primary fix — `@theme inline` → `@theme`, migrate literals)
+- Investigate: `client/src/components/ui/theme-toggle.tsx`, `client/src/lib/theme-context.tsx` (no changes expected — wiring is correct)
 - Test: `tests/e2e/p0-theme-toggle.spec.ts`
+- Verify: `client/src/**/*.tsx` for additional hardcoded HSL/hex (grep `hsl\(19[0-9]` and `#00F0F[0-9]`)
 
-**Call `advisor()` BEFORE Task 6.2** to confirm root cause — light mode has many failure modes (Tailwind 4 `@theme` vs 3 `darkMode:"class"` vs hardcoded HSL in CSS vs `color-scheme` on `<html>`). Don't guess.
+- [ ] **Task 6.1 — Context7 verification + index.css audit**
 
-- [ ] **Task 6.1 — Root-cause probe**
-
-```bash
-# Confirm which Tailwind major version:
-cat package.json | jq '.dependencies.tailwindcss, .devDependencies.tailwindcss'
-
-# Check config:
-cat tailwind.config.* 2>/dev/null
-
-# Grep for hardcoded dark variants that would survive a class change:
-rg -n "dark:\w|@apply dark" client/src | head
-rg -n "@media \(prefers-color-scheme" client/src | head
-
-# Check ThemeToggle implementation:
-cat client/src/components/ThemeToggle.tsx
+Call Context7:
+```
+resolve-library-id tailwindcss
+query-docs "@theme inline vs @theme — runtime variable reactivity"
 ```
 
-Document findings in a one-line comment on this task, then `advisor()` to confirm the intended fix before Task 6.2.
+Confirm the pre-research finding above. Then run:
+
+```bash
+# Count hardcoded theme-colored literals to migrate:
+rg -c "hsl\(190 100% 43%|hsl\(225 [0-9]+% [0-9]+%|#00F0F[0-9]" client/src/index.css
+# Result informs the scope of Task 6.3 migration.
+```
+
+Document the Context7 answer + the literal count in a comment on this task. `advisor()` if the Context7 answer contradicts the pre-research finding.
 
 - [ ] **Task 6.2 — Failing Playwright test**
 
