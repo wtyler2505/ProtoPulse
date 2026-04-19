@@ -163,6 +163,29 @@ Three more skills added, including the session-layer pre-fetch hook and the peda
 
 All three are tracked in `docs/superpowers/plans/2026-04-18-arscontexta-system-upgrades.md` with their full scope. The **tooling foundation is complete**; the remaining work is either content-seeding (T4) or UI components (T9, T12) that live in the per-tab design-system plan, not in `.claude/skills/`.
 
+## Session 7 update (2026-04-19 continuation) — T4 kickoff + T9/T12 specs shipped + all 14 plans enhanced
+
+Plan-integration and remaining upgrade items landed:
+
+- **All 14 gap plans enhanced with `## Vault integration` subsections**: 02, 03 (Wave 10), 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 15, 17. Each subsection contains: Planned insertions table (Task / Insertion site / Target vault slug / Status), `/vault-gap` seed-stub commands, React consumption pattern with `<VaultHoverCard>` or `<VaultExplainer>`, and per-plan Gate (where appropriate).
+- **16-design-system.md Phase 8 shipped**: Vault primitives spec — `useVaultQuickFetch(slug)` hook, `<VaultHoverCard>` / `<VaultExplainer>` components, audience-tier rendering (consumes T11), "Suggest a note" 404 CTA (consumes T8), Storybook stories, CI primitive-bypass guard. BLOCKS Tiers D-G plans consuming vault.
+- **T9 spec shipped as 16-design-system Phase 9**: Vault graph visualization — `/api/vault/graph` route, `<VaultGraph>` d3-force SVG component, keyboard nav, orphan highlight mode, integration as `?view=graph` sub-tab of VaultView. Consumes T3 backlink index.
+- **T12 spec shipped as 16-design-system Phase 10**: Plan↔Vault↔Code traceability panel — `/api/traceability/:planId/:taskId` route, `<TraceabilityPanel>` 3-column UI, Settings > Developer surface, Dashboard KPI widget, CI enforcement (≥80% vault coverage before in-progress plan can merge).
+- **T4 kickoff via inbox seeding** (4 new stubs): `drizzle-orm-schema-patterns-for-protopulse.md`, `component-editor-field-definitions-moc.md`, `electronics-math-calculator-formulas-moc.md`, `wcag-aria-patterns-expansion-moc.md`. Plus the 4 a11y stubs from Wave 10 = 8 pending-extraction inbox items.
+- **Coverage TSV v2 auto-generated**: `docs/superpowers/plans/2026-04-18-e2e-walkthrough/coverage/vault-integration.tsv` — 58 rows across 19 plans, parsed directly from each plan's Vault Integration table. Rebuild via `python3 coverage/_build-tsv.py`.
+- **Grep verification pass**: every plan file has ≥3 vault references (qmd_ | VaultHoverCard | VaultExplainer | vault-gap | /api/vault/ | "vault integration"). 18-innovation-roadmap cites Canonical #4 in body text (expected).
+- **T3 backlink index rebuilt**: `ops/index/plan-vault-backlinks.json` — 682 notes, 91 backlinks (+1 vs session 5), 668 orphans. Orphan count will drop meaningfully once the 8 inbox stubs extract (expect ~12 new knowledge notes).
+- **BL-0855 logged** in `docs/MASTER_BACKLOG.md` P1 section: `/extract` must wire `--include-user-queue` + moderation gate for `ops/queue/user-suggestions.md` (surfaced by `/vault-inbox extract` smoke test).
+
+**Cumulative status: ALL 15 upgrade items now have either shipped tooling (T1-3, T5-8, T10-11, T13-15 = 11 items) or shipped specs in 16-design-system (T9, T12 = 2 items) or kicked-off content campaigns (T4 = 4 inbox stubs seeded). 100% roadmap coverage.**
+
+## Next session — start here (UPDATED session 7)
+
+1. **Run `/extract` on the 8 inbox stubs** — 4 a11y + 4 T4 MOC expansion. Routes them to `knowledge/` with v2 frontmatter. Precondition for consuming slugs in plans.
+2. **Test `<VaultHoverCard>` primitive** — once 16 Phase 8 executes in code, smoke-test on one breadboard pin to close the loop.
+3. **T4 content campaign** — after the 4 T4 MOC-anchor stubs extract, iterate: each MOC should grow to 8-12 notes over 2 weeks.
+4. **BL-0855 implementation** — wire `/extract --include-user-queue` in the extract skill + moderation gate.
+
 ## Next session — start here (UPDATED)
 
 ### Priority 1: Resume the 19-plan vault integration (the original intent)
