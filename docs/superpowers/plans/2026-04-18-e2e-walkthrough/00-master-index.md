@@ -264,7 +264,12 @@ Per project memory "DO REAL RESEARCH ALWAYS. NO MVP.":
 - **Codebase grep** — before any edit, ast-grep for the function/component being touched. Never assume API shape.
 - **Context7 MCP** — `resolve-library-id` + `query-docs` for every third-party library API used (React 19, React Flow, shadcn, Drizzle, Vitest, Playwright). Max 3 resolves + 3 queries per question.
 - **WebSearch** — for industry/EDA conventions (IEEE 315, IEC 60617, KiCad behavior, Flux/Wokwi reference), cite URL in plan task.
-- **Ars Contexta Vault** — for hardware specs, always grep `knowledge/` first before WebSearch.
+- **Ars Contexta Vault — MANDATORY FIRST STEP for anything hardware/UX/pedagogy** (upgraded 2026-04-18):
+  1. `mcp__qmd__qmd_deep_search "<concept under edit>" limit=10` BEFORE the failing-test phase.
+  2. If **≥3 relevant notes** exist: cite their slugs in the task's Research log; consume them via `<VaultHoverCard>` / `<VaultExplainer>` (from `16-design-system.md` Phase 8) wherever the UX benefits.
+  3. If **≤2 relevant notes** exist: create `inbox/YYYY-MM-DD-<slug>.md` stub with the research question + primary-source URLs. `/extract` runs during execution to route to `knowledge/`. Back-reference after.
+  4. **NEVER write directly to `knowledge/`.** Honor the pipeline (`inbox/ → /extract → knowledge/`).
+  5. Also use `mcp__qmd__qmd_vector_search` for "conceptually related" breadth and `mcp__qmd__qmd_search` for exact-term lookups.
 - **Advisor** — each sub-plan calls `advisor()` after the failing-test phase of its first task, and again before declaring done.
 
 ## 8. Quality gates (every sub-plan wraps with this checklist)
@@ -345,6 +350,38 @@ The acceptance criterion for completing this master roadmap is that the above ba
 
 - Findings E2E-001 through E2E-200 were flagged by the audit author as "largely fast first-pass coverage sweep — not all individually click-verified." Anything tagged "GLANCED" in the audit requires a DevTools re-verify before action. Sub-plan authors: when owning a GLANCED finding, add a pre-implementation verification task (`Task N.0 — reproduce in DevTools, screenshot, attach`).
 - Methodology discriminator: "a button works iff a real DevTools click produces user-visible state change." Playwright tests should use `page.getByRole(...).click()`, not `dispatchEvent`.
+
+## 13. Vault integration commitment (added 2026-04-18)
+
+The 2026-04-14 Ars Contexta campaign shipped a production vault-consumption layer (683 notes, 54 MOCs, `useVaultSearch`/`useVaultNote` hooks, `/api/vault/search` route, `server/ai.ts` auto-inject). Only 7 of 19 plans referenced it during initial authoring. This section closes that gap.
+
+**Foundational primitive** — `16-design-system.md` Phase 8 ships:
+- `useVaultQuickFetch(slug)` — React Query wrapper with 10-min `staleTime` around `useVaultNote`.
+- `<VaultHoverCard slug|topic fallback>` — Radix HoverCard with title + 140-char summary + "Read more in Vault →" deep link. Loading + error states. 404 offers an inbox-stub CTA.
+- `<VaultExplainer slug|topic>` — inline expandable variant for DRC error rows, Component Editor fields, tutorial steps.
+
+**Consumption map** (every plan uses vault; each plan's file documents its own exact insertion points):
+| Plan | Key vault insertion | Primary vault-content domain |
+|------|--------------------|------------------------------|
+| 02-p1-dead-buttons | Community card detail dialog tag MOCs (Phase 5.5b) | marketplace/licensing |
+| 03-a11y-systemic | Wave 10 seeds `inbox/` stubs for WCAG/ARIA gaps | a11y/WCAG |
+| 04-dashboard | Network preview edge tooltips; vault-verified sample data | protocols/starter circuits |
+| 05-architecture | Asset Library part tooltips; AI-critique grounding via `buildVaultContext` | component selection/pinouts |
+| 06-schematic | ERC rule `vaultSlug`; net-naming convention; pin alternate-function dialog | nets/pins/ERC |
+| 07-breadboard | Deepened hover-pin tooltip; mistake catalog rule → vault slug; pattern backlinks | breadboard-intelligence/mistakes |
+| 08-pcb-3d-order | Layer material "?"; fab tradeoff matrix; trace width context | PCB materials/fabrication |
+| 09-component-editor | Field-definition HoverCards (Family/Mounting/Package/MPN) | component-field-* |
+| 10-procurement-suite | ESD explainer; alternate-selection reasoning; empty-state value hints | sourcing/lifecycle |
+| 11-validation-simulation | Plain-English DC Operating Point; DRC rule explainers | simulation/DRC-rules |
+| 12-arduino-serial-code | Verify pipeline note; baud-rate standards | arduino-build/serial |
+| 13-learning-surfaces | Tightened: each article has vault MOC slug in frontmatter (CI assertion) | all learning MOCs |
+| 14-community-tasks-history | NRND reason lookup; license plain-English | lifecycle-*/license-* |
+| 15-generative-digital-twin-exports | GA param derivation; calculator formula derivation | algorithms/electronics-math |
+| 17-shell-header-nav | Welcome tour content; first-PCB wizard steps; Print mode explainer | onboarding/maker-ux |
+
+**Pipeline discipline** — when a plan identifies a vault gap during execution: pause, create `inbox/YYYY-MM-DD-<slug>.md`, queue `/extract`, resume and cite the new note. Never write directly to `knowledge/`.
+
+**Coverage TSV** — `docs/superpowers/plans/2026-04-18-e2e-walkthrough/coverage/vault-integration.tsv` is the verification map.
 
 ## 12. Out-of-scope (explicitly)
 
