@@ -23,3 +23,6 @@
 
 ### 2026-04-19T06:50:59Z — from `component-family-groups-parts-by-electrical-role-not-by-manufacturer-or-package`
 - [[moc-component-metadata-fields]] — stub created at `knowledge/moc-component-metadata-fields.md`
+
+### 2026-04-19T06:52:26Z — from `component-mpn-is-the-manufacturer-contract-and-supplier-sku-is-the-distributor-contract-and-only-mpn-is-stable-across-sources`
+- [[procurement]] — stub created at `knowledge/procurement.md`
