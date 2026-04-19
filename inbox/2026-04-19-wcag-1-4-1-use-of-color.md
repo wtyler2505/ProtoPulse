@@ -2,8 +2,12 @@
 name: "WCAG 2.1 SC 1.4.1 Use of Color — vault-gap stub"
 description: "Gap flagged by 03-a11y-systemic.md Wave 10 Task 10.2. Seed for /extract."
 captured_date: 2026-04-19
-extraction_status: pending
-triage_status: gap-stub
+extraction_status: extracted
+triage_status: processed
+extracted_notes:
+  - knowledge/wcag-2-1-sc-1-4-1-color-cannot-be-sole-channel-for-meaning.md
+  - knowledge/multi-channel-severity-encoding-is-the-standard-pattern-for-a11y-compliant-status-ui.md
+extracted_date: 2026-04-19
 source_type: vault-gap-seed
 origin:
   plan: docs/superpowers/plans/2026-04-18-e2e-walkthrough/03-a11y-systemic.md
