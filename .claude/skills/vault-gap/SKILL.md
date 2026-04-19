@@ -1,10 +1,11 @@
 ---
 name: vault-gap
-description: Check whether the Ars Contexta vault has sufficient coverage on a topic, and if not, auto-draft an inbox/ stub so /extract can fill the gap. Returns a structured payload the calling agent pastes into a plan's Research log. Triggers on "/vault-gap", "/vault-gap [topic]", "is there a vault note on X", "check vault coverage for Y".
-version: "1.0"
+description: Check whether the Ars Contexta vault has sufficient coverage on a topic. Auto-drafts an inbox/ stub and queues ops/queue/gap-stubs.md when coverage is thin. Returns a structured payload for plan Research logs. Honors the inbox/ → /extract → knowledge/ pipeline discipline — never writes to knowledge/ directly. Triggers on "/vault-gap", "/vault-gap [topic]", "is there a vault note on X", "check vault coverage for Y", "do we have knowledge on Z".
+version: "1.1"
 user-invocable: true
+context: fork
 allowed-tools: Read, Write, Grep, Glob, Bash, mcp__qmd__qmd_search, mcp__qmd__qmd_vector_search, mcp__qmd__qmd_deep_search, mcp__qmd__qmd_collections, mcp__qmd__qmd_status
-argument-hint: "[topic to check for vault coverage] [--origin-plan path/to/plan.md] [--origin-task 1.2]"
+argument-hint: "[topic to check for vault coverage] [--origin-plan path/to/plan.md] [--origin-task 1.2] [--min-notes 3]"
 ---
 
 ## EXECUTE NOW
