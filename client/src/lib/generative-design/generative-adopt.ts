@@ -204,8 +204,8 @@ export function compareCandidateWithCurrent(
   candidate: CandidateEntry,
   currentIR: CircuitIR | null,
 ): ComparisonResult {
-  const candidateComps = candidate.ir.components;
-  const candidateNets = candidate.ir.nets;
+  const candidateComps: IRComponent[] = candidate.ir.components ?? [];
+  const candidateNets: IRNet[] = candidate.ir.nets ?? [];
 
   const currentComps: IRComponent[] = currentIR?.components ?? [];
   const currentNets: IRNet[] = currentIR?.nets ?? [];

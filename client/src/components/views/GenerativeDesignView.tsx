@@ -22,6 +22,8 @@ import { toast } from '@/hooks/use-toast';
 import type { DesignSpec, CandidateEntry } from '@/lib/generative-design/generative-engine';
 import type { ComparisonResult, AdoptResult } from '@/lib/generative-design/generative-adopt';
 import type { CircuitIR } from '@/lib/circuit-dsl/circuit-ir';
+import { VaultHoverCard } from '@/components/ui/vault-hover-card';
+import { BookOpen } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Default base circuit for seeding the generation
@@ -171,7 +173,18 @@ export default function GenerativeDesignView() {
         {/* Population / generation controls */}
         <div className="flex gap-3">
           <div className="flex flex-col gap-1 flex-1">
-            <label className="text-xs text-zinc-400">Population</label>
+            <label className="text-xs text-zinc-400 flex items-center gap-1">
+              Population
+              <VaultHoverCard slug="genetic-algorithm-parameters-population-and-generations-explained">
+                <span
+                  data-testid="population-vault-info"
+                  aria-label="About genetic algorithm population parameter"
+                  className="inline-flex items-center cursor-help opacity-60 hover:opacity-100 transition-opacity"
+                >
+                  <BookOpen className="w-3 h-3" />
+                </span>
+              </VaultHoverCard>
+            </label>
             <input
               data-testid="population-size-input"
               type="number"
@@ -183,7 +196,18 @@ export default function GenerativeDesignView() {
             />
           </div>
           <div className="flex flex-col gap-1 flex-1">
-            <label className="text-xs text-zinc-400">Generations</label>
+            <label className="text-xs text-zinc-400 flex items-center gap-1">
+              Generations
+              <VaultHoverCard slug="genetic-algorithm-parameters-population-and-generations-explained">
+                <span
+                  data-testid="generations-vault-info"
+                  aria-label="About genetic algorithm generations parameter"
+                  className="inline-flex items-center cursor-help opacity-60 hover:opacity-100 transition-opacity"
+                >
+                  <BookOpen className="w-3 h-3" />
+                </span>
+              </VaultHoverCard>
+            </label>
             <input
               data-testid="generations-input"
               type="number"
