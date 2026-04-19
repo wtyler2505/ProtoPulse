@@ -14,3 +14,6 @@
 
 ### 2026-04-19T06:42:27Z — from `popover-trigger-aschild-requires-tooltip-outside-to-avoid-slot-forwarding-collision`
 - [[gotchas]] — stub created at `knowledge/gotchas.md`
+
+### 2026-04-19T06:44:10Z — from `playwright-focus-trap-testing-requires-real-tab-sequences-not-jsdom`
+- [[testing-patterns]] — stub created at `knowledge/testing-patterns.md`
