@@ -2,8 +2,21 @@
 name: "Electronics math / calculator formulas MOC — vault-gap stub"
 description: "Gap flagged by T4 Directed MOC Expansion + 15-generative-digital-twin-exports.md. Every calculator in the Calculators tab needs a vault-backed formula derivation note."
 captured_date: 2026-04-19
-extraction_status: pending
+extraction_status: extracted
+extracted_date: 2026-04-19
 triage_status: gap-stub
+extracted_notes:
+  - moc-electronics-math
+  - ohms-law-v-equals-i-times-r-derivation
+  - voltage-divider-formula-and-loading-effect
+  - rc-lowpass-cutoff-frequency-1-over-2-pi-rc
+  - resistor-series-and-parallel-combining-formulas
+  - mil-vs-mm-pcb-unit-exact-conversion
+  - awg-vs-mm2-wire-sizing-logarithmic-conversion
+  - dbm-vs-mw-rf-power-unit-ratio
+  - led-current-limiting-resistor-sizing-and-thermal-derating
+  - inductor-flyback-voltage-v-equals-l-di-dt
+  - decoupling-cap-sizing-rule-of-thumb-vs-impedance-curve
 source_type: vault-gap-seed
 origin:
   plan: docs/superpowers/plans/2026-04-18-arscontexta-system-upgrades.md

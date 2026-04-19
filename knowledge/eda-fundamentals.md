@@ -77,6 +77,9 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 ## Component Metadata
 - [[moc-component-metadata-fields]] -- the four canonical component-editor fields (family, mounting, package, MPN), why they are tracked separately, and how they combine to identify a part
 
+## Electronics Math
+- [[moc-electronics-math]] -- foundational formulas backing every calculator card: Ohm's Law, voltage divider, RC cutoff, series/parallel resistors, mil/mm, AWG/mm², dBm/mW, LED resistor, inductor flyback, decoupling cap sizing — each with beginner/intermediate/expert tiers
+
 ## Sub-Domains
 - [[eda-schematic-capture]] -- Core concepts and constraints for schematic capture, symbol generation, and electrical rules checking (ERC).
 - [[eda-pcb-routing]] -- PCB layout rules, trace width calculations, clearance standards, and physical routing constraints.
