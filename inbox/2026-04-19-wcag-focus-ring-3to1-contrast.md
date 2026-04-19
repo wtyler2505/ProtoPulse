@@ -2,7 +2,9 @@
 name: "WCAG 2.1 SC 1.4.11 focus ring 3:1 contrast — vault-gap stub"
 description: "Gap flagged by 03-a11y-systemic.md Wave 10 Task 10.1. Seed for /extract."
 captured_date: 2026-04-19
-extraction_status: pending
+extraction_status: extracted
+extracted_to: knowledge/wcag-2-1-sc-1-4-11-requires-focus-indicators-to-hit-3-to-1-contrast-against-adjacent-colors.md
+extracted_date: 2026-04-19
 triage_status: gap-stub
 source_type: vault-gap-seed
 origin:
