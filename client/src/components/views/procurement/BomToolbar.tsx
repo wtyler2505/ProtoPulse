@@ -1,4 +1,4 @@
-import { Search, SlidersHorizontal, Plus, Download, Zap, Layers, Info } from 'lucide-react';
+import { Search, SlidersHorizontal, Plus, Download, Zap, Layers, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { VaultHoverCard } from '@/components/ui/vault-hover-card';
@@ -60,28 +60,30 @@ export function BomToolbar({
             Cost Optimisation
           </Button>
         </StyledTooltip>
-        {/* TODO(plan-10-wave-2): add vault info icon on Cost Optimisation + Assembly toggles */}
-        <StyledTooltip content={esdFilterOnly ? 'Show all components' : `Show ESD-sensitive only (${esdCount})`} side="bottom">
-          <Button
-            variant="outline"
-            size="sm"
-            className={esdFilterOnly ? 'bg-amber-500/10 border-amber-500/40 text-amber-400' : ''}
-            onClick={onToggleEsdFilter}
-            data-testid="button-toggle-esd-filter"
-          >
-            <Zap className="w-4 h-4 mr-2" />
-            ESD{esdCount > 0 && <span className="ml-1 text-[10px] font-mono">({esdCount})</span>}
-            <VaultHoverCard topic="electrostatic-discharge-esd-protection-filter-definition">
-              <span
-                className="ml-1 inline-flex items-center opacity-60 hover:opacity-100 transition-opacity"
-                data-testid="esd-vault-info"
-                aria-label="About ESD filter"
-              >
-                <Info className="w-3 h-3" />
-              </span>
-            </VaultHoverCard>
-          </Button>
-        </StyledTooltip>
+        <div className="inline-flex items-center gap-1">
+          <StyledTooltip content={esdFilterOnly ? 'Show all components' : `Show ESD-sensitive only (${esdCount})`} side="bottom">
+            <Button
+              variant="outline"
+              size="sm"
+              className={esdFilterOnly ? 'bg-amber-500/10 border-amber-500/40 text-amber-400' : ''}
+              onClick={onToggleEsdFilter}
+              data-testid="button-toggle-esd-filter"
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              ESD{esdCount > 0 && <span className="ml-1 text-[10px] font-mono">({esdCount})</span>}
+            </Button>
+          </StyledTooltip>
+          {/* TODO(plan-10-wave-2): add identical vault info icons on Cost Optimisation + Assembly toggles */}
+          <VaultHoverCard topic="electrostatic-discharge-esd-protection-filter-definition">
+            <span
+              data-testid="esd-vault-info"
+              aria-label="About ESD filter"
+              className="inline-flex items-center cursor-help opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <BookOpen className="w-3 h-3" />
+            </span>
+          </VaultHoverCard>
+        </div>
         <StyledTooltip content={showAssemblyGroups ? 'Show flat BOM list' : 'Group by assembly category'} side="bottom">
           <Button
             variant="outline"
