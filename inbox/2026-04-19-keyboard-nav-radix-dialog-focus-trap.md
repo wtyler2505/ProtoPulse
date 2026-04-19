@@ -2,7 +2,15 @@
 name: "Keyboard nav + Radix Dialog focus trap + Escape hierarchy — vault-gap stub"
 description: "Gap flagged by 03-a11y-systemic.md Wave 10 Task 10.4 + Phase 6 (keyboard-nav test suite). Seed for /extract."
 captured_date: 2026-04-19
-extraction_status: pending
+extraction_status: extracted
+extraction_date: 2026-04-19
+extracted_notes:
+  - knowledge/radix-dialog-focus-trap-and-escape-hierarchy.md
+  - knowledge/popover-trigger-aschild-requires-tooltip-outside-to-avoid-slot-forwarding-collision.md
+  - knowledge/oncloseautofocus-must-fallback-when-trigger-is-unmounted.md
+  - knowledge/nested-radix-dialogs-stack-focus-traps-lifo-and-escape-unwinds-one-level.md
+  - knowledge/protopulse-uses-dialog-for-modal-and-popover-for-anchored-overlays.md
+  - knowledge/playwright-focus-trap-testing-requires-real-tab-sequences-not-jsdom.md
 triage_status: gap-stub
 source_type: vault-gap-seed
 origin:

@@ -17,3 +17,6 @@
 
 ### 2026-04-19T06:44:10Z — from `playwright-focus-trap-testing-requires-real-tab-sequences-not-jsdom`
 - [[testing-patterns]] — stub created at `knowledge/testing-patterns.md`
+
+### 2026-04-19T06:46:48Z — from `drizzle-schema-defines-the-column-the-zod-validator-and-the-typescript-type-from-one-source`
+- [[backend-persistence-patterns]] — stub created at `knowledge/backend-persistence-patterns.md`
