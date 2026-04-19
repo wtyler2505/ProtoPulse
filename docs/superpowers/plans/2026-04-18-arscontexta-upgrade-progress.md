@@ -114,9 +114,30 @@ With skill-list echo shrunk by prior session's settings, this session shipped 3 
 
 **Cumulative status: T1 ✓, T2 ✓, T3 ✓, T5 ✓, T7 ✓, T15 ✓, T17 ✓. 7 of 15 upgrade items shipped (47%).**
 
+## Session 4 update (2026-04-18, same night, post-restart) — T6 + T11 + T8 shipped
+
+Three more skills added to the vault-ops observability+ingest suite:
+
+- **T6 complete** as skill `.claude/skills/vault-source/`:
+  - `SKILL.md` — 9-kind source taxonomy (datasheet/standard/vendor-doc/textbook/paper/community/experiment/ai-suggested/code/other), hover badges spec, reliability tiers (single-source/consensus/authoritative/contested)
+  - `scripts/source.py` — per-note provenance render + vault-wide coverage report + unverified audit
+  - **Live-tested**: baseline 0% provenance coverage across 682 notes, 6 schema violations flagged (confidence=verified without provenance) ✓
+
+- **T11 complete** as skill `.claude/skills/vault-audience/`:
+  - `SKILL.md` — marker protocol (`### [beginner]` / `### [intermediate]` / `### [expert]` body-section headings) + `<VaultExplainer audience>` UI contract + rollout plan
+  - `scripts/check-tiers.py` — parses body sections, compares to `audience:` frontmatter, reports missing/orphan/uncovered, can `--fill-stubs` with TODO placeholders
+  - **Live-tested**: baseline 0% tiered coverage ✓ (as expected — notes need v2 migration first)
+
+- **T8 complete** as skill `.claude/skills/vault-inbox/`:
+  - `SKILL.md` — full protocol + server handler spec for `POST /api/vault/suggest` (rate limits, sanitization, auth, moderation workflow)
+  - `templates/user-suggested-stub.md` — inbox stub template for user submissions
+  - Client UI implementation deferred to `16-design-system.md` Phase 8 `<VaultInboxCta>` component — this skill is the contract
+
+**Cumulative status: T1 ✓, T2 ✓, T3 ✓, T5 ✓, T6 ✓, T7 ✓, T8 ✓, T11 ✓, T15 ✓, T17 ✓. 9 of 15 upgrade items shipped (60%).**
+
 ## Next session — start here (UPDATED AGAIN)
 
-### Priority 1: T6 — Provenance + /vault-source (3 days)
+### Priority 1: T10 — AI-assisted /extract quality gate (3 days)
 
 Reads a plan file, loops qmd_deep_search per task description, emits structured suggestion report. Consumes T1's `/vault-gap`. Drop-in replacement for the manual enhancement work.
 
