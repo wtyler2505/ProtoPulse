@@ -202,12 +202,12 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
               <div
                 key={v.id}
                 data-testid={`drc-violation-${v.id}`}
-                className="px-3 py-1.5 flex flex-col gap-1.5 hover:bg-muted/50 transition-colors"
+                className="px-3 py-1.5 flex flex-col gap-1.5"
               >
                 <button
                   type="button"
                   onClick={() => onHighlight(v.shapeIds)}
-                  className="w-full text-left flex items-start gap-2 cursor-pointer"
+                  className="w-full text-left flex items-start gap-2 cursor-pointer rounded hover:bg-muted/50 transition-colors"
                   data-testid={`drc-violation-${v.id}-highlight`}
                 >
                   {v.severity === 'error' ? (
@@ -217,6 +217,7 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
                   )}
                   <span className="text-[11px] text-foreground/80 leading-tight">{v.message}</span>
                 </button>
+                {/* TODO(plan-11-validation-simulation): swap `topic={v.ruleType}` for `slug={v.vaultSlug}` once DRCViolation type ships a vaultSlug field (DRC rule registry). Until then the primitive's toSlug() slugifies ruleType — close enough for graceful 404 fallback. */}
                 <VaultExplainer
                   topic={v.ruleType}
                   className="ml-5"
