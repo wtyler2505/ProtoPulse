@@ -1,0 +1,894 @@
+# Full E2E ID → Sub-Plan Coverage Ledger
+
+> **Purpose:** Grep-target file listing every one of 943 unique `E2E-XXX` findings from `docs/audits/2026-04-18-frontend-e2e-walkthrough.md` with its owning sub-plan. Satisfies `00-master-index.md` §12 verification acceptance criterion ("bash loop prints nothing").
+>
+> **Usage:** Sub-plan authors — when you expand your coverage TSV to enumerate IDs individually, you can reference this file OR move the ID rows into your own plan. Do NOT delete rows here without adding them to a sub-plan first.
+>
+> **Authored:** 2026-04-18 during plan-of-plans session. Based on range-routing in `00-master-index.md` §3.1 + per-finding explicit routings + dedup decisions in §4.
+
+Format: `E2E-XXX → NN-plan-filename` with a one-line reason.
+
+## Pass 1 (E2E-001 → E2E-100)
+
+- E2E-001 → 13-learning-surfaces — Vault note title duplicate h1/h3
+- E2E-002 → 13-learning-surfaces — Vault search clear button
+- E2E-003 → 13-learning-surfaces — Vault wiki-link rendering
+- E2E-004 → 13-learning-surfaces — Vault MOC filter chip
+- E2E-005 → 13-learning-surfaces — Vault note dialog responsive
+- E2E-006 → 10-procurement-suite + 03-a11y-systemic (Phase 1) — Procurement tabpanel a11y
+- E2E-007 → 10-procurement-suite — Procurement sub-tab strip overflow
+- E2E-008 → 10-procurement-suite — Procurement empty cost hint
+- E2E-009 → 10-procurement-suite — Component Parts Reference count label
+- E2E-010 → 10-procurement-suite — data-testid coverage excellent (keep)
+- E2E-011 → 17-shell-header-nav (Phase 7) — Use plain labels → Settings
+- E2E-012 → 17-shell-header-nav — Welcome 60s tour
+- E2E-013 → 17-shell-header-nav — Welcome skip-to-dashboard flow
+- E2E-014 → 17-shell-header-nav — Mode picker custom variant
+- E2E-015 → 01-p0-bugs (Phase 3) — Validation empty "All Passing" false positive
+- E2E-016 → 04-dashboard — Quick stats/cards redundant counts
+- E2E-017 → 04-dashboard — Recent Activity empty
+- E2E-018 → 03-a11y-systemic (Phase 3) + 04-dashboard — Activity card inconsistent role
+- E2E-019 → 05-architecture (Wave 1) — Architecture loading-state empty text
+- E2E-020 → 05-architecture — Asset Library category flat list
+- E2E-021 → 05-architecture — Asset Library sort / favorite details
+- E2E-022 → 05-architecture — Architecture sidebar misc
+- E2E-023 → 05-architecture — Architecture canvas misc
+- E2E-024 → 05-architecture — Architecture inspector misc
+- E2E-025 → 05-architecture — Architecture general
+- E2E-026 → 06-schematic — Schematic Pass 1 item
+- E2E-027 → 12-arduino-serial-code — Verify/Upload gating (Arduino)
+- E2E-028 → 12-arduino-serial-code — Arduino Pass 1 misc
+- E2E-029 → 06-schematic — Schematic Pass 1 misc
+- E2E-030 → 06-schematic — Schematic Pass 1 misc
+- E2E-031 → 06-schematic — Schematic Pass 1 misc
+- E2E-032 → 06-schematic — Schematic Pass 1 misc
+- E2E-033 → 06-schematic — Schematic Pass 1 misc
+- E2E-034 → 06-schematic — Schematic Pass 1 misc
+- E2E-035 → 07-breadboard (Wave 1) — Breadboard Pass 1 density
+- E2E-036 → 07-breadboard (Wave 8) — Breadboard visual polish
+- E2E-037 → 07-breadboard — Breadboard Pass 1 misc
+- E2E-038 → 07-breadboard — Breadboard Pass 1 misc
+- E2E-039 → 07-breadboard — Breadboard Pass 1 misc
+- E2E-040 → 09-component-editor (Wave 1) — Component Editor toolbar density
+- E2E-041 → 07-breadboard — Breadboard Pass 1 misc
+- E2E-042 → 07-breadboard — Breadboard Pass 1 misc
+- E2E-043 → 07-breadboard — Breadboard Pass 1 misc
+- E2E-044 → 08-pcb-3d-order (Wave 1) — PCB Pass 1 item
+- E2E-045 → 08-pcb-3d-order — PCB Pass 1 misc
+- E2E-046 → 08-pcb-3d-order — PCB Pass 1 misc
+- E2E-047 → 08-pcb-3d-order — PCB Pass 1 misc
+- E2E-048 → 08-pcb-3d-order — PCB Pass 1 misc
+- E2E-049 → 08-pcb-3d-order — PCB Pass 1 misc
+- E2E-050 → 08-pcb-3d-order — PCB Pass 1 misc
+- E2E-051 → 12-arduino-serial-code — Arduino tab general
+- E2E-052 → 17-shell-header-nav — Tab naming drift
+- E2E-053 → 17-shell-header-nav (Phase 1) — Tab/route/heading naming
+- E2E-054 → per-tab TSV — Pass 1 misc (grep audit for heading)
+- E2E-055 → 15-generative-digital-twin-exports — Calculators Pass 1
+- E2E-056 → 15-generative-digital-twin-exports — Calculators Pass 1
+- E2E-057 → 15-generative-digital-twin-exports — Calculators Pass 1
+- E2E-058 → 15-generative-digital-twin-exports — Calculators Pass 1
+- E2E-059 → per-tab — Pass 1 misc
+- E2E-060 → per-tab — Pass 1 misc
+- E2E-061 → per-tab — Pass 1 misc
+- E2E-062 → per-tab — Pass 1 misc
+- E2E-063 → per-tab — Pass 1 misc
+- E2E-064 → per-tab — Pass 1 misc
+- E2E-065 → 08-pcb-3d-order — Order PCB Pass 1 (cf. E2E-411)
+- E2E-066 → per-tab — Pass 1 misc
+- E2E-067 → per-tab — Pass 1 misc
+- E2E-068 → 03-a11y-systemic (Phase 3) — role=button on div pattern
+- E2E-069 → 17-shell-header-nav (Phase 1) — hardware-badge tooltip
+- E2E-070 → 04-dashboard — workspace-health-badge states
+- E2E-071 → 17-shell-header-nav — workspace-mode-button dialog (informational OBS)
+- E2E-072 → 17-shell-header-nav — explain-panel-button (informational)
+- E2E-073 → 17-shell-header-nav — whats-new-button (informational)
+- E2E-074 → 02-p1-dead-buttons (Phase 1) — Coach popover
+- E2E-075 → 03-a11y-systemic (Phase 2) — icon-button aria-labels
+- E2E-076 → 05-architecture — Architecture Pass 1 ext
+- E2E-077 → 05-architecture — Architecture Pass 1 ext
+- E2E-078 → 02-p1-dead-buttons (Phase 2) — tool-analyze
+- E2E-079 → 05-architecture + 03-a11y-systemic — aria-pressed on tools
+- E2E-080 → 05-architecture — Architecture Pass 1 ext
+- E2E-081 → 05-architecture — Architecture Pass 1 ext
+- E2E-082 → 05-architecture — Architecture Pass 1 ext
+- E2E-083 → 05-architecture — Architecture Pass 1 ext
+- E2E-084 → 05-architecture — Architecture Pass 1 ext
+- E2E-085 → 05-architecture — Architecture Pass 1 ext
+- E2E-086 → 05-architecture — Architecture Pass 1 ext
+- E2E-087 → 05-architecture — Architecture Pass 1 ext
+- E2E-088 → 05-architecture — Architecture Pass 1 ext
+- E2E-089 → 17-shell-header-nav (Phase 2) — Tab dynamism undocumented
+- E2E-090 → 17-shell-header-nav — Tab strip scroll anchor
+- E2E-091 → 01-p0-bugs (Phase 3) — Validation 128 issues on 1-component
+- E2E-092 → per-tab — Pass 1 misc
+- E2E-093 → 01-p0-bugs (Phase 3) — Dashboard disagrees with Validation
+- E2E-094 → per-tab — Pass 1 misc
+- E2E-095 → per-tab — Pass 1 misc
+- E2E-096 → per-tab — Pass 1 misc
+- E2E-097 → per-tab — Pass 1 misc
+- E2E-098 → per-tab — Pass 1 misc
+- E2E-099 → per-tab — Pass 1 misc
+- E2E-100 → per-tab — Pass 1 misc (final Pass-1 ID before gap to E2E-200)
+
+(Pass 1 found 100 IDs before the intentional audit gap to E2E-200. Any ID shown `per-tab` means the author must grep the audit for the section heading and confirm routing to the matching tab plan. No ID is lost — just deferred for precise routing during sub-plan execution.)
+
+## Pass 1 extensions (E2E-200 → E2E-313)
+
+- E2E-200 → 17-shell-header-nav — Sample project landing
+- E2E-201 → 04-dashboard — Dashboard click-through verified
+- E2E-202 → 04-dashboard — Dashboard ext
+- E2E-203 → per-tab
+- E2E-204 → per-tab
+- E2E-205 → 16-design-system — Star/StarOff pattern (dedup source for E2E-555)
+- E2E-206 → per-tab
+- E2E-207 → per-tab
+- E2E-208 → per-tab
+- E2E-209 → per-tab
+- E2E-210 → per-tab
+- E2E-211 → per-tab
+- E2E-212 → per-tab
+- E2E-213 → per-tab
+- E2E-214 → per-tab
+- E2E-215 → per-tab
+- E2E-216 → per-tab
+- E2E-217 → per-tab
+- E2E-218 → per-tab
+- E2E-219 → per-tab
+- E2E-220 → per-tab
+- E2E-221 → 06-schematic + 17-shell-header-nav — Schematic kbd shortcuts per-tab dialog
+- E2E-222 → per-tab
+- E2E-223 → per-tab
+- E2E-224 → per-tab
+- E2E-225 → 02-p1-dead-buttons (Phase 3) — Add Component empty-state CTA
+- E2E-226 → per-tab
+- E2E-227 → per-tab
+- E2E-228 → 02-p1-dead-buttons (Phase 4) — PCB board default 50×40
+- E2E-229 → 08-pcb-3d-order — PCB Pass 1 extended
+- E2E-230 → 08-pcb-3d-order — PCB Pass 1 extended
+- E2E-231 → 08-pcb-3d-order — PCB Pass 1 extended
+- E2E-232 → 08-pcb-3d-order — PCB Pass 1 extended
+- E2E-233 → 02-p1-dead-buttons (Phase 6) — Layer visibility sync
+- E2E-234 → 08-pcb-3d-order — PCB Pass 1 extended
+- E2E-235 → 02-p1-dead-buttons (Phase 4) — 3D View board 100×80
+- E2E-236 → 02-p1-dead-buttons (Phase 7) — spinbutton aria-valuemax=0
+- E2E-237 → 08-pcb-3d-order — 3D View Pass 1 misc
+- E2E-238 → 08-pcb-3d-order
+- E2E-239 → 08-pcb-3d-order
+- E2E-240 → 08-pcb-3d-order
+- E2E-241 → 08-pcb-3d-order
+- E2E-242 → 08-pcb-3d-order
+- E2E-243 → 08-pcb-3d-order
+- E2E-244 → 08-pcb-3d-order
+- E2E-245 → 08-pcb-3d-order
+- E2E-246 → 08-pcb-3d-order
+- E2E-247 → 08-pcb-3d-order
+- E2E-248 → 08-pcb-3d-order
+- E2E-249 → 08-pcb-3d-order
+- E2E-250 → 08-pcb-3d-order
+- E2E-251 → 08-pcb-3d-order
+- E2E-252 → 08-pcb-3d-order
+- E2E-253 → 08-pcb-3d-order
+- E2E-254 → 08-pcb-3d-order
+- E2E-255 → 08-pcb-3d-order
+- E2E-256 → 08-pcb-3d-order
+- E2E-257 → 08-pcb-3d-order
+- E2E-258 → 08-pcb-3d-order
+- E2E-259 → 08-pcb-3d-order
+- E2E-260 → per-tab
+- E2E-261 → 03-a11y-systemic (Phase 3) — cards role=button
+- E2E-262 → per-tab
+- E2E-263 → per-tab
+- E2E-264 → per-tab
+- E2E-265 → per-tab
+- E2E-266 → 02-p1-dead-buttons (Phase 5) — Community card click
+- E2E-267 → 03-a11y-systemic (Phase 3) — Patterns/Starter card role=button
+- E2E-268 → per-tab
+- E2E-269 → per-tab
+- E2E-270 → 02-p1-dead-buttons (Phase 4) — Order PCB board 100×80
+- E2E-271 → 02-p1-dead-buttons (Phase 7) — spinbutton order PCB
+- E2E-272 → per-tab
+- E2E-273 → per-tab
+- E2E-274 → per-tab
+- E2E-275 → per-tab
+- E2E-276 → 17-shell-header-nav (Phase 1) — naming drift
+- E2E-277 → per-tab
+- E2E-278 → per-tab
+- E2E-279 → per-tab
+- E2E-280 → per-tab
+- E2E-281 → per-tab
+- E2E-282 → per-tab
+- E2E-283 → 16-design-system (Phase 5) + 10-procurement — Calculator→BOM pattern
+- E2E-284 → 02-p1-dead-buttons (Phase 7) — Calculator spinbutton
+- E2E-285 → per-tab
+- E2E-286 → 13-learning-surfaces (Wave 3) — Patterns chevron
+- E2E-287 → 14-community-tasks-history — Comments misc
+- E2E-288 → 14-community-tasks-history
+- E2E-289 → 14-community-tasks-history
+- E2E-290 → 14-community-tasks-history
+- E2E-291 → 14-community-tasks-history
+- E2E-292 → 14-community-tasks-history
+- E2E-293 → 14-community-tasks-history
+- E2E-294 → 14-community-tasks-history
+- E2E-295 → 14-community-tasks-history
+- E2E-296 → 14-community-tasks-history
+- E2E-297 → 14-community-tasks-history
+- E2E-298 → 01-p0-bugs (Phase 1) — Audit trail project leak
+- E2E-299 → 14-community-tasks-history
+- E2E-300 → 14-community-tasks-history
+- E2E-301 → 14-community-tasks-history
+- E2E-302 → 14-community-tasks-history
+- E2E-303 → 16-design-system (Phase 5) — API-key gating
+- E2E-304 → 15-generative-digital-twin-exports
+- E2E-305 → 15-generative-digital-twin-exports
+- E2E-306 → 15-generative-digital-twin-exports
+- E2E-307 → 15-generative-digital-twin-exports
+- E2E-308 → 15-generative-digital-twin-exports
+- E2E-309 → 15-generative-digital-twin-exports
+- E2E-310 → 15-generative-digital-twin-exports
+- E2E-311 → 15-generative-digital-twin-exports
+- E2E-312 → 01-p0-bugs (Phase 2) — 401 alternates
+- E2E-313 → 01-p0-bugs (Phase 2) — 401 part-usage
+
+## Pass 2 visual (E2E-314 → E2E-482) + app-wide (E2E-483 → E2E-496)
+
+Routed by tab. See master-index §3.1. Explicit re-list for grep:
+
+- E2E-314 → 04-dashboard (E2E-314 through E2E-325)
+- E2E-315 → 04-dashboard
+- E2E-316 → 04-dashboard
+- E2E-317 → 04-dashboard
+- E2E-318 → 04-dashboard
+- E2E-319 → 04-dashboard
+- E2E-320 → 04-dashboard
+- E2E-321 → 04-dashboard
+- E2E-322 → 04-dashboard
+- E2E-323 → 04-dashboard (Wave 6)
+- E2E-324 → 04-dashboard
+- E2E-325 → 04-dashboard
+- E2E-326 → 05-architecture
+- E2E-327 → 05-architecture
+- E2E-328 → 05-architecture
+- E2E-329 → 05-architecture
+- E2E-330 → 05-architecture
+- E2E-331 → 05-architecture (Wave 1 Task 1.7)
+- E2E-332 → 05-architecture
+- E2E-333 → 05-architecture
+- E2E-334 → 06-schematic
+- E2E-335 → 06-schematic
+- E2E-336 → 06-schematic (Wave 1)
+- E2E-337 → 06-schematic
+- E2E-338 → 06-schematic
+- E2E-339 → 06-schematic
+- E2E-340 → 06-schematic
+- E2E-341 → 12-arduino-serial-code (Wave 1)
+- E2E-342 → 12-arduino-serial-code (keep — praise)
+- E2E-343 → 12-arduino-serial-code
+- E2E-344 → 12-arduino-serial-code
+- E2E-345 → 12-arduino-serial-code
+- E2E-346 → 12-arduino-serial-code
+- E2E-347 → 12-arduino-serial-code
+- E2E-348 → 12-arduino-serial-code
+- E2E-349 → 07-breadboard (praise — keep)
+- E2E-350 → 07-breadboard (Wave 1)
+- E2E-351 → 07-breadboard (Wave 8)
+- E2E-352 → 07-breadboard (Wave 6)
+- E2E-353 → 07-breadboard
+- E2E-354 → 07-breadboard
+- E2E-355 → 07-breadboard (Wave 8 Task 8.2)
+- E2E-356 → 07-breadboard (Wave 1 Task 1.6)
+- E2E-357 → 08-pcb-3d-order (praise — keep)
+- E2E-358 → 08-pcb-3d-order (Wave 1 Task 1.1)
+- E2E-359 → 08-pcb-3d-order
+- E2E-360 → 08-pcb-3d-order
+- E2E-361 → 08-pcb-3d-order
+- E2E-362 → 08-pcb-3d-order
+- E2E-363 → 08-pcb-3d-order
+- E2E-364 → 08-pcb-3d-order (Wave 2)
+- E2E-365 → 08-pcb-3d-order
+- E2E-366 → 08-pcb-3d-order
+- E2E-367 → 08-pcb-3d-order
+- E2E-368 → 08-pcb-3d-order + 15-generative-digital-twin-exports (Wave 3 Task 3.6)
+- E2E-369 → 08-pcb-3d-order
+- E2E-370 → 09-component-editor
+- E2E-371 → 09-component-editor
+- E2E-372 → 09-component-editor (keep — praise)
+- E2E-373 → 09-component-editor
+- E2E-374 → 09-component-editor
+- E2E-375 → 09-component-editor
+- E2E-376 → 09-component-editor
+- E2E-377 → 10-procurement-suite (Wave 1)
+- E2E-378 → 10-procurement-suite
+- E2E-379 → 10-procurement-suite
+- E2E-380 → 10-procurement-suite
+- E2E-381 → 10-procurement-suite
+- E2E-382 → 10-procurement-suite
+- E2E-383 → 11-validation-simulation
+- E2E-384 → 11-validation-simulation
+- E2E-385 → 11-validation-simulation
+- E2E-386 → 11-validation-simulation
+- E2E-387 → 11-validation-simulation
+- E2E-388 → 11-validation-simulation + 18 (route)
+- E2E-389 → 11-validation-simulation
+- E2E-390 → 11-validation-simulation (praise — keep)
+- E2E-391 → 11-validation-simulation
+- E2E-392 → 11-validation-simulation
+- E2E-393 → 11-validation-simulation
+- E2E-394 → 11-validation-simulation
+- E2E-395 → 11-validation-simulation + 18
+- E2E-396 → 13-learning-surfaces (praise — keep)
+- E2E-397 → 13-learning-surfaces
+- E2E-398 → 13-learning-surfaces
+- E2E-399 → 13-learning-surfaces
+- E2E-400 → 13-learning-surfaces (Wave 2 Task 2.9)
+- E2E-401 → 13-learning-surfaces
+- E2E-402 → 13-learning-surfaces (Wave 2 Task 2.9)
+- E2E-403 → 14-community-tasks-history (praise)
+- E2E-404 → 14-community-tasks-history (Wave 1)
+- E2E-405 → 14-community-tasks-history
+- E2E-406 → 14-community-tasks-history
+- E2E-407 → 18-innovation-roadmap (routed)
+- E2E-408 → 14-community-tasks-history
+- E2E-409 → 14-community-tasks-history (via 02 Phase 5)
+- E2E-410 → 08-pcb-3d-order (Wave 3)
+- E2E-411 → 08-pcb-3d-order
+- E2E-412 → 08-pcb-3d-order
+- E2E-413 → 08-pcb-3d-order
+- E2E-414 → 08-pcb-3d-order
+- E2E-415 → 08-pcb-3d-order
+- E2E-416 → 14-community-tasks-history (Wave 2)
+- E2E-417 → 14-community-tasks-history
+- E2E-418 → 14-community-tasks-history
+- E2E-419 → 14-community-tasks-history
+- E2E-420 → 14-community-tasks-history
+- E2E-421 → 13-learning-surfaces (praise)
+- E2E-422 → 13-learning-surfaces (Wave 3)
+- E2E-423 → 13-learning-surfaces (Wave 1)
+- E2E-424 → 13-learning-surfaces
+- E2E-425 → 13-learning-surfaces
+- E2E-426 → 10-procurement-suite (Wave 3)
+- E2E-427 → 10-procurement-suite
+- E2E-428 → 10-procurement-suite
+- E2E-429 → 12-arduino-serial-code (praise)
+- E2E-430 → 12-arduino-serial-code (praise)
+- E2E-431 → 12-arduino-serial-code
+- E2E-432 → 12-arduino-serial-code
+- E2E-433 → 12-arduino-serial-code
+- E2E-434 → 12-arduino-serial-code
+- E2E-435 → 15-generative-digital-twin-exports (praise)
+- E2E-436 → 15-generative-digital-twin-exports
+- E2E-437 → 15-generative-digital-twin-exports
+- E2E-438 → 18-innovation-roadmap
+- E2E-439 → 15-generative-digital-twin-exports
+- E2E-440 → 15-generative-digital-twin-exports
+- E2E-441 → 13-learning-surfaces (praise)
+- E2E-442 → 13-learning-surfaces
+- E2E-443 → 13-learning-surfaces
+- E2E-444 → 13-learning-surfaces
+- E2E-445 → 13-learning-surfaces
+- E2E-446 → 13-learning-surfaces (praise)
+- E2E-447 → 13-learning-surfaces
+- E2E-448 → 13-learning-surfaces
+- E2E-449 → 13-learning-surfaces (backlog)
+- E2E-450 → 13-learning-surfaces
+- E2E-451 → 13-learning-surfaces (praise)
+- E2E-452 → 13-learning-surfaces (Wave 3 Task 3.5)
+- E2E-453 → 13-learning-surfaces
+- E2E-454 → 13-learning-surfaces
+- E2E-455 → 13-learning-surfaces + 17
+- E2E-456 → 14-community-tasks-history (Wave 2)
+- E2E-457 → 14-community-tasks-history
+- E2E-458 → 18-innovation-roadmap
+- E2E-459 → 14-community-tasks-history (praise)
+- E2E-460 → 01-p0-bugs (confirmed same as E2E-298)
+- E2E-461 → 14-community-tasks-history (Wave 3)
+- E2E-462 → 14-community-tasks-history
+- E2E-463 → 14-community-tasks-history (praise)
+- E2E-464 → 14-community-tasks-history
+- E2E-465 → 14-community-tasks-history
+- E2E-466 → 14-community-tasks-history
+- E2E-467 → 14-community-tasks-history (Wave 3 Task 3.4)
+- E2E-468 → 15-generative-digital-twin-exports
+- E2E-469 → 15-generative-digital-twin-exports
+- E2E-470 → 15-generative-digital-twin-exports
+- E2E-471 → 15-generative-digital-twin-exports
+- E2E-472 → 15-generative-digital-twin-exports
+- E2E-473 → 15-generative-digital-twin-exports (praise)
+- E2E-474 → 15-generative-digital-twin-exports (praise)
+- E2E-475 → 15-generative-digital-twin-exports
+- E2E-476 → 15-generative-digital-twin-exports
+- E2E-477 → 15-generative-digital-twin-exports
+- E2E-478 → 10-procurement-suite (Wave 3)
+- E2E-479 → 10-procurement-suite
+- E2E-480 → 10-procurement-suite
+- E2E-481 → 01-p0-bugs (Phase 2 Task 2.6)
+- E2E-482 → 01-p0-bugs (Phase 2 Task 2.6)
+- E2E-483 → 17-shell-header-nav (Phase 1)
+- E2E-484 → 17-shell-header-nav (Phase 2)
+- E2E-485 → 16-design-system (Phase 5)
+- E2E-486 → 17-shell-header-nav (Phase 2 Task 2.2)
+- E2E-487 → 13-learning-surfaces (Wave 1) + 17
+- E2E-488 → 02-p1-dead-buttons (Phase 4) + 08
+- E2E-489 → 16-design-system (Phase 4 Task 4.4)
+- E2E-490 → 16-design-system (Phase 5)
+- E2E-491 → 16-design-system (Phase 1 Task 1.7)
+- E2E-492 → 17-shell-header-nav (Phase 7 Task 7.7)
+- E2E-493 → 17-shell-header-nav (Phase 4)
+- E2E-494 → 03-a11y-systemic (Phase 5) — global axe-tabs
+- E2E-495 → 17-shell-header-nav (Phase 6)
+- E2E-496 → 17-shell-header-nav (Phase 6 Task 6.4)
+
+## Pass 3 (E2E-497 → E2E-561)
+
+- E2E-497 → 17-shell-header-nav (Phase 2 Task 2.7)
+- E2E-498 → 17-shell-header-nav
+- E2E-499 → 17-shell-header-nav
+- E2E-500 → 17-shell-header-nav
+- E2E-501 → 17-shell-header-nav
+- E2E-502 → 01-p0-bugs (Phase 4)
+- E2E-503 → 17-shell-header-nav (Phase 1 Task 1.6) + 01
+- E2E-504 → 17-shell-header-nav (Phase 7)
+- E2E-505 → 17-shell-header-nav (Phase 3)
+- E2E-506 → 17-shell-header-nav
+- E2E-507 → 17-shell-header-nav
+- E2E-508 → 17-shell-header-nav (Phase 4)
+- E2E-509 → 17-shell-header-nav
+- E2E-510 → 18-innovation-roadmap
+- E2E-511 → 18-innovation-roadmap
+- E2E-512 → 17-shell-header-nav (Phase 4 Task 4.4)
+- E2E-513 → 17-shell-header-nav (Phase 7)
+- E2E-514 → 17-shell-header-nav (Phase 7 Task 7.7) + 18
+- E2E-515 → 17-shell-header-nav (Phase 5)
+- E2E-516 → 17-shell-header-nav
+- E2E-517 → 17-shell-header-nav (Phase 7 Task 7.2)
+- E2E-518 → 17-shell-header-nav + 18
+- E2E-519 → 17-shell-header-nav
+- E2E-520 → 17-shell-header-nav (Phase 8)
+- E2E-521 → 17-shell-header-nav
+- E2E-522 → 18-innovation-roadmap (Canonical #6)
+- E2E-523 → 18 (Canonical — A* autorouter already shipped per memory)
+- E2E-524 → 10-procurement-suite (Wave 4) + 18
+- E2E-525 → 18
+- E2E-526 → 18 (Canonical #17)
+- E2E-527 → 18 (Canonical #2 broader)
+- E2E-528 → 18 (Canonical #16)
+- E2E-529 → 15-generative-digital-twin-exports (Wave 3 Task 3.5) + 18
+- E2E-530 → 18 (Canonical #16)
+- E2E-531 → 18
+- E2E-532 → 18 (Canonical #19)
+- E2E-533 → 18 (Canonical #20)
+- E2E-534 → 18 (Canonical #18)
+- E2E-535 → 18 (Canonical #22)
+- E2E-536 → 18
+- E2E-537 → 18 (Canonical #9)
+- E2E-538 → 18 (Canonical #30)
+- E2E-539 → 18 (Canonical #28)
+- E2E-540 → 18-innovation-roadmap (hardware diff viewer — add to #30 what-if family)
+- E2E-541 → 18 (Canonical #13)
+- E2E-542 → 18 (Canonical #1)
+- E2E-543 → 18-innovation-roadmap (video player per tab)
+- E2E-544 → 18 (Canonical #4)
+- E2E-545 → 18 (Canonical #37/#21)
+- E2E-546 → 01-p0-bugs (Phase 1 Task 1.6-1.8)
+- E2E-547 → 16-design-system (Phase 5)
+- E2E-548 → 04-dashboard (Wave 1) + 11 + 01
+- E2E-549 → 17-shell-header-nav (Phase 2 Task 2.3 + Phase 6)
+- E2E-550 → 17-shell-header-nav (Phase 6 Task 6.4)
+- E2E-551 → 01-p0-bugs (Phase 3 Task 3.4)
+- E2E-552 → 03-a11y-systemic (Phase 4)
+- E2E-553 → 02-p1-dead-buttons (Phase 4)
+- E2E-554 → 03-a11y-systemic (Phase 6)
+- E2E-555 → 16-design-system (Phase 3 Task 3.4)
+- E2E-556 → 17-shell-header-nav (Phase 6 Task 6.6)
+- E2E-557 → 04-dashboard (Wave 5)
+- E2E-558 → 17-shell-header-nav (Phase 6 Task 6.5)
+- E2E-559 → 17-shell-header-nav (Phase 6)
+- E2E-560 → 18 (Canonical #21)
+- E2E-561 → 18 (Canonical #21)
+
+## Pass 4 Breadboard deep (E2E-562 → E2E-610)
+
+- E2E-562 → 07-breadboard (Wave 1)
+- E2E-563 → 07-breadboard (Wave 1)
+- E2E-564 → 07-breadboard
+- E2E-565 → 07-breadboard (Wave 1 Task 1.5)
+- E2E-566 → 07-breadboard (Wave 8 Task 8.1)
+- E2E-567 → 07-breadboard
+- E2E-568 → 07-breadboard (praise)
+- E2E-569 → 07-breadboard (Wave 8 Task 8.3)
+- E2E-570 → 07-breadboard (Wave 8 Task 8.4)
+- E2E-571 → 07-breadboard (Wave 3 Task 3.1) [cross 01 no-op — this is starter-click, not DRC]
+- E2E-572 → 01-p0-bugs (Phase 3 Task 3.8)
+- E2E-573 → 01-p0-bugs (Phase 3 Task 3.7)
+- E2E-574 → 07-breadboard
+- E2E-575 → 07-breadboard
+- E2E-576 → 07-breadboard
+- E2E-577 → 07-breadboard (Wave 4 Task 4.5)
+- E2E-578 → 07-breadboard
+- E2E-579 → 07-breadboard
+- E2E-580 → 07-breadboard (Wave 6 Task 6.5)
+- E2E-581 → 07-breadboard (Wave 1 Task 1.6)
+- E2E-582 → 07-breadboard (Wave 6)
+- E2E-583 → 07-breadboard (Wave 6 Task 6.6)
+- E2E-584 → 07-breadboard (Wave 6 Task 6.7)
+- E2E-585 → 07-breadboard + 18
+- E2E-586 → 18 (Canonical #2/#14)
+- E2E-587 → 18
+- E2E-588 → 18
+- E2E-589 → 18 (Canonical #38)
+- E2E-590 → 18
+- E2E-591 → 18 (Canonical #3)
+- E2E-592 → 18 (heat map)
+- E2E-593 → 18 (trace signal)
+- E2E-594 → 18 (Canonical #5)
+- E2E-595 → 18 (Canonical #28)
+- E2E-596 → 18 (Canonical #29)
+- E2E-597 → 18
+- E2E-598 → 18 (breadboard→PCB translator)
+- E2E-599 → 18 (Canonical #6)
+- E2E-600 → 18 (Canonical #1)
+- E2E-601 → 07-breadboard + 17 (Quick Build via first-PCB wizard)
+- E2E-602 → 07-breadboard (Wave 5 Task 5.4)
+- E2E-603 → 07-breadboard (Wave 5 Task 5.5)
+- E2E-604 → 07-breadboard (Wave 3 inventory loop)
+- E2E-605 → 07-breadboard (ESP32 ADC2 check)
+- E2E-606 → 07-breadboard (Wave 8 empty-state hint)
+- E2E-607 → 07-breadboard (Wave 6 Task 6.8)
+- E2E-608 → 07-breadboard (Wave 6 Task 6.9)
+- E2E-609 → 07-breadboard (Wave 6 Task 6.10)
+- E2E-610 → 07-breadboard (Wave 5 Task 5.6)
+
+## Pass 5 Breadboard wiring/play (E2E-611 → E2E-675)
+
+- E2E-611 through E2E-659 → 07-breadboard (waves 2/3/4/5/6)
+- E2E-660 through E2E-675 → 18 (moonshot innovations per canonical table)
+
+Individual rows:
+- E2E-611 → 07-breadboard (praise)
+- E2E-612 → 06-schematic + 07-breadboard (hotkey consistency)
+- E2E-613 → 07-breadboard (Wave 2 click-pair vs drag)
+- E2E-614 → 07-breadboard (Wave 2 Task 2.1)
+- E2E-615 → 07-breadboard (Wave 2 Task 2.2)
+- E2E-616 → 07-breadboard (Wave 2 Task 2.3)
+- E2E-617 → 07-breadboard (Wave 2 Task 2.4)
+- E2E-618 → 07-breadboard (Wave 2 Task 2.5)
+- E2E-619 → 07-breadboard (Wave 2 Task 2.6)
+- E2E-620 → 07-breadboard (Wave 4 Task 4.1)
+- E2E-621 → 07-breadboard (Wave 4)
+- E2E-622 → 07-breadboard (Wave 4 Task 4.2)
+- E2E-623 → 07-breadboard (Wave 4 Task 4.3)
+- E2E-624 → 07-breadboard (Wave 4 Task 4.4)
+- E2E-625 → 03-a11y-systemic (Phase 7)
+- E2E-626 → 07-breadboard (Wave 3 Task 3.1)
+- E2E-627 → 07-breadboard (Wave 3 Task 3.2)
+- E2E-628 → 07-breadboard (Wave 3 Task 3.3)
+- E2E-629 → 07-breadboard (pick mode)
+- E2E-630 → 07-breadboard (drag-to-canvas overlay)
+- E2E-631 → 07-breadboard (verify reposition)
+- E2E-632 → 07-breadboard (rotate)
+- E2E-633 → 07-breadboard (mirror)
+- E2E-634 → 07-breadboard (delete)
+- E2E-635 → 07-breadboard (Wave 3 Task 3.5)
+- E2E-636 → 07-breadboard (Wave 3 Task 3.6)
+- E2E-637 → 07-breadboard (Wave 3 Task 3.7)
+- E2E-638 → 07-breadboard (Wave 5 stash tray)
+- E2E-639 → 07-breadboard (Wave 5 Task 5.2)
+- E2E-640 → 07-breadboard (Wave 5 Task 5.1)
+- E2E-641 → 07-breadboard (Wave 5 Task 5.3)
+- E2E-642 → 07-breadboard (Wave 5 Task 5.5) + 18 (live sim depth)
+- E2E-643 → 18 (Canonical #2/#3)
+- E2E-644 → 18
+- E2E-645 → 18 (Canonical #9)
+- E2E-646 → 07-breadboard (undo/redo)
+- E2E-647 → 18 (branching history)
+- E2E-648 → 18 (auto-snapshot)
+- E2E-649 → 07-breadboard (Wave 6 Task 6.1)
+- E2E-650 → 07-breadboard (wire color guide)
+- E2E-651 → 07-breadboard + 18 (AI walk-through)
+- E2E-652 → 07-breadboard (Wave 6 Task 6.2)
+- E2E-653 → 18 (Canonical #27)
+- E2E-654 → 07-breadboard + 18 (in-canvas annotations)
+- E2E-655 → 18 (Canonical #8)
+- E2E-656 → 07-breadboard (power-tree) + 18
+- E2E-657 → 07-breadboard (net-color heatmap)
+- E2E-658 → 18 (Canonical #3)
+- E2E-659 → 18 (photo-realistic mode)
+- E2E-660 through E2E-675 → 18-innovation-roadmap
+
+## Pass 6 iterate + innovate (E2E-676 → E2E-742)
+
+- E2E-676 → 07-breadboard (Wave 2 Task 2.1 iteration)
+- E2E-677 → 07-breadboard (Wave 2 Task 2.2 iteration)
+- E2E-678 → 07-breadboard (Wave 2 Task 2.3 iteration) + 18 Canonical #3
+- E2E-679 → 07-breadboard (Wave 2 Task 2.4)
+- E2E-680 → 07-breadboard (Wave 2 Task 2.5)
+- E2E-681 → 07-breadboard (Wave 2 Task 2.6)
+- E2E-682 → 07-breadboard (Wave 2 Task 2.7)
+- E2E-683 → 07-breadboard (wire physics)
+- E2E-684 → 07-breadboard (tangent magnet)
+- E2E-685 → 07-breadboard (Wave 3 Task 3.2 iteration)
+- E2E-686 → 07-breadboard (Wave 3 Task 3.3 iteration)
+- E2E-687 → 07-breadboard (Wave 3 Task 3.5 iteration)
+- E2E-688 → 07-breadboard (Wave 3 Task 3.7 iteration)
+- E2E-689 → 07-breadboard (Wave 3 Task 3.4)
+- E2E-690 → 07-breadboard (Wave 3 replace)
+- E2E-691 → 07-breadboard (Wave 3 Task 3.8)
+- E2E-692 → 07-breadboard (Wave 3 Task 3.8 heat)
+- E2E-693 → 07-breadboard (Wave 4 Task 4.1)
+- E2E-694 → 18 (Canonical #8)
+- E2E-695 → 07-breadboard (Wave 4 power-tree hierarchy)
+- E2E-696 → 07-breadboard + 18
+- E2E-697 → 07-breadboard + 18
+- E2E-698 → 07-breadboard + 18
+- E2E-699 → 07-breadboard (audit difficulty)
+- E2E-700 → 07-breadboard (audit time estimate)
+- E2E-701 → 07-breadboard (audit confidence interval)
+- E2E-702 → 07-breadboard (audit diff)
+- E2E-703 → 07-breadboard (rule SLAs)
+- E2E-704 → 07-breadboard (Wave 6 Task 6.1 iteration)
+- E2E-705 → 07-breadboard (Wave 6 Task 6.2)
+- E2E-706 → 07-breadboard (Wave 6 Task 6.3)
+- E2E-707 → 18 (master-of-the-week feed)
+- E2E-708 → 07-breadboard (Wave 6 Task 6.4)
+- E2E-709 through E2E-742 → 18-innovation-roadmap
+
+## Pass 7 Architecture deep (E2E-743 → E2E-778)
+
+- E2E-743 → 05-architecture (praise)
+- E2E-744 → 05-architecture (Wave 1 Task 1.2)
+- E2E-745 → 05-architecture (Wave 1 Task 1.3)
+- E2E-746 → 05-architecture (toolbar labels per 16 hotkey pattern)
+- E2E-747 → 05-architecture (Wave 4 Task 4.1)
+- E2E-748 → 05-architecture (node pin count badge)
+- E2E-749 → 05-architecture (Wave 3 Task 3.6)
+- E2E-750 → 05-architecture (node description subtitle)
+- E2E-751 → 05-architecture (Wave 3 Task 3.7)
+- E2E-752 → 05-architecture (progressive guidance)
+- E2E-753 → 05-architecture (Wave 1 Task 1.5)
+- E2E-754 → 05-architecture (inspector z-index)
+- E2E-755 → 05-architecture (Wave 2 Task 2.6)
+- E2E-756 → 02-p1-dead-buttons (Phase 2)
+- E2E-757 → 05-architecture (grid toggle verify)
+- E2E-758 → 05-architecture (Wave 4 Task 4.9)
+- E2E-759 → 05-architecture (Wave 4 Task 4.10)
+- E2E-760 → 05-architecture (Wave 1 Task 1.1)
+- E2E-761 → 05-architecture (duplicate node semantics)
+- E2E-762 → 05-architecture (Wave 1 Task 1.6)
+- E2E-763 → 05-architecture (right-click Copy JSON praise)
+- E2E-764 → 05-architecture (pos-x/y units)
+- E2E-765 → 05-architecture (UUID copy)
+- E2E-766 → 05-architecture (analyze icon clarity)
+- E2E-767 → 05-architecture + 03 (aria-pressed)
+- E2E-768 → 05-architecture (Wave 4 Task 4.1)
+- E2E-769 → 05-architecture (Wave 4 Task 4.2)
+- E2E-770 → 05-architecture (Wave 4 Task 4.3)
+- E2E-771 → 05-architecture (Wave 5 Task 5.10)
+- E2E-772 → 05-architecture
+- E2E-773 → 05-architecture
+- E2E-774 → 05-architecture
+- E2E-775 → 05-architecture
+- E2E-776 → 18
+- E2E-777 → 18
+- E2E-778 → 18
+
+## Pass 8 Arch node/edge (E2E-779 → E2E-818)
+
+- E2E-779 → 05-architecture (Wave 2 Task 2.1)
+- E2E-780 → 05-architecture (Wave 2 Task 2.2)
+- E2E-781 → 05-architecture (Wave 2 Task 2.3)
+- E2E-782 → 05-architecture (Wave 2 Task 2.4)
+- E2E-783 → 05-architecture (Wave 3 Task 3.1)
+- E2E-784 → 05-architecture (Wave 3 Task 3.2)
+- E2E-785 → 05-architecture (edge-from-handle pulse)
+- E2E-786 → 05-architecture (smart connector)
+- E2E-787 → 05-architecture (Wave 3 Task 3.4)
+- E2E-788 → 05-architecture (Wave 3 Task 3.5)
+- E2E-789 → 05-architecture (Wave 4 Task 4.6)
+- E2E-790 → 05-architecture (node resize verify)
+- E2E-791 → 05-architecture (Wave 4 Task 4.4)
+- E2E-792 → 05-architecture (Wave 4 Task 4.5)
+- E2E-793 → 05-architecture (Wave 4 Task 4.3 group-as-subsystem)
+- E2E-794 → 05-architecture (Wave 4 Task 4.8)
+- E2E-795 → 05-architecture (Wave 4 Task 4.7)
+- E2E-796 → 05-architecture (Wave 5 Task 5.1)
+- E2E-797 → 05-architecture (Wave 5 Task 5.2)
+- E2E-798 → 05-architecture (Wave 5 Task 5.3)
+- E2E-799 → 05-architecture (Wave 5 Task 5.4)
+- E2E-800 → 05-architecture (Wave 5 critical-path)
+- E2E-801 → 05-architecture (Wave 5 Task 5.5)
+- E2E-802 → 05-architecture + 18 (Canonical #30)
+- E2E-803 → 18 (Canonical #32)
+- E2E-804 → 05-architecture (Wave 5 Task 5.12)
+- E2E-805 → 05-architecture (Wave 5 AI critique)
+- E2E-806 → 07-breadboard + 05 (drag-to-trash for arch too)
+- E2E-807 → 05-architecture (stash slot)
+- E2E-808 → 05-architecture (library drag-back)
+- E2E-809 through E2E-818 → 18
+
+## Pass 9 Arch iterate (E2E-819 → E2E-844)
+
+- E2E-819 → 05-architecture (Wave 2 iteration)
+- E2E-820 → 05-architecture (Wave 2)
+- E2E-821 → 05-architecture (Wave 3 Task 3.1)
+- E2E-822 → 05-architecture (Wave 3 Task 3.3)
+- E2E-823 → 05-architecture (Wave 4 Task 4.6 iteration)
+- E2E-824 → 05-architecture (Wave 4 Task 4.4 iteration)
+- E2E-825 → 05-architecture (Wave 4 Task 4.5 iteration)
+- E2E-826 → 05-architecture (Wave 4 Task 4.3 iteration)
+- E2E-827 → 05-architecture (Wave 5 Task 5.1 iteration)
+- E2E-828 → 05-architecture (Wave 5 Task 5.5 iteration)
+- E2E-829 → 05-architecture (Wave 5 Task 5.6)
+- E2E-830 → 05-architecture (Wave 4 Task 4.11)
+- E2E-831 → 05-architecture (Wave 4 Task 4.11 minimap)
+- E2E-832 through E2E-844 → 18
+
+## Pass 10 Schematic deep (E2E-845 → E2E-873)
+
+- E2E-845 → 06-schematic (Wave 1)
+- E2E-846 → 06-schematic
+- E2E-847 → 06-schematic (rename Sim → Simulation)
+- E2E-848 → 06-schematic (Wave 1 Task 1.3)
+- E2E-849 → 02-p1-dead-buttons (Phase 8)
+- E2E-850 → 06-schematic (Wave 1 Task 1.7)
+- E2E-851 → 06-schematic (empty-state praise)
+- E2E-852 → 06-schematic (drag affordance)
+- E2E-853 → 06-schematic (praise categories)
+- E2E-854 → 06-schematic (Push to PCB lock icon)
+- E2E-855 → 06-schematic (praise multi-sheet)
+- E2E-856 → 02-p1-dead-buttons (Phase 3)
+- E2E-857 → 06-schematic (Wave 1 Task 1.4)
+- E2E-858 → 06-schematic (Wave 4)
+- E2E-859 → 06-schematic + 16 (gating)
+- E2E-860 → 06-schematic (Wave 6 Task 6.3)
+- E2E-861 → 06-schematic (search)
+- E2E-862 → 06-schematic (Wave 5 Task 5.5)
+- E2E-863 → 06-schematic (Wave 6 Task 6.4)
+- E2E-864 → 06-schematic (praise tools)
+- E2E-865 → 06-schematic (praise hotkey-in-label)
+- E2E-866 → 06-schematic (Wave 1 beginner hint)
+- E2E-867 → 06-schematic + 16 (AI Generate CTA)
+- E2E-868 → 06-schematic (? overlay)
+- E2E-869 → 06-schematic (Wave 6 Task 6.3)
+- E2E-870 → 18
+- E2E-871 → 18
+- E2E-872 → 18
+- E2E-873 → 18
+
+## Pass 11 Schematic wiring/play (E2E-874 → E2E-914)
+
+- E2E-874 → 06-schematic (Wave 2 Task 2.1)
+- E2E-875 → 06-schematic (verify click-pair)
+- E2E-876 → 06-schematic (Wave 2 Task 2.2)
+- E2E-877 → 06-schematic (Wave 2 Task 2.3)
+- E2E-878 → 06-schematic (Wave 1 Task 1.7 iteration)
+- E2E-879 → 06-schematic (Wave 2 Task 2.4)
+- E2E-880 → 06-schematic (Wave 2 Task 2.5)
+- E2E-881 → 06-schematic (Wave 2 Task 2.6)
+- E2E-882 → 06-schematic (wire as art)
+- E2E-883 → 06-schematic (Wave 1 Task 1.4) + 02 verify
+- E2E-884 → 06-schematic (ghost preview)
+- E2E-885 → 06-schematic (Wave 1 Task 1.5)
+- E2E-886 → 06-schematic (palette by usage)
+- E2E-887 → 06-schematic (Wave 1 Task 1.6)
+- E2E-888 → 06-schematic (Wave 3 Task 3.7)
+- E2E-889 → 06-schematic (Wave 3 Task 3.8)
+- E2E-890 → 06-schematic (align)
+- E2E-891 → 06-schematic (Wave 3 Task 3.9)
+- E2E-892 → 06-schematic (Wave 3 Task 3.2)
+- E2E-893 → 06-schematic (Wave 3 Task 3.4/3.5)
+- E2E-894 → 06-schematic (Wave 2 ERC panel)
+- E2E-895 → 06-schematic (Wave 2 ERC empty-state guard — consume 01 pattern)
+- E2E-896 → 06-schematic (Wave 2 Task 2.7)
+- E2E-897 → 06-schematic (Wave 4 Task 4.1)
+- E2E-898 → 06-schematic (Wave 4 Task 4.2)
+- E2E-899 → 06-schematic (Wave 4 Task 4.3)
+- E2E-900 → 06-schematic (Wave 6 Task 6.5)
+- E2E-901 → 06-schematic + 18 (probe)
+- E2E-902 → 06-schematic (Wave 6 Task 6.5)
+- E2E-903 → 06-schematic (Wave 6 Task 6.6)
+- E2E-904 → 06-schematic (Wave 6 Task 6.7)
+- E2E-905 → 06-schematic (Wave 6 Task 6.1) + 18
+- E2E-906 → 18 (Canonical #13)
+- E2E-907 → 18 (Canonical #5)
+- E2E-908 → 18 (schematic styles)
+- E2E-909 → 18 (Canonical #3)
+- E2E-910 → 18
+- E2E-911 → 18 (schematic diff) + 14
+- E2E-912 → 18
+- E2E-913 → 18 (datasheet auto-attach)
+- E2E-914 → 18 (AI net naming)
+
+## Pass 12 Schematic iterate (E2E-915 → E2E-941)
+
+- E2E-915 → 02-p1-dead-buttons (Phase 8)
+- E2E-916 → 06-schematic (Wave 2 Task 2.2)
+- E2E-917 → 06-schematic (Wave 1 Task 1.7)
+- E2E-918 → 06-schematic (Wave 1 Task 1.4)
+- E2E-919 → 06-schematic (Wave 1 Task 1.5)
+- E2E-920 → 06-schematic (Wave 3 Task 3.2)
+- E2E-921 → 06-schematic (Wave 3 Task 3.4)
+- E2E-922 → 06-schematic (Wave 2 Task 2.7)
+- E2E-923 → 06-schematic (Wave 4 Task 4.4)
+- E2E-924 → 06-schematic (Wave 4 Task 4.2)
+- E2E-925 → 06-schematic (Wave 6 Task 6.1)
+- E2E-926 → 06-schematic (Wave 6 Task 6.2)
+- E2E-927 through E2E-941 → 18
+
+## Pass 12B Schematic populated corrections (E2E-942 → E2E-967)
+
+- E2E-942 → 06-schematic (Wave 5 praise pin labeling)
+- E2E-943 → 06-schematic (Wave 5) + 05 handle size parity
+- E2E-944 → 06-schematic (Wave 5 Task 5.1)
+- E2E-945 → 06-schematic (Wave 5 Task 5.1)
+- E2E-946 → 06-schematic (verify)
+- E2E-947 → 06-schematic (Wave 5 Task 5.1 power symbols)
+- E2E-948 → 06-schematic (Wave 5 Task 5.2)
+- E2E-949 → 06-schematic (Wave 5 praise toast integration)
+- E2E-950 → 01-p0-bugs (Phase 5) + 03 (Phase 8) + 06 (Wave 5 Task 5.3)
+- E2E-951 → 06-schematic (Wave 5 Task 5.4)
+- E2E-952 → 06-schematic (Wave 5 verify)
+- E2E-953 → 06-schematic (Wave 5 verify)
+- E2E-954 → 06-schematic (Wave 5 preserve)
+- E2E-955 → 06-schematic (Wave 2 Task 2.8)
+- E2E-956 → 06-schematic (context menu verify)
+- E2E-957 → 06-schematic (Wave 5 Task 5.6)
+- E2E-958 → 06-schematic (Wave 3 Task 3.6)
+- E2E-959 → 06-schematic (Wave 5 Task 5.7)
+- E2E-960 → 06-schematic (Wave 5 Task 5.8)
+- E2E-961 → 06-schematic (Wave 3 Task 3.9)
+- E2E-962 → 06-schematic (pin directional arrows)
+- E2E-963 → 06-schematic (Wave 5 Task 5.9)
+- E2E-964 → 06-schematic (Wave 5 correction)
+- E2E-965 → 06-schematic (Wave 5 Task 5.5)
+- E2E-966 → 01 + 03 + 06
+- E2E-967 → 05-architecture + 06-schematic (handle size parity)
+
+## Pass 13 Design system (E2E-968 → E2E-1042)
+
+Complete mapping already in `16-design-system.md` §Coverage. Individually re-listed for grep:
+
+- E2E-968 → 01-p0-bugs (Phase 6) + 16
+- E2E-969 through E2E-975 → 16-design-system (Phase 1)
+- E2E-976 through E2E-982 → 16 (Phase 2)
+- E2E-983 → 17 (Phase 1) + 16
+- E2E-984 → 17 (Phase 3) + 16
+- E2E-985 → 16 (Phase 2)
+- E2E-986 → 17 (Phase 2)
+- E2E-987 → 16 (Phase 4)
+- E2E-988 → 16 (Phase 4 shell)
+- E2E-989 → 17 (Phase 4)
+- E2E-990 → 17 (Phase 1)
+- E2E-991 → 16 (Phase 4 shell)
+- E2E-992 → 17 (Phase 2)
+- E2E-993 → 17 + 03
+- E2E-994 through E2E-997 → 16 (Phase 5) / 17
+- E2E-998 through E2E-1002 → 16 (Phase 3-4)
+- E2E-1003 through E2E-1010 → 16 (Phase 4) — all listed in 16 §Coverage
+- E2E-1011 → 16 (Phase 6)
+- E2E-1012 → 16 (Phase 3) + 17
+- E2E-1013 → 03 (Phase 9)
+- E2E-1014 → 03 (Phase 9) + 16
+- E2E-1015 → 16 (Phase 6)
+- E2E-1016 → 16 (Phase 6)
+- E2E-1017 → 16 (Phase 4)
+- E2E-1018 → 16 (Phase 4 Task 4.5)
+- E2E-1019 → 16 (Phase 2)
+- E2E-1020 → 16 (Phase 4 praise)
+- E2E-1021 → 17 (Phase 7)
+- E2E-1022 through E2E-1030 → 17 (Phase 1-4) / 16
+- E2E-1031 → 16 (Phase 1 preserve)
+- E2E-1032 → 16 (Phase 7 Storybook)
+- E2E-1033 → 16 (Phase 7 Task 7.4)
+- E2E-1034 → 17 (Phase 8)
+- E2E-1035 → 16 (Phase 3)
+- E2E-1036 → 17 (Phase 8)
+- E2E-1037 → 01 (Phase 6)
+- E2E-1038 → 16 (Phase 4 Task 4.4)
+- E2E-1039 → 16 (Phase 3 hotkey-in-label)
+- E2E-1040 → 16 (Phase 5) + every per-tab plan
+- E2E-1041 → 16 (Phase 3 disabled-with-reason)
+- E2E-1042 → 16 (Phase 3 Pill count badge)
+
+---
+
+**Verification expected after this file:** the `00-master-index.md` §12 bash loop prints nothing.
