@@ -77,8 +77,14 @@ TOPICS_BLOCK="$(echo "$FRONTMATTER" | awk '
 # If no topics field, nothing to do
 [ -z "$TOPICS_BLOCK" ] && exit 0
 
-# Extract [[target]] substrings (strip display-alias after pipe if present)
-mapfile -t TARGETS < <(echo "$TOPICS_BLOCK" | grep -oE '\[\[[^]|]+(\|[^]]+)?\]\]' | sed -E 's/\[\[([^]|]+)(\|[^]]+)?\]\]/\1/' | sort -u)
+# Extract target slugs from topics block. Handles both:
+#   v1 (legacy):    - "[[target]]"  or  topics: ["[[target]]", ...]
+#   v2 (canonical): - target        or  topics: [target, ...]
+# Strip display-alias after pipe when present in v1 format.
+# v2 bare slugs must match pattern ^[a-z][a-z0-9-]+ to avoid picking up YAML keywords.
+mapfile -t V1_TARGETS < <(echo "$TOPICS_BLOCK" | grep -oE '\[\[[^]|]+(\|[^]]+)?\]\]' | sed -E 's/\[\[([^]|]+)(\|[^]]+)?\]\]/\1/')
+mapfile -t V2_TARGETS < <(echo "$TOPICS_BLOCK" | grep -oE '^\s*-\s+[a-z][a-z0-9-]+\s*$' | sed -E 's/^\s*-\s+([a-z][a-z0-9-]+)\s*$/\1/')
+mapfile -t TARGETS < <(printf '%s\n' "${V1_TARGETS[@]}" "${V2_TARGETS[@]}" | grep -v '^$' | sort -u)
 
 # Track any stubs we create this run for the observation log
 CREATED=()
@@ -98,19 +104,26 @@ for target in "${TARGETS[@]}"; do
   SOURCE_DESC="$(echo "$FRONTMATTER" | grep -E '^description:' | head -1 | sed -E 's/^description:\s*"?([^"]*)"?\s*$/\1/')"
   SOURCE_STEM="$(basename "$FILE_PATH" .md)"
 
-  STUB_DESC="Auto-stub (awaiting Core Ideas) — seeded from [[${SOURCE_STEM}]] on $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  # v2-compliant stub description: ≤140 chars, no timestamp bloat (logged separately).
+  # Truncate source stem if needed to keep under cap.
+  SHORT_STEM="${SOURCE_STEM:0:80}"
+  STUB_DESC="Auto-stub MOC — awaiting Core Ideas. Seeded from ${SHORT_STEM}. See ops/observations/auto-stubs-pending.md for triage log."
+  # Hard-truncate if still over 140 (defensive)
+  STUB_DESC="${STUB_DESC:0:140}"
 
   # Compose stub body using the template's shape. Keep it minimal so humans
   # know at a glance the stub needs fleshing out.
+  # v2-compliant frontmatter: bare-slug topics (no [[...]] wrapping), valid type enum.
   cat > "$target_path" <<STUB
 ---
+name: "${target}"
 description: "${STUB_DESC}"
 type: moc
 auto_generated: true
 auto_generated_source: "${SOURCE_STEM}"
 auto_generated_at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 topics:
-  - "[[index]]"
+  - index
 ---
 
 # ${target}
