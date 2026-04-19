@@ -8,6 +8,7 @@ import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, C
 import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/lib/clipboard';
 import { isSafeUrl } from '@shared/url-validation';
+import { VaultHoverCard } from '@/components/ui/vault-hover-card';
 import type { Asset } from './asset-constants';
 
 interface AssetGridProps {
@@ -141,7 +142,14 @@ const AssetGrid = memo(function AssetGrid({
           >
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="font-medium text-xs text-foreground group-hover:text-primary transition-colors truncate">{asset.name}</span>
+                <VaultHoverCard topic={asset.name}>
+                  <span
+                    className="font-medium text-xs text-foreground group-hover:text-primary transition-colors truncate cursor-help"
+                    data-testid={`asset-name-${asset.id}`}
+                  >
+                    {asset.name}
+                  </span>
+                </VaultHoverCard>
                 {asset.custom && (
                   <span className="text-[8px] bg-purple-500/20 text-purple-400 px-1 py-0.5 shrink-0">Custom</span>
                 )}
