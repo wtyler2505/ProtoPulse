@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__memory__read_graph",
+      "mcp__memory__search_nodes",
+      "mcp__memory__add_observations",
+      "mcp__memory__create_entities",
+      "mcp__memory__create_relations",
+      "Bash(do echo:*)",
+      "Read(//home/wtyler/.claude/**)",
+      "Bash(while read f)",
+      "Bash(done)",
+      "Bash(claudekit-hooks:*)",
+      "mcp__clear-thought__clear_thought",
+      "mcp__claude_ai_Clear-ThoughtMCP__clear_thought",
+      "mcp__dev_manager__status",
+      "Bash(perl:*)",
+      "Bash(pgrep:*)",
+      "Read(//home/wtyler/.nvm/versions/node/**)",
+      "Bash(ELECTRON_RUN_AS_NODE=1 bash:*)",
+      "Bash(printenv PATH:*)",
+      "Bash(ln:*)",
+      "mcp__plugin_superpowers-chrome_chrome__use_browser",
+      "mcp__desktop-commander__get_config",
+      "mcp__desktop-commander__set_config_value",
+      "Bash(NODE_OPTIONS='--max-old-space-size=4096' npx vitest run client/src/lib/__tests__/breadboard-board-audit.test.ts)",
+      "Bash(mv /home/wtyler/.claude/command-log.txt /home/wtyler/.claude/command-log.txt.pre-tuneup)",
+      "Bash(:)",
+      "Bash(mkdir -p /home/wtyler/.claude/logs)",
+      "Bash(/home/wtyler/.claude/scripts/auto-push-protopulse.sh)",
+      "mcp__memory__delete_relations",
+      "mcp__memory__delete_entities",
+      "mcp__qmd__qmd_deep_search",
+      "mcp__qmd__qmd_search",
+      "mcp__qmd__qmd_status",
+      "mcp__qmd__qmd_vector_search",
+      "mcp__qmd__qmd_collections",
+      "mcp__claude_ai_Context7__resolve-library-id",
+      "mcp__claude_ai_Context7__query-docs",
+      "Read(//tmp/**)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "desktop-commander",
+    "FileScopeMCP",
+    "clear-thought",
+    "context7",
+    "memory",
+    "arduino-cli-mcp"
+  ]
+}
