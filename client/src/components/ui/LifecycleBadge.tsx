@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { StyledTooltip } from '@/components/ui/styled-tooltip';
+import { VaultHoverCard } from '@/components/ui/vault-hover-card';
 import { cn } from '@/lib/utils';
 import {
   classifyLifecycle,
@@ -36,10 +36,20 @@ function LifecycleBadgeInner({ partNumber, manufacturer, status: overrideStatus,
   const advice = getLifecycleAdvice(status);
 
   return (
-    <StyledTooltip content={advice} side="right">
+    <VaultHoverCard
+      topic={`lifecycle-${status}`}
+      fallback={
+        <div
+          className="text-xs text-muted-foreground leading-relaxed"
+          data-testid={`lifecycle-badge-fallback-${status}`}
+        >
+          {advice}
+        </div>
+      }
+    >
       <span
         className={cn(
-          'inline-flex items-center px-1 py-0 text-[9px] font-medium border uppercase tracking-wider shrink-0',
+          'inline-flex items-center px-1 py-0 text-[9px] font-medium border uppercase tracking-wider shrink-0 cursor-help',
           colors.bg,
           colors.text,
           colors.border,
@@ -49,7 +59,7 @@ function LifecycleBadgeInner({ partNumber, manufacturer, status: overrideStatus,
       >
         {label}
       </span>
-    </StyledTooltip>
+    </VaultHoverCard>
   );
 }
 
