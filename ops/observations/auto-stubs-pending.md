@@ -11,3 +11,6 @@
 
 ### 2026-04-19T06:34:28Z — from `roving-tabindex-is-more-reliable-than-aria-activedescendant-for-grid-focus-management`
 - [[implementation-patterns]] — stub created at `knowledge/implementation-patterns.md`
+
+### 2026-04-19T06:42:27Z — from `popover-trigger-aschild-requires-tooltip-outside-to-avoid-slot-forwarding-collision`
+- [[gotchas]] — stub created at `knowledge/gotchas.md`
