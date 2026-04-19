@@ -6,6 +6,7 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import {
   BookMarked,
+  BookOpen,
   Search,
   ArrowLeft,
   Tag,
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { VaultHoverCard } from '@/components/ui/vault-hover-card';
 import { cn } from '@/lib/utils';
 import { useKnowledgeBase } from '@/lib/electronics-knowledge';
 import type { KnowledgeArticle, ArticleCategory, DifficultyLevel } from '@/lib/electronics-knowledge';
@@ -125,6 +127,22 @@ const ArticleCard = memo(function ArticleCard({ article, onClick }: ArticleCardP
             )}
           </div>
         )}
+        {/* TODO(plan-13-wave-1): swap `topic={article.category}` for `slug={article.vaultMoc}` once the data layer adds a vaultMoc field per article. Plan 13 declares a CI assertion requiring this. */}
+        <div
+          className="pt-1.5 border-t border-border/30"
+          onClick={(e) => { e.stopPropagation(); }}
+        >
+          <VaultHoverCard topic={article.category}>
+            <span
+              data-testid={`article-vault-${article.id}`}
+              aria-label="About this category in the Vault"
+              className="inline-flex items-center gap-1 text-[11px] text-primary/70 hover:text-primary cursor-help transition-colors"
+            >
+              <BookOpen className="w-3 h-3" />
+              Explore in Vault
+            </span>
+          </VaultHoverCard>
+        </div>
       </CardContent>
     </Card>
   );
