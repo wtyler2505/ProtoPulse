@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://protopulse.local/schemas/vault-frontmatter-v2.schema.json",
+  "title": "Ars Contexta Vault Note Frontmatter (v2)",
+  "description": "Canonical frontmatter schema for notes under knowledge/. Upgraded from v1 (2026-04-18) to unlock T3 backlink index, T6 provenance, T11 progressive disclosure, T13 learn-path, and T15 extract-queue priority. Backward-compatible: legacy v1 fields tolerated.",
+  "type": "object",
+  "required": ["name", "description", "type", "topics"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Descriptive slug matching the filename stem. Readable as a claim when used as a wiki-link."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 140,
+      "description": "Tooltip-grade summary. Powers <VaultHoverCard>. Must pass a cold-read test: a newcomer should understand what the note claims without opening it."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["claim", "pattern", "reference", "moc", "meta"],
+      "description": "Determines validator behavior. moc/meta exempt from MOC-membership rule."
+    },
+    "topics": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "description": "MOC membership + domain tags. At least one must be an existing MOC slug for non-moc/meta notes."
+    },
+    "audience": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["beginner", "intermediate", "expert"]
+      },
+      "description": "Target audience tiers. Powers T11 progressive disclosure. A note may target multiple tiers."
+    },
+    "reviewed": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO date (YYYY-MM-DD) of the last human verification. Staleness: verified >365d → info; others >730d → info."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["speculative", "emerging", "supported", "verified", "established"],
+      "description": "Epistemic weight. 'verified' requires at least one provenance entry."
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["subject", "predicate"],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What the claim is about (e.g. 'ESP32 GPIO12')."
+          },
+          "predicate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What's asserted (e.g. 'must-be-low-at-boot')."
+          },
+          "confidence": {
+            "type": "string",
+            "enum": ["speculative", "emerging", "supported", "verified", "established"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Structured assertions. Enables T3 backlink index to connect claims across notes."
+    },
+    "related": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*$"
+      },
+      "description": "Note slugs this note cross-references. Mirrors wiki-links in body. Validator confirms each resolves."
+    },
+    "supersedes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*$"
+      },
+      "description": "Slugs this note replaces. Validator confirms each exists."
+    },
+    "superseded-by": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*$"
+      },
+      "description": "Slugs that replace this note. Validator confirms each exists. Consumers SHOULD prefer the replacement."
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source"],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": ["datasheet", "standard", "community", "vendor-doc", "textbook", "paper", "experiment", "ai-suggested", "code", "other"],
+            "description": "Source taxonomy. 'ai-suggested' flags notes awaiting human verification."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "page": {
+            "type": ["integer", "string"],
+            "description": "Page number or section identifier within the source."
+          },
+          "verified": {
+            "type": "string",
+            "format": "date",
+            "description": "When a human confirmed the citation matches the claim."
+          },
+          "verified-by": {
+            "type": "string",
+            "description": "Attribution for the verifier (name, handle, or 'tyler')."
+          },
+          "reliability": {
+            "type": "string",
+            "enum": ["single-source", "consensus", "authoritative", "contested"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Citation trail. Required when confidence == verified."
+    },
+    "used-by-surface": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "breadboard", "schematic", "pcb", "3d-view", "order-pcb",
+          "arduino", "serial-monitor", "circuit-code",
+          "dashboard", "architecture", "component-editor",
+          "procurement", "validation", "simulation",
+          "learn", "patterns", "starter-circuits", "labs", "vault",
+          "community", "tasks", "history", "audit-trail", "lifecycle",
+          "generative", "digital-twin", "exports", "calculators",
+          "settings", "shell", "ai-panel"
+        ]
+      },
+      "description": "UI surfaces that consume this note (via <VaultHoverCard> / <VaultExplainer>). Feeds T3 backlink index + T7 health heatmap."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "draft", "archived"],
+      "description": "Lifecycle state. Archived notes hidden from qmd_deep_search by default."
+    },
+    "captured_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Legacy v1 field. Kept for extraction-pipeline provenance; not validated beyond format."
+    },
+    "extraction_status": {
+      "type": "string",
+      "enum": ["pending", "in_progress", "extracted", "archived"],
+      "description": "Legacy v1 field. Used by /extract queue tracking."
+    },
+    "triage_status": {
+      "type": "string",
+      "description": "Legacy v1 field. Free-form triage tag (e.g. 'complete_p1_backlog_none', 'gap-stub')."
+    },
+    "parent_source": {
+      "type": "string",
+      "description": "Legacy v1 field. Filename of the inbox source this note was extracted from."
+    },
+    "source_type": {
+      "type": "string",
+      "description": "Legacy v1 field. Kind of source ('e2e-walkthrough', 'vault-gap-seed', etc.)."
+    },
+    "severity_counts": {
+      "type": "object",
+      "description": "Legacy v1 field on e2e-walkthrough stubs."
+    },
+    "e2e_ids": {
+      "type": "array",
+      "items": { "type": ["integer", "string"] },
+      "description": "Legacy v1 field. E2E finding IDs this note resolves."
+    },
+    "origin": {
+      "type": "object",
+      "description": "vault-gap stubs only. See gap-stub.schema.json.",
+      "properties": {
+        "plan": { "type": "string" },
+        "task": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "unblocks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "T15: plans this note unblocks on extraction. Priority hint."
+    }
+  },
+  "additionalProperties": true,
+  "allOf": [
+    {
+      "if": { "properties": { "confidence": { "const": "verified" } }, "required": ["confidence"] },
+      "then": { "required": ["provenance"] }
+    }
+  ]
+}
