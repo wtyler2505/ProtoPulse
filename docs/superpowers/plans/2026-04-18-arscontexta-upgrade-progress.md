@@ -135,9 +135,58 @@ Three more skills added to the vault-ops observability+ingest suite:
 
 **Cumulative status: T1 ✓, T2 ✓, T3 ✓, T5 ✓, T6 ✓, T7 ✓, T8 ✓, T11 ✓, T15 ✓, T17 ✓. 9 of 15 upgrade items shipped (60%).**
 
-## Next session — start here (UPDATED AGAIN)
+## Session 5 update (2026-04-19) — T10 + T14 + T13 shipped
 
-### Priority 1: T10 — AI-assisted /extract quality gate (3 days)
+Three more skills added, including the session-layer pre-fetch hook and the pedagogy generator:
+
+- **T10 complete** as skill `.claude/skills/vault-quality-gate/`:
+  - `SKILL.md` — 13-rule deterministic checklist + optional AI semantic pass + review-bounce protocol (moves failing notes to `inbox/review/` with adjacent `.review.md` summary)
+  - `scripts/gate.py` — full validator: frontmatter parse, schema, cross-link integrity, claim/evidence/application section detection, TODO marker detection, atomic review-bouncer
+  - **Live-tested on `esp32-gpio12-must-be-low-at-boot-...md`**: REVIEW verdict, 1 error (topics-moc-membership) + 2 warnings ✓ — gate catches real issues even in the vault's best note
+- **T14 complete** as skill `.claude/skills/vault-prefetch/`:
+  - `SKILL.md` — SessionStart hook spec, signal-to-topic map (cwd + recent git paths → topic queries), cache format at `ops/cache/prefetch-<branch>.md`
+  - `scripts/prefetch.py` — grep-first implementation (no MCP dependency in hook context), 1-hour fresh-cache skip, branch sanitization, atomic writes
+  - `.claude/hooks/vault-prefetch.sh` — the installable SessionStart hook entry
+  - **Live-tested**: detected recent git activity → inferred topics `[architecture-decisions, maker-ux, methodology]` → rendered digest ✓
+- **T13 complete** as skill `.claude/skills/vault-teach/`:
+  - `SKILL.md` — learn-path generator protocol: foundation → mechanism → application → deep-dive → pre-test staging, audience-tier fallback chain, read-time estimation, Markdown + JSON output
+  - Consumes T11 tier markers, T2 frontmatter, T3 backlinks
+  - Implementation-script deferred until tier coverage >20% (currently 0% per T11 live-test; running it today would produce mostly "(no note available)" placeholders — honest signal, not yet useful product)
+
+**Cumulative status: T1 ✓, T2 ✓, T3 ✓, T5 ✓, T6 ✓, T7 ✓, T8 ✓, T10 ✓, T11 ✓, T13 ✓, T14 ✓, T15 ✓, T17 ✓. 12 of 15 upgrade items shipped (80%).**
+
+## Remaining 3 items — why they graduate out of skill-land
+
+- **T4** — Directed MOC expansion (a11y/WCAG, Drizzle, component-editor, electronics-math) is a **~2-week content-creation campaign**, not a skill. Execution = seeding inbox stubs + running `/extract` repeatedly. The tooling to support T4 (T1 /vault-gap queue, T2 schema, T10 quality gate, T15 priority, T7 health) is already shipped. T4 is the **content push** that consumes all that infrastructure.
+- **T9** — Vault graph visualization as a first-class tab is a **~5-day React/D3 build** that belongs in the `16-design-system.md` / `13-learning-surfaces.md` plan. Spec already exists in the master-index canonical list.
+- **T12** — Plan↔Vault↔Code traceability panel is a **~3-day UI build** that reads T3's backlink JSON and renders it. Belongs in `16-design-system.md` Phase 8 UI.
+
+All three are tracked in `docs/superpowers/plans/2026-04-18-arscontexta-system-upgrades.md` with their full scope. The **tooling foundation is complete**; the remaining work is either content-seeding (T4) or UI components (T9, T12) that live in the per-tab design-system plan, not in `.claude/skills/`.
+
+## Next session — start here (UPDATED)
+
+### Priority 1: Resume the 19-plan vault integration (the original intent)
+
+The vault infrastructure is now deep enough to power the 19-plan vault-integration campaign the original plan called for. Next session:
+
+1. Re-apply the `00-master-index.md` §7 research protocol upgrade (now with real tooling to reference: `/vault-gap`, `/vault-suggest-for-plan`, `/vault-validate --strict`, `/vault-prefetch`, etc.)
+2. Restore `00-master-index.md` §13 Vault Integration Commitment, citing the shipped primitives
+3. For each of the 12 "gap plans" (02, 04-15), run `/vault-suggest-for-plan <plan-file>` to generate the suggestion report. Paste into the plan's Research log.
+4. For any `coverage: missing` or `thin` findings, stubs auto-seed to `inbox/` via `/vault-gap --auto-seed-gaps`.
+5. `/extract` drains the queue; `/vault-quality-gate` is the commit gate.
+6. Run `/vault-health` weekly to track orphan-count → consumed-count migration.
+
+### Priority 2 (parallel): T4 MOC expansion content push
+
+Once vault-integration starts consuming notes, T4 becomes the companion campaign to fill gap-flagged topics.
+
+### Priority 3 (UI work): Start `16-design-system.md` Phase 8 (`<VaultHoverCard>`, `<VaultExplainer>`, `<VaultInboxCta>`)
+
+This is where T9 graph viz and T12 traceability panel will live. UI plan owns these.
+
+### Priority 4: Upgrade existing AC-related skills
+
+Audit `extract`, `connect`, `revisit`, `verify`, `seed`, `pipeline`, `ralph`, `next`, `tasks`, `graph`, `stats`, `validate` etc. against the best-practices checklist in this document. Apply fixes in-place via `/skill-edit`.
 
 Reads a plan file, loops qmd_deep_search per task description, emits structured suggestion report. Consumes T1's `/vault-gap`. Drop-in replacement for the manual enhancement work.
 

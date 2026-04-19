@@ -258,16 +258,45 @@ These are NOT re-proven in each sub-plan. They are assumed truths of the codebas
 
 Every sub-plan's Existing Infrastructure table must include a row for each of these that it touches.
 
-## 7. Research protocol (mandatory per sub-plan)
+## 7. Research protocol (mandatory per sub-plan) — UPGRADED 2026-04-19
 
-Per project memory "DO REAL RESEARCH ALWAYS. NO MVP.":
-- **Codebase grep** — before any edit, ast-grep for the function/component being touched. Never assume API shape.
-- **Context7 MCP** — `resolve-library-id` + `query-docs` for every third-party library API used (React 19, React Flow, shadcn, Drizzle, Vitest, Playwright). Max 3 resolves + 3 queries per question.
-- **WebSearch** — for industry/EDA conventions (IEEE 315, IEC 60617, KiCad behavior, Flux/Wokwi reference), cite URL in plan task.
-- **Ars Contexta Vault** — for hardware specs, always grep `knowledge/` first before WebSearch.
-- **Advisor** — each sub-plan calls `advisor()` after the failing-test phase of its first task, and again before declaring done.
+Per project memory "DO REAL RESEARCH ALWAYS. NO MVP." — and with Ars Contexta tooling now shipped (12 of 15 upgrade items complete per `docs/superpowers/plans/2026-04-18-arscontexta-upgrade-progress.md`), the research step is now concrete and mechanized.
 
-> **Note (2026-04-18):** this protocol will receive a major upgrade after the Ars Contexta system upgrades ship (see `docs/superpowers/plans/2026-04-18-arscontexta-system-upgrades.md`). Upgraded protocol will mandate `/vault-gap`, `/vault-suggest-for-plan`, and enforce the new frontmatter schema. Do not consume the upgraded primitives before they exist.
+### Sequence (mandatory before any edit)
+
+1. **`/vault-prefetch`** — automatic on session start (via hook); refresh mid-session if you pivot. Gives Claude a digest of relevant MOCs + top notes for the current cwd/branch. Reduces downstream search volume.
+
+2. **`/vault-suggest-for-plan <this-plan-file>`** — at the START of executing a sub-plan, run this once. It scans every Task description, batch-queries qmd, and emits a suggestion report (coverage per task: sufficient / thin / missing). Paste the report into the plan's Research log. This is the **single biggest time-saver**: 80% of vault integration mapped in one command.
+
+3. **Per-task research loop**:
+   - If the suggestion report says `sufficient` → cite the listed slugs directly in the task's code/tests, consume via `<VaultHoverCard slug="...">` / `<VaultExplainer slug="...">` where the UI benefits.
+   - If `thin` or `missing` → invoke `/vault-gap "<topic>" --origin-plan <path> --origin-task <id>`. The skill auto-seeds an inbox stub, appends to `ops/queue/gap-stubs.md`, and returns a payload to paste.
+   - Concurrently: continue the task with the best available coverage, flag the gap in the Research log, and check back after `/extract` processes the stub.
+
+4. **Codebase grep** — ast-grep for the function/component being touched. Never assume API shape. (Unchanged.)
+
+5. **Context7 MCP** — `resolve-library-id` + `query-docs` for third-party APIs (React 19, React Flow, shadcn, Drizzle, Vitest, Playwright). Max 3 resolves + 3 queries per question. (Unchanged.)
+
+6. **WebSearch** — for industry/EDA standards (IEEE 315, IEC 60617, WCAG SC numbers, KiCad, Flux, Wokwi). Cite URL in the task.
+
+7. **Vault-validate before citing** — when you intend to cite a vault slug in the plan's implementation, optionally run `/vault-validate <slug>` first. If schema errors exist, prefer a different source OR queue the fix.
+
+8. **Advisor** — each sub-plan calls `advisor()` after the failing-test phase of its first task, and again before declaring done.
+
+### Commit gate
+
+When the sub-plan produces new knowledge notes (rare, but happens when plan execution generates domain insight), `/extract` MUST run `/vault-quality-gate` before committing. Notes that fail bounce to `inbox/review/` — they do NOT land in `knowledge/` until fixed.
+
+### Pipeline discipline (reminder)
+
+- **NEVER write directly to `knowledge/`.** Every note goes through `inbox/ → /extract → knowledge/`.
+- Gap stubs are created via `/vault-gap`, user suggestions via `/vault-inbox`, migration needs via `/vault-validate`'s `migrate-v1-to-v2.py` — all land in `inbox/`.
+- `/extract` is the only writer to `knowledge/`. Priority is ranked by `/vault-extract-priority` which reads the queue.
+
+### Observability
+
+- `/vault-health` runs weekly (cron) and emits a trend report in `ops/health/`. Tracks orphan count, backlink growth, schema-drift counts, demand-gap age.
+- `/vault-index --rebuild` regenerates the plan↔vault↔code backlink DB at `ops/index/plan-vault-backlinks.json`. Pre-commit hook recommended for repos touching `knowledge/` or plans.
 
 ## 8. Quality gates (every sub-plan wraps with this checklist)
 
@@ -347,6 +376,52 @@ The acceptance criterion for completing this master roadmap is that the above ba
 
 - Findings E2E-001 through E2E-200 were flagged by the audit author as "largely fast first-pass coverage sweep — not all individually click-verified." Anything tagged "GLANCED" in the audit requires a DevTools re-verify before action. Sub-plan authors: when owning a GLANCED finding, add a pre-implementation verification task (`Task N.0 — reproduce in DevTools, screenshot, attach`).
 - Methodology discriminator: "a button works iff a real DevTools click produces user-visible state change." Playwright tests should use `page.getByRole(...).click()`, not `dispatchEvent`.
+
+## 13. Vault integration commitment (added 2026-04-19 after tooling complete)
+
+The 2026-04-14 Ars Contexta campaign shipped a production vault-consumption layer (683 notes, 54 MOCs, `useVaultSearch`/`useVaultNote` hooks, `/api/vault/search`, `server/ai.ts` auto-inject). **The 2026-04-18/19 upgrade campaign shipped 12 operational skills on top of that** — gap detection, schema validation, backlink indexing, suggestion mapping, provenance, health reporting, user-suggestion intake, quality gate, audience tiering, learn-paths, prefetch, priority ranking. Integration now has mechanized support end-to-end.
+
+### Foundational primitives (ship in `16-design-system.md` Phase 8)
+
+- `useVaultQuickFetch(slug)` — React Query wrapper with 10-min `staleTime`.
+- `<VaultHoverCard slug|topic fallback>` — Radix HoverCard with title + 140-char summary + "Read more in Vault →" deep link. Loading + error states. 404 offers `<VaultInboxCta>` (see T8).
+- `<VaultExplainer slug audience>` — inline expandable; reads T11 tier markers.
+- `<VaultInboxCta topic>` — the 404 fallback that posts to `/api/vault/suggest` (T8 protocol).
+
+### Consumption map per sub-plan
+
+| Plan | Key vault insertion | Primary domain |
+|------|--------------------|----------------|
+| 02-p1-dead-buttons | Community card detail dialog tag MOCs (Phase 5.5b) | marketplace/licensing |
+| 03-a11y-systemic | Wave 10 seeds `inbox/` stubs for WCAG/ARIA gaps (FOUR STUBS SEEDED 2026-04-19) | a11y/WCAG |
+| 04-dashboard | Network preview edge tooltips; vault-verified sample data | protocols/starter circuits |
+| 05-architecture | Asset Library part tooltips; AI-critique grounding via `buildVaultContext` | component selection/pinouts |
+| 06-schematic | ERC rule `vaultSlug`; net-naming convention; pin alternate-function dialog | nets/pins/ERC |
+| 07-breadboard | Deepened hover-pin tooltip; mistake catalog rule → vault slug | breadboard-intelligence |
+| 08-pcb-3d-order | Layer material "?"; fab tradeoff matrix; trace width context | PCB materials/fabrication |
+| 09-component-editor | Field-definition HoverCards (Family/Mounting/Package/MPN) | component-field-* |
+| 10-procurement-suite | ESD explainer; alternate-selection reasoning | sourcing/lifecycle |
+| 11-validation-simulation | Plain-English DC Operating Point; DRC rule explainers | simulation/DRC-rules |
+| 12-arduino-serial-code | Verify pipeline note; baud-rate standards | arduino-build/serial |
+| 13-learning-surfaces | Tightened: each article has vault MOC slug; graph view via T9 | all learning MOCs |
+| 14-community-tasks-history | NRND reason lookup; license plain-English | lifecycle-*/license-* |
+| 15-generative-digital-twin-exports | GA param derivation; calculator formula derivation | algorithms/electronics-math |
+| 17-shell-header-nav | Welcome tour content; first-PCB wizard steps | onboarding/maker-ux |
+
+### Execution workflow
+
+Each sub-plan, during its own run:
+
+1. Run `/vault-suggest-for-plan docs/superpowers/plans/2026-04-18-e2e-walkthrough/<plan>.md --json` → paste report into the plan's Research log.
+2. For each `sufficient` task → consume via primitive in implementation.
+3. For each `thin`/`missing` task → `/vault-gap "<topic>" --origin-plan <plan> --origin-task <id>` → stub lands in `inbox/`; status tracked in `ops/queue/gap-stubs.md`.
+4. Concurrently, `/extract` drains the queue (priority-ordered by T15).
+5. After `/extract` processes a stub, the resulting `knowledge/<slug>.md` gets `/vault-quality-gate`'d; on pass, the plan task's implementation gets updated to cite the new slug.
+6. `/vault-health --compare auto` runs weekly to track orphan→consumed migration.
+
+### Coverage TSV
+
+`docs/superpowers/plans/2026-04-18-e2e-walkthrough/coverage/vault-integration.tsv` is the verification map. Grow it as each sub-plan executes.
 
 ## 12. Out-of-scope (explicitly)
 
