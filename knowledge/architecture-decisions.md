@@ -22,6 +22,7 @@ Recorded decisions about ProtoPulse's technical architecture. See `docs/adr/` fo
 - [[express-5-chosen-because-spa-tools-dont-need-ssr]] -- no SSR needed for tool apps
 - [[react-query-eliminates-the-need-for-client-state-libraries]] -- server-derived state only
 - [[drizzle-orm-was-chosen-for-type-safe-zod-integration]] -- schema-to-type-to-validation chain
+- [[backend-persistence-patterns]] -- MOC indexing the Drizzle schema, pool, transaction, jsonb, and FK-cascade patterns
 - [[dual-ai-providers-prevent-single-vendor-lock-in]] -- Claude + Gemini with circuit breaker
 - [[project-provider-monolith-is-the-biggest-remaining-frontend-debt]] -- 40+ values, re-render cascade
 - [[hardcoded-project-id-blocked-multi-project-until-wave-39]] -- implicit assumptions become structural

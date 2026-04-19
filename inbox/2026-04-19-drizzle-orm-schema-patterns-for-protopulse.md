@@ -2,7 +2,8 @@
 name: "Drizzle ORM schema patterns for ProtoPulse — vault-gap stub"
 description: "Gap flagged by T4 Directed MOC Expansion. Vault has ~0 Drizzle-specific notes; ProtoPulse relies heavily on Drizzle + PostgreSQL."
 captured_date: 2026-04-19
-extraction_status: pending
+extraction_status: extracted
+extraction_date: 2026-04-19
 triage_status: gap-stub
 source_type: vault-gap-seed
 origin:
