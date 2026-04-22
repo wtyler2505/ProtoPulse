@@ -212,6 +212,32 @@ describe('SchematicCanvas', () => {
     expect(screen.getByTestId('empty-state-title').textContent).toMatch(/Empty Schematic/i);
   });
 
+  // E2E-225, E2E-856: Empty-state "Add Component" button must dispatch the
+  // protopulse:focus-component-search event so the UnifiedComponentSearch
+  // palette (mounted at workspace scope in ProjectWorkspace.tsx) opens.
+  // Audit previously observed "enters place mode but no part selected" — that
+  // symptom was the listener being absent (palette never mounted). The handler
+  // contract is: click → dispatch the event. Locking that in here.
+  it('empty-state Add Component dispatches focus-component-search event (E2E-225, E2E-856)', () => {
+    mockUseCircuitInstances.mockReturnValue({ data: [] });
+
+    const eventSpy = vi.fn();
+    window.addEventListener('protopulse:focus-component-search', eventSpy);
+
+    try {
+      renderCanvas();
+
+      const btn = screen.getByTestId('button-add-schematic-component');
+      fireEvent.click(btn);
+
+      expect(eventSpy).toHaveBeenCalledTimes(1);
+      const evt = eventSpy.mock.calls[0][0] as Event;
+      expect(evt.type).toBe('protopulse:focus-component-search');
+    } finally {
+      window.removeEventListener('protopulse:focus-component-search', eventSpy);
+    }
+  });
+
   it('handles Ctrl+C to copy selected nodes', async () => {
     const mockInstances = [
       { id: 101, partId: 1, referenceDesignator: 'R1', schematicX: 0, schematicY: 0, schematicRotation: 0, properties: {} }
