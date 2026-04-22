@@ -3,6 +3,7 @@ import { Ban, Bot, CircleHelp, Lightbulb, MapPin, PackageCheck, ShieldCheck, Spa
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { VaultHoverCard } from '@/components/ui/vault-hover-card';
 import type { BreadboardSelectionActionId } from '@/lib/breadboard-ai-prompts';
 import type { BreadboardLayoutQualityResult } from '@/lib/breadboard-layout-quality';
 import type {
@@ -331,7 +332,15 @@ export default function BreadboardPartInspector({
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/90">Bench Inspector</p>
             <h3 className="mt-1 truncate text-lg font-semibold text-foreground">
-              {model.refDes} · {model.title}
+              {model.refDes} ·{' '}
+              <VaultHoverCard topic={model.mpn ?? model.title}>
+                <span
+                  className="cursor-help underline decoration-dotted decoration-primary/40 underline-offset-4"
+                  data-testid="bench-inspector-title-vault-trigger"
+                >
+                  {model.title}
+                </span>
+              </VaultHoverCard>
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               {model.manufacturer ?? 'Unknown maker'}{model.mpn ? ` · ${model.mpn}` : ''}
