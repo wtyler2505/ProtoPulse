@@ -7,6 +7,7 @@ export { ComponentStorage } from './components';
 export { CircuitStorage } from './circuit';
 export { MiscStorage } from './misc';
 export { OrderingStorage } from './ordering';
+export { BoardStorage, DEFAULT_BOARD_VALUES } from './boards';
 export { StorageError, VersionConflictError } from './errors';
 export type { PaginationOptions, IStorage } from './interfaces';
 export type { StorageDeps, DbClient, CacheClient } from './types';
