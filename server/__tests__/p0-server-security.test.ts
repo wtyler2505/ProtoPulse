@@ -46,10 +46,7 @@ describe('BL-0002: PUBLIC_PATHS auth bypass', () => {
     const path = await import('path');
 
     // PUBLIC_API_PATHS was moved from index.ts to request-routing.ts
-    const routingSource = await fs.readFile(
-      path.resolve(__dirname, '..', 'request-routing.ts'),
-      'utf-8',
-    );
+    const routingSource = await fs.readFile(path.resolve(__dirname, '..', 'request-routing.ts'), 'utf-8');
 
     // The PUBLIC_API_PATHS array should not contain seed-related paths
     const publicPathsMatch = routingSource.match(/const PUBLIC_API_PATHS\s*=\s*\[([\s\S]+?)\]/);
@@ -58,10 +55,7 @@ describe('BL-0002: PUBLIC_PATHS auth bypass', () => {
     expect(publicPathsContent).not.toContain('seed');
 
     // Verify index.ts does not have a stale PUBLIC_PATHS bypass either
-    const indexSource = await fs.readFile(
-      path.resolve(__dirname, '..', 'index.ts'),
-      'utf-8',
-    );
+    const indexSource = await fs.readFile(path.resolve(__dirname, '..', 'index.ts'), 'utf-8');
     const authBypassLines = indexSource
       .split('\n')
       .filter((line) => line.includes('isPublicApiPath') || line.includes('PUBLIC_PATHS'));
@@ -149,7 +143,10 @@ describe('BL-0070: FZZ ZIP bomb protection', () => {
   it('rejects archive with too many files (>100)', async () => {
     const zip = new JSZip();
     for (let i = 0; i < 101; i++) {
-      zip.file(`part.${String(i)}.fzp`, `<module moduleId="mod-${String(i)}"><title>Part ${String(i)}</title></module>`);
+      zip.file(
+        `part.${String(i)}.fzp`,
+        `<module moduleId="mod-${String(i)}"><title>Part ${String(i)}</title></module>`,
+      );
     }
     const buffer = Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
 
@@ -159,7 +156,10 @@ describe('BL-0070: FZZ ZIP bomb protection', () => {
   it('allows archive with exactly 100 files', async () => {
     const zip = new JSZip();
     for (let i = 0; i < 100; i++) {
-      zip.file(`part.${String(i)}.fzp`, `<module moduleId="mod-${String(i)}"><title>Part ${String(i)}</title></module>`);
+      zip.file(
+        `part.${String(i)}.fzp`,
+        `<module moduleId="mod-${String(i)}"><title>Part ${String(i)}</title></module>`,
+      );
     }
     const buffer = Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
 
@@ -194,10 +194,7 @@ describe('E2E-312/313: /api/parts/browse/* allowlist + user-agnostic response', 
   it('PUBLIC_API_PATHS includes /api/parts/browse/', async () => {
     const fs = await import('fs/promises');
     const path = await import('path');
-    const routingSource = await fs.readFile(
-      path.resolve(__dirname, '..', 'request-routing.ts'),
-      'utf-8',
-    );
+    const routingSource = await fs.readFile(path.resolve(__dirname, '..', 'request-routing.ts'), 'utf-8');
     const publicPathsMatch = routingSource.match(/const PUBLIC_API_PATHS\s*=\s*\[([\s\S]+?)\]/);
     expect(publicPathsMatch).not.toBeNull();
     const publicPathsContent = publicPathsMatch![1];
@@ -207,10 +204,7 @@ describe('E2E-312/313: /api/parts/browse/* allowlist + user-agnostic response', 
   it('browse handlers do NOT reference req.userId, req.session, or req.user', async () => {
     const fs = await import('fs/promises');
     const path = await import('path');
-    const partsRouteSource = await fs.readFile(
-      path.resolve(__dirname, '..', 'routes', 'parts.ts'),
-      'utf-8',
-    );
+    const partsRouteSource = await fs.readFile(path.resolve(__dirname, '..', 'routes', 'parts.ts'), 'utf-8');
 
     // Extract just the two browse handler bodies (from the comment to the next blank-line-separated route)
     const altMatch = partsRouteSource.match(
@@ -267,12 +261,10 @@ describe('E2E-312/313: /api/parts/browse/* allowlist + user-agnostic response', 
 
     vi.doMock('../storage', () => ({
       partsStorage: {
-        listPartsWithAlternates: vi.fn().mockResolvedValue([
-          { part: samplePart, alternateCount: 2 },
-        ]),
-        listPartsUsageSummary: vi.fn().mockResolvedValue([
-          { part: samplePart, projectCount: 3, totalQuantityNeeded: 15, totalPlacements: 4 },
-        ]),
+        listPartsWithAlternates: vi.fn().mockResolvedValue([{ part: samplePart, alternateCount: 2 }]),
+        listPartsUsageSummary: vi
+          .fn()
+          .mockResolvedValue([{ part: samplePart, projectCount: 3, totalQuantityNeeded: 15, totalPlacements: 4 }]),
       },
       storage: {},
       StorageError: class StorageError extends Error {},

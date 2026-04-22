@@ -53,45 +53,57 @@ describe('request-routing helpers', () => {
 
   describe('isSSERequest', () => {
     it('detects SSE routes even from mounted middleware path fragments', () => {
-      expect(isSSERequest({
-        originalUrl: '',
-        baseUrl: '/api',
-        path: '/chat/ai/stream',
-      })).toBe(true);
+      expect(
+        isSSERequest({
+          originalUrl: '',
+          baseUrl: '/api',
+          path: '/chat/ai/stream',
+        }),
+      ).toBe(true);
     });
 
     it('detects hardware and agent stream routes', () => {
-      expect(isSSERequest({
-        originalUrl: '/api/projects/5/agent',
-        baseUrl: '',
-        path: '/api/projects/5/agent',
-      })).toBe(true);
+      expect(
+        isSSERequest({
+          originalUrl: '/api/projects/5/agent',
+          baseUrl: '',
+          path: '/api/projects/5/agent',
+        }),
+      ).toBe(true);
 
-      expect(isSSERequest({
-        originalUrl: '/api/projects/5/arduino/jobs/12/stream',
-        baseUrl: '',
-        path: '/api/projects/5/arduino/jobs/12/stream',
-      })).toBe(true);
+      expect(
+        isSSERequest({
+          originalUrl: '/api/projects/5/arduino/jobs/12/stream',
+          baseUrl: '',
+          path: '/api/projects/5/arduino/jobs/12/stream',
+        }),
+      ).toBe(true);
 
-      expect(isSSERequest({
-        originalUrl: '/api/projects/5/firmware/simulate/runtime-123/events',
-        baseUrl: '',
-        path: '/api/projects/5/firmware/simulate/runtime-123/events',
-      })).toBe(true);
+      expect(
+        isSSERequest({
+          originalUrl: '/api/projects/5/firmware/simulate/runtime-123/events',
+          baseUrl: '',
+          path: '/api/projects/5/firmware/simulate/runtime-123/events',
+        }),
+      ).toBe(true);
     });
 
     it('does not misclassify neighboring non-stream endpoints', () => {
-      expect(isSSERequest({
-        originalUrl: '/api/projects/5/firmware/simulate/runtime-123/status',
-        baseUrl: '',
-        path: '/api/projects/5/firmware/simulate/runtime-123/status',
-      })).toBe(false);
+      expect(
+        isSSERequest({
+          originalUrl: '/api/projects/5/firmware/simulate/runtime-123/status',
+          baseUrl: '',
+          path: '/api/projects/5/firmware/simulate/runtime-123/status',
+        }),
+      ).toBe(false);
 
-      expect(isSSERequest({
-        originalUrl: '/api/projects/5/arduino/jobs/12',
-        baseUrl: '',
-        path: '/api/projects/5/arduino/jobs/12',
-      })).toBe(false);
+      expect(
+        isSSERequest({
+          originalUrl: '/api/projects/5/arduino/jobs/12',
+          baseUrl: '',
+          path: '/api/projects/5/arduino/jobs/12',
+        }),
+      ).toBe(false);
     });
   });
 });

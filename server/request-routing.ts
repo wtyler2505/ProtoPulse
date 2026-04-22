@@ -21,9 +21,10 @@ const SSE_ROUTE_PATTERNS = [
 ] as const;
 
 export function getRequestPath(req: RequestPathLike): string {
-  const originalUrl = typeof req.originalUrl === 'string' && req.originalUrl.length > 0
-    ? req.originalUrl
-    : `${req.baseUrl ?? ''}${req.path ?? ''}`;
+  const originalUrl =
+    typeof req.originalUrl === 'string' && req.originalUrl.length > 0
+      ? req.originalUrl
+      : `${req.baseUrl ?? ''}${req.path ?? ''}`;
   const [path] = originalUrl.split('?', 1);
   return path || '/';
 }
