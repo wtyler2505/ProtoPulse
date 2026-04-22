@@ -290,4 +290,43 @@ describe('ArchitectureView', () => {
     renderArchView();
     expect(screen.queryByTestId('edge-color-legend')).toBeNull();
   });
+
+  // E2E-078 — tool-analyze button was reported "dead / does nothing on click"
+  // during the 2026-04-18 walkthrough. Handler is correctly wired; this
+  // regression asserts clicking the toolbar button toggles the analysis
+  // slide-over panel on and off.
+  it('tool-analyze button toggles the analysis panel (E2E-078)', () => {
+    mockNodes = [
+      { id: 'n1', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'MCU', type: 'mcu' } },
+    ];
+    renderArchView();
+
+    // Panel hidden by default.
+    expect(screen.queryByTestId('analysis-panel')).toBeNull();
+
+    // First click opens the panel + runs analysis.
+    const analyzeBtn = screen.getByTestId('tool-analyze');
+    fireEvent.click(analyzeBtn);
+    const panel = screen.getByTestId('analysis-panel');
+    expect(panel).toBeDefined();
+    expect(screen.getByTestId('analysis-panel-title')).toBeDefined();
+
+    // Second click closes the panel.
+    fireEvent.click(analyzeBtn);
+    expect(screen.queryByTestId('analysis-panel')).toBeNull();
+  });
+
+  // E2E-078 — even on an empty design (no components), clicking tool-analyze
+  // should surface the panel (showing the empty-design sentinel). Guards
+  // against a regression where the click appears dead on fresh projects.
+  it('tool-analyze opens the panel with an empty-design report when no nodes (E2E-078)', () => {
+    renderArchView(); // mockNodes = [] from beforeEach
+    // The empty-project overlay lives at z-0; the toolbar and panel are z-10/z-20.
+    // The tool-analyze button is reachable even on the empty canvas.
+    const analyzeBtn = screen.getByTestId('tool-analyze');
+    fireEvent.click(analyzeBtn);
+    expect(screen.getByTestId('analysis-panel')).toBeDefined();
+    // Empty-design sentinel surfaces as designType = 'Empty'.
+    expect(screen.getByTestId('analysis-design-type').textContent).toContain('Empty');
+  });
 });
