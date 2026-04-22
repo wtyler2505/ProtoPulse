@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardView from '../DashboardView';
 
 /**
@@ -9,9 +10,14 @@ import DashboardView from '../DashboardView';
  *
  * The fix derives `hasDesign` from architecture nodes + BOM items, and gates
  * `allPassing` on it. A new `noDesign` state renders a neutral message.
+ *
+ * Mocking notes:
+ * - WelcomeOverlay gates the whole view when onboarding isn't dismissed.
+ *   Stub it so the test always renders the dashboard body.
+ * - DashboardView uses <VaultHoverCard> which calls useQuery; wrap in
+ *   QueryClientProvider to satisfy React Query.
  */
 
-// Mock all contexts DashboardView depends on. Per-test override via vi.mocked().
 const mockUseArchitecture = vi.fn();
 const mockUseBom = vi.fn();
 const mockUseValidation = vi.fn();
@@ -30,8 +36,20 @@ vi.mock('@/lib/contexts/validation-context', () => ({
 vi.mock('@/lib/contexts/history-context', () => ({
   useHistory: () => mockUseHistory(),
 }));
-vi.mock('@/lib/project-context', () => ({
-  useProjectMeta: () => mockUseProjectMeta(),
+vi.mock('@/lib/project-context', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/project-context')>('@/lib/project-context');
+  return {
+    ...actual,
+    useProjectMeta: () => mockUseProjectMeta(),
+  };
+});
+
+// Stub WelcomeOverlay so the test renders the dashboard body regardless of
+// onboarding state. Keep the named exports DashboardView imports at module scope.
+vi.mock('../WelcomeOverlay', () => ({
+  default: () => null,
+  isOnboardingDismissed: () => true,
+  dismissOnboarding: () => {},
 }));
 
 function seedDefaults({
@@ -50,10 +68,21 @@ function seedDefaults({
   });
 }
 
+function renderView() {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  return render(
+    <QueryClientProvider client={qc}>
+      <DashboardView />
+    </QueryClientProvider>,
+  );
+}
+
 describe('DashboardView validation indicator (E2E-015)', () => {
   it('shows "No design to validate yet" on an empty project (no nodes, no BOM, no issues)', () => {
     seedDefaults();
-    render(<DashboardView />);
+    renderView();
     const indicator = screen.getByTestId('validation-status-indicator');
     expect(indicator.textContent).toMatch(/no design to validate yet/i);
     expect(indicator.textContent).not.toMatch(/all checks passing/i);
@@ -64,7 +93,7 @@ describe('DashboardView validation indicator (E2E-015)', () => {
       nodes: [{ id: 'n1', data: { type: 'microcontroller' } }],
       issues: [],
     });
-    render(<DashboardView />);
+    renderView();
     const indicator = screen.getByTestId('validation-status-indicator');
     expect(indicator.textContent).toMatch(/all checks passing/i);
   });
@@ -74,17 +103,17 @@ describe('DashboardView validation indicator (E2E-015)', () => {
       nodes: [{ id: 'n1', data: { type: 'microcontroller' } }],
       issues: [{ severity: 'error' }],
     });
-    render(<DashboardView />);
+    renderView();
     const indicator = screen.getByTestId('validation-status-indicator');
     expect(indicator.textContent).toMatch(/issues found/i);
   });
 
-  it('also treats BOM-only projects as "has design" (no nodes but BOM items present)', () => {
+  it('treats BOM-only projects as "has design" (no nodes but BOM items present)', () => {
     seedDefaults({
       bom: [{ quantity: 1, totalPrice: 0.5, status: 'In Stock' }],
       issues: [],
     });
-    render(<DashboardView />);
+    renderView();
     const indicator = screen.getByTestId('validation-status-indicator');
     expect(indicator.textContent).toMatch(/all checks passing/i);
   });
