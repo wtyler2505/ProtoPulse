@@ -30,76 +30,22 @@ import {
   actionLabel,
   formatDiffValue,
 } from '@/lib/audit-trail';
-import type {
-  AuditEntry,
-  AuditAction,
-  AuditEntityType,
-  AuditFilters,
-  DiffLine,
-} from '@/lib/audit-trail';
+import type { AuditEntry, AuditAction, AuditEntityType, AuditFilters, DiffLine } from '@/lib/audit-trail';
 
 // ---------------------------------------------------------------------------
-// Demo data — in production this would come from the API
+// Audit entries source
 // ---------------------------------------------------------------------------
-
-const DEMO_ENTRIES: AuditEntry[] = [
-  {
-    id: 'audit-1',
-    timestamp: '2026-03-14T10:15:00Z',
-    userId: 'user-1',
-    userName: 'Tyler',
-    action: 'create',
-    entityType: 'architecture_node',
-    entityId: 'node-abc',
-    entityLabel: 'Motor Controller',
-    after: { label: 'Motor Controller', nodeType: 'microcontroller', positionX: 200, positionY: 100 },
-  },
-  {
-    id: 'audit-2',
-    timestamp: '2026-03-14T10:20:00Z',
-    userId: 'user-1',
-    userName: 'Tyler',
-    action: 'update',
-    entityType: 'bom_item',
-    entityId: 'bom-42',
-    entityLabel: 'ATmega328P',
-    before: { quantity: 1, unitPrice: 2.5, supplier: 'Mouser' },
-    after: { quantity: 5, unitPrice: 2.35, supplier: 'Mouser' },
-  },
-  {
-    id: 'audit-3',
-    timestamp: '2026-03-14T11:05:00Z',
-    userId: 'user-1',
-    userName: 'Tyler',
-    action: 'create',
-    entityType: 'circuit_design',
-    entityId: 'cd-1',
-    entityLabel: 'Power Supply',
-    after: { name: 'Power Supply', description: 'LM7805 linear regulator' },
-  },
-  {
-    id: 'audit-4',
-    timestamp: '2026-03-14T11:30:00Z',
-    userId: 'user-1',
-    userName: 'Tyler',
-    action: 'delete',
-    entityType: 'architecture_edge',
-    entityId: 'edge-17',
-    entityLabel: 'SPI Bus',
-    before: { source: 'node-abc', target: 'node-def', label: 'SPI Bus', signalType: 'SPI' },
-  },
-  {
-    id: 'audit-5',
-    timestamp: '2026-03-14T12:00:00Z',
-    userId: 'user-1',
-    userName: 'Tyler',
-    action: 'export',
-    entityType: 'project',
-    entityId: 'proj-1',
-    entityLabel: 'OmniTrek Nexus',
-    metadata: { format: 'KiCad', exportType: 'schematic' },
-  },
-];
+// Historical note (E2E-298 / E2E-460): this view used to render a hardcoded
+// DEMO_ENTRIES constant (5 rows attributed to the "OmniTrek Nexus" sample
+// project) on every project, which looked exactly like a project-scope leak
+// during Tyler's 2026-04-18 E2E walkthrough. It was in fact placeholder demo
+// data that was never replaced with a real fetch.
+//
+// Until the real backend audit subsystem lands (tracked as BL-0863), this
+// component renders an empty list — which causes the existing empty-state
+// UI below to show "No audit entries found". Generic project-scope middleware
+// is tracked as BL-0864.
+const ENTRIES: AuditEntry[] = [];
 
 const ALL_ENTITY_TYPES: AuditEntityType[] = [
   'project',
@@ -159,7 +105,11 @@ function actionBadgeVariant(action: AuditAction): 'default' | 'secondary' | 'des
 
 function DiffDisplay({ diffs }: { diffs: DiffLine[] }) {
   if (diffs.length === 0) {
-    return <p className="text-xs text-muted-foreground italic" data-testid="diff-empty">No field changes</p>;
+    return (
+      <p className="text-xs text-muted-foreground italic" data-testid="diff-empty">
+        No field changes
+      </p>
+    );
   }
 
   return (
@@ -176,12 +126,8 @@ function DiffDisplay({ diffs }: { diffs: DiffLine[] }) {
           data-testid={`diff-line-${diff.field}`}
         >
           <span className="font-semibold min-w-[100px] shrink-0">{diff.field}</span>
-          {diff.type === 'added' && (
-            <span>+ {formatDiffValue(diff.newValue)}</span>
-          )}
-          {diff.type === 'removed' && (
-            <span>- {formatDiffValue(diff.oldValue)}</span>
-          )}
+          {diff.type === 'added' && <span>+ {formatDiffValue(diff.newValue)}</span>}
+          {diff.type === 'removed' && <span>- {formatDiffValue(diff.oldValue)}</span>}
           {diff.type === 'changed' && (
             <span>
               {formatDiffValue(diff.oldValue)} → {formatDiffValue(diff.newValue)}
@@ -214,10 +160,7 @@ function AuditEntryRow({ entry }: { entry: AuditEntry }) {
   }
 
   return (
-    <div
-      className="border-b border-border/50 last:border-b-0"
-      data-testid={`audit-entry-${entry.id}`}
-    >
+    <div className="border-b border-border/50 last:border-b-0" data-testid={`audit-entry-${entry.id}`}>
       <button
         type="button"
         className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
@@ -240,9 +183,7 @@ function AuditEntryRow({ entry }: { entry: AuditEntry }) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-foreground">
-              {entry.entityLabel ?? entry.entityId}
-            </span>
+            <span className="text-sm font-medium text-foreground">{entry.entityLabel ?? entry.entityId}</span>
             <Badge variant={actionBadgeVariant(entry.action)} className="text-xs">
               {actionLabel(entry.action)}
             </Badge>
@@ -255,7 +196,9 @@ function AuditEntryRow({ entry }: { entry: AuditEntry }) {
             <span>{formattedTime}</span>
             <span>by {entry.userName}</span>
             {diffs.length > 0 && (
-              <span className="text-cyan-400/70">({diffs.length} field{diffs.length !== 1 ? 's' : ''})</span>
+              <span className="text-cyan-400/70">
+                ({diffs.length} field{diffs.length !== 1 ? 's' : ''})
+              </span>
             )}
           </div>
         </div>
@@ -311,10 +254,7 @@ export default function AuditTrailView() {
     return f;
   }, [search, entityTypeFilter, actionFilter, dateStart, dateEnd]);
 
-  const filteredEntries = useMemo(
-    () => filterAuditEntries(DEMO_ENTRIES, filters),
-    [filters],
-  );
+  const filteredEntries = useMemo(() => filterAuditEntries(ENTRIES, filters), [filters]);
 
   const hasActiveFilters = search || entityTypeFilter !== 'all' || actionFilter !== 'all' || dateStart || dateEnd;
 
@@ -366,7 +306,9 @@ export default function AuditTrailView() {
               <Input
                 placeholder="Search entries..."
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); }}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                }}
                 className="pl-9 h-9"
                 data-testid="audit-search-input"
               />
@@ -408,7 +350,9 @@ export default function AuditTrailView() {
               <Input
                 type="date"
                 value={dateStart}
-                onChange={(e) => { setDateStart(e.target.value); }}
+                onChange={(e) => {
+                  setDateStart(e.target.value);
+                }}
                 className="h-9 w-[140px] text-xs"
                 data-testid="audit-date-start"
                 aria-label="Start date"
@@ -417,7 +361,9 @@ export default function AuditTrailView() {
               <Input
                 type="date"
                 value={dateEnd}
-                onChange={(e) => { setDateEnd(e.target.value); }}
+                onChange={(e) => {
+                  setDateEnd(e.target.value);
+                }}
                 className="h-9 w-[140px] text-xs"
                 data-testid="audit-date-end"
                 aria-label="End date"
@@ -426,12 +372,7 @@ export default function AuditTrailView() {
 
             {/* Clear filters */}
             {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                data-testid="audit-clear-filters"
-              >
+              <Button variant="ghost" size="sm" onClick={clearFilters} data-testid="audit-clear-filters">
                 <X className="h-4 w-4 mr-1" />
                 Clear
               </Button>
@@ -441,7 +382,7 @@ export default function AuditTrailView() {
           {/* Results count */}
           <div className="text-xs text-muted-foreground mt-2" data-testid="audit-result-count">
             {filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}
-            {hasActiveFilters && ` (filtered from ${DEMO_ENTRIES.length})`}
+            {hasActiveFilters && ` (filtered from ${ENTRIES.length})`}
           </div>
         </CardHeader>
 
