@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Mock } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import SchematicToolbar from '../SchematicToolbar';
 
 function renderToolbar(overrides: Partial<React.ComponentProps<typeof SchematicToolbar>> = {}) {
@@ -11,23 +13,34 @@ function renderToolbar(overrides: Partial<React.ComponentProps<typeof SchematicT
     onFitView: vi.fn(),
     ...overrides,
   };
-  return { props, ...render(<SchematicToolbar {...props} />) };
+  return {
+    props,
+    ...render(
+      <TooltipProvider>
+        <SchematicToolbar {...props} />
+      </TooltipProvider>,
+    ),
+  };
 }
 
 describe('SchematicToolbar — place-component / place-power (E2E-849, E2E-915, Plan 02 Phase 8)', () => {
-  let partsSpy: ReturnType<typeof vi.fn>;
-  let powerSpy: ReturnType<typeof vi.fn>;
+  let partsSpy: Mock<() => void>;
+  let powerSpy: Mock<() => void>;
+  let partsListener: EventListener;
+  let powerListener: EventListener;
 
   beforeEach(() => {
-    partsSpy = vi.fn();
-    powerSpy = vi.fn();
-    window.addEventListener('protopulse:schematic-focus-parts-panel', partsSpy);
-    window.addEventListener('protopulse:schematic-focus-power-panel', powerSpy);
+    partsSpy = vi.fn<() => void>();
+    powerSpy = vi.fn<() => void>();
+    partsListener = (() => { partsSpy(); }) as EventListener;
+    powerListener = (() => { powerSpy(); }) as EventListener;
+    window.addEventListener('protopulse:schematic-focus-parts-panel', partsListener);
+    window.addEventListener('protopulse:schematic-focus-power-panel', powerListener);
   });
 
   afterEach(() => {
-    window.removeEventListener('protopulse:schematic-focus-parts-panel', partsSpy);
-    window.removeEventListener('protopulse:schematic-focus-power-panel', powerSpy);
+    window.removeEventListener('protopulse:schematic-focus-parts-panel', partsListener);
+    window.removeEventListener('protopulse:schematic-focus-power-panel', powerListener);
   });
 
   it('place-component button is enabled (not perma-disabled)', () => {

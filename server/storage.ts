@@ -10,6 +10,7 @@ import { CircuitStorage } from './storage/circuit';
 import { ArduinoStorage } from './storage/arduino';
 import { MiscStorage } from './storage/misc';
 import { OrderingStorage } from './storage/ordering';
+import { BoardStorage } from './storage/boards';
 import { PartsStorage } from './storage/parts';
 import { SupplyChainStorage } from './storage/supply-chain';
 import { BomTemplateStorage } from './storage/bom-templates';
@@ -32,6 +33,7 @@ export class DatabaseStorage {
   private _arduino = new ArduinoStorage(deps);
   private _misc = new MiscStorage(deps);
   private _ordering = new OrderingStorage(deps);
+  private _boards = new BoardStorage(deps);
 
   // --- Projects ---
   getProjects = this._projects.getProjects.bind(this._projects);
@@ -175,6 +177,10 @@ export class DatabaseStorage {
   updateComment = this._misc.updateComment.bind(this._misc);
   updateCommentStatus = this._misc.updateCommentStatus.bind(this._misc);
   deleteComment = this._misc.deleteComment.bind(this._misc);
+
+  // --- Boards (Plan 02 Phase 4) ---
+  getBoard = this._boards.getBoard.bind(this._boards);
+  upsertBoard = this._boards.upsertBoard.bind(this._boards);
 
   // --- PCB Orders ---
   getOrders = this._ordering.getOrders.bind(this._ordering);
