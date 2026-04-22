@@ -818,6 +818,21 @@ function WorkspaceContent() {
         </Suspense>
       </ErrorBoundary>
 
+      {/*
+        E2E-225, E2E-856: UnifiedComponentSearch is the part-picker palette.
+        It listens for the `protopulse:focus-component-search` event (dispatched
+        by the Schematic empty-state "Add Component" CTA and the Ctrl+K shortcut)
+        and, on selection, dispatches `protopulse:place-component-instance` which
+        is handled by useSchematicKeyboardShortcuts to actually insert the part.
+        Without this mount, the empty-state CTA appeared "dead" — handler fired
+        into the void, leaving the user in an implicit place-mode with no part.
+      */}
+      <ErrorBoundary fallback={<div data-testid="diag-unified-search-error" className="fixed inset-x-4 top-40 z-[100] rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">Component search error</div>}>
+        <Suspense fallback={null}>
+          <UnifiedComponentSearch />
+        </Suspense>
+      </ErrorBoundary>
+
       {/* RS-02 + RS-08: Mobile bottom nav with primary tabs + More menu + active indicators */}
       <ErrorBoundary fallback={<div data-testid="diag-mobile-nav-error" className="h-16 border-t border-border bg-card/60 p-3 text-xs text-destructive lg:hidden">Mobile nav error</div>}>
         <MobileNav ws={ws} dispatch={dispatch} activeView={activeView} setActiveView={setActiveView} />
