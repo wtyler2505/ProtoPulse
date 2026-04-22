@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from '@/test-utils/createTestQueryClient';
 
 // ----------------------------------------------------------------
 // Mocks
@@ -137,15 +138,6 @@ const mockBomItems = [
     minimumStock: null,
   },
 ];
-
-function createTestQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
-      mutations: { retry: false },
-    },
-  });
-}
 
 function renderStorageManager(items = mockBomItems) {
   mockBomData = items;

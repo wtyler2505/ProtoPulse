@@ -51,12 +51,13 @@ vi.mock('@/components/views/circuit-code/SchematicPreview', () => ({
 // Import under test (AFTER mocks)
 // ---------------------------------------------------------------------------
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from '@/test-utils/createTestQueryClient';
 import CircuitCodeView from '../CircuitCodeView';
 import { ProjectIdProvider } from '@/lib/contexts/project-id-context';
 
 function renderView() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const qc = createTestQueryClient();
   return render(
     <QueryClientProvider client={qc}>
       <ProjectIdProvider projectId={1}>
