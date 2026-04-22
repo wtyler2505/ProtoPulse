@@ -425,19 +425,32 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
           </button>
         </StyledTooltip>
         <Popover>
-          <PopoverTrigger asChild>
-            <StyledTooltip content="Coach and tutorials" side="bottom">
+          <StyledTooltip content="Coach and tutorials" side="bottom">
+            <PopoverTrigger asChild>
               <button
                 data-testid="coach-help-button"
+                type="button"
                 className="inline-flex items-center gap-2 rounded-sm px-2.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <GraduationCap className="w-4 h-4" />
                 <span>Coach &amp; Help</span>
               </button>
-            </StyledTooltip>
-          </PopoverTrigger>
+            </PopoverTrigger>
+          </StyledTooltip>
           <PopoverContent className="w-80 p-0" align="end">
-            <Suspense fallback={null}>
+            <Suspense
+              fallback={
+                <div
+                  data-testid="coach-help-loading"
+                  className="flex items-center gap-2 p-4 text-xs text-muted-foreground"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span className="inline-block h-3 w-3 animate-pulse rounded-full bg-muted-foreground/40" />
+                  <span>Loading tutorials…</span>
+                </div>
+              }
+            >
               <TutorialMenu />
             </Suspense>
           </PopoverContent>

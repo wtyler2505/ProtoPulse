@@ -160,4 +160,43 @@ describe('WorkspaceHeader', () => {
     fireEvent.click(screen.getByTestId('workspace-health-badge'));
     expect(setActiveView).toHaveBeenCalledWith('design_history');
   });
+
+  // E2E-074 / Plan 02 Phase 1: clicking coach-help-button must open the popover and
+  // reveal TutorialMenu content. NOTE: this test runs with StyledTooltip mocked as
+  // a pass-through (see top of file), so it cannot detect the specific
+  // `<PopoverTrigger asChild><StyledTooltip>` prop-forwarding regression. The real
+  // click-truth assertion lives in e2e/p1-coach-popover.spec.ts. This unit test
+  // documents the behavioral contract and guards against accidental removal of
+  // the trigger or lazy-loaded content.
+  it('opens the Coach & Help popover and renders TutorialMenu content on click (E2E-074)', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0 },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <WorkspaceHeader
+          ws={buildWorkspaceState()}
+          dispatch={vi.fn()}
+          activeView={'architecture' as ViewMode}
+          setActiveView={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    const trigger = screen.getByTestId('coach-help-button');
+    // Radix PopoverTrigger sets aria-expanded on the underlying button.
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(trigger);
+
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    // The mocked TutorialMenu renders <div data-testid="tutorial-menu" />
+    // inside the PopoverContent portal.
+    const menu = await screen.findByTestId('tutorial-menu');
+    expect(menu).toBeInTheDocument();
+  });
 });
