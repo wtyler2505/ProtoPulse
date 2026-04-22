@@ -300,7 +300,7 @@ export default function ActivityFeedPanel() {
             </p>
           </div>
         ) : (
-          <ul className="divide-y divide-border/30" role="list">
+          <ul className="divide-y divide-border/30">
             {filteredEntries.map((entry) => {
               const config = ACTION_CONFIG[entry.action];
               const IconComponent = config.icon;

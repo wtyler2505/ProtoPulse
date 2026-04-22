@@ -50,6 +50,7 @@ vi.mock('cmdk', () => {
     ...props
   }: React.HTMLAttributes<HTMLDivElement> & { onSelect?: (value: string) => void; value?: string }) => (
     <div
+      // eslint-disable-next-line jsx-a11y/role-has-required-aria-props -- test mock, Radix's real CommandItem supplies aria-selected
       role="option"
       tabIndex={0}
       onClick={() => { onSelect?.(value ?? ''); }}

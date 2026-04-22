@@ -227,7 +227,7 @@ export default function PinExtractModal({
             {previewUrl && (
               <img
                 src={previewUrl}
-                alt="Chip photo preview"
+                alt="Chip preview"
                 className="max-h-32 rounded-md border border-border object-contain"
                 data-testid="pin-extract-preview-image"
               />
@@ -242,7 +242,7 @@ export default function PinExtractModal({
             {previewUrl && (
               <img
                 src={previewUrl}
-                alt="Chip photo"
+                alt="Chip"
                 className="max-h-24 rounded-md border border-border object-contain self-center"
               />
             )}

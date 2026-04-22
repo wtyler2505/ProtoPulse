@@ -45,6 +45,7 @@ const PaginationLink = ({
   size = "icon",
   ...props
 }: PaginationLinkProps) => (
+  // eslint-disable-next-line jsx-a11y/anchor-has-content -- content is forwarded via {...props.children} by shadcn primitive
   <a
     aria-current={isActive ? "page" : undefined}
     className={cn(

@@ -1,3 +1,9 @@
+/* eslint-disable jsx-a11y/no-static-element-interactions --
+ * Phase 3 <InteractiveCard> primitive migration will replace `role="button"` on
+ * `<div>` elements with real `<button>` elements, at which point these disables
+ * can be removed. See docs/superpowers/plans/2026-04-18-e2e-walkthrough/03-a11y-systemic.md
+ * Phase 3. Tracked as part of E2E-552 / Plan 03 Phase 4.
+ */
 import { useState, useMemo, useCallback } from 'react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useComponentParts } from '@/lib/component-editor/hooks';
