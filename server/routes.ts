@@ -28,6 +28,7 @@ import { registerAgentRoutes } from './routes/agent';
 import { registerOrderingRoutes } from './routes/ordering';
 import { registerExportStepRoutes } from './routes/export-step';
 import { registerPcbZoneRoutes } from './routes/pcb-zones';
+import { registerBoardRoutes } from './routes/boards';
 import { registerArduinoRoutes } from './routes/arduino';
 import { registerFirmwareRuntimeRoutes } from './routes/firmware-runtime';
 import { registerPartsRoutes } from './routes/parts';
@@ -72,6 +73,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   registerOrderingRoutes(app);
   registerExportStepRoutes(app);
   registerPcbZoneRoutes(app);
+  registerBoardRoutes(app);
   registerArduinoRoutes(app, storage);
   registerFirmwareRuntimeRoutes(app, storage);
   registerPartsRoutes(app);
