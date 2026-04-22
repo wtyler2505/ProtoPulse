@@ -8,10 +8,9 @@
  * - upsertBoard() updates only the fields supplied in the patch
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { BoardStorage, DEFAULT_BOARD_VALUES } from '../boards';
-
-type MockResult<T> = { resolved: T };
+import type { StorageDeps } from '../types';
 
 function makeDb(selectRows: unknown[], insertRows: unknown[], updateRows: unknown[]) {
   const insertValuesCapture = vi.fn();
@@ -41,17 +40,25 @@ function makeDb(selectRows: unknown[], insertRows: unknown[], updateRows: unknow
     },
   });
 
+  // StorageDeps expects a specific drizzle client type; for unit tests we
+  // only exercise the methods above, so cast via `unknown` to the minimal
+  // shape BoardStorage uses.
+  const db = { select, insert, update } as unknown as StorageDeps['db'];
   return {
-    db: { select, insert, update } as unknown as Parameters<typeof BoardStorage.prototype['upsertBoard']>[0] extends never ? never : any,
+    db,
     captures: { insertValuesCapture, updateSetCapture },
   };
 }
 
 function makeStorage(selectRows: unknown[], insertRows: unknown[] = [], updateRows: unknown[] = []) {
   const { db, captures } = makeDb(selectRows, insertRows, updateRows);
-  const cache = { get: vi.fn(), set: vi.fn(), invalidate: vi.fn(), clear: vi.fn() };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const storage = new BoardStorage({ db, cache } as any);
+  const cache: StorageDeps['cache'] = {
+    get: vi.fn(),
+    set: vi.fn(),
+    invalidate: vi.fn(),
+    clear: vi.fn(),
+  } as unknown as StorageDeps['cache'];
+  const storage = new BoardStorage({ db, cache });
   return { storage, captures };
 }
 
