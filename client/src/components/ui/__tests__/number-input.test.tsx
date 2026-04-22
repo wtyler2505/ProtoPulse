@@ -14,7 +14,7 @@
 // @vitest-environment happy-dom
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { createRef } from 'react';
 import { NumberInput } from '../number-input';
 
@@ -93,11 +93,7 @@ describe('NumberInput — aria-valuemax / aria-valuemin contract (E2E-236/271/28
     const onChange = vi.fn();
     render(<NumberInput data-testid="spin" max={100} onChange={onChange} />);
     const el = screen.getByTestId('spin') as HTMLInputElement;
-    el.focus();
-    // Simulate a change event
-    const ev = new Event('change', { bubbles: true });
-    el.value = '7';
-    el.dispatchEvent(ev);
+    fireEvent.change(el, { target: { value: '7' } });
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 

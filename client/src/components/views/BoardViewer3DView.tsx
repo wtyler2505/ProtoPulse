@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -624,31 +624,37 @@ export default function BoardViewer3DView() {
               <CardContent className="px-3 pb-3 space-y-2">
                 <div>
                   <Label className="text-xs">Width (mm)</Label>
-                  <Input
+                  <NumberInput
                     data-testid="edit-board-width"
-                    type="number"
                     value={editWidth}
                     onChange={(e) => { setEditWidth(e.target.value); }}
+                    min={1}
+                    max={500}
+                    step={0.1}
                     className="h-7 text-xs"
                   />
                 </div>
                 <div>
                   <Label className="text-xs">Height (mm)</Label>
-                  <Input
+                  <NumberInput
                     data-testid="edit-board-height"
-                    type="number"
                     value={editHeight}
                     onChange={(e) => { setEditHeight(e.target.value); }}
+                    min={1}
+                    max={500}
+                    step={0.1}
                     className="h-7 text-xs"
                   />
                 </div>
                 <div>
                   <Label className="text-xs">Thickness (mm)</Label>
-                  <Input
+                  <NumberInput
                     data-testid="edit-board-thickness"
-                    type="number"
                     value={editThickness}
                     onChange={(e) => { setEditThickness(e.target.value); }}
+                    min={0.4}
+                    max={3.2}
+                    step={0.1}
                     className="h-7 text-xs"
                   />
                 </div>

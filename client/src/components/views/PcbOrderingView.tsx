@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -140,22 +141,26 @@ const BoardSpecForm = memo(function BoardSpecForm({ spec, onChange }: BoardSpecF
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div>
           <Label htmlFor="spec-width">Width (mm)</Label>
-          <Input
+          <NumberInput
             data-testid="spec-width"
             id="spec-width"
-            type="number"
             value={spec.width}
             onChange={(e) => { update('width', parseFloat(e.target.value) || 0); }}
+            min={1}
+            max={500}
+            step={0.1}
           />
         </div>
         <div>
           <Label htmlFor="spec-height">Height (mm)</Label>
-          <Input
+          <NumberInput
             data-testid="spec-height"
             id="spec-height"
-            type="number"
             value={spec.height}
             onChange={(e) => { update('height', parseFloat(e.target.value) || 0); }}
+            min={1}
+            max={500}
+            step={0.1}
           />
         </div>
         <div>
@@ -271,11 +276,12 @@ const BoardSpecForm = memo(function BoardSpecForm({ spec, onChange }: BoardSpecF
               ariaLabel="About PCB trace width and IPC-2221"
             />
           </div>
-          <Input
+          <NumberInput
             data-testid="spec-trace"
             id="spec-trace"
-            type="number"
             step="0.01"
+            min={0.075}
+            max={10}
             value={spec.minTraceWidth}
             onChange={(e) => { update('minTraceWidth', parseFloat(e.target.value) || 0); }}
           />
@@ -289,11 +295,12 @@ const BoardSpecForm = memo(function BoardSpecForm({ spec, onChange }: BoardSpecF
               ariaLabel="About PCB minimum drill size"
             />
           </div>
-          <Input
+          <NumberInput
             data-testid="spec-drill"
             id="spec-drill"
-            type="number"
             step="0.01"
+            min={0.15}
+            max={10}
             value={spec.minDrillSize}
             onChange={(e) => { update('minDrillSize', parseFloat(e.target.value) || 0); }}
           />
@@ -774,11 +781,12 @@ export default function PcbOrderingView() {
               </div>
               <div className="flex items-center gap-2 mb-4">
                 <Label htmlFor="quantity">Quantity</Label>
-                <Input
+                <NumberInput
                   data-testid="spec-quantity"
                   id="quantity"
-                  type="number"
                   min={1}
+                  max={10000}
+                  step={1}
                   value={quantity}
                   onChange={(e) => { setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1)); }}
                   className="w-24"
