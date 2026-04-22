@@ -57,25 +57,23 @@ function ariaValueNow(value: unknown): number | undefined {
 const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
   function NumberInput({ min, max, step, value, ...props }, ref) {
     const ariaAttrs: Record<string, number> = {};
-    if (typeof min === 'number' && Number.isFinite(min)) {
-      ariaAttrs['aria-valuemin'] = min;
-    }
-    if (typeof max === 'number' && Number.isFinite(max)) {
-      ariaAttrs['aria-valuemax'] = max;
-    }
+    const safeMin =
+      typeof min === 'number' && Number.isFinite(min) ? min : undefined;
+    const safeMax =
+      typeof max === 'number' && Number.isFinite(max) ? max : undefined;
+    if (typeof safeMin === 'number') ariaAttrs['aria-valuemin'] = safeMin;
+    if (typeof safeMax === 'number') ariaAttrs['aria-valuemax'] = safeMax;
     const now = ariaValueNow(value);
-    if (typeof now === 'number') {
-      ariaAttrs['aria-valuenow'] = now;
-    }
+    if (typeof now === 'number') ariaAttrs['aria-valuenow'] = now;
 
     return (
       <Input
         ref={ref}
         type="number"
-        min={min}
-        max={max}
+        min={safeMin}
+        max={safeMax}
         step={step}
-        value={value as React.ComponentProps<typeof Input>['value']}
+        value={value}
         {...ariaAttrs}
         {...props}
       />

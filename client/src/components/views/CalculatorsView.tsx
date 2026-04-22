@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -33,6 +32,20 @@ import { solvePowerDissipation } from '@/lib/calculators/power-dissipation';
 import { formatEngineering } from '@/lib/calculators/types';
 import type { CalculatorError } from '@/lib/calculators/types';
 import { CalcApplyButtons } from '@/components/ui/CalcApplyButtons';
+
+/**
+ * Upper bound for calculator numeric inputs. Engineering values (voltage,
+ * current, resistance, capacitance, inductance, power) span many orders of
+ * magnitude — e.g. resistors from milliohms to gigaohms. Rather than picking
+ * a per-field ceiling we use a large finite cap (1e12) that satisfies the
+ * WAI-ARIA `aria-valuemax` contract and, critically, overrides the Chromium
+ * accessibility tree default of `0` that was reported as the root cause of
+ * E2E-284 (spinbuttons appearing non-incrementable to assistive tech).
+ *
+ * The cap is cosmetic for free-text entry; the calculator validators in
+ * `@/lib/calculators/*` enforce the real physical domain for each formula.
+ */
+const MAX_CALC_VALUE = 1e12;
 
 // ---------------------------------------------------------------------------
 // Shared sub-components
@@ -119,40 +132,40 @@ function OhmsLawCard() {
         <div className="grid grid-cols-3 gap-2">
           <div>
             <Label htmlFor="ohms-voltage" className="text-xs">Voltage (V)</Label>
-            <Input
+            <NumberInput
               id="ohms-voltage"
               data-testid="calc-ohms-voltage-input"
-              type="number"
               placeholder="V"
               value={voltageRaw}
               onChange={(e) => setVoltage(e.target.value)}
               min={0}
+              max={MAX_CALC_VALUE}
               step="any"
             />
           </div>
           <div>
             <Label htmlFor="ohms-current" className="text-xs">Current (A)</Label>
-            <Input
+            <NumberInput
               id="ohms-current"
               data-testid="calc-ohms-current-input"
-              type="number"
               placeholder="A"
               value={currentRaw}
               onChange={(e) => setCurrent(e.target.value)}
               min={0}
+              max={MAX_CALC_VALUE}
               step="any"
             />
           </div>
           <div>
             <Label htmlFor="ohms-resistance" className="text-xs">{`Resistance (\u03A9)`}</Label>
-            <Input
+            <NumberInput
               id="ohms-resistance"
               data-testid="calc-ohms-resistance-input"
-              type="number"
               placeholder={'\u03A9'}
               value={resistanceRaw}
               onChange={(e) => setResistance(e.target.value)}
               min={0}
+              max={MAX_CALC_VALUE}
               step="any"
             />
           </div>
@@ -232,40 +245,40 @@ function LedResistorCard() {
         <div className="grid grid-cols-3 gap-2">
           <div>
             <Label htmlFor="led-vs" className="text-xs">Supply (V)</Label>
-            <Input
+            <NumberInput
               id="led-vs"
               data-testid="calc-led-supply-input"
-              type="number"
               placeholder="5"
               value={vsRaw}
               onChange={(e) => setVs(e.target.value)}
               min={0}
+              max={MAX_CALC_VALUE}
               step="any"
             />
           </div>
           <div>
             <Label htmlFor="led-vf" className="text-xs">Vf (V)</Label>
-            <Input
+            <NumberInput
               id="led-vf"
               data-testid="calc-led-forward-voltage-input"
-              type="number"
               placeholder="2"
               value={vfRaw}
               onChange={(e) => setVf(e.target.value)}
               min={0}
+              max={MAX_CALC_VALUE}
               step="any"
             />
           </div>
           <div>
             <Label htmlFor="led-if" className="text-xs">If (A)</Label>
-            <Input
+            <NumberInput
               id="led-if"
               data-testid="calc-led-forward-current-input"
-              type="number"
               placeholder="0.02"
               value={ifRaw}
               onChange={(e) => setIf(e.target.value)}
               min={0}
+              max={MAX_CALC_VALUE}
               step="any"
             />
           </div>
@@ -380,37 +393,37 @@ function VoltageDividerCard() {
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <Label htmlFor="div-r1" className="text-xs">{`R1 (\u03A9)`}</Label>
-                <Input
+                <NumberInput
                   id="div-r1"
                   data-testid="calc-divider-r1-input"
-                  type="number"
                   value={r1Raw}
                   onChange={(e) => setR1(e.target.value)}
                   min={0}
+                  max={MAX_CALC_VALUE}
                   step="any"
                 />
               </div>
               <div>
                 <Label htmlFor="div-r2" className="text-xs">{`R2 (\u03A9)`}</Label>
-                <Input
+                <NumberInput
                   id="div-r2"
                   data-testid="calc-divider-r2-input"
-                  type="number"
                   value={r2Raw}
                   onChange={(e) => setR2(e.target.value)}
                   min={0}
+                  max={MAX_CALC_VALUE}
                   step="any"
                 />
               </div>
               <div>
                 <Label htmlFor="div-vin" className="text-xs">Vin (V)</Label>
-                <Input
+                <NumberInput
                   id="div-vin"
                   data-testid="calc-divider-vin-input"
-                  type="number"
                   value={vinRaw}
                   onChange={(e) => setVin(e.target.value)}
                   min={0}
+                  max={MAX_CALC_VALUE}
                   step="any"
                 />
               </div>
@@ -448,25 +461,25 @@ function VoltageDividerCard() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label htmlFor="div-rev-vin" className="text-xs">Vin (V)</Label>
-                <Input
+                <NumberInput
                   id="div-rev-vin"
                   data-testid="calc-divider-rev-vin-input"
-                  type="number"
                   value={vinRaw}
                   onChange={(e) => setVin(e.target.value)}
                   min={0}
+                  max={MAX_CALC_VALUE}
                   step="any"
                 />
               </div>
               <div>
                 <Label htmlFor="div-rev-vout" className="text-xs">Target Vout (V)</Label>
-                <Input
+                <NumberInput
                   id="div-rev-vout"
                   data-testid="calc-divider-rev-vout-input"
-                  type="number"
                   value={targetVoutRaw}
                   onChange={(e) => setTargetVout(e.target.value)}
                   min={0}
+                  max={MAX_CALC_VALUE}
                   step="any"
                 />
               </div>
@@ -565,25 +578,25 @@ function RcTimeConstantCard() {
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label htmlFor="rc-r" className="text-xs">{`Resistance (\u03A9)`}</Label>
-            <Input
+            <NumberInput
               id="rc-r"
               data-testid="calc-rc-resistance-input"
-              type="number"
               value={rRaw}
               onChange={(e) => setR(e.target.value)}
               min={0}
+              max={MAX_CALC_VALUE}
               step="any"
             />
           </div>
           <div>
             <Label htmlFor="rc-c" className="text-xs">Capacitance (F)</Label>
-            <Input
+            <NumberInput
               id="rc-c"
               data-testid="calc-rc-capacitance-input"
-              type="number"
               value={cRaw}
               onChange={(e) => setC(e.target.value)}
               min={0}
+              max={MAX_CALC_VALUE}
               step="any"
             />
           </div>
@@ -726,25 +739,25 @@ function FilterCutoffCard() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label htmlFor="filter-rc-r" className="text-xs">{`R (\u03A9)`}</Label>
-                <Input
+                <NumberInput
                   id="filter-rc-r"
                   data-testid="calc-filter-resistance-input"
-                  type="number"
                   value={rcRRaw}
                   onChange={(e) => setRcR(e.target.value)}
                   min={0}
+                  max={MAX_CALC_VALUE}
                   step="any"
                 />
               </div>
               <div>
                 <Label htmlFor="filter-rc-c" className="text-xs">C (F)</Label>
-                <Input
+                <NumberInput
                   id="filter-rc-c"
                   data-testid="calc-filter-capacitance-input"
-                  type="number"
                   value={rcCRaw}
                   onChange={(e) => setRcC(e.target.value)}
                   min={0}
+                  max={MAX_CALC_VALUE}
                   step="any"
                 />
               </div>
@@ -781,37 +794,37 @@ function FilterCutoffCard() {
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <Label htmlFor="filter-bp-r" className="text-xs">{`R (\u03A9)`}</Label>
-                <Input
+                <NumberInput
                   id="filter-bp-r"
                   data-testid="calc-filter-bp-resistance-input"
-                  type="number"
                   value={bpRRaw}
                   onChange={(e) => setBpR(e.target.value)}
                   min={0}
+                  max={MAX_CALC_VALUE}
                   step="any"
                 />
               </div>
               <div>
                 <Label htmlFor="filter-bp-l" className="text-xs">L (H)</Label>
-                <Input
+                <NumberInput
                   id="filter-bp-l"
                   data-testid="calc-filter-bp-inductance-input"
-                  type="number"
                   value={bpLRaw}
                   onChange={(e) => setBpL(e.target.value)}
                   min={0}
+                  max={MAX_CALC_VALUE}
                   step="any"
                 />
               </div>
               <div>
                 <Label htmlFor="filter-bp-c" className="text-xs">C (F)</Label>
-                <Input
+                <NumberInput
                   id="filter-bp-c"
                   data-testid="calc-filter-bp-capacitance-input"
-                  type="number"
                   value={bpCRaw}
                   onChange={(e) => setBpC(e.target.value)}
                   min={0}
+                  max={MAX_CALC_VALUE}
                   step="any"
                 />
               </div>
@@ -894,53 +907,53 @@ function PowerDissipationCard() {
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label htmlFor="pwr-p" className="text-xs">Power (W)</Label>
-            <Input
+            <NumberInput
               id="pwr-p"
               data-testid="calc-power-power-input"
-              type="number"
               placeholder="W"
               value={powerRaw}
               onChange={(e) => setPower(e.target.value)}
               min={0}
+              max={MAX_CALC_VALUE}
               step="any"
             />
           </div>
           <div>
             <Label htmlFor="pwr-i" className="text-xs">Current (A)</Label>
-            <Input
+            <NumberInput
               id="pwr-i"
               data-testid="calc-power-current-input"
-              type="number"
               placeholder="A"
               value={currentRaw}
               onChange={(e) => setCurrent(e.target.value)}
               min={0}
+              max={MAX_CALC_VALUE}
               step="any"
             />
           </div>
           <div>
             <Label htmlFor="pwr-v" className="text-xs">Voltage (V)</Label>
-            <Input
+            <NumberInput
               id="pwr-v"
               data-testid="calc-power-voltage-input"
-              type="number"
               placeholder="V"
               value={voltageRaw}
               onChange={(e) => setVoltage(e.target.value)}
               min={0}
+              max={MAX_CALC_VALUE}
               step="any"
             />
           </div>
           <div>
             <Label htmlFor="pwr-r" className="text-xs">{`Resistance (\u03A9)`}</Label>
-            <Input
+            <NumberInput
               id="pwr-r"
               data-testid="calc-power-resistance-input"
-              type="number"
               placeholder={'\u03A9'}
               value={resistanceRaw}
               onChange={(e) => setResistance(e.target.value)}
               min={0}
+              max={MAX_CALC_VALUE}
               step="any"
             />
           </div>

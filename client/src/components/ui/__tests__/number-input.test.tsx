@@ -13,10 +13,16 @@
 
 // @vitest-environment happy-dom
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
 import { createRef } from 'react';
+
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+
 import { NumberInput } from '../number-input';
+
+const noop = (): void => {
+  /* intentionally empty — tests don't care about change events */
+};
 
 describe('NumberInput — aria-valuemax / aria-valuemin contract (E2E-236/271/284)', () => {
   it('renders a spinbutton via input[type="number"]', () => {
@@ -28,7 +34,7 @@ describe('NumberInput — aria-valuemax / aria-valuemin contract (E2E-236/271/28
   });
 
   it('forwards max prop to aria-valuemax (E2E-236/271/284)', () => {
-    render(<NumberInput data-testid="spin" value={5} min={0} max={100} onChange={() => {}} />);
+    render(<NumberInput data-testid="spin" value={5} min={0} max={100} onChange={noop} />);
     const el = screen.getByTestId('spin');
     expect(el.getAttribute('aria-valuemax')).toBe('100');
     expect(el.getAttribute('aria-valuemin')).toBe('0');
@@ -39,21 +45,21 @@ describe('NumberInput — aria-valuemax / aria-valuemin contract (E2E-236/271/28
   });
 
   it('omits aria-valuemax when max is undefined (not "0")', () => {
-    render(<NumberInput data-testid="spin" value={5} min={0} onChange={() => {}} />);
+    render(<NumberInput data-testid="spin" value={5} min={0} onChange={noop} />);
     const el = screen.getByTestId('spin');
     expect(el.hasAttribute('aria-valuemax')).toBe(false);
     expect(el.getAttribute('aria-valuemin')).toBe('0');
   });
 
   it('omits aria-valuemin when min is undefined', () => {
-    render(<NumberInput data-testid="spin" value={5} max={10} onChange={() => {}} />);
+    render(<NumberInput data-testid="spin" value={5} max={10} onChange={noop} />);
     const el = screen.getByTestId('spin');
     expect(el.hasAttribute('aria-valuemin')).toBe(false);
     expect(el.getAttribute('aria-valuemax')).toBe('10');
   });
 
   it('omits all three aria-value* attrs when no min/max/value provided', () => {
-    render(<NumberInput data-testid="spin" onChange={() => {}} />);
+    render(<NumberInput data-testid="spin" onChange={noop} />);
     const el = screen.getByTestId('spin');
     expect(el.hasAttribute('aria-valuemin')).toBe(false);
     expect(el.hasAttribute('aria-valuemax')).toBe(false);
@@ -61,13 +67,13 @@ describe('NumberInput — aria-valuemax / aria-valuemin contract (E2E-236/271/28
   });
 
   it('coerces a numeric string value into aria-valuenow', () => {
-    render(<NumberInput data-testid="spin" value="42" max={100} onChange={() => {}} />);
+    render(<NumberInput data-testid="spin" value="42" max={100} onChange={noop} />);
     const el = screen.getByTestId('spin');
     expect(el.getAttribute('aria-valuenow')).toBe('42');
   });
 
   it('omits aria-valuenow when value is an empty or non-numeric string', () => {
-    render(<NumberInput data-testid="spin" value="" max={100} onChange={() => {}} />);
+    render(<NumberInput data-testid="spin" value="" max={100} onChange={noop} />);
     const el = screen.getByTestId('spin');
     expect(el.hasAttribute('aria-valuenow')).toBe(false);
   });
@@ -76,7 +82,7 @@ describe('NumberInput — aria-valuemax / aria-valuemin contract (E2E-236/271/28
     // This is the heart of E2E-236/271/284 — a missing max prop MUST NOT end up
     // as aria-valuemax="0", which would tell screen readers and automated a11y
     // tools the spinbutton upper bound is 0 and cannot be incremented.
-    render(<NumberInput data-testid="spin" onChange={() => {}} />);
+    render(<NumberInput data-testid="spin" onChange={noop} />);
     const el = screen.getByTestId('spin');
     expect(el.getAttribute('aria-valuemax')).not.toBe('0');
     expect(el.getAttribute('aria-valuemin')).not.toBe('0');
@@ -92,7 +98,7 @@ describe('NumberInput — aria-valuemax / aria-valuemin contract (E2E-236/271/28
   it('forwards onChange events', () => {
     const onChange = vi.fn();
     render(<NumberInput data-testid="spin" max={100} onChange={onChange} />);
-    const el = screen.getByTestId('spin') as HTMLInputElement;
+    const el = screen.getByTestId('spin');
     fireEvent.change(el, { target: { value: '7' } });
     expect(onChange).toHaveBeenCalledTimes(1);
   });
