@@ -1,7 +1,7 @@
 import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import { z } from 'zod';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { parseIdParam } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { SimavrRunner } from '../firmware-runtime/simavr-runner';

@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import { VersionConflictError } from '../storage';
 import { z } from 'zod';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { insertCircuitDesignSchema } from '@shared/schema';
 import { circuitSettingsSchema } from '@shared/circuit-schemas';
 import { parseIdParam, payloadLimit } from './utils';

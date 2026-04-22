@@ -1,5 +1,5 @@
 import type { Express } from 'express';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { storage } from '../storage';
 import { insertPcbZoneSchema } from '@shared/schema';
 import { payloadLimit, parseIdParam } from './utils';

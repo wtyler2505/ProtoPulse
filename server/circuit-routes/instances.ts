@@ -3,7 +3,7 @@ import type { IStorage } from '../storage';
 import type { CircuitInstanceRow } from '@shared/schema';
 import type { PartMeta } from '@shared/component-types';
 import { z } from 'zod';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 import { getRefDesPrefix, nextRefdes } from '@shared/ref-des';

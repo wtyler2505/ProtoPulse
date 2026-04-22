@@ -1,5 +1,5 @@
 import type { Express } from 'express';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { storage } from '../storage';
 import { insertHistoryItemSchema } from '@shared/schema';
 import { payloadLimit, parseIdParam, paginationSchema } from './utils';

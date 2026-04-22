@@ -1,6 +1,6 @@
 import type { Express } from 'express';
 import { z } from 'zod';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { storage } from '../storage';
 import { parseIdParam } from './utils';
 import { requireProjectOwnership } from './auth-middleware';

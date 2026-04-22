@@ -1,7 +1,7 @@
 import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import type { NetSegment } from './utils';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import {
   parseIdParam,
   payloadLimit,

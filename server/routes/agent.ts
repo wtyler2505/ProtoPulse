@@ -1,6 +1,6 @@
 import type { Express, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { storage } from '../storage';
 import { categorizeError, redactSecrets } from '../ai';
 import type { ToolContext, ToolResult } from '../ai-tools';

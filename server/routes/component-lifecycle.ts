@@ -1,5 +1,5 @@
 import type { Express } from 'express';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { storage } from '../storage';
 import { insertComponentLifecycleSchema } from '@shared/schema';
 import { parseIdParam } from './utils';

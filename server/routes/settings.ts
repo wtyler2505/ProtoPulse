@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import { GoogleGenAI } from '@google/genai';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { storeApiKey, getApiKey, deleteApiKey, listApiKeyProviders } from '../auth';
 import { storage } from '../storage';
 import { payloadLimit } from './utils';

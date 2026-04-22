@@ -1,5 +1,5 @@
 import type { Express } from 'express';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { validateSession } from '../auth';
 import { storage, VersionConflictError } from '../storage';
 import { insertProjectSchema } from '@shared/schema';

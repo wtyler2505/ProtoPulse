@@ -15,7 +15,7 @@
 
 import type { Express, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { validateSession } from '../auth';
 import { storage, partsStorage, StorageError, VersionConflictError } from '../storage';
 import { db } from '../db';

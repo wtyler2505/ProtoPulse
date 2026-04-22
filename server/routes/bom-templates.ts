@@ -11,7 +11,7 @@
 
 import type { Express, Request, Response } from 'express';
 import { z } from 'zod';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { validateSession } from '../auth';
 import { bomTemplateStorage, partsStorage, storage, StorageError } from '../storage';
 import { ingressPart, type IngressRequest } from '../parts-ingress';

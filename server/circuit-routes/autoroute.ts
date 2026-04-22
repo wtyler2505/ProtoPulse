@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import type { CircuitInstanceRow, CircuitWireRow } from '@shared/schema';
 import { z } from 'zod';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { HttpError, parseIdParam, payloadLimit } from './utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 

@@ -10,7 +10,7 @@ import { parseIdParam, payloadLimit } from '../routes/utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 import { circuitAiRateLimiter } from './rate-limiter';
 import { categorizeError, redactSecrets } from '../ai';
-import { fromZodError } from 'zod-validation-error';
+import { fromZodError } from 'zod-validation-error/v3';
 import { logger } from '../logger';
 import { reviewSchema } from './schemas';
 import { ai } from '../genkit';
