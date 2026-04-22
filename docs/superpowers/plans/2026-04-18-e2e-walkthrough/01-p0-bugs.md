@@ -454,7 +454,44 @@ git commit -m "test(e2e): alternates + part-usage tabs render data (E2E-481, E2E
 
 ---
 
-## Phase 3 — DRC / Audit false positives on empty designs (E2E-015, E2E-091, E2E-093, E2E-548, E2E-551, E2E-572, E2E-573)
+## Phase 3 — DRC / Audit false positives on empty designs — **REVISED 2026-04-22**
+
+### REVISION notice
+
+Pre-verification before Phase 3 dispatch discovered the plan's server-side DRC rule-engine premise is wrong. Verified facts:
+
+- **No `server/services/drc/engine.ts` exists.** No `server/services/drc/` directory.
+- **No `server/services/breadboard/{audit,preflight}.ts`** — breadboard audit/preflight are **CLIENT-SIDE** at `client/src/lib/breadboard-board-audit.ts` (1406 lines) and `client/src/lib/breadboard-preflight.ts` (539 lines).
+- **Validation is a stored-issues model, not a rule engine.** `server/routes/validation.ts` exposes CRUD for issues scoped by `/api/projects/:id/validation` (path param; `requireProjectOwnership` auth). `server/storage/validation.ts` stores rows. There is NO `runValidation(ctx)` function that synthesizes issues on the fly.
+- **Client "validation context" is anti-pattern:** `client/src/lib/contexts/validation-context.tsx:9-16` hardcodes a 6-element `validationChecks` array. `runValidation()` cycles through it via `validationCheckIndex` counter and adds ONE issue per click via `POST /api/projects/:id/validation`. **Same pattern as DEMO_ENTRIES in AuditTrailView.**
+- **"128 issues on 1-component project" (E2E-091) is NOT rule-engine false positives.** Candidate causes: (a) accumulated clicks of "Run Validation" (but 128 doesn't fit the 6-cycle pattern unless button was mashed 128 times), (b) demo seed data persisted in the project's validation table, (c) a different script/batch inserter that bulk-wrote 128 issues. Needs investigation.
+- **"All Checks Passing" (E2E-015) / dashboard vs validation disagreement (E2E-093):** unknown selectors at this moment — Phase 3 must grep the dashboard + validation page for where the text/count originates.
+- **DRC lives client-side too:** `client/src/lib/circuit-editor/breadboard-drc.ts` (417 lines) exports `runBreadboardDrc(ctx): BreadboardDrcResult`. `client/src/lib/drc-presets.ts` (224 lines) defines rule presets. `client/src/components/views/DrcPresetSelector.tsx`, `BreadboardDrcOverlay.tsx`, `pcb-layout/DrcConstraintOverlay.tsx` consume them.
+
+### Scope of this Phase 3 (revised)
+
+This phase is now a **discovery-first investigation**, not a "add a flag to rules" refactor. The original Task 3.4 (`requiresPlacedComponents` flag on DRC rules) may still be valuable — but scoped to `client/src/lib/circuit-editor/breadboard-drc.ts` + `client/src/lib/component-editor/drc.ts`, not a non-existent server engine. The unified `useValidationSummary` hook (Task 3.6) is still valuable — it becomes a real fix for the dashboard/validation-page disagreement.
+
+**Before this phase dispatches, execute the following investigation tasks and update this phase with findings:**
+
+- [ ] **Investigation 3.0a** — grep Dashboard for where "All Checks Passing" originates:
+  ```bash
+  rg -n "All Checks Passing|no issues detected|Everything looks good" client/src/
+  ```
+- [ ] **Investigation 3.0b** — grep Validation page for issue-count source:
+  ```bash
+  rg -n "issues\.length|errorCount|warningCount" client/src/components/views/validation/ client/src/pages/
+  ```
+- [ ] **Investigation 3.0c** — understand how the 128 issues were generated on the test project. Options:
+  1. Call `GET /api/projects/:id/validation` against the real DB for the "1-component project" mentioned in audit E2E-091; read the raw rows.
+  2. Check seed scripts or project-io import paths for any bulk validation-issue insertion.
+  3. Check `ValidationProvider`'s `validationChecks` + `validationCheckIndex` behavior — could a dev-mode seeder have been run 128 times?
+- [ ] **Investigation 3.0d** — `client/src/lib/breadboard-board-audit.ts` and `breadboard-preflight.ts`: find the empty-board entry points. Empty input should short-circuit to `status: 'no-design'`, not fabricate 5 green checks (E2E-572/573). Read the top of each file (exports, entry function signatures) and document.
+- [ ] **Investigation 3.0e** — `client/src/lib/circuit-editor/breadboard-drc.ts`: read `runBreadboardDrc` (line 144) to understand rule signatures. Does each rule have a guard for "no components placed"? If not, that's the real E2E-091 analog for breadboard.
+
+After 3.0a-3.0e complete, rewrite Tasks 3.1-3.9 with real file paths and real API shapes, then dispatch an implementer. Do NOT execute the original Task 3.1-3.9 text below — it references non-existent infrastructure.
+
+### Original (pre-revision) spec preserved below — DO NOT EXECUTE without rewrite:
 
 **Files:**
 - Modify: `server/services/drc/engine.ts` (grep to confirm path)

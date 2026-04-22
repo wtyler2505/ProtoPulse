@@ -39,6 +39,18 @@ describe('request-routing helpers', () => {
     });
   });
 
+  describe('PUBLIC_API_PATHS (E2E-312/313)', () => {
+    it('marks /api/parts/browse/alternates as public', () => {
+      expect(isPublicApiPath('/api/parts/browse/alternates')).toBe(true);
+    });
+    it('marks /api/parts/browse/usage as public', () => {
+      expect(isPublicApiPath('/api/parts/browse/usage')).toBe(true);
+    });
+    it('keeps /api/parts/:id non-public (requires session)', () => {
+      expect(isPublicApiPath('/api/parts/42')).toBe(false);
+    });
+  });
+
   describe('isSSERequest', () => {
     it('detects SSE routes even from mounted middleware path fragments', () => {
       expect(isSSERequest({
