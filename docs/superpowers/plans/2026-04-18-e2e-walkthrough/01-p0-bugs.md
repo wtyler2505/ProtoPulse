@@ -79,7 +79,36 @@ Every finding listed here is claimed by THIS plan. `00-master-index.md` §12 ver
 
 ---
 
-## Phase 1 — Audit Trail project-scope leak (E2E-298, E2E-460, E2E-546)
+## Phase 1 — Audit Trail project-scope leak (E2E-298, E2E-460) — **REVISED 2026-04-22**
+
+### REVISION notice
+
+First execution attempt (2026-04-22) discovered the plan's original premise was wrong. The "leak" is NOT a scoping bug in a backend API — it's **hardcoded demo data**. Verified facts:
+
+- `server/routes/audit.ts` does NOT exist.
+- `server/storage/audit-storage.ts` does NOT exist.
+- `auditEvents` Drizzle table does NOT exist in `shared/schema.ts`.
+- `/api/audit/*` endpoints do NOT exist (zero `rg` hits).
+- `server/middleware/` directory does NOT exist.
+- `useCurrentProject` hook does NOT exist.
+- `client/src/pages/audit-trail/AuditTrailPage.tsx` does NOT exist (the actual file is `client/src/components/views/AuditTrailView.tsx`).
+- `server/audit-log.ts` DOES exist but is an **unrelated** request-logging middleware — ignore.
+- `/api/comments` already uses path-param scoping (`/api/projects/:projectId/comments`), so the generic query-param `requireProjectScope` middleware originally spec'd has no real consumers yet.
+
+**Root cause (actual):** `client/src/components/views/AuditTrailView.tsx` lines 45-102 hardcodes a `DEMO_ENTRIES` constant with 5 fake audit entries. One entry (line 99) has `entityLabel: 'OmniTrek Nexus'`. The component renders `DEMO_ENTRIES` regardless of the current project context — that's the "leak" the audit screenshot captured.
+
+**Scope of this Phase 1 (revised):** Close E2E-298 / E2E-460 visually by removing the demo data and rendering an empty-state placeholder until a real audit subsystem ships. Full backend subsystem (Drizzle table → storage → route → middleware → client query) is deferred to **BL-0863** (its own plan). Generic middleware generalization (E2E-546) is deferred to **BL-0864**.
+
+Tasks 1.6-1.8 (middleware generalization) are no longer part of this phase. Task 1.1-1.5 are replaced by the narrower task set below.
+
+**Files (revised):**
+- Modify: `client/src/components/views/AuditTrailView.tsx` — remove `DEMO_ENTRIES`, render empty-state when no entries.
+- Create: `client/src/components/views/__tests__/AuditTrailView.test.tsx` — unit test asserting no demo data rendered.
+- Modify: `docs/MASTER_BACKLOG.md` — verify BL-0863 + BL-0864 land (already added 2026-04-22).
+
+**Coverage remaining in this phase:** E2E-298, E2E-460. E2E-546 → BL-0864.
+
+**Original (pre-revision) spec preserved below for historical reference — DO NOT EXECUTE:**
 
 **Files:**
 - Modify: `server/routes/audit.ts` (add projectId query-param, enforce in handler)
@@ -899,6 +928,21 @@ computed background color differs between the two modes."
 ```
 
 ## Research log (fill in as work proceeds)
+
+### Vault scan — 2026-04-22 (`/vault-suggest-for-plan`)
+
+- Scanned: 11 units (Goal + 6 Phase goals + 4 cross-cutting task concepts)
+- Coverage: **0/11 sufficient, 0/11 thin, 11/11 missing** vs `--min-score 0.5`. All qmd hits 3-8%.
+- This is a bug-fix / infrastructure plan — low pedagogical reuse. Zero `<VaultHoverCard>` wiring opportunities. Normal.
+- **5 genuine pedagogical gaps worth inbox stubs (via `/vault-gap`):**
+  1. Project-scope middleware pattern (Phase 1) — no vault note on multi-tenant isolation / `res.locals` idioms / Drizzle scoped-WHERE composition.
+  2. Public API allowlist criteria (Phase 2) — "when is it safe to expose an endpoint without auth — no user-scoped fields checklist".
+  3. DRC/audit rule applicability guards + no-design sentinel (Phase 3 + 3.7/3.8) — `requiresPlacedComponents`, `requiresPcbLayout` flags; same pattern as breadboard empty-board guard.
+  4. A11y conditional-render-vs-hide (Phase 5) — reusable principle for heading announcements.
+  5. Tailwind v4 `@theme inline` runtime reactivity (Phase 6) — **highest extraction value**; plan's own pre-research (lines 792-813) is ready raw material for `/extract`.
+- **No stub needed:** Validation hook parity, Wouter route scaffolding, Playwright patterns (generic, not proto-domain).
+
+### Per-task research (fill in as work proceeds)
 
 - Context7 `express@5.1` — "typed middleware that sets res.locals safely" → ...
 - Context7 `drizzle-orm` — "and() + eq() composing WHERE clauses for user-scoped queries" → ...
