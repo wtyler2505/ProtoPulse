@@ -161,6 +161,41 @@ describe('WorkspaceHeader', () => {
     expect(setActiveView).toHaveBeenCalledWith('design_history');
   });
 
+  // E2E-075 / Plan 03 Phase 2: icon-only header buttons must have aria-label
+  // so screen-reader users have an accessible name. Each button renders only a
+  // lucide icon with no visible text — aria-label is the accessible name.
+  it('icon-only header buttons expose aria-labels (E2E-075)', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0 },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <WorkspaceHeader
+          ws={buildWorkspaceState()}
+          dispatch={vi.fn()}
+          activeView={'architecture' as ViewMode}
+          setActiveView={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    const importBtn = screen.getByTestId('import-design-button');
+    expect(importBtn.getAttribute('aria-label')).toBeTruthy();
+    expect(importBtn).toHaveAccessibleName('Import design file');
+
+    const pcbTutorialBtn = screen.getByTestId('pcb-tutorial-button');
+    expect(pcbTutorialBtn.getAttribute('aria-label')).toBeTruthy();
+    expect(pcbTutorialBtn).toHaveAccessibleName('PCB Tutorial');
+
+    const activityFeedBtn = screen.getByTestId('toggle-activity-feed');
+    expect(activityFeedBtn.getAttribute('aria-label')).toBeTruthy();
+    expect(activityFeedBtn).toHaveAccessibleName('Activity feed');
+  });
+
   // E2E-074 / Plan 02 Phase 1: clicking coach-help-button must open the popover and
   // reveal TutorialMenu content. NOTE: this test runs with StyledTooltip mocked as
   // a pass-through (see top of file), so it cannot detect the specific

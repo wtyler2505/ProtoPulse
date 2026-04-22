@@ -418,6 +418,8 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
         <StyledTooltip content="Import design file" side="bottom">
           <button
             data-testid="import-design-button"
+            type="button"
+            aria-label="Import design file"
             className="p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={handleImportDesign}
           >
@@ -458,6 +460,9 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
         <StyledTooltip content="PCB Tutorial" side="bottom">
           <button
             data-testid="pcb-tutorial-button"
+            type="button"
+            aria-label="PCB Tutorial"
+            aria-pressed={ws.pcbTutorialOpen}
             onClick={() => dispatch({ type: 'SET_PCB_TUTORIAL_OPEN', open: !ws.pcbTutorialOpen })}
             className={cn(
               'p-2 transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -478,6 +483,9 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
         <StyledTooltip content="Activity feed" side="bottom">
           <button
             data-testid="toggle-activity-feed"
+            type="button"
+            aria-label="Activity feed"
+            aria-pressed={ws.activityFeedOpen}
             onClick={() => dispatch({ type: 'SET_ACTIVITY_FEED_OPEN', open: !ws.activityFeedOpen })}
             className={cn(
               'p-2 transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
