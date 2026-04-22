@@ -10,6 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+
 import { deriveVisibleLayers } from '../layer-utils';
 
 describe('deriveVisibleLayers (E2E-233)', () => {

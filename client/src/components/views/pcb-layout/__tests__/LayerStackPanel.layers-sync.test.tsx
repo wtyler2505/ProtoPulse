@@ -13,10 +13,12 @@
  * proves the end-to-end wiring: BoardStackup.applyLayerCount → panel DOM.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
-import { LayerStackPanel } from '../LayerStackPanel';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { BoardStackup } from '@/lib/board-stackup';
+
+import { LayerStackPanel } from '../LayerStackPanel';
 
 describe('LayerStackPanel — board layers sync (E2E-233)', () => {
   beforeEach(() => {
