@@ -14,6 +14,7 @@ import {
   Bot,
   Boxes,
   TrendingUp,
+  CircuitBoard,
 } from 'lucide-react';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
@@ -125,6 +126,10 @@ export default function DashboardView() {
   }, [bom]);
 
   // --- Validation stats ---
+  // E2E-015: "All Checks Passing" must NOT show on an empty project. Empty designs
+  // aren't "passing" — there's nothing to validate. Derive `hasDesign` from
+  // architecture nodes + BOM items; when absent, show a neutral "no design" state
+  // instead of a green pass indicator.
   const validationStats = useMemo(() => {
     const breakdown = { error: 0, warning: 0, info: 0 };
     for (const issue of issues) {
@@ -132,10 +137,12 @@ export default function DashboardView() {
         breakdown[issue.severity as keyof typeof breakdown] += 1;
       }
     }
-    const allPassing = issues.length === 0;
+    const hasDesign = nodes.length > 0 || bom.length > 0;
+    const noDesign = !hasDesign;
+    const allPassing = hasDesign && issues.length === 0;
     const hasErrors = breakdown.error > 0;
-    return { total: issues.length, breakdown, allPassing, hasErrors };
-  }, [issues]);
+    return { total: issues.length, breakdown, allPassing, hasErrors, noDesign };
+  }, [issues, nodes, bom]);
 
   // --- Recent history (last 5) ---
   const recentHistory = useMemo(() => {
@@ -396,7 +403,15 @@ export default function DashboardView() {
             <CardContent className="space-y-3">
               {/* Pass/Fail indicator */}
               <div data-testid="validation-status-indicator" className="flex items-center gap-3">
-                {validationStats.allPassing ? (
+                {validationStats.noDesign ? (
+                  <>
+                    <CircuitBoard className="w-8 h-8 text-muted-foreground" />
+                    <div>
+                      <div className="text-sm font-semibold text-muted-foreground">No design to validate yet</div>
+                      <div className="text-[10px] text-muted-foreground">Add components to begin</div>
+                    </div>
+                  </>
+                ) : validationStats.allPassing ? (
                   <>
                     <CheckCircle2 className="w-8 h-8 text-emerald-500" />
                     <div>
