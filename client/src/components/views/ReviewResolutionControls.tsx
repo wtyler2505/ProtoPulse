@@ -89,6 +89,7 @@ export const ReviewResolutionControls = memo(function ReviewResolutionControls({
   );
 
   return (
+    {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
     <div
       data-testid={`review-resolution-${issueId}`}
       className="flex items-center gap-2 mt-1.5"

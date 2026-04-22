@@ -1038,6 +1038,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
       {/* SVG canvas */}
       <ContextMenu>
         <ContextMenuTrigger asChild>
+          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
           <div
             ref={containerRef}
             className="flex-1 overflow-hidden bg-[#1a1a1a] relative"
@@ -1048,6 +1049,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
             onKeyDown={handleKey}
             onClick={handleClick}
             onDoubleClick={handleDblClick}
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic)
             tabIndex={0}
             data-testid="pcb-canvas"
           >

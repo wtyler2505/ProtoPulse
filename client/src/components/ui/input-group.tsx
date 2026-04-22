@@ -61,6 +61,7 @@ function InputGroupAddon({
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
   return (
+    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-noninteractive-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
     <div
       role="group"
       data-slot="input-group-addon"

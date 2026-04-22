@@ -344,6 +344,7 @@ const VirtualOscilloscope = memo(function VirtualOscilloscope({
   const timePerDiv = TIMEBASE_TO_SECONDS[state.timebase] ?? 0.001;
 
   return (
+    {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
     <div
       ref={containerRef}
       className="absolute z-50 bg-zinc-950 border border-zinc-700 rounded-lg shadow-2xl select-none"

@@ -117,6 +117,7 @@ const TaskCard = memo(function TaskCard({ task, columns, onEdit, onMove, onDelet
     >
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
+          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
           <span
             data-testid={`task-title-${task.id}`}
             className="text-sm font-medium leading-tight flex-1"

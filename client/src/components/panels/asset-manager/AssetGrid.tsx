@@ -125,6 +125,7 @@ const AssetGrid = memo(function AssetGrid({
     return (
       <ContextMenu key={asset.id}>
         <ContextMenuTrigger asChild>
+          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
           <div
             draggable
             onDragStart={(e) => handleDragStart(e, asset)}
@@ -138,6 +139,7 @@ const AssetGrid = memo(function AssetGrid({
               isFocused && "ring-1 ring-primary/50"
             )}
             data-testid={`asset-item-${asset.id}`}
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic)
             tabIndex={0}
           >
             <div className="flex items-center justify-between mb-1">

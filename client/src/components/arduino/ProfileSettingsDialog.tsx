@@ -113,6 +113,7 @@ export default function ProfileSettingsDialog({
                 <div className="text-xs border rounded-md p-2 bg-muted/30 space-y-1.5">
                   <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Discovered OTA Devices</div>
                   {networkDevices.map((dev, i) => (
+                    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
                     <div 
                       key={i} 
                       className="flex items-center justify-between p-1.5 hover:bg-muted rounded cursor-pointer group transition-colors border border-transparent hover:border-border"

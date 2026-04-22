@@ -66,6 +66,7 @@ export function BomSettings({
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Preferred Suppliers</span>
           <StyledTooltip content="Edit preferred supplier list" side="top">
+            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
             <span
               className="text-xs text-primary cursor-pointer hover:underline"
               data-testid="link-edit-suppliers"

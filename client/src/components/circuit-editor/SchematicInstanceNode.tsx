@@ -131,6 +131,7 @@ function CustomShapeSymbol({
           onMouseDown={(e) => e.stopPropagation()}
         />
       ) : (
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
         <div
           className="absolute -top-5 left-0 text-[10px] font-bold text-primary whitespace-nowrap cursor-text"
           onDoubleClick={() => { setEditValue(referenceDesignator); setIsEditing(true); }}
@@ -298,6 +299,7 @@ function GenericICSymbol({
           onMouseDown={(e) => e.stopPropagation()}
         />
       ) : (
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
         <div
           className="absolute -top-5 left-0 text-[10px] font-bold text-primary whitespace-nowrap cursor-text"
           onDoubleClick={() => { setEditValue(referenceDesignator); setIsEditing(true); }}

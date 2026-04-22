@@ -83,6 +83,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<Node<Custom
         */}
         <div
           role="group"
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic)
           tabIndex={0}
           aria-label={`Node ${data.label ?? data.type}`}
           className={cn(
@@ -114,6 +115,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<Node<Custom
                   onMouseDown={(e) => e.stopPropagation()}
                 />
               ) : (
+                {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
                 <div
                   className="font-display font-medium text-sm text-foreground cursor-text"
                   onDoubleClick={() => { setEditValue(data.label); setIsEditing(true); }}

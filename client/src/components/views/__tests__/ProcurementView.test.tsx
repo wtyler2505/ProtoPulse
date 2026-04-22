@@ -95,6 +95,7 @@ vi.mock('@/components/ui/context-menu', () => ({
 
 vi.mock('@/components/ui/confirm-dialog', () => ({
   ConfirmDialog: ({ trigger, onConfirm }: { trigger: React.ReactNode; onConfirm?: () => void }) => (
+    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
     <div onClick={onConfirm}>{trigger}</div>
   ),
 }));

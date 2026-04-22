@@ -200,6 +200,7 @@ export function ErrorGutterMarker({
 
       {/* Tooltip */}
       {hoveredMark && tooltipPos && (
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
         <div
           className={cn(
             'absolute z-50 pointer-events-auto',

@@ -410,6 +410,7 @@ export function SerialPlotterPanel() {
       {snapshot.channels.length > 0 && (
         <div className="flex flex-wrap gap-2" data-testid="channel-legend">
           {snapshot.channels.map((ch) => (
+            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
             <div
               key={ch.index}
               className={cn(
@@ -453,6 +454,7 @@ export function SerialPlotterPanel() {
                   }}
                 />
               ) : (
+                {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
                 <span
                   className="text-muted-foreground hover:text-foreground"
                   onDoubleClick={(e) => {

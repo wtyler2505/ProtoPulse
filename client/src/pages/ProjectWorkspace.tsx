@@ -112,6 +112,7 @@ function ResizeHandle({ side, onResize, keyboardConfig }: {
   const ariaProps = useMemo(() => getResizeAriaProps(keyboardConfig), [keyboardConfig]);
 
   return (
+    {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
     <div
       data-testid={`resize-handle-${side}`}
       className="hidden lg:flex w-1 cursor-col-resize items-center justify-center group hover:bg-primary/20 active:bg-primary/30 transition-colors relative z-30 shrink-0 hover:shadow-[0_0_8px_rgba(6,182,212,0.3)] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-0"
@@ -187,6 +188,7 @@ function HoverPeekDock({
   }, [scheduleClose]);
 
   return (
+    {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
     <div
       data-testid={`hover-peek-dock-${side}`}
       className={cn(

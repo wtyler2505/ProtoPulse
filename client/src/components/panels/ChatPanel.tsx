@@ -981,6 +981,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
   if (collapsed) {
     return (
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
       <div
         data-testid="chat-collapsed"
         className="hidden lg:flex flex-col items-center w-10 h-full bg-card/60 backdrop-blur-xl border-l border-border shrink-0 cursor-pointer transition-all duration-300"
@@ -1105,6 +1106,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           {/* Settings slide-over — overlays messages instead of replacing them */}
           {showSettings && (
             <div className="absolute inset-0 top-14 z-20 flex flex-col">
+              {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
               <div
                 className="absolute inset-0 bg-background/60 backdrop-blur-sm"
                 onClick={() => setShowSettings(false)}

@@ -166,6 +166,7 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
       {/* Net name + optional bus width label + simulation voltage */}
       <EdgeLabelRenderer>
         {netName && !isEditing && (
+          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
           <div
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,

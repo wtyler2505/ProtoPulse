@@ -136,6 +136,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
   const showHint = !hasQuery && !isLoading;
 
   return (
+    {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
     <div
       data-testid="command-palette-overlay"
       className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]"
@@ -234,6 +235,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
               const trustConfig = TRUST_BADGE_CONFIG[part.trustLevel];
 
               return (
+                {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/interactive-supports-focus -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
                 <div
                   key={part.id}
                   data-testid={`command-palette-result-${index}`}
