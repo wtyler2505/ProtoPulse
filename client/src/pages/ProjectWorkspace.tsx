@@ -43,6 +43,7 @@ import {
   CommandPalette as NavCommandPalette,
   PartsCommandPalette,
   GlobalSearchDialog,
+  UnifiedComponentSearch,
   TutorialOverlay,
   LessonModeOverlay,
   ActivityFeedPanel,
