@@ -113,6 +113,56 @@ export function getLayerName(index: number, layerCount: number): string {
 // Layer queries
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Visible layer derivation (E2E-233, Plan 02 Phase 6)
+// ---------------------------------------------------------------------------
+
+/**
+ * Descriptor for one copper layer in the visibility panel.
+ *
+ * The panel consumes this list to render one toggle row per copper layer,
+ * whether the board is a 2-layer, 4-layer, or 32-layer stack. `id` is the
+ * KiCad-standard layer name, `label` is a short human-readable string, and
+ * `visible` is the default visibility state (always true on first derivation —
+ * the panel may override per-user).
+ */
+export interface VisibleLayerEntry {
+  /** KiCad-standard layer name: 'F.Cu', 'In1.Cu', ..., 'B.Cu'. */
+  id: string;
+  /** Human-readable label ('Top (Front)', 'Inner 1', ..., 'Bottom (Back)'). */
+  label: string;
+  /** Default visibility — every layer is visible by default. */
+  visible: boolean;
+}
+
+/**
+ * Derive the ordered list of copper layers to display in the visibility
+ * panel for a board with `layerCount` copper layers.
+ *
+ * Fixes E2E-233 (Plan 02 Phase 6): on a 4+ layer stack, the visibility panel
+ * previously rendered only top/bottom toggles. This helper produces one
+ * entry per copper layer, sourcing the count from the shared project board
+ * (`useProjectBoard().layers`, Plan 02 Phase 4). A 4-layer board yields
+ * [F.Cu, In1.Cu, In2.Cu, B.Cu]; a 6-layer board yields
+ * [F.Cu, In1.Cu, In2.Cu, In3.Cu, In4.Cu, B.Cu]; and so on up to the
+ * MAX_LAYER_COUNT. Inputs below 2 are coerced up, inputs above MAX are
+ * clamped.
+ */
+export function deriveVisibleLayers(layerCount: number): VisibleLayerEntry[] {
+  const names = getCopperLayers(layerCount);
+  return names.map((id, idx): VisibleLayerEntry => {
+    let label: string;
+    if (idx === 0) {
+      label = 'Top (Front)';
+    } else if (idx === names.length - 1) {
+      label = 'Bottom (Back)';
+    } else {
+      label = `Inner ${String(idx)}`;
+    }
+    return { id, label, visible: true };
+  });
+}
+
 /**
  * Check if a layer is an outer layer (front or back copper).
  */

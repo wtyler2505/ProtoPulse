@@ -748,6 +748,44 @@ export class BoardStackup {
     this.notify();
   }
 
+  /**
+   * Sync the stackup to a target copper-layer count (E2E-233, Plan 02 Phase 6).
+   *
+   * When the shared project board (`boards.layers`, Plan 02 Phase 4) changes,
+   * the stackup must reflect the new layer count so the layer-visibility
+   * panel renders one toggle row per copper layer — not just top/bottom.
+   *
+   * If a named preset (`${n}-layer`) exists, applies it verbatim so the user
+   * keeps the curated material + thickness choices. Otherwise builds a
+   * symmetric stackup programmatically via the same generator the presets
+   * use. No-op if the stackup already has exactly `n` copper layers.
+   */
+  applyLayerCount(n: number): void {
+    const target = Math.max(2, Math.min(32, Math.round(n)));
+    if (this.layers.length === target) {
+      return;
+    }
+
+    const namedPreset = PRESETS.find((p) => p.name === `${String(target)}-layer`);
+    const preset = namedPreset ?? generateHighLayerPreset(
+      `${String(target)}-layer`,
+      `Auto-generated ${String(target)}-layer stackup`,
+      target,
+    );
+
+    this.layers = preset.layers.map((l) => ({
+      ...l,
+      id: crypto.randomUUID(),
+    }));
+    this.dielectrics = preset.dielectrics.map((d) => ({
+      ...d,
+      id: crypto.randomUUID(),
+    }));
+
+    this.save();
+    this.notify();
+  }
+
   getAvailablePresets(): StackupPreset[] {
     return PRESETS.map((p) => ({ ...p }));
   }
@@ -1019,6 +1057,7 @@ export function useBoardStackup(): {
   reorderLayer: (id: string, newOrder: number) => boolean;
   calculateImpedance: (layerId: string, traceWidth: number, spacing?: number) => ImpedanceResult;
   applyPreset: (presetName: string) => void;
+  applyLayerCount: (n: number) => void;
   presets: StackupPreset[];
   totalThickness: number;
   surfaceFinish: SurfaceFinish;
@@ -1061,6 +1100,10 @@ export function useBoardStackup(): {
     BoardStackup.getInstance().applyPreset(presetName);
   }, []);
 
+  const applyLayerCount = useCallback((n: number) => {
+    BoardStackup.getInstance().applyLayerCount(n);
+  }, []);
+
   const setSurfaceFinish = useCallback((finish: SurfaceFinish) => {
     BoardStackup.getInstance().setSurfaceFinish(finish);
   }, []);
@@ -1088,6 +1131,7 @@ export function useBoardStackup(): {
     reorderLayer,
     calculateImpedance,
     applyPreset,
+    applyLayerCount,
     presets: stackup.getAvailablePresets(),
     totalThickness: stackup.getTotalThickness(),
     surfaceFinish: stackup.getSurfaceFinish(),

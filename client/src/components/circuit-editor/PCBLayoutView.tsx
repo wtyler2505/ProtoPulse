@@ -115,6 +115,7 @@ import {
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import type { ActiveLayer, PcbTool, PanState, SelectionRect, SelectionDragState } from '@/components/views/pcb-layout';
 import { useProjectMeta } from '@/lib/project-context';
+import { useBoardStackup } from '@/lib/board-stackup';
 import { calculateRoutingStatus } from '@/lib/pcb/routing-status';
 import type { Via, ViaType } from '@/lib/pcb/via-model';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow } from '@shared/schema';
@@ -415,6 +416,25 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   // reduce blast radius — a follow-up will delete the circuit-settings write.
   const { board: projectBoard, updateBoard } = useProjectBoard(projectId);
   const comments = commentResult?.data ?? [];
+
+  // Plan 02 Phase 6 / E2E-233: the layer-visibility panel (LayerStackPanel)
+  // reads from the BoardStackup singleton. When the shared project board's
+  // `layers` field (Plan 02 Phase 4) changes — or when the stackup is empty
+  // on first mount — sync the stackup so the panel renders one toggle row
+  // per copper layer instead of just top/bottom. Guarded by a length check
+  // so user-initiated stackup edits (add/remove via the panel itself) don't
+  // fight the board value.
+  const { layers: stackupLayers, applyLayerCount: syncStackupLayerCount } = useBoardStackup();
+  useEffect(() => {
+    if (projectBoard.id <= 0) { return; }
+    const targetCount = projectBoard.layers;
+    if (targetCount > 0 && stackupLayers.length !== targetCount) {
+      syncStackupLayerCount(targetCount);
+    }
+    // Only react to server board changes and current stackup length — not
+    // syncStackupLayerCount identity (it's a stable useCallback).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectBoard.id, projectBoard.layers, stackupLayers.length]);
 
   const createWireMutation = useCreateCircuitWire();
   const deleteWireMutation = useDeleteCircuitWire();

@@ -429,6 +429,58 @@ describe('BoardStackup', () => {
       expect(() => stackup.applyPreset('99-layer')).toThrow('Preset "99-layer" not found');
     });
 
+    // -----------------------------------------------------------------------
+    // applyLayerCount — E2E-233, Plan 02 Phase 6
+    // -----------------------------------------------------------------------
+
+    it('applyLayerCount(4) yields exactly 4 copper layers', () => {
+      const stackup = BoardStackup.getInstance();
+      stackup.applyLayerCount(4);
+      expect(stackup.getLayerCount()).toBe(4);
+    });
+
+    it('applyLayerCount(6) yields 6 copper layers', () => {
+      const stackup = BoardStackup.getInstance();
+      stackup.applyLayerCount(6);
+      expect(stackup.getLayerCount()).toBe(6);
+    });
+
+    it('applyLayerCount matches preset output for 4-layer when preset exists', () => {
+      const stackup = BoardStackup.getInstance();
+      stackup.applyLayerCount(4);
+      const layers = stackup.getAllLayers();
+      // 4-layer preset is Signal-Ground-Power-Signal
+      expect(layers[0].type).toBe('signal');
+      expect(layers[1].type).toBe('ground');
+      expect(layers[2].type).toBe('power');
+      expect(layers[3].type).toBe('signal');
+    });
+
+    it('applyLayerCount(5) falls back to programmatic build when no preset exists', () => {
+      const stackup = BoardStackup.getInstance();
+      stackup.applyLayerCount(5);
+      expect(stackup.getLayerCount()).toBe(5);
+    });
+
+    it('applyLayerCount clamps below 2 and above 32', () => {
+      const stackup = BoardStackup.getInstance();
+      stackup.applyLayerCount(0);
+      expect(stackup.getLayerCount()).toBe(2);
+      stackup.applyLayerCount(999);
+      expect(stackup.getLayerCount()).toBe(32);
+    });
+
+    it('applyLayerCount is a no-op when layer count already matches', () => {
+      const stackup = BoardStackup.getInstance();
+      stackup.applyPreset('4-layer');
+      const originalIds = stackup.getAllLayers().map((l) => l.id);
+      stackup.applyLayerCount(4);
+      const nextIds = stackup.getAllLayers().map((l) => l.id);
+      // No reassignment — ids preserved, which means the stackup was not
+      // rebuilt (rebuilds mint new crypto.randomUUID ids).
+      expect(nextIds).toEqual(originalIds);
+    });
+
     it('presets have descriptions', () => {
       const stackup = BoardStackup.getInstance();
       const presets = stackup.getAvailablePresets();

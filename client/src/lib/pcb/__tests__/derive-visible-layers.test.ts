@@ -34,7 +34,7 @@ describe('deriveVisibleLayers (E2E-233)', () => {
 
   it('returns 6 ordered layers when layerCount=6', () => {
     const v = deriveVisibleLayers(6);
-    expect(v.map((l) => l.id)).toEqual([
+    expect(v.map((l: { id: string }) => l.id)).toEqual([
       'F.Cu',
       'In1.Cu',
       'In2.Cu',
@@ -45,7 +45,7 @@ describe('deriveVisibleLayers (E2E-233)', () => {
   });
 
   it('returns 8 ordered layers when layerCount=8', () => {
-    expect(deriveVisibleLayers(8).map((l) => l.id)).toEqual([
+    expect(deriveVisibleLayers(8).map((l: { id: string }) => l.id)).toEqual([
       'F.Cu',
       'In1.Cu',
       'In2.Cu',
