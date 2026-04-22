@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import ReleaseConfidenceCard from '@/components/ui/ReleaseConfidenceCard';
+import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useValidation } from '@/lib/contexts/validation-context';
@@ -262,7 +263,14 @@ const BoardSpecForm = memo(function BoardSpecForm({ spec, onChange }: BoardSpecF
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="spec-trace">Min Trace Width (mm)</Label>
+          <div className="flex items-center gap-1.5">
+            <Label htmlFor="spec-trace">Min Trace Width (mm)</Label>
+            <VaultInfoIcon
+              slug="trace-width-vs-current-carrying-capacity-ipc-2221"
+              testId="spec-trace-vault-info"
+              ariaLabel="About PCB trace width and IPC-2221"
+            />
+          </div>
           <Input
             data-testid="spec-trace"
             id="spec-trace"
@@ -273,7 +281,14 @@ const BoardSpecForm = memo(function BoardSpecForm({ spec, onChange }: BoardSpecF
           />
         </div>
         <div>
-          <Label htmlFor="spec-drill">Min Drill Size (mm)</Label>
+          <div className="flex items-center gap-1.5">
+            <Label htmlFor="spec-drill">Min Drill Size (mm)</Label>
+            <VaultInfoIcon
+              topic="pcb-min-drill-size-fab-capability"
+              testId="spec-drill-vault-info"
+              ariaLabel="About PCB minimum drill size"
+            />
+          </div>
           <Input
             data-testid="spec-drill"
             id="spec-drill"
