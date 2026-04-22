@@ -318,7 +318,6 @@ vi.mock('@/components/views/component-editor/ExactPartDraftModal', () => ({
 
 vi.mock('@/components/ui/select', () => ({
   Select: ({ children, onValueChange, value }: { children: ReactNode; onValueChange: (v: string) => void; value: string }) => (
-    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
     <div data-testid="mock-select" data-value={value} onClick={() => onValueChange('2')}>
       {children}
     </div>

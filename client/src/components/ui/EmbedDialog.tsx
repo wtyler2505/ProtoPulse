@@ -170,7 +170,6 @@ export default function EmbedDialog({ open, onOpenChange, circuitData }: EmbedDi
   }
 
   return (
-    {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       data-testid="embed-dialog-overlay"

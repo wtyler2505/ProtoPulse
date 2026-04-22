@@ -106,7 +106,6 @@ function SchematicAnnotationNodeInner({
   );
 
   return (
-    {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
     <div
       data-testid={`schematic-annotation-${annotationId}`}
       className={cn(

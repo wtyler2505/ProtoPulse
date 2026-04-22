@@ -199,7 +199,6 @@ function SchematicPowerNode({
           onMouseDown={(e) => e.stopPropagation()}
         />
       ) : (
-        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
         <div
           className="absolute left-full ml-1 text-[9px] font-bold whitespace-nowrap cursor-text"
           style={{ color, top: '50%', transform: 'translateY(-50%)' }}

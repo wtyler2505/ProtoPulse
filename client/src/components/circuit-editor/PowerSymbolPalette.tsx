@@ -61,7 +61,6 @@ function SymbolItem({ def }: { def: PowerSymbolDef }) {
 
   return (
     <StyledTooltip content={def.description} side="right">
-      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
       <div
         draggable
         onDragStart={onDragStart}
@@ -127,7 +126,6 @@ function CustomSymbolInput({
           aria-label="Custom power net name"
           className="h-6 text-xs flex-1"
         />
-        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
         <div
           draggable={!!customNet.trim()}
           onDragStart={handleDragStart}

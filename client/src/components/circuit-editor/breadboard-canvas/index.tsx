@@ -1254,7 +1254,6 @@ export function BreadboardCanvas({
 
 
       {/* SVG canvas */}
-      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
       <div
         ref={containerRef}
         className="flex-1 overflow-hidden bg-background cursor-crosshair relative"
@@ -1267,7 +1266,6 @@ export function BreadboardCanvas({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic)
         tabIndex={0}
         data-testid="breadboard-canvas"
       >

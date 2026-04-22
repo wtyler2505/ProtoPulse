@@ -150,7 +150,6 @@ export default function ComponentReplacementDialog({
             <ScrollArea className="flex-1">
               <div className="p-2 space-y-2">
                 {results.map((alt, i) => (
-                  {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
                   <div
                     key={i}
                     onClick={() => handleSelect(alt)}

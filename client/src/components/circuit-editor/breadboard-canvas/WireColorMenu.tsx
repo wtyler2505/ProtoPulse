@@ -18,7 +18,6 @@ export function WireColorMenu({ wireId, position, onColorChange, onClose }: Wire
     return null;
   }
   return (
-    {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
     <div
       className="absolute z-20 bg-card border border-border rounded-md shadow-lg p-1.5"
       style={{ left: position.x, top: position.y }}

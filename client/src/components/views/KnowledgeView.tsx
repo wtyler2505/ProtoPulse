@@ -128,7 +128,6 @@ const ArticleCard = memo(function ArticleCard({ article, onClick }: ArticleCardP
           </div>
         )}
         {/* TODO(plan-13-wave-1): swap `topic={article.category}` for `slug={article.vaultMoc}` once the data layer adds a vaultMoc field per article. Plan 13 declares a CI assertion requiring this. */}
-        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
         <div
           className="pt-1.5 border-t border-border/30"
           onClick={(e) => { e.stopPropagation(); }}

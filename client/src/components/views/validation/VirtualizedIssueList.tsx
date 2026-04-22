@@ -179,7 +179,6 @@ export const VirtualizedIssueList = memo(function VirtualizedIssueList({
               {row.type === 'arch' && (
                 <ContextMenu>
                   <ContextMenuTrigger asChild>
-                    {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
                     <div data-testid={`row-issue-${row.issue.id}`} onClick={() => { if (row.issue.componentId) { onIssueFocus ? onIssueFocus(row.issue.componentId) : setActiveView('architecture'); } }} className={cn("flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group", row.issue.componentId ? "cursor-pointer" : "cursor-default")} role={row.issue.componentId ? "button" : undefined} tabIndex={row.issue.componentId ? 0 : undefined} onKeyDown={row.issue.componentId ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onIssueFocus ? onIssueFocus(row.issue.componentId) : setActiveView('architecture'); } } : undefined}>
                       <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
                         {getIcon(row.issue.severity)}

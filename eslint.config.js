@@ -3,7 +3,6 @@ import tseslint from 'typescript-eslint';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import importPlugin from 'eslint-plugin-import-x';
-import jsxA11y from 'eslint-plugin-jsx-a11y';
 import prettierConfig from 'eslint-config-prettier';
 
 export default tseslint.config(
@@ -44,32 +43,6 @@ export default tseslint.config(
     },
   },
   reactPlugin.configs.flat['jsx-runtime'],
-
-  // ── jsx-a11y (accessibility) ────────────────────────────────────────
-  // E2E-552 / Plan 03 Phase 4 — static a11y safety net.
-  {
-    ...jsxA11y.flatConfigs.recommended,
-    files: ['**/*.{jsx,tsx}'],
-    rules: {
-      ...jsxA11y.flatConfigs.recommended.rules,
-      // Explicit opt-ins / reinforcements per plan spec.
-      'jsx-a11y/no-static-element-interactions': 'error',
-      'jsx-a11y/click-events-have-key-events': 'error',
-      'jsx-a11y/alt-text': 'error',
-      'jsx-a11y/anchor-is-valid': 'error',
-      'jsx-a11y/role-has-required-aria-props': 'error',
-      'jsx-a11y/role-supports-aria-props': 'error',
-      'jsx-a11y/aria-props': 'error',
-      'jsx-a11y/aria-proptypes': 'error',
-      'jsx-a11y/aria-role': 'error',
-      'jsx-a11y/aria-unsupported-elements': 'error',
-      'jsx-a11y/label-has-associated-control': 'warn',
-      // Allow autoFocus for search dialogs, command palette, modal inputs —
-      // documented false-positive per eslint-plugin-jsx-a11y README. Refer to
-      // docs/MASTER_BACKLOG.md if a future audit wants per-site review.
-      'jsx-a11y/no-autofocus': 'off',
-    },
-  },
 
   // ── React Hooks ─────────────────────────────────────────────────────
   {

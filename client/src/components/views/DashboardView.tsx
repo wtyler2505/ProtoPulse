@@ -280,7 +280,6 @@ export default function DashboardView() {
                       .sort((a, b) => b[1] - a[1])
                       .map(([type, count]) => (
                         <VaultHoverCard key={type} topic={type}>
-                          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
                           <span
                             data-testid={`arch-type-${type}`}
                             onClick={(e) => e.stopPropagation()}

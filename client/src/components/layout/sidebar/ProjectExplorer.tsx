@@ -87,7 +87,6 @@ function SectionHeader({ config, count, expanded, hasChildren, onToggle, onNavig
         <span className="w-3 shrink-0" />
       )}
       <Icon className="w-3 h-3 shrink-0" />
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
       <span
         data-testid={`explorer-nav-${config.key}`}
         className="text-xs flex-1 truncate hover:text-primary cursor-pointer"

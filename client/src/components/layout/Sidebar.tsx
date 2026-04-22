@@ -386,7 +386,6 @@ function SidebarContent({
                   className="flex-1 min-w-0 text-sm bg-muted/30 border border-primary/50 px-1.5 py-0.5 text-foreground focus-visible:outline-none focus-ring"
                 />
               ) : (
-                {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
                 <span
                   data-testid="inline-edit-name"
                   className="truncate cursor-pointer flex items-center gap-1.5"

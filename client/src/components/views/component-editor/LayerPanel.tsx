@@ -93,7 +93,6 @@ export default function LayerPanel({ view }: { view: 'breadboard' | 'schematic' 
       </div>
       <div className="max-h-64 overflow-y-auto">
         {layers.map((layer) => (
-          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
           <div
             key={layer.name}
             data-testid={`layer-row-${layer.name}`}

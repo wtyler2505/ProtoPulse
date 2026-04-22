@@ -86,7 +86,6 @@ export default function ShortcutsOverlay({ open, onClose, activeView }: Shortcut
   const grouped = groupByCategory(entries);
 
   return (
-    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-noninteractive-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
     <div
       data-testid="shortcuts-overlay-backdrop"
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
@@ -95,7 +94,6 @@ export default function ShortcutsOverlay({ open, onClose, activeView }: Shortcut
       aria-label="Keyboard shortcuts"
       aria-modal="true"
     >
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
       <div
         data-testid="shortcuts-overlay-panel"
         className="bg-card border border-border rounded-lg shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto p-6"

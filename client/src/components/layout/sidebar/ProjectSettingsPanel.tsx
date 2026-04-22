@@ -231,7 +231,6 @@ const ProjectSettingsPanel = memo(function ProjectSettingsPanel({
           </div>
 
           <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-2">Version</div>
-          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions -- Phase 3 InteractiveCard migration (Plan 03-a11y-systemic) */}
           <div
             className="text-xs font-mono text-primary cursor-pointer hover:underline"
             data-testid="text-version"
