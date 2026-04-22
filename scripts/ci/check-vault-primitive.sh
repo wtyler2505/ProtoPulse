@@ -25,6 +25,7 @@ ALLOWED=(
   "client/src/hooks/useVaultQuickFetch.ts"
   "client/src/components/ui/vault-hover-card.tsx"
   "client/src/components/ui/vault-explainer.tsx"
+  "client/src/components/ui/vault-info-icon.tsx"
   "client/src/components/views/VaultBrowserView.tsx"
   "client/src/components/panels/chat/AnswerSourcePanel.tsx"
   "client/src/hooks/__tests__/useVaultQuickFetch.test.tsx"
