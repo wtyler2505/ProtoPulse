@@ -24,6 +24,7 @@ import { shouldPromptBomAdd, mapCommunityPartToBom } from '@/lib/community-bom-b
 import { useBom } from '@/lib/contexts/bom-context';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { VaultHoverCard } from '@/components/ui/vault-hover-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -158,7 +159,15 @@ const ComponentCard = memo(function ComponentCard({ component, onClick }: Compon
             {component.downloads}
           </span>
           <span data-testid={`component-version-${component.id}`}>v{component.version}</span>
-          <Badge variant="secondary" className="text-xs px-1.5 py-0">{component.license}</Badge>
+          <VaultHoverCard topic={`license-${component.license.toLowerCase()}-plain-english`}>
+            <Badge
+              variant="secondary"
+              className="text-xs px-1.5 py-0 cursor-help"
+              data-testid={`component-license-${component.id}`}
+            >
+              {component.license}
+            </Badge>
+          </VaultHoverCard>
         </div>
 
         {component.tags.length > 0 && (
@@ -259,7 +268,14 @@ const ComponentDetail = memo(function ComponentDetail({
             </div>
             <div>
               <span className="text-muted-foreground">License:</span>{' '}
-              <span data-testid="detail-license">{component.license}</span>
+              <VaultHoverCard topic={`license-${component.license.toLowerCase()}-plain-english`}>
+                <span
+                  data-testid="detail-license"
+                  className="cursor-help underline decoration-dotted decoration-primary/40 underline-offset-4"
+                >
+                  {component.license}
+                </span>
+              </VaultHoverCard>
             </div>
             <div>
               <span className="text-muted-foreground">Category:</span>{' '}
