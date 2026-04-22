@@ -1,7 +1,26 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@theme inline {
+/*
+ * BL / E2E-968, E2E-1037: Enable class-based dark mode for Tailwind v4.
+ * Without this, `dark:` variant utilities only respond to the OS-level
+ * prefers-color-scheme media query. The ProtoPulse ThemeProvider flips
+ * `.light` / `.dark` on <html>, so we wire `dark:` to honour those classes.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * NOTE: This block intentionally uses `@theme` WITHOUT the `inline` modifier.
+ * With `inline`, Tailwind v4 bakes the literal HSL values into every generated
+ * utility class at build time (e.g. `bg-background` becomes
+ * `background-color: hsl(225 20% 3%);`), which makes runtime updates to the
+ * `--color-*` custom properties (see client/src/lib/theme-context.tsx ->
+ * applyThemeColors) invisible to visible Tailwind classes. Dropping `inline`
+ * causes Tailwind to emit `background-color: var(--color-background);` so the
+ * runtime style.setProperty calls on <html> correctly override the dark defaults.
+ * This is what makes the light-mode toggle actually change visuals.
+ */
+@theme {
   --font-display: 'Rajdhani', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --font-sans: 'Inter', sans-serif;
@@ -211,28 +230,32 @@
     border-right: 1px solid;
   }
   .edge-glow {
-    box-shadow: 0 0 1px 0 hsl(190 100% 43% / 0.3), inset 0 0 1px 0 hsl(190 100% 43% / 0.1);
+    box-shadow:
+      0 0 1px 0 color-mix(in srgb, var(--color-primary) 30%, transparent),
+      inset 0 0 1px 0 color-mix(in srgb, var(--color-primary) 10%, transparent);
   }
   .edge-glow-strong {
-    box-shadow: 0 0 8px -2px hsl(190 100% 43% / 0.4), 0 0 2px 0 hsl(190 100% 43% / 0.2);
+    box-shadow:
+      0 0 8px -2px color-mix(in srgb, var(--color-primary) 40%, transparent),
+      0 0 2px 0 color-mix(in srgb, var(--color-primary) 20%, transparent);
   }
   .scan-line {
     background-image: repeating-linear-gradient(
       0deg,
       transparent,
       transparent 2px,
-      hsl(190 100% 43% / 0.015) 2px,
-      hsl(190 100% 43% / 0.015) 4px
+      color-mix(in srgb, var(--color-primary) 1.5%, transparent) 2px,
+      color-mix(in srgb, var(--color-primary) 1.5%, transparent) 4px
     );
   }
   .data-grid {
     background-image:
-      linear-gradient(hsl(225 12% 14% / 0.5) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(225 12% 14% / 0.5) 1px, transparent 1px);
+      linear-gradient(color-mix(in srgb, var(--color-border) 50%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--color-border) 50%, transparent) 1px, transparent 1px);
     background-size: 20px 20px;
   }
   .substrate {
-    background-image: radial-gradient(hsl(225 12% 14% / 0.6) 1px, transparent 1px);
+    background-image: radial-gradient(color-mix(in srgb, var(--color-border) 60%, transparent) 1px, transparent 1px);
     background-size: 16px 16px;
   }
   .led-indicator {
@@ -241,8 +264,8 @@
     display: inline-block;
   }
   .led-on {
-    background: hsl(190 100% 43%);
-    box-shadow: 0 0 6px hsl(190 100% 43% / 0.6);
+    background: var(--color-primary);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--color-primary) 60%, transparent);
   }
   .led-warning {
     background: hsl(40 100% 50%);
@@ -263,7 +286,7 @@
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(190 100% 43% / 0.25) transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-primary) 25%, transparent) transparent;
 }
 *::-webkit-scrollbar {
   width: 6px;
@@ -273,11 +296,11 @@
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: hsl(190 100% 43% / 0.25);
+  background: color-mix(in srgb, var(--color-primary) 25%, transparent);
   border: none;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: hsl(190 100% 43% / 0.45);
+  background: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 *::-webkit-scrollbar-corner {
   background: transparent;
@@ -290,7 +313,7 @@
 .react-flow__handle {
   @apply bg-primary w-2 h-2 border-none;
   border-radius: 0 !important;
-  box-shadow: 0 0 4px hsl(190 100% 43% / 0.5);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--color-primary) 50%, transparent);
 }
 .react-flow__edge-path {
   @apply stroke-muted-foreground stroke-2;
