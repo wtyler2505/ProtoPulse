@@ -7,7 +7,10 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { boards, type Board, type UpdateBoard } from '@shared/schema';
+
+import { boards } from '@shared/schema';
+import type { Board, UpdateBoard } from '@shared/schema';
+
 import { StorageError } from './errors';
 import type { StorageDeps } from './types';
 
@@ -44,8 +47,8 @@ export class BoardStorage {
    */
   async getBoard(projectId: number): Promise<Board> {
     try {
-      const [row] = await this.db.select().from(boards).where(eq(boards.projectId, projectId));
-      if (row) { return row; }
+      const rows = await this.db.select().from(boards).where(eq(boards.projectId, projectId));
+      if (rows.length > 0) { return rows[0]; }
       const now = new Date();
       return {
         id: 0,
@@ -66,9 +69,9 @@ export class BoardStorage {
    */
   async upsertBoard(projectId: number, patch: UpdateBoard): Promise<Board> {
     try {
-      const [existing] = await this.db.select().from(boards).where(eq(boards.projectId, projectId));
+      const existingRows = await this.db.select().from(boards).where(eq(boards.projectId, projectId));
 
-      if (!existing) {
+      if (existingRows.length === 0) {
         const insertValues = {
           projectId,
           ...DEFAULT_BOARD_VALUES,
@@ -78,14 +81,13 @@ export class BoardStorage {
         return created;
       }
 
-      // Filter out undefined values so zero/false don't get dropped but
-      // undefined (omitted) fields leave the row untouched.
-      const setValues: Record<string, unknown> = { updatedAt: new Date() };
-      for (const [key, value] of Object.entries(patch)) {
-        if (value !== undefined) {
-          setValues[key] = value;
-        }
-      }
+      // `UpdateBoard` is a strict zod schema — Object.entries only emits keys
+      // the caller actually set, so we can merge directly without filtering
+      // undefined. `false` and `0` are preserved.
+      const setValues: Record<string, unknown> = {
+        ...patch,
+        updatedAt: new Date(),
+      };
 
       const [updated] = await this.db.update(boards)
         .set(setValues)
