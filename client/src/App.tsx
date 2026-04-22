@@ -1,20 +1,21 @@
-import { Switch, Route, useRoute } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider } from "next-themes";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/lib/auth-context";
-import { ProtoPulseThemeProvider, THEME_PRESETS } from "@/lib/theme-context";
-import { GpuPerformanceProvider, detectGpuTier, classifyGpuTier, shouldUseBackdropBlur } from "@/lib/gpu-performance";
-import { Loader2 } from "lucide-react";
-import { lazy, Suspense } from "react";
-import ProjectWorkspace from "@/pages/ProjectWorkspace";
-import ProjectPickerPage from "@/pages/ProjectPickerPage";
-import AuthPage from "@/pages/AuthPage";
-import NotFound from "@/pages/not-found";
+import { Switch, Route, useRoute } from 'wouter';
+import { queryClient } from './lib/queryClient';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from 'next-themes';
+import { Toaster } from '@/components/ui/toaster';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { ProtoPulseThemeProvider, THEME_PRESETS } from '@/lib/theme-context';
+import { GpuPerformanceProvider, detectGpuTier, classifyGpuTier, shouldUseBackdropBlur } from '@/lib/gpu-performance';
+import { Loader2 } from 'lucide-react';
+import { lazy, Suspense } from 'react';
+import ProjectWorkspace from '@/pages/ProjectWorkspace';
+import ProjectPickerPage from '@/pages/ProjectPickerPage';
+import AuthPage from '@/pages/AuthPage';
+import SettingsPage from '@/pages/settings/SettingsPage';
+import NotFound from '@/pages/not-found';
 
-const EmbedViewerPage = lazy(() => import("@/pages/EmbedViewerPage"));
+const EmbedViewerPage = lazy(() => import('@/pages/EmbedViewerPage'));
 
 // Apply high-contrast class eagerly to avoid flash of unstyled content.
 // The useHighContrast hook keeps it in sync after React mounts.
@@ -31,8 +32,8 @@ try {
 try {
   const blurOverride = localStorage.getItem('protopulse-gpu-blur-override');
   // If user explicitly disabled, or auto-detect finds a low-end GPU
-  const blurDisabled = blurOverride === 'false' ||
-    (blurOverride === null && !shouldUseBackdropBlur(detectGpuTier().tier));
+  const blurDisabled =
+    blurOverride === 'false' || (blurOverride === null && !shouldUseBackdropBlur(detectGpuTier().tier));
   if (blurDisabled) {
     document.documentElement.classList.add('reduce-blur');
   }
@@ -80,6 +81,7 @@ function Router() {
     <Switch>
       <Route path="/projects/:projectId/*?" component={ProjectWorkspace} />
       <Route path="/projects" component={ProjectPickerPage} />
+      <Route path="/settings" component={SettingsPage} />
       <Route path="/" component={ProjectPickerPage} />
       <Route component={NotFound} />
     </Switch>
@@ -88,12 +90,18 @@ function Router() {
 
 /** Render embed viewer for /embed/* routes — bypasses AuthGate */
 function EmbedRouter() {
-  const [matchData, paramsData] = useRoute("/embed/:data");
-  const [matchShort, paramsShort] = useRoute("/embed/s/:code");
+  const [matchData, paramsData] = useRoute('/embed/:data');
+  const [matchShort, paramsShort] = useRoute('/embed/s/:code');
 
   if (matchShort) {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>}>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-background flex items-center justify-center">
+            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          </div>
+        }
+      >
         <EmbedViewerPage codeParam={paramsShort.code} />
       </Suspense>
     );
@@ -101,7 +109,13 @@ function EmbedRouter() {
 
   if (matchData) {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>}>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-background flex items-center justify-center">
+            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          </div>
+        }
+      >
         <EmbedViewerPage dataParam={paramsData.data} />
       </Suspense>
     );
@@ -111,7 +125,7 @@ function EmbedRouter() {
 }
 
 function App() {
-  const [isEmbed] = useRoute("/embed/*");
+  const [isEmbed] = useRoute('/embed/*');
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>

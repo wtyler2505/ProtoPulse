@@ -1,7 +1,8 @@
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import ProfileSection from "./sections/ProfileSection";
-import AppearanceSection from "./sections/AppearanceSection";
-import APIKeysSection from "./sections/APIKeysSection";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+
+import APIKeysSection from './sections/APIKeysSection';
+import AppearanceSection from './sections/AppearanceSection';
+import ProfileSection from './sections/ProfileSection';
 
 /**
  * Skeleton /settings route (Plan 01 Phase 4, E2E-502).
@@ -17,16 +18,12 @@ import APIKeysSection from "./sections/APIKeysSection";
  */
 export default function SettingsPage() {
   return (
-    <div
-      className="min-h-screen w-full bg-background p-6"
-      data-testid="settings-page"
-    >
+    <div className="min-h-screen w-full bg-background p-6" data-testid="settings-page">
       <div className="max-w-3xl mx-auto space-y-6">
         <header className="space-y-1">
           <h1 className="text-2xl font-bold text-foreground">Settings</h1>
           <p className="text-sm text-muted-foreground">
-            Manage your profile, appearance, and API keys. Full controls land with
-            plan 17-shell-header-nav.
+            Manage your profile, appearance, and API keys. Full controls land with plan 17-shell-header-nav.
           </p>
         </header>
 
