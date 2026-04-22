@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import {
@@ -67,6 +67,27 @@ function SchematicViewContent() {
 
   const handleEnterSheet = useCallback((id: number) => {
     setActiveCircuitId(id);
+  }, []);
+
+  // Listen for SchematicToolbar "place-component" / "place-power" clicks.
+  // The toolbar lives inside SchematicCanvas and does not own the side-panel
+  // state, so it dispatches window events that we handle here by opening the
+  // left panel and switching to the appropriate tab. See E2E-849 / E2E-915.
+  useEffect(() => {
+    const handleFocusParts = () => {
+      setPartsPanel(true);
+      setPanelTab('components');
+    };
+    const handleFocusPower = () => {
+      setPartsPanel(true);
+      setPanelTab('power');
+    };
+    window.addEventListener('protopulse:schematic-focus-parts-panel', handleFocusParts);
+    window.addEventListener('protopulse:schematic-focus-power-panel', handleFocusPower);
+    return () => {
+      window.removeEventListener('protopulse:schematic-focus-parts-panel', handleFocusParts);
+      window.removeEventListener('protopulse:schematic-focus-power-panel', handleFocusPower);
+    };
   }, []);
 
   const handleGoToParent = useCallback(() => {

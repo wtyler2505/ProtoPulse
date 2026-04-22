@@ -653,6 +653,73 @@ export type InsertDesignComment = z.infer<typeof insertDesignCommentSchema>;
 export type DesignComment = typeof designComments.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Boards (E2E-228 / Plan 02 Phase 4) — shared PCB source-of-truth for
+// PCBLayoutView, BoardViewer3DView, and PcbOrderingView. One physical board
+// per project (unique project_id). A project may have many circuit designs,
+// but they all lay out to a single physical PCB.
+// ---------------------------------------------------------------------------
+
+export const boards = pgTable('boards', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  // Physical geometry (PCBLayoutView + BoardViewer3DView)
+  widthMm: real('width_mm').notNull().default(100),
+  heightMm: real('height_mm').notNull().default(80),
+  thicknessMm: real('thickness_mm').notNull().default(1.6),
+  cornerRadiusMm: real('corner_radius_mm').notNull().default(2),
+  // Stack (PcbOrderingView)
+  layers: integer('layers').notNull().default(2),
+  copperWeightOz: real('copper_weight_oz').notNull().default(1),
+  // Finish / appearance
+  finish: varchar('finish', { length: 50 }).notNull().default('HASL'),
+  solderMaskColor: varchar('solder_mask_color', { length: 30 }).notNull().default('green'),
+  silkscreenColor: varchar('silkscreen_color', { length: 30 }).notNull().default('white'),
+  // Manufacturing tolerances
+  minTraceWidthMm: real('min_trace_width_mm').notNull().default(0.2),
+  minDrillSizeMm: real('min_drill_size_mm').notNull().default(0.3),
+  // Advanced flags
+  castellatedHoles: boolean('castellated_holes').notNull().default(false),
+  impedanceControl: boolean('impedance_control').notNull().default(false),
+  viaInPad: boolean('via_in_pad').notNull().default(false),
+  goldFingers: boolean('gold_fingers').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('uq_boards_project').on(table.projectId),
+]);
+
+export const insertBoardSchema = createInsertSchema(boards).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Partial update schema — each view edits only the fields it owns; endpoint
+// merges rather than replacing, so a PCBLayoutView resize doesn't clobber
+// a PcbOrderingView finish choice.
+export const updateBoardSchema = z.object({
+  widthMm: z.number().positive().optional(),
+  heightMm: z.number().positive().optional(),
+  thicknessMm: z.number().positive().optional(),
+  cornerRadiusMm: z.number().nonnegative().optional(),
+  layers: z.number().int().min(1).max(32).optional(),
+  copperWeightOz: z.number().positive().optional(),
+  finish: z.enum(['HASL', 'ENIG', 'OSP', 'ENEPIG', 'Immersion_Tin', 'Immersion_Silver']).optional(),
+  solderMaskColor: z.enum(['green', 'red', 'blue', 'black', 'white', 'yellow', 'purple', 'matte-black', 'matte-green']).optional(),
+  silkscreenColor: z.enum(['white', 'black', 'yellow', 'red']).optional(),
+  minTraceWidthMm: z.number().positive().optional(),
+  minDrillSizeMm: z.number().positive().optional(),
+  castellatedHoles: z.boolean().optional(),
+  impedanceControl: z.boolean().optional(),
+  viaInPad: z.boolean().optional(),
+  goldFingers: z.boolean().optional(),
+}).strict();
+
+export type Board = typeof boards.$inferSelect;
+export type InsertBoard = z.infer<typeof insertBoardSchema>;
+export type UpdateBoard = z.infer<typeof updateBoardSchema>;
+
+// ---------------------------------------------------------------------------
 // PCB Orders (FG-10) — PCB fabrication order tracking
 // ---------------------------------------------------------------------------
 

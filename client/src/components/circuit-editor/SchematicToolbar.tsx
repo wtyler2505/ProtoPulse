@@ -38,18 +38,42 @@ interface SchematicToolbarProps {
   onOpenShortcuts?: () => void;
 }
 
+/**
+ * Toolbar tool definitions.
+ *
+ * `place-component` and `place-power` are NOT active drawing tools — they are
+ * shortcuts that focus the corresponding side-panel tab (Parts / Power) so the
+ * user can drag a component or power symbol onto the canvas. They dispatch
+ * window events (`protopulse:schematic-focus-parts-panel` /
+ * `protopulse:schematic-focus-power-panel`) handled in `SchematicView.tsx`,
+ * which opens the left panel and switches the tab. This decouples the toolbar
+ * (rendered inside `SchematicCanvas`) from the panel state (owned by
+ * `SchematicView`). See E2E-849 / E2E-915 / Plan 02 Phase 8.
+ */
+type ToolAction = 'set-tool' | 'focus-parts-panel' | 'focus-power-panel';
+
 const tools: {
   id: SchematicTool;
   icon: typeof MousePointer2;
   label: string;
-  enabled: boolean;
+  action: ToolAction;
 }[] = [
-  { id: 'select', icon: MousePointer2, label: 'Select (V)', enabled: true },
-  { id: 'pan', icon: Move, label: 'Pan (H)', enabled: true },
-  { id: 'draw-net', icon: Cable, label: 'Draw Net (W) — drag between pins', enabled: true },
-  { id: 'place-component', icon: Component, label: 'Place Component — drag from Parts panel', enabled: false },
-  { id: 'place-power', icon: Zap, label: 'Place Power — drag from Power panel', enabled: false },
-  { id: 'place-annotation', icon: Type, label: 'Place Annotation (T) — click to add text note', enabled: true },
+  { id: 'select', icon: MousePointer2, label: 'Select (V)', action: 'set-tool' },
+  { id: 'pan', icon: Move, label: 'Pan (H)', action: 'set-tool' },
+  { id: 'draw-net', icon: Cable, label: 'Draw Net (W) — drag between pins', action: 'set-tool' },
+  {
+    id: 'place-component',
+    icon: Component,
+    label: 'Place Component — open Parts panel',
+    action: 'focus-parts-panel',
+  },
+  {
+    id: 'place-power',
+    icon: Zap,
+    label: 'Place Power — open Power panel',
+    action: 'focus-power-panel',
+  },
+  { id: 'place-annotation', icon: Type, label: 'Place Annotation (T) — click to add text note', action: 'set-tool' },
 ];
 
 const SchematicToolbar = memo(function SchematicToolbar({
@@ -73,23 +97,34 @@ const SchematicToolbar = memo(function SchematicToolbar({
       className="absolute top-3 left-60 z-10 flex items-center gap-1 bg-card/80 backdrop-blur-xl border border-border p-1 shadow-lg"
       data-testid="schematic-toolbar"
     >
-      {tools.map((tool) => (
-        <StyledTooltip key={tool.id} content={tool.label} side="bottom">
-          <button
-            data-testid={`schematic-tool-${tool.id}`}
-            disabled={!tool.enabled}
-            aria-label={tool.label}
-            className={cn(
-              'p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
-              activeTool === tool.id && tool.enabled && 'bg-primary/20 text-primary border border-primary/40',
-              !tool.enabled && 'opacity-40 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground',
-            )}
-            onClick={() => tool.enabled && onToolChange(tool.id)}
-          >
-            <tool.icon className="w-5 h-5" />
-          </button>
-        </StyledTooltip>
-      ))}
+      {tools.map((tool) => {
+        const isToggleable = tool.action === 'set-tool';
+        const isActive = isToggleable && activeTool === tool.id;
+        const handleClick = () => {
+          if (tool.action === 'set-tool') {
+            onToolChange(tool.id);
+          } else if (tool.action === 'focus-parts-panel') {
+            window.dispatchEvent(new CustomEvent('protopulse:schematic-focus-parts-panel'));
+          } else if (tool.action === 'focus-power-panel') {
+            window.dispatchEvent(new CustomEvent('protopulse:schematic-focus-power-panel'));
+          }
+        };
+        return (
+          <StyledTooltip key={tool.id} content={tool.label} side="bottom">
+            <button
+              data-testid={`schematic-tool-${tool.id}`}
+              aria-label={tool.label}
+              className={cn(
+                'p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
+                isActive && 'bg-primary/20 text-primary border border-primary/40',
+              )}
+              onClick={handleClick}
+            >
+              <tool.icon className="w-5 h-5" />
+            </button>
+          </StyledTooltip>
+        );
+      })}
       <div className="w-px h-5 bg-border mx-0.5" />
       <StyledTooltip content="Undo (Ctrl+Z)" side="bottom">
         <button
