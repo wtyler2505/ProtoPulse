@@ -15,9 +15,8 @@ import {
   Zap,
   ChevronDown,
   RotateCcw,
-  BookOpen,
 } from 'lucide-react';
-import { VaultHoverCard } from '@/components/ui/vault-hover-card';
+import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -106,14 +105,12 @@ function OhmsLawCard() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Calculator className="w-4 h-4 text-[var(--color-editor-accent)]" />
           {"Ohm's Law"}
-          <VaultHoverCard slug="ohms-law-v-equals-i-times-r-derivation">
-            <span
-              data-testid="calc-ohms-vault-info"
-              className="ml-auto inline-flex cursor-help opacity-60 hover:opacity-100 transition-opacity"
-            >
-              <BookOpen className="w-3 h-3" />
-            </span>
-          </VaultHoverCard>
+          <VaultInfoIcon
+            slug="ohms-law-v-equals-i-times-r-derivation"
+            testId="calc-ohms-vault-info"
+            ariaLabel="About Ohm's Law"
+            className="ml-auto"
+          />
         </CardTitle>
         <CardDescription>V = I x R — enter any 2 values</CardDescription>
       </CardHeader>
@@ -221,14 +218,12 @@ function LedResistorCard() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Lightbulb className="w-4 h-4 text-[var(--color-editor-accent)]" />
           LED Resistor
-          <VaultHoverCard slug="led-current-limiting-resistor-sizing-and-thermal-derating">
-            <span
-              data-testid="calc-led-vault-info"
-              className="ml-auto inline-flex cursor-help opacity-60 hover:opacity-100 transition-opacity"
-            >
-              <BookOpen className="w-3 h-3" />
-            </span>
-          </VaultHoverCard>
+          <VaultInfoIcon
+            slug="led-current-limiting-resistor-sizing-and-thermal-derating"
+            testId="calc-led-vault-info"
+            ariaLabel="About LED resistor sizing"
+            className="ml-auto"
+          />
         </CardTitle>
         <CardDescription>R = (Vs - Vf) / If</CardDescription>
       </CardHeader>
@@ -360,14 +355,12 @@ function VoltageDividerCard() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <GitFork className="w-4 h-4 text-[var(--color-editor-accent)]" />
           Voltage Divider
-          <VaultHoverCard slug="voltage-divider-formula-and-loading-effect">
-            <span
-              data-testid="calc-divider-vault-info"
-              className="ml-auto inline-flex cursor-help opacity-60 hover:opacity-100 transition-opacity"
-            >
-              <BookOpen className="w-3 h-3" />
-            </span>
-          </VaultHoverCard>
+          <VaultInfoIcon
+            slug="voltage-divider-formula-and-loading-effect"
+            testId="calc-divider-vault-info"
+            ariaLabel="About voltage divider"
+            className="ml-auto"
+          />
         </CardTitle>
         <CardDescription>Vout = Vin x R2 / (R1 + R2)</CardDescription>
       </CardHeader>
@@ -558,14 +551,12 @@ function RcTimeConstantCard() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Timer className="w-4 h-4 text-[var(--color-editor-accent)]" />
           RC Time Constant
-          <VaultHoverCard slug="rc-lowpass-cutoff-frequency-1-over-2-pi-rc">
-            <span
-              data-testid="calc-rc-vault-info"
-              className="ml-auto inline-flex cursor-help opacity-60 hover:opacity-100 transition-opacity"
-            >
-              <BookOpen className="w-3 h-3" />
-            </span>
-          </VaultHoverCard>
+          <VaultInfoIcon
+            slug="rc-lowpass-cutoff-frequency-1-over-2-pi-rc"
+            testId="calc-rc-vault-info"
+            ariaLabel="About RC time constant"
+            className="ml-auto"
+          />
         </CardTitle>
         <CardDescription>{'\u03C4 = R \u00D7 C, fc = 1/(2\u03C0RC)'}</CardDescription>
       </CardHeader>
@@ -690,14 +681,12 @@ function FilterCutoffCard() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Radio className="w-4 h-4 text-[var(--color-editor-accent)]" />
           Filter Cutoff
-          <VaultHoverCard slug="rc-lowpass-cutoff-frequency-1-over-2-pi-rc">
-            <span
-              data-testid="calc-filter-vault-info"
-              className="ml-auto inline-flex cursor-help opacity-60 hover:opacity-100 transition-opacity"
-            >
-              <BookOpen className="w-3 h-3" />
-            </span>
-          </VaultHoverCard>
+          <VaultInfoIcon
+            slug="rc-lowpass-cutoff-frequency-1-over-2-pi-rc"
+            testId="calc-filter-vault-info"
+            ariaLabel="About filter cutoff frequency"
+            className="ml-auto"
+          />
         </CardTitle>
         <CardDescription>Low-pass, high-pass, and bandpass</CardDescription>
       </CardHeader>
@@ -891,14 +880,12 @@ function PowerDissipationCard() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Zap className="w-4 h-4 text-[var(--color-editor-accent)]" />
           Power Dissipation
-          <VaultHoverCard slug="ohms-law-v-equals-i-times-r-derivation">
-            <span
-              data-testid="calc-power-vault-info"
-              className="ml-auto inline-flex cursor-help opacity-60 hover:opacity-100 transition-opacity"
-            >
-              <BookOpen className="w-3 h-3" />
-            </span>
-          </VaultHoverCard>
+          <VaultInfoIcon
+            slug="ohms-law-v-equals-i-times-r-derivation"
+            testId="calc-power-vault-info"
+            ariaLabel="About power dissipation"
+            className="ml-auto"
+          />
         </CardTitle>
         <CardDescription>P=IV, P=I{'\u00B2'}R, P=V{'\u00B2'}/R — enter any 2</CardDescription>
       </CardHeader>

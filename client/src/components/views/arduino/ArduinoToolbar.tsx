@@ -10,10 +10,9 @@ import {
   Download,
   Square,
   Wand2,
-  BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { VaultHoverCard } from '@/components/ui/vault-hover-card';
+import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -175,15 +174,12 @@ export default function ArduinoToolbar({
               {activeJob?.jobType === 'compile' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
               <span>Verify</span>
             </Button>
-            <VaultHoverCard topic="arduino-build-pipeline-verify-vs-upload-compilation-only">
-              <span
-                data-testid="arduino-verify-vault-info"
-                aria-label="About Arduino Verify vs Upload"
-                className="inline-flex items-center cursor-help opacity-60 hover:opacity-100 transition-opacity"
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-              </span>
-            </VaultHoverCard>
+            <VaultInfoIcon
+              topic="arduino-build-pipeline-verify-vs-upload-compilation-only"
+              testId="arduino-verify-vault-info"
+              ariaLabel="About Arduino Verify vs Upload"
+              sizeClass="w-3.5 h-3.5"
+            />
           </div>
 
           <Button

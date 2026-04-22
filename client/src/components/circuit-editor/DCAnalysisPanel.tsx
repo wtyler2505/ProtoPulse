@@ -6,9 +6,8 @@ import {
   XCircle,
   ChevronDown,
   ChevronRight,
-  BookOpen,
 } from 'lucide-react';
-import { VaultHoverCard } from '@/components/ui/vault-hover-card';
+import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
 import { cn } from '@/lib/utils';
 import {
   solveDCOperatingPoint,
@@ -132,15 +131,11 @@ const DCAnalysisPanel = memo(function DCAnalysisPanel({
         <span className="text-xs font-medium text-foreground flex-1">
           DC Operating Point
         </span>
-        <VaultHoverCard slug="dc-operating-point-analysis-definition-and-interpretation">
-          <span
-            data-testid="dc-operating-point-vault-info"
-            aria-label="About DC Operating Point analysis"
-            className="inline-flex items-center cursor-help opacity-60 hover:opacity-100 transition-opacity"
-          >
-            <BookOpen className="w-3 h-3" />
-          </span>
-        </VaultHoverCard>
+        <VaultInfoIcon
+          slug="dc-operating-point-analysis-definition-and-interpretation"
+          testId="dc-operating-point-vault-info"
+          ariaLabel="About DC Operating Point analysis"
+        />
         <button
           data-testid="dc-analysis-run"
           onClick={handleRunAnalysis}

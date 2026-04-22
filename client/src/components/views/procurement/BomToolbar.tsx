@@ -1,7 +1,7 @@
-import { Search, SlidersHorizontal, Plus, Download, Zap, Layers, BookOpen } from 'lucide-react';
+import { Search, SlidersHorizontal, Plus, Download, Zap, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
-import { VaultHoverCard } from '@/components/ui/vault-hover-card';
+import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
 import { cn } from '@/lib/utils';
 
 export interface BomToolbarProps {
@@ -74,15 +74,11 @@ export function BomToolbar({
             </Button>
           </StyledTooltip>
           {/* TODO(plan-10-wave-2): add identical vault info icons on Cost Optimisation + Assembly toggles */}
-          <VaultHoverCard topic="electrostatic-discharge-esd-protection-filter-definition">
-            <span
-              data-testid="esd-vault-info"
-              aria-label="About ESD filter"
-              className="inline-flex items-center cursor-help opacity-60 hover:opacity-100 transition-opacity"
-            >
-              <BookOpen className="w-3 h-3" />
-            </span>
-          </VaultHoverCard>
+          <VaultInfoIcon
+            topic="electrostatic-discharge-esd-protection-filter-definition"
+            testId="esd-vault-info"
+            ariaLabel="About ESD filter"
+          />
         </div>
         <StyledTooltip content={showAssemblyGroups ? 'Show flat BOM list' : 'Group by assembly category'} side="bottom">
           <Button
