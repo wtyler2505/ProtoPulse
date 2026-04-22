@@ -4,7 +4,9 @@
  * camera angle buttons, layer visibility toggles, and dimensions.
  */
 
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { useProjectId } from '@/lib/contexts/project-id-context';
+import { useProjectBoard } from '@/hooks/useProjectBoard';
 import {
   Box,
   Eye,
@@ -417,10 +419,40 @@ export default function BoardViewer3DView() {
     importScene,
   } = useBoardViewer3D();
 
+  // Plan 02 Phase 4 / E2E-228: drive the 3D singleton from the shared per-project
+  // board source of truth. The singleton mirrors server data; user edits flow
+  // back via updateBoard() below.
+  const projectId = useProjectId();
+  const { board: projectBoard, updateBoard } = useProjectBoard(projectId);
+
+  // Sync server board -> 3D singleton whenever the server row changes.
+  useEffect(() => {
+    setBoard({
+      width: projectBoard.widthMm,
+      height: projectBoard.heightMm,
+      thickness: projectBoard.thicknessMm,
+      cornerRadius: projectBoard.cornerRadiusMm,
+    });
+  }, [
+    projectBoard.widthMm,
+    projectBoard.heightMm,
+    projectBoard.thicknessMm,
+    projectBoard.cornerRadiusMm,
+    setBoard,
+  ]);
+
   const [viewAngle, setViewAngle] = useState<ViewAngle>('isometric');
   const [editWidth, setEditWidth] = useState(String(board.width));
   const [editHeight, setEditHeight] = useState(String(board.height));
   const [editThickness, setEditThickness] = useState(String(board.thickness));
+
+  // Keep the edit fields in sync with the server-side board as it updates
+  // from other views (e.g. user resized in PCBLayoutView).
+  useEffect(() => {
+    setEditWidth(String(projectBoard.widthMm));
+    setEditHeight(String(projectBoard.heightMm));
+    setEditThickness(String(projectBoard.thicknessMm));
+  }, [projectBoard.widthMm, projectBoard.heightMm, projectBoard.thicknessMm]);
 
   const rotation = VIEW_ROTATIONS[viewAngle];
   const scale = 2; // px per mm for CSS 3D depth
@@ -436,9 +468,14 @@ export default function BoardViewer3DView() {
     const h = parseFloat(editHeight);
     const t = parseFloat(editThickness);
     if (!isNaN(w) && !isNaN(h) && !isNaN(t) && w > 0 && h > 0 && t > 0) {
+      // Update local singleton (snappy UI) and persist through the hook so
+      // PCBLayoutView / PcbOrderingView pick up the change.
       setBoard({ width: w, height: h, thickness: t, cornerRadius: board.cornerRadius });
+      if (projectId > 0) {
+        void updateBoard({ widthMm: w, heightMm: h, thicknessMm: t }).catch(() => undefined);
+      }
     }
-  }, [editWidth, editHeight, editThickness, setBoard, board.cornerRadius]);
+  }, [editWidth, editHeight, editThickness, setBoard, board.cornerRadius, projectId, updateBoard]);
 
   const handleExport = useCallback(() => {
     const json = exportScene();

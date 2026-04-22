@@ -13,6 +13,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect, useSyncExternalStore } from 'react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+import { useProjectBoard } from '@/hooks/useProjectBoard';
 import {
   useCircuitDesigns,
   useCircuitInstances,
@@ -408,6 +409,11 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   const { data: circuitVias } = useCircuitVias(circuitId);
   const { data: zones } = usePcbZones(projectId);
   const { data: commentResult } = useComments(projectId, { targetType: 'spatial', status: 'open' });
+  // Plan 02 Phase 4 / E2E-228: shared per-project board source of truth. Width
+  // and height flow from here so PcbOrderingView + BoardViewer3DView see the
+  // same numbers. Legacy per-circuit settings keys are preserved for now to
+  // reduce blast radius — a follow-up will delete the circuit-settings write.
+  const { board: projectBoard, updateBoard } = useProjectBoard(projectId);
   const comments = commentResult?.data ?? [];
 
   const createWireMutation = useCreateCircuitWire();
@@ -447,16 +453,34 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   const [traceWidth, setTraceWidth] = useState(DEFAULT_TRACE_WIDTH);
   const [tracePoints, setTracePoints] = useState<Array<{ x: number; y: number }>>([]);
   const [zonePoints, setZonePoints] = useState<Array<{ x: number; y: number }>>([]);
-  // Board dimensions — load from circuit settings, fall back to defaults
+  // Board dimensions — prefer the shared per-project board (Plan 02 Phase 4).
+  // Fall back to legacy per-circuit settings if the shared row hasn't loaded
+  // yet (e.g. first paint) or a legacy project still has only circuit-scoped
+  // dims.
   const savedSettings = circuitSettings as Record<string, unknown> | null;
   const [boardWidth, setBoardWidth] = useState(() => {
+    if (projectBoard.id > 0 && projectBoard.widthMm > 0) { return projectBoard.widthMm; }
     const saved = savedSettings?.pcbBoardWidth;
     return typeof saved === 'number' && saved > 0 ? saved : DEFAULT_BOARD.width;
   });
   const [boardHeight, setBoardHeight] = useState(() => {
+    if (projectBoard.id > 0 && projectBoard.heightMm > 0) { return projectBoard.heightMm; }
     const saved = savedSettings?.pcbBoardHeight;
     return typeof saved === 'number' && saved > 0 ? saved : DEFAULT_BOARD.height;
   });
+
+  // Sync: when the shared board updates from elsewhere (3D viewer, order form),
+  // reflect that here.
+  useEffect(() => {
+    if (projectBoard.id > 0) {
+      if (projectBoard.widthMm !== boardWidth) { setBoardWidth(projectBoard.widthMm); }
+      if (projectBoard.heightMm !== boardHeight) { setBoardHeight(projectBoard.heightMm); }
+    }
+    // boardWidth/boardHeight intentionally omitted — we only want this to fire
+    // when the server row changes, not on every local edit (which would fight
+    // itself during typing).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectBoard.id, projectBoard.widthMm, projectBoard.heightMm]);
   const [mouseBoardPos, setMouseBoardPos] = useState<{ x: number; y: number } | null>(null);
   const [selectedViaId, setSelectedViaId] = useState<string | null>(null);
 
@@ -493,13 +517,19 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
     boardDimTimerRef.current = setTimeout(() => {
       const mergedSettings = { ...(currentSaved ?? {}), pcbBoardWidth: boardWidth, pcbBoardHeight: boardHeight };
       updateDesignMutation.mutate({ projectId, id: circuitId, settings: mergedSettings });
+      // Plan 02 Phase 4: mirror to the shared per-project board so the 3D
+      // viewer and order form see the same dimensions. Fire-and-forget; the
+      // optimistic UX path lives inside useProjectBoard.
+      if (projectId > 0) {
+        void updateBoard({ widthMm: boardWidth, heightMm: boardHeight }).catch(() => undefined);
+      }
     }, 500);
     return () => {
       if (boardDimTimerRef.current) {
         clearTimeout(boardDimTimerRef.current);
       }
     };
-  }, [boardWidth, boardHeight, circuitId, projectId, circuitSettings, updateDesignMutation]);
+  }, [boardWidth, boardHeight, circuitId, projectId, circuitSettings, updateDesignMutation, updateBoard]);
 
   // --- Refs ---
   const svgRef = useRef<SVGSVGElement>(null);

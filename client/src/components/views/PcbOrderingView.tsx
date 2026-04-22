@@ -3,7 +3,10 @@
  * Step-based: Board specs -> Select fab -> DFM check -> Quote comparison -> Order summary.
  */
 
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useProjectId } from '@/lib/contexts/project-id-context';
+import { useProjectBoard } from '@/hooks/useProjectBoard';
+import type { Board, UpdateBoard } from '@shared/schema';
 import {
   ShoppingBag,
   CheckCircle2,
@@ -117,6 +120,51 @@ const DEFAULT_SPEC: BoardSpecification = {
   viaInPad: false,
   goldFingers: false,
 };
+
+// ---------------------------------------------------------------------------
+// Adapters — bridge between the shared Board row (schema.ts) and the legacy
+// BoardSpecification shape used throughout this view (client/src/lib/pcb-ordering).
+// Keeps the existing form / DFM / quote engines untouched while routing
+// reads/writes through useProjectBoard.
+// ---------------------------------------------------------------------------
+
+function boardToSpec(board: Board): BoardSpecification {
+  return {
+    width: board.widthMm,
+    height: board.heightMm,
+    layers: board.layers,
+    thickness: board.thicknessMm,
+    copperWeight: board.copperWeightOz as CopperWeightOz,
+    finish: board.finish as BoardFinish,
+    solderMaskColor: board.solderMaskColor as SolderMaskColor,
+    silkscreenColor: board.silkscreenColor as SilkscreenColor,
+    minTraceWidth: board.minTraceWidthMm,
+    minDrillSize: board.minDrillSizeMm,
+    castellatedHoles: board.castellatedHoles,
+    impedanceControl: board.impedanceControl,
+    viaInPad: board.viaInPad,
+    goldFingers: board.goldFingers,
+  };
+}
+
+function specDiffToBoardPatch(prev: BoardSpecification, next: BoardSpecification): UpdateBoard {
+  const patch: UpdateBoard = {};
+  if (next.width !== prev.width) { patch.widthMm = next.width; }
+  if (next.height !== prev.height) { patch.heightMm = next.height; }
+  if (next.layers !== prev.layers) { patch.layers = next.layers; }
+  if (next.thickness !== prev.thickness) { patch.thicknessMm = next.thickness; }
+  if (next.copperWeight !== prev.copperWeight) { patch.copperWeightOz = next.copperWeight; }
+  if (next.finish !== prev.finish) { patch.finish = next.finish; }
+  if (next.solderMaskColor !== prev.solderMaskColor) { patch.solderMaskColor = next.solderMaskColor; }
+  if (next.silkscreenColor !== prev.silkscreenColor) { patch.silkscreenColor = next.silkscreenColor; }
+  if (next.minTraceWidth !== prev.minTraceWidth) { patch.minTraceWidthMm = next.minTraceWidth; }
+  if (next.minDrillSize !== prev.minDrillSize) { patch.minDrillSizeMm = next.minDrillSize; }
+  if (next.castellatedHoles !== prev.castellatedHoles) { patch.castellatedHoles = next.castellatedHoles; }
+  if (next.impedanceControl !== prev.impedanceControl) { patch.impedanceControl = next.impedanceControl; }
+  if (next.viaInPad !== prev.viaInPad) { patch.viaInPad = next.viaInPad; }
+  if (next.goldFingers !== prev.goldFingers) { patch.goldFingers = next.goldFingers; }
+  return patch;
+}
 
 // ---------------------------------------------------------------------------
 // Step 1: Board Specs Form
@@ -647,8 +695,32 @@ export default function PcbOrderingView() {
     compareFabricators,
   } = usePcbOrdering();
 
+  const projectId = useProjectId();
+  const { board, updateBoard } = useProjectBoard(projectId);
+
   const [step, setStep] = useState(0);
-  const [spec, setSpec] = useState<BoardSpecification>({ ...DEFAULT_SPEC });
+  const [spec, setSpec] = useState<BoardSpecification>(() => boardToSpec(board));
+  // Keep local `spec` in sync when the server board changes (e.g. another view
+  // edits width/height). We deliberately avoid a full identity swap on every
+  // render so the user can type into inputs without cursor reset.
+  const lastBoardRef = useRef(board);
+  useEffect(() => {
+    if (lastBoardRef.current === board) { return; }
+    lastBoardRef.current = board;
+    setSpec(boardToSpec(board));
+  }, [board]);
+
+  // Publish local spec changes back to the shared board source of truth.
+  const handleSpecChange = useCallback((next: BoardSpecification) => {
+    setSpec((prev) => {
+      const patch = specDiffToBoardPatch(prev, next);
+      if (Object.keys(patch).length > 0 && projectId > 0) {
+        void updateBoard(patch).catch(() => undefined);
+      }
+      return next;
+    });
+  }, [projectId, updateBoard]);
+
   const [selectedFab, setSelectedFab] = useState<FabricatorId | null>(null);
   const [dfmResult, setDfmResult] = useState<DfmCheckResult | null>(null);
   const [quotes, setQuotes] = useState<PriceQuote[]>([]);
@@ -791,7 +863,7 @@ export default function PcbOrderingView() {
                   className="w-24"
                 />
               </div>
-              <BoardSpecForm spec={spec} onChange={setSpec} />
+              <BoardSpecForm spec={spec} onChange={handleSpecChange} />
             </div>
           </ScrollArea>
         </TabsContent>

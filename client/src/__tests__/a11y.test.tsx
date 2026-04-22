@@ -110,6 +110,32 @@ vi.mock('@/lib/contexts/project-id-context', () => ({
   ProjectIdProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// Plan 02 Phase 4: the shared per-project board hook is used by PCBLayoutView,
+// BoardViewer3DView, and PcbOrderingView. Stub it so the a11y harness doesn't
+// fire real fetches (which would trigger toast+onError paths and shift the
+// rendered DOM snapshot between axe's synchronous container pass and its
+// assertion).
+vi.mock('@/hooks/useProjectBoard', () => ({
+  useProjectBoard: () => ({
+    board: {
+      id: 0, projectId: 1,
+      widthMm: 100, heightMm: 80, thicknessMm: 1.6, cornerRadiusMm: 2,
+      layers: 2, copperWeightOz: 1,
+      finish: 'HASL', solderMaskColor: 'green', silkscreenColor: 'white',
+      minTraceWidthMm: 0.2, minDrillSizeMm: 0.3,
+      castellatedHoles: false, impedanceControl: false, viaInPad: false, goldFingers: false,
+      createdAt: new Date(0), updatedAt: new Date(0),
+    },
+    isLoading: false,
+    isError: false,
+    error: null,
+    updateBoard: vi.fn().mockResolvedValue(undefined),
+    isUpdating: false,
+  }),
+  DEFAULT_PROJECT_BOARD: {},
+  projectBoardQueryKey: (id: number) => ['projects', id, 'board'] as const,
+}));
+
 vi.mock('@/lib/auth-context', () => ({
   useAuth: () => ({ user: { id: 1, username: 'test' }, isLoading: false, login: vi.fn(), logout: vi.fn() }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,

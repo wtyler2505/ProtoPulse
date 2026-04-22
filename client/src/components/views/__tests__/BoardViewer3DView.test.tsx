@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from '@/test-utils/createTestQueryClient';
+import { ProjectIdProvider } from '@/lib/contexts/project-id-context';
 
 // ---------------------------------------------------------------------------
 // Package heights export (must match the module under test)
@@ -163,7 +166,17 @@ import BoardViewer3DView, { PACKAGE_HEIGHTS } from '@/components/views/BoardView
 // ---------------------------------------------------------------------------
 
 function renderView() {
-  return render(React.createElement(BoardViewer3DView));
+  // Plan 02 Phase 4: view now consumes useProjectBoard() which requires
+  // ProjectIdProvider + a QueryClient. With projectId=0 the hook short-circuits
+  // (no network) while still exposing a populated default board.
+  const qc = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={qc}>
+      <ProjectIdProvider projectId={0}>
+        <BoardViewer3DView />
+      </ProjectIdProvider>
+    </QueryClientProvider>,
+  );
 }
 
 // ---------------------------------------------------------------------------
