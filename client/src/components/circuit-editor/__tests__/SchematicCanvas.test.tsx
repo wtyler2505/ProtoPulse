@@ -183,6 +183,35 @@ describe('SchematicCanvas', () => {
     expect(screen.getByTestId('react-flow')).toBeDefined();
   });
 
+  // E2E-950, E2E-966: empty-state heading must NOT persist in DOM once populated
+  // Regression lock-in: SchematicCanvas.tsx must conditionally render <EmptyState>
+  // (not CSS-hide it) so screen readers don't announce "Empty Schematic" over a
+  // populated canvas. Current code path: line ~920
+  //   `{(!instances || instances.length === 0) && <EmptyState title="Empty Schematic" ... />}`
+  // If someone regresses this to `className={hidden}`-style hiding, this test will fail.
+  it('does not render Empty Schematic heading when instances is populated (E2E-950, E2E-966)', () => {
+    mockUseCircuitInstances.mockReturnValue({
+      data: [
+        { id: 101, circuitId: 1, partId: 1, referenceDesignator: 'R1', schematicX: 0, schematicY: 0, schematicRotation: 0, properties: {} },
+      ],
+    });
+
+    renderCanvas();
+
+    // Empty-state heading must not be in the DOM (not merely hidden)
+    expect(screen.queryByTestId('empty-state-title')).toBeNull();
+    expect(screen.queryByText(/Empty Schematic/i)).toBeNull();
+  });
+
+  it('renders Empty Schematic heading when instances is empty (E2E-950 inverse)', () => {
+    mockUseCircuitInstances.mockReturnValue({ data: [] });
+
+    renderCanvas();
+
+    // When truly empty, the heading IS shown
+    expect(screen.getByTestId('empty-state-title').textContent).toMatch(/Empty Schematic/i);
+  });
+
   it('handles Ctrl+C to copy selected nodes', async () => {
     const mockInstances = [
       { id: 101, partId: 1, referenceDesignator: 'R1', schematicX: 0, schematicY: 0, schematicRotation: 0, properties: {} }
