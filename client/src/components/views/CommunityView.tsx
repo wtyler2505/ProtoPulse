@@ -9,8 +9,6 @@ import {
   Search,
   Star,
   Download,
-  ArrowLeft,
-  Filter,
   Plus,
   FolderOpen,
   Package,
@@ -25,7 +23,7 @@ import { useBom } from '@/lib/contexts/bom-context';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VaultHoverCard } from '@/components/ui/vault-hover-card';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -127,12 +125,18 @@ const ComponentCard = memo(function ComponentCard({ component, onClick }: Compon
   const typeInfo = TYPE_LABELS[component.type];
 
   return (
-    <Card
+    <button
+      type="button"
       data-testid={`community-card-${component.id}`}
-      className="bg-card/60 border-border/50 hover:border-primary/30 transition-colors cursor-pointer"
+      aria-label={`Open details for ${component.name}`}
       onClick={() => { onClick(component); }}
+      className={cn(
+        'w-full text-left rounded-lg border bg-card/60 border-border/50 hover:border-primary/30',
+        'transition-colors cursor-pointer',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+      )}
     >
-      <CardContent className="p-3 space-y-2">
+      <div className="p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div data-testid={`component-name-${component.id}`} className="text-sm font-semibold truncate">
@@ -159,15 +163,27 @@ const ComponentCard = memo(function ComponentCard({ component, onClick }: Compon
             {component.downloads}
           </span>
           <span data-testid={`component-version-${component.id}`}>v{component.version}</span>
-          <VaultHoverCard topic={`license-${component.license.toLowerCase()}-plain-english`}>
-            <Badge
-              variant="secondary"
-              className="text-xs px-1.5 py-0 cursor-help"
-              data-testid={`component-license-${component.id}`}
-            >
-              {component.license}
-            </Badge>
-          </VaultHoverCard>
+          {/*
+           * The license badge hosts a VaultHoverCard; stop propagation so
+           * hovering/clicking the hover-card trigger does NOT also fire the
+           * card's open-detail onClick. Consumers expect the badge to be an
+           * inline teaching affordance, not a secondary detail trigger.
+           */}
+          <span
+            onClick={(e) => { e.stopPropagation(); }}
+            onKeyDown={(e) => { e.stopPropagation(); }}
+            role="presentation"
+          >
+            <VaultHoverCard topic={`license-${component.license.toLowerCase()}-plain-english`}>
+              <Badge
+                variant="secondary"
+                className="text-xs px-1.5 py-0 cursor-help"
+                data-testid={`component-license-${component.id}`}
+              >
+                {component.license}
+              </Badge>
+            </VaultHoverCard>
+          </span>
         </div>
 
         {component.tags.length > 0 && (
@@ -182,8 +198,8 @@ const ComponentCard = memo(function ComponentCard({ component, onClick }: Compon
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </button>
   );
 });
 
@@ -193,32 +209,19 @@ const ComponentCard = memo(function ComponentCard({ component, onClick }: Compon
 
 interface ComponentDetailProps {
   component: CommunityComponent;
-  onBack: () => void;
   onDownload: (id: string) => void;
   onRate: (componentId: string, rating: number) => void;
 }
 
 const ComponentDetail = memo(function ComponentDetail({
   component,
-  onBack,
   onDownload,
   onRate,
 }: ComponentDetailProps) {
   const typeInfo = TYPE_LABELS[component.type];
 
   return (
-    <div data-testid="component-detail" className="flex flex-col h-full">
-      <Button
-        data-testid="detail-back"
-        variant="ghost"
-        size="sm"
-        className="self-start mb-4"
-        onClick={onBack}
-      >
-        <ArrowLeft className="w-4 h-4 mr-1" />
-        Back to library
-      </Button>
-
+    <div data-testid="component-detail" className="flex flex-col max-h-[70vh]">
       <ScrollArea className="flex-1">
         <div className="max-w-2xl space-y-4">
           <div className="flex items-start justify-between gap-4">
@@ -499,31 +502,6 @@ export default function CommunityView() {
     createCollection({ name, description });
   }, [createCollection]);
 
-  // Detail view
-  if (selectedComponent) {
-    return (
-      <div data-testid="community-view" className="flex flex-col h-full p-4">
-        <ComponentDetail
-          component={selectedComponent}
-          onBack={() => { setSelectedComponent(null); }}
-          onDownload={handleDownload}
-          onRate={handleRate}
-        />
-        {bomPromptPart && (
-          <AddToBomPrompt
-            bomPreview={mapCommunityPartToBom(bomPromptPart)}
-            componentName={bomPromptPart.name}
-            onConfirm={(item) => {
-              addBomItem(item);
-              setBomPromptPart(null);
-            }}
-            onDismiss={() => { setBomPromptPart(null); }}
-          />
-        )}
-      </div>
-    );
-  }
-
   return (
     <div data-testid="community-view" className="flex flex-col h-full gap-4 p-4">
       {/* Header */}
@@ -690,6 +668,40 @@ export default function CommunityView() {
           onDismiss={() => { setBomPromptPart(null); }}
         />
       )}
+
+      {/*
+       * Detail dialog (E2E-266, Plan 02 Phase 5).
+       * Previously clicking a community card swapped the entire view to an
+       * inline ComponentDetail pane, which the 2026-04-18 walkthrough auditor
+       * reported as "NOTHING visible" — the replacement was too subtle to
+       * read as an interaction result. Radix Dialog provides an unambiguous
+       * modal affordance plus focus-trap + Escape-to-close for free.
+       */}
+      <Dialog
+        open={selectedComponent !== null}
+        onOpenChange={(open) => { if (!open) { setSelectedComponent(null); } }}
+      >
+        <DialogContent
+          data-testid="community-detail-dialog"
+          className="sm:max-w-2xl"
+        >
+          {selectedComponent && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="sr-only">{selectedComponent.name}</DialogTitle>
+                <DialogDescription className="sr-only">
+                  Community component details for {selectedComponent.name} by {selectedComponent.author.name}.
+                </DialogDescription>
+              </DialogHeader>
+              <ComponentDetail
+                component={selectedComponent}
+                onDownload={handleDownload}
+                onRate={handleRate}
+              />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
