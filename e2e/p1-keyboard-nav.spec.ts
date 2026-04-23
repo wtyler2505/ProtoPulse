@@ -20,8 +20,8 @@
  *
  * Related backlog entries:
  *   - BL-0868: color-contrast ring (Phase 9) — green after Phase 9 landed.
- *   - BL-0985: breadboard tie-points intentionally not tab-stops (Phase 7).
- *   - BL-1087: 3D viewer / canvas views — keyboard story deferred (pointer-only today).
+ *   - BL-0869: breadboard tie-points intentionally not tab-stops (Phase 7).
+ *   - BL-0870: 3D viewer / canvas views — keyboard story deferred (pointer-only today).
  */
 import { test, expect, type Page } from '@playwright/test';
 import { tabThrough, assertNoKeyboardTrap, type FocusStop } from './keyboard-helpers';
@@ -143,11 +143,11 @@ test.describe('Keyboard nav — Core Design Views', () => {
     await runKeyboardKernel(page, 'component_editor');
   });
 
-  // 3D viewer is a Three.js canvas — keyboard navigation is deferred (BL-1087).
+  // 3D viewer is a Three.js canvas — keyboard navigation is deferred (BL-0870).
   // Pointer-only today; adding WASD/arrow-nav requires a dedicated camera
   // controller. Skipped rather than failed per Plan 03 Phase 6 "don't be
   // perfectionist" policy.
-  test.skip('viewer_3d — canvas-only, keyboard story deferred (BL-1087)', () => {});
+  test.skip('viewer_3d — canvas-only, keyboard story deferred (BL-0870)', () => {});
 });
 
 // ---------------------------------------------------------------------------
