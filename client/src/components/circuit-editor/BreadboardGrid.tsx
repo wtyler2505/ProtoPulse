@@ -1,15 +1,18 @@
 import React, { useCallback, useMemo } from 'react';
+
 import {
   BB,
-  coordToPixel,
   coordKey,
   getBoardDimensions,
-  type BreadboardCoord,
-  type TiePoint,
-  type RailPoint,
-  type RailId,
-  type ColumnLetter,
-  type PixelPos,
+  coordToPixel,
+} from '@/lib/circuit-editor/breadboard-model';
+import type {
+  BreadboardCoord,
+  ColumnLetter,
+  PixelPos,
+  RailId,
+  RailPoint,
+  TiePoint,
 } from '@/lib/circuit-editor/breadboard-model';
 
 // ---------------------------------------------------------------------------
@@ -108,6 +111,21 @@ function buildRailPoints(): RailPoint[] {
 const TERMINAL_POINTS = buildTerminalPoints();
 const RAIL_POINTS = buildRailPoints();
 
+const RAIL_ARIA_LABELS: Record<RailId, string> = {
+  left_pos: 'Left positive rail',
+  left_neg: 'Left negative rail',
+  right_pos: 'Right positive rail',
+  right_neg: 'Right negative rail',
+};
+
+function getTiePointAriaLabel(coord: BreadboardCoord): string {
+  if (coord.type === 'terminal') {
+    return `Terminal column ${coord.col.toUpperCase()}, row ${String(coord.row)}`;
+  }
+
+  return `${RAIL_ARIA_LABELS[coord.rail]}, point ${String(coord.index + 1)}`;
+}
+
 /** Row numbers to label on the left axis */
 const ROW_LABELS = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 63];
 
@@ -151,6 +169,8 @@ const Hole = React.memo(function Hole({
     onMouseEnter?.(coord);
   }, [onMouseEnter, coord]);
 
+  const ariaLabel = getTiePointAriaLabel(coord);
+
   return (
     <circle
       cx={cx}
@@ -163,6 +183,8 @@ const Hole = React.memo(function Hole({
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={onMouseLeave}
+      role="button"
+      aria-label={ariaLabel}
       data-testid={`hole-${coordKey(coord)}`}
     />
   );
