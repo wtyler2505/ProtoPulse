@@ -1,13 +1,21 @@
-import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import { SnippetLibrary } from '@/lib/design-reuse';
 
 import DesignPatternsView from '../DesignPatternsView';
-import { SnippetLibrary } from '@/lib/design-reuse';
 
 describe('DesignPatternsView', () => {
   beforeEach(() => {
     localStorage.clear();
     SnippetLibrary.resetForTesting();
+  });
+
+  it('patterns tab empty-state does not leak into the DOM when patterns are populated (E2E-966)', () => {
+    render(<DesignPatternsView />);
+
+    expect(screen.getByTestId('pattern-group-power')).toBeInTheDocument();
+    expect(screen.queryByTestId('empty-state-title')).toBeNull();
   });
 
   // Under full parallel test load (~29k tests), the React render + async waits can exceed the

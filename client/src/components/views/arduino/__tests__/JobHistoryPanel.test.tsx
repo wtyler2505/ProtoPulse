@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import JobHistoryPanel from '../JobHistoryPanel';
 
 // ---------------------------------------------------------------------------
@@ -113,7 +114,9 @@ describe('JobHistoryPanel', () => {
 
   it('renders the panel container', () => {
     const qc = createQueryClient();
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {})); // never resolves
+    globalThis.fetch = vi.fn().mockReturnValue(new Promise((resolve) => {
+      void resolve;
+    }));
 
     render(
       <QueryClientProvider client={qc}>
@@ -132,6 +135,7 @@ describe('JobHistoryPanel', () => {
     });
 
     expect(screen.getByTestId('job-history-panel')).toBeDefined();
+    expect(screen.getByTestId('empty-state-title')).toHaveTextContent('No jobs yet');
   });
 
   it('renders job list with correct testids', async () => {
@@ -144,6 +148,7 @@ describe('JobHistoryPanel', () => {
     expect(screen.getByTestId('job-history-item-2')).toBeDefined();
     expect(screen.getByTestId('job-history-item-3')).toBeDefined();
     expect(screen.getByTestId('job-history-item-4')).toBeDefined();
+    expect(screen.queryByTestId('empty-state-title')).toBeNull();
   });
 
   it('displays status badges with correct labels', async () => {

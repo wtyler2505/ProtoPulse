@@ -10,6 +10,7 @@
  */
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
+
 import {
   Search,
   Cpu,
@@ -30,14 +31,11 @@ import {
   Copy,
   Layers,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { InteractiveCard } from '@/components/ui/interactive-card';
+
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog,
   DialogContent,
@@ -46,13 +44,17 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Input } from '@/components/ui/input';
+import { InteractiveCard } from '@/components/ui/interactive-card';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { getAllPatterns, getPatternsByCategory, getPatternsByDifficulty, searchPatterns } from '@/lib/design-patterns';
-import { useDesignSnippets } from '@/lib/design-reuse';
-
 import type { PatternCategory, PatternDifficulty, DesignPattern } from '@/lib/design-patterns';
+import { useDesignSnippets } from '@/lib/design-reuse';
 import type { SnippetCategory, DesignSnippet, CreateSnippetInput } from '@/lib/design-reuse';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -398,13 +400,12 @@ function PatternsTabContent() {
 
       {/* Grouped cards */}
       {filteredPatterns.length === 0 ? (
-        <div
-          data-testid="design-patterns-empty"
-          className="text-center py-12 text-muted-foreground"
-        >
-          <Search className="w-8 h-8 mx-auto mb-3 opacity-40" />
-          <p className="text-sm">No patterns match your filters.</p>
-          <p className="text-xs mt-1">Try a different search term or clear filters.</p>
+        <div data-testid="design-patterns-empty" className="py-12">
+          <EmptyState
+            icon={Search}
+            title="No patterns match your filters."
+            description="Try a different search term or clear filters."
+          />
         </div>
       ) : (
         <div className="space-y-6">
@@ -519,9 +520,18 @@ function SnippetCard({
                   >
                     <span className="font-medium text-foreground">{node.label}</span>
                     <span className="text-muted-foreground ml-1.5">({node.type})</span>
-                    {node.properties.value != null && (
-                      <span className="font-mono text-[var(--color-editor-accent)] ml-1.5">{String(node.properties.value)}</span>
-                    )}
+                    {(() => {
+                      const value = node.properties.value;
+                      const displayValue = typeof value === 'string' || typeof value === 'number'
+                        ? String(value)
+                        : null;
+
+                      if (displayValue === null) {
+                        return null;
+                      }
+
+                      return <span className="font-mono text-[var(--color-editor-accent)] ml-1.5">{displayValue}</span>;
+                    })()}
                   </div>
                 ))}
               </div>
@@ -874,13 +884,12 @@ function MySnippetsTabContent() {
 
       {/* Snippets grid */}
       {filteredSnippets.length === 0 ? (
-        <div
-          data-testid="snippets-empty"
-          className="text-center py-12 text-muted-foreground"
-        >
-          <Layers className="w-8 h-8 mx-auto mb-3 opacity-40" />
-          <p className="text-sm">No snippets match your filters.</p>
-          <p className="text-xs mt-1">Create a new snippet or try different search terms.</p>
+        <div data-testid="snippets-empty" className="py-12">
+          <EmptyState
+            icon={Layers}
+            title="No snippets match your filters."
+            description="Create a new snippet or try different search terms."
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="snippets-grid">

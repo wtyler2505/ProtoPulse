@@ -1,11 +1,6 @@
 import { useState } from 'react';
+
 import { useQuery } from '@tanstack/react-query';
-import type { ArduinoJob } from '@shared/schema';
-import { useProjectId } from '@/lib/project-context';
-import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   History,
   ChevronDown,
@@ -16,6 +11,16 @@ import {
   Clock,
   Loader2,
 } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useProjectId } from '@/lib/project-context';
+import { cn } from '@/lib/utils';
+
+import type { ArduinoJob } from '@shared/schema';
+
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -143,11 +148,13 @@ export default function JobHistoryPanel({ className }: JobHistoryPanelProps) {
         data-testid="job-history-panel"
         className={cn('flex flex-col items-center justify-center h-full gap-3 p-8 text-center', className)}
       >
-        <History className="w-10 h-10 text-muted-foreground/50" />
-        <h3 className="text-sm font-medium text-foreground">No jobs yet</h3>
-        <p className="text-xs text-muted-foreground max-w-xs">
-          Compile or upload a sketch to see your build history here. Each job records its output, duration, and status.
-        </p>
+        <div data-testid="job-history-empty" className="w-full max-w-sm">
+          <EmptyState
+            icon={History}
+            title="No jobs yet"
+            description="Compile or upload a sketch to see your build history here. Each job records its output, duration, and status."
+          />
+        </div>
       </div>
     );
   }
@@ -179,7 +186,9 @@ export default function JobHistoryPanel({ className }: JobHistoryPanelProps) {
                   variant="ghost"
                   data-testid={`job-history-toggle-${String(job.id)}`}
                   className="w-full justify-start h-auto py-2.5 px-3 rounded-none hover:bg-muted/30"
-                  onClick={() => toggleExpand(job.id)}
+                  onClick={() => {
+                    toggleExpand(job.id);
+                  }}
                 >
                   <div className="flex items-center gap-2 w-full min-w-0">
                     {isExpanded ? (
@@ -216,7 +225,7 @@ export default function JobHistoryPanel({ className }: JobHistoryPanelProps) {
                       <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
                         <span>{formatTimestamp(job.createdAt)}</span>
                         <span>{formatDuration(job.startedAt, job.finishedAt)}</span>
-                        {job.exitCode !== null && job.exitCode !== undefined && (
+                        {job.exitCode !== null && (
                           <span>exit: {String(job.exitCode)}</span>
                         )}
                       </div>
