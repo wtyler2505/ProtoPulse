@@ -5,27 +5,37 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0" +
+  // E2E-1013 (Plan 03 Phase 9): focus-visible now references the palette-
+  //   independent `--color-focus-ring` token (white/near-black) instead of
+  //   the brand `--color-ring` cyan, plus a 2px ring offset so the indicator
+  //   reads against any surface. Ring width bumped 1 -> 2 for visibility.
+  // E2E-1014 (Plan 03 Phase 9): `active:scale-[0.98]` gives tactile click
+  //   feedback uniformly. Subtle (2% shrink) so it doesn't disrupt dense
+  //   toolbars. `motion-reduce:active:scale-100` respects prefers-reduced-
+  //   motion. `transition` governs both color and transform.
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] motion-reduce:active:scale-100" +
 " hover-elevate active-elevate-2",
   {
     variants: {
       variant: {
         default:
            // @replit: no hover, and add primary border
-           "bg-primary text-primary-foreground border border-primary-border",
+           // E2E-1014: `active:brightness-90` adds tactile press feedback.
+           "bg-primary text-primary-foreground border border-primary-border active:brightness-90",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm border-destructive-border",
+          "bg-destructive text-destructive-foreground shadow-sm border-destructive-border active:brightness-90",
         outline:
           // @replit Shows the background color of whatever card / sidebar / accent background it is inside of.
           // Inherits the current text color. Uses shadow-xs. no shadow on active
           // No hover state
-          " border [border-color:var(--button-outline)] shadow-xs active:shadow-none ",
+          // E2E-1014: keep the shadow-drop active cue plus a subtle bg tint.
+          " border [border-color:var(--button-outline)] shadow-xs active:shadow-none active:bg-muted/60 ",
         secondary:
           // @replit border, no hover, no shadow, secondary border.
-          "border bg-secondary text-secondary-foreground border border-secondary-border ",
+          "border bg-secondary text-secondary-foreground border border-secondary-border active:brightness-90",
         // @replit no hover, transparent border
-        ghost: "border border-transparent",
-        link: "text-primary underline-offset-4 hover:underline",
+        ghost: "border border-transparent active:bg-muted/60",
+        link: "text-primary underline-offset-4 hover:underline active:opacity-70",
       },
       size: {
         // @replit changed sizes

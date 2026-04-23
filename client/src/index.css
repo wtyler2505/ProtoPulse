@@ -82,6 +82,14 @@
 }
 
 /*
+ * E2E-1013 / Plan 03 Phase 9 — Light-mode focus-ring override.
+ * See `--color-focus-ring` in @theme above for rationale.
+ */
+.light {
+  --color-focus-ring: hsl(0 0% 10%);
+}
+
+/*
  * High-contrast mode — WCAG AAA (>=7:1) overrides.
  * Activated by toggling .high-contrast on <html>.
  * Stored in localStorage key 'protopulse-high-contrast'.
@@ -117,6 +125,8 @@
   --color-border: hsl(0 0% 35%);
   --color-input: hsl(0 0% 35%);
   --color-ring: hsl(190 100% 60%);
+  /* High-contrast mode keeps the palette-independent pure white ring. */
+  --color-focus-ring: hsl(0 0% 100%);
 
   --color-sidebar: hsl(0 0% 2%);
   --color-sidebar-border: hsl(0 0% 30%);
@@ -184,13 +194,19 @@
   }
 
   /*
-   * BL-0321: Global focus-visible indicator for all interactive elements.
-   * Uses the neon-cyan theme color (#00F0FF) with 2px solid outline + 2px offset.
-   * Individual components may override via more specific selectors or Tailwind
-   * focus-visible:ring-* / focus-visible:outline-* utilities.
+   * BL-0321 / E2E-1013 (Plan 03 Phase 9): Global focus-visible indicator.
+   *
+   * Uses `--color-focus-ring` — a palette-independent high-contrast token
+   * (white in dark mode, near-black in light mode) rather than the brand
+   * `--color-ring` which blended against cyan-tinted surfaces and failed
+   * WCAG 2.1 AA §1.4.11 (non-text contrast >= 3:1).
+   *
+   * 2px solid ring + 2px offset creates a "banded" indicator that reads
+   * against any background. Individual components may override via more
+   * specific selectors or Tailwind focus-visible:ring-* utilities.
    */
   :focus-visible {
-    outline: 2px solid #00F0FF;
+    outline: 2px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
 }
@@ -294,10 +310,16 @@
   }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  /* Accessible focus-visible ring for custom interactive elements that don't
-     inherit shadcn/ui Button styles. Matches the neon-cyan theme. */
+  /*
+   * Accessible focus-visible ring for custom interactive elements that don't
+   * inherit shadcn/ui Button styles.
+   *
+   * E2E-1013 (Plan 03 Phase 9): migrated from brand cyan to the palette-
+   * independent `--color-focus-ring` token so contrast satisfies WCAG 2.1
+   * AA against all 8 theme presets + high-contrast + light mode.
+   */
   .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 focus-visible:ring-offset-1 focus-visible:ring-offset-background;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 }
 
