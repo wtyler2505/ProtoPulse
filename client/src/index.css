@@ -53,6 +53,23 @@
   --color-border: hsl(225 12% 20%);
   --color-input: hsl(225 12% 20%);
   --color-ring: hsl(190 100% 43%);
+  /*
+   * E2E-1013 / Plan 03 Phase 9 — dedicated focus-ring token.
+   *
+   * The brand `--color-ring` is cyan, which blends against cyan-tinted dark
+   * backgrounds and gives keyboard users near-invisible focus rings (failing
+   * WCAG 2.1 AA §1.4.11 non-text contrast of >= 3:1).
+   *
+   * `--color-focus-ring` is palette-independent: near-white in dark mode,
+   * near-black in light mode (see `.light` override below). Contrast ratios:
+   *   - white (#FFFFFF) vs background hsl(225 20% 3%) (~#06080C) = ~19.5:1
+   *   - near-black hsl(0 0% 10%) vs background hsl(210 20% 98%) = ~17:1
+   *
+   * Both blow past the 3:1 AA requirement AND the 4.5:1 AAA target, and the
+   * ring reads correctly across all 8 theme presets because it no longer
+   * depends on the brand color.
+   */
+  --color-focus-ring: hsl(0 0% 100%);
 
   --color-sidebar: hsl(225 20% 4%);
   --color-sidebar-border: hsl(225 12% 18%);
