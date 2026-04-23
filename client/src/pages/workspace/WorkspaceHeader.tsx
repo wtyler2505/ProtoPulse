@@ -221,7 +221,15 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
   }, [nodes, edges, setNodes, setEdges, pushUndoState, addBomItem, setActiveView, toast]);
 
   return (
-    <header className="h-10 border-b border-border bg-background/60 backdrop-blur-xl hidden lg:flex items-center px-1 gap-0 z-10">
+    <header
+      data-testid="workspace-header"
+      className="h-20 border-b border-border bg-background/60 backdrop-blur-xl hidden lg:flex flex-col px-1 z-10"
+    >
+      {/* Plan 17 Phase 1 — Row 1 (40px): identity + navigation */}
+      <div
+        data-testid="header-row-identity"
+        className="h-10 flex items-center gap-0 shrink-0"
+      >
       {/* AS-04: Larger toggle buttons with better contrast */}
       <StyledTooltip content="Toggle sidebar" side="bottom">
         <button
@@ -229,6 +237,7 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
           onClick={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: !ws.sidebarCollapsed })}
           className="p-2 hover:bg-muted/50 bg-muted/20 border border-border/50 rounded-sm text-muted-foreground hover:text-foreground transition-colors mr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           title={ws.sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+          aria-label={ws.sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
         >
           {ws.sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
         </button>

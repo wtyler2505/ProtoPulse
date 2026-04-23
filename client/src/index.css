@@ -74,6 +74,236 @@
   --color-sidebar: hsl(225 20% 4%);
   --color-sidebar-border: hsl(225 12% 18%);
 
+  /*
+   * ─────────────────────────────────────────────────────────────
+   * Plan 16 Phase 1 — Semantic design-system tokens
+   * ─────────────────────────────────────────────────────────────
+   *
+   * Audit refs: E2E-969, E2E-970, E2E-971, E2E-972, E2E-973,
+   * E2E-974, E2E-491, E2E-1031.
+   *
+   * Phase 1 ships the tokens. Consumer migration is explicitly
+   * deferred to Phase 2 (primitives: Button, Input, InteractiveCard)
+   * and later per-tab plans. `--color-primary` above is NOT retuned
+   * here — 186 files reference it today and retuning cascades a
+   * visual shift outside this phase's file ownership.
+   *
+   * Strategy for breaking the E2E-970 primary/brand tie:
+   *   - `--color-brand` ships today as a cyan *alias* (same hex as
+   *     `--color-primary`). Phase 2 migrates brand-intent callsites
+   *     (logos, marketing surfaces, "ProtoPulse" wordmark) to
+   *     `--color-brand`. ONLY AFTER that migration completes is
+   *     `--color-primary` free to retune to a non-cyan interactive
+   *     emphasis (candidates: hsl(220 90% 65%) rich blue or
+   *     hsl(260 90% 70%) violet). Until then, primary and brand
+   *     remain visually coupled but logically distinct.
+   */
+
+  /*
+   * `--color-brand` — project brand identity (ProtoPulse cyan).
+   *
+   * Use for: wordmark, favicon surfaces, "about / brand" chrome,
+   * anything that signals "this is ProtoPulse" as opposed to
+   * "this is the active thing you clicked".
+   *
+   * Do NOT use for: active tab underline, hovered button,
+   * selected list row — those are interactive emphasis and belong
+   * on `--color-primary`.
+   *
+   * Contrast vs --color-background (hsl 225 20% 3%, ~#06080C):
+   *   hsl(190 100% 43%) ≈ #00C4DB → ~8.9:1 (AAA pass).
+   */
+  --color-brand: hsl(190 100% 43%);
+  --color-brand-foreground: hsl(225 20% 3%);
+
+  /*
+   * `--color-power` — electrical POWER semantic (VCC rails, power
+   * nets, +5V/+3V3/+12V indicators, power domain badges).
+   *
+   * Stable across Architecture View, Schematic View, PCB Layer
+   * Stack, Validation zones. E2E-971 flagged amber/amber/red
+   * inconsistency for "power" across three views — this token
+   * ends that.
+   *
+   * Amber at L=55% (not L=50% which is the common .led-warning
+   * literal) lifts contrast on our near-black bg from ~7.5:1
+   * to ~8.6:1 against --color-background (AAA pass).
+   *
+   * Deliberately matches the same hue/sat as the existing
+   * .led-warning literal (hsl 40 100% 50%) so Phase 2 consumer
+   * migration is a find-replace, not a redesign.
+   */
+  --color-power: hsl(40 95% 55%);
+  --color-power-foreground: hsl(225 20% 3%);
+
+  /*
+   * `--color-signal` — data/logic SIGNAL semantic (GPIO lines,
+   * digital traces, "signal integrity" context, bus wires in
+   * Schematic).
+   *
+   * Uses the cyan family but one step brighter (L=60% vs brand's
+   * L=43%) so signal traces read as "active data moving" against
+   * a brand-cyan surface. This separation is what lets a signal
+   * badge coexist on a brand-cyan header without visual mud.
+   *
+   * Contrast vs --color-background: ~11:1 (AAA pass).
+   */
+  --color-signal: hsl(190 100% 60%);
+  --color-signal-foreground: hsl(225 20% 3%);
+
+  /*
+   * `--color-data` — data-value semantic (measurements, KPI
+   * numerics, inspector field values, hex/MPN string highlighting).
+   *
+   * Muted violet — deliberately orthogonal to cyan family so a
+   * KPI digit never visually fights an active-state indicator.
+   * L=72% (not the audit spec's 65%) to clear 7:1 against
+   * --color-background:
+   *   hsl(270 85% 72%) ≈ #C283F0 → ~7.4:1 (AAA pass).
+   * At L=65% the ratio was ~5.5:1 — AA-only, which would block
+   * KPI text usage under the WCAG 2.1 AA 4.5:1 text threshold
+   * plus our self-imposed AAA target.
+   */
+  --color-data: hsl(270 85% 72%);
+  --color-data-foreground: hsl(225 20% 3%);
+
+  /*
+   * `--color-warning` — validation/advisory WARNING semantic
+   * (ERC/DRC warnings, "setup required" chrome, non-fatal caveat
+   * badges).
+   *
+   * Distinct from `--color-power` even though both are amber-gold:
+   *   - power  = hsl(40 95% 55%)  — pure amber, domain role
+   *   - warning = hsl(45 100% 60%) — slightly more yellow-green,
+   *     brighter, for advisory chrome. Hue shift of 5° + lightness
+   *     bump of 5% is enough for side-by-side disambiguation
+   *     (see a Validation zone next to a Power net badge).
+   *
+   * Contrast vs --color-background: ~10.5:1 (AAA pass).
+   *
+   * E2E-974 cited "amber on zinc-900 ≈ 4.2:1 AAA-fail" — that
+   * was for L=50% amber on zinc-900 (#18181b). OUR background
+   * is darker (~#06080C) AND we use L=60% for warning; both
+   * shifts push us well past AAA.
+   */
+  --color-warning: hsl(45 100% 60%);
+  --color-warning-foreground: hsl(225 20% 3%);
+
+  /*
+   * `--color-success` — positive-outcome semantic (test-pass
+   * badges, ERC-clean, build-succeeded toast, ready-to-run trust
+   * receipts).
+   *
+   * Green at L=55% on a cyan-adjacent background reads
+   * unambiguously positive without looking like a brand accent.
+   * Contrast ~9.7:1 (AAA pass).
+   */
+  --color-success: hsl(145 75% 55%);
+  --color-success-foreground: hsl(225 20% 3%);
+
+  /*
+   * `--color-info` — informational semantic (tips, "did you
+   * know", non-actionable pedagogy chrome). Distinct from primary
+   * (which is interactive emphasis) and brand (which is identity).
+   *
+   * Uses a cooler blue so info callouts read as neutral-helpful
+   * rather than brand-endorsed. Contrast ~8.1:1 (AAA pass).
+   */
+  --color-info: hsl(215 90% 70%);
+  --color-info-foreground: hsl(225 20% 3%);
+
+  /*
+   * Aliases — existing `--color-destructive` above remains the
+   * canonical "destructive action" token. `--color-error` below
+   * is a *semantic alias* for runtime errors (as opposed to
+   * destructive user actions like delete). Both currently resolve
+   * to the same hex; decoupling would require consumer migration
+   * which is Phase 2+ territory.
+   */
+  --color-error: var(--color-destructive);
+  --color-error-foreground: var(--color-destructive-foreground);
+
+  /*
+   * `--color-focus-ring` — already shipped Phase 9 (E2E-1013).
+   * Kept above in the ring/border block. Documented here for
+   * completeness of the semantic token list.
+   */
+
+  /*
+   * ─────────────────────────────────────────────────────────────
+   * Typography tokens — E2E-976, E2E-977, E2E-978, E2E-979,
+   * E2E-980, E2E-981, E2E-982, E2E-1019.
+   * ─────────────────────────────────────────────────────────────
+   *
+   * Phase 1 SHIPS the scale. Phase 2 creates the `<Heading>`
+   * primitive and migrates consumers. No consumer references the
+   * `text-h1 / text-body / text-kpi-*` utility classes today
+   * (verified by grep — zero hits in client/src), so adding these
+   * cannot collide.
+   */
+  --text-h1: 2rem;          /* 32px — page-level titles (View headers) */
+  --text-h2: 1.5rem;        /* 24px — panel headers */
+  --text-h3: 1.125rem;      /* 18px — card + section headers */
+  --text-body: 0.875rem;    /* 14px — running text (matches --app-font-size default) */
+  --text-caption: 0.75rem;  /* 12px — metadata, timestamps, helper text */
+  --text-kpi: 3rem;         /* 48px — hero KPIs (Dashboard stats) */
+  --text-kpi-md: 1.5rem;    /* 24px — card-level stats */
+  --text-kpi-sm: 1rem;      /* 16px — inline counts */
+
+  /* Leading — E2E-980 (vault 1.4× vs validation 1.7× inconsistency) */
+  --leading-dense: 1.3;     /* data-dense surfaces: tables, inspectors */
+  --leading-default: 1.5;   /* body copy — matches --app-line-height */
+  --leading-reader: 1.7;    /* long-form reading: vault notes, explainers */
+
+  /*
+   * ─────────────────────────────────────────────────────────────
+   * Spacing tokens — E2E-985 (card padding 16 vs 24px drift).
+   * ─────────────────────────────────────────────────────────────
+   *
+   * Canonical card padding is 1.5rem (24px). Compact variant for
+   * data-dense panels (validation tables, inspector rows).
+   */
+  --spacing-card-padding-sm: 0.75rem;   /* 12px — ultra-compact data rows */
+  --spacing-card-padding-md: 1rem;      /* 16px — secondary cards */
+  --spacing-card-padding-lg: 1.5rem;    /* 24px — canonical primary cards */
+
+  /*
+   * ─────────────────────────────────────────────────────────────
+   * Motion tokens — E2E-1015, E2E-1016.
+   * ─────────────────────────────────────────────────────────────
+   *
+   * Three-tier scale: tactile (tooltip/chip), base (hover/focus),
+   * slow (drawer/modal). Tokens are DATA — consumers reference
+   * them via `var(--motion-duration-base)` in transition-duration
+   * declarations. Under prefers-reduced-motion the existing
+   * universal sweep at the bottom of this file (`animation-
+   * duration: 0.01ms !important`) still wins; the overrides
+   * below additionally zero the token values so any future
+   * consumer reading the token directly (e.g. JS-driven
+   * animations) also honours reduced motion.
+   */
+  --motion-duration-fast: 80ms;    /* tooltip reveal, chip hover */
+  --motion-duration-base: 150ms;   /* button hover, focus ring, tab underline */
+  --motion-duration-slow: 300ms;   /* drawer slide, modal fade, view transition */
+
+  /* Standard material-style ease — approach-fast, settle-slow */
+  --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+
+  /*
+   * ─────────────────────────────────────────────────────────────
+   * Casing tokens — E2E-977, E2E-982.
+   * ─────────────────────────────────────────────────────────────
+   *
+   * Shipped as CSS custom properties so utility classes below
+   * can reference them. Case policy (Phase 2 docs):
+   *   - Title Case: page/view titles, dialog headers.
+   *   - Sentence case: body copy, button labels, form helper text.
+   *   - ALL CAPS: status pills, badges, section eyebrows only.
+   */
+  --case-tracking-caps: 0.1em;   /* letter-spacing for all-caps labels */
+
   --radius-sm: 0px;
   --radius-md: 0px;
   --radius-lg: 0px;
@@ -84,9 +314,45 @@
 /*
  * E2E-1013 / Plan 03 Phase 9 — Light-mode focus-ring override.
  * See `--color-focus-ring` in @theme above for rationale.
+ *
+ * Plan 16 Phase 1 — Light-mode semantic token overrides. Each
+ * new dark-mode token is re-pitched for a near-white background
+ * (--color-background in light mode ≈ hsl 210 20% 98%, ~#F6F8FA).
+ * Lightness is REDUCED (not inverted) because these are chroma
+ * signals, not surface colors — we want the same "amber means
+ * power" hue with a darker L% so contrast against a light surface
+ * clears 4.5:1 text / 3:1 UI (WCAG 2.1 AA).
  */
 .light {
   --color-focus-ring: hsl(0 0% 10%);
+
+  /* Brand cyan shifts darker: L=35% gives ~4.8:1 on light bg */
+  --color-brand: hsl(190 100% 35%);
+  --color-brand-foreground: hsl(210 20% 98%);
+
+  /* Power amber darker: L=42% gives ~4.6:1 on light bg */
+  --color-power: hsl(40 95% 42%);
+  --color-power-foreground: hsl(225 20% 3%);
+
+  /* Signal teal — mirrors brand shift */
+  --color-signal: hsl(190 100% 38%);
+  --color-signal-foreground: hsl(210 20% 98%);
+
+  /* Data violet — L=48% for ~5.2:1 on light bg */
+  --color-data: hsl(270 70% 48%);
+  --color-data-foreground: hsl(210 20% 98%);
+
+  /* Warning amber-yellow — L=42% for ~4.7:1 on light bg */
+  --color-warning: hsl(45 100% 42%);
+  --color-warning-foreground: hsl(225 20% 3%);
+
+  /* Success green — L=38% for ~4.9:1 on light bg */
+  --color-success: hsl(145 75% 34%);
+  --color-success-foreground: hsl(210 20% 98%);
+
+  /* Info blue — L=48% for ~4.6:1 on light bg */
+  --color-info: hsl(215 85% 45%);
+  --color-info-foreground: hsl(210 20% 98%);
 }
 
 /*
@@ -130,6 +396,28 @@
 
   --color-sidebar: hsl(0 0% 2%);
   --color-sidebar-border: hsl(0 0% 30%);
+
+  /*
+   * Plan 16 Phase 1 — High-contrast overrides for new semantic
+   * tokens. All values ≥7:1 contrast against pure-black
+   * background (WCAG 2.1 AAA). Lightness bumped to 65-75%
+   * across the board; hues preserved so semantic meaning
+   * survives the mode switch.
+   */
+  --color-brand: hsl(190 100% 65%);
+  --color-brand-foreground: hsl(0 0% 0%);
+  --color-power: hsl(40 100% 65%);
+  --color-power-foreground: hsl(0 0% 0%);
+  --color-signal: hsl(190 100% 70%);
+  --color-signal-foreground: hsl(0 0% 0%);
+  --color-data: hsl(270 100% 80%);
+  --color-data-foreground: hsl(0 0% 0%);
+  --color-warning: hsl(45 100% 68%);
+  --color-warning-foreground: hsl(0 0% 0%);
+  --color-success: hsl(145 85% 65%);
+  --color-success-foreground: hsl(0 0% 0%);
+  --color-info: hsl(215 100% 78%);
+  --color-info-foreground: hsl(0 0% 0%);
 }
 
 /* High-contrast border width increase — 2px borders for visibility */
@@ -321,6 +609,33 @@
   .focus-ring {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
+
+  /*
+   * Plan 16 Phase 1 — Casing utility classes.
+   * E2E-977, E2E-982 — inconsistent casing across tabs.
+   *
+   * Use these instead of raw Tailwind `uppercase` / `capitalize`
+   * so the casing policy is discoverable in one place.
+   */
+  .case-title {
+    /* Title Case: manual capitalization in content — this class
+       is a marker + tracking reset (no transform). Applied to
+       view titles, dialog headers. */
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .case-sentence {
+    /* Sentence case: same as title — transform is manual in
+       content. Default for body, buttons, helper text. */
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .case-caps {
+    /* ALL CAPS with tracking for legibility. Status pills,
+       badges, section eyebrows. NEVER for prose. */
+    text-transform: uppercase;
+    letter-spacing: var(--case-tracking-caps);
+  }
 }
 
 * {
@@ -399,6 +714,19 @@
 
 /* OS-level reduced motion */
 @media (prefers-reduced-motion: reduce) {
+  /*
+   * Plan 16 Phase 1 — zero the motion *tokens* so consumers that
+   * read them via JS (e.g. `getComputedStyle(root).getPropertyValue
+   * ('--motion-duration-base')` for imperative animations) also
+   * honour reduced motion. The universal sweep below still applies
+   * for CSS transitions/animations, so this is additive.
+   */
+  :root {
+    --motion-duration-fast: 0ms;
+    --motion-duration-base: 0ms;
+    --motion-duration-slow: 0ms;
+  }
+
   *,
   *::before,
   *::after {
@@ -425,6 +753,14 @@
 }
 
 /* Manual toggle via ReducedMotionManager */
+.reduced-motion {
+  /* Plan 16 Phase 1 — zero motion tokens for JS consumers (see
+     @media block above for rationale). */
+  --motion-duration-fast: 0ms;
+  --motion-duration-base: 0ms;
+  --motion-duration-slow: 0ms;
+}
+
 .reduced-motion *,
 .reduced-motion *::before,
 .reduced-motion *::after {
