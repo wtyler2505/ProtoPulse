@@ -31,6 +31,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { InteractiveCard } from '@/components/ui/interactive-card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -128,10 +129,15 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
   const CategoryIcon = CATEGORY_ICONS[pattern.category];
 
   return (
-    <Card
+    <InteractiveCard
       data-testid={`pattern-card-${pattern.id}`}
-      className="bg-card/60 backdrop-blur-xl border-border hover:border-[var(--color-editor-accent)]/30 transition-colors cursor-pointer"
+      aria-label={`${expanded ? 'Collapse' : 'Expand'} design pattern: ${pattern.name}`}
+      aria-expanded={expanded}
       onClick={() => { setExpanded((prev) => !prev); }}
+      className="rounded-xl"
+    >
+    <Card
+      className="bg-card/60 backdrop-blur-xl border-border hover:border-[var(--color-editor-accent)]/30 transition-colors cursor-pointer"
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
@@ -294,6 +300,7 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
         </CardContent>
       )}
     </Card>
+    </InteractiveCard>
   );
 }
 

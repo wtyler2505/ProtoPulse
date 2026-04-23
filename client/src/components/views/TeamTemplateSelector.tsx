@@ -14,6 +14,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { InteractiveCard } from '@/components/ui/interactive-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +57,13 @@ function TemplateCard({ template, selected, onSelect }: TemplateCardProps) {
   const colorClass = CATEGORY_COLORS[template.category];
 
   return (
+    <InteractiveCard
+      data-testid={`template-card-${template.id}`}
+      aria-label={`Select team template: ${template.name}`}
+      aria-pressed={selected}
+      onClick={() => { onSelect(template); }}
+      className="rounded-xl"
+    >
     <Card
       className={cn(
         'cursor-pointer transition-all duration-200 border',
@@ -63,16 +71,6 @@ function TemplateCard({ template, selected, onSelect }: TemplateCardProps) {
           ? 'border-[var(--color-editor-accent)] shadow-[0_0_12px_rgba(0,240,255,0.2)] bg-[var(--color-editor-accent)]/5'
           : 'border-border bg-card hover:border-muted-foreground/50',
       )}
-      data-testid={`template-card-${template.id}`}
-      onClick={() => { onSelect(template); }}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSelect(template);
-        }
-      }}
     >
       <CardHeader className="pb-2">
         <div className="flex items-center gap-3">
@@ -111,6 +109,7 @@ function TemplateCard({ template, selected, onSelect }: TemplateCardProps) {
         </div>
       </CardContent>
     </Card>
+    </InteractiveCard>
   );
 }
 

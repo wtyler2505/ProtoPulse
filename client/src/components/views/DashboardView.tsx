@@ -1,8 +1,10 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions --
- * Phase 3 <InteractiveCard> primitive migration will replace `role="button"` on
- * `<div>` elements with real `<button>` elements, at which point these disables
- * can be removed. See docs/superpowers/plans/2026-04-18-e2e-walkthrough/03-a11y-systemic.md
- * Phase 3. Tracked as part of E2E-552 / Plan 03 Phase 4.
+ * The three clickable summary cards (Architecture / BOM / Validation) migrated
+ * to <InteractiveCard> in Plan 03 Phase 3. The remaining lint hits come from
+ * VaultHoverCard trigger <span> elements inside those cards that use
+ * onClick/onKeyDown to stopPropagation so clicking a vault badge doesn't
+ * navigate the parent card. Those spans are intentional and cannot be a
+ * button (invalid HTML — button-in-button). Scoped disable stays.
  */
 import { useMemo, useState } from 'react';
 import {
@@ -28,6 +30,7 @@ import { useValidation } from '@/lib/contexts/validation-context';
 import { useHistory } from '@/lib/contexts/history-context';
 import { useProjectMeta } from '@/lib/project-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { InteractiveCard } from '@/components/ui/interactive-card';
 import { VaultHoverCard } from '@/components/ui/vault-hover-card';
 import { cn } from '@/lib/utils';
 import WelcomeOverlay, { isOnboardingDismissed, dismissOnboarding } from './WelcomeOverlay';
@@ -238,18 +241,14 @@ export default function DashboardView() {
         {/* Main cards grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Architecture Summary Card */}
-          <Card
+          <InteractiveCard
             data-testid="dashboard-card-architecture"
-            className="bg-card/60 backdrop-blur-xl border-border hover:border-primary/30 transition-colors cursor-pointer"
+            aria-label="Open Architecture view"
             onClick={() => handleNavigate('architecture')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleNavigate('architecture');
-              }
-            }}
+            className="rounded-xl"
+          >
+          <Card
+            className="bg-card/60 backdrop-blur-xl border-border hover:border-primary/30 transition-colors cursor-pointer"
           >
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold">
@@ -308,20 +307,17 @@ export default function DashboardView() {
               )}
             </CardContent>
           </Card>
+          </InteractiveCard>
 
           {/* BOM Summary Card */}
-          <Card
+          <InteractiveCard
             data-testid="dashboard-card-bom"
-            className="bg-card/60 backdrop-blur-xl border-border hover:border-primary/30 transition-colors cursor-pointer"
+            aria-label="Open Bill of Materials view"
             onClick={() => handleNavigate('procurement')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleNavigate('procurement');
-              }
-            }}
+            className="rounded-xl"
+          >
+          <Card
+            className="bg-card/60 backdrop-blur-xl border-border hover:border-primary/30 transition-colors cursor-pointer"
           >
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold">
@@ -385,20 +381,17 @@ export default function DashboardView() {
               )}
             </CardContent>
           </Card>
+          </InteractiveCard>
 
           {/* Validation Summary Card */}
-          <Card
+          <InteractiveCard
             data-testid="dashboard-card-validation"
-            className="bg-card/60 backdrop-blur-xl border-border hover:border-primary/30 transition-colors cursor-pointer"
+            aria-label="Open Validation view"
             onClick={() => handleNavigate('validation')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleNavigate('validation');
-              }
-            }}
+            className="rounded-xl"
+          >
+          <Card
+            className="bg-card/60 backdrop-blur-xl border-border hover:border-primary/30 transition-colors cursor-pointer"
           >
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold">
@@ -479,6 +472,7 @@ export default function DashboardView() {
               )}
             </CardContent>
           </Card>
+          </InteractiveCard>
 
           {/* Recent Activity Card */}
           <Card

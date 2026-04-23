@@ -13,6 +13,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { InteractiveCard } from '@/components/ui/interactive-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -67,24 +68,20 @@ function SampleCard({ sample, onOpen }: SampleCardProps) {
   const catMeta = CATEGORY_META[sample.category];
 
   return (
+    <InteractiveCard
+      data-testid={`sample-card-${sample.id}`}
+      aria-label={`Open sample project: ${sample.name}`}
+      onClick={() => {
+        onOpen(sample);
+      }}
+      className="rounded-xl group"
+    >
     <Card
       className={cn(
         'border-border bg-card cursor-pointer transition-all duration-200',
         'hover:border-[var(--color-editor-accent)]/50 hover:shadow-[0_0_12px_rgba(0,240,255,0.1)]',
-        'group flex flex-col',
+        'flex flex-col h-full',
       )}
-      data-testid={`sample-card-${sample.id}`}
-      onClick={() => {
-        onOpen(sample);
-      }}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onOpen(sample);
-        }
-      }}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
@@ -155,6 +152,7 @@ function SampleCard({ sample, onOpen }: SampleCardProps) {
         </div>
       </CardContent>
     </Card>
+    </InteractiveCard>
   );
 }
 

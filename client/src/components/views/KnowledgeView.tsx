@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { InteractiveCard } from '@/components/ui/interactive-card';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -100,10 +101,14 @@ const ArticleCard = memo(function ArticleCard({ article, onClick }: ArticleCardP
   const firstLine = article.content.split('\n').find((l) => l.trim() && !l.startsWith('#'))?.trim() ?? '';
 
   return (
-    <Card
+    <InteractiveCard
       data-testid={`article-card-${article.id}`}
-      className="bg-card/60 border-border/50 hover:border-primary/30 transition-colors cursor-pointer"
+      aria-label={`Open article: ${article.title}`}
       onClick={() => { onClick(article.id); }}
+      className="rounded-xl"
+    >
+    <Card
+      className="bg-card/60 border-border/50 hover:border-primary/30 transition-colors cursor-pointer"
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
@@ -151,6 +156,7 @@ const ArticleCard = memo(function ArticleCard({ article, onClick }: ArticleCardP
         </div>
       </CardContent>
     </Card>
+    </InteractiveCard>
   );
 });
 

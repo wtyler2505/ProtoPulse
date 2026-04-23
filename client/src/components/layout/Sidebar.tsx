@@ -34,6 +34,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { InteractiveCard } from '@/components/ui/interactive-card';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import FeatureMaturityBadge from '@/components/ui/FeatureMaturityBadge';
 import { useToast } from '@/hooks/use-toast';
@@ -430,15 +431,12 @@ function SidebarContent({
             const isGroupCollapsed = collapsedGroups[group.id] === true;
             return (
               <div key={group.id} data-testid={`sidebar-group-${group.id}`}>
-                <div
-                  role="button"
-                  tabIndex={0}
+                <InteractiveCard
                   aria-expanded={!isGroupCollapsed}
                   aria-label={isGroupCollapsed ? `Expand ${group.label}` : `Collapse ${group.label}`}
                   data-testid={`sidebar-group-header-${group.id}`}
-                  className="px-4 py-1.5 flex items-center gap-2 text-muted-foreground hover:text-foreground cursor-pointer hover:bg-muted/30 transition-colors"
+                  className="px-4 py-1.5 flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                   onClick={() => toggleGroup(group.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleGroup(group.id); } }}
                 >
                   {isGroupCollapsed
                     ? <ChevronRight className="w-3 h-3 shrink-0" />
@@ -446,7 +444,7 @@ function SidebarContent({
                   }
                   <GroupIcon className="w-3 h-3 shrink-0" />
                   <span className="text-xs font-semibold uppercase tracking-wider">{group.label}</span>
-                </div>
+                </InteractiveCard>
                 {!isGroupCollapsed && (
                   <div className="space-y-0.5">
                     {items.map((item) => {

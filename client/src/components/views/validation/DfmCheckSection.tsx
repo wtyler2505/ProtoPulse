@@ -1,5 +1,6 @@
 import { Factory, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { InteractiveCard } from '@/components/ui/interactive-card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -69,23 +70,15 @@ export function DfmCheckSection({
           {dfmResult.violations.length > 0 && (
             <div className="space-y-1 max-h-40 overflow-auto">
               {dfmResult.violations.map((v) => (
-                <div
+                <InteractiveCard
                   key={v.id}
                   data-testid={`dfm-violation-${v.id}`}
-                  role="button"
-                  tabIndex={0}
+                  aria-label={`View DFM violation on PCB: ${v.message}`}
                   onClick={() => {
                     mapDfmViolationToHighlight(v);
                     setActiveView('pcb');
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      mapDfmViolationToHighlight(v);
-                      setActiveView('pcb');
-                    }
-                  }}
-                  className="flex items-start gap-2 text-xs py-1 cursor-pointer hover:bg-muted/30 rounded px-1 transition-colors"
+                  className="flex items-start gap-2 text-xs py-1 hover:bg-muted/30 rounded px-1 transition-colors"
                 >
                   <Badge variant={v.severity === 'error' ? 'destructive' : v.severity === 'warning' ? 'secondary' : 'outline'} className="text-[10px] px-1 py-0 flex-shrink-0">
                     {v.severity}
@@ -97,7 +90,7 @@ export function DfmCheckSection({
                     </p>
                   </div>
                   <span className="text-[9px] text-primary/60 flex-shrink-0 self-center">View on PCB</span>
-                </div>
+                </InteractiveCard>
               ))}
             </div>
           )}
