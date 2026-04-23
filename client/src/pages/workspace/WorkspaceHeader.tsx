@@ -307,6 +307,12 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
       </ScrollableTabBar>
 
       <div className="border-b border-border h-full w-2 shrink-0"></div>
+      </div>
+      {/* Plan 17 Phase 1 — Row 2 (40px): action + AI + environment clusters */}
+      <div
+        data-testid="header-row-tools"
+        className="h-10 flex items-center gap-2 shrink-0 border-t border-border/40"
+      >
       <div className="w-px h-5 bg-border ml-1" />
       {/* AS-04: Larger chat toggle button with better contrast */}
       <StyledTooltip content="Toggle AI assistant" side="bottom">
@@ -315,6 +321,7 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
           onClick={() => dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: !ws.chatCollapsed })}
           className="p-2 hover:bg-muted/50 bg-muted/20 border border-border/50 rounded-sm text-muted-foreground hover:text-foreground transition-colors ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           title={ws.chatCollapsed ? 'Show chat' : 'Hide chat'}
+          aria-label={ws.chatCollapsed ? 'Show chat' : 'Hide chat'}
         >
           {ws.chatCollapsed ? <PanelRightOpen className="w-5 h-5" /> : <PanelRightClose className="w-5 h-5" />}
         </button>
@@ -429,10 +436,11 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
             data-testid="import-design-button"
             type="button"
             aria-label="Import design file"
-            className="p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex items-center gap-1.5 p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors rounded-sm text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={handleImportDesign}
           >
             <Upload className="w-4 h-4" />
+            <span className="hidden xl:inline">Import design file</span>
           </button>
         </StyledTooltip>
         <Popover>
@@ -474,13 +482,14 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
             aria-pressed={ws.pcbTutorialOpen}
             onClick={() => dispatch({ type: 'SET_PCB_TUTORIAL_OPEN', open: !ws.pcbTutorialOpen })}
             className={cn(
-              'p-2 transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'inline-flex items-center gap-1.5 p-2 transition-colors rounded-sm text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               ws.pcbTutorialOpen
                 ? 'text-primary bg-primary/10'
                 : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground',
             )}
           >
             <CircuitBoard className="w-4 h-4" />
+            <span className="hidden xl:inline">PCB Tutorial</span>
           </button>
         </StyledTooltip>
         <Suspense fallback={null}>
@@ -497,19 +506,21 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
             aria-pressed={ws.activityFeedOpen}
             onClick={() => dispatch({ type: 'SET_ACTIVITY_FEED_OPEN', open: !ws.activityFeedOpen })}
             className={cn(
-              'p-2 transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'inline-flex items-center gap-1.5 p-2 transition-colors rounded-sm text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               ws.activityFeedOpen
                 ? 'text-primary bg-primary/10'
                 : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground',
             )}
           >
             <Activity className="w-4 h-4" />
+            <span className="hidden xl:inline">Activity feed</span>
           </button>
         </StyledTooltip>
         <Suspense fallback={null}>
           <ShareProjectButton projectId={projectId} />
         </Suspense>
         <ThemeToggle />
+      </div>
       </div>
     </header>
   );

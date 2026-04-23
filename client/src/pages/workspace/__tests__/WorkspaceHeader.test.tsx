@@ -203,6 +203,91 @@ describe('WorkspaceHeader', () => {
   // click-truth assertion lives in e2e/p1-coach-popover.spec.ts. This unit test
   // documents the behavioral contract and guards against accidental removal of
   // the trigger or lazy-loaded content.
+  // Plan 17 Phase 1 (E2E-483, E2E-990, E2E-1022, E2E-1025): the header collapses the
+  // former 40px single-row bar into a 2-row 80px layout with named row testids so
+  // downstream Playwright / visual audits can target each cluster.
+  it('renders a 2-row 80px header with identity and tools rows (Plan 17 Phase 1)', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0 },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <WorkspaceHeader
+          ws={buildWorkspaceState()}
+          dispatch={vi.fn()}
+          activeView={'architecture' as ViewMode}
+          setActiveView={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    const header = screen.getByTestId('workspace-header');
+    // h-20 (Tailwind) = 80px per design-system token. We assert on the class
+    // rather than computed style because jsdom does not apply Tailwind utilities.
+    expect(header.className).toContain('h-20');
+    expect(screen.getByTestId('header-row-identity')).toBeInTheDocument();
+    expect(screen.getByTestId('header-row-tools')).toBeInTheDocument();
+  });
+
+  // Plan 17 Phase 1 (E2E-993, E2E-483): icon-only header buttons gain visible text
+  // labels by default at xl breakpoints — the markup must include both the icon and
+  // the label span so downstream responsive tests see the label in the DOM.
+  it('icon-only header buttons render visible text labels (Plan 17 Phase 1)', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0 },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <WorkspaceHeader
+          ws={buildWorkspaceState()}
+          dispatch={vi.fn()}
+          activeView={'architecture' as ViewMode}
+          setActiveView={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId('import-design-button')).toHaveTextContent('Import design file');
+    expect(screen.getByTestId('pcb-tutorial-button')).toHaveTextContent('PCB Tutorial');
+    expect(screen.getByTestId('toggle-activity-feed')).toHaveTextContent('Activity feed');
+  });
+
+  // Plan 17 Phase 1 (E2E-069): the workspace-hardware-badge must be wrapped in a
+  // tooltip chain. Source-of-truth tooltip copy lives in hardware-workspace-status.ts
+  // (`detail` field) — this test verifies the badge renders via the tooltip chain
+  // and retains its accessible name.
+  it('hardware badge is tooltip-wrapped and retains accessible name (E2E-069)', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0 },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <WorkspaceHeader
+          ws={buildWorkspaceState()}
+          dispatch={vi.fn()}
+          activeView={'architecture' as ViewMode}
+          setActiveView={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    const badge = screen.getByTestId('workspace-hardware-badge');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAccessibleName('Open Arduino workspace');
+  });
+
   it('opens the Coach & Help popover and renders TutorialMenu content on click (E2E-074)', async () => {
     const queryClient = new QueryClient({
       defaultOptions: {
