@@ -3,6 +3,7 @@ import tseslint from 'typescript-eslint';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import importPlugin from 'eslint-plugin-import-x';
+import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import prettierConfig from 'eslint-config-prettier';
 
@@ -87,12 +88,12 @@ export default tseslint.config(
       'import-x': importPlugin,
     },
     settings: {
-      'import-x/resolver': {
-        typescript: {
+      'import-x/resolver-next': [
+        createTypeScriptImportResolver({
           alwaysTryTypes: true,
           project: './tsconfig.json',
-        },
-      },
+        }),
+      ],
     },
     rules: {
       'import-x/order': [
