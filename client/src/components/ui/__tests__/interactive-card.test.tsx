@@ -84,9 +84,22 @@ describe('InteractiveCard', () => {
   it('applies a focus-visible ring class', () => {
     render(<InteractiveCard>Focus me</InteractiveCard>);
     const btn = screen.getByRole('button', { name: 'Focus me' });
-    // focus-visible ring tokens come from shadcn; assert the class survives
+    // E2E-1013 (Plan 03 Phase 9): migrated from brand `--ring` to the
+    // palette-independent `--color-focus-ring` token so contrast passes
+    // WCAG 2.1 AA across all theme presets + light + high-contrast.
     expect(btn.className).toMatch(/focus-visible:ring-2/);
-    expect(btn.className).toMatch(/focus-visible:ring-ring/);
+    expect(btn.className).toMatch(/focus-visible:ring-\[var\(--color-focus-ring\)\]/);
+    expect(btn.className).toMatch(/focus-visible:ring-offset-2/);
+  });
+
+  it('applies active-state press feedback (E2E-1014)', () => {
+    render(<InteractiveCard>Press me</InteractiveCard>);
+    const btn = screen.getByRole('button', { name: 'Press me' });
+    // Tactile feedback: 2% shrink + 10% dim on press, with reduced-motion
+    // fallback that drops the transform.
+    expect(btn.className).toMatch(/active:scale-\[0\.98\]/);
+    expect(btn.className).toMatch(/active:brightness-90/);
+    expect(btn.className).toMatch(/motion-reduce:active:scale-100/);
   });
 
   it('resets native button chrome so card layout classes win', () => {

@@ -53,8 +53,14 @@ export const InteractiveCard = React.forwardRef<
         className={cn(
           // Reset native button chrome so card layout classes stay authoritative
           'group relative w-full appearance-none bg-transparent p-0 m-0 border-0 text-left cursor-pointer',
-          // Focus ring — shadcn/ui token set, 2px w/ offset so it pops against surface
-          'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          // Focus ring — E2E-1013 (Plan 03 Phase 9): `--color-focus-ring`
+          // (palette-independent white/near-black) instead of brand `--ring`
+          // cyan, so contrast meets WCAG 2.1 AA §1.4.11 on every theme.
+          'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          // E2E-1014 (Plan 03 Phase 9): tactile press feedback. Subtle (2%
+          // shrink, 10% dim) so dense card lists don't jitter. Reduced motion
+          // drops the transform but keeps the brightness cue.
+          'transition active:scale-[0.98] active:brightness-90 motion-reduce:active:scale-100',
           // Disabled semantics
           'disabled:opacity-50 disabled:cursor-not-allowed',
           className,

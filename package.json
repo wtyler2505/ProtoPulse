@@ -18,6 +18,7 @@
     "i18n:extract": "tsx scripts/extract-i18n.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:a11y": "playwright test e2e/p1-a11y-scan.spec.ts",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
