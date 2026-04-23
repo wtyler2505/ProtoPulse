@@ -7,6 +7,7 @@
 ## 1. Scope — do these two things, nothing else
 
 ### Phase A — **Plan 03 Phase 7: tie-point aria-labels (E2E-625)**
+
 ### Phase B — **Plan 03 Phase 8: shared `<EmptyState>` primitive wiring (E2E-966 cleanup)**
 
 Do NOT pick up any other phase. Specifically **do not touch** Plan 03 Phase 1 (procurement tabpanel), Phase 5 (axe-core Playwright harness), Phase 6 (keyboard-nav suite), or Phase 9 (focus-ring contrast). Those are reserved for Claude tomorrow. Reasons:
@@ -51,11 +52,13 @@ git status --short       # should be clean except for ops/sessions/*.json
 | `0abd4d1c` | `test(schematic): regression test for empty-state DOM leak (E2E-950, E2E-966)` |
 
 **Plans complete today:**
+
 - Plan 01 (P0 bugs) — 6/6 phases done
 - Plan 02 (P1 dead buttons) — 8/8 phases done
 - Plan 03 (a11y systemic) — 3/9 phases done (Phase 2 icon-labels, Phase 3 InteractiveCard, Phase 4 ESLint rules)
 
 **BL items open (context only — don't try to fix):**
+
 - BL-0863: full audit-trail backend subsystem (deferred, multi-day plan)
 - BL-0864: generic requireProjectScope middleware (deferred until BL-0863)
 - BL-0866: pre-existing test drift — 49 failing tests across 10 files, all pre-dating today. Known list:
@@ -104,12 +107,14 @@ There is a `PostToolUse` hook at `.claude/hooks/auto-commit-vault.sh` that autom
 
 1. Do your edits. The hook may fire "Auto:" commits mid-stream — that's fine.
 2. When you reach a stopping point, create a **narrative** commit with the real message:
+
    ```bash
    git commit --allow-empty -m "$(cat <<'EOF'
    fix(a11y): ...long message referencing E2E-XXX...
    EOF
    )"
    ```
+
    Use `--allow-empty` only if the hook already committed all your content and you want to leave a narrative marker. Otherwise, just `git add <files> && git commit -m ...` as normal.
 3. **Do NOT amend. Do NOT force push.** Tyler has an auto-push cron on main.
 
@@ -169,6 +174,7 @@ export function coordKey(coord: BreadboardCoord): string {
 ```
 
 So `coord` is a `BreadboardCoord` with either:
+
 - `{ type: 'terminal', col: 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j', row: 1..63 }` — the 5-hole columns in the two terminal groups
 - `{ type: 'rail', rail: '+top' | '-top' | '+bottom' | '-bottom' (or similar naming), index: 0..n }` — the power rails
 
@@ -266,11 +272,13 @@ Refs: docs/audits/2026-04-18-frontend-e2e-walkthrough.md (E2E-625)
 ### 4.8 File ownership for Phase A
 
 **You own:**
+
 - `client/src/components/circuit-editor/BreadboardGrid.tsx`
 - `client/src/components/circuit-editor/__tests__/BreadboardGrid.test.tsx` (new if missing, else extend)
 - New e2e spec at `e2e/p1-breadboard-tie-point-a11y.spec.ts` is OPTIONAL — skip it if time is tight; the unit test covers the contract.
 
 **Do NOT touch anything else** for Phase A. Specifically avoid:
+
 - `client/src/lib/circuit-editor/breadboard-model.ts` (schema — if labels need to come from there, add the label derivation IN `BreadboardGrid.tsx` via an imported helper function that lives in a NEW file `client/src/components/circuit-editor/tie-point-a11y.ts`, not a mutation to the model)
 - `client/src/lib/circuit-editor/breadboard-drc.ts`
 - Any other Breadboard-related file — coord mapping should happen at render time only
@@ -292,6 +300,7 @@ The primitive `<EmptyState>` already exists at `client/src/components/ui/EmptySt
 ### 5.2 Pre-verified reality
 
 Current consumers of the shared primitive (3):
+
 ```
 client/src/components/circuit-editor/SchematicCanvas.tsx
 client/src/components/views/ArchitectureView.tsx
@@ -306,6 +315,7 @@ rg -n "data-testid=\".*empty\"" client/src/components/
 ```
 
 Likely hand-rolled sites (confirm before editing — may NOT all be bugs):
+
 - `client/src/components/views/SchematicView.tsx` lines ~165-198 — has its own empty-state block (early return). This is fine as-is (early return = not in DOM), but MIGHT benefit from migrating to the shared primitive for visual consistency. **However, touching this file risks stepping on Plan 01 Phase 5 regression tests and other recent work — only migrate if the existing JSX is clearly substandard.**
 - BOM views, procurement sub-components, community cards (some migrated already via Plan 02 Phase 5), learn/patterns cards.
 
@@ -368,9 +378,11 @@ Plan 01 Phase 5 regression (E2E-950/E2E-966) still green.
 ### 5.8 File ownership for Phase B
 
 **You own:**
+
 - Any view you migrate to the shared primitive + its tests
 
 **Do NOT touch:**
+
 - `client/src/components/ui/EmptyState.tsx` — the primitive itself is fine; do not modify.
 - SchematicCanvas test lines 186-225 (Plan 01 Phase 5 regression).
 - `client/src/components/views/CommunityView.tsx` (Plan 02 Phase 5 — commit `fe66360a` — just landed, leave alone).
@@ -391,6 +403,7 @@ Plan 03 Phase 4 (commit `03687f59`) added `/* eslint-disable jsx-a11y/no-static-
 Plan 03 Phase 3 (commit `d93f72ce`) then migrated 7 of those files. The disable headers in the migrated files should be removable now — the violations they suppress no longer exist.
 
 **Process:**
+
 1. For each file in the Phase 3 migration list (get it from `git show --stat d93f72ce`), remove the disable header.
 2. Run `NODE_OPTIONS='--max-old-space-size=8192' npx eslint <file>` — must stay at 0 errors.
 3. If the header ISN'T safe to remove (a non-migrated pattern in the same file still trips the rule), document that in a comment on the header referencing the remaining violation.
@@ -401,6 +414,7 @@ Plan 03 Phase 3 (commit `d93f72ce`) then migrated 7 of those files. The disable 
 Plan 02 Phase 7 shipped a `<NumberInput>` primitive (commit `c355c6a7`) and migrated 22 calculator inputs, board-dimension inputs, and Order PCB inputs. There are OTHER `<input type="number">` callers in the codebase (procurement, component-editor, etc.) that were out of scope for Phase 7.
 
 **Process:**
+
 1. `rg -n 'type="number"' client/src/ | grep -v "number-input\|NumberInput"` — find remaining callers.
 2. Migrate low-risk ones (contained to one component, with a clear min/max range).
 3. For each migrated input, add a short test assertion that `aria-valuemax` is present and non-zero.
@@ -409,6 +423,7 @@ Plan 02 Phase 7 shipped a `<NumberInput>` primitive (commit `c355c6a7`) and migr
 ### Bonus 3 — Clean up orphaned `filterAuditEntries` helpers if unused
 
 Plan 01 Phase 1 (commit `2d563a41`) removed `DEMO_ENTRIES` from `AuditTrailView.tsx` but left `filterAuditEntries` / `exportAuditCSV` in `client/src/lib/audit-trail.ts` for a future BL-0863 consumer. If the lib has other callers, leave it. If `AuditTrailView` is the ONLY caller and the entries array is now empty forever until BL-0863 ships, consider:
+
 - Option A: leave it (safest — BL-0863 will resurrect it)
 - Option B: annotate with a `@deprecated until BL-0863` JSDoc so future agents know the status
 
