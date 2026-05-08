@@ -1,0 +1,5 @@
+# ProtoPulse PP-NLM Notesbook rhythm (paste into `crontab -e`)
+0 9 * * 0   /home/wtyler/Projects/ProtoPulse/.claude/hooks/pp-nlm-weekly-cron.sh >> /home/wtyler/.claude/logs/pp-nlm-weekly.log 2>&1
+0 9 1 * *   /home/wtyler/.local/bin/nlm mindmap create pp-backlog --title "Backlog map $(date -u +\%Y-\%m)" --confirm >> /home/wtyler/.claude/logs/pp-nlm-monthly.log 2>&1
+0 8 * * *   /home/wtyler/.local/bin/nlm login --check >> /home/wtyler/.claude/logs/pp-nlm-auth.log 2>&1
+*/30 * * * * /home/wtyler/Projects/ProtoPulse/.claude/hooks/pp-nlm-studio-archive.sh >> /home/wtyler/.claude/logs/pp-nlm-archive.log 2>&1
