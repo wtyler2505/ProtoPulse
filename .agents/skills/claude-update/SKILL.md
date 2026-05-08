@@ -28,6 +28,10 @@ update AI documentation to incorporate them as appropriate.
 | Accessibility                 | `aria` skill         |
 | API design / DX               | `api` skill          |
 | Documentation                 | `docs` skill   |
+| NotebookLM Notesbook updates  | `docs/notebooklm.md` (when created) + `pp-knowledge` skill |
+| ProtoPulse skill conventions  | `.claude/skills/pp-knowledge/SKILL.md` |
+| Studio archive policy         | `docs/notebooklm.md` §Auto-Download |
+| Notebook taxonomy / aliases / tags | `pp-knowledge` skill — Tier map |
 
 **Decision:** Ask "Who needs this?" — if domain-specific, use a skill.
 
