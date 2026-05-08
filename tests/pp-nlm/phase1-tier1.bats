@@ -21,15 +21,8 @@ ALIASES="pp-codebase pp-breadboard pp-hardware pp-arscontexta pp-memories pp-res
 }
 
 @test "all 9 pp-* notebooks tagged pp:active" {
-  count=0
-  for nb in $ALIASES; do
-    id=$(nlm alias get "$nb" 2>/dev/null | tail -1)
-    [ -z "$id" ] && continue
-    # Check that this notebook is tagged pp:active
-    if nlm tag list 2>/dev/null | grep -q "$id"; then
-      count=$((count + 1))
-    fi
-  done
+  # `nlm tag select` returns matched notebooks, one per numbered line.
+  count=$(nlm tag select "pp:active" 2>/dev/null | grep -cE '^\s+[0-9]+\.')
   [ "$count" -eq 9 ]
 }
 

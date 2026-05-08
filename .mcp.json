@@ -15,8 +15,18 @@
     },
     "qmd": {
       "command": "/home/wtyler/.local/share/pipx/venvs/qmd/bin/python",
-      "args": ["-c", "from qmd.mcp.server import main; main()"],
+      "args": [
+        "-c",
+        "from qmd.mcp.server import main; main()"
+      ],
       "timeout": 120000
+    },
+    "notebooklm-mcp": {
+      "type": "stdio",
+      "command": "notebooklm-mcp",
+      "args": [],
+      "env": {},
+      "timeout": 60000
     }
   }
 }
