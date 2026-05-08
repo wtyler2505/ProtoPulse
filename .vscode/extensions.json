@@ -1,0 +1,18 @@
+{
+  "recommendations": [
+    "bradlc.vscode-tailwindcss",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "usernamehw.errorlens",
+    "vitest.explorer",
+    "ms-playwright.playwright",
+    "eamodio.gitlens",
+    "antfu.vite",
+    "mikestead.dotenv",
+    "yoavbls.pretty-ts-errors",
+    "streetsidesoftware.code-spell-checker"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-typescript-next"
+  ]
+}
