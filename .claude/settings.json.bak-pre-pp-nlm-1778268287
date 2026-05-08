@@ -192,16 +192,6 @@
             "timeout": 5
           }
         ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/pp-nlm-commit-to-journal.sh",
-            "timeout": 8000
-          }
-        ]
       }
     ],
     "Stop": [
@@ -241,16 +231,6 @@
           {
             "type": "command",
             "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/session-capture.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/pp-nlm-stop-draft-recap.sh",
-            "timeout": 10000
           }
         ]
       }
@@ -339,16 +319,6 @@
           {
             "type": "command",
             "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/session-orient.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/pp-nlm-session-start.sh",
-            "timeout": 8000
           }
         ]
       }
