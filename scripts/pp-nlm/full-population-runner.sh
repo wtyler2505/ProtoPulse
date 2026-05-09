@@ -1,26 +1,30 @@
 #!/usr/bin/env bash
-# Master runner: wait for Phase 2 to finish (if still running) → populate-hardware
-# → all Tier-2 populates → all Tier-3 populates → final report.
+# Legacy population runner. The preferred 2026-05-09 path is source-pack
+# consolidation via build-consolidation-packs.sh, but this remains for targeted
+# repopulation if needed.
 #
-# Walltime: 12-15 hours dominated by populate-hardware (744 sources at ~60s each).
-# Tier-2/3 collectively: ~30-60 minutes (small source counts each).
-#
-# Launch: nohup bash scripts/pp-nlm/full-population-runner.sh > ~/.claude/logs/pp-nlm-full-population.log 2>&1 &
-# Survives session end. Idempotent against the source manifest — re-running picks up gaps.
+# Launch: nohup bash scripts/pp-nlm/full-population-runner.sh &
+# This script owns its log file internally to avoid duplicate tee output.
 
 set -uo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 LOG="$HOME/.claude/logs/pp-nlm-full-population.log"
+LOCK="$HOME/.claude/state/pp-nlm/full-population-runner.lock"
 mkdir -p "$(dirname "$LOG")"
+mkdir -p "$(dirname "$LOCK")"
+exec >> "$LOG" 2>&1
+exec 9>"$LOCK"
+flock -n 9 || { echo "$(date -u --iso-8601=seconds) full-population-runner already active"; exit 75; }
+source "$ROOT/scripts/pp-nlm/lib/write-helpers.sh"
 
 log() {
-  echo "$(date -u --iso-8601=seconds) $*" | tee -a "$LOG"
+  echo "$(date -u --iso-8601=seconds) $*"
 }
 
 log "=== full-population-runner started ==="
 
 # ---- Step 0: auth gate ----
-if ! nlm login --check >/dev/null 2>&1; then
+if ! pp_nlm_require_auth_bounded >/dev/null 2>&1; then
   log "FAIL: nlm not authenticated. Run: nlm login"
   exit 2
 fi
@@ -45,16 +49,16 @@ while true; do
 done
 
 # ---- Step 2: populate-hardware (the big one) ----
-log "Step 2: populate-hardware.sh — 744 vault notes (12-15h walltime)..."
-bash "$ROOT/scripts/pp-nlm/populate-hardware.sh" 2>&1 | tee -a "$LOG"
+log "Step 2: populate-hardware.sh..."
+bash "$ROOT/scripts/pp-nlm/populate-hardware.sh"
 log "Step 2: populate-hardware done. Manifest counts:"
-jq -r 'to_entries | .[] | "  \(.key): \(.value | length)"' "$HOME/.claude/state/pp-nlm/source-manifest.json" 2>&1 | tee -a "$LOG"
+jq -r 'to_entries | .[] | "  \(.key): \(.value | length)"' "$HOME/.claude/state/pp-nlm/source-manifest.json"
 
 # ---- Step 3: all Tier-2 feature populates ----
-log "Step 3: 10 Tier-2 feature populates..."
+log "Step 3: legacy feature populate scripts..."
 for s in "$ROOT"/scripts/pp-nlm/populate-pp-feat-*.sh; do
   log "  starting $(basename "$s")"
-  bash "$s" 2>&1 | tee -a "$LOG"
+  bash "$s"
   log "  done $(basename "$s")"
 done
 
@@ -63,10 +67,10 @@ done
 # ---- Step 5: final report ----
 log "=== full-population-runner finished ==="
 log "Final manifest counts:"
-jq -r 'to_entries | sort_by(.key) | .[] | "  \(.key): \(.value | length) sources"' "$HOME/.claude/state/pp-nlm/source-manifest.json" 2>&1 | tee -a "$LOG"
+jq -r 'to_entries | sort_by(.key) | .[] | "  \(.key): \(.value | length) sources"' "$HOME/.claude/state/pp-nlm/source-manifest.json"
 log ""
 log "Total sources across all pp-* notebooks:"
-jq -r '[.[] | length] | add' "$HOME/.claude/state/pp-nlm/source-manifest.json" 2>&1 | tee -a "$LOG"
+jq -r '[.[] | length] | add' "$HOME/.claude/state/pp-nlm/source-manifest.json"
 log ""
 log "Errors logged this run: $(grep -c FAIL "$LOG" || echo 0)"
 log "Done. Verify with: bats tests/pp-nlm/*.bats"

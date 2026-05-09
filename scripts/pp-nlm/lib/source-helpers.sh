@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # scripts/pp-nlm/lib/source-helpers.sh
-# Shared helpers for Phase 2/3 source-population scripts.
+# Shared helpers for source-population scripts.
 # Source this file: `source scripts/pp-nlm/lib/source-helpers.sh`
 #
 # Contracts:
-#   - All helpers are IDEMPOTENT: re-running skips sources whose `(notebook_alias, title)` already in manifest.
+#   - All helpers are IDEMPOTENT: re-running skips sources whose title/hash already appear in manifest.
 #   - Word-count guard: text sources >500K words are SKIPPED and logged to errors.log.
-#   - Per-source manifest entry written atomically.
-#   - 2s sleep after every successful add per nlm-skill SKILL.md L709-713 rate-limiting table.
+#   - Per-source manifest entry written through write-helpers.sh.
+#   - Writes are serialized through a single NotebookLM lock.
 #   - Failures logged but do not abort the script — caller can re-run to fill gaps.
 
 set -uo pipefail
@@ -20,30 +20,7 @@ PP_NLM_RATE_SLEEP="${PP_NLM_RATE_SLEEP:-2}"
 
 mkdir -p "$PP_NLM_STATE" "$PP_NLM_LOGS"
 [ -f "$PP_NLM_SOURCE_MANIFEST" ] || echo "{}" > "$PP_NLM_SOURCE_MANIFEST"
-
-# --- Internal: atomic manifest write ---
-_pp_manifest_record() {
-  local alias="$1" id="$2" title="$3" path_or_url="$4" kind="$5"
-  local tmp
-  tmp=$(mktemp)
-  jq --arg a "$alias" \
-     --arg i "$id" \
-     --arg t "$title" \
-     --arg s "$path_or_url" \
-     --arg k "$kind" \
-     '.[$a] = ((.[$a] // []) + [{id: $i, title: $t, path_or_url: $s, kind: $k, added: now | todate}])' \
-     "$PP_NLM_SOURCE_MANIFEST" > "$tmp" \
-     && mv "$tmp" "$PP_NLM_SOURCE_MANIFEST" \
-     || rm -f "$tmp"
-}
-
-# --- Internal: check if already added ---
-_pp_already_added() {
-  local alias="$1" title="$2"
-  jq -e --arg a "$alias" --arg t "$title" \
-    '.[$a] // [] | any(.title == $t)' \
-    "$PP_NLM_SOURCE_MANIFEST" >/dev/null 2>&1
-}
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/write-helpers.sh"
 
 # --- Public: add a markdown/text file as source ---
 # add_source_text <alias> <file-path> [title-override]
@@ -54,7 +31,8 @@ add_source_text() {
   local base; base="$(basename "$file" .md)"
   local title="${title_override:-$base v1 — $stamp}"
 
-  if _pp_already_added "$alias" "$title"; then
+  local content_hash; content_hash="$(pp_nlm_sha256_file "$file" 2>/dev/null || true)"
+  if [ -n "$content_hash" ] && pp_nlm_manifest_seen "$alias" "$title" "$content_hash"; then
     echo "  skip: [$alias] $title (already in manifest)"
     return 0
   fi
@@ -63,29 +41,15 @@ add_source_text() {
     return 1
   fi
 
-  local content; content="$(cat "$file")"
   # 500K word cap (Sources §22.1)
-  local words; words=$(echo "$content" | wc -w)
+  local words; words=$(wc -w < "$file")
   if [ "$words" -gt 500000 ]; then
     echo "  SKIP-OVERSIZE: [$alias] $file = $words words (>500K cap)" | tee -a "$PP_NLM_ERROR_LOG"
     return 0
   fi
 
   echo "  add: [$alias] $title ($words w)"
-  local raw
-  raw=$(nlm source add "$alias" --text "$content" --title "$title" --wait 2>&1)
-  local rc=$?
-  if [ "$rc" -ne 0 ]; then
-    echo "  FAIL: [$alias] $title rc=$rc :: $(echo "$raw" | tail -3 | tr '\n' '|')" | tee -a "$PP_NLM_ERROR_LOG"
-    return 1
-  fi
-  local sid
-  sid=$(echo "$raw" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
-  if [ -z "$sid" ]; then
-    echo "  WARN: [$alias] $title — no source-id parsed; recording with placeholder" | tee -a "$PP_NLM_ERROR_LOG"
-    sid="unknown-$(date +%s)"
-  fi
-  _pp_manifest_record "$alias" "$sid" "$title" "$file" "text"
+  pp_nlm_source_add_file "$alias" "$file" "$title" "text"
   sleep "$PP_NLM_RATE_SLEEP"
 }
 
@@ -96,23 +60,13 @@ add_source_url() {
   local stamp; stamp=$(date -u +%Y-%m-%d)
   local title="${title_override:-$url — $stamp}"
 
-  if _pp_already_added "$alias" "$title"; then
+  if pp_nlm_manifest_seen "$alias" "$title" "$(pp_nlm_sha256_text "$url")"; then
     echo "  skip: [$alias] $title (already in manifest)"
     return 0
   fi
 
   echo "  add: [$alias] URL $url"
-  local raw
-  raw=$(nlm source add "$alias" --url "$url" --title "$title" --wait 2>&1)
-  local rc=$?
-  if [ "$rc" -ne 0 ]; then
-    echo "  FAIL: [$alias] url=$url rc=$rc :: $(echo "$raw" | tail -3 | tr '\n' '|')" | tee -a "$PP_NLM_ERROR_LOG"
-    return 1
-  fi
-  local sid
-  sid=$(echo "$raw" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
-  [ -z "$sid" ] && sid="unknown-$(date +%s)"
-  _pp_manifest_record "$alias" "$sid" "$title" "$url" "url"
+  pp_nlm_source_add_url "$alias" "$url" "$title"
   sleep "$PP_NLM_RATE_SLEEP"
 }
 
@@ -124,7 +78,8 @@ add_source_file() {
   local base; base="$(basename "$file")"
   local title="${title_override:-$base v1 — $stamp}"
 
-  if _pp_already_added "$alias" "$title"; then
+  local content_hash; content_hash="$(pp_nlm_sha256_file "$file" 2>/dev/null || true)"
+  if [ -n "$content_hash" ] && pp_nlm_manifest_seen "$alias" "$title" "$content_hash"; then
     echo "  skip: [$alias] $title (already in manifest)"
     return 0
   fi
@@ -134,23 +89,13 @@ add_source_file() {
   fi
 
   echo "  add: [$alias] FILE $file"
-  local raw
-  raw=$(nlm source add "$alias" --file "$file" --title "$title" --wait 2>&1)
-  local rc=$?
-  if [ "$rc" -ne 0 ]; then
-    echo "  FAIL: [$alias] file=$file rc=$rc :: $(echo "$raw" | tail -3 | tr '\n' '|')" | tee -a "$PP_NLM_ERROR_LOG"
-    return 1
-  fi
-  local sid
-  sid=$(echo "$raw" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
-  [ -z "$sid" ] && sid="unknown-$(date +%s)"
-  _pp_manifest_record "$alias" "$sid" "$title" "$file" "file"
+  pp_nlm_source_add_file "$alias" "$file" "$title" "file"
   sleep "$PP_NLM_RATE_SLEEP"
 }
 
 # --- Public: auth gate ---
 pp_require_auth() {
-  if ! nlm login --check >/dev/null 2>&1; then
+  if ! pp_nlm_require_auth_bounded >/dev/null 2>&1; then
     echo "nlm: not authenticated. Run: nlm login" >&2
     exit 2
   fi
@@ -159,5 +104,5 @@ pp_require_auth() {
 # --- Public: count sources for an alias in manifest ---
 pp_manifest_count() {
   local alias="$1"
-  jq -r --arg a "$alias" '.[$a] // [] | length' "$PP_NLM_SOURCE_MANIFEST"
+  pp_nlm_manifest_count "$alias"
 }

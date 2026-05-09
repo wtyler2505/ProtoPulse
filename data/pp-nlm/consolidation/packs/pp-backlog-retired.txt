@@ -1,0 +1,78 @@
+# ProtoPulse Consolidated Source Pack :: Backlog and Iteration
+
+Generated: 2026-05-09T19:42:37+00:00
+Retired alias: pp-backlog-retired
+Retired notebook ID: f583c6b0-9e26-4d8d-8ad7-c88d1a45234f
+Target hub: pp-core
+Source count included: 1
+
+## Source Index
+1. Iteration log format guide v1 — 2026-05-09 [435e195f-fea6-4aa5-909a-91e2a5de4a04]
+
+---
+
+## Source 1: Iteration log format guide v1 — 2026-05-09
+
+Original notebook alias: pp-backlog-retired
+Original notebook ID: f583c6b0-9e26-4d8d-8ad7-c88d1a45234f
+Original source ID: 435e195f-fea6-4aa5-909a-91e2a5de4a04
+Original source title: Iteration log format guide v1 — 2026-05-09
+Content SHA256: b7ecacf0f836a49f5ab3c10a2483534cc29ad059350cd5527733d0c78c06a0d7
+
+BEGIN SOURCE CONTENT
+Iteration log format guide — pp-backlog
+
+Purpose
+
+Time-series, append-only record of BL-XXXX decisions, Wave history, and
+
+ 
+
+'we tried X, didn't work, chose Y because Z' entries.
+
+Entry shape
+
+Title:
+
+ 
+
+<ISO-date> — <decision-tag> (BL-XXXX if applicable)
+
+Body:
+
+ four fields:
+
+Tried:
+
+ what was attempted
+
+Why not:
+
+ why it didn't fit
+
+Chose:
+
+ what was chosen instead
+
+Why:
+
+ the reasoning that made it the right call
+
+Entries are added via
+
+/pp-iter <decision>
+
+ slash command, or 
+
+nlm note create pp-backlog ...
+
+ manually.
+
+ 
+
+Wave snapshots are appended via the weekly cron (
+
+pp-nlm-weekly-cron.sh
+
+).
+END SOURCE CONTENT

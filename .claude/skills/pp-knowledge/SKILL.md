@@ -1,127 +1,112 @@
 ---
 name: pp-knowledge
 description: >
-  Query the ProtoPulse NotebookLM corpus (the PP-NLM Notesbook). Use when Tyler asks
-  "what does this codebase do", "have we tried X", "what do we know about <component>",
-  "remind me about Y", "what's the BL- iteration history", "find anything related to
-  W". Routes to the right Tier-1 notebook (pp-codebase, pp-breadboard, pp-hardware,
-  pp-arscontexta, pp-memories, pp-research, pp-backlog, pp-journal, pp-bench) or drills
-  into a Tier-2 feature deep-dive (pp-feat-*) when the question is feature-specific.
-  Per-component questions go to pp-hardware with the part number in the query — Tier-3
-  per-IC notebooks were tried and dropped 2026-05-09 as redundant.
-  Triggers on mentions of "codebase", "breadboard", "hardware", "memory", "remember",
-  "research", "iteration log", "journal", "bench", "BL-", or any ProtoPulse-specific
-  recall verb.
+  Query the ProtoPulse NotebookLM corpus after the 2026-05-09 consolidation.
+  Routes questions to the two active hub notebooks: pp-core for codebase,
+  Ars Contexta, memory, backlog, journal, research, and feature/system
+  questions; pp-hardware for hardware, breadboard, bench, parts catalog, and
+  per-component drill-in. Old pp-* aliases are compatibility aliases that now
+  resolve to one of those hubs.
 allowed-tools: Bash(nlm:*), Read, Write
 ---
 
-# ProtoPulse NotebookLM Notesbook router (`pp-knowledge`)
+# ProtoPulse NotebookLM Router (`pp-knowledge`)
 
-This skill is the routing brain for ProtoPulse's NotebookLM corpus. It picks WHICH notebook to query and HOW to query it.
+This skill chooses which live ProtoPulse NotebookLM hub to query. For CLI/MCP mechanics, defer to the global `nlm-skill`.
 
-For the underlying CLI/MCP mechanics, defer to the `nlm-skill` (global, v0.6.6+).
+## Live Topology
 
-## Tier map (memorize this — it's the routing table)
+ProtoPulse is consolidated into two active NotebookLM hubs:
 
-| Alias | Title | Use when… | Citation rule |
+| Canonical alias | Notebook | Live ID | Holds |
 |---|---|---|---|
-| `pp-codebase` | Codebase Atlas | Architecture, services, hooks, contexts, plans, "where does X live" | `path/to/file.ext:LineN` |
-| `pp-breadboard` | Breadboard Lab | BreadboardView, exact-part flows, parts catalog, DRC, bench stash | source name + section/line |
-| `pp-hardware` | Hardware Knowledge | Component theory, vault claims, datasheet lookups (744-note vault mirror) | vault note slug + ISO date |
-| `pp-arscontexta` | Ars Contexta | Methodology, MOC discipline, pipeline rules, vault self-knowledge | methodology doc + section |
-| `pp-memories` | Memories | Tyler preferences, gotchas, anti-patterns, hard rules | ISO date of memory |
-| `pp-research` | Research Lab | Active investigations, deep-research imports, papers, vendor docs | source title + URL |
-| `pp-backlog` | Backlog & Iteration | BL-XXXX history, Wave decisions, "have we tried X" | BL-ID + ISO date + Wave # |
-| `pp-journal` | Dev Journal | Daily/weekly recaps, commit summaries, what landed when | ISO date |
-| `pp-bench` | Bench Notes | Physical hardware observations, real-world part comparisons | part # / vendor / measurement |
-| `pp-feat-*` | Feature deep-dives | Specific subsystem (MNA solver, parts catalog, AI integration, design system, Tauri migration, Arduino IDE, PCB layout, Yjs collab, firmware runtime) | feature name + source |
+| `pp-core` | ProtoPulse :: Core Knowledge Hub | `7565a078-8051-43ea-8512-c54c3b4d363e` | Codebase, architecture, plans, Ars Contexta methodology, Tyler memories, backlog, journal, research imports, and most feature/system deep dives |
+| `pp-hardware` | ProtoPulse :: Hardware & Bench Lab | `bb95833a-926e-47b1-8f45-d23427fbc58d` | Hardware knowledge, breadboard workflows, bench observations, parts catalog, and per-component drill-in |
 
-All Tier-1 notebooks are tagged `pp:active` — default cross-query target.
-Tier-2 notebooks are tagged `pp:feature` (opt-in to cross-query via `--tags "pp:active,pp:feature"`).
+Compatibility aliases deliberately remain:
 
-**Note:** Tier-3 per-component notebooks (`pp-cmp-*`) were tried and dropped 2026-05-09. Per-component drill-in is now: `nlm notebook query pp-hardware "<part-number> <topic>"` — pp-hardware's 744-source corpus already holds every per-IC claim with proper RAG retrieval.
+- Core aliases: `pp-codebase`, `pp-arscontexta`, `pp-memories`, `pp-backlog`, `pp-journal`, `pp-research`, `pp-feat-mna-solver`, `pp-feat-ai-integration`, `pp-feat-design-system`, `pp-feat-tauri-migration`, `pp-feat-arduino-ide`, `pp-feat-pcb-layout`, `pp-feat-collab-yjs`, `pp-feat-firmware-runtime`.
+- Hardware aliases: `pp-breadboard`, `pp-bench`, `pp-feat-parts-catalog`, `pp-cmp-*`.
 
-## Routing decision tree
+Treat those aliases as routing handles, not separate notebooks. Before any write, resolve with `nlm alias get <alias>` and record the resolved target ID.
+
+## Routing Decision Tree
 
 ```
-Tyler's question…
-│
-├─► Cross-cutting / "what do we know about X" / unsure which notebook
-│    → `nlm cross query --tags pp:active "<question>"`
-│
-├─► Specific to a feature subsystem
-│    → `nlm notebook query pp-feat-<slug> "<question>"`
-│
-├─► Specific component / IC / part number
-│    → `nlm notebook query pp-hardware "<part-number> <topic>"`
-│       (Tier-3 per-IC notebooks were dropped 2026-05-09; pp-hardware's RAG retrieves
-│        the right per-component chunks when the part number is in the query.)
-│
-├─► About the code / architecture / plans
-│    → `nlm notebook query pp-codebase "<question>"`
-│
-├─► About a BL-XXXX item or Wave decision
-│    → `nlm notebook query pp-backlog "<question>"`
-│
-├─► About what Tyler said / preferences / gotchas
-│    → `nlm notebook query pp-memories "<question>"`
-│
-├─► About methodology / how vault works / Ars Contexta
-│    → `nlm notebook query pp-arscontexta "<question>"`
-│
-└─► Recent activity / "what landed last week"
-     → `nlm notebook query pp-journal "<question>"`
+Tyler's question...
+|
+|-- Cross-cutting / unsure / "what do we know about X"
+|    -> `nlm cross query --tags pp:active "<question>"`
+|
+|-- Codebase, architecture, plans, services, hooks, contexts
+|    -> `nlm notebook query pp-core "<question>"`
+|
+|-- Ars Contexta, methodology, vault pipeline, extraction rules
+|    -> `nlm notebook query pp-core "<question>"`
+|
+|-- Tyler preferences, memories, gotchas, work standards
+|    -> `nlm notebook query pp-core "<question>"`
+|
+|-- Backlog, BL-XXXX, Wave history, implementation decisions
+|    -> `nlm notebook query pp-core "<question>"`
+|
+|-- Recent work, recaps, commits, weekly summaries
+|    -> `nlm notebook query pp-core "<question>"`
+|
+|-- Research imports, innovation notes, external source synthesis
+|    -> `nlm notebook query pp-core "<question>"`
+|
+|-- Feature/system deep dive other than physical parts
+|    -> `nlm notebook query pp-core "<feature slug> <question>"`
+|
+|-- Hardware, breadboard, parts catalog, bench measurements
+|    -> `nlm notebook query pp-hardware "<question>"`
+|
+`-- Specific component / IC / part number
+     -> `nlm notebook query pp-hardware "<part-number> <question>"`
 ```
 
-## Citation discipline
+## Citation Discipline
 
-- **Quote nlm citation slugs verbatim.** Never paraphrase a citation — copy what `nlm` returns.
-- For `pp-codebase`: prefer file:line format. If the source has line ranges, include them.
-- For `pp-hardware`: surface the vault note slug (the `kebab-case-claim.md` filename without extension) so Tyler can grep the vault directly.
-- For `pp-backlog`: surface BL-ID + Wave number every time (the backlog is keyed by these).
-- If `nlm` returns no citation, say "uncited synthesis" explicitly — do not fabricate.
+- Quote `nlm` citation slugs verbatim. Never paraphrase a citation.
+- For codebase claims, prefer file path and line details when the source provides them.
+- For hardware claims, surface the vault note slug or part number so Tyler can grep the vault directly.
+- For backlog claims, surface BL-ID and Wave/date when present.
+- If `nlm` returns no citation, say "uncited synthesis" explicitly.
 
-## Token efficiency
+## Query Efficiency
 
-Prefer ONE well-formed `nlm cross query --tags pp:active "<comprehensive question>"` over multiple per-notebook `notebook query` rounds. Cross-query synthesizes across notebooks with citations attributed per-notebook.
+Prefer one strong hub query over a scatter of old alias queries. The old aliases point to hubs now, so querying `pp-codebase`, `pp-backlog`, and `pp-research` separately often repeats the same notebook.
 
-For follow-ups, capture the `--conversation-id` from the first reply and pass it on subsequent `notebook query` calls. This persists in the NotebookLM web UI for cross-device continuity.
+Use `nlm cross query --tags pp:active "<question>"` for broad synthesis across both hubs.
 
-## Anti-patterns
+## Anti-Patterns
 
-- **Never `nlm chat start`** — that's an interactive REPL for humans, not controllable by AI tools (verified via `nlm-skill` SKILL.md L59).
-- **Don't query `pp-feat-*` notebooks via `cross --tags pp:active`** — they're excluded from `pp:active` for a reason. Use `--tags "pp:active,pp:feature"` to opt them in, or query them explicitly.
-- **Don't paraphrase citations.** Quote them.
-- **Don't fabricate.** If a query returns no results, report empty — don't synthesize from training data.
+- Do not treat `pp-feat-*` or `pp-cmp-*` aliases as separate notebooks unless live alias resolution proves a deliberate exception.
+- Do not use `pp:feature` or `pp:component` tags for default query scope; those tags are retired-source compatibility signals after consolidation.
+- Do not query `pp-feat-breadboard-view`; that alias is retired. Ask `pp-hardware` with "BreadboardView" in the query.
+- Do not fabricate citations.
 
-## Bidirectional bridge awareness
+## Bidirectional Bridge Awareness
 
-When a Studio artifact (audio transcript, study guide, mind map JSON) appears in `inbox/` with `provenance.source: nlm-studio`, it routes through the existing `extract` skill — NOT directly into `knowledge/`. The extracted notes then re-publish as new versioned sources on the matching notebook (round-trip). Don't shortcut this.
+Studio artifacts still route through `docs/nlm-archive/` -> `inbox/` -> `/extract` -> `knowledge/` -> republish. Consolidation changes the target notebook, not the provenance rule.
 
-## Quota awareness (Ultra tier)
+Republish routing:
 
-5,000 chats/day, 200 audio, 200 video, 1000 reports, 200 deep-research per day. Burn liberally — this is the project's deep-recall layer, not a precious resource. The only cost discipline:
-- `studio_create` calls cost the artifact-type quota (1 audio, 1 mindmap, etc.)
-- `notebook query` and `cross query` cost 1 chat each
-- Source adds cost 0 quota
+- Methodology, code, backlog, memory, journal, research, and feature notes -> `pp-core`.
+- Hardware, breadboard, bench, parts, and component notes -> `pp-hardware`.
 
-## Auth lifetime
+## Notebook IDs
 
-Sessions ~20 min. The CLI auto-recovers (CSRF refresh → token reload → headless re-auth → 429/5xx retry with exp backoff). If a query returns "Cookies have expired" after auto-recovery, run `nlm login` manually.
+The canonical live mapping lives at `~/.claude/state/pp-nlm/notebook-manifest.json`. Resolve live truth with:
 
-## When to defer to other skills
+```bash
+nlm alias get pp-core
+nlm alias get pp-hardware
+```
 
-- **CLI mechanics, MCP tool surfaces, exhaustive command tables** → defer to global `nlm-skill`.
-- **Vault search (fast keyword/vector)** → use `qmd` MCP tools first; NLM is the slower synthesis layer.
-- **Studio output absorption into vault** → defer to `extract` skill (the bidirectional bridge).
-- **Plan-task ↔ vault routing** → defer to `vault-suggest-for-plan` skill.
-
-## Notebook IDs (live, kept synced via `notebook-manifest.json`)
-
-Resolve on the fly: `nlm alias get <pp-alias>` returns the UUID. The canonical mapping lives at `~/.claude/state/pp-nlm/notebook-manifest.json`.
-
-## Out of scope
+## Out Of Scope
 
 - BrainGrid integration of any kind.
-- Public sharing of notebooks (single-user, private always).
-- Any synthesis claim NOT grounded in a source citation.
+- Public notebook sharing.
+- Any synthesis claim not grounded in NotebookLM citations or local source evidence.

@@ -21,5 +21,6 @@ $ARGUMENTS
 
 ## Notes
 - 1 chat quota.
-- For feature- or component-specific scope, prefer `/pp-feat-* notebook query` or `/pp-cmp-* notebook query` directly via the `nlm-skill`.
-- For methodology, use `nlm notebook query pp-arscontexta`.
+- For feature-specific scope, query `pp-core` with the feature slug in the prompt.
+- For component-specific scope, query `pp-hardware` with the part number in the prompt.
+- For methodology, use `nlm notebook query pp-core "Ars Contexta <question>"`.

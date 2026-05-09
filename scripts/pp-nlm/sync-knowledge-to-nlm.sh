@@ -4,16 +4,13 @@
 #
 # Watches knowledge/ for newly-created or recently-modified notes (since last sync
 # tracked in ops/index/nlm-index.json's `last_sync` field) and republishes each as
-# a versioned source on the appropriate Tier-1 notebook.
+# a versioned source on the appropriate consolidated hub.
 #
 # Routing rules (frontmatter-driven):
-#   topics contains "hardware" or filename matches *-(capacitor|resistor|esp32|atmega|74hc|mosfet|bjt|stepper|pwm|brownout|datasheet|pinout)*  → pp-hardware
-#   topics contains "methodology" or "ars-contexta" → pp-arscontexta
-#   topics contains "breadboard" or "drc" or "exact-part" → pp-breadboard
-#   topics contains "codebase" or "architecture" or "plan" → pp-codebase
-#   provenance.source == "experiment" → also pp-bench
+#   hardware/electronics/breadboard/bench/component/parts -> pp-hardware
+#   methodology/codebase/architecture/plan/backlog/research/memory/journal -> pp-core
 #   provenance.source == "nlm-studio" → SKIP (already lives in NLM by definition; loop guard)
-#   default fallback → pp-hardware (most permissive Tier-1 for technical claims)
+#   default fallback → pp-core
 #
 # Versioning convention: source title = "<slug> v<N> — <YYYY-MM-DD>"
 # Idempotent: skips notes already present in source-manifest.json under the routed alias.
@@ -28,9 +25,10 @@ LOG="$HOME/.claude/logs/pp-nlm-sync-knowledge.log"
 mkdir -p "$(dirname "$NLM_INDEX")" "$(dirname "$LOG")"
 [ -f "$NLM_INDEX" ] || echo "{}" > "$NLM_INDEX"
 [ -f "$SOURCE_MANIFEST" ] || echo "{}" > "$SOURCE_MANIFEST"
+source "$ROOT/scripts/pp-nlm/lib/write-helpers.sh"
 
 # Auth gate
-if ! nlm login --check >/dev/null 2>&1; then
+if ! pp_nlm_require_auth_bounded >/dev/null 2>&1; then
   echo "$(date -u --iso-8601=seconds) FAIL: not authenticated" | tee -a "$LOG" >&2
   exit 2
 fi
@@ -91,20 +89,18 @@ route_alias() {
 
   # Topic-based routing
   case " $topics " in
-    *" methodology "*|*" ars-contexta "*) echo "pp-arscontexta"; return ;;
-    *" breadboard "*|*" drc "*|*" exact-part "*) echo "pp-breadboard"; return ;;
-    *" codebase "*|*" architecture "*|*" plan "*) echo "pp-codebase"; return ;;
-    *" hardware "*|*" electronics "*|*" component "*) echo "pp-hardware"; return ;;
+    *" hardware "*|*" electronics "*|*" component "*|*" breadboard "*|*" drc "*|*" exact-part "*|*" bench "*|*" parts "*) echo "pp-hardware"; return ;;
+    *" methodology "*|*" ars-contexta "*|*" codebase "*|*" architecture "*|*" plan "*|*" backlog "*|*" research "*|*" memory "*|*" journal "*) echo "pp-core"; return ;;
   esac
 
   # Filename pattern fallback for hardware
-  if [[ "$fname" =~ (capacitor|resistor|esp32|atmega|74hc|mosfet|bjt|stepper|pwm|brownout|datasheet|pinout|7-segment|1088as|28byj|level-shift|decoupling|gpio) ]]; then
+  if [[ "$fname" =~ (breadboard|bench|parts-catalog|component|capacitor|resistor|esp32|atmega|74hc|mosfet|bjt|stepper|pwm|brownout|datasheet|pinout|7-segment|1088as|28byj|level-shift|decoupling|gpio) ]]; then
     echo "pp-hardware"
     return
   fi
 
   # Default
-  echo "pp-hardware"
+  echo "pp-core"
 }
 
 count_added=0
@@ -131,8 +127,10 @@ for note in "$KNOWLEDGE"/*.md; do
   v=$((existing_count + 1))
   title="${slug} v${v} — ${date_today}"
 
-  # Idempotency check — exact title already in manifest?
-  if jq -e --arg a "$alias" --arg t "$title" '.[$a] // [] | any(.title == $t)' "$SOURCE_MANIFEST" >/dev/null 2>&1; then
+  content_hash=$(pp_nlm_sha256_file "$note")
+
+  # Idempotency check — exact title/hash already in manifest?
+  if pp_nlm_manifest_seen "$alias" "$title" "$content_hash"; then
     count_skipped=$((count_skipped + 1))
     continue
   fi
@@ -146,24 +144,24 @@ for note in "$KNOWLEDGE"/*.md; do
   fi
 
   echo "$(date -u --iso-8601=seconds) add [$alias] $title ($words w)" | tee -a "$LOG"
-  content="$(cat "$note")"
-  raw=$(nlm source add "$alias" --text "$content" --title "$title" --wait 2>&1)
-  rc=$?
-  if [ "$rc" -ne 0 ]; then
-    echo "$(date -u --iso-8601=seconds) FAIL [$alias] rc=$rc $title :: $(echo "$raw" | tail -2 | tr '\n' '|')" | tee -a "$LOG" >&2
+  if ! pp_nlm_source_add_file "$alias" "$note" "$title" "knowledge-republish"; then
+    echo "$(date -u --iso-8601=seconds) FAIL [$alias] $title" | tee -a "$LOG" >&2
     count_failed=$((count_failed + 1))
     continue
   fi
 
   # Capture source_id
-  sid=$(echo "$raw" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+  sid=$(jq -r --arg a "$alias" --arg t "$title" '
+    .[$a] // [] | map(select(.title == $t)) | last | .remote_source_id // .id // empty
+  ' "$SOURCE_MANIFEST" 2>/dev/null)
+  if [ -z "$sid" ]; then
+    target_id=$(pp_nlm_resolve_alias "$alias" || true)
+    canonical_alias=$(pp_nlm_canonical_alias_for_id "$target_id" "$alias")
+    sid=$(jq -r --arg a "$canonical_alias" --arg t "$title" '
+      .[$a] // [] | map(select(.title == $t)) | last | .remote_source_id // .id // empty
+    ' "$SOURCE_MANIFEST" 2>/dev/null)
+  fi
   [ -z "$sid" ] && sid="unknown-$(date +%s)"
-
-  # Update source-manifest
-  tmp=$(mktemp)
-  jq --arg a "$alias" --arg i "$sid" --arg t "$title" --arg p "$note" \
-    '.[$a] = ((.[$a] // []) + [{id: $i, title: $t, path_or_url: $p, kind: "knowledge-republish", added: now | todate}])' \
-    "$SOURCE_MANIFEST" > "$tmp" && mv "$tmp" "$SOURCE_MANIFEST"
 
   # If this knowledge note was extracted FROM an nlm-studio artifact, update nlm-index
   artifact_id_in_note=$(awk '

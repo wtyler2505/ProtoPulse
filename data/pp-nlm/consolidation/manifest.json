@@ -1,0 +1,14 @@
+{
+  "pp-backlog-retired": {
+    "retired_alias": "pp-backlog-retired",
+    "retired_notebook_id": "f583c6b0-9e26-4d8d-8ad7-c88d1a45234f",
+    "retired_title": "Backlog and Iteration",
+    "target_alias": "pp-core",
+    "pack_path": "/home/wtyler/Projects/ProtoPulse/data/pp-nlm/consolidation/packs/pp-backlog-retired.txt",
+    "pack_sha256": "f2501b7f15e5f78dbc34167f1d8dce73f89c412052de71ca7911e8929aa4e748",
+    "source_count": 1,
+    "status": "built",
+    "error": null,
+    "updated": "2026-05-09T19:42:37Z"
+  }
+}

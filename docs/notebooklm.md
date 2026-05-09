@@ -1,6 +1,6 @@
 # ProtoPulse NotebookLM Notesbook (PP-NLM) — Reference
 
-**Status:** Live with **18 notebooks** (9 Tier-1 + 9 Tier-2). Phase 0/1/2/4/5/6/7/8/10/11 complete. Phase 3 in progress (populate-hardware orphan PID 31395 running, ~12-15h walltime; 9 Tier-2 populates queued for after). Phase 9 cron pending Tyler's `crontab -e`. **Tier-3 per-component notebooks dropped 2026-05-09 as redundant with `pp-hardware`** — see `feedback_notebook_granularity.md`.
+**Status:** Live consolidated topology with **2 active hub notebooks**. The old 9 Tier-1 plus feature/component spread is retired as a source layer. Compatibility aliases remain, but they resolve to either `pp-core` or `pp-hardware`. Phase 9 cron remains pending Tyler's `crontab -e`.
 **Account:** wtyler2505@gmail.com (Google AI Ultra).
 **Plan:** [`/home/wtyler/.claude/plans/claude-update-nlm-skill-i-want-velvet-tide.md`](../../.claude/plans/claude-update-nlm-skill-i-want-velvet-tide.md).
 **Last updated:** 2026-05-09.
@@ -20,34 +20,38 @@ ProtoPulse accumulated 744+ atomic vault notes, 25+ plans, 231KB of MASTER_BACKL
 
 ---
 
-## 2. Tier taxonomy
+## 2. Consolidated topology
 
-### Tier 1 — Durable, always-active (9 notebooks, tagged `pp:active`)
+### Active hubs
 
-| Alias | Title | Purpose | Citation rule |
+| Canonical alias | Title | Purpose | Citation rule |
 |---|---|---|---|
-| `pp-codebase` | ProtoPulse :: Codebase Atlas | Architecture, services, hooks, contexts, plans (the "what is this code" oracle) | `path/to/file.ext:LineN` |
-| `pp-breadboard` | ProtoPulse :: Breadboard Lab | BreadboardView, parts, DRC, exact-part flow, bench stash | source name + section/line |
-| `pp-hardware` | ProtoPulse :: Hardware Knowledge | 744-note vault mirror (component theory, design rules) | vault note slug + ISO date |
-| `pp-arscontexta` | ProtoPulse :: Ars Contexta | Methodology, MOC discipline, pipeline rules | methodology doc + section |
-| `pp-memories` | ProtoPulse :: Memories | Tyler's voice (mirror of MEMORY.md) | ISO date of memory |
-| `pp-research` | ProtoPulse :: Research Lab | Active investigations, deep-research imports | source title + URL |
-| `pp-backlog` | ProtoPulse :: Backlog & Iteration | BL-XXXX history, Wave decisions | BL-ID + ISO + Wave # |
-| `pp-journal` | ProtoPulse :: Dev Journal | Daily/weekly recaps, commit summaries | ISO date |
-| `pp-bench` | ProtoPulse :: Bench Notes | Physical hardware observations, measurements | part # / vendor / equipment |
+| `pp-core` | ProtoPulse :: Core Knowledge Hub | Codebase, architecture, plans, Ars Contexta, memories, backlog, journal, research, and non-hardware feature/system deep dives | Match the source domain: file path/line, BL-ID, ISO date, research URL, or source title |
+| `pp-hardware` | ProtoPulse :: Hardware & Bench Lab | Hardware knowledge, breadboard workflows, bench observations, parts catalog, component drill-in | Vault note slug, part number, source title, ISO date, or measurement context |
 
-### Tier 2 — Feature deep-dives (9 notebooks, tagged `pp:feature`)
+### Compatibility aliases
 
-Naming: `pp-feat-<slug>`. Per-subsystem deep-dives:
-`pp-feat-mna-solver`, `pp-feat-parts-catalog`, `pp-feat-ai-integration`, `pp-feat-design-system`, `pp-feat-tauri-migration`, `pp-feat-arduino-ide`, `pp-feat-pcb-layout`, `pp-feat-collab-yjs`, `pp-feat-firmware-runtime`.
+These aliases remain for ergonomics and old commands, but they are not separate notebooks anymore.
 
-(`pp-feat-breadboard-view` was deleted 2026-05-09 as redundant with Tier-1 `pp-breadboard`.)
+Core hub aliases:
 
-### Tier 3 — DROPPED 2026-05-09
+`pp-codebase`, `pp-arscontexta`, `pp-memories`, `pp-backlog`, `pp-journal`, `pp-research`, `pp-feat-mna-solver`, `pp-feat-ai-integration`, `pp-feat-design-system`, `pp-feat-tauri-migration`, `pp-feat-arduino-ide`, `pp-feat-pcb-layout`, `pp-feat-collab-yjs`, `pp-feat-firmware-runtime`.
 
-Per-component `pp-cmp-*` notebooks were tried (10 created: esp32, atmega328p, 74hc595, 74hc14, mosfet-nmos, mosfet-pmos, lm317, ams1117, 1088as-7seg, 28byj-48) and removed as redundant with `pp-hardware`. Each held only 4-12 sources, all duplicated from pp-hardware's 744-source corpus. Per-IC drill-in is now: `nlm notebook query pp-hardware "<part-number> <topic>"` — pp-hardware's RAG retrieves the right per-component chunks when the part number is in the query.
+Hardware hub aliases:
 
-See `feedback_notebook_granularity.md` in memory for the lesson: don't split a corpus into thin per-X notebooks when an existing notebook already holds the same content.
+`pp-breadboard`, `pp-bench`, `pp-feat-parts-catalog`, `pp-cmp-*`.
+
+### Retired source notebooks
+
+The old Tier-1, Tier-2, and per-component notebooks are retained only as source material until their contents are packed into the hubs. They should be tagged `pp:retired-source`, not used as active query surfaces.
+
+Per-component drill-in is now:
+
+```bash
+nlm notebook query pp-hardware "<part-number> <topic>"
+```
+
+The consolidation lesson: do not split a corpus into thin per-X notebooks when an existing hub can retrieve the same content with the right part number or feature slug in the query.
 
 ---
 
@@ -55,14 +59,15 @@ See `feedback_notebook_granularity.md` in memory for the lesson: don't split a c
 
 | Tag | Reserved for | Default cross-query? |
 |---|---|---|
-| `pp:active` | Tier-1 only | ✅ yes |
-| `pp:legacy` | Pre-existing notebooks kept for reference | ❌ no |
-| `pp:archive` | Renamed `[ARCHIVED ...]` notebooks | ❌ no |
-| `pp:feature` | Tier-2 deep-dives | ❌ no (opt-in) |
-| `pp:<alias-suffix>` | Per-notebook (e.g. `pp:codebase`, `pp:hardware`) | n/a (informational) |
-| `pp:<feature-slug>` | Per Tier-2 feature | n/a |
+| `pp:active` | The two live hubs only | yes |
+| `pp:consolidated` | Consolidated hub notebooks | yes when paired with `pp:active` |
+| `pp:core` | Core Knowledge Hub | yes through `pp:active` |
+| `pp:hardware` | Hardware & Bench Lab | yes through `pp:active` |
+| `pp:retired-source` | Old notebooks kept as source material | no |
+| `pp:legacy` | Pre-existing notebooks kept for reference | no |
+| `pp:archive` | Renamed archived notebooks | no |
 
-(`pp:component` and `pp:cmp-*` are RETIRED — Tier-3 dropped 2026-05-09.)
+`pp:feature`, `pp:component`, and `pp:cmp-*` are retired after consolidation. Do not use them as active query scopes.
 
 **Critical:** `nlm tag add <id> --tags "tag1,tag2"` — `--tags` flag is REQUIRED. Positional fails.
 
@@ -88,7 +93,7 @@ Source titles always end with `vN — YYYY-MM-DD`.
 
 1. `mcp__notebooklm-mcp__source_get_content(source_id="<old-vN-id>")` → fetch verbatim.
 2. Edit locally.
-3. `nlm source add --text "$NEW" --title "<slug> v<N+1> — <DATE>" --wait`.
+3. Write the revised text to a local file, then run it through `scripts/pp-nlm/lib/write-helpers.sh` via `pp_nlm_source_add_file <hub-alias> <file> "<slug> v<N+1> — <DATE>"`.
 4. After 30-day grace, `nlm source delete <old-vN-id> --confirm`.
 
 The grace period preserves cross-references during transitions.
@@ -152,7 +157,7 @@ nlm pipeline run <alias> <pipeline-name> [--topic "..."]
 ```cron
 0 9 * * 0   /home/wtyler/Projects/ProtoPulse/.claude/hooks/pp-nlm-weekly-cron.sh >> /home/wtyler/.claude/logs/pp-nlm-weekly.log 2>&1
 0 9 1 * *   /home/wtyler/.local/bin/nlm mindmap create pp-backlog --title "Backlog map $(date -u +\%Y-\%m)" --confirm >> /home/wtyler/.claude/logs/pp-nlm-monthly.log 2>&1
-0 8 * * *   /home/wtyler/.local/bin/nlm login --check >> /home/wtyler/.claude/logs/pp-nlm-auth.log 2>&1
+0 8 * * *   timeout 45s /home/wtyler/.local/bin/nlm doctor >> /home/wtyler/.claude/logs/pp-nlm-auth.log 2>&1
 */30 * * * * /home/wtyler/Projects/ProtoPulse/.claude/hooks/pp-nlm-studio-archive.sh >> /home/wtyler/.claude/logs/pp-nlm-archive.log 2>&1
 ```
 
@@ -228,11 +233,10 @@ scripts/pp-nlm/sync-knowledge-to-nlm.sh (cron-driven or manual)
 For each new knowledge note (modified since last_sync):
   - Route by frontmatter (topics + filename pattern):
       hardware/electronics → pp-hardware
-      methodology/ars-contexta → pp-arscontexta
-      breadboard/drc → pp-breadboard
-      codebase/architecture → pp-codebase
-  - nlm source add <alias> --text "$content" --title "<slug> v<N> — <DATE>" --wait
-  - Update source-manifest.json
+      methodology/ars-contexta/code/backlog/research/memory/journal → pp-core
+      hardware/electronics/breadboard/bench/component/parts → pp-hardware
+  - add via lock-protected file-backed helper, not giant `--text "$content"` argv
+  - Update source-manifest.json with target id, content hash, status, attempts, and last error
   - If knowledge note has artifact_id, update ops/index/nlm-index.json mapping
 ```
 
@@ -309,9 +313,9 @@ Three skills compose into expert operation. Load order matters — operator read
 - `/pp-promote` any pp-memories notes that earned MEMORY.md inclusion
 
 ### Monthly
-- Monthly cron generates pp-backlog mindmap
-- Review Tier-2 expansion candidates (any feature subsystem that's been queried >5 times AND has a distinct chat-voice/source-set warrants its own pp-feat-* notebook — see `feedback_notebook_granularity.md` for the gate). Per-component drill-in stays in pp-hardware.
-- `nlm source stale <alias>` per Tier-1 — sync if anything stale (or run `/pp-sync`)
+- Monthly cron generates a backlog mindmap from `pp-core`
+- Review whether any feature truly deserves a separate notebook again; the default answer after consolidation is no. Keep feature aliases as hub-routing handles unless Tyler explicitly asks for a new deep-dive notebook.
+- `nlm source stale <alias>` per active hub — sync if anything stale (or run `/pp-sync`)
 - Review `ops/index/nlm-index.json` for stale entries (knowledge notes that no longer exist)
 
 ### Quarterly
@@ -323,7 +327,7 @@ Three skills compose into expert operation. Load order matters — operator read
 Sources older than the last major refactor on their topic are stale. Use the versioning convention to refresh:
 1. `mcp__notebooklm-mcp__source_get_content` to fetch verbatim
 2. Edit locally
-3. Add as new versioned source with vN+1 title
+3. Add as new versioned source with vN+1 title through `scripts/pp-nlm/lib/write-helpers.sh`
 4. Delete old after 30-day grace
 
 ---
@@ -337,7 +341,8 @@ Sources older than the last major refactor on their topic are stale. Use the ver
 
 ### Source addition
 - **500K word silent rejection** — pre-check `wc -w`, split on H2 headings if oversized.
-- **`source_add` returned but Studio uses partial content** — always pass `--wait` for sources that will feed Studio.
+- **`source_add` timed out** — treat timeout as unknown state; reconcile by source list/title/hash before retrying.
+- **`source_add` returned but Studio uses partial content** — for sources that immediately feed Studio, use bounded wait and verify readiness before generation.
 - **Duplicate URLs** — manifest-track to skip; Google's dedup is unreliable.
 
 ### Studio generation
@@ -363,7 +368,7 @@ For deeper troubleshooting, see [`~/.claude/skills/nlm-skill/references/troubles
 | Resource | Daily cap | Typical burn | Budget |
 |---|---|---|---|
 | Notebooks | 500 total | ~30-50 over time | < 10% |
-| Sources / notebook | 600 | varies (744 for pp-hardware) | within cap |
+| Sources / notebook | 600 | hubs stay under cap by packing old notebooks into dense source packs | within cap by design |
 | Words / source | 500,000 | usually <50K | within cap |
 | Chat queries | 5,000/day | 10-50 typical day | < 5% |
 | Audio | 200/day | 1-3/day | < 5% |
@@ -390,15 +395,15 @@ For deeper troubleshooting, see [`~/.claude/skills/nlm-skill/references/troubles
 
 ---
 
-## 19. Build status (snapshot 2026-05-08)
+## 19. Build status (snapshot 2026-05-09)
 
 | Phase | Status | Notes |
 |---|---|---|
-| 0 — Audit + auth | ✅ DONE | 104 notebooks audited; 3 ProtoPulse-relevant tagged `pp:legacy` |
-| 1 — MCP wiring + Tier-1 | ✅ DONE | 9 notebooks live, aliases set, tags applied; manifest written |
-| 2 — Source population (8 of 9 Tier-1) | ✅ DONE | 7 of 8 populated (pp-arscontexta:34, pp-memories:25, pp-breadboard:10, pp-bench:2, pp-research:2, pp-journal:2, pp-backlog:1). pp-codebase missing from manifest — verify next session |
-| 3 — pp-hardware + Tier-2 | ⏳ IN PROGRESS | populate-hardware orphan PID 31395 running through 743 notes (~12-15h). After it finishes, relaunch full-population-runner.sh to run the 9 Tier-2 populates. (Tier-3 dropped 2026-05-09.) |
-| 4 — Custom chat configs (9 Tier-1) | ✅ DONE | All 9 hand-crafted, deeply tailored, applied |
+| 0 — Audit + auth | DONE | `nlm doctor` passes; account is Tyler's Ultra account |
+| 1 — MCP wiring + consolidated hubs | DONE | Two active hubs, compatibility aliases routed to hubs, manifest refreshed |
+| 2 — Source population | SUPERSEDED | Old one-source-per-notebook population is no longer the default |
+| 3 — Source-pack consolidation | IN PROGRESS | Retired notebooks migrate as dense source packs after one pack retrieval test |
+| 4 — Custom chat configs | IN PROGRESS | Existing prompts retained; bulk apply now has a dry-run gate and retired-alias checks |
 | 5 — pp-knowledge skill + claude-update extension | ✅ DONE | Routing layer live |
 | 6 — 14 /pp-* slash commands | ✅ DONE | 5/5 bats green |
 | 7 — 5 hooks + settings.json wiring | ✅ DONE | 6/6 bats green; settings.json patched via jq merge |

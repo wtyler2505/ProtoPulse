@@ -1,41 +1,37 @@
 # Codex Completion Report
 
-**Task:** Review `CLAUDE_RESPONSE.md` Round 2, push back on Option (C), answer Claude's action-item questions, and write `CODEX_RESPONSE_2.md`.
-**Status:** done
+**Task:** Pause ProtoPulse NotebookLM migration and run an infrastructure rethink/R&D pass over NLM CLI/MCP usage, logs, skills, hooks, and manifests.
+**Status:** partial
 
 ## Changes Made
-- `CODEX_RESPONSE_2.md` - Added adversarial Round 2 review of Option (C), including code-traced holes, answers to Claude's four questions, and pushback on the same-client-match claim.
-- `CODEX_DONE.md` - Updated this completion report for the current handoff.
+- `docs/audits/2026-05-09-notebooklm-infrastructure-rethink.md` - Added evidence-backed rethink/R&D report and proposal pack.
+- `inbox/2026-05-09-notebooklm-cli-mcp-infrastructure-reliability.md` - Filed learn/research capture for downstream extraction.
+- `ops/observations/2026-05-09-notebooklm-consolidation-infrastructure-drift.md` - Captured the manifest/skill/live-alias drift as a pending observation.
 
 ## Commands Run
 ```bash
-sed -n '1,260p' CLAUDE_RESPONSE.md
-sed -n '1,260p' server/collaboration.ts
-sed -n '1,260p' shared/collaboration.ts
-sed -n '1,300p' client/src/lib/collaboration-client.ts
-sed -n '1,360p' server/__tests__/collaboration-crdt-integration.test.ts
-sed -n '260,620p' server/collaboration.ts
-sed -n '260,620p' shared/collaboration.ts
-sed -n '300,620p' client/src/lib/collaboration-client.ts
-sed -n '360,760p' server/__tests__/collaboration-crdt-integration.test.ts
-sed -n '620,1040p' server/collaboration.ts
-rg -n "broadcastToRoom|sendToClient|setUserRole|shutdown|getRoomUsers|validateWsSession|class CollaborationServer|rooms =|recentOps|detectConflict|mergeAndBroadcastOps|state-sync|conflict-detected" server/collaboration.ts shared/collaboration.ts client/src/lib/collaboration-client.ts server/__tests__/collaboration-crdt-integration.test.ts
-rg -n "on\\(['\\\"]state-update|sendStateUpdate\\(|collaborationClient\\.|useCollaboration\\(|ConflictResolutionDialog|pendingConflicts|resolveConflict" client/src --glob '!**/node_modules/**'
-nl -ba server/collaboration.ts | sed -n '55,95p;185,245p;420,590p;770,865p'
-nl -ba shared/collaboration.ts | sed -n '145,295p'
-nl -ba client/src/lib/collaboration-client.ts | sed -n '180,235p;320,385p;420,435p'
-nl -ba server/__tests__/collaboration-crdt-integration.test.ts | sed -n '580,645p'
-npm test -- server/__tests__/collaboration-crdt-integration.test.ts -t "BL-0524"
-git status --short
-git add CODEX_RESPONSE_2.md CODEX_DONE.md && git commit -m "Add Codex Round 2 CRDT review"
+ps -ef | rg 'protopulse_nlm|nlm source content|nlm source add|notebooklm'
+kill 80469 84732 84733 84734 84741 2>/dev/null || true
+sed -n '1,240p' scripts/pp-nlm/lib/source-helpers.sh
+sed -n '1,260p' scripts/pp-nlm/full-population-runner.sh
+sed -n '1,220p' scripts/pp-nlm/apply-chat-configs.sh
+sed -n '1,240p' .claude/skills/pp-knowledge/SKILL.md
+jq -r 'to_entries | sort_by(.key) | .[] | "\(.key)\t\(.value|length)"' ~/.claude/state/pp-nlm/source-manifest.json
+rg -n 'Argument list too long|FAIL|Could not add text source|timed out|timeout|Error:' ~/.claude/logs/pp-nlm-*.log
+nlm source add --help
+nlm doctor
+nlm --version
+nlm alias get <pp-alias>
 ```
 
 ## Next Steps
-- Claude should revise Option (C) before implementation, especially the send-vs-apply checkpoint issue and connection-id requirement.
-- After Claude implements a revised design, Codex should run the full collaboration CRDT suite and review the diff.
+- Tyler should approve which proposals to implement from `docs/audits/2026-05-09-notebooklm-infrastructure-rethink.md`.
+- Recommended first implementation set: canonicalize two-hub docs/skills, add bounded health checks, add a safe write helper, fix single-owner logging, and gate chat config bulk apply.
+- Run one source-pack retrieval test before migrating all old notebooks as packs.
 
 ## Blockers
-- None for this review artifact.
+- Per the `rethink` workflow, infrastructure-changing proposals were not auto-implemented without Tyler approval.
+- One smoke-test Hardware source with JSON wrapper content still exists from the earlier migration attempt and should not be deleted without explicit confirmation.
 
 ## Handoff Notes
-The strongest remaining objection is that broadcast-time delivered checkpointing would mark `ws1` caught up in the existing BL-0524/BL-0879 server test, so the spec's claim that the current test passes unchanged is false. A clean fix likely needs per-connection observed frontiers plus an explicit client ACK or a state-sync path that actually applies authoritative document state before marking the frontier observed.
+The migration writes are paused. The main technical lesson is that the old one-source-per-old-notebook copy approach should be replaced with pack-based consolidation plus timeout reconciliation. Treat NotebookLM write timeouts as unknown state, not proof of failure.

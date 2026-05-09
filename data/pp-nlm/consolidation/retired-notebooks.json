@@ -1,0 +1,182 @@
+[
+  {
+    "alias": "pp-codebase-retired",
+    "notebook_id": "9dffa994-ff7f-4de8-b296-7147573b8068",
+    "title": "Codebase Atlas",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-arscontexta-retired",
+    "notebook_id": "61e691c5-bb12-409c-b6c8-30f3936fe3ab",
+    "title": "Ars Contexta",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-memories-retired",
+    "notebook_id": "caa9305a-aad8-4b42-9f2a-43d2eb4285e5",
+    "title": "Memories",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-backlog-retired",
+    "notebook_id": "f583c6b0-9e26-4d8d-8ad7-c88d1a45234f",
+    "title": "Backlog and Iteration",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-journal-retired",
+    "notebook_id": "347f3165-2272-4f05-9e07-f9802d4df2e5",
+    "title": "Dev Journal",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-research-retired",
+    "notebook_id": "7f117d93-a009-4ead-9d62-6eba6b69806b",
+    "title": "Research Lab",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-breadboard-retired",
+    "notebook_id": "a7f540e4-a397-4dfb-9788-50af91d1821d",
+    "title": "Breadboard Lab",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "pp-bench-retired",
+    "notebook_id": "b334053c-cd68-4c3d-a7ff-b7411b17a15e",
+    "title": "Bench Notes",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "legacy-unified-eda-platform",
+    "notebook_id": "2bca06e8-a0f4-4692-b63f-cc4a298b3745",
+    "title": "Legacy Unified EDA Platform",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "legacy-browser-eda-platform",
+    "notebook_id": "157b8fab-9d89-4f6b-9bff-31eb8f54d0b2",
+    "title": "Legacy Browser EDA Platform",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-feat-breadboard-view-retired",
+    "notebook_id": "a8ff895e-a358-4c7d-82ef-72723a764ec6",
+    "title": "Feature Breadboard View",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "pp-feat-mna-solver-retired",
+    "notebook_id": "1fe42c0d-9011-44bd-ad9d-4a96a906ff96",
+    "title": "Feature MNA Solver",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-feat-parts-catalog-retired",
+    "notebook_id": "9b118a5e-a24d-47cc-ad82-a2d095cfde92",
+    "title": "Feature Parts Catalog",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "pp-feat-ai-integration-retired",
+    "notebook_id": "f4e55dc8-0275-4e3c-be90-e51c1f562201",
+    "title": "Feature AI Integration",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-feat-design-system-retired",
+    "notebook_id": "56ffdf87-e915-4313-8d64-276255adce17",
+    "title": "Feature Design System",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-feat-arduino-ide-retired",
+    "notebook_id": "fae9d22c-81d6-4398-b0eb-aa053488dbea",
+    "title": "Feature Arduino IDE",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-feat-pcb-layout-retired",
+    "notebook_id": "3a467568-a670-4b08-b290-36d8ffcb2e1c",
+    "title": "Feature PCB Layout",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-feat-tauri-migration-retired",
+    "notebook_id": "b1b540ae-678c-4324-bcdc-00c93555b1a5",
+    "title": "Feature Tauri Migration",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-feat-collab-yjs-retired",
+    "notebook_id": "c5c20343-f0cc-4b10-8a7c-c750feb67e60",
+    "title": "Feature Collab Yjs",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-feat-firmware-runtime-retired",
+    "notebook_id": "370080dd-2d18-4b17-9702-95826c593e2f",
+    "title": "Feature Firmware Runtime",
+    "target_alias": "pp-core"
+  },
+  {
+    "alias": "pp-cmp-esp32-retired",
+    "notebook_id": "2edcf977-01fe-4cb9-b910-48e92b23f011",
+    "title": "Component ESP32",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "pp-cmp-atmega328p-retired",
+    "notebook_id": "ca943c01-2c76-46e9-b80d-7973467eddf7",
+    "title": "Component ATmega328P",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "pp-cmp-74hc595-retired",
+    "notebook_id": "5e5a955d-14d3-4f2d-bd10-f1eba1c047c7",
+    "title": "Component 74HC595",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "pp-cmp-74hc14-retired",
+    "notebook_id": "220e0e1c-c336-4c06-a52c-ba0ece41c3da",
+    "title": "Component 74HC14",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "pp-cmp-mosfet-nmos-retired",
+    "notebook_id": "cf1206ff-e002-4f01-b2cc-a8d8f361b79e",
+    "title": "Component NMOS MOSFET",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "pp-cmp-mosfet-pmos-retired",
+    "notebook_id": "8645fad0-3c30-421a-9763-78409e7aeff9",
+    "title": "Component PMOS MOSFET",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "pp-cmp-lm317-retired",
+    "notebook_id": "0874b606-5adc-42a4-8bd6-1dac5051a004",
+    "title": "Component LM317",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "pp-cmp-ams1117-retired",
+    "notebook_id": "a305928f-07ef-4ea6-b32c-3044c6bac418",
+    "title": "Component AMS1117",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "pp-cmp-1088as-7seg-retired",
+    "notebook_id": "a2cfb254-ef62-4c5c-aa48-fba42477fdae",
+    "title": "Component 1088AS 7-Segment",
+    "target_alias": "pp-hardware"
+  },
+  {
+    "alias": "pp-cmp-28byj-48-retired",
+    "notebook_id": "b11a8d1b-5803-4959-bc0a-1b13ca53af70",
+    "title": "Component 28BYJ-48",
+    "target_alias": "pp-hardware"
+  }
+]

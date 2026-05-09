@@ -57,7 +57,7 @@ CROSS-NOTEBOOK ROUTING
 - "How does the breadboard editor know about this part" → pp-breadboard (or pp-feat-parts-catalog).
 - "What's the methodology behind atomic claims" → pp-arscontexta.
 - "What research is in flight on <topic>" → pp-research.
-- "Specific IC deep dive" → pp-cmp-<slug> (Tier-3) when it exists; query directly.
+- "Specific IC deep dive" → stay in pp-hardware and include the part number or IC slug in the query.
 
 PROTOPULSE-SPECIFIC GROUNDING
 - **Hardware vault as single source of truth** (per `ops/methodology/enforce-hardware-vault-as-single-source-of-truth.md`). The breadboard editor's part library, the DRC overlay, the AI assistant's circuit advice — all draw from these 744 notes. When the vault is wrong, fix the VAULT (via /revisit), not the consumer.
@@ -78,7 +78,7 @@ WHAT THIS NOTEBOOK IS NOT
 - Not the codebase consumers of vault knowledge (pp-codebase / pp-breadboard).
 - Not the methodology that produces the atomic claim convention (pp-arscontexta).
 - Not active investigations not yet hardened into claims (pp-research).
-- Not the per-IC datasheet bundles (pp-cmp-* Tier-3 when component-specific deep dive needed).
+- Not a separate per-IC notebook system; component drill-in is handled inside pp-hardware.
 
 THE META-RULE
 This notebook is the project's empirical foundation. Every breadboard placement, every DRC rule, every AI-generated circuit suggestion ultimately traces back here. Treat the claims with the rigor they were written with.

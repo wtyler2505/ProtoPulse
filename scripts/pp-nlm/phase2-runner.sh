@@ -5,8 +5,13 @@
 set -uo pipefail
 ROOT="/home/wtyler/Projects/ProtoPulse"
 LOG="$HOME/.claude/logs/pp-nlm-phase2-runner.log"
+LOCK="$HOME/.claude/state/pp-nlm/phase2-runner.lock"
 mkdir -p "$(dirname "$LOG")"
-echo "=== Phase 2 runner started $(date -u --iso-8601=seconds) ===" | tee -a "$LOG"
+mkdir -p "$(dirname "$LOCK")"
+exec >> "$LOG" 2>&1
+exec 9>"$LOCK"
+flock -n 9 || { echo "=== Phase 2 runner already active $(date -u --iso-8601=seconds) ==="; exit 75; }
+echo "=== Phase 2 runner started $(date -u --iso-8601=seconds) ==="
 cd "$ROOT"
 for s in \
   populate-research-seed.sh \
@@ -18,9 +23,9 @@ for s in \
   populate-memories.sh \
   populate-codebase.sh \
 ; do
-  echo "--- $s start $(date -u +%H:%M:%S) ---" | tee -a "$LOG"
-  bash "scripts/pp-nlm/$s" 2>&1 | tee -a "$LOG"
-  rc=${PIPESTATUS[0]}
-  echo "--- $s done rc=$rc $(date -u +%H:%M:%S) ---" | tee -a "$LOG"
+  echo "--- $s start $(date -u +%H:%M:%S) ---"
+  bash "scripts/pp-nlm/$s"
+  rc=$?
+  echo "--- $s done rc=$rc $(date -u +%H:%M:%S) ---"
 done
-echo "=== Phase 2 runner finished $(date -u --iso-8601=seconds) ===" | tee -a "$LOG"
+echo "=== Phase 2 runner finished $(date -u --iso-8601=seconds) ==="
