@@ -14,9 +14,10 @@ setup() { cd "$(git rev-parse --show-toplevel)"; }
   done
 }
 
-@test "every chat config has CITATION RULE" {
+@test "every chat config has CITATION RULE section" {
+  # Match any 'CITATION RULE' header — colon, parenthetical, or bare line
   for f in data/pp-nlm/chat-configs/*.txt; do
-    grep -q "CITATION RULE:" "$f" || { echo "no citation rule: $f"; return 1; }
+    grep -qE 'CITATION RULE\b' "$f" || { echo "no citation rule: $f"; return 1; }
   done
 }
 
