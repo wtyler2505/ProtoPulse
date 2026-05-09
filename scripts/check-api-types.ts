@@ -45,7 +45,7 @@ export function regenerateTypes(projectRoot: string): string {
   const original = existsSync(filePath) ? readFileSync(filePath, 'utf-8') : null;
 
   try {
-    execSync('npx tsx script/generate-api-types.ts', {
+    execSync('npx tsx scripts/generate-api-types.ts', {
       cwd: projectRoot,
       stdio: 'pipe',
       timeout: 30_000,

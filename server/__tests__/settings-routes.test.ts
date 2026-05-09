@@ -157,12 +157,12 @@ beforeEach(() => {
 
 describe('GET /api/settings/api-keys', () => {
   it('returns providers for authenticated user', async () => {
-    mockListApiKeyProviders.mockResolvedValue(['anthropic', 'gemini']);
+    mockListApiKeyProviders.mockResolvedValue(['gemini', 'jlcpcb']);
 
     const res = await fetch(`${baseUrlAuth}/api/settings/api-keys`);
     expect(res.status).toBe(200);
     const body = await res.json() as { providers: string[] };
-    expect(body.providers).toEqual(['anthropic', 'gemini']);
+    expect(body.providers).toEqual(['gemini', 'jlcpcb']);
   });
 
   it('returns 401 without user', async () => {
@@ -182,7 +182,7 @@ describe('POST /api/settings/api-keys', () => {
     const res = await fetch(`${baseUrlAuth}/api/settings/api-keys`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider: 'anthropic', apiKey: 'sk-test-key' }),
+      body: JSON.stringify({ provider: 'gemini', apiKey: 'AIzaSyTestKey' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json() as { message: string };
@@ -202,7 +202,7 @@ describe('POST /api/settings/api-keys', () => {
     const res = await fetch(`${baseUrlNoAuth}/api/settings/api-keys`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider: 'anthropic', apiKey: 'test' }),
+      body: JSON.stringify({ provider: 'gemini', apiKey: 'test' }),
     });
     expect(res.status).toBe(401);
   });
@@ -216,7 +216,7 @@ describe('DELETE /api/settings/api-keys/:provider', () => {
   it('deletes an API key', async () => {
     mockDeleteApiKey.mockResolvedValue(true);
 
-    const res = await fetch(`${baseUrlAuth}/api/settings/api-keys/anthropic`, { method: 'DELETE' });
+    const res = await fetch(`${baseUrlAuth}/api/settings/api-keys/gemini`, { method: 'DELETE' });
     expect(res.status).toBe(204);
   });
 

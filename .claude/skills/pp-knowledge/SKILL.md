@@ -5,9 +5,10 @@ description: >
   "what does this codebase do", "have we tried X", "what do we know about <component>",
   "remind me about Y", "what's the BL- iteration history", "find anything related to
   W". Routes to the right Tier-1 notebook (pp-codebase, pp-breadboard, pp-hardware,
-  pp-arscontexta, pp-memories, pp-research, pp-backlog, pp-journal, pp-bench), drills
-  into Tier-2 feature deep-dives (pp-feat-*) or Tier-3 component refs (pp-cmp-*) when
-  feature- or part-specific, or fans out via cross query when scope spans tiers.
+  pp-arscontexta, pp-memories, pp-research, pp-backlog, pp-journal, pp-bench) or drills
+  into a Tier-2 feature deep-dive (pp-feat-*) when the question is feature-specific.
+  Per-component questions go to pp-hardware with the part number in the query — Tier-3
+  per-IC notebooks were tried and dropped 2026-05-09 as redundant.
   Triggers on mentions of "codebase", "breadboard", "hardware", "memory", "remember",
   "research", "iteration log", "journal", "bench", "BL-", or any ProtoPulse-specific
   recall verb.
@@ -33,11 +34,12 @@ For the underlying CLI/MCP mechanics, defer to the `nlm-skill` (global, v0.6.6+)
 | `pp-backlog` | Backlog & Iteration | BL-XXXX history, Wave decisions, "have we tried X" | BL-ID + ISO date + Wave # |
 | `pp-journal` | Dev Journal | Daily/weekly recaps, commit summaries, what landed when | ISO date |
 | `pp-bench` | Bench Notes | Physical hardware observations, real-world part comparisons | part # / vendor / measurement |
-| `pp-feat-*` | Feature deep-dives | Specific subsystem (BreadboardView, MNA solver, parts catalog, AI integration, design system, Tauri migration, …) | feature name + source |
-| `pp-cmp-*` | Component references | Per-IC datasheet bundles (ESP32, ATmega328P, 74HC595, …) | part number + page/section |
+| `pp-feat-*` | Feature deep-dives | Specific subsystem (MNA solver, parts catalog, AI integration, design system, Tauri migration, Arduino IDE, PCB layout, Yjs collab, firmware runtime) | feature name + source |
 
 All Tier-1 notebooks are tagged `pp:active` — default cross-query target.
-Tier-2 notebooks are tagged `pp:feature`. Tier-3 are tagged `pp:component` (excluded from `pp:active` cross-query by default).
+Tier-2 notebooks are tagged `pp:feature` (opt-in to cross-query via `--tags "pp:active,pp:feature"`).
+
+**Note:** Tier-3 per-component notebooks (`pp-cmp-*`) were tried and dropped 2026-05-09. Per-component drill-in is now: `nlm notebook query pp-hardware "<part-number> <topic>"` — pp-hardware's 744-source corpus already holds every per-IC claim with proper RAG retrieval.
 
 ## Routing decision tree
 
@@ -51,8 +53,9 @@ Tyler's question…
 │    → `nlm notebook query pp-feat-<slug> "<question>"`
 │
 ├─► Specific component / IC / part number
-│    → `nlm notebook query pp-cmp-<slug> "<question>"`
-│       (or fan out: `nlm cross query --tags "pp:component,pp:cmp-<slug>"`)
+│    → `nlm notebook query pp-hardware "<part-number> <topic>"`
+│       (Tier-3 per-IC notebooks were dropped 2026-05-09; pp-hardware's RAG retrieves
+│        the right per-component chunks when the part number is in the query.)
 │
 ├─► About the code / architecture / plans
 │    → `nlm notebook query pp-codebase "<question>"`
@@ -87,7 +90,7 @@ For follow-ups, capture the `--conversation-id` from the first reply and pass it
 ## Anti-patterns
 
 - **Never `nlm chat start`** — that's an interactive REPL for humans, not controllable by AI tools (verified via `nlm-skill` SKILL.md L59).
-- **Don't query `pp-cmp-*` or `pp-feat-*` notebooks via `cross --tags pp:active`** — they're excluded from `pp:active` for a reason. Query them explicitly.
+- **Don't query `pp-feat-*` notebooks via `cross --tags pp:active`** — they're excluded from `pp:active` for a reason. Use `--tags "pp:active,pp:feature"` to opt them in, or query them explicitly.
 - **Don't paraphrase citations.** Quote them.
 - **Don't fabricate.** If a query returns no results, report empty — don't synthesize from training data.
 

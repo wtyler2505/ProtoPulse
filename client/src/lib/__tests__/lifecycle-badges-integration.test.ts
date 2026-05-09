@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import {
   classifyLifecycle,
@@ -129,7 +130,14 @@ describe('LifecycleBadge visibility', () => {
   });
 
   function renderWithTooltip(element: React.ReactElement) {
-    return render(createElement(TooltipProvider, null, element));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      createElement(
+        QueryClientProvider,
+        { client },
+        createElement(TooltipProvider, null, element),
+      ),
+    );
   }
 
   it('renders nothing for active parts', () => {

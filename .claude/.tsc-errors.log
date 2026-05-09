@@ -1,9 +1,10 @@
-[2J[3J[H2:29:25 AM - Starting compilation in watch mode...
+[2J[3J[H12:20:24 PM - Starting compilation in watch mode...
 
 
 <--- Last few GCs --->
 
-[35118:0x3a191000]   103516 ms: Mark-Compact (reduce) 2046.9 (2085.0) -> 2046.6 (2083.5) MB, pooled: 0 MB, 5520.67 / 0.00 ms  (+ 182.7 ms in 0 steps since start of marking, biggest step 0.0 ms, walltime since start of marking 6038 ms) (average mu = 0.124,
+[34625:0x2f572000]    90643 ms: Mark-Compact (reduce) 2046.4 (2083.6) -> 2045.3 (2081.6) MB, pooled: 0 MB, 1987.22 / 0.00 ms  (+ 157.1 ms in 0 steps since start of marking, biggest step 0.0 ms, walltime since start of marking 2253 ms) (average mu = 0.331,[34625:0x2f572000]    94655 ms: Mark-Compact 2046.4 (2081.6) -> 2045.9 (2085.1) MB, pooled: 0 MB, 3978.86 / 0.00 ms  (average mu = 0.160, current mu = 0.008) allocation failure; scavenge might not succeed
+
 
 <--- JS stacktrace --->
 
@@ -17,11 +18,7 @@ FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memor
  5: 0x145e109 v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags) [node]
  6: 0x14327b8 v8::internal::HeapAllocator::AllocateRawWithLightRetrySlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]
  7: 0x14336e5 v8::internal::HeapAllocator::AllocateRawWithRetryOrFailSlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]
- 8: 0x140bade v8::internal::Factory::AllocateRaw(int, v8::internal::AllocationType, v8::internal::AllocationAlignment) [node]
- 9: 0x13fa13c v8::internal::FactoryBase<v8::internal::Factory>::AllocateRawArray(int, v8::internal::AllocationType) [node]
-10: 0x13fa296 v8::internal::FactoryBase<v8::internal::Factory>::NewFixedArrayWithFiller(v8::internal::Handle<v8::internal::Map>, int, v8::internal::Handle<v8::internal::HeapObject>, v8::internal::AllocationType) [node]
-11: 0x172d7f7 v8::internal::OrderedHashTable<v8::internal::OrderedHashMap, 2>::Allocate(v8::internal::Isolate*, int, v8::internal::AllocationType) [node]
-12: 0x172d882 v8::internal::OrderedHashTable<v8::internal::OrderedHashMap, 2>::Rehash(v8::internal::Isolate*, v8::internal::Handle<v8::internal::OrderedHashMap>, int) [node]
-13: 0x1862f26 v8::internal::Runtime_MapGrow(int, unsigned long*, v8::internal::Isolate*) [node]
-14: 0x7f774cdac476 
+ 8: 0x140c3be v8::internal::Factory::NewFillerObject(int, v8::internal::AllocationAlignment, v8::internal::AllocationType, v8::internal::AllocationOrigin) [node]
+ 9: 0x186da1c v8::internal::Runtime_AllocateInYoungGeneration(int, unsigned long*, v8::internal::Isolate*) [node]
+10: 0x7ef7d59ec476 
 Aborted (core dumped)

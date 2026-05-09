@@ -44,10 +44,10 @@ When ALL three skills load together, you are flawless. Without operator-level kn
 Resolve any alias to UUID: `nlm alias get <alias>`. Manifest at `~/.claude/state/pp-nlm/notebook-manifest.json`.
 
 ### Tier-2 (feature deep-dives, tagged `pp:feature`)
-Created on demand. Naming: `pp-feat-<slug>`. Initial 10 listed in plan §5b. Hard cap 50.
+9 notebooks: `pp-feat-{mna-solver, parts-catalog, ai-integration, design-system, tauri-migration, arduino-ide, pcb-layout, collab-yjs, firmware-runtime}`. Naming: `pp-feat-<slug>`. Excluded from default `pp:active` cross-query (opt in via `--tags "pp:active,pp:feature"`).
 
-### Tier-3 (component refs, tagged `pp:component`)
-Per-IC datasheet bundles. Naming: `pp-cmp-<slug>`. Open-ended. 50-100+ expected over time. **Excluded from default `pp:active` cross-query.**
+### Tier-3 — DROPPED 2026-05-09
+Per-IC `pp-cmp-*` notebooks were tried and removed as redundant with `pp-hardware`. Per-component drill-in is now: `nlm notebook query pp-hardware "<part-number> <topic>"`. See `feedback_notebook_granularity.md` in memory for the lesson.
 
 ### 14 `/pp-*` slash commands (`.claude/commands/pp-*.md`)
 | Command | What it does | Quota |
@@ -109,8 +109,8 @@ Per-IC datasheet bundles. Naming: `pp-cmp-<slug>`. Open-ended. 50-100+ expected 
 1. **Domain spans tiers / unsure** → `/pp-query <question>`
 2. **Specific Tier-1** → defer to `pp-knowledge` skill for routing → `nlm notebook query <alias> "..."`
 3. **Specific feature deep-dive** → `nlm notebook query pp-feat-<slug> "..."`
-4. **Specific component** → `nlm notebook query pp-cmp-<slug> "..."`
-5. **Cross-tier including Tier-2/3** → `nlm cross query --tags "pp:active,pp:feature" "..."` (note explicit tag list, not just `pp:active`)
+4. **Specific component / IC / part** → `nlm notebook query pp-hardware "<part-number> <topic>"` (Tier-3 per-component notebooks dropped 2026-05-09; pp-hardware's RAG handles per-part retrieval)
+5. **Cross-tier including Tier-2** → `nlm cross query --tags "pp:active,pp:feature" "..."` (explicit tag list, not just `pp:active`)
 
 ### Tyler wants to capture something
 1. **A preference / rule / gotcha** → `/pp-capture`
@@ -146,7 +146,7 @@ Per-IC datasheet bundles. Naming: `pp-cmp-<slug>`. Open-ended. 50-100+ expected 
 
 ### Maintenance / setup
 1. **New Tier-2 notebook**: manual `nlm notebook create "ProtoPulse :: Feature — <Name>"` + `nlm alias set pp-feat-<slug> <id>` + `nlm tag add <id> --tags "pp:feature,pp:feat-<slug>"`. Apply hand-crafted chat config.
-2. **New Tier-3 component**: same shape with `pp:component,pp:cmp-<slug>` tags. Excluded from default cross-query.
+2. **New per-component drill-in**: do NOT create a Tier-3 notebook (those were dropped 2026-05-09). Add the component's vault notes/datasheet to `pp-hardware` directly. Per-IC questions go to `nlm notebook query pp-hardware "<part-number> <topic>"`.
 3. **Apply chat config to new notebook**: hand-craft `data/pp-nlm/chat-configs/<alias>.txt` (DEEP, notebook-specific — see `feedback_no_bulk_scripts_for_craft_work`), then `PROMPT="$(cat ...)" && nlm chat configure <alias> --goal custom --prompt "$PROMPT"`.
 4. **Refresh stale source**: `nlm source_get_content <old-vN-id>` → edit → `nlm source add <alias> --text "$NEW" --title "<slug> v<N+1> — <DATE>" --wait` → 30-day grace → delete old.
 
@@ -183,14 +183,13 @@ Per-IC datasheet bundles. Naming: `pp-cmp-<slug>`. Open-ended. 50-100+ expected 
 ### Tag schema enforcement
 - `pp:active` reserved for Tier-1 only.
 - `pp:feature` reserved for Tier-2.
-- `pp:component` reserved for Tier-3.
 - `pp:legacy` for relevant-but-archived prior notebooks (not part of pp-* taxonomy).
 - `pp:archive` for stale archived notebooks.
+- `pp:component` is RETIRED (Tier-3 dropped 2026-05-09).
 
 ### Default cross-query scope
 - `nlm cross query --tags pp:active` returns Tier-1 only.
-- For Tier-2 inclusion: `--tags "pp:active,pp:feature"`.
-- For everything: `--tags "pp:active,pp:feature,pp:component"` (or use `--all`).
+- For Tier-2 inclusion: `--tags "pp:active,pp:feature"` (this is the everything-scope now).
 
 ### Source-manifest path
 - `~/.claude/state/pp-nlm/source-manifest.json`. Populated by populate scripts. Idempotency-critical.

@@ -256,21 +256,21 @@ describe('categorizeError', () => {
 
   it('redacts Anthropic API keys (sk-...) in user message', () => {
     const result = categorizeError({
-      message: 'Failed with key sk-ant1234567890abcdef in request',
+      message: 'Failed with key sk-ant-api03-1234567890abcdefghijk in request',
     });
 
     expect(result.code).toBe('UNKNOWN');
-    expect(result.userMessage).not.toContain('sk-ant1234567890abcdef');
+    expect(result.userMessage).not.toContain('sk-ant-api03-1234567890abcdefghijk');
     expect(result.userMessage).toContain('[REDACTED]');
   });
 
   it('redacts Google API keys (AIza...) in user message', () => {
     const result = categorizeError({
-      message: 'Failed with key AIzaSyA1B2C3D4E5F6G7H8I9 in request',
+      message: 'Failed with key AIzaSyA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q in request',
     });
 
     expect(result.code).toBe('UNKNOWN');
-    expect(result.userMessage).not.toContain('AIzaSyA1B2C3D4E5F6G7H8I9');
+    expect(result.userMessage).not.toContain('AIzaSyA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q');
     expect(result.userMessage).toContain('[REDACTED]');
   });
 

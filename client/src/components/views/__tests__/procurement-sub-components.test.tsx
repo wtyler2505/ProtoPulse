@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactElement } from 'react';
 import { detectEsdSensitivity, detectAssemblyCategory, ASSEMBLY_CATEGORY_INFO } from '../procurement/bom-utils';
 import { BomToolbar } from '../procurement/BomToolbar';
 import { BomSettings } from '../procurement/BomSettings';
@@ -92,6 +94,11 @@ function makeCostBreakdown(): CostBreakdown {
 const noop = vi.fn();
 const mockToast = vi.fn() as ReturnType<typeof import('@/hooks/use-toast').useToast>['toast'];
 
+function renderWithQuery(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
+
 // ── Tests: bom-utils ──
 
 describe('detectEsdSensitivity', () => {
@@ -146,14 +153,14 @@ describe('ASSEMBLY_CATEGORY_INFO', () => {
 
 describe('BomToolbar', () => {
   it('renders search input and buttons', () => {
-    render(<BomToolbar searchTerm="" onSearchChange={noop} showSettings={false} onToggleSettings={noop} esdFilterOnly={false} onToggleEsdFilter={noop} esdCount={3} showAssemblyGroups={false} onToggleAssemblyGroups={noop} onAddItem={noop} totalCost={42.5} onExportCSV={noop} />);
+    renderWithQuery(<BomToolbar searchTerm="" onSearchChange={noop} showSettings={false} onToggleSettings={noop} esdFilterOnly={false} onToggleEsdFilter={noop} esdCount={3} showAssemblyGroups={false} onToggleAssemblyGroups={noop} onAddItem={noop} totalCost={42.5} onExportCSV={noop} />);
     expect(screen.getByTestId('input-search-bom')).toBeDefined();
     expect(screen.getByTestId('button-export-csv')).toBeDefined();
     expect(screen.getByTestId('text-total-cost')).toBeDefined();
   });
 
   it('displays total cost', () => {
-    render(<BomToolbar searchTerm="" onSearchChange={noop} showSettings={false} onToggleSettings={noop} esdFilterOnly={false} onToggleEsdFilter={noop} esdCount={0} showAssemblyGroups={false} onToggleAssemblyGroups={noop} onAddItem={noop} totalCost={123.45} onExportCSV={noop} />);
+    renderWithQuery(<BomToolbar searchTerm="" onSearchChange={noop} showSettings={false} onToggleSettings={noop} esdFilterOnly={false} onToggleEsdFilter={noop} esdCount={0} showAssemblyGroups={false} onToggleAssemblyGroups={noop} onAddItem={noop} totalCost={123.45} onExportCSV={noop} />);
     expect(screen.getByTestId('text-total-cost').textContent).toContain('123.45');
   });
 });

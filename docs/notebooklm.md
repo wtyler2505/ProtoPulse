@@ -1,9 +1,9 @@
 # ProtoPulse NotebookLM Notesbook (PP-NLM) — Reference
 
-**Status:** Live, Phase 0/1/4/5/6/7/8/10/11 complete; Phase 2 partial (runner died mid-pp-breadboard, manifest reconstructed); Phase 3 (pp-hardware + Tier-2/3) pending; Phase 9 cron pending Tyler's `crontab -e`.
+**Status:** Live with **18 notebooks** (9 Tier-1 + 9 Tier-2). Phase 0/1/2/4/5/6/7/8/10/11 complete. Phase 3 in progress (populate-hardware orphan PID 31395 running, ~12-15h walltime; 9 Tier-2 populates queued for after). Phase 9 cron pending Tyler's `crontab -e`. **Tier-3 per-component notebooks dropped 2026-05-09 as redundant with `pp-hardware`** — see `feedback_notebook_granularity.md`.
 **Account:** wtyler2505@gmail.com (Google AI Ultra).
 **Plan:** [`/home/wtyler/.claude/plans/claude-update-nlm-skill-i-want-velvet-tide.md`](../../.claude/plans/claude-update-nlm-skill-i-want-velvet-tide.md).
-**Last updated:** 2026-05-08.
+**Last updated:** 2026-05-09.
 
 ---
 
@@ -36,18 +36,18 @@ ProtoPulse accumulated 744+ atomic vault notes, 25+ plans, 231KB of MASTER_BACKL
 | `pp-journal` | ProtoPulse :: Dev Journal | Daily/weekly recaps, commit summaries | ISO date |
 | `pp-bench` | ProtoPulse :: Bench Notes | Physical hardware observations, measurements | part # / vendor / equipment |
 
-### Tier 2 — Feature deep-dives (target ~10-25, tagged `pp:feature`)
+### Tier 2 — Feature deep-dives (9 notebooks, tagged `pp:feature`)
 
-Naming: `pp-feat-<slug>`. Spawned on demand for major subsystems. Initial set:
-`pp-feat-breadboard-view`, `pp-feat-mna-solver`, `pp-feat-parts-catalog`, `pp-feat-ai-integration`, `pp-feat-design-system`, `pp-feat-tauri-migration`, `pp-feat-arduino-ide`, `pp-feat-pcb-layout`, `pp-feat-collab-yjs`, `pp-feat-firmware-runtime`.
+Naming: `pp-feat-<slug>`. Per-subsystem deep-dives:
+`pp-feat-mna-solver`, `pp-feat-parts-catalog`, `pp-feat-ai-integration`, `pp-feat-design-system`, `pp-feat-tauri-migration`, `pp-feat-arduino-ide`, `pp-feat-pcb-layout`, `pp-feat-collab-yjs`, `pp-feat-firmware-runtime`.
 
-Hard cap 50.
+(`pp-feat-breadboard-view` was deleted 2026-05-09 as redundant with Tier-1 `pp-breadboard`.)
 
-### Tier 3 — Component references (open-ended, tagged `pp:component`)
+### Tier 3 — DROPPED 2026-05-09
 
-Naming: `pp-cmp-<slug>`. Per-IC datasheet bundles. **Excluded from default `pp:active` cross-query.** Examples: `pp-cmp-esp32`, `pp-cmp-atmega328p`, `pp-cmp-74hc595`, `pp-cmp-mosfet-nmos`, `pp-cmp-ams1117`, `pp-cmp-1088as-7seg`, `pp-cmp-28byj-48`.
+Per-component `pp-cmp-*` notebooks were tried (10 created: esp32, atmega328p, 74hc595, 74hc14, mosfet-nmos, mosfet-pmos, lm317, ams1117, 1088as-7seg, 28byj-48) and removed as redundant with `pp-hardware`. Each held only 4-12 sources, all duplicated from pp-hardware's 744-source corpus. Per-IC drill-in is now: `nlm notebook query pp-hardware "<part-number> <topic>"` — pp-hardware's RAG retrieves the right per-component chunks when the part number is in the query.
 
-Open-ended — 50-100+ expected over time.
+See `feedback_notebook_granularity.md` in memory for the lesson: don't split a corpus into thin per-X notebooks when an existing notebook already holds the same content.
 
 ---
 
@@ -59,10 +59,10 @@ Open-ended — 50-100+ expected over time.
 | `pp:legacy` | Pre-existing notebooks kept for reference | ❌ no |
 | `pp:archive` | Renamed `[ARCHIVED ...]` notebooks | ❌ no |
 | `pp:feature` | Tier-2 deep-dives | ❌ no (opt-in) |
-| `pp:component` | Tier-3 per-IC references | ❌ no (opt-in) |
 | `pp:<alias-suffix>` | Per-notebook (e.g. `pp:codebase`, `pp:hardware`) | n/a (informational) |
 | `pp:<feature-slug>` | Per Tier-2 feature | n/a |
-| `pp:cmp-<part>` | Per Tier-3 component | n/a |
+
+(`pp:component` and `pp:cmp-*` are RETIRED — Tier-3 dropped 2026-05-09.)
 
 **Critical:** `nlm tag add <id> --tags "tag1,tag2"` — `--tags` flag is REQUIRED. Positional fails.
 
@@ -310,7 +310,7 @@ Three skills compose into expert operation. Load order matters — operator read
 
 ### Monthly
 - Monthly cron generates pp-backlog mindmap
-- Review Tier-2/3 expansion candidates (any feature/IC that's been queried >5 times warrants its own notebook)
+- Review Tier-2 expansion candidates (any feature subsystem that's been queried >5 times AND has a distinct chat-voice/source-set warrants its own pp-feat-* notebook — see `feedback_notebook_granularity.md` for the gate). Per-component drill-in stays in pp-hardware.
 - `nlm source stale <alias>` per Tier-1 — sync if anything stale (or run `/pp-sync`)
 - Review `ops/index/nlm-index.json` for stale entries (knowledge notes that no longer exist)
 
@@ -396,8 +396,8 @@ For deeper troubleshooting, see [`~/.claude/skills/nlm-skill/references/troubles
 |---|---|---|
 | 0 — Audit + auth | ✅ DONE | 104 notebooks audited; 3 ProtoPulse-relevant tagged `pp:legacy` |
 | 1 — MCP wiring + Tier-1 | ✅ DONE | 9 notebooks live, aliases set, tags applied; manifest written |
-| 2 — Source population (8 of 9 Tier-1) | ⚠️ PARTIAL | Background runner died mid-pp-breadboard; manifest reconstructed (24 sources across 5 notebooks); pp-memories, pp-codebase, pp-backlog still need their populates |
-| 3 — pp-hardware + Tier-2/3 | ❌ pending | 744 vault notes + 10 features + 10 components |
+| 2 — Source population (8 of 9 Tier-1) | ✅ DONE | 7 of 8 populated (pp-arscontexta:34, pp-memories:25, pp-breadboard:10, pp-bench:2, pp-research:2, pp-journal:2, pp-backlog:1). pp-codebase missing from manifest — verify next session |
+| 3 — pp-hardware + Tier-2 | ⏳ IN PROGRESS | populate-hardware orphan PID 31395 running through 743 notes (~12-15h). After it finishes, relaunch full-population-runner.sh to run the 9 Tier-2 populates. (Tier-3 dropped 2026-05-09.) |
 | 4 — Custom chat configs (9 Tier-1) | ✅ DONE | All 9 hand-crafted, deeply tailored, applied |
 | 5 — pp-knowledge skill + claude-update extension | ✅ DONE | Routing layer live |
 | 6 — 14 /pp-* slash commands | ✅ DONE | 5/5 bats green |

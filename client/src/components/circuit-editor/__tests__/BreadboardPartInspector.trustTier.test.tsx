@@ -10,10 +10,17 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactElement } from 'react';
 
 import BreadboardPartInspector from '../BreadboardPartInspector';
 import type { BreadboardSelectedPartModel } from '@/lib/breadboard-part-inspector';
 import type { BreadboardTrustTier } from '@/lib/breadboard-part-inspector';
+
+function renderWithQuery(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
 
 // ---------------------------------------------------------------------------
 // Minimal model fixture builder
@@ -128,32 +135,32 @@ function baseProps(model: BreadboardSelectedPartModel) {
 
 describe('BreadboardPartInspector — 4-canonical-tier trust badge (audit #173)', () => {
   it('renders "Verified exact" label for verified-exact tier', () => {
-    render(<BreadboardPartInspector {...baseProps(buildModel('verified-exact'))} />);
+    renderWithQuery(<BreadboardPartInspector {...baseProps(buildModel('verified-exact'))} />);
     expect(screen.getByText('Verified exact')).toBeTruthy();
   });
 
   it('renders "Connector defined" label for connector-defined tier', () => {
-    render(<BreadboardPartInspector {...baseProps(buildModel('connector-defined'))} />);
+    renderWithQuery(<BreadboardPartInspector {...baseProps(buildModel('connector-defined'))} />);
     expect(screen.getByText('Connector defined')).toBeTruthy();
   });
 
   it('renders "Heuristic" label for heuristic tier', () => {
-    render(<BreadboardPartInspector {...baseProps(buildModel('heuristic'))} />);
+    renderWithQuery(<BreadboardPartInspector {...baseProps(buildModel('heuristic'))} />);
     expect(screen.getByText('Heuristic')).toBeTruthy();
   });
 
   it('renders "Stash absent" label for stash-absent tier', () => {
-    render(<BreadboardPartInspector {...baseProps(buildModel('stash-absent'))} />);
+    renderWithQuery(<BreadboardPartInspector {...baseProps(buildModel('stash-absent'))} />);
     expect(screen.getByText('Stash absent')).toBeTruthy();
   });
 
   it('does NOT render the old binary "Candidate exact" label', () => {
-    render(<BreadboardPartInspector {...baseProps(buildModel('connector-defined'))} />);
+    renderWithQuery(<BreadboardPartInspector {...baseProps(buildModel('connector-defined'))} />);
     expect(screen.queryByText('Candidate exact')).toBeNull();
   });
 
   it('verified-exact badge uses emerald color class', () => {
-    render(<BreadboardPartInspector {...baseProps(buildModel('verified-exact'))} />);
+    renderWithQuery(<BreadboardPartInspector {...baseProps(buildModel('verified-exact'))} />);
     // Get the badge element that contains the tier label text
     const badge = screen.getByText('Verified exact').closest('[class*="border-"]');
     expect(badge).toBeTruthy();
@@ -161,21 +168,21 @@ describe('BreadboardPartInspector — 4-canonical-tier trust badge (audit #173)'
   });
 
   it('connector-defined badge uses sky color class', () => {
-    render(<BreadboardPartInspector {...baseProps(buildModel('connector-defined'))} />);
+    renderWithQuery(<BreadboardPartInspector {...baseProps(buildModel('connector-defined'))} />);
     const badge = screen.getByText('Connector defined').closest('[class*="border-"]');
     expect(badge).toBeTruthy();
     expect(badge?.className).toContain('sky');
   });
 
   it('heuristic badge uses amber color class', () => {
-    render(<BreadboardPartInspector {...baseProps(buildModel('heuristic'))} />);
+    renderWithQuery(<BreadboardPartInspector {...baseProps(buildModel('heuristic'))} />);
     const badge = screen.getByText('Heuristic').closest('[class*="border-"]');
     expect(badge).toBeTruthy();
     expect(badge?.className).toContain('amber');
   });
 
   it('stash-absent badge uses rose color class', () => {
-    render(<BreadboardPartInspector {...baseProps(buildModel('stash-absent'))} />);
+    renderWithQuery(<BreadboardPartInspector {...baseProps(buildModel('stash-absent'))} />);
     const badge = screen.getByText('Stash absent').closest('[class*="border-"]');
     expect(badge).toBeTruthy();
     expect(badge?.className).toContain('rose');
@@ -192,7 +199,7 @@ describe('BreadboardPartInspector — 4-canonical-tier trust badge (audit #173)'
     const colorClasses: string[] = [];
 
     for (const [tier, label] of tierLabels) {
-      render(<BreadboardPartInspector {...baseProps(buildModel(tier))} />);
+      renderWithQuery(<BreadboardPartInspector {...baseProps(buildModel(tier))} />);
       // Find by text then walk up to the badge element with a border class
       const badge = screen.getByText(label).closest('[class*="border-"]');
       expect(badge).toBeTruthy();

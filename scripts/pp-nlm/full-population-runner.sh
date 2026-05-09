@@ -58,13 +58,7 @@ for s in "$ROOT"/scripts/pp-nlm/populate-pp-feat-*.sh; do
   log "  done $(basename "$s")"
 done
 
-# ---- Step 4: all Tier-3 component populates ----
-log "Step 4: 10 Tier-3 component populates..."
-for s in "$ROOT"/scripts/pp-nlm/populate-pp-cmp-*.sh; do
-  log "  starting $(basename "$s")"
-  bash "$s" 2>&1 | tee -a "$LOG"
-  log "  done $(basename "$s")"
-done
+# ---- Step 4: REMOVED 2026-05-09 — Tier-3 per-component notebooks dropped as redundant with pp-hardware ----
 
 # ---- Step 5: final report ----
 log "=== full-population-runner finished ==="
