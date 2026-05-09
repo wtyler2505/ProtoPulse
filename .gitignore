@@ -23,3 +23,6 @@ backups/
 # Test run logs (persistent output for multi-agent context sharing)
 logs/
 .moltbook_credentials.json
+
+# Local MCP runtime caches
+FileScopeMCP-tree.json

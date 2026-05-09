@@ -1,3 +1,8 @@
+---
+name: scribe-mastery
+description: Use when working on Scribe documentation, technical writing, blogs, specs, write docs requests, articles, research synthesis, pipeline state, blueprints, drafts, critiques, finals, or styleguide checks
+---
+
 # Scribe Mastery (Super Skill)
 
 ## Description

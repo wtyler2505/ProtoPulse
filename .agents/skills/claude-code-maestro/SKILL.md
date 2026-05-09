@@ -1,3 +1,8 @@
+---
+name: claude-code-maestro
+description: Use when working with Claude Code CLI settings, hooks, commands, skills, agents, plugins, permissions, sandboxing, MCP servers, CI pipelines, extension ideas, or custom workflows
+---
+
 # Claude Code Maestro (Super Skill)
 
 ## Description

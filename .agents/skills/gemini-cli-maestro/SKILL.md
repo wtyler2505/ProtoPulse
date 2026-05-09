@@ -1,3 +1,8 @@
+---
+name: gemini-cli-maestro
+description: Use when working with Gemini CLI setup, settings, scripts, MCP integrations, orchestration workflows, health checks, backups, diagnostics, qmd search, or google_web_search fallbacks
+---
+
 # gemini-cli-maestro (Super Skill)
 
 ## Description
