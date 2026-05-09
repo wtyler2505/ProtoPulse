@@ -58,9 +58,11 @@ If you find yourself creating a file in knowledge/ without having run /extract, 
 
 ## NotebookLM Notesbook System (PP-NLM)
 
-ProtoPulse's evolving knowledge lives across 9 Tier-1 + ~10 Tier-2 + ~10 Tier-3 NotebookLM notebooks (the *PP-NLM Notesbook*, Ultra tier).
+ProtoPulse's evolving knowledge lives across **18 NotebookLM notebooks** (the *PP-NLM Notesbook*, Ultra tier): 9 Tier-1 durable + 9 Tier-2 feature deep-dives. Tier-3 per-component notebooks were tried and dropped 2026-05-09 — they redundantly duplicated `pp-hardware` content; per-IC drill-in is handled by querying `pp-hardware` with the part number.
 
-**Tier-1 aliases:** `pp-codebase`, `pp-breadboard`, `pp-hardware`, `pp-arscontexta`, `pp-memories`, `pp-research`, `pp-backlog`, `pp-journal`, `pp-bench`. Tier-2 (`pp-feat-*`): per-feature deep-dives. Tier-3 (`pp-cmp-*`): per-component datasheet bundles.
+**Tier-1 aliases (durable, always-active):** `pp-codebase`, `pp-breadboard`, `pp-hardware`, `pp-arscontexta`, `pp-memories`, `pp-research`, `pp-backlog`, `pp-journal`, `pp-bench`.
+
+**Tier-2 aliases (`pp-feat-*`, feature deep-dives):** `pp-feat-mna-solver`, `pp-feat-parts-catalog`, `pp-feat-ai-integration`, `pp-feat-design-system`, `pp-feat-tauri-migration`, `pp-feat-arduino-ide`, `pp-feat-pcb-layout`, `pp-feat-collab-yjs`, `pp-feat-firmware-runtime`. (`pp-feat-breadboard-view` was redundant with Tier-1 `pp-breadboard` and was dropped.)
 
 **Skills stack (load order):**
 1. `nlm-skill` (global) — CLI/MCP tool mechanics. References: `mcp-tool-surface.md`, `advanced-recipes.md`, `edge-cases.md`, `performance-and-batching.md`.
