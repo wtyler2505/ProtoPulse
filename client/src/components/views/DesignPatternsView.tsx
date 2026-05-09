@@ -365,7 +365,7 @@ function PatternsTabContent() {
           value={categoryFilter}
           onValueChange={(v) => { setCategoryFilter(v as PatternCategory | 'all'); }}
         >
-          <SelectTrigger data-testid="design-patterns-category-filter" className="w-full sm:w-[160px]">
+          <SelectTrigger data-testid="design-patterns-category-filter" className="w-full sm:w-[160px]" aria-label="Filter design patterns by category">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
@@ -381,7 +381,7 @@ function PatternsTabContent() {
           value={difficultyFilter}
           onValueChange={(v) => { setDifficultyFilter(v as PatternDifficulty | 'all'); }}
         >
-          <SelectTrigger data-testid="design-patterns-difficulty-filter" className="w-full sm:w-[160px]">
+          <SelectTrigger data-testid="design-patterns-difficulty-filter" className="w-full sm:w-[160px]" aria-label="Filter design patterns by difficulty">
             <SelectValue placeholder="Difficulty" />
           </SelectTrigger>
           <SelectContent>
@@ -855,7 +855,7 @@ function MySnippetsTabContent() {
           value={snippetCategoryFilter}
           onValueChange={(v) => { setSnippetCategoryFilter(v as SnippetCategory | 'all'); }}
         >
-          <SelectTrigger data-testid="snippets-category-filter" className="w-full sm:w-[160px]">
+          <SelectTrigger data-testid="snippets-category-filter" className="w-full sm:w-[160px]" aria-label="Filter snippets by category">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>

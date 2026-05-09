@@ -45,18 +45,28 @@ export interface NumberInputProps
  * Returns `undefined` when the value cannot be parsed, which signals callers
  * to OMIT the `aria-valuenow` attribute rather than emit `NaN` or `0`.
  */
-function ariaValueNow(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
+function formatAriaNumber(value: number): string {
+  const raw = String(value);
+  if (!raw.includes('e') && !raw.includes('E')) return raw;
+  return value.toLocaleString('en-US', {
+    useGrouping: false,
+    maximumFractionDigits: 20,
+  });
+}
+
+function ariaValueNow(value: unknown): string | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return formatAriaNumber(value);
   if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
+    const trimmed = value.trim();
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? formatAriaNumber(parsed) : undefined;
   }
   return undefined;
 }
 
 const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
   function NumberInput({ min, max, step, value, ...props }, ref) {
-    const ariaAttrs: Record<string, number> = {};
+    const ariaAttrs: Record<string, number | string> = {};
     const safeMin =
       typeof min === 'number' && Number.isFinite(min) ? min : undefined;
     const safeMax =
@@ -64,7 +74,7 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
     if (typeof safeMin === 'number') ariaAttrs['aria-valuemin'] = safeMin;
     if (typeof safeMax === 'number') ariaAttrs['aria-valuemax'] = safeMax;
     const now = ariaValueNow(value);
-    if (typeof now === 'number') ariaAttrs['aria-valuenow'] = now;
+    if (typeof now === 'string') ariaAttrs['aria-valuenow'] = now;
 
     return (
       <Input

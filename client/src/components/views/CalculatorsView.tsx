@@ -174,7 +174,7 @@ function OhmsLawCard() {
           <Button data-testid="calc-ohms-calculate-btn" size="sm" onClick={handleCalculate} className="flex-1">
             Calculate
           </Button>
-          <Button data-testid="calc-ohms-reset-btn" size="sm" variant="outline" onClick={handleReset}>
+          <Button data-testid="calc-ohms-reset-btn" size="sm" variant="outline" onClick={handleReset} aria-label="Reset Ohm's Law calculator">
             <RotateCcw className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -287,7 +287,7 @@ function LedResistorCard() {
           <Button data-testid="calc-led-calculate-btn" size="sm" onClick={handleCalculate} className="flex-1">
             Calculate
           </Button>
-          <Button data-testid="calc-led-reset-btn" size="sm" variant="outline" onClick={handleReset}>
+          <Button data-testid="calc-led-reset-btn" size="sm" variant="outline" onClick={handleReset} aria-label="Reset LED resistor calculator">
             <RotateCcw className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -432,7 +432,7 @@ function VoltageDividerCard() {
               <Button data-testid="calc-divider-forward-btn" size="sm" onClick={handleForward} className="flex-1">
                 Calculate
               </Button>
-              <Button data-testid="calc-divider-reset-btn" size="sm" variant="outline" onClick={handleReset}>
+              <Button data-testid="calc-divider-reset-btn" size="sm" variant="outline" onClick={handleReset} aria-label="Reset voltage divider calculator">
                 <RotateCcw className="w-3.5 h-3.5" />
               </Button>
             </div>
@@ -488,7 +488,7 @@ function VoltageDividerCard() {
               <Button data-testid="calc-divider-reverse-btn" size="sm" onClick={handleReverse} className="flex-1">
                 Suggest R Values
               </Button>
-              <Button data-testid="calc-divider-rev-reset-btn" size="sm" variant="outline" onClick={handleReset}>
+              <Button data-testid="calc-divider-rev-reset-btn" size="sm" variant="outline" onClick={handleReset} aria-label="Reset reverse voltage divider calculator">
                 <RotateCcw className="w-3.5 h-3.5" />
               </Button>
             </div>
@@ -605,7 +605,7 @@ function RcTimeConstantCard() {
           <Button data-testid="calc-rc-calculate-btn" size="sm" onClick={handleCalculate} className="flex-1">
             Calculate
           </Button>
-          <Button data-testid="calc-rc-reset-btn" size="sm" variant="outline" onClick={handleReset}>
+          <Button data-testid="calc-rc-reset-btn" size="sm" variant="outline" onClick={handleReset} aria-label="Reset RC time constant calculator">
             <RotateCcw className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -766,7 +766,7 @@ function FilterCutoffCard() {
               <Button data-testid="calc-filter-rc-btn" size="sm" onClick={handleRcCalculate} className="flex-1">
                 Calculate
               </Button>
-              <Button data-testid="calc-filter-reset-btn" size="sm" variant="outline" onClick={handleReset}>
+              <Button data-testid="calc-filter-reset-btn" size="sm" variant="outline" onClick={handleReset} aria-label="Reset filter cutoff calculator">
                 <RotateCcw className="w-3.5 h-3.5" />
               </Button>
             </div>
@@ -833,7 +833,7 @@ function FilterCutoffCard() {
               <Button data-testid="calc-filter-bp-btn" size="sm" onClick={handleBpCalculate} className="flex-1">
                 Calculate
               </Button>
-              <Button data-testid="calc-filter-bp-reset-btn" size="sm" variant="outline" onClick={handleReset}>
+              <Button data-testid="calc-filter-bp-reset-btn" size="sm" variant="outline" onClick={handleReset} aria-label="Reset band-pass filter calculator">
                 <RotateCcw className="w-3.5 h-3.5" />
               </Button>
             </div>
@@ -962,7 +962,7 @@ function PowerDissipationCard() {
           <Button data-testid="calc-power-calculate-btn" size="sm" onClick={handleCalculate} className="flex-1">
             Calculate
           </Button>
-          <Button data-testid="calc-power-reset-btn" size="sm" variant="outline" onClick={handleReset}>
+          <Button data-testid="calc-power-reset-btn" size="sm" variant="outline" onClick={handleReset} aria-label="Reset power dissipation calculator">
             <RotateCcw className="w-3.5 h-3.5" />
           </Button>
         </div>

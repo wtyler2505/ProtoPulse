@@ -549,6 +549,7 @@ export default function BoardViewer3DView() {
               size="sm"
               className="h-7 px-2"
               onClick={() => { setViewAngle('isometric'); }}
+              aria-label="Reset 3D view angle"
             >
               <RotateCcw className="w-3 h-3" />
             </Button>
@@ -660,9 +661,10 @@ export default function BoardViewer3DView() {
               </CardHeader>
               <CardContent className="px-3 pb-3 space-y-2">
                 <div>
-                  <Label className="text-xs">Width (mm)</Label>
+                  <Label htmlFor="edit-board-width" className="text-xs">Width (mm)</Label>
                   <NumberInput
                     data-testid="edit-board-width"
+                    id="edit-board-width"
                     value={editWidth}
                     onChange={(e) => { setEditWidth(e.target.value); }}
                     min={1}
@@ -672,9 +674,10 @@ export default function BoardViewer3DView() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Height (mm)</Label>
+                  <Label htmlFor="edit-board-height" className="text-xs">Height (mm)</Label>
                   <NumberInput
                     data-testid="edit-board-height"
+                    id="edit-board-height"
                     value={editHeight}
                     onChange={(e) => { setEditHeight(e.target.value); }}
                     min={1}
@@ -684,9 +687,10 @@ export default function BoardViewer3DView() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Thickness (mm)</Label>
+                  <Label htmlFor="edit-board-thickness" className="text-xs">Thickness (mm)</Label>
                   <NumberInput
                     data-testid="edit-board-thickness"
+                    id="edit-board-thickness"
                     value={editThickness}
                     onChange={(e) => { setEditThickness(e.target.value); }}
                     min={0.4}

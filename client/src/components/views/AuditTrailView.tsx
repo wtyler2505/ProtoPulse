@@ -316,7 +316,7 @@ export default function AuditTrailView() {
 
             {/* Entity type filter */}
             <Select value={entityTypeFilter} onValueChange={setEntityTypeFilter}>
-              <SelectTrigger className="w-[180px] h-9" data-testid="audit-entity-type-filter">
+              <SelectTrigger className="w-[180px] h-9" data-testid="audit-entity-type-filter" aria-label="Filter audit entries by entity type">
                 <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
                 <SelectValue placeholder="Entity type" />
               </SelectTrigger>
@@ -332,7 +332,7 @@ export default function AuditTrailView() {
 
             {/* Action filter */}
             <Select value={actionFilter} onValueChange={setActionFilter}>
-              <SelectTrigger className="w-[150px] h-9" data-testid="audit-action-filter">
+              <SelectTrigger className="w-[150px] h-9" data-testid="audit-action-filter" aria-label="Filter audit entries by action">
                 <SelectValue placeholder="Action" />
               </SelectTrigger>
               <SelectContent>

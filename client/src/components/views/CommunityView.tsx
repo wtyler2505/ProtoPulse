@@ -553,7 +553,7 @@ export default function CommunityView() {
               value={typeFilter}
               onValueChange={(v) => { setTypeFilter(v as ComponentType | '__all__'); }}
             >
-              <SelectTrigger data-testid="community-type-filter" className="w-36 h-9 text-xs">
+              <SelectTrigger data-testid="community-type-filter" className="w-36 h-9 text-xs" aria-label="Filter community components by type">
                 <SelectValue placeholder="All types" />
               </SelectTrigger>
               <SelectContent>
@@ -565,7 +565,7 @@ export default function CommunityView() {
             </Select>
 
             <Select value={sortBy} onValueChange={(v) => { setSortBy(v as SortOption); }}>
-              <SelectTrigger data-testid="community-sort" className="w-36 h-9 text-xs">
+              <SelectTrigger data-testid="community-sort" className="w-36 h-9 text-xs" aria-label="Sort community components">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

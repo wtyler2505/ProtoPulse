@@ -132,8 +132,9 @@ export default function GenerativeDesignView() {
         {/* Constraint sliders */}
         <div className="flex flex-col gap-3">
           <div data-testid="constraint-budget" className="flex flex-col gap-1">
-            <label className="text-xs text-zinc-400">Budget: ${budgetUsd}</label>
+            <label htmlFor="constraint-budget-input" className="text-xs text-zinc-400">Budget: ${budgetUsd}</label>
             <input
+              id="constraint-budget-input"
               type="range"
               min={1}
               max={200}
@@ -144,8 +145,9 @@ export default function GenerativeDesignView() {
           </div>
 
           <div data-testid="constraint-power" className="flex flex-col gap-1">
-            <label className="text-xs text-zinc-400">Max Power: {maxWatts}W</label>
+            <label htmlFor="constraint-power-input" className="text-xs text-zinc-400">Max Power: {maxWatts}W</label>
             <input
+              id="constraint-power-input"
               type="range"
               min={0.1}
               max={50}
@@ -157,8 +159,9 @@ export default function GenerativeDesignView() {
           </div>
 
           <div data-testid="constraint-temperature" className="flex flex-col gap-1">
-            <label className="text-xs text-zinc-400">Max Temp: {maxTempC}C</label>
+            <label htmlFor="constraint-temperature-input" className="text-xs text-zinc-400">Max Temp: {maxTempC}C</label>
             <input
+              id="constraint-temperature-input"
               type="range"
               min={25}
               max={150}
@@ -172,7 +175,7 @@ export default function GenerativeDesignView() {
         {/* Population / generation controls */}
         <div className="flex gap-3">
           <div className="flex flex-col gap-1 flex-1">
-            <label className="text-xs text-zinc-400 flex items-center gap-1">
+            <label htmlFor="population-size-input" className="text-xs text-zinc-400 flex items-center gap-1">
               Population
               <VaultInfoIcon
                 slug="genetic-algorithm-parameters-population-and-generations-explained"
@@ -181,6 +184,7 @@ export default function GenerativeDesignView() {
               />
             </label>
             <input
+              id="population-size-input"
               data-testid="population-size-input"
               type="number"
               min={2}
@@ -191,7 +195,7 @@ export default function GenerativeDesignView() {
             />
           </div>
           <div className="flex flex-col gap-1 flex-1">
-            <label className="text-xs text-zinc-400 flex items-center gap-1">
+            <label htmlFor="generations-input" className="text-xs text-zinc-400 flex items-center gap-1">
               Generations
               <VaultInfoIcon
                 slug="genetic-algorithm-parameters-population-and-generations-explained"
@@ -200,6 +204,7 @@ export default function GenerativeDesignView() {
               />
             </label>
             <input
+              id="generations-input"
               data-testid="generations-input"
               type="number"
               min={1}

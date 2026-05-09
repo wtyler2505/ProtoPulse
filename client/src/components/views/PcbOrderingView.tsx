@@ -296,12 +296,12 @@ const BoardSpecForm = memo(function BoardSpecForm({ spec, onChange }: BoardSpecF
           </div>
         </div>
         <div>
-          <Label>Silkscreen Color</Label>
+          <Label htmlFor="spec-silk">Silkscreen Color</Label>
           <Select
             value={spec.silkscreenColor}
             onValueChange={(v) => { update('silkscreenColor', v as SilkscreenColor); }}
           >
-            <SelectTrigger data-testid="spec-silk" className="mt-2">
+            <SelectTrigger data-testid="spec-silk" id="spec-silk" className="mt-2">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

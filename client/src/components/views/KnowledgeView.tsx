@@ -417,7 +417,7 @@ export default function KnowledgeView() {
           value={categoryFilter}
           onValueChange={(v) => { setCategoryFilter(v as ArticleCategory | '__all__'); }}
         >
-          <SelectTrigger data-testid="knowledge-category-filter" className="w-44 h-9 text-xs">
+          <SelectTrigger data-testid="knowledge-category-filter" className="w-44 h-9 text-xs" aria-label="Filter articles by category">
             <SelectValue placeholder="All categories" />
           </SelectTrigger>
           <SelectContent>
@@ -434,7 +434,7 @@ export default function KnowledgeView() {
           value={difficultyFilter}
           onValueChange={(v) => { setDifficultyFilter(v as DifficultyLevel | '__all__'); }}
         >
-          <SelectTrigger data-testid="knowledge-difficulty-filter" className="w-36 h-9 text-xs">
+          <SelectTrigger data-testid="knowledge-difficulty-filter" className="w-36 h-9 text-xs" aria-label="Filter articles by difficulty">
             <SelectValue placeholder="All levels" />
           </SelectTrigger>
           <SelectContent>

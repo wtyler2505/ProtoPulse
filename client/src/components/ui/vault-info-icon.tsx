@@ -76,6 +76,7 @@ export const VaultInfoIcon = React.memo(function VaultInfoIcon({
     >
       <span
         data-testid={testId}
+        role="img"
         aria-label={ariaLabel}
         className={cn(
           'inline-flex items-center cursor-help opacity-60 hover:opacity-100 transition-opacity',

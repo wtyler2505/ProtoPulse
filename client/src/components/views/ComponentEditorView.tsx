@@ -870,6 +870,7 @@ function ComponentEditorContent() {
             ref={fileInputRef}
             type="file"
             accept=".fzpz"
+            aria-label="Import FZPZ component file"
             className="hidden"
             onChange={handleImportFzpz}
             data-testid="input-import-fzpz"
@@ -889,6 +890,7 @@ function ComponentEditorContent() {
             ref={svgFileInputRef}
             type="file"
             accept=".svg"
+            aria-label="Import SVG component image"
             className="hidden"
             onChange={handleImportSvg}
             data-testid="input-import-svg"

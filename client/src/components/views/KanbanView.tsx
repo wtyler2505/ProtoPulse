@@ -337,7 +337,7 @@ const FilterBar = memo(function FilterBar({ filter, onFilterChange, allTags, all
           onFilterChange({ ...filter, priority: v === '__all__' ? undefined : v as TaskPriority });
         }}
       >
-        <SelectTrigger data-testid="filter-priority" className="w-32 h-8 text-xs">
+        <SelectTrigger data-testid="filter-priority" className="w-32 h-8 text-xs" aria-label="Filter tasks by priority">
           <SelectValue placeholder="Priority" />
         </SelectTrigger>
         <SelectContent>
@@ -355,7 +355,7 @@ const FilterBar = memo(function FilterBar({ filter, onFilterChange, allTags, all
             onFilterChange({ ...filter, tag: v === '__all__' ? undefined : v });
           }}
         >
-          <SelectTrigger data-testid="filter-tag" className="w-32 h-8 text-xs">
+          <SelectTrigger data-testid="filter-tag" className="w-32 h-8 text-xs" aria-label="Filter tasks by tag">
             <SelectValue placeholder="Tag" />
           </SelectTrigger>
           <SelectContent>
@@ -374,7 +374,7 @@ const FilterBar = memo(function FilterBar({ filter, onFilterChange, allTags, all
             onFilterChange({ ...filter, assignee: v === '__all__' ? undefined : v });
           }}
         >
-          <SelectTrigger data-testid="filter-assignee" className="w-32 h-8 text-xs">
+          <SelectTrigger data-testid="filter-assignee" className="w-32 h-8 text-xs" aria-label="Filter tasks by assignee">
             <SelectValue placeholder="Assignee" />
           </SelectTrigger>
           <SelectContent>
