@@ -1,0 +1,39 @@
+# ProtoPulse Consolidated Source Pack :: Memories
+
+Pack schema: protopulse-nlm-consolidation-pack-v1
+Retired alias: pp-memories-retired
+Retired notebook ID: caa9305a-aad8-4b42-9f2a-43d2eb4285e5
+Retired notebook title: Memories
+Target hub: pp-core
+Source count included: 27
+
+## Source Index
+1. Memories :: MEMORY v1 — 2026-05-09 [a14e96ef-e1b5-4dfb-a47c-891b1ac1314d]
+2. Memories :: auto_push_protopulse v1 — 2026-05-09 [cd52ffae-f18c-4f15-8676-f5dc8470eccc]
+3. Memories :: claudekit_patches v1 — 2026-05-09 [02c83c12-d87d-40f9-b649-c1e675e30532]
+4. Memories :: codebase_patterns v1 — 2026-05-09 [4973c31d-0f4b-4c7e-b6a2-0fd0ab9c7390]
+5. Memories :: feedback_agent_count_cap v1 — 2026-05-09 [2369ab51-44e0-4fe0-a9c1-44003cee4eac]
+6. Memories :: feedback_agent_resource_limits v1 — 2026-05-09 [f2289fd4-043c-4410-aa93-b012143f2941]
+7. Memories :: feedback_agent_teams_rule v1 — 2026-05-09 [b36fb9c4-b7a9-4e65-9037-dd0beb3316ce]
+8. Memories :: feedback_autonomous_waves v1 — 2026-05-09 [d3cd7415-26ef-46f8-a40c-5e81c77b2898]
+9. Memories :: feedback_backlog_updates v1 — 2026-05-09 [0b6757d3-f8bd-4727-9da3-be8c30da5ea0]
+10. Memories :: feedback_document_findings_to_backlog v1 — 2026-05-09 [8a0e0a48-93cb-4837-8172-f36d8079bd6a]
+11. Memories :: feedback_fix_before_moving_forward v1 — 2026-05-09 [7ec2e9b8-7464-454f-968f-8b79865d39ff]
+12. Memories :: feedback_git_push_automation v1 — 2026-05-09 [bca8c587-cac8-4a98-828e-e0cca69c6796]
+13. Memories :: feedback_knowledge_claude_md v1 — 2026-05-09 [d4367c12-77ba-4ba2-8900-6367643f2eed]
+14. Memories :: feedback_never_idle_while_waiting v1 — 2026-05-09 [f8a3d718-e166-4ff9-af4c-b26972cf3d8d]
+15. Memories :: feedback_never_say_the_user v1 — 2026-05-09 [cdff8426-04f2-4f94-b521-97fc292e8d2e]
+16. Memories :: feedback_never_suggest_stopping v1 — 2026-05-09 [c768c4b0-9cbe-452f-a005-59e7ff65794e]
+17. Memories :: feedback_no_bulk_scripts_for_craft_work v1 — 2026-05-09 [eb371200-c249-4fba-b2c3-0320a45f58bf]
+18. Memories :: feedback_no_mediocrity v1 — 2026-05-09 [9fdf485f-35b0-4dfe-b98d-69f3f366dfa6]
+19. Memories :: feedback_no_stepping_on_teammates v1 — 2026-05-09 [64879f9b-0881-4fc5-b34e-f815dedb66d5]
+20. Memories :: feedback_perfection_over_speed v1 — 2026-05-09 [461ddd46-79d5-4901-90ff-0d3b27d9e87f]
+21. Memories :: feedback_real_research_always v1 — 2026-05-09 [ea815860-b449-4e6a-9280-64aa0ae23fa8]
+22. Memories :: feedback_research_before_each_phase v1 — 2026-05-09 [a22d4f19-8a56-4674-9596-d7c6b46e9a2d]
+23. Memories :: feedback_working_standards v1 — 2026-05-09 [d32615ea-ef1d-4ed9-a4ed-caef86292d03]
+24. Memories :: project_arscontexta_campaign_complete v1 — 2026-05-09 [12c26935-7c4f-4733-b90f-33f6c8b9afa3]
+25. Memories :: project_breadboard_audit_wave1 v1 — 2026-05-09 [65c409be-4b96-4384-8295-e95735f45e18]
+26. Memories :: project_button_type_audit_closed v1 — 2026-05-09 [a01399e0-b0ee-4384-888e-f2cc76308e21]
+27. Memories :: project_chat_streaming_bug v1 — 2026-05-09 [eb7c357f-7d7a-4fcf-b1cc-1ab24695ceb0]
+
+---

@@ -23,6 +23,14 @@ ProtoPulse is consolidated into two active NotebookLM hubs:
 | `pp-core` | ProtoPulse :: Core Knowledge Hub | `7565a078-8051-43ea-8512-c54c3b4d363e` | Codebase, architecture, plans, Ars Contexta methodology, Tyler memories, backlog, journal, research imports, and most feature/system deep dives |
 | `pp-hardware` | ProtoPulse :: Hardware & Bench Lab | `bb95833a-926e-47b1-8f45-d23427fbc58d` | Hardware knowledge, breadboard workflows, bench observations, parts catalog, and per-component drill-in |
 
+Tyler also has a private sandbox mirror:
+
+| Alias | Notebook | Live ID | Holds |
+|---|---|---|---|
+| `pp-devlab` | ProtoPulse :: DevLab Sandbox | `d4188389-eef8-4aa3-a27d-1fed3f8cf444` | One-way exact mirror of Core + Hardware for Tyler's development learning, testing, planning, research, and exploration |
+
+`pp-devlab` is not a canonical hub and is not part of default `pp:active` cross-query. Query it only when Tyler explicitly wants the personal sandbox/lab surface.
+
 Compatibility aliases deliberately remain:
 
 - Core aliases: `pp-codebase`, `pp-arscontexta`, `pp-memories`, `pp-backlog`, `pp-journal`, `pp-research`, `pp-feat-mna-solver`, `pp-feat-ai-integration`, `pp-feat-design-system`, `pp-feat-tauri-migration`, `pp-feat-arduino-ide`, `pp-feat-pcb-layout`, `pp-feat-collab-yjs`, `pp-feat-firmware-runtime`.

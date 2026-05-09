@@ -11,5 +11,31 @@
     "status": "built",
     "error": null,
     "updated": "2026-05-09T19:46:28Z"
+  },
+  "pp-codebase-retired": {
+    "retired_alias": "pp-codebase-retired",
+    "retired_notebook_id": "9dffa994-ff7f-4de8-b296-7147573b8068",
+    "retired_title": "Codebase Atlas",
+    "pack_title": "Codebase Atlas",
+    "target_alias": "pp-core",
+    "pack_path": "/home/wtyler/Projects/ProtoPulse/data/pp-nlm/consolidation/packs/pp-codebase-retired.txt",
+    "pack_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_count": 0,
+    "status": "list_failed",
+    "error": "live source list failed and no legacy inventory exists for 9dffa994-ff7f-4de8-b296-7147573b8068",
+    "updated": "2026-05-09T20:45:37Z"
+  },
+  "pp-arscontexta-retired": {
+    "retired_alias": "pp-arscontexta-retired",
+    "retired_notebook_id": "61e691c5-bb12-409c-b6c8-30f3936fe3ab",
+    "retired_title": "Ars Contexta",
+    "pack_title": "Ars Contexta",
+    "target_alias": "pp-core",
+    "pack_path": "/home/wtyler/Projects/ProtoPulse/data/pp-nlm/consolidation/packs/pp-arscontexta-retired.txt",
+    "pack_sha256": "1209d28fcf61ae5d0d3853c3d9a3710714186b2085361d1ae2dbc4e55eca02dc",
+    "source_count": 34,
+    "status": "built",
+    "error": null,
+    "updated": "2026-05-09T20:53:23Z"
   }
 }

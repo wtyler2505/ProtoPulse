@@ -4,14 +4,15 @@ description: >
   Expert operator skill for ProtoPulse's consolidated NotebookLM system. Use for
   substantial NotebookLM work in this project: source population, source-pack
   consolidation, Studio artifacts, archive durability, hooks, chat configs,
-  health checks, and CLI/MCP troubleshooting. The live topology is two active
-  hubs, not the old 9 Tier-1 plus feature/component notebook spread.
+  health checks, DevLab mirror sync, and CLI/MCP troubleshooting. The live
+  topology is two active hubs plus Tyler's private DevLab mirror, not the old
+  9 Tier-1 plus feature/component notebook spread.
 allowed-tools: Bash(nlm:*), Bash(jq:*), Bash(timeout:*), Bash(bats:*), Read, Write, Edit
 ---
 
 # PP-NLM Notesbook Operator
 
-ProtoPulse NotebookLM is now a consolidated two-hub system. The old many-notebook taxonomy survives only as compatibility aliases and retired source notebooks.
+ProtoPulse NotebookLM is now a consolidated two-hub system with a private DevLab mirror. The old many-notebook taxonomy survives only as compatibility aliases and retired source notebooks.
 
 ## Skill Stack
 
@@ -25,6 +26,14 @@ ProtoPulse NotebookLM is now a consolidated two-hub system. The old many-noteboo
 |---|---|---|---|
 | `pp-core` | ProtoPulse :: Core Knowledge Hub | `7565a078-8051-43ea-8512-c54c3b4d363e` | `pp:active`, `pp:consolidated`, `pp:core` |
 | `pp-hardware` | ProtoPulse :: Hardware & Bench Lab | `bb95833a-926e-47b1-8f45-d23427fbc58d` | `pp:active`, `pp:consolidated`, `pp:hardware`, `pp:breadboard`, `pp:bench` |
+
+Private sandbox mirror:
+
+| Alias | Notebook | ID | Tags |
+|---|---|---|---|
+| `pp-devlab` | ProtoPulse :: DevLab Sandbox | `d4188389-eef8-4aa3-a27d-1fed3f8cf444` | `pp:devlab`, `pp:sandbox`, `pp:private`, `pp:mirror` |
+
+`pp-devlab` is a one-way exact mirror of Core + Hardware for Tyler's personal development learning, testing, planning, research, and exploration. It is not tagged `pp:active` and should not be included in default project answers unless Tyler explicitly asks for DevLab.
 
 Compatibility aliases:
 
@@ -61,6 +70,7 @@ Canonical manifest: `~/.claude/state/pp-nlm/notebook-manifest.json`.
 - `scripts/pp-nlm/lib/write-helpers.sh` - lock-protected source writes and manifest reconciliation.
 - `scripts/pp-nlm/lib/source-helpers.sh` - compatibility layer used by population scripts.
 - `scripts/pp-nlm/build-consolidation-packs.sh` - source-pack builder for retired notebooks.
+- `scripts/pp-nlm/sync-devlab.sh` - one-way exact mirror from `pp-core` + `pp-hardware` into `pp-devlab`.
 - `scripts/pp-nlm/apply-chat-configs.sh` - dry-run gated chat config apply.
 - `scripts/pp-nlm/studio-output-to-inbox.sh` - Studio archive -> inbox bridge.
 - `scripts/pp-nlm/sync-knowledge-to-nlm.sh` - knowledge -> NotebookLM return leg.
@@ -100,6 +110,8 @@ Use canonical hub aliases for new sources:
 - `pp-hardware`: hardware, breadboard, bench, parts catalog, component notes.
 
 Old aliases may be used by slash commands for user ergonomics, but helpers must record the resolved target ID and canonical alias.
+
+Use `pp-devlab` only for mirror writes from `scripts/pp-nlm/sync-devlab.sh` and for Tyler's explicit sandbox/lab queries. Do not route canonical captures, recaps, backlog decisions, research imports, or hardware notes into DevLab.
 
 ## Source-Pack Consolidation
 

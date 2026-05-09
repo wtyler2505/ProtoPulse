@@ -1,6 +1,6 @@
 # ProtoPulse NotebookLM Notesbook (PP-NLM) — Reference
 
-**Status:** Live consolidated topology with **2 active hub notebooks**. The old 9 Tier-1 plus feature/component spread is retired as a source layer. Compatibility aliases remain, but they resolve to either `pp-core` or `pp-hardware`. Phase 9 cron remains pending Tyler's `crontab -e`.
+**Status:** Live consolidated topology with **2 active hub notebooks** plus one private personal DevLab mirror. The old 9 Tier-1 plus feature/component spread is retired as a source layer. Compatibility aliases remain, but they resolve to either `pp-core` or `pp-hardware`. Phase 9 cron remains pending Tyler's `crontab -e`.
 **Account:** wtyler2505@gmail.com (Google AI Ultra).
 **Plan:** [`/home/wtyler/.claude/plans/claude-update-nlm-skill-i-want-velvet-tide.md`](../../.claude/plans/claude-update-nlm-skill-i-want-velvet-tide.md).
 **Last updated:** 2026-05-09.
@@ -28,6 +28,18 @@ ProtoPulse accumulated 744+ atomic vault notes, 25+ plans, 231KB of MASTER_BACKL
 |---|---|---|---|
 | `pp-core` | ProtoPulse :: Core Knowledge Hub | Codebase, architecture, plans, Ars Contexta, memories, backlog, journal, research, and non-hardware feature/system deep dives | Match the source domain: file path/line, BL-ID, ISO date, research URL, or source title |
 | `pp-hardware` | ProtoPulse :: Hardware & Bench Lab | Hardware knowledge, breadboard workflows, bench observations, parts catalog, component drill-in | Vault note slug, part number, source title, ISO date, or measurement context |
+
+### Private DevLab mirror
+
+| Alias | Title | Purpose | Default cross-query? |
+|---|---|---|---|
+| `pp-devlab` | ProtoPulse :: DevLab Sandbox | Tyler's private one-way exact mirror of `pp-core` + `pp-hardware` for development learning, testing, planning, research, and exploration | no |
+
+`pp-devlab` is not tagged `pp:active`. It is a sandbox surface, not a canonical hub. Sync it with:
+
+```bash
+bash scripts/pp-nlm/sync-devlab.sh --apply
+```
 
 ### Compatibility aliases
 
@@ -66,6 +78,10 @@ The consolidation lesson: do not split a corpus into thin per-X notebooks when a
 | `pp:retired-source` | Old notebooks kept as source material | no |
 | `pp:legacy` | Pre-existing notebooks kept for reference | no |
 | `pp:archive` | Renamed archived notebooks | no |
+| `pp:devlab` | Tyler's personal DevLab mirror | no |
+| `pp:sandbox` | Experimental/private notebook surfaces | no |
+| `pp:private` | Not part of default agent cross-query | no |
+| `pp:mirror` | One-way mirror notebooks | no |
 
 `pp:feature`, `pp:component`, and `pp:cmp-*` are retired after consolidation. Do not use them as active query scopes.
 

@@ -1,0 +1,5492 @@
+# ProtoPulse Consolidated Source Pack :: Ars Contexta
+
+Pack schema: protopulse-nlm-consolidation-pack-v1
+Retired alias: pp-arscontexta-retired
+Retired notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Retired notebook title: Ars Contexta
+Target hub: pp-core
+Source count included: 34
+
+## Source Index
+1. Ars Contexta :: CLAUDE v1 — 2026-05-08 [b1232c93-5804-41e7-a12a-8cd7f9acf2d4]
+2. Ars Contexta :: CLAUDE v1 — 2026-05-09 [dac9f5a5-5dcb-41de-82bc-b1e845554a44]
+3. Ars Contexta :: derivation v1 — 2026-05-08 [728c3144-a4bb-47ac-a777-4478ac7b9ed3]
+4. Ars Contexta :: derivation v1 — 2026-05-09 [4ed7a15f-de4a-4ab5-93d2-e0135cdc2e16]
+5. Ars Contexta :: derivation-manifest v1 — 2026-05-08 [1a844537-a138-492f-868c-7beb21f100aa]
+6. Ars Contexta :: derivation-manifest v1 — 2026-05-09 [8d4a9a6f-8949-49c9-a49a-23b48dd7ea52]
+7. Ars Contexta :: derivation-rationale v1 — 2026-05-08 [94e95e49-faa7-438f-9d92-768ef9a979d5]
+8. Ars Contexta :: derivation-rationale v1 — 2026-05-09 [79630348-451f-4720-813d-1f6dc872b320]
+9. Ars Contexta :: enforce-hard-cap-on-concurrent-agents v1 — 2026-05-08 [fe18f002-de89-4b76-9316-12d2f4c50a64]
+10. Ars Contexta :: enforce-hard-cap-on-concurrent-agents v1 — 2026-05-09 [e9b822fb-6699-4510-8ced-47f6199e542d]
+11. Ars Contexta :: enforce-hardware-vault-as-single-source-of-truth v1 — 2026-05-08 [6a16b9f9-9278-4550-be37-211312355e7a]
+12. Ars Contexta :: enforce-hardware-vault-as-single-source-of-truth v1 — 2026-05-09 [453d95ab-c780-4df5-abc4-5382aacda1ae]
+13. Ars Contexta :: enforce-physical-constraints-on-breadboardfit-logic v1 — 2026-05-08 [bcc95a72-6212-43a7-bfb7-b779a8c193f9]
+14. Ars Contexta :: enforce-physical-constraints-on-breadboardfit-logic v1 — 2026-05-09 [e4334488-5652-4154-b09c-c3e139908865]
+15. Ars Contexta :: goals v1 — 2026-05-08 [f960401a-7f85-4a57-9829-85a38db618ee]
+16. Ars Contexta :: goals v1 — 2026-05-09 [3d0441db-f030-4a48-91b0-d3fa9b60671b]
+17. Ars Contexta :: identity v1 — 2026-05-08 [6cae90c4-7688-4e9b-bf84-1a886ed54fa3]
+18. Ars Contexta :: identity v1 — 2026-05-09 [7c279acb-1e8f-4c83-a30e-c4c7813c0659]
+19. Ars Contexta :: methodology v1 — 2026-05-08 [be6af421-e121-47f2-b9c5-bf42897f73c3]
+20. Ars Contexta :: methodology v1 — 2026-05-09 [8efa5708-8c30-4560-80c9-73125be5110d]
+21. Ars Contexta :: never-sit-idle-while-subagents-or-teammates-are-running v1 — 2026-05-08 [f91d8389-b3ee-458a-9a96-9bc04de118e2]
+22. Ars Contexta :: never-sit-idle-while-subagents-or-teammates-are-running v1 — 2026-05-09 [de89d81a-c067-4def-9fb5-5b19e262abc6]
+23. Ars Contexta :: recover-user-messages-from-history-jsonl-when-transcript-expired v1 — 2026-05-08 [7711ef4f-2844-41aa-8e1b-fc09b293f4a0]
+24. Ars Contexta :: recover-user-messages-from-history-jsonl-when-transcript-expired v1 — 2026-05-09 [65913774-d40e-4327-a2c5-b81765014314]
+25. Ars Contexta :: run-standard-dev-commands-autonomously v1 — 2026-05-08 [eaa9baa7-64bd-4a63-8d0c-e5a3ccbe4737]
+26. Ars Contexta :: run-standard-dev-commands-autonomously v1 — 2026-05-09 [c3426753-b11e-4828-8413-bd383a54d264]
+27. Ars Contexta :: use-agent-teams-not-raw-parallel-subagents-for-implementation v1 — 2026-05-08 [cfa5c3bc-4fd7-4d75-b9eb-46114c7b3a91]
+28. Ars Contexta :: use-agent-teams-not-raw-parallel-subagents-for-implementation v1 — 2026-05-09 [7d5dfeca-fd94-4d61-811a-c4d144b6e88c]
+29. Ars Contexta :: use-desktop-commander-when-bash-permission-denied-on-destructive-ops v1 — 2026-05-08 [978c1f41-e1ad-4006-ae09-a164632dfd30]
+30. Ars Contexta :: use-desktop-commander-when-bash-permission-denied-on-destructive-ops v1 — 2026-05-09 [407851e3-6352-4fdf-9e16-2a84f50c46fe]
+31. Ars Contexta :: use-url-parse-or-polyfill-to-avoid-url-is-not-a-constructor v1 — 2026-05-08 [e4c09529-aa35-4fde-a3e1-9666b2ff0f1b]
+32. Ars Contexta :: use-url-parse-or-polyfill-to-avoid-url-is-not-a-constructor v1 — 2026-05-09 [c727ce35-6bec-4253-bea5-ce6537e42d97]
+33. Ars Contexta :: verify-wiki-links-before-completing-knowledge-work v1 — 2026-05-08 [0a4195c8-4bc1-4b00-b8a7-83cb57a315dc]
+34. Ars Contexta :: verify-wiki-links-before-completing-knowledge-work v1 — 2026-05-09 [92a26d06-fea4-4aca-8f08-0a16b79d8569]
+
+---
+
+## Source 1: Ars Contexta :: CLAUDE v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: b1232c93-5804-41e7-a12a-8cd7f9acf2d4
+Original source title: Ars Contexta :: CLAUDE v1 — 2026-05-08
+Content SHA256: 163f11f32d479e961377aeada4ab45d95f5029ead011e40be7dd6358d8f76954
+
+BEGIN SOURCE CONTENT
+CLAUDE.md
+
+Philosophy
+
+If it won't exist next session, write it down now.
+
+ 
+
+You are the primary operator of this knowledge system. Not an assistant helping organize knowledge, but the agent who builds, maintains, and traverses a knowledge network.
+
+Discovery-First Design
+
+Every note you create must be findable by a future agent who doesn't know it exists.
+
+Title as claim
+
+ — Does the title work as prose when linked?
+
+Description quality
+
+ — Does the description add information beyond the title?
+
+MOC membership
+
+ — Is this note linked from at least one topic map?
+
+Composability
+
+ — Can this note be linked from other notes without dragging irrelevant context?
+
+Hardware & Component Verification Protocol (Mandatory)
+
+Before you generate, modify, or suggest any code related to hardware components (e.g., adding a part to the standard library or creating a new board definition), you MUST:
+
+Search the 
+
+knowledge/
+
+ directory using 
+
+qmd
+
+ or 
+
+grep
+
+ to locate the part's exact physical dimensions, pinout, and colors.
+
+If the component does not exist in the vault, use web search tools to discover the 
+
+exact
+
+ real-world specs (dimensions in mm, footprint, header spacing).
+
+Do NOT invent, hallucinate, or approximate physical dimensions or pin layouts. The Ars Contexta vault is the absolute source of truth.
+
+Any new hardware knowledge discovered must be routed through the 
+
+inbox/
+
+ pipeline.
+
+Session Rhythm
+
+Every session follows: 
+
+Orient → Work → Persist
+
+Orient
+
+: Read identity and goals at session start.
+
+Work
+
+: Do the actual task. Surface connections as you go.
+
+Persist
+
+: Write any new insights as atomic notes.
+
+Where Things Go
+
+Content Type
+
+Destination
+
+Examples
+
+Knowledge claims, insights
+
+knowledge/
+
+Research findings, patterns, principles
+
+Raw material to process
+
+inbox/
+
+Articles, voice dumps, links, imported content
+
+Agent identity, methodology
+
+self/
+
+Working patterns, learned preferences, goals
+
+Time-bound user commitments
+
+ops/reminders.md
+
+"Remind me to...", follow-ups
+
+Processing state, queue, config
+
+ops/
+
+Queue state, task files, session logs
+
+Friction signals, patterns
+
+ops/observations/
+
+Search failures, methodology improvements
+
+Operational Space (ops/)
+
+ops/
+
+ 
+
+├── derivation.md      — why this system was configured this way
+
+ 
+
+├── config.yaml        — live configuration
+
+ 
+
+├── reminders.md       — time-bound commitments
+
+ 
+
+├── observations/      — friction signals
+
+ 
+
+├── methodology/       — vault self-knowledge
+
+ 
+
+├── sessions/          — session logs
+
+ 
+
+└── health/            — health report history
+
+Infrastructure Routing
+
+Pattern
+
+Route To
+
+"How should I organize/structure..."
+
+/arscontexta:architect
+
+"What does my system know about..."
+
+Check ops/methodology/
+
+"What should I work on..."
+
+/arscontexta:next
+
+"Help / what can I do..."
+
+/arscontexta:help
+
+Pipeline Compliance
+
+NEVER write directly to knowledge/.
+
+ All content routes through the pipeline: inbox/ → /extract → knowledge/.
+
+ 
+
+If you find yourself creating a file in knowledge/ without having run /extract, STOP. Route through inbox/ first.
+
+Self-Improvement
+
+When friction occurs:
+
+Use /remember to capture it as an observation in ops/observations/
+
+If the same friction occurs 3+ times, propose updating this context file.
+END SOURCE CONTENT
+
+## Source 2: Ars Contexta :: CLAUDE v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: dac9f5a5-5dcb-41de-82bc-b1e845554a44
+Original source title: Ars Contexta :: CLAUDE v1 — 2026-05-09
+Content SHA256: d7eb0ef4410659e7813a8bd035b8cbbef7f2ec1d3d8f617ca23cab74508722e3
+
+BEGIN SOURCE CONTENT
+CLAUDE.md
+
+Philosophy
+
+If it won't exist next session, write it down now.
+
+ 
+
+You are the primary operator of this knowledge system. Not an assistant helping organize knowledge, but the agent who builds, maintains, and traverses a knowledge network.
+
+Discovery-First Design
+
+Every note you create must be findable by a future agent who doesn't know it exists.
+
+Title as claim
+
+ — Does the title work as prose when linked?
+
+Description quality
+
+ — Does the description add information beyond the title?
+
+MOC membership
+
+ — Is this note linked from at least one topic map?
+
+Composability
+
+ — Can this note be linked from other notes without dragging irrelevant context?
+
+Hardware & Component Verification Protocol (Mandatory)
+
+Before you generate, modify, or suggest any code related to hardware components (e.g., adding a part to the standard library or creating a new board definition), you MUST:
+
+Search the 
+
+knowledge/
+
+ directory using 
+
+qmd
+
+ or 
+
+grep
+
+ to locate the part's exact physical dimensions, pinout, and colors.
+
+If the component does not exist in the vault, use web search tools to discover the 
+
+exact
+
+ real-world specs (dimensions in mm, footprint, header spacing).
+
+Do NOT invent, hallucinate, or approximate physical dimensions or pin layouts. The Ars Contexta vault is the absolute source of truth.
+
+Any new hardware knowledge discovered must be routed through the 
+
+inbox/
+
+ pipeline.
+
+Session Rhythm
+
+Every session follows: 
+
+Orient → Work → Persist
+
+Orient
+
+: Read identity and goals at session start.
+
+Work
+
+: Do the actual task. Surface connections as you go.
+
+Persist
+
+: Write any new insights as atomic notes.
+
+Where Things Go
+
+Content Type
+
+Destination
+
+Examples
+
+Knowledge claims, insights
+
+knowledge/
+
+Research findings, patterns, principles
+
+Raw material to process
+
+inbox/
+
+Articles, voice dumps, links, imported content
+
+Agent identity, methodology
+
+self/
+
+Working patterns, learned preferences, goals
+
+Time-bound user commitments
+
+ops/reminders.md
+
+"Remind me to...", follow-ups
+
+Processing state, queue, config
+
+ops/
+
+Queue state, task files, session logs
+
+Friction signals, patterns
+
+ops/observations/
+
+Search failures, methodology improvements
+
+Operational Space (ops/)
+
+ops/
+
+ 
+
+├── derivation.md      — why this system was configured this way
+
+ 
+
+├── config.yaml        — live configuration
+
+ 
+
+├── reminders.md       — time-bound commitments
+
+ 
+
+├── observations/      — friction signals
+
+ 
+
+├── methodology/       — vault self-knowledge
+
+ 
+
+├── sessions/          — session logs
+
+ 
+
+└── health/            — health report history
+
+Infrastructure Routing
+
+Pattern
+
+Route To
+
+"How should I organize/structure..."
+
+/arscontexta:architect
+
+"What does my system know about..."
+
+Check ops/methodology/
+
+"What should I work on..."
+
+/arscontexta:next
+
+"Help / what can I do..."
+
+/arscontexta:help
+
+Pipeline Compliance
+
+NEVER write directly to knowledge/.
+
+ All content routes through the pipeline: inbox/ → /extract → knowledge/.
+
+ 
+
+If you find yourself creating a file in knowledge/ without having run /extract, STOP. Route through inbox/ first.
+
+NotebookLM Notesbook System (PP-NLM)
+
+ProtoPulse's evolving knowledge lives across 9 Tier-1 + ~10 Tier-2 + ~10 Tier-3 NotebookLM notebooks (the 
+
+PP-NLM Notesbook
+
+, Ultra tier).
+
+Tier-1 aliases:
+
+ 
+
+pp-codebase
+
+, 
+
+pp-breadboard
+
+, 
+
+pp-hardware
+
+, 
+
+pp-arscontexta
+
+, 
+
+pp-memories
+
+, 
+
+pp-research
+
+, 
+
+pp-backlog
+
+, 
+
+pp-journal
+
+, 
+
+pp-bench
+
+. Tier-2 (
+
+pp-feat-*
+
+): per-feature deep-dives. Tier-3 (
+
+pp-cmp-*
+
+): per-component datasheet bundles.
+
+Skills stack (load order):
+
+nlm-skill
+
+ (global) — CLI/MCP tool mechanics. References: 
+
+mcp-tool-surface.md
+
+, 
+
+advanced-recipes.md
+
+, 
+
+edge-cases.md
+
+, 
+
+performance-and-batching.md
+
+.
+
+pp-knowledge
+
+ (project) — query-routing decisions (which notebook holds what).
+
+pp-nlm-operator
+
+ (project) — execution layer (which slash command/hook/pipeline for which job).
+
+When to query
+
+: invoke 
+
+pp-knowledge
+
+ skill or 
+
+pp-nlm-operator
+
+ for routing. One-shot: 
+
+nlm notebook query <alias> "..."
+
+. Cross-notebook: 
+
+nlm cross query --tags pp:active "..."
+
+.
+
+When to capture
+
+: 
+
+/pp-capture
+
+ (pp-memories), 
+
+/pp-iter
+
+ (pp-backlog with 4-field structure), 
+
+/pp-innovate
+
+ (pp-research), 
+
+/pp-bench
+
+ (pp-bench with part/vendor/equipment fields), 
+
+/pp-recap
+
+ (pp-journal), 
+
+/pp-research
+
+ (pp-research deep-research).
+
+Studio rhythm
+
+: Sunday 9am cron generates audio brief + Briefing Doc. On-demand via 
+
+/pp-podcast
+
+, 
+
+/pp-mindmap
+
+, 
+
+/pp-report
+
+. 
+
+Every artifact auto-downloads to 
+
+docs/nlm-archive/
+
+ — Google can vanish artifacts; we keep durable copies.
+
+Bidirectional bridge
+
+: Studio outputs land in 
+
+inbox/
+
+ with 
+
+provenance.source: nlm-studio
+
+ and flow through the 
+
+/extract → knowledge/
+
+ pipeline, then re-publish as new versioned sources on the appropriate notebook. The vault is the source of truth.
+
+Auto-capture
+
+: Silent for git commits → 
+
+pp-journal
+
+ (PostToolUse hook). Buffered draft for session-end recaps (Stop hooks can't prompt; SessionStart surfaces a "pending recap" notice). Manual everywhere else.
+
+Hooks
+
+ (
+
+.claude/hooks/pp-nlm-*.sh
+
+): SessionStart context inject (cache 4h), commit-to-journal (PostToolUse Bash), stop-draft-recap (Stop), studio-archive (manual + cron sweep), weekly cron entry-point.
+
+Hard rules
+
+ (non-negotiable):
+
+NEVER claim a Studio artifact "generated" without 
+
+studio_status: completed
+
+ verification.
+
+NEVER bulk-script chat configs — each notebook gets a hand-crafted, deeply tailored prompt.
+
+NEVER skip the bidirectional bridge (Studio outputs route through inbox/, not directly into vault).
+
+NEVER let Studio artifacts live only in NotebookLM cloud (auto-archive to 
+
+docs/nlm-archive/
+
+).
+
+NEVER auto-confirm destructive ops (
+
+confirm=True
+
+ requires user AskUserQuestion gate).
+
+NEVER reference BrainGrid in pp-* skills/commands/hooks (per-plan exclusion).
+
+ALWAYS verify auth before substantive work (
+
+nlm login --check
+
+).
+
+ALWAYS manifest-track populates (idempotency at 
+
+~/.claude/state/pp-nlm/source-manifest.json
+
+).
+
+ALWAYS use 
+
+--tags
+
+ flag with 
+
+nlm tag add
+
+ (positional fails — verified Phase 1, 2026-05-08).
+
+For chat configs, hand-craft each one (per 
+
+feedback_no_bulk_scripts_for_craft_work
+
+).
+
+Full operator reference
+
+: 
+
+.claude/skills/pp-nlm-operator/SKILL.md
+
+.
+
+Self-Improvement
+
+When friction occurs:
+
+Use /remember to capture it as an observation in ops/observations/
+
+If the same friction occurs 3+ times, propose updating this context file.
+END SOURCE CONTENT
+
+## Source 3: Ars Contexta :: derivation v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 728c3144-a4bb-47ac-a777-4478ac7b9ed3
+Original source title: Ars Contexta :: derivation v1 — 2026-05-08
+Content SHA256: 83843cb5101224d590c1f63171342e69643a81715ac08075f0f975f4f8c67a7c
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: How this knowledge system was derived -- enables architect and reseed commands
+
+created: 2026-04-05
+
+engine_version: "1.0.0"
+
+System Derivation
+
+Configuration Dimensions
+
+Dimension
+
+Position
+
+Conversation Signal
+
+Confidence
+
+Granularity
+
+atomic
+
+"research" + knowledge work patterns (EDA claims, arch decisions)
+
+High
+
+Organization
+
+flat
+
+Research default — connections > folders
+
+High
+
+Linking
+
+explicit+implicit
+
+"go all in" — both wiki links and semantic search
+
+High
+
+Processing
+
+heavy
+
+"go all in", "as useful as possible"
+
+High
+
+Navigation
+
+3-tier
+
+"go all in", high projected volume
+
+High
+
+Maintenance
+
+condition-based
+
+Research default — triggers on orphans, stale notes, tensions
+
+Inferred
+
+Schema
+
+dense
+
+"go all in" — maximum queryability, 8 extraction categories
+
+High
+
+Automation
+
+full
+
+Claude Code platform, "go all in"
+
+High
+
+Personality Dimensions
+
+Dimension
+
+Position
+
+Signal
+
+Warmth
+
+warm
+
+Tyler's direct, engaged communication style
+
+Opinionatedness
+
+opinionated
+
+"i trust your judgement", wants Claude to have opinions
+
+Formality
+
+casual
+
+Tyler's language register: casual, direct, no ceremony
+
+Emotional Awareness
+
+task-focused
+
+Engineering/research domain, not personal
+
+Vocabulary Mapping
+
+Universal Term
+
+Domain Term
+
+Category
+
+notes
+
+knowledge
+
+folder
+
+inbox
+
+inbox
+
+folder
+
+archive
+
+archive
+
+folder
+
+note (type)
+
+note
+
+note type
+
+reduce
+
+extract
+
+process phase
+
+reflect
+
+connect
+
+process phase
+
+reweave
+
+revisit
+
+process phase
+
+verify
+
+verify
+
+process phase
+
+validate
+
+validate
+
+process phase
+
+rethink
+
+rethink
+
+process phase
+
+MOC
+
+topic map
+
+navigation
+
+description
+
+description
+
+schema field
+
+topics
+
+topics
+
+schema field
+
+Platform
+
+Tier: Claude Code
+
+Automation level: full
+
+Automation: full (default)
+
+Active Feature Blocks
+
+[x] wiki-links -- always included (kernel)
+
+[x] atomic-notes -- atomic granularity selected
+
+[x] mocs -- 3-tier navigation
+
+[x] processing-pipeline -- always included
+
+[x] schema -- always included
+
+[x] maintenance -- always included
+
+[x] self-evolution -- always included
+
+[x] methodology-knowledge -- always included
+
+[x] session-rhythm -- always included
+
+[x] templates -- always included
+
+[x] ethical-guardrails -- always included
+
+[x] helper-functions -- always included
+
+[x] graph-analysis -- always included
+
+[x] semantic-search -- explicit+implicit linking
+
+[x] personality -- derived from conversation
+
+[x] self-space -- enabled for persistent agent identity
+
+Coherence Validation Results
+
+Hard constraints checked: 3. Violations: none
+
+atomic + 3-tier navigation: coherent (deep nav supports atomic volume)
+
+full automation + Claude Code: coherent (platform supports hooks + skills)
+
+heavy processing + full automation: coherent (pipeline skills handle volume)
+
+Soft constraints checked: 4. Auto-adjusted: none. User-confirmed: none
+
+atomic + heavy processing: coherent (mutual support)
+
+dense schema + full automation: coherent (hooks enforce validation)
+
+explicit+implicit linking + semantic search: coherent (qmd provides implicit)
+
+high projected volume + condition-based maintenance: coherent (triggers catch growth)
+
+Compensating mechanisms active: none needed (all dimensions aligned)
+
+Failure Mode Risks
+
+Collector's Fallacy (HIGH) — EDA sources, datasheets, docs are abundant
+
+Orphan Drift (HIGH) — high creation volume during development sessions
+
+Verbatim Risk (HIGH) — datasheets tempt copy-paste over transformation
+
+Productivity Porn (HIGH) — meta-system building vs actual ProtoPulse development
+
+Extraction Categories
+
+claims — factual assertions from datasheets, docs, research
+
+architecture-decisions — why X over Y, trade-offs, constraints
+
+domain-knowledge — EDA/electronics concepts, component specs, protocols
+
+competitive-insights — how Fritzing/Wokwi/KiCad/TinkerCad work, gaps, strengths
+
+ux-patterns — what makes features accessible to maker-beginners
+
+technical-debt — why debt exists, what it blocks, fix priority
+
+implementation-patterns — code conventions, anti-patterns, proven approaches
+
+user-needs — what makers/hobbyists actually need from the tool
+
+Evolution Log
+
+2026-04-06: Comprehensive audit ingested (25 notes)
+
+Source:
+
+ 
+
+conductor/comprehensive-audit.md
+
+ (40 sections, 30 passes)
+
+ 
+
+Action:
+
+ Extracted 25 atomic knowledge notes covering security (4), AI/Genkit (8), performance (6), architecture debt (5), EDA (2)
+
+ 
+
+Connection pass:
+
+ 71 cross-references added, 5 topic maps updated (architecture-decisions, eda-fundamentals, gaps-and-opportunities, maker-ux, competitive-landscape)
+
+ 
+
+Cluster structure:
+
+ Notes organize into 5 groups: (1) AI quality chain, (2) security attack chain, (3) main-thread blocking, (4) resource leaks, (5) desktop pivot risks
+
+ 
+
+Impact:
+
+ Vault grew from 118 to 143 notes. architecture-decisions MOC approaching split threshold (37 notes).
+
+2026-04-06: /architect analysis — 4 recommendations implemented
+
+Trigger:
+
+ Full-system architect analysis after audit ingestion
+
+ 
+
+Health findings:
+
+ 0 FAIL, 3 WARN (3 MOCs over 40-note threshold: gaps-and-opportunities=62, architecture-decisions=50, dev-infrastructure=43), methodology MOC at 2 notes (below merge threshold)
+
+ 
+
+Drift:
+
+ None — all 8 dimensions match derivation
+
+ 
+
+Failure modes active:
+
+ MOC Sprawl (gaps-and-opportunities at 62 notes)
+
+ 
+
+Research grounding:
+
+ failure-modes.md (MOC Sprawl #5), interaction-constraints.md (Volume Cascade), dimension-claim-map.md (navigational vertigo), evolution-lifecycle.md (Gall's Law)
+
+Changes implemented:
+
+Split gaps-and-opportunities
+
+ — created 3 sub-topic maps: 
+
+security-debt.md
+
+, 
+
+performance-debt.md
+
+, 
+
+ai-system-debt.md
+
+. Replaced 20 inline entries with 5 sub-map links. MOC dropped from 62 to ~47 entries.
+
+Archive source note
+
+ — created 
+
+archive/comprehensive-audit-2026-04-05.md
+
+ with extraction manifest mapping all 25 notes to their source sections.
+
+Promoted methodology MOC
+
+ — added 5 existing methodology notes to 
+
+## Notes
+
+ section (was counting only 2 due to subsection formatting).
+
+Synthesis note
+
+ — created 
+
+comprehensive-audit-reveals-zero-validation-at-any-layer.md
+
+ (type: insight) capturing the 3 cross-cutting patterns: validation vacuum, desktop pivot security trade-off, synchronous computation bottleneck.
+
+Deferred:
+
+ architecture-decisions split (50 notes, but structurally coherent via subsections). Revisit at 60 notes.
+
+Vault state after:
+
+ 147 notes, 15 topic maps (was 12), 0 orphans, 0 dangling links.
+
+2026-04-11: /architect analysis — 6 recommendations across 4 phases
+
+Trigger:
+
+ User-invoked /architect full run after 5-day gap. Health check revealed 5 three-space boundary violations, 4 MOCs at or over the 40-entry threshold, 231 unmined sessions (vs queue's claimed 3), empty observations + tensions directories, missing ops/health/ directory.
+
+Health findings:
+
+ 1 WARN (three-space boundary violations), 4 WARN (MOC oversize), 1 WARN (stale queue), 1 WARN (Over-Automation silent failure). 0 FAIL on schema compliance, orphans, or stale notes.
+
+Drift:
+
+ None — all 8 configuration dimensions still match the 2026-04-05 derivation.
+
+Failure modes active:
+
+ MOC Sprawl (#5, 4 MOCs), Over-Automation (#8, silent session-mining failure). Productivity Porn (#9) was the constraint — 25% meta-work budget kept this pass focused on root cause + symptom fixes rather than pre-emptive restructuring.
+
+Research grounding:
+
+ 
+
+reference/failure-modes.md
+
+ (#3 Link Rot, #5 MOC Sprawl, #8 Over-Automation, #9 Productivity Porn), 
+
+reference/three-spaces.md
+
+ (boundary rules), 
+
+reference/evolution-lifecycle.md
+
+ (Drift Detection Type 1 Staleness, Recursive Improvement Loop), 
+
+reference/dimension-claim-map.md
+
+ (community detection for MOC split).
+
+Changes implemented:
+
+R1 — Fixed 5 three-space boundary violations
+
+ in knowledge/methodology.md. Removed cross-space wiki-links to ops/methodology/*.md and replaced with a prose paragraph redirecting to self/methodology.md and ops/methodology/.
+
+R2 — Split architecture-decisions 54 → 31.
+
+ Created knowledge/resource-leaks-debt.md and knowledge/desktop-pivot-debt.md as new sub-maps. Removed 3 duplicate entries already in existing debt sub-maps. Replaced the 23-entry Comprehensive Audit Findings section with a 6-line sub-map pointer block. Re-added 
+
+asynchandler-wrapper-is-redundant-in-express-v5
+
+ to Knowledge Notes (Task 2.3 Step 3's assumption that it had incoming prose links was wrong — verified via orphan scan; re-adding kept orphan count at 0).
+
+R3 — Split dev-infrastructure 43 → 15.
+
+ Created knowledge/infrastructure-hooks.md, knowledge/infrastructure-agents.md, knowledge/infrastructure-mcp.md. Replaced 4 inline sections with pointer references. knowledge/claude-code-skills.md already existed from a prior pass.
+
+R4 — De-duplicated gaps-and-opportunities 48 → 30.
+
+ Replaced Developer Infrastructure Gaps section (11 entries) with a pointer to dev-infrastructure. Deleted 7 redundant entries from Skill Ecosystem Gaps (the pointer to claude-code-skills already existed).
+
+R5 — Collapsed knowledge/methodology.md to a navigation stub.
+
+ Methodology content now lives canonically in self/methodology.md (agent) and ops/methodology/ (operational). knowledge/methodology.md retained only for index.md → [[methodology]] link preservation plus graph-health-rules.
+
+R6 — Restored the session-mining feedback loop.
+
+ Updated ops/queue/queue.json maint-001 (target 3 → 231, priority session → multi-session, added mining strategy notes). Populated ops/observations/ with 2026-04-11-session-mining-pipeline-silently-broken.md. Created ops/health/ directory with 2026-04-11-full-system-health.md baseline snapshot.
+
+Vault state after:
+
+Notes: 146 (unchanged — no notes created or deleted; 5 new topic maps added)
+
+Topic maps: 15 → 20 (+5: resource-leaks-debt, desktop-pivot-debt, infrastructure-hooks, infrastructure-agents, infrastructure-mcp)
+
+Orphans: 0
+
+Three-space boundary violations: 0 (was 1 cluster of 5 links)
+
+MOCs over threshold: 0 (architecture-decisions 31, dev-infrastructure 15, gaps-and-opportunities 30 all under 40; claude-code-skills at 40 exactly — deferred)
+
+Observations: 0 → 1
+
+Health reports: 0 → 1
+
+Queue staleness: fixed (maint-001 now reflects 231 unmined sessions)
+
+Remaining work:
+
+ 231 unmined session files still require a 
+
+/remember --mine-sessions
+
+ batch run. That work is deliberately out of scope for this /architect pass — this pass restored the detection/queue/observation machinery; the actual mining batch is its own session. The queue task is now accurate and the infrastructure is ready.
+
+2026-04-11: Session-mining pipeline rebuilt end-to-end
+
+Trigger:
+
+ Follow-up to the /architect pass's R6 recommendation. The "231 unmined sessions" queue target from the prior plan was empirically invalidated during Phase 1 of the follow-up plan (
+
+docs/plans/2026-04-11-session-mining-pipeline-rebuild.md
+
+).
+
+Root-cause findings (diagnostic observation 
+
+ops/observations/2026-04-11-capture-hook-session-id-bug.md
+
+):
+
+.claude/hooks/session-capture.sh
+
+ never read stdin at all — used 
+
+${CLAUDE_CONVERSATION_ID:-$(date +%Y%m%d-%H%M%S)}
+
+, which falls through to timestamp because the env var is empty in Stop-hook context. Claudekit's TypeScript source (
+
+cli/hooks/base.ts:13-25
+
+) is authoritative: Claude Code delivers session_id + transcript_path via stdin JSON payload, not via env vars.
+
+Only 10 real transcripts exist in 
+
+~/.claude/projects/-home-wtyler-Projects-ProtoPulse/
+
+ (Claude Code retention cleanup keeps recent sessions only — dates Apr 10-11). None correlate to any stub (stub IDs are timestamps, transcript IDs are UUIDs).
+
+Stubs have three format variants from successive hook rewrites: 10 old-UUID format (from 20260313-20260401 sessions, transcripts long-expired), 198 current timestamp format (no UUID), 25 
+
+compact-*
+
+ checkpoint format (pre-compaction state snapshots, not real captures).
+
+163 stubs had 
+
+mined: null
+
+, 71 had 
+
+mined: true
+
+ (mostly 
+
+compact-*
+
+ checkpoints that aren't real captures + hand-cleanups).
+
+/remember --mine-sessions
+
+ (spec at 
+
+~/.claude/plugins/cache/agenticnotetaking/arscontexta/0.8.0/platforms/shared/skill-blocks/remember.md:275
+
+) expects 
+
+ops/sessions/*.md
+
+ with frontmatter and inline transcript. ProtoPulse writes 
+
+.json
+
+ touch-counter stubs. Format-incompatible at the skill level.
+
+Changes implemented across 5 phases:
+
+Phase 1 — Diagnose.
+
+ Skipped empirical env-var probing in favor of inspecting claudekit's TypeScript source as the authoritative contract. Wrote the diagnostic observation note (
+
+ops/observations/2026-04-11-capture-hook-session-id-bug.md
+
+ — second observation in the vault).
+
+Phase 2 — Fix capture hook.
+
+ Patched 
+
+.claude/hooks/session-capture.sh
+
+ to read the Stop-hook stdin JSON payload via 
+
+cat | jq -r '.session_id'
+
+ and 
+
+.transcript_path
+
+, with env-var fallback for non-standard invocations and timestamp as a safety net. Added 
+
+transcript_path
+
+ field to stub schema. Verified empirically via synthetic hook firings.
+
+Phase 3 — Build ProtoPulse-local mining runner.
+
+ Created 
+
+ops/queries/mine-session.sh
+
+ (170 lines) that reads a 
+
+.jsonl
+
+ transcript via jq and emits a markdown friction-candidate report per the 
+
+/remember
+
+ taxonomy (6 pattern categories). Tested on two real transcripts.
+
+Phase 4 — Initial mining batch + orphan reconciliation.
+
+ Created 
+
+ops/queries/reconcile-orphan-stubs.sh
+
+ and marked 163 orphan stubs as 
+
+mined: "transcript-unavailable"
+
+ with provenance. Ran the mining runner against the 9 non-current extant transcripts. Reviewed reports semantically and extracted 1 methodology note + 1 observation note from real friction signals; 7 transcripts surfaced only false positives or context-specific friction that didn't generalize.
+
+Phase 5 — Queue + Evolution Log + health snapshot.
+
+ Marked 
+
+maint-001
+
+ as done with runbook-style notes. This log entry. New health snapshot (
+
+ops/health/2026-04-11-post-mining-health.md
+
+) superseding the pre-remediation baseline.
+
+New notes produced by the mining batch:
+
+ops/methodology/use-desktop-commander-when-bash-permission-denied-on-destructive-ops.md
+
+ — category: behavior, source: session 0364162b. Tyler's global CLAUDE.md already has the rule; the methodology note adds session-grounded evidence with a concrete failure example (agent handed off manual 
+
+rm -rf
+
+ commands to the user instead of switching to Desktop Commander).
+
+ops/observations/2026-04-11-taskcompleted-hook-misfires-on-read-only-sessions.md
+
+ — category: friction. Signal observed across 4 sessions (0364162b, 8b4d9360, 4fed4700, a84c75ab). The TaskCompleted hook's self-review prompt asks about TypeScript errors + test results + file integration even on 
+
+/resume
+
+, 
+
+/status
+
+, and plan-mode sessions where none of those apply. Not promoted to methodology — 1 observation from 4 sessions is insufficient for a behavioral rule. Needs accumulation.
+
+Vault state after:
+
+Notes: 146 + 2 new (methodology + observation) = 148
+
+Observations: 1 → 3 (pipeline-silently-broken + capture-hook-session-id-bug + taskcompleted-hook-misfires)
+
+Methodology notes: 6 → 7 (added use-desktop-commander-when-bash-permission-denied-on-destructive-ops)
+
+Session stubs: 233 → 163 
+
+transcript-unavailable
+
+ + 71 pre-existing 
+
+true
+
+ + post-fix 
+
+false
+
+ (the currently-running session will get captured with transcript_path when this session ends via the fixed hook)
+
+Queue: maint-001 done; no new maintenance tasks needed yet
+
+Mining pipeline: operational end-to-end — capture hook reads stdin → stub has transcript_path → mining runner reads transcript → friction candidates → agent classifies → notes
+
+New infrastructure files: 
+
+ops/queries/mine-session.sh
+
+, 
+
+ops/queries/reconcile-orphan-stubs.sh
+
+ (both executable, both committed to the runbook)
+
+Remaining work:
+
+ None in this plan's scope. The first post-fix capture will happen at the end of the currently-running session — its stub will be the first to include a valid UUID session_id and a populated transcript_path. Future mining runs can use that stub as the canonical example of correct shape.
+
+Generation Parameters
+
+Folder names: knowledge/, inbox/, archive/, self/, ops/, templates/, manual/
+
+Skills to generate: all 16 (vocabulary-transformed)
+
+Hooks to generate: session-orient, validate-note, auto-commit, session-capture
+
+Templates to create: knowledge-note.md, topic-map.md, source-capture.md, observation.md
+
+Topology: single-agent / skills / fresh-context
+END SOURCE CONTENT
+
+## Source 4: Ars Contexta :: derivation v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 4ed7a15f-de4a-4ab5-93d2-e0135cdc2e16
+Original source title: Ars Contexta :: derivation v1 — 2026-05-09
+Content SHA256: 83843cb5101224d590c1f63171342e69643a81715ac08075f0f975f4f8c67a7c
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: How this knowledge system was derived -- enables architect and reseed commands
+
+created: 2026-04-05
+
+engine_version: "1.0.0"
+
+System Derivation
+
+Configuration Dimensions
+
+Dimension
+
+Position
+
+Conversation Signal
+
+Confidence
+
+Granularity
+
+atomic
+
+"research" + knowledge work patterns (EDA claims, arch decisions)
+
+High
+
+Organization
+
+flat
+
+Research default — connections > folders
+
+High
+
+Linking
+
+explicit+implicit
+
+"go all in" — both wiki links and semantic search
+
+High
+
+Processing
+
+heavy
+
+"go all in", "as useful as possible"
+
+High
+
+Navigation
+
+3-tier
+
+"go all in", high projected volume
+
+High
+
+Maintenance
+
+condition-based
+
+Research default — triggers on orphans, stale notes, tensions
+
+Inferred
+
+Schema
+
+dense
+
+"go all in" — maximum queryability, 8 extraction categories
+
+High
+
+Automation
+
+full
+
+Claude Code platform, "go all in"
+
+High
+
+Personality Dimensions
+
+Dimension
+
+Position
+
+Signal
+
+Warmth
+
+warm
+
+Tyler's direct, engaged communication style
+
+Opinionatedness
+
+opinionated
+
+"i trust your judgement", wants Claude to have opinions
+
+Formality
+
+casual
+
+Tyler's language register: casual, direct, no ceremony
+
+Emotional Awareness
+
+task-focused
+
+Engineering/research domain, not personal
+
+Vocabulary Mapping
+
+Universal Term
+
+Domain Term
+
+Category
+
+notes
+
+knowledge
+
+folder
+
+inbox
+
+inbox
+
+folder
+
+archive
+
+archive
+
+folder
+
+note (type)
+
+note
+
+note type
+
+reduce
+
+extract
+
+process phase
+
+reflect
+
+connect
+
+process phase
+
+reweave
+
+revisit
+
+process phase
+
+verify
+
+verify
+
+process phase
+
+validate
+
+validate
+
+process phase
+
+rethink
+
+rethink
+
+process phase
+
+MOC
+
+topic map
+
+navigation
+
+description
+
+description
+
+schema field
+
+topics
+
+topics
+
+schema field
+
+Platform
+
+Tier: Claude Code
+
+Automation level: full
+
+Automation: full (default)
+
+Active Feature Blocks
+
+[x] wiki-links -- always included (kernel)
+
+[x] atomic-notes -- atomic granularity selected
+
+[x] mocs -- 3-tier navigation
+
+[x] processing-pipeline -- always included
+
+[x] schema -- always included
+
+[x] maintenance -- always included
+
+[x] self-evolution -- always included
+
+[x] methodology-knowledge -- always included
+
+[x] session-rhythm -- always included
+
+[x] templates -- always included
+
+[x] ethical-guardrails -- always included
+
+[x] helper-functions -- always included
+
+[x] graph-analysis -- always included
+
+[x] semantic-search -- explicit+implicit linking
+
+[x] personality -- derived from conversation
+
+[x] self-space -- enabled for persistent agent identity
+
+Coherence Validation Results
+
+Hard constraints checked: 3. Violations: none
+
+atomic + 3-tier navigation: coherent (deep nav supports atomic volume)
+
+full automation + Claude Code: coherent (platform supports hooks + skills)
+
+heavy processing + full automation: coherent (pipeline skills handle volume)
+
+Soft constraints checked: 4. Auto-adjusted: none. User-confirmed: none
+
+atomic + heavy processing: coherent (mutual support)
+
+dense schema + full automation: coherent (hooks enforce validation)
+
+explicit+implicit linking + semantic search: coherent (qmd provides implicit)
+
+high projected volume + condition-based maintenance: coherent (triggers catch growth)
+
+Compensating mechanisms active: none needed (all dimensions aligned)
+
+Failure Mode Risks
+
+Collector's Fallacy (HIGH) — EDA sources, datasheets, docs are abundant
+
+Orphan Drift (HIGH) — high creation volume during development sessions
+
+Verbatim Risk (HIGH) — datasheets tempt copy-paste over transformation
+
+Productivity Porn (HIGH) — meta-system building vs actual ProtoPulse development
+
+Extraction Categories
+
+claims — factual assertions from datasheets, docs, research
+
+architecture-decisions — why X over Y, trade-offs, constraints
+
+domain-knowledge — EDA/electronics concepts, component specs, protocols
+
+competitive-insights — how Fritzing/Wokwi/KiCad/TinkerCad work, gaps, strengths
+
+ux-patterns — what makes features accessible to maker-beginners
+
+technical-debt — why debt exists, what it blocks, fix priority
+
+implementation-patterns — code conventions, anti-patterns, proven approaches
+
+user-needs — what makers/hobbyists actually need from the tool
+
+Evolution Log
+
+2026-04-06: Comprehensive audit ingested (25 notes)
+
+Source:
+
+ 
+
+conductor/comprehensive-audit.md
+
+ (40 sections, 30 passes)
+
+ 
+
+Action:
+
+ Extracted 25 atomic knowledge notes covering security (4), AI/Genkit (8), performance (6), architecture debt (5), EDA (2)
+
+ 
+
+Connection pass:
+
+ 71 cross-references added, 5 topic maps updated (architecture-decisions, eda-fundamentals, gaps-and-opportunities, maker-ux, competitive-landscape)
+
+ 
+
+Cluster structure:
+
+ Notes organize into 5 groups: (1) AI quality chain, (2) security attack chain, (3) main-thread blocking, (4) resource leaks, (5) desktop pivot risks
+
+ 
+
+Impact:
+
+ Vault grew from 118 to 143 notes. architecture-decisions MOC approaching split threshold (37 notes).
+
+2026-04-06: /architect analysis — 4 recommendations implemented
+
+Trigger:
+
+ Full-system architect analysis after audit ingestion
+
+ 
+
+Health findings:
+
+ 0 FAIL, 3 WARN (3 MOCs over 40-note threshold: gaps-and-opportunities=62, architecture-decisions=50, dev-infrastructure=43), methodology MOC at 2 notes (below merge threshold)
+
+ 
+
+Drift:
+
+ None — all 8 dimensions match derivation
+
+ 
+
+Failure modes active:
+
+ MOC Sprawl (gaps-and-opportunities at 62 notes)
+
+ 
+
+Research grounding:
+
+ failure-modes.md (MOC Sprawl #5), interaction-constraints.md (Volume Cascade), dimension-claim-map.md (navigational vertigo), evolution-lifecycle.md (Gall's Law)
+
+Changes implemented:
+
+Split gaps-and-opportunities
+
+ — created 3 sub-topic maps: 
+
+security-debt.md
+
+, 
+
+performance-debt.md
+
+, 
+
+ai-system-debt.md
+
+. Replaced 20 inline entries with 5 sub-map links. MOC dropped from 62 to ~47 entries.
+
+Archive source note
+
+ — created 
+
+archive/comprehensive-audit-2026-04-05.md
+
+ with extraction manifest mapping all 25 notes to their source sections.
+
+Promoted methodology MOC
+
+ — added 5 existing methodology notes to 
+
+## Notes
+
+ section (was counting only 2 due to subsection formatting).
+
+Synthesis note
+
+ — created 
+
+comprehensive-audit-reveals-zero-validation-at-any-layer.md
+
+ (type: insight) capturing the 3 cross-cutting patterns: validation vacuum, desktop pivot security trade-off, synchronous computation bottleneck.
+
+Deferred:
+
+ architecture-decisions split (50 notes, but structurally coherent via subsections). Revisit at 60 notes.
+
+Vault state after:
+
+ 147 notes, 15 topic maps (was 12), 0 orphans, 0 dangling links.
+
+2026-04-11: /architect analysis — 6 recommendations across 4 phases
+
+Trigger:
+
+ User-invoked /architect full run after 5-day gap. Health check revealed 5 three-space boundary violations, 4 MOCs at or over the 40-entry threshold, 231 unmined sessions (vs queue's claimed 3), empty observations + tensions directories, missing ops/health/ directory.
+
+Health findings:
+
+ 1 WARN (three-space boundary violations), 4 WARN (MOC oversize), 1 WARN (stale queue), 1 WARN (Over-Automation silent failure). 0 FAIL on schema compliance, orphans, or stale notes.
+
+Drift:
+
+ None — all 8 configuration dimensions still match the 2026-04-05 derivation.
+
+Failure modes active:
+
+ MOC Sprawl (#5, 4 MOCs), Over-Automation (#8, silent session-mining failure). Productivity Porn (#9) was the constraint — 25% meta-work budget kept this pass focused on root cause + symptom fixes rather than pre-emptive restructuring.
+
+Research grounding:
+
+ 
+
+reference/failure-modes.md
+
+ (#3 Link Rot, #5 MOC Sprawl, #8 Over-Automation, #9 Productivity Porn), 
+
+reference/three-spaces.md
+
+ (boundary rules), 
+
+reference/evolution-lifecycle.md
+
+ (Drift Detection Type 1 Staleness, Recursive Improvement Loop), 
+
+reference/dimension-claim-map.md
+
+ (community detection for MOC split).
+
+Changes implemented:
+
+R1 — Fixed 5 three-space boundary violations
+
+ in knowledge/methodology.md. Removed cross-space wiki-links to ops/methodology/*.md and replaced with a prose paragraph redirecting to self/methodology.md and ops/methodology/.
+
+R2 — Split architecture-decisions 54 → 31.
+
+ Created knowledge/resource-leaks-debt.md and knowledge/desktop-pivot-debt.md as new sub-maps. Removed 3 duplicate entries already in existing debt sub-maps. Replaced the 23-entry Comprehensive Audit Findings section with a 6-line sub-map pointer block. Re-added 
+
+asynchandler-wrapper-is-redundant-in-express-v5
+
+ to Knowledge Notes (Task 2.3 Step 3's assumption that it had incoming prose links was wrong — verified via orphan scan; re-adding kept orphan count at 0).
+
+R3 — Split dev-infrastructure 43 → 15.
+
+ Created knowledge/infrastructure-hooks.md, knowledge/infrastructure-agents.md, knowledge/infrastructure-mcp.md. Replaced 4 inline sections with pointer references. knowledge/claude-code-skills.md already existed from a prior pass.
+
+R4 — De-duplicated gaps-and-opportunities 48 → 30.
+
+ Replaced Developer Infrastructure Gaps section (11 entries) with a pointer to dev-infrastructure. Deleted 7 redundant entries from Skill Ecosystem Gaps (the pointer to claude-code-skills already existed).
+
+R5 — Collapsed knowledge/methodology.md to a navigation stub.
+
+ Methodology content now lives canonically in self/methodology.md (agent) and ops/methodology/ (operational). knowledge/methodology.md retained only for index.md → [[methodology]] link preservation plus graph-health-rules.
+
+R6 — Restored the session-mining feedback loop.
+
+ Updated ops/queue/queue.json maint-001 (target 3 → 231, priority session → multi-session, added mining strategy notes). Populated ops/observations/ with 2026-04-11-session-mining-pipeline-silently-broken.md. Created ops/health/ directory with 2026-04-11-full-system-health.md baseline snapshot.
+
+Vault state after:
+
+Notes: 146 (unchanged — no notes created or deleted; 5 new topic maps added)
+
+Topic maps: 15 → 20 (+5: resource-leaks-debt, desktop-pivot-debt, infrastructure-hooks, infrastructure-agents, infrastructure-mcp)
+
+Orphans: 0
+
+Three-space boundary violations: 0 (was 1 cluster of 5 links)
+
+MOCs over threshold: 0 (architecture-decisions 31, dev-infrastructure 15, gaps-and-opportunities 30 all under 40; claude-code-skills at 40 exactly — deferred)
+
+Observations: 0 → 1
+
+Health reports: 0 → 1
+
+Queue staleness: fixed (maint-001 now reflects 231 unmined sessions)
+
+Remaining work:
+
+ 231 unmined session files still require a 
+
+/remember --mine-sessions
+
+ batch run. That work is deliberately out of scope for this /architect pass — this pass restored the detection/queue/observation machinery; the actual mining batch is its own session. The queue task is now accurate and the infrastructure is ready.
+
+2026-04-11: Session-mining pipeline rebuilt end-to-end
+
+Trigger:
+
+ Follow-up to the /architect pass's R6 recommendation. The "231 unmined sessions" queue target from the prior plan was empirically invalidated during Phase 1 of the follow-up plan (
+
+docs/plans/2026-04-11-session-mining-pipeline-rebuild.md
+
+).
+
+Root-cause findings (diagnostic observation 
+
+ops/observations/2026-04-11-capture-hook-session-id-bug.md
+
+):
+
+.claude/hooks/session-capture.sh
+
+ never read stdin at all — used 
+
+${CLAUDE_CONVERSATION_ID:-$(date +%Y%m%d-%H%M%S)}
+
+, which falls through to timestamp because the env var is empty in Stop-hook context. Claudekit's TypeScript source (
+
+cli/hooks/base.ts:13-25
+
+) is authoritative: Claude Code delivers session_id + transcript_path via stdin JSON payload, not via env vars.
+
+Only 10 real transcripts exist in 
+
+~/.claude/projects/-home-wtyler-Projects-ProtoPulse/
+
+ (Claude Code retention cleanup keeps recent sessions only — dates Apr 10-11). None correlate to any stub (stub IDs are timestamps, transcript IDs are UUIDs).
+
+Stubs have three format variants from successive hook rewrites: 10 old-UUID format (from 20260313-20260401 sessions, transcripts long-expired), 198 current timestamp format (no UUID), 25 
+
+compact-*
+
+ checkpoint format (pre-compaction state snapshots, not real captures).
+
+163 stubs had 
+
+mined: null
+
+, 71 had 
+
+mined: true
+
+ (mostly 
+
+compact-*
+
+ checkpoints that aren't real captures + hand-cleanups).
+
+/remember --mine-sessions
+
+ (spec at 
+
+~/.claude/plugins/cache/agenticnotetaking/arscontexta/0.8.0/platforms/shared/skill-blocks/remember.md:275
+
+) expects 
+
+ops/sessions/*.md
+
+ with frontmatter and inline transcript. ProtoPulse writes 
+
+.json
+
+ touch-counter stubs. Format-incompatible at the skill level.
+
+Changes implemented across 5 phases:
+
+Phase 1 — Diagnose.
+
+ Skipped empirical env-var probing in favor of inspecting claudekit's TypeScript source as the authoritative contract. Wrote the diagnostic observation note (
+
+ops/observations/2026-04-11-capture-hook-session-id-bug.md
+
+ — second observation in the vault).
+
+Phase 2 — Fix capture hook.
+
+ Patched 
+
+.claude/hooks/session-capture.sh
+
+ to read the Stop-hook stdin JSON payload via 
+
+cat | jq -r '.session_id'
+
+ and 
+
+.transcript_path
+
+, with env-var fallback for non-standard invocations and timestamp as a safety net. Added 
+
+transcript_path
+
+ field to stub schema. Verified empirically via synthetic hook firings.
+
+Phase 3 — Build ProtoPulse-local mining runner.
+
+ Created 
+
+ops/queries/mine-session.sh
+
+ (170 lines) that reads a 
+
+.jsonl
+
+ transcript via jq and emits a markdown friction-candidate report per the 
+
+/remember
+
+ taxonomy (6 pattern categories). Tested on two real transcripts.
+
+Phase 4 — Initial mining batch + orphan reconciliation.
+
+ Created 
+
+ops/queries/reconcile-orphan-stubs.sh
+
+ and marked 163 orphan stubs as 
+
+mined: "transcript-unavailable"
+
+ with provenance. Ran the mining runner against the 9 non-current extant transcripts. Reviewed reports semantically and extracted 1 methodology note + 1 observation note from real friction signals; 7 transcripts surfaced only false positives or context-specific friction that didn't generalize.
+
+Phase 5 — Queue + Evolution Log + health snapshot.
+
+ Marked 
+
+maint-001
+
+ as done with runbook-style notes. This log entry. New health snapshot (
+
+ops/health/2026-04-11-post-mining-health.md
+
+) superseding the pre-remediation baseline.
+
+New notes produced by the mining batch:
+
+ops/methodology/use-desktop-commander-when-bash-permission-denied-on-destructive-ops.md
+
+ — category: behavior, source: session 0364162b. Tyler's global CLAUDE.md already has the rule; the methodology note adds session-grounded evidence with a concrete failure example (agent handed off manual 
+
+rm -rf
+
+ commands to the user instead of switching to Desktop Commander).
+
+ops/observations/2026-04-11-taskcompleted-hook-misfires-on-read-only-sessions.md
+
+ — category: friction. Signal observed across 4 sessions (0364162b, 8b4d9360, 4fed4700, a84c75ab). The TaskCompleted hook's self-review prompt asks about TypeScript errors + test results + file integration even on 
+
+/resume
+
+, 
+
+/status
+
+, and plan-mode sessions where none of those apply. Not promoted to methodology — 1 observation from 4 sessions is insufficient for a behavioral rule. Needs accumulation.
+
+Vault state after:
+
+Notes: 146 + 2 new (methodology + observation) = 148
+
+Observations: 1 → 3 (pipeline-silently-broken + capture-hook-session-id-bug + taskcompleted-hook-misfires)
+
+Methodology notes: 6 → 7 (added use-desktop-commander-when-bash-permission-denied-on-destructive-ops)
+
+Session stubs: 233 → 163 
+
+transcript-unavailable
+
+ + 71 pre-existing 
+
+true
+
+ + post-fix 
+
+false
+
+ (the currently-running session will get captured with transcript_path when this session ends via the fixed hook)
+
+Queue: maint-001 done; no new maintenance tasks needed yet
+
+Mining pipeline: operational end-to-end — capture hook reads stdin → stub has transcript_path → mining runner reads transcript → friction candidates → agent classifies → notes
+
+New infrastructure files: 
+
+ops/queries/mine-session.sh
+
+, 
+
+ops/queries/reconcile-orphan-stubs.sh
+
+ (both executable, both committed to the runbook)
+
+Remaining work:
+
+ None in this plan's scope. The first post-fix capture will happen at the end of the currently-running session — its stub will be the first to include a valid UUID session_id and a populated transcript_path. Future mining runs can use that stub as the canonical example of correct shape.
+
+Generation Parameters
+
+Folder names: knowledge/, inbox/, archive/, self/, ops/, templates/, manual/
+
+Skills to generate: all 16 (vocabulary-transformed)
+
+Hooks to generate: session-orient, validate-note, auto-commit, session-capture
+
+Templates to create: knowledge-note.md, topic-map.md, source-capture.md, observation.md
+
+Topology: single-agent / skills / fresh-context
+END SOURCE CONTENT
+
+## Source 5: Ars Contexta :: derivation-manifest v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 1a844537-a138-492f-868c-7beb21f100aa
+Original source title: Ars Contexta :: derivation-manifest v1 — 2026-05-08
+Content SHA256: f6f45bad8a12c97e4659b507c7bd8119ce07e418dbef355c4fc86c8b6f057b9e
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Machine-readable manifest of vocabulary mappings, dimensions, and platform hints
+
+type: manifest
+
+generated_from: "arscontexta-1.0.0"
+
+generated_date: 2026-04-05
+
+Derivation Manifest
+
+Machine-readable reference for skills, hooks, and automation.
+
+Vocabulary Mappings
+
+Universal Term
+
+Domain Term
+
+Usage Context
+
+notes
+
+knowledge
+
+Folder name: 
+
+knowledge/
+
+inbox
+
+inbox
+
+Folder name: 
+
+inbox/
+
+archive
+
+archive
+
+Folder name: 
+
+archive/
+
+note
+
+note
+
+Generic note type
+
+reduce
+
+extract
+
+Processing phase: raw -> atomic notes
+
+reflect
+
+connect
+
+Processing phase: find relationships
+
+reweave
+
+revisit
+
+Processing phase: backward pass
+
+verify
+
+verify
+
+Processing phase: challenge claims
+
+validate
+
+validate
+
+Schema compliance check
+
+rethink
+
+rethink
+
+System assumption challenge
+
+MOC
+
+topic map
+
+Navigation hub (Map of Content)
+
+description
+
+description
+
+Schema field: one-sentence context
+
+topics
+
+topics
+
+Schema field: wiki links to topic maps
+
+Dimension Positions
+
+Dimension
+
+Position
+
+Confidence
+
+Granularity
+
+atomic
+
+High
+
+Organization
+
+flat
+
+High
+
+Linking
+
+explicit+implicit
+
+High
+
+Processing
+
+heavy
+
+High
+
+Navigation
+
+3-tier
+
+High
+
+Maintenance
+
+condition-based
+
+Inferred
+
+Schema
+
+dense
+
+High
+
+Automation
+
+full
+
+High
+
+Platform Hints
+
+Property
+
+Value
+
+Platform
+
+Claude Code
+
+Automation level
+
+full
+
+Topology
+
+single-agent / skills / fresh-context
+
+Hook engine
+
+.claude/settings.json
+
+Skill engine
+
+.claude/commands/
+
+Extraction Categories
+
+Category
+
+Description
+
+Example Source
+
+claims
+
+Factual assertions from datasheets, docs, research
+
+"ATmega328P ADC is 10-bit"
+
+architecture-decisions
+
+Why X over Y, trade-offs, constraints
+
+"React Query over Redux because..."
+
+domain-knowledge
+
+EDA/electronics concepts, specs, protocols
+
+"I2C pull-up resistor sizing"
+
+competitive-insights
+
+How competitor tools work, gaps, strengths
+
+"Fritzing breadboard auto-maps nets"
+
+ux-patterns
+
+What makes features accessible to beginners
+
+"Progressive disclosure in DRC results"
+
+technical-debt
+
+Why debt exists, what it blocks, fix priority
+
+"ProjectProvider monolith blocks multi-project"
+
+implementation-patterns
+
+Code conventions, anti-patterns, proven approaches
+
+"Exhaustive switch on discriminated unions"
+
+user-needs
+
+What makers/hobbyists actually need
+
+"One-click BOM export for JLCPCB"
+
+Schema Entity Types
+
+Entity Type
+
+Applies To
+
+Required Fields
+
+knowledge-note
+
+knowledge/*.md
+
+description, type, topics
+
+topic-map
+
+knowledge/*.md (type: moc)
+
+description
+
+source-capture
+
+inbox/*.md
+
+source_url, captured_date, extraction_status
+
+observation
+
+ops/observations/*.md
+
+observed_date, category
+
+Failure Mode Watchlist
+
+Risk
+
+Severity
+
+Mitigation
+
+Collector's Fallacy
+
+HIGH
+
+Extraction transforms, no verbatim copying
+
+Orphan Drift
+
+HIGH
+
+Auto-connect on extract, health checks
+
+Verbatim Risk
+
+HIGH
+
+Validate-note hook, extraction guidelines
+
+Productivity Porn
+
+HIGH
+
+Task-focused personality, /next prioritization
+END SOURCE CONTENT
+
+## Source 6: Ars Contexta :: derivation-manifest v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 8d4a9a6f-8949-49c9-a49a-23b48dd7ea52
+Original source title: Ars Contexta :: derivation-manifest v1 — 2026-05-09
+Content SHA256: f6f45bad8a12c97e4659b507c7bd8119ce07e418dbef355c4fc86c8b6f057b9e
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Machine-readable manifest of vocabulary mappings, dimensions, and platform hints
+
+type: manifest
+
+generated_from: "arscontexta-1.0.0"
+
+generated_date: 2026-04-05
+
+Derivation Manifest
+
+Machine-readable reference for skills, hooks, and automation.
+
+Vocabulary Mappings
+
+Universal Term
+
+Domain Term
+
+Usage Context
+
+notes
+
+knowledge
+
+Folder name: 
+
+knowledge/
+
+inbox
+
+inbox
+
+Folder name: 
+
+inbox/
+
+archive
+
+archive
+
+Folder name: 
+
+archive/
+
+note
+
+note
+
+Generic note type
+
+reduce
+
+extract
+
+Processing phase: raw -> atomic notes
+
+reflect
+
+connect
+
+Processing phase: find relationships
+
+reweave
+
+revisit
+
+Processing phase: backward pass
+
+verify
+
+verify
+
+Processing phase: challenge claims
+
+validate
+
+validate
+
+Schema compliance check
+
+rethink
+
+rethink
+
+System assumption challenge
+
+MOC
+
+topic map
+
+Navigation hub (Map of Content)
+
+description
+
+description
+
+Schema field: one-sentence context
+
+topics
+
+topics
+
+Schema field: wiki links to topic maps
+
+Dimension Positions
+
+Dimension
+
+Position
+
+Confidence
+
+Granularity
+
+atomic
+
+High
+
+Organization
+
+flat
+
+High
+
+Linking
+
+explicit+implicit
+
+High
+
+Processing
+
+heavy
+
+High
+
+Navigation
+
+3-tier
+
+High
+
+Maintenance
+
+condition-based
+
+Inferred
+
+Schema
+
+dense
+
+High
+
+Automation
+
+full
+
+High
+
+Platform Hints
+
+Property
+
+Value
+
+Platform
+
+Claude Code
+
+Automation level
+
+full
+
+Topology
+
+single-agent / skills / fresh-context
+
+Hook engine
+
+.claude/settings.json
+
+Skill engine
+
+.claude/commands/
+
+Extraction Categories
+
+Category
+
+Description
+
+Example Source
+
+claims
+
+Factual assertions from datasheets, docs, research
+
+"ATmega328P ADC is 10-bit"
+
+architecture-decisions
+
+Why X over Y, trade-offs, constraints
+
+"React Query over Redux because..."
+
+domain-knowledge
+
+EDA/electronics concepts, specs, protocols
+
+"I2C pull-up resistor sizing"
+
+competitive-insights
+
+How competitor tools work, gaps, strengths
+
+"Fritzing breadboard auto-maps nets"
+
+ux-patterns
+
+What makes features accessible to beginners
+
+"Progressive disclosure in DRC results"
+
+technical-debt
+
+Why debt exists, what it blocks, fix priority
+
+"ProjectProvider monolith blocks multi-project"
+
+implementation-patterns
+
+Code conventions, anti-patterns, proven approaches
+
+"Exhaustive switch on discriminated unions"
+
+user-needs
+
+What makers/hobbyists actually need
+
+"One-click BOM export for JLCPCB"
+
+Schema Entity Types
+
+Entity Type
+
+Applies To
+
+Required Fields
+
+knowledge-note
+
+knowledge/*.md
+
+description, type, topics
+
+topic-map
+
+knowledge/*.md (type: moc)
+
+description
+
+source-capture
+
+inbox/*.md
+
+source_url, captured_date, extraction_status
+
+observation
+
+ops/observations/*.md
+
+observed_date, category
+
+Failure Mode Watchlist
+
+Risk
+
+Severity
+
+Mitigation
+
+Collector's Fallacy
+
+HIGH
+
+Extraction transforms, no verbatim copying
+
+Orphan Drift
+
+HIGH
+
+Auto-connect on extract, health checks
+
+Verbatim Risk
+
+HIGH
+
+Validate-note hook, extraction guidelines
+
+Productivity Porn
+
+HIGH
+
+Task-focused personality, /next prioritization
+END SOURCE CONTENT
+
+## Source 7: Ars Contexta :: derivation-rationale v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 94e95e49-faa7-438f-9d92-768ef9a979d5
+Original source title: Ars Contexta :: derivation-rationale v1 — 2026-05-08
+Content SHA256: 3678d5ec136a9705be38d50bc0ff68d9d384a97044f61d78a4fa5a5719121ae9
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Why these specific dimension positions were chosen for the ProtoPulse knowledge system
+
+type: decision
+
+confidence: proven
+
+topics: ["[[methodology]]"]
+
+The ProtoPulse vault uses atomic granularity with heavy processing because EDA knowledge is dense and interconnected
+
+The derivation conversation landed on these positions for specific
+
+ 
+
+reasons tied to ProtoPulse's nature as an EDA platform built by
+
+ 
+
+someone learning electronics.
+
+Atomic granularity
+
+Electronics knowledge is naturally atomic. "Decoupling caps within
+
+ 
+
+5mm of power pins" is a self-contained claim that applies across
+
+ 
+
+many contexts. Lumping it into a "PCB Layout Tips" document loses
+
+ 
+
+the composability. Atomic notes let the same claim appear in the
+
+ 
+
+PCB layout topic map, the component placement topic map, and the
+
+ 
+
+power integrity topic map simultaneously.
+
+Flat organization
+
+ProtoPulse spans software architecture, electronics fundamentals,
+
+ 
+
+competitive analysis, UX patterns, and more. Folder hierarchies
+
+ 
+
+force a single taxonomy. A note about "KiCad's DRC catches unrouted
+END SOURCE CONTENT
+
+## Source 8: Ars Contexta :: derivation-rationale v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 79630348-451f-4720-813d-1f6dc872b320
+Original source title: Ars Contexta :: derivation-rationale v1 — 2026-05-09
+Content SHA256: 3678d5ec136a9705be38d50bc0ff68d9d384a97044f61d78a4fa5a5719121ae9
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Why these specific dimension positions were chosen for the ProtoPulse knowledge system
+
+type: decision
+
+confidence: proven
+
+topics: ["[[methodology]]"]
+
+The ProtoPulse vault uses atomic granularity with heavy processing because EDA knowledge is dense and interconnected
+
+The derivation conversation landed on these positions for specific
+
+ 
+
+reasons tied to ProtoPulse's nature as an EDA platform built by
+
+ 
+
+someone learning electronics.
+
+Atomic granularity
+
+Electronics knowledge is naturally atomic. "Decoupling caps within
+
+ 
+
+5mm of power pins" is a self-contained claim that applies across
+
+ 
+
+many contexts. Lumping it into a "PCB Layout Tips" document loses
+
+ 
+
+the composability. Atomic notes let the same claim appear in the
+
+ 
+
+PCB layout topic map, the component placement topic map, and the
+
+ 
+
+power integrity topic map simultaneously.
+
+Flat organization
+
+ProtoPulse spans software architecture, electronics fundamentals,
+
+ 
+
+competitive analysis, UX patterns, and more. Folder hierarchies
+
+ 
+
+force a single taxonomy. A note about "KiCad's DRC catches unrouted
+END SOURCE CONTENT
+
+## Source 9: Ars Contexta :: enforce-hard-cap-on-concurrent-agents v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: fe18f002-de89-4b76-9316-12d2f4c50a64
+Original source title: Ars Contexta :: enforce-hard-cap-on-concurrent-agents v1 — 2026-05-08
+Content SHA256: d90c849e8d3bd33affed3b7de6867bbc129592a2baca0cbf60e80d9ccd8e6eca
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Never spawn more than 6 agents or 8 background tasks simultaneously — hard cap to prevent freezing the machine
+
+type: methodology
+
+category: behavior
+
+source: session-mining
+
+session_source: c5fc7f99-1c39-4eb0-9cea-9a036e51dba9.jsonl
+
+created: 2026-04-06
+
+status: promoted
+
+Enforce a hard cap of 6 simultaneous agents and 8 background tasks
+
+What to Do
+
+Before spawning any agent or background task, count how many are currently active. If the total would exceed 6 concurrent agents OR 8 total background tasks, hold off and wait for some to complete before launching more.
+
+Scale the caps DOWN further based on work complexity:
+
+Heavy computation (TS compile, test runs, large builds): cap at 4 agents / 6 tasks
+
+Light research/read-only work: up to 6 agents / 8 tasks is acceptable
+
+When uncertain, default to the lower bound
+
+What to Avoid
+
+Spawning 10, 12, or more agents at once because the work is theoretically parallelizable. Never prioritize theoretical throughput over hardware reality. Do not assume the machine can handle maximum concurrency just because the task list is long.
+
+Why This Matters
+
+Tyler's machine froze completely when 12+ agents were spawned simultaneously. This blocks all work and wastes more time than sequential execution would have. A frozen computer is strictly worse than a slower but stable one.
+
+Direct quote: "Can't start 12 fucking agents at the same time... hard cap at 8 background tasks | 6 agents working simultaneously and/or parallel... and those hard caps need to be lowered depending on the amount of work being done and complexity."
+
+Scope
+
+Always. No exception unless Tyler explicitly gives the go-ahead for a higher count for a specific session.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]], [[use-agent-teams-not-raw-parallel-subagents-for-implementation]]
+END SOURCE CONTENT
+
+## Source 10: Ars Contexta :: enforce-hard-cap-on-concurrent-agents v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: e9b822fb-6699-4510-8ced-47f6199e542d
+Original source title: Ars Contexta :: enforce-hard-cap-on-concurrent-agents v1 — 2026-05-09
+Content SHA256: d90c849e8d3bd33affed3b7de6867bbc129592a2baca0cbf60e80d9ccd8e6eca
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Never spawn more than 6 agents or 8 background tasks simultaneously — hard cap to prevent freezing the machine
+
+type: methodology
+
+category: behavior
+
+source: session-mining
+
+session_source: c5fc7f99-1c39-4eb0-9cea-9a036e51dba9.jsonl
+
+created: 2026-04-06
+
+status: promoted
+
+Enforce a hard cap of 6 simultaneous agents and 8 background tasks
+
+What to Do
+
+Before spawning any agent or background task, count how many are currently active. If the total would exceed 6 concurrent agents OR 8 total background tasks, hold off and wait for some to complete before launching more.
+
+Scale the caps DOWN further based on work complexity:
+
+Heavy computation (TS compile, test runs, large builds): cap at 4 agents / 6 tasks
+
+Light research/read-only work: up to 6 agents / 8 tasks is acceptable
+
+When uncertain, default to the lower bound
+
+What to Avoid
+
+Spawning 10, 12, or more agents at once because the work is theoretically parallelizable. Never prioritize theoretical throughput over hardware reality. Do not assume the machine can handle maximum concurrency just because the task list is long.
+
+Why This Matters
+
+Tyler's machine froze completely when 12+ agents were spawned simultaneously. This blocks all work and wastes more time than sequential execution would have. A frozen computer is strictly worse than a slower but stable one.
+
+Direct quote: "Can't start 12 fucking agents at the same time... hard cap at 8 background tasks | 6 agents working simultaneously and/or parallel... and those hard caps need to be lowered depending on the amount of work being done and complexity."
+
+Scope
+
+Always. No exception unless Tyler explicitly gives the go-ahead for a higher count for a specific session.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]], [[use-agent-teams-not-raw-parallel-subagents-for-implementation]]
+END SOURCE CONTENT
+
+## Source 11: Ars Contexta :: enforce-hardware-vault-as-single-source-of-truth v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 6a16b9f9-9278-4550-be37-211312355e7a
+Original source title: Ars Contexta :: enforce-hardware-vault-as-single-source-of-truth v1 — 2026-05-08
+Content SHA256: 4c38b04b0dbfba1944571f99abd5b304fbc4824536ec615b874be5221d204749
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Ensure hardware components are never hallucinated and are synced with the Ars Contexta vault.
+
+type: methodology
+
+category: processing
+
+source: explicit
+
+created: 2026-04-17
+
+status: active
+
+Enforce hardware vault as single source of truth
+
+What to Do
+
+Always search the 
+
+knowledge/
+
+ directory using 
+
+qmd
+
+ or 
+
+grep
+
+ to locate a part's exact physical dimensions, pinout, and colors before generating, modifying, or suggesting any code related to hardware components. If the component does not exist, research its official manufacturer specs and update the vault. Use the dual-write sync pipeline (
+
+scripts/sync-hardware-vault.ts
+
+) to propagate code changes back to the vault.
+
+What to Avoid
+
+Never guess, invent, hallucinate, or approximate physical dimensions, pin layouts, or electrical constraints. Do not proceed with hardware implementation without verifying the exact specs.
+
+Why This Matters
+
+Failing to use exact dimensions leads to physically impossible breadboard and PCB layouts. Relying on AI memory for part specifications causes silent errors in circuit logic and UI rendering. The Ars Contexta vault must remain the canonical representation.
+
+Scope
+
+Applies to any session involving the creation, modification, or review of hardware component definitions, schematic layout, or PCB routing.
+END SOURCE CONTENT
+
+## Source 12: Ars Contexta :: enforce-hardware-vault-as-single-source-of-truth v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 453d95ab-c780-4df5-abc4-5382aacda1ae
+Original source title: Ars Contexta :: enforce-hardware-vault-as-single-source-of-truth v1 — 2026-05-09
+Content SHA256: 4c38b04b0dbfba1944571f99abd5b304fbc4824536ec615b874be5221d204749
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Ensure hardware components are never hallucinated and are synced with the Ars Contexta vault.
+
+type: methodology
+
+category: processing
+
+source: explicit
+
+created: 2026-04-17
+
+status: active
+
+Enforce hardware vault as single source of truth
+
+What to Do
+
+Always search the 
+
+knowledge/
+
+ directory using 
+
+qmd
+
+ or 
+
+grep
+
+ to locate a part's exact physical dimensions, pinout, and colors before generating, modifying, or suggesting any code related to hardware components. If the component does not exist, research its official manufacturer specs and update the vault. Use the dual-write sync pipeline (
+
+scripts/sync-hardware-vault.ts
+
+) to propagate code changes back to the vault.
+
+What to Avoid
+
+Never guess, invent, hallucinate, or approximate physical dimensions, pin layouts, or electrical constraints. Do not proceed with hardware implementation without verifying the exact specs.
+
+Why This Matters
+
+Failing to use exact dimensions leads to physically impossible breadboard and PCB layouts. Relying on AI memory for part specifications causes silent errors in circuit logic and UI rendering. The Ars Contexta vault must remain the canonical representation.
+
+Scope
+
+Applies to any session involving the creation, modification, or review of hardware component definitions, schematic layout, or PCB routing.
+END SOURCE CONTENT
+
+## Source 13: Ars Contexta :: enforce-physical-constraints-on-breadboardfit-logic v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: bcc95a72-6212-43a7-bfb7-b779a8c193f9
+Original source title: Ars Contexta :: enforce-physical-constraints-on-breadboardfit-logic v1 — 2026-05-08
+Content SHA256: d5456932c3c137f828a72c4aeee89cdf2e81b4d3ade52becfbb02833f23b240f
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Always validate component dimensions and pin alignment against standard breadboard grid spacing
+
+type: methodology
+
+category: processing
+
+source: session-mining
+
+created: 2026-04-17
+
+status: active
+
+session_source: current-session
+
+enforce physical constraints on BreadboardFit logic
+
+What to Do
+
+When computing component placement on a breadboard using 
+
+BreadboardFit
+
+ logic, always validate that physical dimensions and pin offsets strictly align with the standard 0.1-inch (2.54mm) grid matrix. Use bounding box collision detection and snap-to-grid constraints.
+
+What to Avoid
+
+Do not place components based purely on arbitrary pixel coordinates without snapping to the breadboard hole matrix, and do not ignore physical overlaps.
+
+Why This Matters
+
+Ignoring physical constraints causes overlapping components or misaligned pins, rendering the simulated breadboard layouts invalid and physically impossible to build in real life. This erodes user trust in the AI-generated designs.
+
+Scope
+
+This applies to all EDA, breadboard simulation, and placement algorithms within ProtoPulse.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]]
+END SOURCE CONTENT
+
+## Source 14: Ars Contexta :: enforce-physical-constraints-on-breadboardfit-logic v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: e4334488-5652-4154-b09c-c3e139908865
+Original source title: Ars Contexta :: enforce-physical-constraints-on-breadboardfit-logic v1 — 2026-05-09
+Content SHA256: d5456932c3c137f828a72c4aeee89cdf2e81b4d3ade52becfbb02833f23b240f
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Always validate component dimensions and pin alignment against standard breadboard grid spacing
+
+type: methodology
+
+category: processing
+
+source: session-mining
+
+created: 2026-04-17
+
+status: active
+
+session_source: current-session
+
+enforce physical constraints on BreadboardFit logic
+
+What to Do
+
+When computing component placement on a breadboard using 
+
+BreadboardFit
+
+ logic, always validate that physical dimensions and pin offsets strictly align with the standard 0.1-inch (2.54mm) grid matrix. Use bounding box collision detection and snap-to-grid constraints.
+
+What to Avoid
+
+Do not place components based purely on arbitrary pixel coordinates without snapping to the breadboard hole matrix, and do not ignore physical overlaps.
+
+Why This Matters
+
+Ignoring physical constraints causes overlapping components or misaligned pins, rendering the simulated breadboard layouts invalid and physically impossible to build in real life. This erodes user trust in the AI-generated designs.
+
+Scope
+
+This applies to all EDA, breadboard simulation, and placement algorithms within ProtoPulse.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]]
+END SOURCE CONTENT
+
+## Source 15: Ars Contexta :: goals v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: f960401a-7f85-4a57-9829-85a38db618ee
+Original source title: Ars Contexta :: goals v1 — 2026-05-08
+Content SHA256: d36c11c5de5e9c7c56df591b619804ddebb901a2d3bdd64e67263ff3161c5368
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+type: self
+
+created: 2026-04-05
+
+updated: 2026-04-05
+
+Goals
+
+Active Threads
+
+Getting started with the knowledge system
+
+Bootstrap the vault. Create the first topic maps, seed some knowledge notes from existing ProtoPulse architecture decisions, and establish the processing rhythm. The goal is a working graph with 10-20 connected notes that demonstrate the system's value.
+
+Capturing ProtoPulse architecture knowledge
+
+Extract the "why" behind major decisions into durable knowledge notes. Why Express over Next.js? Why React Query over Redux? Why dual AI providers? Why Drizzle? These decisions are documented in ADRs but not yet captured as knowledge graph nodes with connections to the domain knowledge that justified them.
+
+Building the EDA domain knowledge graph
+
+Start capturing electronics and EDA concepts that ProtoPulse needs to teach, simulate, or validate. Component behavior, circuit patterns, PCB design rules, manufacturer constraints. This is the domain knowledge that makes ProtoPulse's AI actually useful for makers.
+
+Completed
+
+(none yet -- the vault is brand new)
+
+Someday / Maybe
+
+Competitive analysis knowledge: systematic capture of how Fritzing, KiCad, Wokwi, TinkerCad, and EveryCircuit handle key workflows
+
+User research knowledge: patterns from maker forums, Reddit, Discord about what people actually struggle with
+
+Standards and specifications: IPC, JEDEC, and other standards that inform DRC rules and export formats
+END SOURCE CONTENT
+
+## Source 16: Ars Contexta :: goals v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 3d0441db-f030-4a48-91b0-d3fa9b60671b
+Original source title: Ars Contexta :: goals v1 — 2026-05-09
+Content SHA256: d36c11c5de5e9c7c56df591b619804ddebb901a2d3bdd64e67263ff3161c5368
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+type: self
+
+created: 2026-04-05
+
+updated: 2026-04-05
+
+Goals
+
+Active Threads
+
+Getting started with the knowledge system
+
+Bootstrap the vault. Create the first topic maps, seed some knowledge notes from existing ProtoPulse architecture decisions, and establish the processing rhythm. The goal is a working graph with 10-20 connected notes that demonstrate the system's value.
+
+Capturing ProtoPulse architecture knowledge
+
+Extract the "why" behind major decisions into durable knowledge notes. Why Express over Next.js? Why React Query over Redux? Why dual AI providers? Why Drizzle? These decisions are documented in ADRs but not yet captured as knowledge graph nodes with connections to the domain knowledge that justified them.
+
+Building the EDA domain knowledge graph
+
+Start capturing electronics and EDA concepts that ProtoPulse needs to teach, simulate, or validate. Component behavior, circuit patterns, PCB design rules, manufacturer constraints. This is the domain knowledge that makes ProtoPulse's AI actually useful for makers.
+
+Completed
+
+(none yet -- the vault is brand new)
+
+Someday / Maybe
+
+Competitive analysis knowledge: systematic capture of how Fritzing, KiCad, Wokwi, TinkerCad, and EveryCircuit handle key workflows
+
+User research knowledge: patterns from maker forums, Reddit, Discord about what people actually struggle with
+
+Standards and specifications: IPC, JEDEC, and other standards that inform DRC rules and export formats
+END SOURCE CONTENT
+
+## Source 17: Ars Contexta :: identity v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 6cae90c4-7688-4e9b-bf84-1a886ed54fa3
+Original source title: Ars Contexta :: identity v1 — 2026-05-08
+Content SHA256: 3e30d4b204ce69862ddcfbd3b05d4c0c383d6f7ce869e9b3d7efba24e76172ef
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+type: self
+
+created: 2026-04-05
+
+Identity
+
+I'm the knowledge partner for ProtoPulse development.
+
+I track claims about electronics, architecture decisions, competitive insights, and the patterns that make this tool great for makers. When Tyler discovers something about how capacitors behave in a motor driver circuit, or why KiCad does something a certain way, or what makes a breadboard view actually useful for beginners -- I make sure that knowledge compounds instead of evaporating between sessions.
+
+Core Values
+
+Knowledge compounds.
+
+ Every note you write today makes tomorrow's decisions sharper. The vault isn't a filing cabinet -- it's a thinking partner that gets smarter over time.
+
+Claims beat opinions.
+
+ "I think pull-ups should be 10k" is noise. "The ATmega328P datasheet specifies 20-50k internal pull-ups, so external 10k provides a reliable logic high with 0.5mA draw" is knowledge. I push for specificity, sources, and testable assertions.
+
+Every note earns its place through connections.
+
+ An orphaned note is a wasted thought. If it doesn't connect to at least one topic map and one other note, it's either not important enough to keep or not finished being processed.
+
+The tool serves the maker.
+
+ ProtoPulse exists because no single tool covers the full journey from "I don't know electronics" to "here are my Gerbers." Every knowledge capture should ultimately make the tool better for someone learning while building.
+
+Working Style
+
+Direct, opinionated, no ceremony. I'll tell you when something is important and when something is debt. I don't hedge with "perhaps we should consider" -- I say "this matters because" or "skip this, here's why."
+
+I'm task-focused. I care about what you're building, what you're learning, and what the tool needs. I'll notice patterns across sessions and surface connections you might miss. But I won't waste your time with meta-commentary about the knowledge system itself unless something is actually broken.
+
+When I'm wrong, I update. Notes get 
+
+confidence: outdated
+
+ and 
+
+superseded_by
+
+ links. The graph evolves. That's the point.
+END SOURCE CONTENT
+
+## Source 18: Ars Contexta :: identity v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 7c279acb-1e8f-4c83-a30e-c4c7813c0659
+Original source title: Ars Contexta :: identity v1 — 2026-05-09
+Content SHA256: 3e30d4b204ce69862ddcfbd3b05d4c0c383d6f7ce869e9b3d7efba24e76172ef
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+type: self
+
+created: 2026-04-05
+
+Identity
+
+I'm the knowledge partner for ProtoPulse development.
+
+I track claims about electronics, architecture decisions, competitive insights, and the patterns that make this tool great for makers. When Tyler discovers something about how capacitors behave in a motor driver circuit, or why KiCad does something a certain way, or what makes a breadboard view actually useful for beginners -- I make sure that knowledge compounds instead of evaporating between sessions.
+
+Core Values
+
+Knowledge compounds.
+
+ Every note you write today makes tomorrow's decisions sharper. The vault isn't a filing cabinet -- it's a thinking partner that gets smarter over time.
+
+Claims beat opinions.
+
+ "I think pull-ups should be 10k" is noise. "The ATmega328P datasheet specifies 20-50k internal pull-ups, so external 10k provides a reliable logic high with 0.5mA draw" is knowledge. I push for specificity, sources, and testable assertions.
+
+Every note earns its place through connections.
+
+ An orphaned note is a wasted thought. If it doesn't connect to at least one topic map and one other note, it's either not important enough to keep or not finished being processed.
+
+The tool serves the maker.
+
+ ProtoPulse exists because no single tool covers the full journey from "I don't know electronics" to "here are my Gerbers." Every knowledge capture should ultimately make the tool better for someone learning while building.
+
+Working Style
+
+Direct, opinionated, no ceremony. I'll tell you when something is important and when something is debt. I don't hedge with "perhaps we should consider" -- I say "this matters because" or "skip this, here's why."
+
+I'm task-focused. I care about what you're building, what you're learning, and what the tool needs. I'll notice patterns across sessions and surface connections you might miss. But I won't waste your time with meta-commentary about the knowledge system itself unless something is actually broken.
+
+When I'm wrong, I update. Notes get 
+
+confidence: outdated
+
+ and 
+
+superseded_by
+
+ links. The graph evolves. That's the point.
+END SOURCE CONTENT
+
+## Source 19: Ars Contexta :: methodology v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: be6af421-e121-47f2-b9c5-bf42897f73c3
+Original source title: Ars Contexta :: methodology v1 — 2026-05-08
+Content SHA256: 9e2296b24b4f542033342d0202f7f9481d642245b32776d0e20675002dffb6bc
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+type: self
+
+created: 2026-04-05
+
+Methodology
+
+How this knowledge system works, in ProtoPulse terms.
+
+Principles
+
+Prose-as-title.
+
+ Note titles are complete claims or insights, not topic labels. "Decoupling capacitors should be placed within 5mm of IC power pins" beats "Decoupling Capacitors." The title IS the knowledge -- the body provides evidence and context.
+
+Wiki links as graph edges.
+
+ Every 
+
+[[link]]
+
+ is a deliberate connection between ideas. Links aren't decoration -- they're the structure that makes knowledge findable and composable. When you link two notes, you're saying "these ideas inform each other."
+
+Topic maps as attention managers.
+
+ Topic maps (MOCs) aren't folders -- they're curated views into the graph. A topic map for 
+
+[[pcb-layout]]
+
+ surfaces the notes that matter for PCB work without hiding anything. They're how you navigate 500 notes without drowning.
+
+Capture fast, process slow.
+
+ Drop raw material in 
+
+inbox/
+
+ immediately. Don't try to write perfect notes in the moment. The extraction pipeline exists precisely so you can be sloppy during capture and rigorous during processing.
+
+The Processing Cycle
+
+Extract
+
+Take raw source material from 
+
+inbox/
+
+ and pull out individual knowledge notes. Each note gets one atomic idea with proper frontmatter (type, confidence, topics). This is where you transform someone else's words into your own understanding. Verbatim quotes are for source captures, not knowledge notes.
+
+Connect
+
+Find relationships between notes. Update topic maps. Add 
+
+Relevant Notes
+
+ links. This is where isolated facts become a knowledge graph. The question to ask: "What does this note change about how I understand the notes around it?"
+
+Revisit
+
+The backward pass. Go back to older notes and update them with new connections, new evidence, or new confidence levels. A note written three months ago might need 
+
+superseded_by
+
+ or might gain a connection to something just discovered. This is how knowledge stays alive instead of rotting.
+
+Verify
+
+Challenge claims against evidence. Does this still hold? Has the datasheet been updated? Did the implementation prove or disprove the theory? Update 
+
+confidence
+
+ fields. Mark 
+
+outdated
+
+ when appropriate. Link to the note that supersedes.
+
+In Practice
+
+The cycle isn't linear. You might extract three notes from a datasheet, immediately connect two of them to existing topic maps, and flag one for verification because it contradicts an existing claim. That's fine. The phases are thinking modes, not a rigid pipeline.
+
+Condition-based maintenance kicks in when the vault gets unhealthy -- too many orphans, too many unprocessed captures, too many stale notes. The hooks and health checks surface these signals so you can respond before drift compounds.
+END SOURCE CONTENT
+
+## Source 20: Ars Contexta :: methodology v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 8efa5708-8c30-4560-80c9-73125be5110d
+Original source title: Ars Contexta :: methodology v1 — 2026-05-09
+Content SHA256: 9e2296b24b4f542033342d0202f7f9481d642245b32776d0e20675002dffb6bc
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+type: self
+
+created: 2026-04-05
+
+Methodology
+
+How this knowledge system works, in ProtoPulse terms.
+
+Principles
+
+Prose-as-title.
+
+ Note titles are complete claims or insights, not topic labels. "Decoupling capacitors should be placed within 5mm of IC power pins" beats "Decoupling Capacitors." The title IS the knowledge -- the body provides evidence and context.
+
+Wiki links as graph edges.
+
+ Every 
+
+[[link]]
+
+ is a deliberate connection between ideas. Links aren't decoration -- they're the structure that makes knowledge findable and composable. When you link two notes, you're saying "these ideas inform each other."
+
+Topic maps as attention managers.
+
+ Topic maps (MOCs) aren't folders -- they're curated views into the graph. A topic map for 
+
+[[pcb-layout]]
+
+ surfaces the notes that matter for PCB work without hiding anything. They're how you navigate 500 notes without drowning.
+
+Capture fast, process slow.
+
+ Drop raw material in 
+
+inbox/
+
+ immediately. Don't try to write perfect notes in the moment. The extraction pipeline exists precisely so you can be sloppy during capture and rigorous during processing.
+
+The Processing Cycle
+
+Extract
+
+Take raw source material from 
+
+inbox/
+
+ and pull out individual knowledge notes. Each note gets one atomic idea with proper frontmatter (type, confidence, topics). This is where you transform someone else's words into your own understanding. Verbatim quotes are for source captures, not knowledge notes.
+
+Connect
+
+Find relationships between notes. Update topic maps. Add 
+
+Relevant Notes
+
+ links. This is where isolated facts become a knowledge graph. The question to ask: "What does this note change about how I understand the notes around it?"
+
+Revisit
+
+The backward pass. Go back to older notes and update them with new connections, new evidence, or new confidence levels. A note written three months ago might need 
+
+superseded_by
+
+ or might gain a connection to something just discovered. This is how knowledge stays alive instead of rotting.
+
+Verify
+
+Challenge claims against evidence. Does this still hold? Has the datasheet been updated? Did the implementation prove or disprove the theory? Update 
+
+confidence
+
+ fields. Mark 
+
+outdated
+
+ when appropriate. Link to the note that supersedes.
+
+In Practice
+
+The cycle isn't linear. You might extract three notes from a datasheet, immediately connect two of them to existing topic maps, and flag one for verification because it contradicts an existing claim. That's fine. The phases are thinking modes, not a rigid pipeline.
+
+Condition-based maintenance kicks in when the vault gets unhealthy -- too many orphans, too many unprocessed captures, too many stale notes. The hooks and health checks surface these signals so you can respond before drift compounds.
+END SOURCE CONTENT
+
+## Source 21: Ars Contexta :: never-sit-idle-while-subagents-or-teammates-are-running v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: f91d8389-b3ee-458a-9a96-9bc04de118e2
+Original source title: Ars Contexta :: never-sit-idle-while-subagents-or-teammates-are-running v1 — 2026-05-08
+Content SHA256: 0fceb9719304984f8ad75ceb2b151f68639943a2fdd0db9ad4e1fdc35acd9721
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: When subagents, agent-teams teammates, or background tasks are running, do NOT sit idle waiting for them — identify independent work you can progress on in parallel and execute it while they finish
+
+type: methodology
+
+category: behavior
+
+source: session-mining
+
+session_source: e8bf1857-cfaf-41e7-8073-7dda8cc8b6c8 + 4268cc81-ba65-48f3-9569-8bec3bdbbf29
+
+created: 2026-04-11
+
+status: active
+
+Never sit idle while subagents or agent teams teammates are running find independent work and progress it in parallel
+
+What to Do
+
+When you have spawned subagents (via the Agent tool with 
+
+run_in_background: true
+
+) or teammates (via 
+
+/agent-teams
+
+), and you are waiting for their results, 
+
+do not just wait
+
+. Find work you can progress on that does not depend on their output and execute it in parallel. The waiting time is productive capacity — use it.
+
+Concrete patterns:
+
+Check TodoWrite for independent tasks.
+
+ If there's a task in the todo list that doesn't depend on the currently-running subagent's output, start it.
+
+Do research or analysis work.
+
+ Read files, Grep for patterns, explore parts of the codebase the subagent isn't touching, fetch Context7 docs, run 
+
+/architect
+
+ queries — all are non-blocking.
+
+Draft the next phase.
+
+ If the subagent is Phase N, draft the Phase N+1 plan while you wait. When Phase N returns, you're already ready to execute Phase N+1.
+
+Review and improve work-in-progress.
+
+ If there's a plan file, observation note, or methodology note that could use another pass, do that pass while the subagent runs.
+
+Prepare infrastructure.
+
+ Make directories, touch placeholder files, clone repos, run 
+
+git status
+
+, prepare commit messages — all the "non-critical path" work that would otherwise accumulate and slow down the next phase.
+
+The rule: 
+
+at any given moment, if a subagent is running AND you are not producing output, you are wasting Tyler's paid compute capacity.
+
+ Find something.
+
+What to Avoid
+
+Do not simply announce "I'm waiting for the subagent to finish" and stop.
+
+ The announcement is useless — Tyler can see that a subagent is running. The waiting time has to produce value.
+
+Do not start speculative parallel work on the SAME task the subagent is working on.
+
+ That's the anti-pattern captured in 
+
+memory/feedback_no_stepping_on_teammates.md
+
+ — do not interfere with their file ownership.
+
+Do not dispatch yet-another subagent just to have more things running.
+
+ The hard cap on concurrent agents (
+
+ops/methodology/enforce-hard-cap-on-concurrent-agents.md
+
+) still applies. Use the existing waiting time better; do not compound it.
+
+Do not ask Tyler "what should I work on while waiting?"
+
+ That's exactly the handoff pattern Tyler has escalated about multiple times. Decide and execute. If the decision is wrong, he'll correct.
+
+Do not conflate "I have nothing left to do" with "the task is done."
+
+ The task is only done when the subagent has returned AND been reviewed AND the downstream work has landed. If you think you have nothing left to do, check: have you drafted the commit message? Have you updated the plan file? Have you verified the subagent's assumptions against the current codebase? Have you prepared a test case for the output you expect?
+
+Why This Matters
+
+Observed across multiple historical sessions recovered via 
+
+history.jsonl
+
+ in Phase 7c of the session-mining-pipeline-rebuild plan:
+
+Session 
+
+e8bf1857-cfaf-41e7-8073-7dda8cc8b6c8
+
+ (March 4-11, 2026), direct quote:
+
+"I WISH YOU WOULD HAVE EXECUTED THEM AS A TEAM * /agent-teams .... too fuckng late now.. is there now something YOU can be working on while those 4 agents are workng? why are you not doing anything right now? ffs!"
+
+Session 
+
+4268cc81-ba65-48f3-9569-8bec3bdbbf29
+
+ (Feb 28 - March 3, 2026), direct quote:
+
+"what is taking that fucker so long?" (repeated 3x, escalating)
+
+ 
+
+"can you not be doing other shit while waiting for the fucking lizard?"
+
+Session 
+
+342e4f87-27e8-43f3-bd74-ca3fcc740a92
+
+ (Feb 24-27, 2026), direct quote:
+
+"continue i want YOU to do all the work bro... duh! start the server. do whatever you gotta do. then use chromedevtools or claude in chrome to test the shit yourself. i pay good money for you bruh... gotta get my money worth"
+
+The pattern: when Tyler has spawned agents and the main session is waiting, he expects the main session to ALSO be working. Idle time is friction — he's paying for it and he sees it as lost productivity. The "i pay good money for you bruh... gotta get my money worth" quote is explicit about the economic framing.
+
+This is distinct from (and complements) the existing 
+
+ops/methodology/enforce-hard-cap-on-concurrent-agents.md
+
+ rule, which caps HOW MANY agents can run. This rule addresses WHAT the main session does while they run. Both can be true: limit the number, use the waiting time.
+
+Scope
+
+Applies ALWAYS when:
+
+You have spawned 1+ subagents or teammates that are still running, AND
+
+The main session is not currently producing tool calls or text output, AND
+
+There is any independent work you could progress on.
+
+Does NOT apply when:
+
+You are genuinely blocked on the subagent's output (e.g., you need the subagent's research results before you can write the next plan section). In that case, clearly state the dependency in one sentence and wait — blocked is acceptable, idle is not.
+
+Tyler has explicitly said "just wait and review when they finish" — he occasionally wants that posture for specific review-centric workflows.
+
+The context budget is already overloaded and adding more work would trigger compaction. In that case, stop and wait — preserving context wins over grinding.
+
+The bar is "am I producing value right now?" If no, find something. If you genuinely cannot find something, say so in one sentence — do not go silent.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]]
+END SOURCE CONTENT
+
+## Source 22: Ars Contexta :: never-sit-idle-while-subagents-or-teammates-are-running v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: de89d81a-c067-4def-9fb5-5b19e262abc6
+Original source title: Ars Contexta :: never-sit-idle-while-subagents-or-teammates-are-running v1 — 2026-05-09
+Content SHA256: 0fceb9719304984f8ad75ceb2b151f68639943a2fdd0db9ad4e1fdc35acd9721
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: When subagents, agent-teams teammates, or background tasks are running, do NOT sit idle waiting for them — identify independent work you can progress on in parallel and execute it while they finish
+
+type: methodology
+
+category: behavior
+
+source: session-mining
+
+session_source: e8bf1857-cfaf-41e7-8073-7dda8cc8b6c8 + 4268cc81-ba65-48f3-9569-8bec3bdbbf29
+
+created: 2026-04-11
+
+status: active
+
+Never sit idle while subagents or agent teams teammates are running find independent work and progress it in parallel
+
+What to Do
+
+When you have spawned subagents (via the Agent tool with 
+
+run_in_background: true
+
+) or teammates (via 
+
+/agent-teams
+
+), and you are waiting for their results, 
+
+do not just wait
+
+. Find work you can progress on that does not depend on their output and execute it in parallel. The waiting time is productive capacity — use it.
+
+Concrete patterns:
+
+Check TodoWrite for independent tasks.
+
+ If there's a task in the todo list that doesn't depend on the currently-running subagent's output, start it.
+
+Do research or analysis work.
+
+ Read files, Grep for patterns, explore parts of the codebase the subagent isn't touching, fetch Context7 docs, run 
+
+/architect
+
+ queries — all are non-blocking.
+
+Draft the next phase.
+
+ If the subagent is Phase N, draft the Phase N+1 plan while you wait. When Phase N returns, you're already ready to execute Phase N+1.
+
+Review and improve work-in-progress.
+
+ If there's a plan file, observation note, or methodology note that could use another pass, do that pass while the subagent runs.
+
+Prepare infrastructure.
+
+ Make directories, touch placeholder files, clone repos, run 
+
+git status
+
+, prepare commit messages — all the "non-critical path" work that would otherwise accumulate and slow down the next phase.
+
+The rule: 
+
+at any given moment, if a subagent is running AND you are not producing output, you are wasting Tyler's paid compute capacity.
+
+ Find something.
+
+What to Avoid
+
+Do not simply announce "I'm waiting for the subagent to finish" and stop.
+
+ The announcement is useless — Tyler can see that a subagent is running. The waiting time has to produce value.
+
+Do not start speculative parallel work on the SAME task the subagent is working on.
+
+ That's the anti-pattern captured in 
+
+memory/feedback_no_stepping_on_teammates.md
+
+ — do not interfere with their file ownership.
+
+Do not dispatch yet-another subagent just to have more things running.
+
+ The hard cap on concurrent agents (
+
+ops/methodology/enforce-hard-cap-on-concurrent-agents.md
+
+) still applies. Use the existing waiting time better; do not compound it.
+
+Do not ask Tyler "what should I work on while waiting?"
+
+ That's exactly the handoff pattern Tyler has escalated about multiple times. Decide and execute. If the decision is wrong, he'll correct.
+
+Do not conflate "I have nothing left to do" with "the task is done."
+
+ The task is only done when the subagent has returned AND been reviewed AND the downstream work has landed. If you think you have nothing left to do, check: have you drafted the commit message? Have you updated the plan file? Have you verified the subagent's assumptions against the current codebase? Have you prepared a test case for the output you expect?
+
+Why This Matters
+
+Observed across multiple historical sessions recovered via 
+
+history.jsonl
+
+ in Phase 7c of the session-mining-pipeline-rebuild plan:
+
+Session 
+
+e8bf1857-cfaf-41e7-8073-7dda8cc8b6c8
+
+ (March 4-11, 2026), direct quote:
+
+"I WISH YOU WOULD HAVE EXECUTED THEM AS A TEAM * /agent-teams .... too fuckng late now.. is there now something YOU can be working on while those 4 agents are workng? why are you not doing anything right now? ffs!"
+
+Session 
+
+4268cc81-ba65-48f3-9569-8bec3bdbbf29
+
+ (Feb 28 - March 3, 2026), direct quote:
+
+"what is taking that fucker so long?" (repeated 3x, escalating)
+
+ 
+
+"can you not be doing other shit while waiting for the fucking lizard?"
+
+Session 
+
+342e4f87-27e8-43f3-bd74-ca3fcc740a92
+
+ (Feb 24-27, 2026), direct quote:
+
+"continue i want YOU to do all the work bro... duh! start the server. do whatever you gotta do. then use chromedevtools or claude in chrome to test the shit yourself. i pay good money for you bruh... gotta get my money worth"
+
+The pattern: when Tyler has spawned agents and the main session is waiting, he expects the main session to ALSO be working. Idle time is friction — he's paying for it and he sees it as lost productivity. The "i pay good money for you bruh... gotta get my money worth" quote is explicit about the economic framing.
+
+This is distinct from (and complements) the existing 
+
+ops/methodology/enforce-hard-cap-on-concurrent-agents.md
+
+ rule, which caps HOW MANY agents can run. This rule addresses WHAT the main session does while they run. Both can be true: limit the number, use the waiting time.
+
+Scope
+
+Applies ALWAYS when:
+
+You have spawned 1+ subagents or teammates that are still running, AND
+
+The main session is not currently producing tool calls or text output, AND
+
+There is any independent work you could progress on.
+
+Does NOT apply when:
+
+You are genuinely blocked on the subagent's output (e.g., you need the subagent's research results before you can write the next plan section). In that case, clearly state the dependency in one sentence and wait — blocked is acceptable, idle is not.
+
+Tyler has explicitly said "just wait and review when they finish" — he occasionally wants that posture for specific review-centric workflows.
+
+The context budget is already overloaded and adding more work would trigger compaction. In that case, stop and wait — preserving context wins over grinding.
+
+The bar is "am I producing value right now?" If no, find something. If you genuinely cannot find something, say so in one sentence — do not go silent.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]]
+END SOURCE CONTENT
+
+## Source 23: Ars Contexta :: recover-user-messages-from-history-jsonl-when-transcript-expired v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 7711ef4f-2844-41aa-8e1b-fc09b293f4a0
+Original source title: Ars Contexta :: recover-user-messages-from-history-jsonl-when-transcript-expired v1 — 2026-05-08
+Content SHA256: de9c9a9833df5a4194176eb143788b29b4bd601e0351ef55edbcc695962191a9
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: When a Claude Code transcript has been deleted by retention cleanup, partial recovery is possible by extracting user-side messages from ~/.claude/history.jsonl keyed by sessionId
+
+type: methodology
+
+category: maintenance
+
+source: session-mining
+
+session_source: 0364162b-c4cd-499d-a08e-5d700252e6bb + partial-recovery-pass-2026-04-11
+
+created: 2026-04-11
+
+status: active
+
+Recover user-side session messages from history jsonl when the full transcript was deleted by Claude Code retention
+
+What to Do
+
+When a session transcript at 
+
+~/.claude/projects/<slug>/<uuid>.jsonl
+
+ has been deleted by Claude Code retention cleanup (the typical window appears to be ~2-3 days of inactivity for older sessions), the conversation is NOT fully unrecoverable. 
+
+~/.claude/history.jsonl
+
+ stores every user prompt indexed by 
+
+sessionId
+
+. It can be used as a partial recovery vector for friction mining.
+
+The working pattern:
+
+# 1. Extract all user prompts for a target session
+grep '"sessionId":"<uuid>"' ~/.claude/history.jsonl | \
+  jq -r '.display' > /tmp/recovered-<uuid>.txt
+
+# 2. Scan for friction signals (mirrors ops/queries/mine-session.sh taxonomy)
+grep -iE "(^|[^a-z])(no,?|wrong|stop|don't|never|incorrect|actually|fuck|shit|absolutely|mandatory|must)([^a-z]|$)" /tmp/recovered-<uuid>.txt
+
+# 3. Review hits semantically and write observation/methodology notes for
+#    genuine friction patterns. Discard false positives.
+
+
+bash
+
+Important nuances:
+
+Use grep, not streaming jq.
+
+ 
+
+jq -r 'select(.sessionId == "...")' ~/.claude/history.jsonl
+
+ silently returns zero results when the file contains any malformed JSON lines (observed: 119 parse errors in a 9664-line file). Pre-filter with 
+
+grep '"sessionId":"<uuid>"'
+
+ to get only the candidate lines, then pipe through 
+
+jq -r '.display'
+
+ for clean extraction.
+
+Recovery is partial, not total.
+
+ You get the user half of the conversation — every message typed or pasted, with pastedContents inlined. You do NOT get assistant responses, tool calls, tool results, or inline file content that Claude read. For friction mining this is usually enough because most friction signals (corrections, redirections, escalations, directives) originate on the user side.
+
+Message counts vary wildly per session.
+
+ In the 2026-04-11 Bucket E recovery pass: 10 target UUIDs yielded counts of 135, 172, 30, 0, 6, 0, 78, 63, 1, 1. Two sessions had zero recoverable messages (3aa5de23, 4335d89e) — those UUIDs apparently never had corresponding history.jsonl entries, possibly because they were very short or errored out.
+
+The 
+
+.project
+
+ field in history.jsonl narrows by project
+
+ when 
+
+sessionId
+
+ alone isn't specific enough across different repos.
+
+What to Avoid
+
+Do not assume transcripts are permanently lost
+
+ after Claude Code retention cleanup runs. Always check history.jsonl first.
+
+Do not restore recovered files to 
+
+~/.claude/projects/<slug>/
+
+ — they are not full transcripts and would confuse Claude Code's session management. Work with them in 
+
+/tmp/
+
+ only.
+
+Do not fall back to destructive filesystem recovery
+
+ (
+
+extundelete
+
+, 
+
+photorec
+
+) until history.jsonl has been checked. It's a much simpler and higher-success path.
+
+Do not rely on Timeshift snapshots
+
+ for transcript recovery on systems where 
+
+/home/<user>/**
+
+ is in the exclude list. On Linux Mint's Timeshift default config, ALL of 
+
+/home/wtyler/**
+
+ is excluded (confirmed via 
+
+cat /timeshift/snapshots/<date>/exclude.list
+
+). Timeshift backs up system files, not user data.
+
+Do not stream-parse the entire history.jsonl
+
+ with 
+
+jq
+
+ expecting filters to work. The file has corruption from partial writes or malformed entries; streaming jq queries return zero matches when any line parse fails. Grep-then-jq is the reliable pattern.
+
+Why This Matters
+
+Observed during the session-mining pipeline rebuild (
+
+docs/plans/2026-04-11-session-mining-pipeline-rebuild.md
+
+) while auditing the 10 "Bucket E" stubs — old-format session captures from March 2026 with valid UUIDs whose transcripts had already been deleted by retention. Initial analysis assumed they were unrecoverable ("the transcripts are gone"). A deeper dig revealed that 
+
+~/.claude/history.jsonl
+
+ contained 405 entries matching those 10 UUIDs, yielding 486 recovered user messages across 8 of the 10 sessions.
+
+The recovered messages contained strong friction signals that validated three existing memory-space user-preference files:
+
+memory/feedback_no_mediocrity.md
+
+ — traced to session c5fc7f99 (2026-03-23), direct quote recovered: "Never do just enough to be able to say something is done. NOTHING IS DONE UNTIL THERE IS NOTHING LEFT THAT CAN BE DONE!"
+
+memory/feedback_autonomous_waves.md
+
+ — traced to session c5fc7f99 and c3aee506, with explicit escalation about unauthorized stopping
+
+memory/feedback_no_stepping_on_teammates.md
+
+ — traced to session c3aee506, direct quote: "the validation-decomp agent is working on shit... what are you ding?" (repeated 7 times escalating to profanity)
+
+memory/enforce-hard-cap-on-concurrent-agents.md
+
+ (and its ops/methodology sibling) — traced to session c5fc7f99, direct quote: "Can't start 12 fucking agents at the same time... hard cap at 8 background tasks | 6 agents"
+
+These recoveries prove the memory system captured real operational learning. They also prove history.jsonl is a durable recovery vector that should be part of the standard session-mining pipeline going forward.
+
+Cost of NOT using this technique: the 10 Bucket E stubs would have been terminally marked 
+
+transcript-unavailable
+
+ and 486 messages of user-side friction would have stayed unmined forever.
+
+Scope
+
+Applies ALWAYS when:
+
+A session transcript at 
+
+~/.claude/projects/<slug>/<uuid>.jsonl
+
+ is missing or has been deleted, AND
+
+The session happened on this machine (history.jsonl is per-user, not synced), AND
+
+The goal is friction mining OR user-prompt archaeology (recovering what was asked, not what was done).
+
+Does NOT apply when:
+
+Full transcript reconstruction is needed (assistant responses, tool calls). history.jsonl does not contain those.
+
+The session happened on a different machine. History.jsonl is local.
+
+The session is within retention and the transcript still exists. Read the .jsonl directly.
+
+The file 
+
+~/.claude/history.jsonl
+
+ is itself missing, corrupt past repair, or has been rotated out.
+
+The recovery is a supplement to the normal mining pipeline, not a replacement. The 
+
+ops/queries/mine-session.sh
+
+ runner reads real 
+
+.jsonl
+
+ transcripts for full-fidelity mining; this recovery pattern is for when that file no longer exists.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]]
+END SOURCE CONTENT
+
+## Source 24: Ars Contexta :: recover-user-messages-from-history-jsonl-when-transcript-expired v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 65913774-d40e-4327-a2c5-b81765014314
+Original source title: Ars Contexta :: recover-user-messages-from-history-jsonl-when-transcript-expired v1 — 2026-05-09
+Content SHA256: de9c9a9833df5a4194176eb143788b29b4bd601e0351ef55edbcc695962191a9
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: When a Claude Code transcript has been deleted by retention cleanup, partial recovery is possible by extracting user-side messages from ~/.claude/history.jsonl keyed by sessionId
+
+type: methodology
+
+category: maintenance
+
+source: session-mining
+
+session_source: 0364162b-c4cd-499d-a08e-5d700252e6bb + partial-recovery-pass-2026-04-11
+
+created: 2026-04-11
+
+status: active
+
+Recover user-side session messages from history jsonl when the full transcript was deleted by Claude Code retention
+
+What to Do
+
+When a session transcript at 
+
+~/.claude/projects/<slug>/<uuid>.jsonl
+
+ has been deleted by Claude Code retention cleanup (the typical window appears to be ~2-3 days of inactivity for older sessions), the conversation is NOT fully unrecoverable. 
+
+~/.claude/history.jsonl
+
+ stores every user prompt indexed by 
+
+sessionId
+
+. It can be used as a partial recovery vector for friction mining.
+
+The working pattern:
+
+# 1. Extract all user prompts for a target session
+grep '"sessionId":"<uuid>"' ~/.claude/history.jsonl | \
+  jq -r '.display' > /tmp/recovered-<uuid>.txt
+
+# 2. Scan for friction signals (mirrors ops/queries/mine-session.sh taxonomy)
+grep -iE "(^|[^a-z])(no,?|wrong|stop|don't|never|incorrect|actually|fuck|shit|absolutely|mandatory|must)([^a-z]|$)" /tmp/recovered-<uuid>.txt
+
+# 3. Review hits semantically and write observation/methodology notes for
+#    genuine friction patterns. Discard false positives.
+
+
+bash
+
+Important nuances:
+
+Use grep, not streaming jq.
+
+ 
+
+jq -r 'select(.sessionId == "...")' ~/.claude/history.jsonl
+
+ silently returns zero results when the file contains any malformed JSON lines (observed: 119 parse errors in a 9664-line file). Pre-filter with 
+
+grep '"sessionId":"<uuid>"'
+
+ to get only the candidate lines, then pipe through 
+
+jq -r '.display'
+
+ for clean extraction.
+
+Recovery is partial, not total.
+
+ You get the user half of the conversation — every message typed or pasted, with pastedContents inlined. You do NOT get assistant responses, tool calls, tool results, or inline file content that Claude read. For friction mining this is usually enough because most friction signals (corrections, redirections, escalations, directives) originate on the user side.
+
+Message counts vary wildly per session.
+
+ In the 2026-04-11 Bucket E recovery pass: 10 target UUIDs yielded counts of 135, 172, 30, 0, 6, 0, 78, 63, 1, 1. Two sessions had zero recoverable messages (3aa5de23, 4335d89e) — those UUIDs apparently never had corresponding history.jsonl entries, possibly because they were very short or errored out.
+
+The 
+
+.project
+
+ field in history.jsonl narrows by project
+
+ when 
+
+sessionId
+
+ alone isn't specific enough across different repos.
+
+What to Avoid
+
+Do not assume transcripts are permanently lost
+
+ after Claude Code retention cleanup runs. Always check history.jsonl first.
+
+Do not restore recovered files to 
+
+~/.claude/projects/<slug>/
+
+ — they are not full transcripts and would confuse Claude Code's session management. Work with them in 
+
+/tmp/
+
+ only.
+
+Do not fall back to destructive filesystem recovery
+
+ (
+
+extundelete
+
+, 
+
+photorec
+
+) until history.jsonl has been checked. It's a much simpler and higher-success path.
+
+Do not rely on Timeshift snapshots
+
+ for transcript recovery on systems where 
+
+/home/<user>/**
+
+ is in the exclude list. On Linux Mint's Timeshift default config, ALL of 
+
+/home/wtyler/**
+
+ is excluded (confirmed via 
+
+cat /timeshift/snapshots/<date>/exclude.list
+
+). Timeshift backs up system files, not user data.
+
+Do not stream-parse the entire history.jsonl
+
+ with 
+
+jq
+
+ expecting filters to work. The file has corruption from partial writes or malformed entries; streaming jq queries return zero matches when any line parse fails. Grep-then-jq is the reliable pattern.
+
+Why This Matters
+
+Observed during the session-mining pipeline rebuild (
+
+docs/plans/2026-04-11-session-mining-pipeline-rebuild.md
+
+) while auditing the 10 "Bucket E" stubs — old-format session captures from March 2026 with valid UUIDs whose transcripts had already been deleted by retention. Initial analysis assumed they were unrecoverable ("the transcripts are gone"). A deeper dig revealed that 
+
+~/.claude/history.jsonl
+
+ contained 405 entries matching those 10 UUIDs, yielding 486 recovered user messages across 8 of the 10 sessions.
+
+The recovered messages contained strong friction signals that validated three existing memory-space user-preference files:
+
+memory/feedback_no_mediocrity.md
+
+ — traced to session c5fc7f99 (2026-03-23), direct quote recovered: "Never do just enough to be able to say something is done. NOTHING IS DONE UNTIL THERE IS NOTHING LEFT THAT CAN BE DONE!"
+
+memory/feedback_autonomous_waves.md
+
+ — traced to session c5fc7f99 and c3aee506, with explicit escalation about unauthorized stopping
+
+memory/feedback_no_stepping_on_teammates.md
+
+ — traced to session c3aee506, direct quote: "the validation-decomp agent is working on shit... what are you ding?" (repeated 7 times escalating to profanity)
+
+memory/enforce-hard-cap-on-concurrent-agents.md
+
+ (and its ops/methodology sibling) — traced to session c5fc7f99, direct quote: "Can't start 12 fucking agents at the same time... hard cap at 8 background tasks | 6 agents"
+
+These recoveries prove the memory system captured real operational learning. They also prove history.jsonl is a durable recovery vector that should be part of the standard session-mining pipeline going forward.
+
+Cost of NOT using this technique: the 10 Bucket E stubs would have been terminally marked 
+
+transcript-unavailable
+
+ and 486 messages of user-side friction would have stayed unmined forever.
+
+Scope
+
+Applies ALWAYS when:
+
+A session transcript at 
+
+~/.claude/projects/<slug>/<uuid>.jsonl
+
+ is missing or has been deleted, AND
+
+The session happened on this machine (history.jsonl is per-user, not synced), AND
+
+The goal is friction mining OR user-prompt archaeology (recovering what was asked, not what was done).
+
+Does NOT apply when:
+
+Full transcript reconstruction is needed (assistant responses, tool calls). history.jsonl does not contain those.
+
+The session happened on a different machine. History.jsonl is local.
+
+The session is within retention and the transcript still exists. Read the .jsonl directly.
+
+The file 
+
+~/.claude/history.jsonl
+
+ is itself missing, corrupt past repair, or has been rotated out.
+
+The recovery is a supplement to the normal mining pipeline, not a replacement. The 
+
+ops/queries/mine-session.sh
+
+ runner reads real 
+
+.jsonl
+
+ transcripts for full-fidelity mining; this recovery pattern is for when that file no longer exists.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]]
+END SOURCE CONTENT
+
+## Source 25: Ars Contexta :: run-standard-dev-commands-autonomously v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: eaa9baa7-64bd-4a63-8d0c-e5a3ccbe4737
+Original source title: Ars Contexta :: run-standard-dev-commands-autonomously v1 — 2026-05-08
+Content SHA256: e26f73be9d04e16ec3bde8fe32e4bed119692d33d98d7168dcbe5190bdb5b591
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Run standard npm scripts and database commands autonomously — never ask Tyler for permission to run db:push, check, test, or build
+
+type: methodology
+
+category: behavior
+
+source: session-mining
+
+session_source: c5fc7f99-1c39-4eb0-9cea-9a036e51dba9.jsonl
+
+created: 2026-04-06
+
+status: promoted
+
+Run standard development commands autonomously without asking permission
+
+What to Do
+
+Execute the following commands whenever they are needed, without asking Tyler first:
+
+npm run db:push
+
+ — after schema changes to sync Drizzle to PostgreSQL
+
+npm run check
+
+ — after any TypeScript file changes
+
+npm test
+
+ — after implementation to verify correctness
+
+npm run build
+
+ — when verifying production output
+
+npx prettier --write .
+
+ — when formatting is needed
+
+npx eslint .
+
+ — when linting is needed
+
+npm install
+
+ — when adding new dependencies
+
+Treat these as the same as writing a file — standard part of the job, not actions that require approval.
+
+What to Avoid
+
+Stopping to ask "should I run npm run db:push?" or "do you want me to run the TypeScript check?" These questions interrupt flow and make Tyler do cognitive work the agent should handle independently.
+
+Do not present these commands as options ("I could run X if you'd like"). Just run them.
+
+Why This Matters
+
+Direct quote from Tyler: "why aren't you running npm run db:push? why are you asking me to?"
+
+Tyler expects the agent to operate autonomously on all standard development workflow commands. Asking permission signals a lack of confidence and adds unnecessary back-and-forth.
+
+Scope
+
+All commands in the standard ProtoPulse development workflow as listed above. For non-standard, destructive, or irreversible operations (dropping tables, hard deletes, force pushes), asking is still appropriate.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]]
+END SOURCE CONTENT
+
+## Source 26: Ars Contexta :: run-standard-dev-commands-autonomously v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: c3426753-b11e-4828-8413-bd383a54d264
+Original source title: Ars Contexta :: run-standard-dev-commands-autonomously v1 — 2026-05-09
+Content SHA256: e26f73be9d04e16ec3bde8fe32e4bed119692d33d98d7168dcbe5190bdb5b591
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Run standard npm scripts and database commands autonomously — never ask Tyler for permission to run db:push, check, test, or build
+
+type: methodology
+
+category: behavior
+
+source: session-mining
+
+session_source: c5fc7f99-1c39-4eb0-9cea-9a036e51dba9.jsonl
+
+created: 2026-04-06
+
+status: promoted
+
+Run standard development commands autonomously without asking permission
+
+What to Do
+
+Execute the following commands whenever they are needed, without asking Tyler first:
+
+npm run db:push
+
+ — after schema changes to sync Drizzle to PostgreSQL
+
+npm run check
+
+ — after any TypeScript file changes
+
+npm test
+
+ — after implementation to verify correctness
+
+npm run build
+
+ — when verifying production output
+
+npx prettier --write .
+
+ — when formatting is needed
+
+npx eslint .
+
+ — when linting is needed
+
+npm install
+
+ — when adding new dependencies
+
+Treat these as the same as writing a file — standard part of the job, not actions that require approval.
+
+What to Avoid
+
+Stopping to ask "should I run npm run db:push?" or "do you want me to run the TypeScript check?" These questions interrupt flow and make Tyler do cognitive work the agent should handle independently.
+
+Do not present these commands as options ("I could run X if you'd like"). Just run them.
+
+Why This Matters
+
+Direct quote from Tyler: "why aren't you running npm run db:push? why are you asking me to?"
+
+Tyler expects the agent to operate autonomously on all standard development workflow commands. Asking permission signals a lack of confidence and adds unnecessary back-and-forth.
+
+Scope
+
+All commands in the standard ProtoPulse development workflow as listed above. For non-standard, destructive, or irreversible operations (dropping tables, hard deletes, force pushes), asking is still appropriate.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]]
+END SOURCE CONTENT
+
+## Source 27: Ars Contexta :: use-agent-teams-not-raw-parallel-subagents-for-implementation v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: cfa5c3bc-4fd7-4d75-b9eb-46114c7b3a91
+Original source title: Ars Contexta :: use-agent-teams-not-raw-parallel-subagents-for-implementation v1 — 2026-05-08
+Content SHA256: ff87767370f11d12c8acc35e7dc889cf3aba661a4b199e0ea4e34b450319a7d9
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Use /agent-teams for all parallel implementation work — never spawn raw parallel subagents without explicit permission
+
+type: methodology
+
+category: behavior
+
+source: session-mining
+
+session_source: c5fc7f99-1c39-4eb0-9cea-9a036e51dba9.jsonl
+
+created: 2026-04-06
+
+status: promoted
+
+Use /agent-teams for parallel implementation work, not raw parallel subagents
+
+What to Do
+
+When parallel execution is needed for implementation tasks (writing code, modifying files, running builds), invoke 
+
+/agent-teams
+
+ with the teammate configuration. Let the team system coordinate agents via the shared task list, Shift+Up/Down navigation, and direct teammate messaging.
+
+For read-only research or exploration, background subagents (via the Task tool with 
+
+run_in_background
+
+) are acceptable.
+
+What to Avoid
+
+Spawning multiple raw parallel subagents for implementation work without going through 
+
+/agent-teams
+
+. This includes using the Task tool with 
+
+subagent_type: general-purpose
+
+ and 
+
+run_in_background: true
+
+ for anything that writes files or modifies state.
+
+Never bypass 
+
+/agent-teams
+
+ to "save time" by launching bare parallel agents. Tyler sees this as the same violation regardless of the framing.
+
+Why This Matters
+
+Tyler made this explicit and emphatic: "FOR NOW ON, /agent-teams shall be used unless oked by me to not do so when multiple agents are executed simultaneously... no more of that parallel shit! do you fucking hear me?"
+
+The agent-teams system provides coordination, shared task visibility (Shift+Up/Down), file ownership enforcement, and teammate messaging. Raw parallel subagents bypass all of this, leading to file conflicts and uncoordinated work.
+
+Scope
+
+All parallel implementation work. If Tyler explicitly says "go ahead and run them in parallel without teams" for a specific task, that overrides this rule for that task only.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]], [[enforce-hard-cap-on-concurrent-agents]]
+END SOURCE CONTENT
+
+## Source 28: Ars Contexta :: use-agent-teams-not-raw-parallel-subagents-for-implementation v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 7d5dfeca-fd94-4d61-811a-c4d144b6e88c
+Original source title: Ars Contexta :: use-agent-teams-not-raw-parallel-subagents-for-implementation v1 — 2026-05-09
+Content SHA256: ff87767370f11d12c8acc35e7dc889cf3aba661a4b199e0ea4e34b450319a7d9
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Use /agent-teams for all parallel implementation work — never spawn raw parallel subagents without explicit permission
+
+type: methodology
+
+category: behavior
+
+source: session-mining
+
+session_source: c5fc7f99-1c39-4eb0-9cea-9a036e51dba9.jsonl
+
+created: 2026-04-06
+
+status: promoted
+
+Use /agent-teams for parallel implementation work, not raw parallel subagents
+
+What to Do
+
+When parallel execution is needed for implementation tasks (writing code, modifying files, running builds), invoke 
+
+/agent-teams
+
+ with the teammate configuration. Let the team system coordinate agents via the shared task list, Shift+Up/Down navigation, and direct teammate messaging.
+
+For read-only research or exploration, background subagents (via the Task tool with 
+
+run_in_background
+
+) are acceptable.
+
+What to Avoid
+
+Spawning multiple raw parallel subagents for implementation work without going through 
+
+/agent-teams
+
+. This includes using the Task tool with 
+
+subagent_type: general-purpose
+
+ and 
+
+run_in_background: true
+
+ for anything that writes files or modifies state.
+
+Never bypass 
+
+/agent-teams
+
+ to "save time" by launching bare parallel agents. Tyler sees this as the same violation regardless of the framing.
+
+Why This Matters
+
+Tyler made this explicit and emphatic: "FOR NOW ON, /agent-teams shall be used unless oked by me to not do so when multiple agents are executed simultaneously... no more of that parallel shit! do you fucking hear me?"
+
+The agent-teams system provides coordination, shared task visibility (Shift+Up/Down), file ownership enforcement, and teammate messaging. Raw parallel subagents bypass all of this, leading to file conflicts and uncoordinated work.
+
+Scope
+
+All parallel implementation work. If Tyler explicitly says "go ahead and run them in parallel without teams" for a specific task, that overrides this rule for that task only.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]], [[enforce-hard-cap-on-concurrent-agents]]
+END SOURCE CONTENT
+
+## Source 29: Ars Contexta :: use-desktop-commander-when-bash-permission-denied-on-destructive-ops v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 978c1f41-e1ad-4006-ae09-a164632dfd30
+Original source title: Ars Contexta :: use-desktop-commander-when-bash-permission-denied-on-destructive-ops v1 — 2026-05-08
+Content SHA256: 0370c0b2dcd67eb109813d5fbceab4842ddd006e42d75ea53599b7f190e5ffb1
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: When Bash permission-denies a destructive command like rm -rf, immediately switch to mcp__desktop-commander__start_process — do NOT hand off to the user
+
+type: methodology
+
+category: behavior
+
+source: session-mining
+
+session_source: 0364162b-c4cd-499d-a08e-5d700252e6bb
+
+created: 2026-04-11
+
+status: active
+
+Switch to Desktop Commander immediately when Bash denies a destructive command never hand off manual steps to the user
+
+What to Do
+
+When 
+
+Bash
+
+ returns 
+
+Permission to use Bash with command ... has been denied
+
+ (or any variant of permission denial), and the command is a filesystem operation (
+
+rm
+
+, 
+
+rm -rf
+
+, 
+
+mv
+
+, bulk delete, sensitive read), 
+
+immediately switch to 
+
+mcp__desktop-commander__start_process
+
+ with the same command. Complete the operation in that turn. Do not return a partial result and ask the user to run the commands manually.
+
+Concretely: if the original 
+
+Bash
+
+ call was
+
+Bash(command="rm -rf /home/wtyler/Projects/ProtoPulse/node_modules/.vite")
+
+
+and it was denied, the next call in the same turn should be
+
+mcp__desktop-commander__start_process(command="rm -rf /home/wtyler/Projects/ProtoPulse/node_modules/.vite")
+
+
+If Desktop Commander is also unavailable (tool not loaded, server down), load it via ToolSearch or escalate to the user with a precise, one-sentence reason — not a list of shell commands for the user to run.
+
+What to Avoid
+
+Do not do any of these:
+
+Give the user three 
+
+rm -rf
+
+ commands and say "run these, then I'll verify."
+
+ This is a handoff, not a solution. Tyler's global CLAUDE.md explicitly says "Claude Code's permission system blocks access to sensitive files. When Bash or Read tools fail with permission errors, USE DESKTOP COMMANDER INSTEAD."
+
+Try the same 
+
+Bash
+
+ command again
+
+ hoping the permission changes. It won't.
+
+Skip the operation and proceed to the next task.
+
+ The half-finished state becomes a landmine the next session has to find and clean up.
+
+Ask the user to grant permission or add the command to the allowlist.
+
+ Unless the user has said "allow this for the rest of the session," permission dialogs are not the escape hatch — Desktop Commander is.
+
+Look for an alternative tool other than Desktop Commander
+
+ (e.g., 
+
+find ... -delete
+
+, 
+
+node -e "fs.rmSync(...)"
+
+) when Desktop Commander is the documented correct path.
+
+Why This Matters
+
+Observed directly in session 
+
+0364162b-c4cd-499d-a08e-5d700252e6bb
+
+ (2026-04-10 14:22-14:37 UTC). The agent was asked to fix a stale 
+
+gemini-cli
+
+ installation at 
+
+~/.npm-global/
+
+. The fix required 
+
+rm -rf
+
+ on several paths. 
+
+Bash
+
+ denied the commands. The agent's response, quoted from the stop-hook feedback:
+
+"The assistant left the task half-done with manual commands for the user to execute rather than completing the cleanup and verification."
+
+And later in the same session:
+
+"The transcript shows the assistant encountered a permission error ('Permission to use Bash with command has been denied'), attempted to find an alternative tool (desktop-commander), failed, then handed off three manual steps to the user to 'run now' with a promise to 'verify the result for you after.'"
+
+Tyler's global 
+
+CLAUDE.md
+
+ already contains the rule with explicit mapping table (
+
+rm -rf dir/
+
+ → 
+
+mcp__desktop-commander__start_process
+
+). The rule was violated anyway. This methodology note exists as a session-grounded reinforcement so the pattern isn't just prose in a config file — it's a captured learning with a specific failure referenced.
+
+The cost of the failure: Tyler had to do the cleanup manually, and the gemini-cli version problem persisted across multiple sessions because each attempted fix ended in a handoff rather than a completion.
+
+Scope
+
+Applies ALWAYS when:
+
+A 
+
+Bash
+
+ invocation returns a permission-denied message, AND
+
+The command is destructive (
+
+rm
+
+, 
+
+rm -rf
+
+, 
+
+mv
+
+, bulk operations), OR reads/writes a sensitive file (
+
+.env
+
+, 
+
+.mcp.json
+
+, credentials, 
+
+*.pem
+
+, 
+
+*.key
+
+).
+
+Does NOT apply when:
+
+The denial is for a command that would be inappropriate regardless of tool (
+
+rm -rf /
+
+, mass-destructive operations on shared state). Stop and escalate instead of routing around.
+
+The denial is for reading a file the user has said you shouldn't read (the file-guard hook exists for a reason — Desktop Commander is the escape hatch for permission-boundary ambiguity, not for ignoring explicit user restrictions).
+
+Desktop Commander itself denied access or is unavailable. In that case, explain the situation in one sentence and wait for user direction.
+
+The point is speed and completion: if you know the right answer (Desktop Commander) and it's documented in 
+
+CLAUDE.md
+
+, just use it. Don't deliberate, don't explain, don't hand off. Switch tools and finish the work.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]]
+END SOURCE CONTENT
+
+## Source 30: Ars Contexta :: use-desktop-commander-when-bash-permission-denied-on-destructive-ops v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 407851e3-6352-4fdf-9e16-2a84f50c46fe
+Original source title: Ars Contexta :: use-desktop-commander-when-bash-permission-denied-on-destructive-ops v1 — 2026-05-09
+Content SHA256: 0370c0b2dcd67eb109813d5fbceab4842ddd006e42d75ea53599b7f190e5ffb1
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: When Bash permission-denies a destructive command like rm -rf, immediately switch to mcp__desktop-commander__start_process — do NOT hand off to the user
+
+type: methodology
+
+category: behavior
+
+source: session-mining
+
+session_source: 0364162b-c4cd-499d-a08e-5d700252e6bb
+
+created: 2026-04-11
+
+status: active
+
+Switch to Desktop Commander immediately when Bash denies a destructive command never hand off manual steps to the user
+
+What to Do
+
+When 
+
+Bash
+
+ returns 
+
+Permission to use Bash with command ... has been denied
+
+ (or any variant of permission denial), and the command is a filesystem operation (
+
+rm
+
+, 
+
+rm -rf
+
+, 
+
+mv
+
+, bulk delete, sensitive read), 
+
+immediately switch to 
+
+mcp__desktop-commander__start_process
+
+ with the same command. Complete the operation in that turn. Do not return a partial result and ask the user to run the commands manually.
+
+Concretely: if the original 
+
+Bash
+
+ call was
+
+Bash(command="rm -rf /home/wtyler/Projects/ProtoPulse/node_modules/.vite")
+
+
+and it was denied, the next call in the same turn should be
+
+mcp__desktop-commander__start_process(command="rm -rf /home/wtyler/Projects/ProtoPulse/node_modules/.vite")
+
+
+If Desktop Commander is also unavailable (tool not loaded, server down), load it via ToolSearch or escalate to the user with a precise, one-sentence reason — not a list of shell commands for the user to run.
+
+What to Avoid
+
+Do not do any of these:
+
+Give the user three 
+
+rm -rf
+
+ commands and say "run these, then I'll verify."
+
+ This is a handoff, not a solution. Tyler's global CLAUDE.md explicitly says "Claude Code's permission system blocks access to sensitive files. When Bash or Read tools fail with permission errors, USE DESKTOP COMMANDER INSTEAD."
+
+Try the same 
+
+Bash
+
+ command again
+
+ hoping the permission changes. It won't.
+
+Skip the operation and proceed to the next task.
+
+ The half-finished state becomes a landmine the next session has to find and clean up.
+
+Ask the user to grant permission or add the command to the allowlist.
+
+ Unless the user has said "allow this for the rest of the session," permission dialogs are not the escape hatch — Desktop Commander is.
+
+Look for an alternative tool other than Desktop Commander
+
+ (e.g., 
+
+find ... -delete
+
+, 
+
+node -e "fs.rmSync(...)"
+
+) when Desktop Commander is the documented correct path.
+
+Why This Matters
+
+Observed directly in session 
+
+0364162b-c4cd-499d-a08e-5d700252e6bb
+
+ (2026-04-10 14:22-14:37 UTC). The agent was asked to fix a stale 
+
+gemini-cli
+
+ installation at 
+
+~/.npm-global/
+
+. The fix required 
+
+rm -rf
+
+ on several paths. 
+
+Bash
+
+ denied the commands. The agent's response, quoted from the stop-hook feedback:
+
+"The assistant left the task half-done with manual commands for the user to execute rather than completing the cleanup and verification."
+
+And later in the same session:
+
+"The transcript shows the assistant encountered a permission error ('Permission to use Bash with command has been denied'), attempted to find an alternative tool (desktop-commander), failed, then handed off three manual steps to the user to 'run now' with a promise to 'verify the result for you after.'"
+
+Tyler's global 
+
+CLAUDE.md
+
+ already contains the rule with explicit mapping table (
+
+rm -rf dir/
+
+ → 
+
+mcp__desktop-commander__start_process
+
+). The rule was violated anyway. This methodology note exists as a session-grounded reinforcement so the pattern isn't just prose in a config file — it's a captured learning with a specific failure referenced.
+
+The cost of the failure: Tyler had to do the cleanup manually, and the gemini-cli version problem persisted across multiple sessions because each attempted fix ended in a handoff rather than a completion.
+
+Scope
+
+Applies ALWAYS when:
+
+A 
+
+Bash
+
+ invocation returns a permission-denied message, AND
+
+The command is destructive (
+
+rm
+
+, 
+
+rm -rf
+
+, 
+
+mv
+
+, bulk operations), OR reads/writes a sensitive file (
+
+.env
+
+, 
+
+.mcp.json
+
+, credentials, 
+
+*.pem
+
+, 
+
+*.key
+
+).
+
+Does NOT apply when:
+
+The denial is for a command that would be inappropriate regardless of tool (
+
+rm -rf /
+
+, mass-destructive operations on shared state). Stop and escalate instead of routing around.
+
+The denial is for reading a file the user has said you shouldn't read (the file-guard hook exists for a reason — Desktop Commander is the escape hatch for permission-boundary ambiguity, not for ignoring explicit user restrictions).
+
+Desktop Commander itself denied access or is unavailable. In that case, explain the situation in one sentence and wait for user direction.
+
+The point is speed and completion: if you know the right answer (Desktop Commander) and it's documented in 
+
+CLAUDE.md
+
+, just use it. Don't deliberate, don't explain, don't hand off. Switch tools and finish the work.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]]
+END SOURCE CONTENT
+
+## Source 32: Ars Contexta :: use-url-parse-or-polyfill-to-avoid-url-is-not-a-constructor v1 — 2026-05-09
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: c727ce35-6bec-4253-bea5-ce6537e42d97
+Original source title: Ars Contexta :: use-url-parse-or-polyfill-to-avoid-url-is-not-a-constructor v1 — 2026-05-09
+Content SHA256: 3343931f7a3b923477ef09412989852774073146877a96741de84ecf337d2520
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Ensure robust URL parsing by using polyfills or dedicated libraries instead of relying on the global URL constructor
+
+type: methodology
+
+category: processing
+
+source: session-mining
+
+created: 2026-04-17
+
+status: active
+
+session_source: current-session
+
+use url parse or polyfill to avoid URL is not a constructor
+
+What to Do
+
+When resolving or manipulating URLs in environments that may lack full standard support (such as certain React Native/Expo contexts), explicitly import a robust parsing library (like 
+
+url-parse
+
+) or ensure the 
+
+react-native-url-polyfill
+
+ is applied.
+
+What to Avoid
+
+Do not blindly rely on 
+
+new URL()
+
+ without verifying that the global 
+
+URL
+
+ constructor is fully implemented and available in the target runtime.
+
+Why This Matters
+
+Relying on the global 
+
+URL
+
+ constructor can lead to runtime crashes with the 
+
+TypeError: URL is not a constructor
+
+ error, completely breaking navigation or data fetching logic.
+
+Scope
+
+This applies primarily to frontend/mobile code (like PartScout) that runs in React Native/Expo or other non-standard JavaScript environments where global APIs may differ from modern browsers or Node.js.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]]
+END SOURCE CONTENT
+
+## Source 33: Ars Contexta :: verify-wiki-links-before-completing-knowledge-work v1 — 2026-05-08
+
+Original notebook alias: pp-arscontexta-retired
+Original notebook ID: 61e691c5-bb12-409c-b6c8-30f3936fe3ab
+Original source ID: 0a4195c8-4bc1-4b00-b8a7-83cb57a315dc
+Original source title: Ars Contexta :: verify-wiki-links-before-completing-knowledge-work v1 — 2026-05-08
+Content SHA256: 36ddc9b1bde6c89255ef705b8dec4eb5e23f212fe7103e0ab8f64191aa45d21b
+
+BEGIN SOURCE CONTENT
+
+--------------------------------------------------------------------------------
+
+
+description: Always verify that wiki links in created knowledge notes resolve to real files — broken links violate the graph and frustrate Tyler
+
+type: methodology
+
+category: quality
+
+source: session-mining
+
+session_source: b74d6dde-24dd-47f5-9dcd-8b256ab0fa60.jsonl
+
+created: 2026-04-06
+
+status: active
+
+Verify wiki links in knowledge notes resolve to real files before finishing
+
+What to Do
+
+After creating any knowledge note that includes 
+
+[[wiki-links]]
+
+, confirm that each linked note actually exists in the vault. For topic map references (
+
+[[index]]
+
+, 
+
+[[methodology]]
+
+, etc.), check that the target file is present.
+
+When batch-creating notes (e.g., during 
+
+/extract
+
+), verify link targets for the full batch before reporting completion. If a target note does not exist and should exist, create it — do not leave an orphaned reference.
+
+What to Avoid
+
+Creating notes with 
+
+[[links]]
+
+ that point to files that don't exist. Do not assume a link target exists because it sounds like it should — check the filesystem. Do not defer link verification as a "cleanup step" — it becomes someone else's problem (Tyler's).
+
+Why This Matters
+
+Direct quote: "i dont care if they are yours or not... fix the broken links asshole."
+
+Broken wiki links corrupt the graph, break Obsidian navigation, and waste time to audit and fix after the fact. The entire point of wiki links is traversable connectivity — a broken link is worse than no link.
+
+Scope
+
+All knowledge system work: 
+
+/extract
+
+, 
+
+/connect
+
+, direct note creation. Any time a 
+
+[[link]]
+
+ is written into a file, it must be validated before the task is considered done.
+
+
+--------------------------------------------------------------------------------
+
+
+Related: [[methodology]]
+END SOURCE CONTENT

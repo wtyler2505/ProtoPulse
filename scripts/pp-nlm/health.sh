@@ -12,6 +12,7 @@ ARCHIVE_MANIFEST="$ROOT/docs/nlm-archive/manifest.json"
 
 CORE_ID="7565a078-8051-43ea-8512-c54c3b4d363e"
 HARDWARE_ID="bb95833a-926e-47b1-8f45-d23427fbc58d"
+DEVLAB_ID="d4188389-eef8-4aa3-a27d-1fed3f8cf444"
 
 echo "PP-NLM Health"
 echo "============="
@@ -51,6 +52,16 @@ for alias in pp-codebase pp-arscontexta pp-memories pp-backlog pp-journal pp-res
     echo "  WARN: $alias -> ${id:-unresolved}"
   fi
 done
+echo
+
+echo "Private DevLab"
+id="$(timeout 20s nlm alias get pp-devlab 2>/dev/null | tail -1 || true)"
+if [ "$id" = "$DEVLAB_ID" ]; then
+  count="$(timeout 60s nlm source list pp-devlab --json 2>/dev/null | jq 'length' 2>/dev/null || echo "unknown")"
+  echo "  OK: pp-devlab -> $id ($count sources)"
+else
+  echo "  WARN: pp-devlab -> ${id:-unresolved} (expected $DEVLAB_ID)"
+fi
 echo
 
 echo "Local Notebook Manifest"

@@ -10,6 +10,8 @@ CONFIG_DIR="$ROOT/data/pp-nlm/chat-configs"
 LOCK="$HOME/.claude/state/pp-nlm/chat-config.lock"
 CORE_ID="7565a078-8051-43ea-8512-c54c3b4d363e"
 HARDWARE_ID="bb95833a-926e-47b1-8f45-d23427fbc58d"
+DEVLAB_ID="d4188389-eef8-4aa3-a27d-1fed3f8cf444"
+CHAT_CONFIG_TIMEOUT="${PP_NLM_CHAT_CONFIG_TIMEOUT:-180s}"
 
 source "$ROOT/scripts/pp-nlm/lib/write-helpers.sh"
 
@@ -17,13 +19,15 @@ APPLY=0
 ALL_COMPAT=0
 ALIASES=(pp-core pp-hardware)
 
-for arg in "$@"; do
-  case "$arg" in
-    --apply) APPLY=1 ;;
-    --dry-run) APPLY=0 ;;
-    --all-compat) ALL_COMPAT=1 ;;
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --apply) APPLY=1; shift ;;
+    --dry-run) APPLY=0; shift ;;
+    --all-compat) ALL_COMPAT=1; shift ;;
+    --devlab) ALIASES=(pp-devlab); shift ;;
+    --alias) ALIASES=("${2:-}"); shift 2 ;;
     *)
-      echo "Usage: $0 [--dry-run] [--apply] [--all-compat]" >&2
+      echo "Usage: $0 [--dry-run] [--apply] [--all-compat] [--devlab] [--alias ALIAS]" >&2
       exit 2
       ;;
   esac
@@ -56,8 +60,8 @@ preflight_config() {
   fi
 
   id="$(timeout 20s nlm alias get "$alias" 2>/dev/null | tail -1 || true)"
-  if [ "$id" != "$CORE_ID" ] && [ "$id" != "$HARDWARE_ID" ]; then
-    echo "FAIL: $alias resolves to ${id:-nothing}, not a live hub" >&2
+  if [ "$id" != "$CORE_ID" ] && [ "$id" != "$HARDWARE_ID" ] && { [ "$alias" != "pp-devlab" ] || [ "$id" != "$DEVLAB_ID" ]; }; then
+    echo "FAIL: $alias resolves to ${id:-nothing}, not an approved PP-NLM target" >&2
     return 1
   fi
 
@@ -83,18 +87,20 @@ fi
 
 pp_nlm_require_auth_bounded
 mkdir -p "$(dirname "$LOCK")"
-(
+if ! (
   flock -w 300 9 || { echo "FAIL: could not acquire chat config lock" >&2; exit 75; }
   for alias in "${ALIASES[@]}"; do
     f="$CONFIG_DIR/$alias.txt"
     prompt="$(< "$f")"
     echo "Applying chat config to $alias..."
-    if ! timeout 90s nlm chat configure "$alias" --goal custom --prompt "$prompt"; then
+    if ! timeout "$CHAT_CONFIG_TIMEOUT" nlm chat configure "$alias" --goal custom --prompt "$prompt"; then
       echo "FAIL: chat configure failed or timed out for $alias" >&2
       exit 1
     fi
     sleep 2
   done
-) 9>"$LOCK"
+) 9>"$LOCK"; then
+  exit 1
+fi
 
 echo "Done."

@@ -192,11 +192,13 @@ pp_nlm_source_add_file() {
     fi
 
     local existing raw rc sid status err
-    existing="$(pp_nlm_reconcile_source_id "$target_id" "$title" || true)"
-    if [ -n "$existing" ]; then
-      pp_nlm_manifest_record "$requested_alias" "$canonical_alias" "$target_id" "$existing" "$title" "$file" "$kind" "$content_hash" "already_present_reconciled" 1 "" "$original_source_id"
-      echo "  skip: [$canonical_alias] $title (already present -> $existing)"
-      exit 0
+    if [ "${PP_NLM_SKIP_PRE_ADD_RECONCILE:-0}" != "1" ]; then
+      existing="$(pp_nlm_reconcile_source_id "$target_id" "$title" || true)"
+      if [ -n "$existing" ]; then
+        pp_nlm_manifest_record "$requested_alias" "$canonical_alias" "$target_id" "$existing" "$title" "$file" "$kind" "$content_hash" "already_present_reconciled" 1 "" "$original_source_id"
+        echo "  skip: [$canonical_alias] $title (already present -> $existing)"
+        exit 0
+      fi
     fi
 
     echo "  add-file: [$canonical_alias] $title"
