@@ -1,26 +1,41 @@
-STATUS: done
-TASKS_COMPLETED: [1, 2, 3]
+# Codex Completion Report
 
-BL-0875 source-code axe fix:
-- Views fixed: 10 / 10
-- Per-view changes summary:
-  - ComponentEditorView: added accessible names to hidden FZPZ and SVG file inputs.
-  - CalculatorsView: added accessible names to reset icon buttons, made VaultInfoIcon ARIA valid via `role="img"`, and normalized NumberInput `aria-valuenow` values out of exponential notation.
-  - DesignPatternsView: added accessible names to category and difficulty select triggers.
-  - KanbanView: added accessible names to priority, tag, and assignee filter select triggers.
-  - KnowledgeView: added accessible names to category and difficulty filter select triggers.
-  - BoardViewer3DView: added an accessible name to the reset-view icon button and associated edit-board number inputs with visible labels.
-  - CommunityView: added accessible names to type filter and sort select triggers.
-  - PcbOrderingView: associated the Silkscreen Color label with its select trigger.
-  - GenerativeDesignView: associated existing visible labels with range/number inputs and fixed VaultInfoIcon ARIA validity via the shared component.
-  - AuditTrailView: added accessible names to entity type and action filter select triggers.
-- a11y suite axe-violation count before: 10
-- a11y suite axe-violation count after: 0
-- Remaining failures in a11y suite (non-axe): DashboardView `history is not iterable`; ArchitectureView missing TooltipProvider wrapper; SchematicView timeout; BreadboardView missing `useBom` mock plus timeout; PCBLayoutView runner soft-assertion spillover from Breadboard mock failure; ProcurementView missing `useBom` mock; CircuitCodeView `Worker is not defined`; ArduinoWorkbenchView `Cannot read properties of undefined (reading 'find')`.
+**Task:** Review `CLAUDE_RESPONSE.md` Round 2, push back on Option (C), answer Claude's action-item questions, and write `CODEX_RESPONSE_2.md`.
+**Status:** done
 
-MASTER_BACKLOG.md updates:
-- BL-0875: reduced to test-harness/render work only and updated with the 2026-05-09 full-suite result, 8 fail / 19 pass / 27 total, and 0 remaining `violations:` lines.
-- BL-0880 (if created): created as DONE for the BL-0875 source-code axe fixes with per-area fix and verification notes.
+## Changes Made
+- `CODEX_RESPONSE_2.md` - Added adversarial Round 2 review of Option (C), including code-traced holes, answers to Claude's four questions, and pushback on the same-client-match claim.
+- `CODEX_DONE.md` - Updated this completion report for the current handoff.
 
-BLOCKERS: None for the source-code axe work.
-NEXT_STEPS: Continue BL-0875 harness work: add the missing TooltipProvider wrapper, repair Dashboard history and `useBom` mocks, add the Worker stub, fix ArduinoWorkbenchView test data, and isolate the Schematic timeout / PCBLayout soft-assertion attribution.
+## Commands Run
+```bash
+sed -n '1,260p' CLAUDE_RESPONSE.md
+sed -n '1,260p' server/collaboration.ts
+sed -n '1,260p' shared/collaboration.ts
+sed -n '1,300p' client/src/lib/collaboration-client.ts
+sed -n '1,360p' server/__tests__/collaboration-crdt-integration.test.ts
+sed -n '260,620p' server/collaboration.ts
+sed -n '260,620p' shared/collaboration.ts
+sed -n '300,620p' client/src/lib/collaboration-client.ts
+sed -n '360,760p' server/__tests__/collaboration-crdt-integration.test.ts
+sed -n '620,1040p' server/collaboration.ts
+rg -n "broadcastToRoom|sendToClient|setUserRole|shutdown|getRoomUsers|validateWsSession|class CollaborationServer|rooms =|recentOps|detectConflict|mergeAndBroadcastOps|state-sync|conflict-detected" server/collaboration.ts shared/collaboration.ts client/src/lib/collaboration-client.ts server/__tests__/collaboration-crdt-integration.test.ts
+rg -n "on\\(['\\\"]state-update|sendStateUpdate\\(|collaborationClient\\.|useCollaboration\\(|ConflictResolutionDialog|pendingConflicts|resolveConflict" client/src --glob '!**/node_modules/**'
+nl -ba server/collaboration.ts | sed -n '55,95p;185,245p;420,590p;770,865p'
+nl -ba shared/collaboration.ts | sed -n '145,295p'
+nl -ba client/src/lib/collaboration-client.ts | sed -n '180,235p;320,385p;420,435p'
+nl -ba server/__tests__/collaboration-crdt-integration.test.ts | sed -n '580,645p'
+npm test -- server/__tests__/collaboration-crdt-integration.test.ts -t "BL-0524"
+git status --short
+git add CODEX_RESPONSE_2.md CODEX_DONE.md && git commit -m "Add Codex Round 2 CRDT review"
+```
+
+## Next Steps
+- Claude should revise Option (C) before implementation, especially the send-vs-apply checkpoint issue and connection-id requirement.
+- After Claude implements a revised design, Codex should run the full collaboration CRDT suite and review the diff.
+
+## Blockers
+- None for this review artifact.
+
+## Handoff Notes
+The strongest remaining objection is that broadcast-time delivered checkpointing would mark `ws1` caught up in the existing BL-0524/BL-0879 server test, so the spec's claim that the current test passes unchanged is false. A clean fix likely needs per-connection observed frontiers plus an explicit client ACK or a state-sync path that actually applies authoritative document state before marking the frontier observed.
