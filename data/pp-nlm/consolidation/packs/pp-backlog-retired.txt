@@ -1,22 +1,23 @@
-# ProtoPulse Consolidated Source Pack :: Backlog and Iteration
+# ProtoPulse Consolidated Source Pack :: Backlog
 
-Generated: 2026-05-09T19:42:37+00:00
+Pack schema: protopulse-nlm-consolidation-pack-v1
 Retired alias: pp-backlog-retired
 Retired notebook ID: f583c6b0-9e26-4d8d-8ad7-c88d1a45234f
+Retired notebook title: Backlog and Iteration
 Target hub: pp-core
 Source count included: 1
 
 ## Source Index
-1. Iteration log format guide v1 — 2026-05-09 [435e195f-fea6-4aa5-909a-91e2a5de4a04]
+1. Backlog :: Iteration log format guide v1 — 2026-05-09 [435e195f-fea6-4aa5-909a-91e2a5de4a04]
 
 ---
 
-## Source 1: Iteration log format guide v1 — 2026-05-09
+## Source 1: Backlog :: Iteration log format guide v1 — 2026-05-09
 
 Original notebook alias: pp-backlog-retired
 Original notebook ID: f583c6b0-9e26-4d8d-8ad7-c88d1a45234f
 Original source ID: 435e195f-fea6-4aa5-909a-91e2a5de4a04
-Original source title: Iteration log format guide v1 — 2026-05-09
+Original source title: Backlog :: Iteration log format guide v1 — 2026-05-09
 Content SHA256: b7ecacf0f836a49f5ab3c10a2483534cc29ad059350cd5527733d0c78c06a0d7
 
 BEGIN SOURCE CONTENT

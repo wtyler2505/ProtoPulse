@@ -191,9 +191,16 @@ pp_nlm_source_add_file() {
       exit 0
     fi
 
+    local existing raw rc sid status err
+    existing="$(pp_nlm_reconcile_source_id "$target_id" "$title" || true)"
+    if [ -n "$existing" ]; then
+      pp_nlm_manifest_record "$requested_alias" "$canonical_alias" "$target_id" "$existing" "$title" "$file" "$kind" "$content_hash" "already_present_reconciled" 1 "" "$original_source_id"
+      echo "  skip: [$canonical_alias] $title (already present -> $existing)"
+      exit 0
+    fi
+
     echo "  add-file: [$canonical_alias] $title"
 
-    local raw rc sid status err
     if [ "${PP_NLM_USE_WAIT:-0}" = "1" ]; then
       raw="$(timeout "$PP_NLM_ADD_TIMEOUT" nlm source add "$target_id" --file "$file" --title "$title" --wait --wait-timeout "$PP_NLM_WAIT_TIMEOUT" 2>&1)"
     else
@@ -247,13 +254,20 @@ pp_nlm_source_add_url() {
 
     pp_nlm_require_auth_bounded || exit $?
 
-    local target_id canonical_alias raw rc sid status err
+    local target_id canonical_alias existing raw rc sid status err
     target_id="$(pp_nlm_resolve_alias "$requested_alias" || true)"
     if [ -z "$target_id" ]; then
       pp_nlm_log_error "FAIL: [$requested_alias] could not resolve alias"
       exit 2
     fi
     canonical_alias="$(pp_nlm_canonical_alias_for_id "$target_id" "$requested_alias")"
+
+    existing="$(pp_nlm_reconcile_source_id "$target_id" "$title" || true)"
+    if [ -n "$existing" ]; then
+      pp_nlm_manifest_record "$requested_alias" "$canonical_alias" "$target_id" "$existing" "$title" "$url" "url" "$content_hash" "already_present_reconciled" 1 ""
+      echo "  skip: [$canonical_alias] $title (already present -> $existing)"
+      exit 0
+    fi
 
     echo "  add-url: [$canonical_alias] $url"
     if [ "${PP_NLM_USE_WAIT:-0}" = "1" ]; then

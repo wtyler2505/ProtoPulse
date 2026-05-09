@@ -112,7 +112,7 @@ fetch_source_content() {
 }
 
 write_manifest_entry() {
-  local alias="$1" notebook_id="$2" title="$3" target="$4" pack="$5" count="$6" status="$7" error="${8:-}"
+  local alias="$1" notebook_id="$2" title="$3" pack_title="$4" target="$5" pack="$6" count="$7" status="$8" error="${9:-}"
   local tmp hash
   hash="$(sha256sum "$pack" 2>/dev/null | awk '{print $1}')"
   tmp="$(mktemp)"
@@ -120,6 +120,7 @@ write_manifest_entry() {
     --arg alias "$alias" \
     --arg notebook_id "$notebook_id" \
     --arg title "$title" \
+    --arg pack_title "$pack_title" \
     --arg target "$target" \
     --arg pack "$pack" \
     --arg hash "$hash" \
@@ -130,6 +131,7 @@ write_manifest_entry() {
         retired_alias: $alias,
         retired_notebook_id: $notebook_id,
         retired_title: $title,
+        pack_title: $pack_title,
         target_alias: $target,
         pack_path: $pack,
         pack_sha256: $hash,
@@ -143,10 +145,11 @@ write_manifest_entry() {
 
 process_notebook() {
   local item="$1"
-  local alias notebook_id title target slug pack source_json count idx rows
+  local alias notebook_id title pack_title target slug pack source_json count idx rows source_title
   alias="$(printf '%s' "$item" | json_field '.alias')"
   notebook_id="$(printf '%s' "$item" | json_field '.notebook_id')"
   title="$(printf '%s' "$item" | json_field '.title')"
+  pack_title="$(printf '%s' "$item" | jq -r '.pack_title // .title')"
   target="$(printf '%s' "$item" | json_field '.target_alias')"
 
   if [ -n "$ONLY" ] && [ "$alias" != "$ONLY" ]; then
@@ -160,7 +163,7 @@ process_notebook() {
   if ! source_json="$(list_sources_json "$notebook_id" 2>&1)"; then
     echo "$(date -u --iso-8601=seconds) FAIL list: $alias :: $source_json" | tee -a "$LOG" >&2
     : > "$pack"
-    write_manifest_entry "$alias" "$notebook_id" "$title" "$target" "$pack" 0 "list_failed" "$source_json"
+    write_manifest_entry "$alias" "$notebook_id" "$title" "$pack_title" "$target" "$pack" 0 "list_failed" "$source_json"
     return 1
   fi
 
@@ -170,11 +173,12 @@ process_notebook() {
   fi
 
   {
-    echo "# ProtoPulse Consolidated Source Pack :: $title"
+    echo "# ProtoPulse Consolidated Source Pack :: $pack_title"
     echo
-    echo "Generated: $(date -u --iso-8601=seconds)"
+    echo "Pack schema: protopulse-nlm-consolidation-pack-v1"
     echo "Retired alias: $alias"
     echo "Retired notebook ID: $notebook_id"
+    echo "Retired notebook title: $title"
     echo "Target hub: $target"
     echo "Source count included: $count"
     echo
@@ -231,11 +235,11 @@ process_notebook() {
     } >> "$pack"
   done <<< "$rows"
 
-  write_manifest_entry "$alias" "$notebook_id" "$title" "$target" "$pack" "$idx" "built"
+  write_manifest_entry "$alias" "$notebook_id" "$title" "$pack_title" "$target" "$pack" "$idx" "built"
 
   if [ "$ADD" -eq 1 ]; then
-    pack_title="ProtoPulse Consolidated Source Pack :: $title"
-    pp_nlm_source_add_file "$target" "$pack" "$pack_title" "consolidation-pack" "$notebook_id"
+    source_title="ProtoPulse Consolidated Source Pack :: $pack_title"
+    pp_nlm_source_add_file "$target" "$pack" "$source_title" "consolidation-pack" "$notebook_id"
   fi
 }
 

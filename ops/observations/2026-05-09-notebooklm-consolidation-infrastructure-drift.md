@@ -1,7 +1,7 @@
 ---
 description: PP-NLM live aliases, tags, manifests, and skills drifted apart during notebook consolidation.
 category: drift
-status: pending
+status: resolved
 observed: 2026-05-09
 related_notes:
   - "[[methodology]]"
@@ -13,4 +13,4 @@ The live NotebookLM aliases now point most ProtoPulse aliases at two consolidate
 
 The source manifest is also still keyed by the old aliases and does not contain a `pp-core` entry. This means idempotency checks can no longer be trusted as a faithful reflection of the live NotebookLM topology.
 
-Resolution: update the PP-NLM skills, manifests, and write helpers after Tyler approves the consolidated two-hub topology. Treat this as a system drift finding, not a completed fix.
+Resolution: Tyler approved the consolidated topology on 2026-05-09. The PP-NLM skills, docs, local notebook manifest, source manifest, safe write helper, health script, logging locks, chat config gate, and consolidation-pack builder were updated in the follow-up implementation pass.

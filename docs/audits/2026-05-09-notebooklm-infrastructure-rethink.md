@@ -2,7 +2,7 @@
 
 Date: 2026-05-09
 Scope: ProtoPulse PP-NLM CLI/MCP usage, logs, skills, hooks, manifests, and consolidation workflow
-Status: proposal pack, not implemented
+Status: proposal pack approved and implemented; final retirement of old notebooks still requires Tyler approval
 
 ## Why This Pass Happened
 
@@ -323,6 +323,22 @@ Per the `rethink` workflow, none of the proposals above should be implemented si
 
 - Approve Proposals 1, 3, 4, 5, and 6 immediately.
 - Approve Proposal 2 after one pack retrieval test.
+
+## Implementation Closeout
+
+Tyler approved the recommended set on 2026-05-09. The implementation now has:
+
+- Two active hubs documented and routed: `pp-core` and `pp-hardware`.
+- Compatibility aliases mapped to those hubs in `~/.claude/state/pp-nlm/notebook-manifest.json`.
+- Source manifest normalized into `pp-core` and `pp-hardware` buckets.
+- File-backed, lock-protected write helpers with bounded auth checks, live-title reconciliation, and timeout states.
+- Bounded health reporting at `scripts/pp-nlm/health.sh`.
+- Single-owner logging and lock files for the long-running population runners.
+- Dry-run-first chat config application, defaulting only to `pp-core` and `pp-hardware`.
+- Retired feature/component tags removed from the old notebooks and the active hardware hub no longer tagged `pp:component`.
+- Source-pack builder at `scripts/pp-nlm/build-consolidation-packs.sh`, with fallback to the prior migration inventory/cache.
+
+Pack retrieval gate passed: a `pp-core` query against `ProtoPulse Consolidated Source Pack :: Backlog` retrieved the BL iteration-log structure and cited source `6ea62f11-94c6-430b-b2f9-bff50832f7d1`.
 
 ## Sources
 

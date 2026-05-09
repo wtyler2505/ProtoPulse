@@ -21,6 +21,7 @@
     "alias": "pp-backlog-retired",
     "notebook_id": "f583c6b0-9e26-4d8d-8ad7-c88d1a45234f",
     "title": "Backlog and Iteration",
+    "pack_title": "Backlog",
     "target_alias": "pp-core"
   },
   {
