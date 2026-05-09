@@ -1,132 +1,97 @@
-# Task Handoff to Codex — Verify BL-0876 staged fix + triage BL-0875
+# Task Handoff #2 to Codex — BL-0875 source-code axe fixes (bulk mechanical)
 
-**From:** Claude Code (session at 14MB context — needs to wind down)
+**From:** Claude Code
 **Date:** 2026-05-09
 **Priority:** medium
-**Coordination note:** Tyler also has Codex working on NLM-related files (`data/pp-nlm/`, `scripts/pp-nlm/`, `.claude/skills/pp-knowledge/`, `.claude/skills/pp-nlm-operator/`, `docs/notebooklm.md`). **This handoff is NOT NLM work** — it's test verification on `client/src/test-setup.ts` + a11y/lifecycle/procurement test suites. If you (Codex) are already busy on NLM, queue this; if there's no conflict, proceed.
+**Coordination:** Tyler may have a separate Codex session on NLM. **This is NOT NLM work** — it's a11y source-code fixes in `client/src/components/views/*.tsx`. Stay clear of `data/pp-nlm/`, `scripts/pp-nlm/`, `.claude/skills/pp-knowledge/`, `.claude/skills/pp-nlm-operator/`, `docs/notebooklm.md`. Claude is concurrently working `server/collaboration.ts` + `shared/collaboration.ts` (BL-0879 CRDT) — do NOT touch those.
 
 ## Background
 
-This session closed 8 BL items in the BL-0866 family (test-suite drift cluster):
-- BL-0865, BL-0872, BL-0873, BL-0874, BL-0877 → DONE
-- BL-0866 → SPLIT into 7 children
-- BL-0878 → DONE 6/7
-- BL-0879 → diagnosed as architectural (CRDT LWW server-side monotonic Lamport bug)
-- **BL-0876 → STAGED** ← this is what needs verification
-
-## What was just changed (uncommitted as of handoff write — auto-commit hook will pick it up)
-
-`client/src/test-setup.ts` got a global `fetch` stub:
-
-```ts
-import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
-import { afterEach, beforeEach, vi } from 'vitest';
-
-beforeEach(() => {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(() =>
-      Promise.resolve(
-        new Response('null', {
-          status: 404,
-          headers: { 'content-type': 'application/json' },
-        }),
-      ),
-    ),
-  );
-});
-
-afterEach(() => {
-  cleanup();
-  vi.unstubAllGlobals();
-});
-```
-
-Hypothesis: Components using `useQuery` (TanStack Query) trigger real `fetch` calls during a11y rendering. Without a dev server on :3000, those produce `ECONNREFUSED` noise. The stub returns 404 JSON `null` so `useQuery` resolves cleanly to "no data" instead of TCP-failing.
-
-**Source for the pattern:** vitest 3.x docs on `vi.stubGlobal` (https://vitest.dev/api/vi.html#vi-stubglobal). 3.x is current as of May 2026 per package.json.
+Previous Codex handoff verified BL-0876 (ECONNREFUSED → 0, 73/73 sentinel suite passing). Per CODEX_DONE.md from that run, BL-0875 a11y suite has 10 real axe-core violations across 9 views. These are SOURCE-CODE bugs (not test-setup bugs). Most are missing `aria-label` on icon-only buttons and missing `<label>` on inputs.
 
 ## Tasks
 
-### Task 1 — Verify BL-0876 staged fix
+### Task 1 — Fix all 10 real axe violations
 
-Run, in this order, with `run_in_background: true` and `NODE_OPTIONS="--max-old-space-size=4096"`:
+Per Codex-1's triage, the violations are:
+
+| View | File | Violations |
+|---|---|---|
+| ComponentEditorView | `client/src/components/views/ComponentEditorView.tsx` | label |
+| CalculatorsView | `client/src/components/views/CalculatorsView.tsx` | aria-prohibited-attr, aria-valid-attr-value, button-name |
+| DesignPatternsView | `client/src/components/views/DesignPatternsView.tsx` | button-name |
+| KanbanView | `client/src/components/views/KanbanView.tsx` | button-name |
+| KnowledgeView | `client/src/components/views/KnowledgeView.tsx` | button-name |
+| BoardViewer3DView | `client/src/components/views/BoardViewer3DView.tsx` | button-name, label |
+| CommunityView | `client/src/components/views/CommunityView.tsx` | button-name |
+| PcbOrderingView | `client/src/components/views/PcbOrderingView.tsx` | button-name |
+| GenerativeDesignView | `client/src/components/views/GenerativeDesignView.tsx` | aria-prohibited-attr, label |
+| AuditTrailView | `client/src/components/views/AuditTrailView.tsx` | button-name |
+
+For each:
+
+1. Read the source file.
+2. Run `NODE_OPTIONS="--max-old-space-size=4096" npx vitest run client/src/__tests__/a11y.test.tsx -t "<ViewName>" 2>&1 | tee logs/tests-a11y-<view>-pretest.log` (background) to get the exact axe message + failing element selectors.
+3. Apply the minimal fix per WCAG:
+   - **button-name**: icon-only `<button>` needs `aria-label="<verb> <noun>"` (e.g., `aria-label="Close dialog"`). Don't invent random labels — read what the button does and label accordingly.
+   - **label**: form inputs need an associated `<label htmlFor>` OR `aria-label`/`aria-labelledby`. Prefer real visible labels per WCAG 3.3.2 unless the existing UI is intentionally label-less.
+   - **aria-prohibited-attr**: an ARIA attribute is on an element where it's not allowed. Remove it OR change the element role appropriately. Read https://www.w3.org/TR/wai-aria-1.2/#prohibitedattributes for the rule.
+   - **aria-valid-attr-value**: the attribute value is invalid (e.g., `aria-controls="undefined"`). Fix the value source.
+4. Re-run the targeted axe test to confirm 0 violations for that view.
+
+### Task 2 — Verify final count
+
+After all 10 are fixed:
 
 ```bash
-NODE_OPTIONS="--max-old-space-size=4096" npx vitest run \
-  client/src/components/circuit-editor/__tests__/BreadboardPartInspector.trustTier.test.tsx \
-  client/src/lib/__tests__/lifecycle-badges-integration.test.ts \
-  client/src/components/views/__tests__/procurement-sub-components.test.tsx \
-  2>&1 | tee logs/tests-bl0876-verify-pretest.log
+NODE_OPTIONS="--max-old-space-size=4096" npx vitest run client/src/__tests__/a11y.test.tsx 2>&1 | tee logs/tests-a11y-bl0875-after.log
 ```
 
-Expected if the fix is correct: 0 ECONNREFUSED, all tests pass (10/10 + ~40+ + 2/2). The 3 files we already migrated to QueryClientProvider wrappers should still pass. The new global stub layer should be additive, not breaking.
+Count: `grep -c "violations:" logs/tests-a11y-bl0875-after.log`. Expected reduction: 10 → 0 for these specific rules.
 
-### Task 2 — Run a11y suite, count ECONNREFUSED before/after
+### Task 3 — Update BL-0875 in MASTER_BACKLOG.md
 
-```bash
-NODE_OPTIONS="--max-old-space-size=4096" npx vitest run \
-  client/src/__tests__/a11y.test.tsx \
-  2>&1 | tee logs/tests-a11y-bl0876-after.log
-```
+Note that the 10 source-code axe violations are CLOSED, the 1 TooltipProvider test-harness wrapper for ArchitectureView remains, and the harness failures (DashboardView, Breadboard, Procurement, CircuitCodeView, ArduinoWorkbenchView, SchematicView) are still open as a separate test-harness sub-cluster.
 
-After it completes:
-- `grep -c "ECONNREFUSED" logs/tests-a11y-bl0876-after.log` → should be 0
-- `grep -c "ECONNREFUSED" logs/tests-a11y-latest.log` → previous run, was non-zero
-- Note pass/fail counts
+If BL-0875 is reduced to ONLY test-harness failures (no source-code axe violations remaining), you may split it: keep BL-0875 for harness work, carve a new BL-0880 for "BL-0875 source-code axe fixes — DONE" as historical record.
 
-### Task 3 — Triage remaining BL-0875 a11y violations
+## Constraints
 
-After Task 2, parse `logs/tests-a11y-bl0876-after.log` for the failing tests. The previous breakdown was 3 distinct failure modes:
-- (a) `Tooltip must be used within TooltipProvider` — test-setup wrapper issue
-- (b) `ECONNREFUSED 127.0.0.1:3000` — should be GONE after Task 1's fix
-- (c) Real axe-core violations (button-name, label, aria-valid-attr-value, aria-prohibited-attr) in CalculatorsView, DesignPatternsView, KanbanView, KnowledgeView, BoardViewer3DView, CommunityView, etc.
-
-For each remaining failure, classify (a/b/c) in a new section appended to `docs/MASTER_BACKLOG.md` under BL-0875 as a 2026-05-09 update.
-
-### Task 4 — Update BL-0876 status in MASTER_BACKLOG.md
-
-If Tasks 1+2 show 0 ECONNREFUSED and no test regressions: change BL-0876 status from `STAGED` to `DONE` and add the verification note (test count, log path, ECONNREFUSED before/after).
-
-If the global fetch stub caused regressions in tests that DO need real fetch behavior: revert the test-setup.ts change, mark BL-0876 as `BLOCKED — global stub regresses tests X/Y, needs per-test mock strategy instead`, and document which tests need real fetch.
+- **Do NOT touch** `client/src/test-setup.ts` (Claude's BL-0876 fix landed there — leave it).
+- **Do NOT touch** `server/collaboration.ts` or `shared/collaboration.ts` — Claude is concurrently fixing BL-0879 there.
+- **Do NOT touch** any NLM territory paths (see top of file).
+- **Do NOT** add visible labels that change the visible UI design unless the existing design is broken — prefer `aria-label` for icon-only controls per common WCAG practice. The goal is screen-reader access, not visual redesign.
+- Each fix should be the SMALLEST change that satisfies axe. Don't refactor surrounding code.
+- Commit per view OR one commit at the end with clear message — your call.
 
 ## Output: write `CODEX_DONE.md` with this exact shape
 
 ```markdown
 STATUS: [done|partial|blocked]
-TASKS_COMPLETED: [1, 2, 3, 4 or subset]
+TASKS_COMPLETED: [1, 2, 3 or subset]
 
-BL-0876 verification:
-- ECONNREFUSED before: <count>
-- ECONNREFUSED after: <count>
-- Tests passing in BL-0876 sentinel suite (Task 1): <X>/<Y>
-- Decision: <DONE | reverted | other>
-
-BL-0875 triage (counts):
-- Mode (a) TooltipProvider: <count> tests, list: [...]
-- Mode (b) ECONNREFUSED: <count>
-- Mode (c) real axe violations: <count> tests, list: [view: violation]
+BL-0875 source-code axe fix:
+- Views fixed: <count> / 10
+- Per-view changes summary:
+  - ComponentEditorView: <description of what was added/changed>
+  - CalculatorsView: <description>
+  - ... (one line per view)
+- a11y suite axe-violation count before: 10
+- a11y suite axe-violation count after: <count>
+- Remaining failures in a11y suite (non-axe): <list>
 
 MASTER_BACKLOG.md updates:
-- BL-0876: <new status>
-- BL-0875: <updated diagnostic>
+- BL-0875: <new status / new note>
+- BL-0880 (if created): <description>
 
-BLOCKERS: <any unexpected failures or env issues>
-NEXT_STEPS: <what's still pending after this handoff>
+BLOCKERS: <any unexpected issues>
+NEXT_STEPS: <what's still pending>
 ```
-
-## Constraints
-
-- Do NOT touch any of these (Tyler's other Codex session may be working there): `data/pp-nlm/`, `scripts/pp-nlm/`, `.claude/skills/pp-knowledge/`, `.claude/skills/pp-nlm-operator/`, `docs/notebooklm.md`, NLM source manifests under `~/.claude/state/pp-nlm/`.
-- Do NOT skip-fix individual axe violations in this run — that's BL-0875's separate triage scope.
-- Do NOT alter the test-setup.ts fix unless verification shows regressions.
-- Stay within the BL-0866 child cluster scope.
 
 ## Success criteria
 
-- [ ] Task 1 sentinel suite runs cleanly with the staged fix (no regression)
-- [ ] ECONNREFUSED count in a11y log drops to 0
-- [ ] BL-0876 row in MASTER_BACKLOG.md is updated (DONE or BLOCKED with concrete reason)
-- [ ] BL-0875 row gets a 2026-05-09 triage update with per-mode counts
+- [ ] All 10 source-code axe violations resolved
+- [ ] a11y test suite shows reduced axe-violation count
+- [ ] BL-0875 row in MASTER_BACKLOG.md updated (or split with BL-0880)
 - [ ] CODEX_DONE.md written with structured output
+- [ ] No untouched files in claimed-out territory (test-setup.ts, collaboration.ts, NLM paths)
