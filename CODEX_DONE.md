@@ -1,39 +1,20 @@
-# Codex Completion Report
+STATUS: done
+TASKS_COMPLETED: [1, 2, 3, 4]
 
-**Task:** Repair Codex startup warnings for invalid ProtoPulse skills and MCP startup timeouts
-**Status:** done
+BL-0876 verification:
+- ECONNREFUSED before: 18
+- ECONNREFUSED after: 0
+- Tests passing in BL-0876 sentinel suite (Task 1): 73/73
+- Decision: DONE
 
-## Changes Made
-- `.agents/skills/claude-agent-sdk/SKILL.md` - replaced malformed YAML frontmatter with valid `name` and `description`
-- `.agents/skills/gemini-cli-maestro/SKILL.md` - added valid YAML frontmatter
-- `.agents/skills/claude-code-maestro/SKILL.md` - added valid YAML frontmatter
-- `.agents/skills/scribe-mastery/SKILL.md` - added valid YAML frontmatter
-- `.gitignore` - ignored generated `FileScopeMCP-tree.json` runtime cache
-- `/home/wtyler/.codex/config.toml` - raised `FileScopeMCP` startup timeout to 120 seconds and added explicit `playwright` MCP config with 120 second timeout
+BL-0875 triage (counts):
+- Mode (a) TooltipProvider: 1 test, list: [ArchitectureView]
+- Mode (b) ECONNREFUSED: 0
+- Mode (c) real axe violations: 10 tests, list: [ComponentEditorView: label; CalculatorsView: aria-prohibited-attr, aria-valid-attr-value, button-name; DesignPatternsView: button-name; KanbanView: button-name; KnowledgeView: button-name; BoardViewer3DView: button-name, label; CommunityView: button-name; PcbOrderingView: button-name; GenerativeDesignView: aria-prohibited-attr, label; AuditTrailView: button-name]
 
-## Commands Run
-```bash
-codex --version
-codex --help
-codex exec --help
-codex mcp list --json
-python3 /home/wtyler/.codex/plugins/cache/claude-plugins-official/skill-creator/local/skills/skill-creator/scripts/quick_validate.py .agents/skills/claude-agent-sdk
-python3 /home/wtyler/.codex/plugins/cache/claude-plugins-official/skill-creator/local/skills/skill-creator/scripts/quick_validate.py .agents/skills/gemini-cli-maestro
-python3 /home/wtyler/.codex/plugins/cache/claude-plugins-official/skill-creator/local/skills/skill-creator/scripts/quick_validate.py .agents/skills/claude-code-maestro
-python3 /home/wtyler/.codex/plugins/cache/claude-plugins-official/skill-creator/local/skills/skill-creator/scripts/quick_validate.py .agents/skills/scribe-mastery
-printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"codex-probe","version":"0.0.0"}}}' | timeout 120s /usr/bin/node /home/wtyler/FileScopeMCP/dist/mcp-server.js --base-dir=. --max-results=50 --enable-pagination=true --min-importance=6 > /tmp/protopulse-filescope-stdout.log 2> /tmp/protopulse-filescope-stderr.log
-printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"codex-probe","version":"0.0.0"}}}' | timeout 90s npx @playwright/mcp@latest
-git diff --check -- .gitignore .agents/skills/claude-agent-sdk/SKILL.md .agents/skills/gemini-cli-maestro/SKILL.md .agents/skills/claude-code-maestro/SKILL.md .agents/skills/scribe-mastery/SKILL.md
-codex debug prompt-input 'startup probe' > /tmp/protopulse-codex-startup-probe.txt 2>&1
-rg -n '^⚠|^WARNING:|^MCP startup incomplete|^Skipped loading|^.*timed out after' /tmp/protopulse-codex-startup-probe.txt
-```
+MASTER_BACKLOG.md updates:
+- BL-0876: DONE
+- BL-0875: updated diagnostic with 2026-05-09 verification counts, zero remaining ECONNREFUSED, per-mode triage, and additional harness/render failures: DashboardView history iterable issue, BreadboardView/ProcurementView missing useBom mock, CircuitCodeView Worker stub, ArduinoWorkbenchView undefined find, and SchematicView timeout.
 
-## Next Steps
-- Start a fresh Codex session when convenient to confirm the interactive startup banner is quiet.
-- Leave Claude's active project-code changes alone; this repair was scoped to startup metadata/config only.
-
-## Blockers (if any)
-- None.
-
-## Handoff Notes
-All four previously rejected skills pass `quick_validate.py`. Raw JSON-RPC initialize probes returned valid responses for both `FileScopeMCP` and `playwright`; FileScope logs to stderr during tree building, while stdout stayed clean JSON-RPC. `codex mcp list --json` now reports `startup_timeout_sec: 120.0` for both `FileScopeMCP` and `playwright`.
+BLOCKERS: None for the BL-0876 handoff. BL-0875 remains open because the a11y suite still has 17 failing tests unrelated to ECONNREFUSED.
+NEXT_STEPS: Split BL-0875 into test-harness fixes versus source-code axe fixes, then address the 10 real serious/critical accessibility violations per view.
