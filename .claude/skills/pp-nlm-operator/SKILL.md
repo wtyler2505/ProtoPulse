@@ -71,6 +71,7 @@ Canonical manifest: `~/.claude/state/pp-nlm/notebook-manifest.json`.
 - `scripts/pp-nlm/lib/source-helpers.sh` - compatibility layer used by population scripts.
 - `scripts/pp-nlm/build-consolidation-packs.sh` - source-pack builder for retired notebooks.
 - `scripts/pp-nlm/sync-devlab.sh` - one-way exact mirror from `pp-core` + `pp-hardware` into `pp-devlab`.
+- `scripts/pp-nlm/request-devlab-sync.sh` - coalesced DevLab autosync request/runner used after canonical hub writes.
 - `scripts/pp-nlm/apply-chat-configs.sh` - dry-run gated chat config apply.
 - `scripts/pp-nlm/studio-output-to-inbox.sh` - Studio archive -> inbox bridge.
 - `scripts/pp-nlm/sync-knowledge-to-nlm.sh` - knowledge -> NotebookLM return leg.
@@ -112,6 +113,8 @@ Use canonical hub aliases for new sources:
 Old aliases may be used by slash commands for user ergonomics, but helpers must record the resolved target ID and canonical alias.
 
 Use `pp-devlab` only for mirror writes from `scripts/pp-nlm/sync-devlab.sh` and for Tyler's explicit sandbox/lab queries. Do not route canonical captures, recaps, backlog decisions, research imports, or hardware notes into DevLab.
+
+Canonical source writes through `scripts/pp-nlm/lib/write-helpers.sh` request a delayed DevLab mirror sync automatically. The request is coalesced in `~/.claude/state/pp-nlm/devlab-sync-request.json`; `scripts/pp-nlm/request-devlab-sync.sh --run-due` drains it, and `sync-devlab.sh --apply` remains the explicit full reconciliation path.
 
 ## Source-Pack Consolidation
 

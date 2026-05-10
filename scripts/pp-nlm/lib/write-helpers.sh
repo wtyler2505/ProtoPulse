@@ -22,6 +22,7 @@ PP_NLM_LOCK_TIMEOUT="${PP_NLM_LOCK_TIMEOUT:-900}"
 
 PP_NLM_CORE_ID="${PP_NLM_CORE_ID:-7565a078-8051-43ea-8512-c54c3b4d363e}"
 PP_NLM_HARDWARE_ID="${PP_NLM_HARDWARE_ID:-bb95833a-926e-47b1-8f45-d23427fbc58d}"
+PP_NLM_DEVLAB_QUEUE_ON_WRITE="${PP_NLM_DEVLAB_QUEUE_ON_WRITE:-1}"
 
 mkdir -p "$PP_NLM_STATE" "$PP_NLM_LOGS"
 [ -f "$PP_NLM_SOURCE_MANIFEST" ] || echo "{}" > "$PP_NLM_SOURCE_MANIFEST"
@@ -156,6 +157,20 @@ pp_nlm_tail_error() {
   tail -8 | tr '\n' '|' | cut -c1-1000
 }
 
+pp_nlm_request_devlab_sync() {
+  local canonical_alias="$1" title="${2:-}"
+  [ "$PP_NLM_DEVLAB_QUEUE_ON_WRITE" = "1" ] || return 0
+  case "$canonical_alias" in
+    pp-core|pp-hardware)
+      "$PP_NLM_ROOT/scripts/pp-nlm/request-devlab-sync.sh" \
+        --request \
+        --source "$canonical_alias" \
+        --title "$title" \
+        --reason "canonical-source-write" >/dev/null 2>&1 || true
+      ;;
+  esac
+}
+
 pp_nlm_source_add_file() {
   local requested_alias="$1" file="$2" title="$3" kind="${4:-file}" original_source_id="${5:-}"
   if [ ! -f "$file" ]; then
@@ -196,6 +211,7 @@ pp_nlm_source_add_file() {
       existing="$(pp_nlm_reconcile_source_id "$target_id" "$title" || true)"
       if [ -n "$existing" ]; then
         pp_nlm_manifest_record "$requested_alias" "$canonical_alias" "$target_id" "$existing" "$title" "$file" "$kind" "$content_hash" "already_present_reconciled" 1 "" "$original_source_id"
+        pp_nlm_request_devlab_sync "$canonical_alias" "$title"
         echo "  skip: [$canonical_alias] $title (already present -> $existing)"
         exit 0
       fi
@@ -217,6 +233,7 @@ pp_nlm_source_add_file() {
       status="added"
       [ -n "$sid" ] || { sid="unknown-$(date +%s)"; status="added_unreconciled"; }
       pp_nlm_manifest_record "$requested_alias" "$canonical_alias" "$target_id" "$sid" "$title" "$file" "$kind" "$content_hash" "$status" 1 "" "$original_source_id"
+      pp_nlm_request_devlab_sync "$canonical_alias" "$title"
       exit 0
     fi
 
@@ -224,6 +241,7 @@ pp_nlm_source_add_file() {
     if [ -n "$sid" ]; then
       status="unknown_reconciled"
       pp_nlm_manifest_record "$requested_alias" "$canonical_alias" "$target_id" "$sid" "$title" "$file" "$kind" "$content_hash" "$status" 1 "$err" "$original_source_id"
+      pp_nlm_request_devlab_sync "$canonical_alias" "$title"
       echo "  reconciled: [$canonical_alias] $title -> $sid"
       exit 0
     fi
@@ -267,6 +285,7 @@ pp_nlm_source_add_url() {
     existing="$(pp_nlm_reconcile_source_id "$target_id" "$title" || true)"
     if [ -n "$existing" ]; then
       pp_nlm_manifest_record "$requested_alias" "$canonical_alias" "$target_id" "$existing" "$title" "$url" "url" "$content_hash" "already_present_reconciled" 1 ""
+      pp_nlm_request_devlab_sync "$canonical_alias" "$title"
       echo "  skip: [$canonical_alias] $title (already present -> $existing)"
       exit 0
     fi
@@ -286,12 +305,14 @@ pp_nlm_source_add_url() {
       status="added"
       [ -n "$sid" ] || { sid="unknown-$(date +%s)"; status="added_unreconciled"; }
       pp_nlm_manifest_record "$requested_alias" "$canonical_alias" "$target_id" "$sid" "$title" "$url" "url" "$content_hash" "$status" 1 ""
+      pp_nlm_request_devlab_sync "$canonical_alias" "$title"
       exit 0
     fi
 
     sid="$(pp_nlm_reconcile_source_id "$target_id" "$title" || true)"
     if [ -n "$sid" ]; then
       pp_nlm_manifest_record "$requested_alias" "$canonical_alias" "$target_id" "$sid" "$title" "$url" "url" "$content_hash" "unknown_reconciled" 1 "$err"
+      pp_nlm_request_devlab_sync "$canonical_alias" "$title"
       exit 0
     fi
 

@@ -41,6 +41,8 @@ ProtoPulse accumulated 744+ atomic vault notes, 25+ plans, 231KB of MASTER_BACKL
 bash scripts/pp-nlm/sync-devlab.sh --apply
 ```
 
+Canonical `pp-core`/`pp-hardware` writes through `scripts/pp-nlm/lib/write-helpers.sh` also request a delayed DevLab sync automatically. Requests are coalesced by `scripts/pp-nlm/request-devlab-sync.sh`, so bursts of source writes collapse into one mirror pass. Cron should run `request-devlab-sync.sh --run-due` frequently and `sync-devlab.sh --apply` once daily for drift reconciliation.
+
 ### Compatibility aliases
 
 These aliases remain for ergonomics and old commands, but they are not separate notebooks anymore.
@@ -175,6 +177,8 @@ nlm pipeline run <alias> <pipeline-name> [--topic "..."]
 0 9 1 * *   /home/wtyler/.local/bin/nlm mindmap create pp-backlog --title "Backlog map $(date -u +\%Y-\%m)" --confirm >> /home/wtyler/.claude/logs/pp-nlm-monthly.log 2>&1
 0 8 * * *   timeout 45s /home/wtyler/.local/bin/nlm doctor >> /home/wtyler/.claude/logs/pp-nlm-auth.log 2>&1
 */30 * * * * /home/wtyler/Projects/ProtoPulse/.claude/hooks/pp-nlm-studio-archive.sh >> /home/wtyler/.claude/logs/pp-nlm-archive.log 2>&1
+*/15 * * * * /home/wtyler/Projects/ProtoPulse/scripts/pp-nlm/request-devlab-sync.sh --run-due >> /home/wtyler/.claude/logs/pp-nlm-devlab-autosync.log 2>&1
+20 8 * * *   /home/wtyler/Projects/ProtoPulse/scripts/pp-nlm/sync-devlab.sh --apply >> /home/wtyler/.claude/logs/pp-nlm-devlab-sync.log 2>&1
 ```
 
 Snippet at `scripts/pp-nlm/crontab.snippet`. Tyler installs via `crontab -e` paste.
