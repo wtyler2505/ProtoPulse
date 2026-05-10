@@ -1,97 +1,81 @@
-# Task Handoff #2 to Codex — BL-0875 source-code axe fixes (bulk mechanical)
+# Codex Collaboration Handoff — Tauri v2 Desktop Migration Deep Plan
 
 **From:** Claude Code
 **Date:** 2026-05-09
-**Priority:** medium
-**Coordination:** Tyler may have a separate Codex session on NLM. **This is NOT NLM work** — it's a11y source-code fixes in `client/src/components/views/*.tsx`. Stay clear of `data/pp-nlm/`, `scripts/pp-nlm/`, `.claude/skills/pp-knowledge/`, `.claude/skills/pp-nlm-operator/`, `docs/notebooklm.md`. Claude is concurrently working `server/collaboration.ts` + `shared/collaboration.ts` (BL-0879 CRDT) — do NOT touch those.
+**Priority:** high
+**Mode:** **PEER COLLABORATION — bidirectional adversarial review** (per Tyler's HARD RULE: never one-shot RPC; always multiple review cycles)
+**Replaces:** the prior BL-0875 a11y handoff (already done — CODEX_DONE.md confirms)
 
-## Background
+## Tyler's directive (verbatim, this session)
 
-Previous Codex handoff verified BL-0876 (ECONNREFUSED → 0, 73/73 sentinel suite passing). Per CODEX_DONE.md from that run, BL-0875 a11y suite has 10 real axe-core violations across 9 views. These are SOURCE-CODE bugs (not test-setup bugs). Most are missing `aria-label` on icon-only buttons and missing `<label>` on inputs.
+> "I would like you to dive deeper into all of the sources that you need to dive into in that are any way related to this because it's probably gonna be a big undertaking. ... use all of the tools that you have for working with Notebook LM either through CLI or through the MCP tools. ... Don't just take what we have in the sources at face value. Verify everything that we have already quote, unquote, verified in the notebook. Use the deep research capability through the notebook LMMCP server to do further research on any gaps we're missing information and knowledge for, especially up to date and accurate shit. I don't care how long this takes but I want every single detail planned out, deep researched, documented, added to the notebook, talked about between you and querying the AI chat in the notebook. And I also want you to fully utilize codex as a peer, a collaborator, a verifier. Y'all two should be working closely together to talk everything through, run ideas by each other, plan everything out, to the finest little detail, verify those plans amongst each other, bounce things back and forth, iterate, innovate, be creative, all that good shit."
 
-## Tasks
+## Scope
 
-### Task 1 — Fix all 10 real axe violations
+Build a comprehensive, deeply-researched, no-time-pressure implementation plan for converting ProtoPulse from its current partial Tauri v2 scaffold into a production-ready desktop application. This is NOT one-shot work — it's a multi-phase, multi-round, adversarial-review undertaking.
 
-Per Codex-1's triage, the violations are:
+## Context — read first
 
-| View | File | Violations |
-|---|---|---|
-| ComponentEditorView | `client/src/components/views/ComponentEditorView.tsx` | label |
-| CalculatorsView | `client/src/components/views/CalculatorsView.tsx` | aria-prohibited-attr, aria-valid-attr-value, button-name |
-| DesignPatternsView | `client/src/components/views/DesignPatternsView.tsx` | button-name |
-| KanbanView | `client/src/components/views/KanbanView.tsx` | button-name |
-| KnowledgeView | `client/src/components/views/KnowledgeView.tsx` | button-name |
-| BoardViewer3DView | `client/src/components/views/BoardViewer3DView.tsx` | button-name, label |
-| CommunityView | `client/src/components/views/CommunityView.tsx` | button-name |
-| PcbOrderingView | `client/src/components/views/PcbOrderingView.tsx` | button-name |
-| GenerativeDesignView | `client/src/components/views/GenerativeDesignView.tsx` | aria-prohibited-attr, label |
-| AuditTrailView | `client/src/components/views/AuditTrailView.tsx` | button-name |
+Before responding, read in this order:
+1. `docs/audits/2026-05-09-tauri-v2-migration-phase0-findings.md` — Phase 0 inventory + drift analysis + phase plan + the 12 pp-core source IDs + the gaps and stale debt notes
+2. `src-tauri/tauri.conf.json` — current config (CSP is SET, withGlobalTauri:FALSE — knowledge debt notes are PARTIALLY STALE)
+3. `src-tauri/Cargo.toml` — current Rust deps (missing serial plugin, hid plugin, updater, no release profile)
+4. `src-tauri/src/lib.rs` — verify or refute the "spawns Express via global node" debt note (Claude has not yet read this in Phase 0)
+5. `src-tauri/capabilities/default.json` — verify or refute the "spawn_process exposed without allowlist" debt note
+6. `knowledge/tauri-csp-disabled-plus-global-tauri-equals-xss-to-rce.md` — note (partially stale per Phase 0 finding)
+7. `knowledge/tauri-node-sidecar-is-not-self-contained-and-crashes-without-global-node.md` — note (status TBD)
+8. The pp-core notebook (use `nlm notebook query pp-core` or MCP `notebook_query`) — 12 Tauri-related sources listed in the Phase 0 doc
 
-For each:
+## Lane split for this collaboration
 
-1. Read the source file.
-2. Run `NODE_OPTIONS="--max-old-space-size=4096" npx vitest run client/src/__tests__/a11y.test.tsx -t "<ViewName>" 2>&1 | tee logs/tests-a11y-<view>-pretest.log` (background) to get the exact axe message + failing element selectors.
-3. Apply the minimal fix per WCAG:
-   - **button-name**: icon-only `<button>` needs `aria-label="<verb> <noun>"` (e.g., `aria-label="Close dialog"`). Don't invent random labels — read what the button does and label accordingly.
-   - **label**: form inputs need an associated `<label htmlFor>` OR `aria-label`/`aria-labelledby`. Prefer real visible labels per WCAG 3.3.2 unless the existing UI is intentionally label-less.
-   - **aria-prohibited-attr**: an ARIA attribute is on an element where it's not allowed. Remove it OR change the element role appropriately. Read https://www.w3.org/TR/wai-aria-1.2/#prohibitedattributes for the rule.
-   - **aria-valid-attr-value**: the attribute value is invalid (e.g., `aria-controls="undefined"`). Fix the value source.
-4. Re-run the targeted axe test to confirm 0 violations for that view.
+Both of us touch the plan + verification. To avoid stomping:
 
-### Task 2 — Verify final count
+| Domain | Owner |
+|---|---|
+| `docs/plans/2026-05-09-tauri-v2-desktop-migration.md` (the plan doc) | **Claude writes draft → Codex reviews → adversarial cycles** |
+| `docs/audits/2026-05-09-tauri-v2-migration-*.md` (audit/findings docs) | **Whoever produces the finding owns their doc** — Claude wrote the Phase 0 doc, Codex writes their critique as a sibling doc |
+| `knowledge/tauri-*.md` updates (debt note frontmatter status changes) | **Joint** — coordinate via this handoff doc; one of us writes, the other reviews before commit |
+| `src-tauri/**/*` code changes | **DEFERRED** until plan is complete and approved by Tyler. No code edits during planning. |
+| pp-core notebook source additions (`source_add`) | **Codex owns NLM infrastructure writes** — Claude requests via this handoff, Codex executes |
+| pp-core notebook reads (`source_get_content`, `notebook_query`) | **Both** — concurrent reads are safe |
+| pp-core notebook deep research (`research_start` / `research_status` / `research_import`) | **Joint** — coordinate which queries each runs to avoid duplicate API spend |
+| `nlm chat` extended conversations with notebook AI | **Joint** — pool insights into the plan doc |
+| `data/pp-nlm/**`, `scripts/pp-nlm/**`, `.claude/skills/pp-knowledge/`, `.claude/skills/pp-nlm-operator/`, `docs/notebooklm.md`, hooks | **Codex owns** (per established lane rule) — Claude doesn't touch infra files |
 
-After all 10 are fixed:
+## Round 1 ask for Codex
 
-```bash
-NODE_OPTIONS="--max-old-space-size=4096" npx vitest run client/src/__tests__/a11y.test.tsx 2>&1 | tee logs/tests-a11y-bl0875-after.log
-```
+**Critique the Phase 0 findings doc (`docs/audits/2026-05-09-tauri-v2-migration-phase0-findings.md`).** Specifically:
 
-Count: `grep -c "violations:" logs/tests-a11y-bl0875-after.log`. Expected reduction: 10 → 0 for these specific rules.
+1. **Are the drift findings correct?** Read `src-tauri/src/lib.rs` + `src-tauri/capabilities/default.json` and verify or refute Phase 0's "TBD" claims. Update the drift table with what you find. Write your findings to `docs/audits/2026-05-09-tauri-v2-migration-phase0-codex-verify.md`.
+2. **Is the proposed phase ordering (Phase 5 in the doc) right?** Are there hard dependencies between phases that the proposed order violates? Should anything move earlier/later?
+3. **Are there gaps in the gap-analysis list (Phase 3)?** Tauri 2026 best-practices we're missing? E.g., I haven't included: app-state persistence, internationalization plugin scope, autostart/login-item plugin, deep linking (`tauri-plugin-deep-link`), WebView2 update channel pinning, Linux AppImage vs deb vs Flatpak distribution decisions, Snap/Flathub publication, telemetry consent UX patterns. Add what's missing.
+4. **What's wrong / risky about the proposed lane split above?** Push back if anything's underspecified.
+5. **What should Round 2 focus on?** Propose the next adversarial cut.
 
-### Task 3 — Update BL-0875 in MASTER_BACKLOG.md
+When done, write your full critique to `CODEX_RESPONSE_TAURI.md` with the structured shape Codex usually uses (STATUS / TASKS_COMPLETED / NEXT_STEPS / BLOCKERS).
 
-Note that the 10 source-code axe violations are CLOSED, the 1 TooltipProvider test-harness wrapper for ArchitectureView remains, and the harness failures (DashboardView, Breadboard, Procurement, CircuitCodeView, ArduinoWorkbenchView, SchematicView) are still open as a separate test-harness sub-cluster.
+## Hard rules (non-negotiable)
 
-If BL-0875 is reduced to ONLY test-harness failures (no source-code axe violations remaining), you may split it: keep BL-0875 for harness work, carve a new BL-0880 for "BL-0875 source-code axe fixes — DONE" as historical record.
+- **No code edits to `src-tauri/`** during planning. We're inventorying + planning, not implementing.
+- **No deletions** of stale knowledge notes — update frontmatter `status:` fields, add resolution dates, but preserve the historical content.
+- **Cite source URLs** for any claim about Tauri v2 / plugin / CLI behavior. Training data is stale.
+- **Use Context7 + WebSearch May 2026** before claiming current behavior of any library/CLI/framework. The `pp-core` notebook content can also be stale — verify against upstream when in doubt.
+- **Multiple review rounds** — don't return a one-shot "looks good." Push back. Find holes. Disagree productively.
+- **No stopping points suggested** — when you finish a round, immediately propose the next round of work.
 
-## Constraints
+## Constraints from session context
 
-- **Do NOT touch** `client/src/test-setup.ts` (Claude's BL-0876 fix landed there — leave it).
-- **Do NOT touch** `server/collaboration.ts` or `shared/collaboration.ts` — Claude is concurrently fixing BL-0879 there.
-- **Do NOT touch** any NLM territory paths (see top of file).
-- **Do NOT** add visible labels that change the visible UI design unless the existing design is broken — prefer `aria-label` for icon-only controls per common WCAG practice. The goal is screen-reader access, not visual redesign.
-- Each fix should be the SMALLEST change that satisfies axe. Don't refactor surrounding code.
-- Commit per view OR one commit at the end with clear message — your call.
+- Claude's session context is at capacity at end of Phase 0 — Tyler will likely `/clear` and resume in a fresh Claude session before Round 1 critique-of-critique. Codex can start immediately on the Phase 0 critique while Claude session resets.
+- The pending PP-NLM session recap at `~/.claude/state/pp-nlm/pending-recap.md` is from a different session — don't apply or discard, leave for Tyler.
 
-## Output: write `CODEX_DONE.md` with this exact shape
+## Success criteria (multi-round, not single-shot)
 
-```markdown
-STATUS: [done|partial|blocked]
-TASKS_COMPLETED: [1, 2, 3 or subset]
+- [ ] Codex Round 1 critique returned (this round)
+- [ ] Claude Round 2 reply (next session)
+- [ ] Codex Round 2 counter
+- [ ] ... continue until both agree there are no open holes
+- [ ] Final plan in `docs/plans/2026-05-09-tauri-v2-desktop-migration.md` follows the canonical plan template
+- [ ] Plan added as new pp-core source (Codex executes via `source_add`)
+- [ ] Tyler explicitly approves before any `src-tauri/` code edits begin
 
-BL-0875 source-code axe fix:
-- Views fixed: <count> / 10
-- Per-view changes summary:
-  - ComponentEditorView: <description of what was added/changed>
-  - CalculatorsView: <description>
-  - ... (one line per view)
-- a11y suite axe-violation count before: 10
-- a11y suite axe-violation count after: <count>
-- Remaining failures in a11y suite (non-axe): <list>
-
-MASTER_BACKLOG.md updates:
-- BL-0875: <new status / new note>
-- BL-0880 (if created): <description>
-
-BLOCKERS: <any unexpected issues>
-NEXT_STEPS: <what's still pending>
-```
-
-## Success criteria
-
-- [ ] All 10 source-code axe violations resolved
-- [ ] a11y test suite shows reduced axe-violation count
-- [ ] BL-0875 row in MASTER_BACKLOG.md updated (or split with BL-0880)
-- [ ] CODEX_DONE.md written with structured output
-- [ ] No untouched files in claimed-out territory (test-setup.ts, collaboration.ts, NLM paths)
+Tyler's the deciding voice. We don't ship code without his sign-off.
