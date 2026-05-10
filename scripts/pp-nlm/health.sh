@@ -8,7 +8,9 @@ STATE="${PP_NLM_STATE:-$HOME/.claude/state/pp-nlm}"
 LOGS="${PP_NLM_LOGS:-$HOME/.claude/logs}"
 SOURCE_MANIFEST="$STATE/source-manifest.json"
 NOTEBOOK_MANIFEST="$STATE/notebook-manifest.json"
+DEVLAB_MIRROR_MANIFEST="$STATE/devlab-mirror-manifest.json"
 ARCHIVE_MANIFEST="$ROOT/docs/nlm-archive/manifest.json"
+DEVLAB_SOURCE_TIMEOUT="${PP_NLM_HEALTH_DEVLAB_SOURCE_TIMEOUT:-120s}"
 
 CORE_ID="7565a078-8051-43ea-8512-c54c3b4d363e"
 HARDWARE_ID="bb95833a-926e-47b1-8f45-d23427fbc58d"
@@ -57,7 +59,7 @@ echo
 echo "Private DevLab"
 id="$(timeout 20s nlm alias get pp-devlab 2>/dev/null | tail -1 || true)"
 if [ "$id" = "$DEVLAB_ID" ]; then
-  count="$(timeout 60s nlm source list pp-devlab --json 2>/dev/null | jq 'length' 2>/dev/null || echo "unknown")"
+  count="$(timeout "$DEVLAB_SOURCE_TIMEOUT" nlm source list pp-devlab --json 2>/dev/null | jq 'length' 2>/dev/null || echo "unknown")"
   echo "  OK: pp-devlab -> $id ($count sources)"
 else
   echo "  WARN: pp-devlab -> ${id:-unresolved} (expected $DEVLAB_ID)"
@@ -79,6 +81,22 @@ if [ -f "$SOURCE_MANIFEST" ]; then
   echo "  unresolved_or_failed: $unresolved"
 else
   echo "  WARN: missing $SOURCE_MANIFEST"
+fi
+echo
+
+echo "DevLab Mirror Manifest"
+if [ -f "$DEVLAB_MIRROR_MANIFEST" ]; then
+  jq -r '
+    .sources
+    | to_entries
+    | group_by(.value.status)
+    | map({status: .[0].value.status, count: length})
+    | sort_by(.status)
+    | .[]
+    | "  \(.status): \(.count)"
+  ' "$DEVLAB_MIRROR_MANIFEST" 2>/dev/null || echo "  WARN: could not parse $DEVLAB_MIRROR_MANIFEST"
+else
+  echo "  WARN: missing $DEVLAB_MIRROR_MANIFEST"
 fi
 echo
 

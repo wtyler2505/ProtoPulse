@@ -46,6 +46,7 @@ ORIGINS = {
         "label": "Hardware",
     },
 }
+UNRESOLVED_STATUSES = {"content_failed", "add_failed", "add_unknown"}
 
 
 def now() -> str:
@@ -103,6 +104,10 @@ def mirror_title(origin_label: str, title: str, sid: str) -> str:
     return f"{origin_label} Mirror :: {title} [{sid[:8]}]"
 
 
+def metadata_gap_title(origin_label: str, title: str, sid: str) -> str:
+    return f"{origin_label} Mirror Metadata Gap :: {title} [{sid[:8]}]"
+
+
 def compose_mirror_text(
     origin_alias: str,
     sid: str,
@@ -128,6 +133,37 @@ def compose_mirror_text(
             "BEGIN ORIGIN SOURCE CONTENT",
             content,
             "END ORIGIN SOURCE CONTENT",
+            "",
+        ]
+    )
+
+
+def compose_metadata_gap_text(
+    origin_alias: str,
+    sid: str,
+    title: str,
+    source_type: str,
+    url: str | None,
+    error: str,
+) -> str:
+    return "\n".join(
+        [
+            "# ProtoPulse DevLab Mirror Metadata Gap",
+            "",
+            "Mirror schema: protopulse-devlab-metadata-gap-v1",
+            f"Origin hub: {origin_alias}",
+            f"Origin source ID: {sid}",
+            f"Origin source title: {title}",
+            f"Origin source type: {source_type}",
+            f"Origin URL: {url or 'none'}",
+            f"Checked at: {now()}",
+            "",
+            "---",
+            "",
+            "The origin source appears in the live NotebookLM source list, but NotebookLM did not return source content.",
+            "This DevLab source is a non-canonical gap marker, not a substitute for the missing article/source body.",
+            "",
+            f"Last content error: {error}",
             "",
         ]
     )
@@ -190,6 +226,41 @@ def find_target_by_title(target_sources: list[dict[str, Any]], title: str) -> st
     return None
 
 
+def reconcile_missing_origin_sources(
+    manifest: dict[str, Any],
+    origin_alias: str,
+    origin_sources: list[dict[str, Any]],
+) -> int:
+    live_ids = {source_id(source) for source in origin_sources if source_id(source)}
+    reconciled = 0
+    for key, row in list(manifest.get("sources", {}).items()):
+        if row.get("origin_alias") != origin_alias:
+            continue
+        if row.get("status") not in UNRESOLVED_STATUSES:
+            continue
+        origin_id = row.get("origin_id") or key.split(":", 1)[-1]
+        if origin_id in live_ids:
+            continue
+        record_source(
+            manifest,
+            key=key,
+            origin_alias=origin_alias,
+            origin_id=origin_id,
+            origin_title=row.get("origin_title") or "Unknown missing origin source",
+            origin_type=row.get("origin_type") or "unknown",
+            origin_url=row.get("origin_url"),
+            mirror_title_value=row.get("mirror_title") or "Missing origin source",
+            mirror_source_id=row.get("mirror_source_id"),
+            content_hash=row.get("content_hash"),
+            status="origin_missing",
+            cache_path=Path(row["cache_path"]) if row.get("cache_path") else None,
+            error="origin source no longer appears in the live origin source list",
+        )
+        log(f"reconciled missing origin: {key} {row.get('origin_title') or origin_id}")
+        reconciled += 1
+    return reconciled
+
+
 def get_source_content(
     client: Any,
     sid: str,
@@ -234,6 +305,8 @@ def sync_origin(
     log(f"list origin: {origin_alias}")
     origin_sources = client.get_notebook_sources_with_types(origin_id)
     log(f"origin count: {origin_alias} = {len(origin_sources)}")
+    if reconcile_missing_origin_sources(manifest, origin_alias, origin_sources):
+        write_json(MIRROR_MANIFEST, manifest)
 
     attempts = 0
     for idx, source in enumerate(origin_sources, start=1):
@@ -245,8 +318,10 @@ def sync_origin(
         url = source.get("url")
         key = f"{origin_alias}:{sid}"
         mtitle = mirror_title(label, title, sid)
+        gtitle = metadata_gap_title(label, title, sid)
         cached = manifest.get("sources", {}).get(key, {})
         existing_id = find_target_by_title(target_sources, mtitle)
+        existing_gap_id = find_target_by_title(target_sources, gtitle)
 
         if existing_id and cached.get("status") in {"mirrored", "already_present", "mirrored_after_timeout"}:
             log(f"skip mirrored: {origin_alias} {idx}/{len(origin_sources)} {title}")
@@ -303,6 +378,26 @@ def sync_origin(
             content_hash = sha256_text(mirror_text)
         except Exception as exc:
             log(f"WARN content failed: {origin_alias} {sid} {title} :: {exc}")
+            remote_id = existing_gap_id
+            status = "metadata_gap"
+            gap_text = compose_metadata_gap_text(origin_alias, sid, title, stype, url, str(exc))
+            gap_path = base.with_suffix(".metadata-gap.txt")
+            gap_path.write_text(gap_text, encoding="utf-8")
+            content_hash = sha256_text(gap_text)
+            if not remote_id:
+                try:
+                    log(f"metadata gap add: {origin_alias} {idx}/{len(origin_sources)} {title}")
+                    result = client.add_text_source(TARGET_ID, gap_text, gtitle, wait=False)
+                    remote_id = result.get("id") if isinstance(result, dict) else None
+                except Exception as add_exc:
+                    log(f"WARN metadata gap add failed: {origin_alias} {sid} {title} :: {add_exc}")
+                    status = "content_failed"
+                    remote_id = None
+            if not remote_id and status == "metadata_gap":
+                target_sources = client.get_notebook_sources_with_types(TARGET_ID)
+                remote_id = find_target_by_title(target_sources, gtitle)
+            if not remote_id:
+                status = "content_failed"
             record_source(
                 manifest,
                 key=key,
@@ -311,14 +406,16 @@ def sync_origin(
                 origin_title=title,
                 origin_type=stype,
                 origin_url=url,
-                mirror_title_value=mtitle,
-                mirror_source_id=None,
-                content_hash=None,
-                status="content_failed",
-                cache_path=raw_path,
+                mirror_title_value=gtitle if remote_id else mtitle,
+                mirror_source_id=remote_id,
+                content_hash=content_hash if remote_id else None,
+                status=status,
+                cache_path=gap_path if remote_id else raw_path,
                 error=str(exc),
             )
             write_json(MIRROR_MANIFEST, manifest)
+            if remote_id:
+                target_sources.append({"id": remote_id, "title": gtitle})
             continue
 
         try:
