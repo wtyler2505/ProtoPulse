@@ -1,5 +1,9 @@
 # Tauri IPC Contract Table
 
+## Supersession
+
+**Note (2026-05-10, Round 4 supersession):** This ADR documents the manual command-rename path proposed in Round 3. **The plan-doc** (`docs/plans/2026-05-10-tauri-v2-desktop-migration.md` Phase 1.3) **supersedes the manual fix with `tauri-specta` auto-generated bindings.** This ADR remains valuable as the contract baseline + drift-test design + Rust-only-command audit, but agents must adopt the `tauri-specta` path - DO NOT manually rename commands.
+
 **Status:** Proposed contract baseline  
 **Date:** 2026-05-10  
 **Scope:** `client/src/lib/tauri-api.ts` paired against `src-tauri/src/lib.rs` without editing `src-tauri/`.
