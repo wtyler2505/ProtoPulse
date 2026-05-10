@@ -29,12 +29,14 @@ bash -n scripts/pp-nlm/health.sh scripts/pp-nlm/sync-devlab.sh scripts/pp-nlm/re
 scripts/pp-nlm/request-devlab-sync.sh --status
 PP_NLM_DEVLAB_AUTOSYNC_MIN_INTERVAL=0 scripts/pp-nlm/request-devlab-sync.sh --request --source pp-core --title "autosync self-test" --reason "verification" --no-spawn
 PP_NLM_DEVLAB_AUTOSYNC_MIN_INTERVAL=0 scripts/pp-nlm/request-devlab-sync.sh --run-due
+crontab -l
+crontab /tmp/protopulse-crontab.NL1pM7
 python3 -c 'import ast, pathlib; ast.parse(pathlib.Path("scripts/pp-nlm/devlab_mirror_sync.py").read_text())'
 git diff --check
 ```
 
 ## Next Steps
-- `pp-core`/`pp-hardware` writes now request DevLab sync automatically. Cron should include `scripts/pp-nlm/request-devlab-sync.sh --run-due` plus a daily `scripts/pp-nlm/sync-devlab.sh --apply` reconciliation pass from `scripts/pp-nlm/crontab.snippet`.
+- `pp-core`/`pp-hardware` writes now request DevLab sync automatically. The live user crontab now includes `scripts/pp-nlm/request-devlab-sync.sh --run-due` every 15 minutes and a daily `scripts/pp-nlm/sync-devlab.sh --apply` reconciliation pass.
 - Re-run `bash scripts/pp-nlm/sync-devlab.sh --apply` manually whenever you want immediate full reconciliation.
 - Repair or remove the one stale `pp-core` origin URL if Tyler wants canonical cleanup. DevLab now carries an explicit metadata gap marker for it.
 
@@ -45,3 +47,5 @@ git diff --check
 `pp-devlab` is live and queryable. Health reports `pp-devlab -> d4188389-eef8-4aa3-a27d-1fed3f8cf444 (290 sources)`. The mirror manifest currently reports `288` mirrored, `1` already present, and `1` metadata_gap, with `unresolved_or_failed: 0` in the source manifest. A DevLab query cited both Core and Hardware mirror sources, proving the sandbox can answer across the combined mirrored corpus. The DevLab chat config was applied live with the hardened sandbox prompt. DevLab now has both on-write autosync requests and cron fallback paths.
 
 The DevLab autosync request runner was verified end to end with a no-spawn self-test request and immediate `--run-due`; it ran an idempotent mirror sync and cleared the pending request.
+
+The live crontab was merged after implementation. It preserves Tyler's existing ProtoPulse auto-push job, replaces the old `nlm login --check` auth probe with bounded `timeout 45s nlm doctor`, and adds both DevLab autosync cron entries. A final `bash scripts/pp-nlm/health.sh` pass reported auth OK, both live hubs OK, `pp-devlab` at 290 sources, mirror statuses of `288` mirrored / `1` already present / `1` metadata_gap, and `unresolved_or_failed: 0`.
