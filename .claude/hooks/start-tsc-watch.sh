@@ -8,7 +8,7 @@ if tmux has-session -t tsc-watch 2>/dev/null; then
 fi
 
 tmux new-session -d -s tsc-watch \
-  "cd /home/wtyler/Projects/ProtoPulse && npx tsc --noEmit --watch --pretty false 2>&1 | tee .claude/.tsc-errors.log" 2>/dev/null
+  "cd /home/wtyler/Projects/ProtoPulse && NODE_OPTIONS='--max-old-space-size=16384' npx tsc --noEmit --watch --pretty false 2>&1 | tee .claude/.tsc-errors.log" 2>/dev/null
 
 echo "{}"
 exit 0
