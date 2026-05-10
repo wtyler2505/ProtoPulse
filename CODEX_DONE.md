@@ -1,63 +1,69 @@
 # Codex Completion Report
 
-**Task:** Round 2 of the Tauri v2 migration deep plan: self-critique, 12 NotebookLM deep-research topics, and revised drift/phasing.
+**Task:** Round 3 of the Tauri v2 migration deep plan: topology ADR, IPC contract table, release trust model ADR, and implementation plan draft.
 **Status:** done
 
 ## Changes Made
 
-- `CODEX_RESPONSE_TAURI_R2_SELFCRITIQUE.md` - Counter-critique of Round 1, including claim-confidence register, weak-source flags, failure scenarios, and the top 3 Round 3 unknowns.
-- `docs/audits/2026-05-09-tauri-v2-migration-r2-deep-research.md` - NotebookLM Round 2 research audit with all 12 topics, completed task IDs, imported pp-core source IDs, source URLs, summaries, and failure/thin-result notes.
-- `docs/audits/2026-05-09-tauri-v2-migration-r2-revised-phasing.md` - Updated drift table and revised 12-phase ordering based on Phase 0, Round 1, and Round 2 research.
-- `CODEX_DONE.md` - Updated this completion report.
+- `docs/decisions/2026-05-10-adr-tauri-runtime-topology.md` - Chose Path C hybrid topology with justification, phase implications, reversibility, and Tyler ratification questions.
+- `docs/decisions/2026-05-10-tauri-ipc-contract.md` - Added full bridge/handler contract table, including mismatches and drift-test specification.
+- `docs/decisions/2026-05-10-adr-release-trust-model.md` - Added Windows, macOS, updater custody, CI matrix/Linux format, and source-map/debug artifact decisions.
+- `docs/plans/2026-05-10-tauri-v2-desktop-migration.md` - Drafted 12-phase implementation plan using the canonical plan structure, including Phase 1 bridge wiring, missing `dist/index.cjs`, and Phase 3 8-bucket storage migration.
+- `knowledge/tauri-csp-disabled-plus-global-tauri-equals-xss-to-rce.md` - Frontmatter-only verification marker and `partially-resolved` status update.
+- `knowledge/tauri-node-sidecar-is-not-self-contained-and-crashes-without-global-node.md` - Frontmatter-only verification marker and `partially-resolved` status update.
+- `CODEX_DONE.md` - Updated this completion report with Round 4 focus proposal.
 
 ## Commands Run
 
 ```bash
 sed -n '1,260p' CODEX_HANDOFF.md
-sed -n '1,220p' CODEX_DONE.md
 git status --short
-sed -n '1,220p' /home/wtyler/.codex/skills/notebooklm-cli/SKILL.md
-sed -n '1,220p' /home/wtyler/.agents/skills/nlm-skill/SKILL.md
-sed -n '1,220p' /home/wtyler/.codex/skills/notebooklm-mcp/SKILL.md
-sed -n '1,220p' .claude/skills/pp-knowledge/SKILL.md
-sed -n '1,260p' .claude/skills/pp-nlm-operator/SKILL.md
-nlm --version
-nlm login --check
-nlm alias get pp-core
-cp -a /home/wtyler/.notebooklm-mcp-cli/. /tmp/protopulse-nlm-profile/
-NOTEBOOKLM_MCP_CLI_PATH=/tmp/protopulse-nlm-profile timeout 45s nlm login --check
-mcp__notebooklm_mcp__.research_start(query="Tauri v2 auto-updater best practices and signing key management 2026", notebook_id="7565a078-8051-43ea-8512-c54c3b4d363e", source="web", mode="deep")
-NOTEBOOKLM_MCP_CLI_PATH=/tmp/protopulse-nlm-profile nlm research status 7565a078-8051-43ea-8512-c54c3b4d363e --task-id 3b0e3bff-cfc1-4bb9-9c49-535ef88fddc9 --max-wait 0 --full
-NOTEBOOKLM_MCP_CLI_PATH=/tmp/protopulse-nlm-profile nlm research import 7565a078-8051-43ea-8512-c54c3b4d363e 3b0e3bff-cfc1-4bb9-9c49-535ef88fddc9 --indices 1,2,3,5,8,9,12,15,16,20,29,35,38,40,42,44,46,67 --timeout 600
-NOTEBOOKLM_MCP_CLI_PATH=/tmp/protopulse-nlm-profile nlm research start --force --source web --mode deep --notebook-id 7565a078-8051-43ea-8512-c54c3b4d363e "Tauri v2 auto-updater best practices and signing key management 2026"
-NOTEBOOKLM_MCP_CLI_PATH=/tmp/protopulse-nlm-profile nlm research status 7565a078-8051-43ea-8512-c54c3b4d363e --task-id ff2bf676-7b13-4575-a47f-92e0190539b9 --max-wait 600 --poll-interval 30 --full
-NOTEBOOKLM_MCP_CLI_PATH=/tmp/protopulse-nlm-profile nlm research import 7565a078-8051-43ea-8512-c54c3b4d363e ff2bf676-7b13-4575-a47f-92e0190539b9 --indices 1,2,4,5,6,8,11,12,13,16,17,21,22,30,36 --timeout 600
-zsh # sequential harness for topics 2,3,4,5,7,8,9,10,11,12 using nlm research start/status/import
-NOTEBOOKLM_MCP_CLI_PATH=/tmp/protopulse-nlm-profile nlm research import 7565a078-8051-43ea-8512-c54c3b4d363e b5aa3a92-3bdd-419b-8f7e-5fee538fd685 --indices 1,3,5,6,8,10,11,16,38,43,63 --timeout 600
-NOTEBOOKLM_MCP_CLI_PATH=/tmp/protopulse-nlm-profile nlm research import 7565a078-8051-43ea-8512-c54c3b4d363e 8814581a-4370-4953-a179-80227445ba12 --indices 5,6,8,10,12,14,16,17,22,32 --timeout 600
-NOTEBOOKLM_MCP_CLI_PATH=/tmp/protopulse-nlm-profile nlm source list 7565a078-8051-43ea-8512-c54c3b4d363e --json
-sed -n '1,260p' CODEX_RESPONSE_TAURI.md
-sed -n '1,300p' docs/audits/2026-05-09-tauri-v2-migration-phase0-codex-verify.md
-sed -n '1,360p' docs/audits/2026-05-09-tauri-v2-migration-phase0-findings.md
-rg -n "[ \\t]+$" CODEX_DONE.md CODEX_RESPONSE_TAURI_R2_SELFCRITIQUE.md docs/audits/2026-05-09-tauri-v2-migration-r2-deep-research.md docs/audits/2026-05-09-tauri-v2-migration-r2-revised-phasing.md
-git diff -- src-tauri
+wc -l CODEX_RESPONSE_TAURI.md CODEX_RESPONSE_TAURI_R2_SELFCRITIQUE.md docs/audits/2026-05-09-tauri-v2-migration-r2-deep-research.md docs/audits/2026-05-09-tauri-v2-migration-r2-revised-phasing.md docs/audits/2026-05-09-tauri-v2-migration-phase1-claude-verify.md docs/audits/2026-05-09-tauri-v2-migration-phase1-storage-and-runtime-audit.md docs/audits/2026-05-09-tauri-v2-migration-phase0-findings.md docs/plans/2026-03-05-pcb-layout-engine.md src-tauri/src/lib.rs src-tauri/tauri.conf.json src-tauri/capabilities/default.json src-tauri/Cargo.toml client/src/lib/tauri-api.ts vite.config.ts
+sed -n '1,220p' CODEX_RESPONSE_TAURI.md
+sed -n '1,140p' CODEX_RESPONSE_TAURI_R2_SELFCRITIQUE.md
+sed -n '1,180p' docs/audits/2026-05-09-tauri-v2-migration-r2-deep-research.md
+sed -n '1,190p' docs/audits/2026-05-09-tauri-v2-migration-r2-revised-phasing.md
+sed -n '1,230p' docs/audits/2026-05-09-tauri-v2-migration-phase1-claude-verify.md
+sed -n '1,190p' docs/audits/2026-05-09-tauri-v2-migration-phase1-storage-and-runtime-audit.md
+sed -n '1,230p' docs/audits/2026-05-09-tauri-v2-migration-phase0-findings.md
+rg -n "^(#|##|###)|^\\*\\*Files:|^\\*\\*Context:|^\\*\\*Step 1|^\\*\\*Step 2|^\\*\\*Step 3|^\\*\\*Step 4|^\\*\\*Step 5|## /agent-teams|Mandatory Research|Team Execution" docs/plans/2026-03-05-pcb-layout-engine.md
+nl -ba src-tauri/src/lib.rs | sed -n '1,460p'
+nl -ba client/src/lib/tauri-api.ts | sed -n '1,280p'
+nl -ba src-tauri/tauri.conf.json | sed -n '1,120p'
+nl -ba src-tauri/capabilities/default.json | sed -n '1,120p'
+nl -ba src-tauri/Cargo.toml | sed -n '1,120p'
+nl -ba vite.config.ts | sed -n '1,140p'
+rg -n "getDesktopAPI|isTauri|tauri-api|invoke\\(" client/src src-tauri -g '!src-tauri/target/**'
+find dist -maxdepth 3 -type f -print | sort
+find server -type f \( -name '*.ts' -o -name '*.tsx' \) | wc -l
+rg -n "\\b(app|router)\\.(get|post|put|patch|delete|use)\\(" server | wc -l
+mkdir -p docs/decisions
 git diff --check
-git status --short -- src-tauri CODEX_DONE.md CODEX_RESPONSE_TAURI_R2_SELFCRITIQUE.md docs/audits/2026-05-09-tauri-v2-migration-r2-deep-research.md docs/audits/2026-05-09-tauri-v2-migration-r2-revised-phasing.md
+git status --short
 ```
+
+Web/Context7 research:
+- `mcp__context7__.resolve_library_id("Tauri v2 documentation")` and `mcp__context7__.resolve_library_id("tauri")` both returned `user cancelled MCP tool call`.
+- Official web sources were opened for Tauri sidecars, capabilities, updater, Windows/macOS signing, GitHub pipeline, Debian/AppImage, Stronghold, Store, Vite sourcemaps, Microsoft signing options, Microsoft Artifact Signing, GitHub artifact attestations, and RustSec.
 
 ## Next Steps
 
-- Round 3 should decide runtime topology: Express sidecar, hybrid, or Rust-native privileged backend.
-- Round 3 should produce the IPC/native-authority contract table before `src-tauri/` edits.
-- Import or re-cite official RustSec/npm/SLSA/GitHub supply-chain docs directly if the final implementation plan relies on them; NotebookLM topic 12 improved after second import but still mixed primary and secondary sources.
-- Keep updater behind CI/signing/key-custody decisions.
+- Round 4 should implement Phase 1 only: build-output proof, first real `DesktopAPI` caller wiring, and the IPC drift test.
+- Round 4 should not start capability hardening until the drift test fails for the known mismatches and then passes after the contract is aligned.
+- Round 4 should decide whether to keep the knowledge frontmatter-only edits or route a fuller reconciliation through `inbox/` and `/extract`.
 
 ## Blockers
 
-- MCP `research_start` returned `user cancelled MCP tool call`; direct CLI-backed `nlm research start --mode deep` was used after verifying auth via a copied `/tmp` profile.
-- Direct home-profile `nlm login --check` failed under Codex sandboxing because it attempted to write under `~/.notebooklm-mcp-cli/profiles/default`.
-- NotebookLM source imports do not print imported source IDs; IDs were resolved after import via `nlm source list --json`, with duplicates possible because pp-core already had some matching URLs.
+- Context7 was available in the tool surface but both Tauri resolve calls returned `user cancelled MCP tool call`; I used official primary web docs as fallback and recorded that in the plan.
+- No code tests were run because Round 3 was docs/decision-plan only. Verification was `git diff --check` plus source/doc reads.
+- No `src-tauri/` edits were made, and no `pp-core` notebook writes or `source_add` calls were made.
+- No commit was made because the Round 3 handoff explicitly says to leave artifacts uncommitted for Tyler review.
 
 ## Handoff Notes
 
-All 12 mandatory topics were run through NotebookLM deep research and imported into `pp-core`; topic 6 was preserved from a pre-existing completed, unimported research task. No files under `src-tauri/` were edited, and no commit was made per the Round 2 handoff.
+Path C is accepted with a hard boundary: do not convert the current broken Express launch into production truth by inertia. The first executable work should be Round 4 Phase 1: prove the build artifacts, wire one real desktop workflow through `getDesktopAPI()`, and add the IPC drift test that catches the current command/payload mismatches.
+
+Recommended Round 4 focus: **Phase 1 implementation sprint** with three bounded deliverables:
+1. Build contract test for `dist/public` and `dist/index.cjs`.
+2. Desktop bridge routing for the smallest real file workflow.
+3. IPC contract drift test covering command names, payload keys, registered handlers, and later `AppManifest::commands`.

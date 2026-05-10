@@ -3,6 +3,10 @@ description: "Tauri app spawns Express backend via global 'node' command — cra
 type: debt-note
 source: "conductor/comprehensive-audit.md §5"
 confidence: proven
+status: partially-resolved
+verified: "2026-05-10"
+verification_marker: verified-2026-05-10
+verification_notes: "Build script can create dist/index.cjs, but live dist lacks it; src-tauri still launches global node with no bundle.externalBin."
 topics: ["[[architecture-decisions]]", "[[competitive-landscape]]"]
 related_components: ["src-tauri/src/lib.rs"]
 ---

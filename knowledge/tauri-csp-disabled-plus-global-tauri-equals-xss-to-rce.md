@@ -3,6 +3,10 @@ description: "tauri.conf.json sets csp:null and withGlobalTauri:true — any XSS
 type: debt-note
 source: "conductor/comprehensive-audit.md §5, §16, §20"
 confidence: proven
+status: partially-resolved
+verified: "2026-05-10"
+verification_marker: verified-2026-05-10
+verification_notes: "Current tauri.conf.json sets CSP and withGlobalTauri:false, but CSP still permits unsafe-inline and broad localhost while spawn_process remains exposed."
 topics: ["[[architecture-decisions]]"]
 related_components: ["src-tauri/tauri.conf.json", "src-tauri/src/lib.rs", "src-tauri/capabilities/main.json"]
 ---

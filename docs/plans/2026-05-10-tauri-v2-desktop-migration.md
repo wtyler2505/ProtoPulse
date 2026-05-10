@@ -1,0 +1,909 @@
+# FG-XX: Tauri v2 Desktop Migration — Implementation Plan
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** Turn the current Tauri v2 scaffold into a credible desktop migration path: a wired desktop API bridge, a tested IPC/native-authority contract, a chosen hybrid runtime topology, a storage migration that preserves project data and secrets, and a release path that does not pretend unsigned or unbootable artifacts are production-ready.
+
+**Architecture:** Adopt Path C from `docs/decisions/2026-05-10-adr-tauri-runtime-topology.md`: keep Express for web/cloud compatibility and any explicitly approved non-privileged compatibility surface, while moving desktop-privileged work into typed Rust/Tauri commands and official plugins. Frontend code calls a stable `DesktopAPI` adapter only when `isTauri` is true; browser/web behavior remains working until packaged desktop is proven.
+
+**Tech Stack:** Tauri v2 + Rust 2021 + React 19 + TypeScript 5.6 + Vite 7 + Vitest 4 + Playwright + GitHub Actions + tauri-action + RustSec/cargo-audit + npm audit/provenance + official Tauri plugins
+
+---
+
+## Existing Infrastructure Summary
+
+| File | Lines | Status |
+|------|-------|--------|
+| `src-tauri/src/lib.rs` | 400 | Present, but production path launches global `node` against `dist/index.cjs`, registers generic `spawn_process`, exposes devtools menu, and has command-name drift with the frontend. |
+| `src-tauri/src/main.rs` | 5 | Thin entrypoint into `protopulse::run()`. |
+| `src-tauri/build.rs` | 3 | Uses `tauri_build::build()` only; no `AppManifest::commands` allowlist. |
+| `src-tauri/tauri.conf.json` | 41 | Has `withGlobalTauri:false` and a CSP, but no `bundle.externalBin`, no updater config, broad localhost CSP, and all bundle targets enabled. |
+| `src-tauri/capabilities/default.json` | 34 | Grants broad shell/fs/dialog permissions; no custom command restriction. |
+| `src-tauri/Cargo.toml` | 18 | Uses Tauri 2 plugins and `tokio[process]`; enables `tauri` `devtools`; no release profile; no updater/process/store/stronghold/window-state plugins. |
+| `client/src/lib/tauri-api.ts` | 223 | Defines `DesktopAPI`, but has zero callers outside itself; invokes three mismatched commands. |
+| `vite.config.ts` | 102 | Builds frontend to `dist/public`; lacks `base: './'`; hidden sourcemaps are enabled. |
+| `scripts/build.ts` | 48 | Builds `dist/index.cjs`, but current working tree `dist/` only contains `dist/public/*`, so the Tauri production shell is not currently bootable. |
+| `package.json` | 186 | Has `tauri`, `tauri:dev`, `tauri:build`; Tauri JS/CLI packages use caret ranges around 2.10.x. |
+| `server/` | 336 TS files | Large Express surface; current route/middleware count makes a full Rust rewrite a separate multi-month program. |
+| `docs/decisions/2026-05-10-tauri-ipc-contract.md` | New | Contract table for every bridge method and registered command. |
+| `docs/decisions/2026-05-10-adr-release-trust-model.md` | New | Signing, updater custody, CI matrix, Linux format, and source-map decisions. |
+
+## Phase Overview
+
+This plan is split into 12 phases, each independently reviewable:
+
+| Phase | Description | Tasks | Unblocks |
+|-------|-------------|-------|----------|
+| **Phase 1** | Baseline truth, bridge wiring, and IPC contract | 1.1-1.3 | Makes the scaffold testable before security edits |
+| **Phase 2** | Native authority threat model and least privilege | 2.1-2.2 | Removes generic native authority before expanding desktop |
+| **Phase 3** | Runtime topology and 8-bucket storage architecture | 3.1-3.3 | Chooses data/runtime boundaries before lifecycle/release |
+| **Phase 4** | Desktop lifecycle and project-open semantics | 4.1-4.2 | Defines launch/open behavior before packaging |
+| **Phase 5** | CI matrix, supply-chain baseline, packaged smoke | 5.1-5.2 | Makes artifacts reproducible before signing/updater |
+| **Phase 6** | Release hardening without public distribution | 6.1-6.2 | Tightens build output and debug policy |
+| **Phase 7** | Signing, notarization, and key custody | 7.1-7.2 | Establishes Tyler-owned release trust |
+| **Phase 8** | Updater and release channels | 8.1-8.2 | Adds updates after signed artifacts exist |
+| **Phase 9** | Hardware authority and toolchain packaging | 9.1-9.2 | Moves serial/HID/Arduino workflows into native boundary |
+| **Phase 10** | Observability, diagnostics, and consent | 10.1-10.2 | Makes failures reportable without privacy drift |
+| **Phase 11** | Optional desktop UX integrations | 11.1 | Adds tray/shortcuts/autostart only after core is stable |
+| **Phase 12** | Linux distribution expansion and store channels | 12.1 | Expands beyond deb/AppImage deliberately |
+
+---
+
+## Phase 1: Baseline Truth, Build Smoke, And IPC Contract
+
+### Task 1.1: Prove Production Build Inputs Exist
+
+**Files:**
+- Modify: `scripts/build.ts`, `package.json`
+- Test: `scripts/__tests__/build-output.test.ts` or `client/src/lib/__tests__/tauri-build-inputs.test.ts`
+
+**Context:** `src-tauri/src/lib.rs` expects `resource_dir/dist/index.cjs`, but the live `dist/` currently only has frontend assets. Before sidecar work, the build must prove the server entry exists or the topology must stop trying to launch it.
+
+**Step 1: Write the failing test**  
+Add a test that runs or inspects the production build contract and fails if `dist/public/index.html` or `dist/index.cjs` is missing after `npm run build`.
+
+**Step 2: Run the test**  
+Run `npm run build && npx vitest run scripts/__tests__/build-output.test.ts`. Expected: FAIL until the current build output contract is made deterministic in the test environment.
+
+**Step 3: Implement**  
+Make the build script and package scripts produce the required server/frontend outputs, or update the planned Tauri runtime path to not require `dist/index.cjs` for desktop.
+
+**Step 4: Run the test again**  
+Expected: PASS, with explicit artifact paths recorded in test output.
+
+**Step 5: Commit**  
+`git commit -m "test(tauri): assert desktop build artifacts exist"`
+
+### Task 1.2: Wire The Desktop API Bridge Into Real Callers
+
+**Files:**
+- Modify: `client/src/lib/tauri-api.ts`
+- Modify: first selected caller modules for file open/save/export/import
+- Test: `client/src/lib/__tests__/desktop-api-routing.test.ts`
+
+**Context:** The Tauri bridge has zero callers outside itself. This means current IPC bugs are latent, and desktop mode is not a real product path yet.
+
+**Step 1: Write the failing test**  
+Add tests that simulate `isTauri` true/false and assert selected file/menu workflows route through `getDesktopAPI()` only in desktop mode.
+
+**Step 2: Run the test**  
+Run `npx vitest run client/src/lib/__tests__/desktop-api-routing.test.ts`. Expected: FAIL because no app workflow calls the bridge.
+
+**Step 3: Implement**  
+Introduce a narrow adapter at the workflow boundary instead of scattering `isTauri` checks. Keep browser fallback behavior intact.
+
+**Step 4: Run the test again**  
+Expected: PASS in both browser and Tauri-stub modes.
+
+**Step 5: Commit**  
+`git commit -m "feat(tauri): route desktop workflows through DesktopAPI"`
+
+### Task 1.3: Add IPC Drift Test
+
+**Files:**
+- Create: `client/src/lib/__tests__/tauri-ipc-contract.test.ts`
+- Read-only fixture input: `src-tauri/src/lib.rs`, `src-tauri/build.rs`, `client/src/lib/tauri-api.ts`
+
+**Context:** Current TypeScript invokes `read_file_contents`, `write_file_contents`, and `get_app_version`; Rust registers `read_file`, `write_file`, and `get_version`. The test must fail before any contract fix lands.
+
+**Step 1: Write the failing test**  
+Implement the parser described in `docs/decisions/2026-05-10-tauri-ipc-contract.md`.
+
+**Step 2: Run the test**  
+Run `npx vitest run client/src/lib/__tests__/tauri-ipc-contract.test.ts`. Expected: FAIL on the three known mismatches and payload-key drift.
+
+**Step 3: Implement**  
+Align command names/payload keys or add deliberate fixtures for Rust-only commands. Do not loosen the test to hide drift.
+
+**Step 4: Run the test again**  
+Expected: PASS only after frontend invokes, Rust handlers, registrations, and later app-manifest commands agree.
+
+**Step 5: Commit**  
+`git commit -m "test(tauri): enforce IPC contract parity"`
+
+## /agent-teams Prompt
+
+```
+/agent-teams
+
+Phase 1 team: Baseline + bridge + IPC contract.
+
+File ownership matrix:
+- build-contract: scripts/build.ts, package.json, scripts/__tests__/build-output.test.ts
+- bridge-routing: client/src/lib/tauri-api.ts plus selected workflow callers, client/src/lib/__tests__/desktop-api-routing.test.ts
+- ipc-contract: client/src/lib/__tests__/tauri-ipc-contract.test.ts only
+
+Before writing code, retry Context7 for Tauri v2 and @tauri-apps/api, then cite official docs used. Do not edit src-tauri until Tyler approves a code phase that includes those files.
+```
+
+---
+
+## Phase 2: Native Authority Threat Model And Least-Privilege Boundary
+
+### Task 2.1: Replace Generic Process Authority In The Plan
+
+**Files:**
+- Modify: `client/src/lib/tauri-api.ts`
+- Modify: `src-tauri/src/lib.rs`
+- Modify: `src-tauri/build.rs`
+- Test: `client/src/lib/__tests__/tauri-ipc-contract.test.ts`, `src-tauri/tests/command_manifest.rs`
+
+**Context:** `spawn_process(command,args)` is a generic process primitive with no allowlist, timeout, cwd/env control, or output cap. Tauri registered commands are allowed by default unless restricted with `AppManifest::commands`.
+
+**Step 1: Write the failing test**  
+Assert `spawn_process` is not present in production manifest fixtures and that typed commands exist for each allowed process workflow.
+
+**Step 2: Run the test**  
+Expected: FAIL because `spawn_process` is currently registered.
+
+**Step 3: Implement**  
+Replace generic process calls with typed command names or scoped sidecar wrappers; add `AppManifest::commands(&[...])` in `build.rs`.
+
+**Step 4: Run the test again**  
+Expected: PASS with only typed commands exposed.
+
+**Step 5: Commit**  
+`git commit -m "fix(tauri): replace generic process command with typed authority"`
+
+### Task 2.2: Narrow Capabilities And CSP By Caller Graph
+
+**Files:**
+- Modify: `src-tauri/capabilities/default.json`
+- Modify: `src-tauri/tauri.conf.json`
+- Test: `client/src/lib/__tests__/tauri-capabilities.test.ts`
+
+**Context:** Capabilities currently grant broad shell/fs/dialog permissions, and CSP allows inline styles plus broad localhost. Capability cleanup must follow the actual caller graph from Phase 1.
+
+**Step 1: Write the failing test**  
+Assert no broad shell/fs permissions exist without scoped allow entries and production CSP does not include `http://localhost:*`.
+
+**Step 2: Run the test**  
+Expected: FAIL on current permissions and CSP.
+
+**Step 3: Implement**  
+Replace broad grants with scoped plugin permissions, split dev/prod CSP policy, and keep `withGlobalTauri:false`.
+
+**Step 4: Run the test again**  
+Expected: PASS plus `npm run tauri:build` capability schema validation.
+
+**Step 5: Commit**  
+`git commit -m "fix(tauri): scope desktop capabilities and production CSP"`
+
+## /agent-teams Prompt
+
+```
+/agent-teams
+
+Phase 2 team: native authority boundary.
+
+File ownership matrix:
+- command-manifest: src-tauri/build.rs, src-tauri/src/lib.rs, src-tauri/tests/command_manifest.rs
+- capability-scope: src-tauri/capabilities/default.json, src-tauri/tauri.conf.json, client/src/lib/__tests__/tauri-capabilities.test.ts
+
+Use official Tauri capabilities, permissions, command scopes, CSP, shell, and FS docs before code. Coordinate because both teammates touch authority surfaces.
+```
+
+---
+
+## Phase 3: Runtime Topology And Storage Architecture Decision
+
+### Task 3.1: Implement The Hybrid Runtime Boundary
+
+**Files:**
+- Modify: `client/src/lib/tauri-api.ts`
+- Create: `client/src/lib/desktop/runtime-topology.ts`
+- Test: `client/src/lib/__tests__/runtime-topology.test.ts`
+
+**Context:** Path C is accepted as proposed: Express remains for web/cloud compatibility and any explicitly approved non-privileged compatibility surface; Rust/Tauri owns desktop authority.
+
+**Step 1: Write the failing test**  
+Assert each selected workflow declares one of: browser/web, desktop Rust command, remote/server API, or temporary local compatibility.
+
+**Step 2: Run the test**  
+Expected: FAIL until workflow classification exists.
+
+**Step 3: Implement**  
+Add a runtime topology registry and route the first desktop workflows through it.
+
+**Step 4: Run the test again**  
+Expected: PASS with a visible list of unresolved `/api/*` dependencies.
+
+**Step 5: Commit**  
+`git commit -m "feat(tauri): define hybrid runtime boundary"`
+
+### Task 3.2: Migrate Storage By 8 Buckets
+
+**Files:**
+- Create: `client/src/lib/desktop/storage-migration.ts`
+- Create: `client/src/lib/desktop/storage-buckets.ts`
+- Test: `client/src/lib/__tests__/desktop-storage-migration.test.ts`
+
+**Context:** Storage classification from `docs/audits/2026-05-09-tauri-v2-migration-phase1-storage-and-runtime-audit.md` is canonical for this phase:
+1. Session/auth -> Stronghold or OS-bound secret storage; never plaintext app-data JSON.
+2. Project/workspace data -> native project file/folder or SQLite.
+3. User preferences -> Tauri Store.
+4. History/cache -> Store with bounded retention or SQL if size grows.
+5. Catalog/marketplace -> server source of truth plus offline cache.
+6. Hardware presets -> Store.
+7. One-time UX state -> Store.
+8. Migration markers -> read once, complete migration, delete markers.
+
+**Step 1: Write the failing test**  
+Create representative localStorage fixtures for all eight buckets and assert target store/file decisions.
+
+**Step 2: Run the test**  
+Expected: FAIL because no migration layer exists.
+
+**Step 3: Implement**  
+Build an idempotent migration planner first; do not mutate user data until dry-run output is reviewed.
+
+**Step 4: Run the test again**  
+Expected: PASS for dry-run classification and rollback metadata.
+
+**Step 5: Commit**  
+`git commit -m "feat(tauri): classify desktop storage migration buckets"`
+
+### Task 3.3: Reconcile `pp-core` Source `62a2e851`
+
+**Files:**
+- Create: `inbox/tauri-storage-reconciliation-2026-05-10.md`
+- Later pipeline output: knowledge note via `/extract`
+
+**Context:** The older notebook source recommends server-with-offline-cache for project storage. The desktop pivot supersedes that for project data but preserves it for shared catalog content. This round must not write to `pp-core`; capture the reconciliation locally for the next notebook sync.
+
+**Step 1: Write the failing test**  
+Add a documentation check that the reconciliation inbox item exists before Phase 3 is marked complete.
+
+**Step 2: Run the test**  
+Expected: FAIL until the inbox item exists.
+
+**Step 3: Implement**  
+Write the reconciliation into `inbox/` with provenance, then route through the normal pipeline in a later notebook/vault round.
+
+**Step 4: Run the test again**  
+Expected: PASS.
+
+**Step 5: Commit**  
+`git commit -m "docs(tauri): capture storage reconciliation for extraction"`
+
+## /agent-teams Prompt
+
+```
+/agent-teams
+
+Phase 3 team: runtime topology + storage.
+
+File ownership matrix:
+- runtime-boundary: client/src/lib/desktop/runtime-topology.ts, client/src/lib/__tests__/runtime-topology.test.ts
+- storage-buckets: client/src/lib/desktop/storage-buckets.ts, client/src/lib/desktop/storage-migration.ts, client/src/lib/__tests__/desktop-storage-migration.test.ts
+- reconciliation-doc: inbox/tauri-storage-reconciliation-2026-05-10.md
+
+Use Tauri Store, Stronghold, SQL, FS scope docs and WebSearch for current desktop data-storage patterns. No direct writes to knowledge/ without the extraction pipeline.
+```
+
+---
+
+## Phase 4: Desktop Lifecycle And Project-Open Semantics
+
+### Task 4.1: Define Project Open Contract
+
+**Files:**
+- Create: `client/src/lib/desktop/project-open-contract.ts`
+- Modify: selected project import/open workflow files
+- Test: `client/src/lib/__tests__/project-open-contract.test.ts`
+
+**Context:** File associations, deep links, single instance, window focus, and storage migration all depend on what "open a ProtoPulse project" means.
+
+**Step 1: Write the failing test**  
+Assert cold-start, warm-start, invalid-path, and already-open project behavior.
+
+**Step 2: Run the test**  
+Expected: FAIL until a contract exists.
+
+**Step 3: Implement**  
+Create a pure TypeScript contract for validation and event routing before touching native lifecycle code.
+
+**Step 4: Run the test again**  
+Expected: PASS.
+
+**Step 5: Commit**  
+`git commit -m "feat(tauri): define project-open lifecycle contract"`
+
+### Task 4.2: Add Native Lifecycle Hooks
+
+**Files:**
+- Modify: `src-tauri/src/lib.rs`
+- Modify: `src-tauri/tauri.conf.json`
+- Test: `src-tauri/tests/project_open.rs`
+
+**Context:** Once the project-open contract exists, Tauri can wire file associations, deep links, single-instance forwarding, and window state.
+
+**Step 1: Write the failing test**  
+Add native tests or scripted smoke hooks for open-event forwarding and invalid path rejection.
+
+**Step 2: Run the test**  
+Expected: FAIL because lifecycle plugins are not installed.
+
+**Step 3: Implement**  
+Add only the lifecycle plugins needed for the contract, with scoped capabilities.
+
+**Step 4: Run the test again**  
+Expected: PASS plus manual smoke for cold/warm start.
+
+**Step 5: Commit**  
+`git commit -m "feat(tauri): wire project-open lifecycle events"`
+
+## /agent-teams Prompt
+
+```
+/agent-teams
+
+Phase 4 team: lifecycle.
+
+File ownership matrix:
+- project-contract: client/src/lib/desktop/project-open-contract.ts, client/src/lib/__tests__/project-open-contract.test.ts
+- native-lifecycle: src-tauri/src/lib.rs, src-tauri/tauri.conf.json, src-tauri/tests/project_open.rs
+
+Research Tauri deep-link, single-instance, window-state, file association, and platform capability docs before code. Keep storage migration assumptions aligned with Phase 3.
+```
+
+---
+
+## Phase 5: CI Matrix, Supply-Chain Baseline, And Packaged Smoke
+
+### Task 5.1: Add Cross-Platform Build Matrix
+
+**Files:**
+- Create: `.github/workflows/tauri-build.yml`
+- Create: `scripts/ci/tauri-packaged-smoke.sh`
+- Test: workflow dry-run/lint where available
+
+**Context:** Release trust starts with reproducible artifacts. Matrix: Win-x64, macOS x64, macOS arm64, Linux x64. Linux starts with deb + AppImage.
+
+**Step 1: Write the failing test**  
+Add a workflow lint or script-level test that fails unless all required targets and smoke steps are present.
+
+**Step 2: Run the test**  
+Expected: FAIL because no workflow exists.
+
+**Step 3: Implement**  
+Create the matrix with dependency installs, `npm run check`, tests, `tauri build`, artifact upload, and packaged smoke commands.
+
+**Step 4: Run the test again**  
+Expected: PASS locally for script lint; remote CI validates target builds.
+
+**Step 5: Commit**  
+`git commit -m "ci(tauri): add cross-platform packaged build matrix"`
+
+### Task 5.2: Add Supply-Chain Baseline
+
+**Files:**
+- Modify: `.github/workflows/tauri-build.yml`
+- Create: `scripts/ci/supply-chain-check.sh`
+- Test: `scripts/ci/supply-chain-check.sh`
+
+**Context:** Cargo/npm audit, lockfile discipline, SBOM/provenance, and artifact attestations belong before signing/updater secrets are attached.
+
+**Step 1: Write the failing test**  
+Script fails if `cargo audit`, `npm audit`, lockfile checks, and artifact-attestation placeholders are absent.
+
+**Step 2: Run the test**  
+Expected: FAIL until the checks are wired.
+
+**Step 3: Implement**  
+Add audit commands, permissions-minimized workflow settings, and provenance/attestation TODOs gated before public release.
+
+**Step 4: Run the test again**  
+Expected: PASS locally where tools exist; missing tools emit clear install instructions.
+
+**Step 5: Commit**  
+`git commit -m "ci(tauri): add supply-chain release gates"`
+
+## /agent-teams Prompt
+
+```
+/agent-teams
+
+Phase 5 team: CI + supply chain.
+
+File ownership matrix:
+- build-matrix: .github/workflows/tauri-build.yml, scripts/ci/tauri-packaged-smoke.sh
+- supply-chain: scripts/ci/supply-chain-check.sh, workflow audit/provenance steps
+
+Research tauri-action, GitHub hosted runners, GitHub artifact attestations, npm provenance, RustSec/cargo-audit, and SLSA before code.
+```
+
+---
+
+## Phase 6: Release Hardening Without Public Distribution
+
+### Task 6.1: Gate Devtools And Tune Release Profile
+
+**Files:**
+- Modify: `src-tauri/Cargo.toml`
+- Modify: `src-tauri/src/lib.rs`
+- Test: `src-tauri/tests/release_surface.rs`
+
+**Context:** `devtools` is enabled in `Cargo.toml`, and the menu exposes "Toggle Developer Tools" without a release guard.
+
+**Step 1: Write the failing test**  
+Assert release builds do not include the devtools menu or feature.
+
+**Step 2: Run the test**  
+Expected: FAIL on current config.
+
+**Step 3: Implement**  
+Gate devtools by debug/profile feature and add release profile settings only after build smoke is stable.
+
+**Step 4: Run the test again**  
+Expected: PASS in debug/release profile checks.
+
+**Step 5: Commit**  
+`git commit -m "fix(tauri): gate devtools from release builds"`
+
+### Task 6.2: Enforce Debug Artifact Policy
+
+**Files:**
+- Modify: `vite.config.ts`
+- Modify: packaging/CI scripts
+- Test: `client/src/lib/__tests__/debug-artifacts.test.ts`
+
+**Context:** Hidden source maps may be useful locally, but public bundles should not ship maps unless a crash-service upload policy exists.
+
+**Step 1: Write the failing test**  
+Assert packaged public artifacts exclude `.map` files or move them to a private artifact path.
+
+**Step 2: Run the test**  
+Expected: FAIL if maps are bundled in release resources.
+
+**Step 3: Implement**  
+Keep hidden maps local or upload to private CI artifacts; do not include them in public bundles.
+
+**Step 4: Run the test again**  
+Expected: PASS.
+
+**Step 5: Commit**  
+`git commit -m "fix(release): keep source maps out of public desktop bundles"`
+
+## /agent-teams Prompt
+
+```
+/agent-teams
+
+Phase 6 team: release hardening.
+
+File ownership matrix:
+- devtools-profile: src-tauri/Cargo.toml, src-tauri/src/lib.rs, src-tauri/tests/release_surface.rs
+- debug-artifacts: vite.config.ts, scripts/ci/tauri-packaged-smoke.sh, client/src/lib/__tests__/debug-artifacts.test.ts
+
+Research Tauri debug/release behavior, Cargo profiles, Vite sourcemap behavior, and packaged artifact layout before code.
+```
+
+---
+
+## Phase 7: Signing, Notarization, And Key Custody
+
+### Task 7.1: Add Signing Placeholders Without Secrets
+
+**Files:**
+- Modify: `.github/workflows/tauri-build.yml`
+- Create: `docs/release/tauri-signing-runbook.md`
+- Test: workflow lint
+
+**Context:** Tyler owns signing credentials. Agents can wire placeholders and docs, not create trust anchors.
+
+**Step 1: Write the failing test**  
+Assert workflow has no hardcoded certs/keys and references environment-scoped secrets only.
+
+**Step 2: Run the test**  
+Expected: FAIL until placeholders and docs exist.
+
+**Step 3: Implement**  
+Add Azure Artifact Signing/OV fallback placeholders and macOS Developer ID/notary placeholders behind manual protected environments.
+
+**Step 4: Run the test again**  
+Expected: PASS without secrets present.
+
+**Step 5: Commit**  
+`git commit -m "docs(release): define signing and notarization placeholders"`
+
+### Task 7.2: Validate Signed Artifact Expectations
+
+**Files:**
+- Create: `scripts/ci/verify-signed-artifacts.sh`
+- Modify: `.github/workflows/tauri-build.yml`
+- Test: `scripts/ci/verify-signed-artifacts.sh --dry-run`
+
+**Context:** Signing must verify artifacts, not just run a command.
+
+**Step 1: Write the failing test**  
+Dry-run fails unless expected Windows/macOS signing verification commands are declared.
+
+**Step 2: Run the test**  
+Expected: FAIL.
+
+**Step 3: Implement**  
+Add verification steps for Windows Authenticode and macOS codesign/notary status.
+
+**Step 4: Run the test again**  
+Expected: PASS in dry-run; real signing waits for Tyler secrets.
+
+**Step 5: Commit**  
+`git commit -m "ci(release): verify signed desktop artifacts"`
+
+## /agent-teams Prompt
+
+```
+/agent-teams
+
+Phase 7 team: signing trust.
+
+File ownership matrix:
+- signing-runbook: docs/release/tauri-signing-runbook.md
+- signing-ci: .github/workflows/tauri-build.yml, scripts/ci/verify-signed-artifacts.sh
+
+Research Microsoft Artifact Signing, Windows signing options, Tauri Windows signing, Tauri macOS signing, Apple Developer ID, notarization, and GitHub protected environments before code.
+```
+
+---
+
+## Phase 8: Updater And Release Channels
+
+### Task 8.1: Define Update Manifest And Channel Policy
+
+**Files:**
+- Create: `docs/release/tauri-updater-policy.md`
+- Test: docs/link check or release-policy test
+
+**Context:** Updater waits until signing, CI artifacts, endpoint strategy, rollback, and key custody are settled.
+
+**Step 1: Write the failing test**  
+Assert updater policy names stable/beta/nightly, rollback, prompt UX, endpoint owner, and key owner.
+
+**Step 2: Run the test**  
+Expected: FAIL until policy exists.
+
+**Step 3: Implement**  
+Document static JSON vs dynamic server strategy and Tyler-owned private key custody.
+
+**Step 4: Run the test again**  
+Expected: PASS.
+
+**Step 5: Commit**  
+`git commit -m "docs(release): define updater channel policy"`
+
+### Task 8.2: Wire Updater After Signing Is Green
+
+**Files:**
+- Modify: `src-tauri/Cargo.toml`
+- Modify: `src-tauri/tauri.conf.json`
+- Modify: `src-tauri/src/lib.rs`
+- Test: `src-tauri/tests/updater_config.rs`
+
+**Context:** Tauri updater artifacts and pubkey config should land only after the trust model is real.
+
+**Step 1: Write the failing test**  
+Assert updater config is absent until signing gate is enabled, then validates pubkey/endpoints/artifact generation in a controlled fixture.
+
+**Step 2: Run the test**  
+Expected: FAIL in the updater branch until config is wired.
+
+**Step 3: Implement**  
+Add updater and process plugin setup, `createUpdaterArtifacts`, pubkey placeholder, and channel endpoints.
+
+**Step 4: Run the test again**  
+Expected: PASS and packaged artifacts include updater signatures.
+
+**Step 5: Commit**  
+`git commit -m "feat(release): configure signed Tauri updater"`
+
+## /agent-teams Prompt
+
+```
+/agent-teams
+
+Phase 8 team: updater.
+
+File ownership matrix:
+- updater-policy: docs/release/tauri-updater-policy.md
+- updater-config: src-tauri/Cargo.toml, src-tauri/tauri.conf.json, src-tauri/src/lib.rs, src-tauri/tests/updater_config.rs
+
+Research Tauri updater, CrabNebula updater patterns, GitHub release assets, static JSON manifests, and key-rotation practices before code.
+```
+
+---
+
+## Phase 9: Hardware Authority And Toolchain Packaging
+
+### Task 9.1: Audit Serial/HID Plugin Choices
+
+**Files:**
+- Create: `docs/audits/tauri-hardware-plugin-provenance.md`
+- Test: docs/provenance check
+
+**Context:** Serial/HID plugins are hardware trust boundaries and may be third-party. Do not add them without provenance, maintenance, license, platform, and permission review.
+
+**Step 1: Write the failing test**  
+Assert every proposed hardware plugin has source URL, license, maintenance status, platform support, permission model, and fallback path.
+
+**Step 2: Run the test**  
+Expected: FAIL until audit exists.
+
+**Step 3: Implement**  
+Research and document official/third-party options before dependency changes.
+
+**Step 4: Run the test again**  
+Expected: PASS.
+
+**Step 5: Commit**  
+`git commit -m "docs(tauri): audit hardware plugin provenance"`
+
+### Task 9.2: Package Arduino CLI As Scoped Sidecar If Needed
+
+**Files:**
+- Modify: `src-tauri/tauri.conf.json`
+- Modify: `src-tauri/capabilities/default.json`
+- Create: `scripts/tauri/prepare-arduino-sidecar.ts`
+- Test: `src-tauri/tests/arduino_sidecar.rs`
+
+**Context:** Arduino CLI, if needed, must be a target-triple sidecar with scoped args, not a generic process spawn.
+
+**Step 1: Write the failing test**  
+Assert sidecar target triples, allowed args, no-device behavior, timeout, and output caps.
+
+**Step 2: Run the test**  
+Expected: FAIL until sidecar wiring exists.
+
+**Step 3: Implement**  
+Prepare sidecar binaries, scoped shell permissions, typed Rust wrappers, and hardware failure tests.
+
+**Step 4: Run the test again**  
+Expected: PASS on no-device and mocked sidecar cases.
+
+**Step 5: Commit**  
+`git commit -m "feat(tauri): package Arduino CLI as scoped sidecar"`
+
+## /agent-teams Prompt
+
+```
+/agent-teams
+
+Phase 9 team: hardware authority.
+
+File ownership matrix:
+- plugin-audit: docs/audits/tauri-hardware-plugin-provenance.md
+- arduino-sidecar: scripts/tauri/prepare-arduino-sidecar.ts, src-tauri/tauri.conf.json, src-tauri/capabilities/default.json, src-tauri/tests/arduino_sidecar.rs
+
+Research serial/HID plugin maintenance, Tauri sidecars, Arduino CLI packaging, udev/driver requirements, and hardware test patterns before code.
+```
+
+---
+
+## Phase 10: Observability, Diagnostics, And Consent
+
+### Task 10.1: Define Privacy-First Diagnostics Contract
+
+**Files:**
+- Create: `docs/release/diagnostics-consent-policy.md`
+- Create: `client/src/lib/desktop/diagnostics-policy.ts`
+- Test: `client/src/lib/__tests__/diagnostics-policy.test.ts`
+
+**Context:** Logs and crash reports must not arrive before consent, redaction, retention, and export UX.
+
+**Step 1: Write the failing test**  
+Assert diagnostics are opt-in, redact project paths/secrets, and have retention/export rules.
+
+**Step 2: Run the test**  
+Expected: FAIL until policy exists.
+
+**Step 3: Implement**  
+Add policy module and documentation without wiring external telemetry.
+
+**Step 4: Run the test again**  
+Expected: PASS.
+
+**Step 5: Commit**  
+`git commit -m "docs(diagnostics): define desktop consent and redaction policy"`
+
+### Task 10.2: Add Local Diagnostic Export
+
+**Files:**
+- Create: `client/src/lib/desktop/diagnostic-export.ts`
+- Modify: selected settings/help UI
+- Test: `client/src/lib/__tests__/diagnostic-export.test.ts`
+
+**Context:** Local export is useful before remote crash reporting and works offline.
+
+**Step 1: Write the failing test**  
+Assert export includes app version, platform, recent logs, and redacted config, but excludes secrets and project source content.
+
+**Step 2: Run the test**  
+Expected: FAIL.
+
+**Step 3: Implement**  
+Create local diagnostic bundle generation through the desktop file-save adapter.
+
+**Step 4: Run the test again**  
+Expected: PASS.
+
+**Step 5: Commit**  
+`git commit -m "feat(diagnostics): add redacted local export"`
+
+## /agent-teams Prompt
+
+```
+/agent-teams
+
+Phase 10 team: diagnostics.
+
+File ownership matrix:
+- diagnostics-policy: docs/release/diagnostics-consent-policy.md, client/src/lib/desktop/diagnostics-policy.ts
+- diagnostic-export: client/src/lib/desktop/diagnostic-export.ts, selected settings/help UI, client/src/lib/__tests__/diagnostic-export.test.ts
+
+Research Tauri logging, process model, Sentry/Bugsnag options, Rust crash-reporting, source-map upload policy, and privacy-redaction patterns before code.
+```
+
+---
+
+## Phase 11: Optional Desktop UX Integrations
+
+### Task 11.1: Add Only Approved Desktop Affordances
+
+**Files:**
+- Modify: `src-tauri/src/lib.rs`
+- Modify: `src-tauri/capabilities/default.json`
+- Modify: selected UI settings files
+- Test: `src-tauri/tests/desktop_affordances.rs`
+
+**Context:** Tray, global shortcuts, autostart, notifications, and custom menus are useful only after lifecycle/release/storage are stable.
+
+**Step 1: Write the failing test**  
+Assert each affordance has explicit enablement, accessibility behavior, platform support, and capability scope.
+
+**Step 2: Run the test**  
+Expected: FAIL until selected affordances are declared.
+
+**Step 3: Implement**  
+Add only Tyler-approved affordances with opt-in settings and platform checks.
+
+**Step 4: Run the test again**  
+Expected: PASS.
+
+**Step 5: Commit**  
+`git commit -m "feat(tauri): add approved desktop UX integrations"`
+
+## /agent-teams Prompt
+
+```
+/agent-teams
+
+Phase 11 team: optional desktop UX.
+
+File ownership matrix:
+- affordances: src-tauri/src/lib.rs, src-tauri/capabilities/default.json, selected UI settings files, src-tauri/tests/desktop_affordances.rs
+
+Research Tauri tray, global shortcut, autostart, notifications, menu, accessibility, and per-platform behavior before code.
+```
+
+---
+
+## Phase 12: Linux Distribution Expansion And Store Channels
+
+### Task 12.1: Evaluate Flatpak/Snap/Store Channels
+
+**Files:**
+- Create: `docs/release/linux-and-store-channel-evaluation.md`
+- Test: docs/release-channel check
+
+**Context:** deb/AppImage are initial Linux outputs. Flatpak/Snap and app stores change sandboxing, DBus, filesystem access, hardware permissions, and update mechanics.
+
+**Step 1: Write the failing test**  
+Assert each candidate channel lists sandbox constraints, filesystem/hardware behavior, updater compatibility, single-instance/deep-link behavior, and release owner.
+
+**Step 2: Run the test**  
+Expected: FAIL until evaluation exists.
+
+**Step 3: Implement**  
+Evaluate Linux formats and app stores after the direct-distribution path is stable.
+
+**Step 4: Run the test again**  
+Expected: PASS.
+
+**Step 5: Commit**  
+`git commit -m "docs(release): evaluate Linux and store distribution channels"`
+
+## /agent-teams Prompt
+
+```
+/agent-teams
+
+Phase 12 team: distribution expansion.
+
+File ownership matrix:
+- distribution-eval: docs/release/linux-and-store-channel-evaluation.md
+
+Research Tauri AppImage, Debian, Flatpak, Snapcraft, Microsoft Store, Mac App Store, hardware permissions, DBus/single-instance behavior, and update policies before recommending expansion.
+```
+
+---
+
+## Mandatory Research Per Phase
+
+Round 3 attempted Context7 twice for Tauri v2 and both `resolve_library_id` calls returned `user cancelled MCP tool call`. The fallback used official WebSearch/WebFetch sources. Every implementation phase must retry Context7 first, then use these primary sources as the minimum web baseline:
+
+| Phase | Context7 lookups to retry | WebSearch / primary-source citations |
+|---|---|---|
+| 1 | `Tauri v2`, `@tauri-apps/api`, `Vitest`, `Vite` | Tauri IPC: https://v2.tauri.app/concept/inter-process-communication/ ; Tauri calling Rust: https://v2.tauri.app/develop/calling-rust/ ; Vite build options: https://vite.dev/config/build-options.html |
+| 2 | `Tauri capabilities`, `tauri-plugin-shell`, `tauri-plugin-fs` | Capabilities: https://v2.tauri.app/security/capabilities/ ; Permissions: https://v2.tauri.app/security/permissions/ ; CSP: https://v2.tauri.app/security/csp/ ; Sidecar args/scopes: https://v2.tauri.app/develop/sidecar/ |
+| 3 | `tauri-plugin-store`, `tauri-plugin-stronghold`, `tauri-plugin-sql`, `tauri-plugin-fs` | Store: https://v2.tauri.app/plugin/store/ ; Stronghold: https://v2.tauri.app/plugin/stronghold/ ; SQL: https://v2.tauri.app/plugin/sql/ ; FS: https://v2.tauri.app/plugin/file-system/ |
+| 4 | `tauri-plugin-deep-link`, `tauri-plugin-single-instance`, `tauri-plugin-window-state` | Deep links: https://v2.tauri.app/plugin/deep-linking/ ; Single instance: https://v2.tauri.app/plugin/single-instance/ ; Window state: https://v2.tauri.app/plugin/window-state/ |
+| 5 | `tauri-action`, `GitHub Actions`, `cargo audit` | Tauri GitHub pipeline: https://v2.tauri.app/distribute/pipelines/github/ ; tauri-action: https://github.com/tauri-apps/tauri-action ; GitHub hosted runners: https://docs.github.com/actions/using-github-hosted-runners/about-github-hosted-runners ; RustSec: https://rustsec.org/ ; GitHub attestations: https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds |
+| 6 | `Cargo profiles`, `Vite sourcemap`, `Tauri debug` | Vite sourcemap: https://vite.dev/config/build-options.html#build-sourcemap ; Tauri config: https://v2.tauri.app/reference/config/ |
+| 7 | `Tauri signing`, `Microsoft Artifact Signing`, `Apple notarization` | Windows signing: https://v2.tauri.app/distribute/sign/windows/ ; Microsoft signing options: https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options ; Artifact Signing: https://learn.microsoft.com/en-us/azure/artifact-signing/how-to-signing-integrations ; macOS signing: https://v2.tauri.app/distribute/sign/macos/ |
+| 8 | `Tauri updater`, `CrabNebula updater` | Tauri updater: https://v2.tauri.app/plugin/updater/ ; CrabNebula auto-updates: https://docs.crabnebula.dev/cloud/guides/auto-updates-tauri/ |
+| 9 | `Tauri sidecar`, `serial plugin`, `HID plugin`, `Arduino CLI` | Sidecars: https://v2.tauri.app/develop/sidecar/ ; Node sidecar: https://v2.tauri.app/learn/sidecar-nodejs ; Arduino CLI docs: https://arduino.github.io/arduino-cli/latest/ |
+| 10 | `tauri-plugin-log`, `Sentry Tauri`, `Bugsnag Rust` | Tauri process model: https://v2.tauri.app/concept/process-model/ ; Tauri log plugin: https://crates.io/crates/tauri-plugin-log ; sentry-tauri: https://github.com/timfish/sentry-tauri |
+| 11 | `Tauri tray`, `global shortcut`, `autostart`, `notifications` | Autostart: https://v2.tauri.app/plugin/autostart/ ; Global shortcut: https://v2.tauri.app/plugin/global-shortcut/ ; Notifications: https://v2.tauri.app/plugin/notification/ |
+| 12 | `Tauri AppImage`, `Debian`, `Flatpak`, `Snapcraft` | AppImage: https://v2.tauri.app/distribute/appimage/ ; Debian: https://v2.tauri.app/distribute/debian/ ; Flatpak: https://v2.tauri.app/distribute/flatpak/ ; Snapcraft: https://v2.tauri.app/distribute/snapcraft/ |
+
+## Team Execution Checklist
+
+1. Re-read the phase ADRs/docs before editing.
+2. Run Context7 for current library APIs; if Context7 fails, record the failure and use official primary docs.
+3. Write the failing test first.
+4. Run the test and capture the expected failure.
+5. Implement the smallest change that satisfies the contract.
+6. Run focused tests, then `npm run check`, then the relevant Tauri/build smoke.
+7. Confirm no unrelated files or user changes were reverted.
+8. Commit with the conventional message named in the task.
+9. Update `CODEX_DONE.md` or the active handoff with exact commands, verification, blockers, and next phase.
+10. Do not attach release secrets, updater private keys, Apple credentials, or Microsoft signing credentials to agent-owned workflows.
+
+## Dependencies
+
+```
+Phase 1 (baseline + IPC)
+  └── Phase 2 (authority boundary)
+        ├── Phase 3 (runtime + storage)
+        │     └── Phase 4 (lifecycle/project-open)
+        └── Phase 5 (CI/supply chain)
+              └── Phase 6 (release hardening)
+                    └── Phase 7 (signing/notarization)
+                          └── Phase 8 (updater)
+
+Phase 9 (hardware) depends on Phases 2, 3, 5, and 7 when sidecars are signed.
+Phase 10 (diagnostics) depends on Phase 6 source-map policy.
+Phase 11 (optional UX) depends on Phase 4 lifecycle stability.
+Phase 12 (distribution expansion) depends on Phases 5, 7, and 8.
+```
+
+## Downstream Unblocks
+
+| Item | Description | New Prerequisite Status |
+|------|-------------|------------------------|
+| Desktop preview | Packaged app boots and bridges real workflows | Phase 1-5 |
+| Native project files | Project data leaves browser localStorage safely | Phase 3-4 |
+| Hardware workflows | Serial/HID/Arduino authority is typed and scoped | Phase 2 + Phase 9 |
+| Public Windows/macOS distribution | Signed, notarized, reproducible artifacts | Phase 5-7 |
+| Auto-update | Signed updater artifacts and Tyler-owned key custody | Phase 8 |
+| Linux expansion | Flatpak/Snap/store channel analysis | Phase 12 |
