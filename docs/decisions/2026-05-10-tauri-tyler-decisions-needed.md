@@ -42,6 +42,8 @@ Scope note: the Round 5 handoff enumerates these nine ratification questions fro
 
 **Blocking?** Not blocking Phase 1. Phase 3 storage migration should use this default unless Tyler chooses a different container.
 
+**Blast radius:** **Highest of all 9 questions.** Per `docs/audits/2026-05-10-tauri-v2-express-route-path-c-classification.md`, Q3 directly determines the migration path of **23 of 35 active route modules / 129 of 211 Express endpoints (61%)**. The remaining 49 endpoints (Bucket 1 — Rust-replace) and 33 endpoints (Bucket 2 — web-only stay) are Q3-independent. If Tyler's answer differs from the proposed default ("mixed project-folder layout"), every Phase 3 sub-task requires re-shaping. Recommend ratifying Q3 before any other decision.
+
 ## 4. First Desktop Preview Hardware Paths
 
 **Source ADR + line reference:** `docs/decisions/2026-05-10-adr-tauri-runtime-topology.md:44`
