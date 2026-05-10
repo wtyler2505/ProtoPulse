@@ -1,77 +1,93 @@
-# Codex Round 4 Handoff — Integrate Claude's Context7 Research + Adversarial Plan-Doc Pass
+# Codex Round 5 Handoff — Pre-Implementation Validation Packet + Phase 1 Prompt Pack + Tyler Decision List
 
 **From:** Claude Code
 **Date:** 2026-05-10
-**Round:** 4 of N
-**Replaces:** Round 3 handoff (completed — 3 ADRs + plan-doc all landed)
+**Round:** 5 of N
+**Replaces:** Round 4 handoff (completed)
 
-## Round 3 Outcomes (accepted)
+## Round 4 Outcomes (accepted)
 
-All 4 Round 3 deliverables on disk:
-- `docs/decisions/2026-05-10-adr-tauri-runtime-topology.md` (5.4 KB)
-- `docs/decisions/2026-05-10-tauri-ipc-contract.md` (10.3 KB)
-- `docs/decisions/2026-05-10-adr-release-trust-model.md` (6 KB)
-- `docs/plans/2026-05-10-tauri-v2-desktop-migration.md` (39 KB)
-- `CODEX_DONE.md` updated
+- Plan-doc updated with `tauri-specta` as Phase 1 IPC fix (replaces manual parser), pinned package versions, integrated `fs:scope`/`$APPLOCALDATA/EBWebView/**` deny rule, threaded process+log+updater plugins into Phases 8/10.
+- `CODEX_RESPONSE_TAURI_R4_SELFCRITIQUE.md` (10.9 KB) — adversarial pass surfaced over-promises (Phase 3 8-bucket too big, Phase 9 hardware acceptance ladder missing), still-assumes (tauri-specta RC API needs compile proof, cargo build alone isn't IPC drift test, generated bindings commit policy unstated, ADRs still list manual IPC fixes — need supersession note), TDD feedback loop reality table, file-ownership collision table (lib.rs touched by 7 phases, Cargo.toml by 5, tauri.conf.json by 5, capabilities/default.json by 4), per-phase rollback story.
 
-## Why Round 4 Exists
+## Round 5 Deliverables (4)
 
-Tyler explicitly asked: "you can feed it [Claude's Context7 research] to codex after you get it all so codex can use it." Your Context7 MCP is broken (server-side, not auth-fixable — Tyler's words: "ITS CONTEXT7 SERVER IS FACKED"). Claude's Context7 works. So Claude pulled the upstream Tauri v2 docs you couldn't and dumped them into a feed file. Round 4 = integrate that feed into your Round 3 plan-doc.
+### Deliverable A — Pre-implementation environment validation script
 
-## Required Reading
+Write `scripts/tauri-preflight.sh` — a single bash script that fails fast if any prerequisite is missing. Verifies:
 
-1. **`docs/audits/2026-05-10-tauri-v2-claude-context7-research-feed.md`** — Claude's Context7 research feed. **CONTAINS THE BIG ONE: `tauri-specta` eliminates the IPC drift problem structurally.** Auto-generates TypeScript bindings from Rust commands at build time. The 3 mismatched commands you tabled in IPC contract get FIXED by adopting specta — generated bindings can't drift.
-2. Your own Round 3 outputs (re-read for adversarial review):
-   - `docs/plans/2026-05-10-tauri-v2-desktop-migration.md`
-   - `docs/decisions/2026-05-10-adr-tauri-runtime-topology.md`
-   - `docs/decisions/2026-05-10-tauri-ipc-contract.md`
-   - `docs/decisions/2026-05-10-adr-release-trust-model.md`
-3. Prior rounds: `CODEX_RESPONSE_TAURI.md`, `CODEX_RESPONSE_TAURI_R2_SELFCRITIQUE.md`, `docs/audits/2026-05-09-tauri-v2-migration-r2-deep-research.md`, `docs/audits/2026-05-09-tauri-v2-migration-r2-revised-phasing.md`
-4. Claude Phase 1: `docs/audits/2026-05-09-tauri-v2-migration-phase1-claude-verify.md`, `docs/audits/2026-05-09-tauri-v2-migration-phase1-storage-and-runtime-audit.md`
+1. Required CLI versions: `node`, `npm`, `rustc`, `cargo`, `tauri` (CLI), against pins in plan-doc Tech Stack.
+2. Cache writability: probes `npm config get cache`, `cargo --list` cache dir, fails if read-only (this caused R4's environment risk).
+3. Required plugins resolvable: `npm view @tauri-apps/plugin-log version` etc. for all plan-doc-pinned plugins; `cargo search tauri-specta tauri-plugin-{log,process,updater,fs,dialog,shell,opener,stronghold,store,deep-link,single-instance,window-state}` for Rust counterparts.
+4. `npm run check` passes (TypeScript baseline before any IPC changes).
+5. `cargo check --manifest-path src-tauri/Cargo.toml` passes (Rust baseline).
+6. `npm run tauri:build` smoke (or `tauri build --debug` if full build too slow) succeeds and produces an executable artifact path that the script prints.
+7. Reports: `dist/index.cjs` MISSING (already known), `withGlobalTauri:false` confirmed, CSP present, `vite.config.ts` `base:'./'` status.
+8. Exits 0 only if all 7 pass; otherwise emits a structured failure report (which gate failed, what to install, what to verify).
 
-## Round 4 Deliverables (3)
+The script is the gate that runs before ANY Phase 1 code change.
 
-### Deliverable A — Plan-doc integration pass
+### Deliverable B — Phase 1 prompt pack
 
-Update `docs/plans/2026-05-10-tauri-v2-desktop-migration.md` in place to integrate the Claude research feed:
+Write `docs/plans/2026-05-10-tauri-v2-phase1-prompt-pack.md` containing one ready-to-paste `/agent-teams` prompt per Phase 1 task. Each prompt must:
 
-1. **Tech Stack section:** add `tauri-specta` (or note it as the chosen IPC binding generator), `tauri-plugin-log`, `tauri-plugin-process`, with version pins from current upstream.
-2. **Phase 1 (Baseline + IPC):** restructure the IPC contract task. Instead of "manually rename frontend commands to match Rust," the task becomes "adopt tauri-specta, regenerate `client/src/lib/bindings.ts`, refactor `tauri-api.ts` to use `commands.readFile(filePath)` instead of `invoke('read_file_contents', { path: filePath })`." The drift test goes from a separate Vitest to "TypeScript compilation fails if Rust commands change without regen — `cargo build` is the test."
-3. **Phase 2 (Native Authority):** replace the loose `fs:allow-read-file` capability examples with the verified `fs:scope` glob patterns from the feed (Pattern A and Pattern B). **Hard-require the `$APPLOCALDATA/EBWebView` deny rule** — that's where Windows WebView2 stores tokens/cookies and the canonical Tauri docs example for what to deny.
-4. **Phase 8 (Updater):** reference the verified `process + updater` composition snippet from the feed.
-5. **Phase 10 (Observability):** reference the verified `tauri-plugin-log` setup with `Target::new(TargetKind::Stdout)` + `LogDir { file_name }` + `Webview` forwarding.
-6. **Existing Infrastructure Summary:** mark `tauri-specta` and the missing plugins as "Required (not installed)." Remove any "TBD upstream API" entries — the API patterns are verified.
+- Name the **single owner** of each touched file (per the R4 collision table — `src-tauri/src/lib.rs` and `Cargo.toml` go to one "native-deps" agent for Phase 1; `client/src/lib/tauri-api.ts` and the new `bindings.ts` to a "bridge" agent; tests to a "test-author" agent).
+- Specify **strict merge order** when phases collide (specta build setup → bindings export → frontend refactor; not parallel).
+- Include the **failing-test-first prompt** (per TDD memory rule).
+- Reference the canonical source URLs from Claude's research feed for each step.
+- Cite the success criteria from `tauri-preflight.sh` that must still pass after the task.
+- Document the **environment exports needed** (`npm_config_cache=/tmp/npm-cache-protopulse`, `CARGO_HOME=/tmp/cargo-home-protopulse` if home cache is read-only).
 
-### Deliverable B — Self-adversarial pass on the plan-doc
+Five Phase 1 prompts: 1.1 baseline smoke, 1.2 bridge wiring audit, 1.3 tauri-specta adoption + bindings generation, 1.4 frontend refactor to typed `commands.X()`, 1.5 IPC contract + drift test.
 
-Read your own plan-doc as if you were Claude adversarially reviewing it. Write `CODEX_RESPONSE_TAURI_R4_SELFCRITIQUE.md` covering:
+### Deliverable C — Supersession note for IPC ADR
 
-1. **Where does the plan over-promise?** Phases that look easier than they are.
-2. **Where does the plan assume?** Steps that depend on facts you didn't verify (now that you have the Claude feed, verify them).
-3. **Are the TDD task breakdowns realistic?** A failing test in a Tauri/Rust setup costs a Rust toolchain run; estimate the actual feedback loop latency per task.
-4. **Where does file ownership in `/agent-teams` prompts collide?** Two phases editing `lib.rs`, two editing `tauri.conf.json`, two editing `capabilities/default.json` — surface those collisions.
-5. **What's the rollback story per phase?** If Phase N ships and breaks, can we revert without taking down Phases N-1?
+Add a 3-line `## Supersession` block at the top of `docs/decisions/2026-05-10-tauri-ipc-contract.md`:
 
-### Deliverable C — Round 5 focus proposal
+> **Note (2026-05-10, Round 4 supersession):** This ADR documents the manual command-rename path proposed in Round 3. **The plan-doc** (`docs/plans/2026-05-10-tauri-v2-desktop-migration.md` Phase 1.3) **supersedes the manual fix with `tauri-specta` auto-generated bindings.** This ADR remains valuable as the contract baseline + drift-test design + Rust-only-command audit, but agents must adopt the `tauri-specta` path — DO NOT manually rename commands.
 
-In `CODEX_DONE.md`, propose what Round 5 should focus on. Don't say "looks good." Examples of valid Round 5 focuses:
-- Per-phase agent-teams prompt drafting (one prompt per phase, ready to paste)
-- Per-phase Test/Verification Notes section (acceptance criteria for each task)
-- Decision-needed escalation list for Tyler (specific yes/no questions)
-- Pre-implementation environment validation script (verifies prereqs before Phase 1 starts)
+### Deliverable D — Tyler Decision-Needed List
+
+Compile the **9 ratification questions** raised across the 3 Round 3 ADRs into a single doc: `docs/decisions/2026-05-10-tauri-tyler-decisions-needed.md`.
+
+For each question:
+- **Source ADR + line reference**
+- **Question (verbatim)**
+- **Proposed default** (what we'll do if Tyler doesn't ratify, with justification)
+- **Reversibility** (what changes if Tyler picks differently later)
+- **Blocking?** (does Phase X stall without an answer, or can we ship with the default)
+
+The 9 questions to compile:
+
+From `adr-tauri-runtime-topology.md` lines 41-44:
+1. Express-less offline mode for embedded/field devices?
+2. Temporary local Express compatibility sidecar acceptable?
+3. Project container choice: single `.protopulse` file / project folder bundle / SQLite / mixed?
+4. Mandatory hardware paths for first desktop preview?
+
+From `adr-release-trust-model.md`:
+5. Decision 1 line 10: Azure Artifact Signing eligibility / OV+HSM fallback / dev-preview-only?
+6. Decision 2 line 14: paid Apple Developer account ready / notarize-immediately / macOS-dev-preview-only?
+7. Decision 3 line 18: updater key custody — local offline private key / cloud KMS / GitHub Secret with strict env controls?
+8. Decision 4 line 22: Linux ARM/Raspberry Pi as Phase 12 target or separate embedded program?
+9. Decision 5 line 26: when crash reporting introduced, upload maps to Sentry-style service or local-only?
+
+Each gets the 4-field treatment above. This becomes Tyler's read-and-decide doc.
 
 ## Constraints (still in force)
 
-- **No code edits to `src-tauri/`** — Round 4 is still planning.
-- **No commits** — leave all artifacts uncommitted for Tyler review.
-- **No notebook source_adds** — defer notebook integration to a later round.
-- **Verify upstream claims via WebSearch + WebFetch** on canonical URLs (the feed has them indexed). Do NOT use Context7 — your MCP server is broken; the feed is what Claude pulled for you.
-- **No stopping suggestions** — when Round 4 lands, propose Round 5 immediately.
+- **No code edits to `src-tauri/`.** The preflight script is `scripts/`; the prompt pack is `docs/plans/`; the supersession note is a doc edit; the decision list is a new doc.
+- **No commits.** Leave artifacts uncommitted.
+- **No notebook writes.**
+- **Do NOT use Context7 — your MCP is broken.** Use WebSearch + WebFetch on canonical URLs from prior research feed. Claude pulls Context7 separately if needed.
+- **No stopping-point suggestions.** When R5 lands, propose R6 focus immediately. Round 6 likely = Tyler reads decision list, ratifies; agents kick off Phase 1 against the prompt pack.
 
 ## Output Checklist
 
-- [ ] `docs/plans/2026-05-10-tauri-v2-desktop-migration.md` updated with feed integration (Deliverable A)
-- [ ] `CODEX_RESPONSE_TAURI_R4_SELFCRITIQUE.md` written (Deliverable B)
-- [ ] `CODEX_DONE.md` updated with Round 5 focus proposal (Deliverable C)
+- [ ] `scripts/tauri-preflight.sh` (executable, fails fast, structured report)
+- [ ] `docs/plans/2026-05-10-tauri-v2-phase1-prompt-pack.md` (5 ready-to-paste prompts)
+- [ ] `docs/decisions/2026-05-10-tauri-ipc-contract.md` updated with supersession note at top
+- [ ] `docs/decisions/2026-05-10-tauri-tyler-decisions-needed.md` (9 questions, 4-field format each)
+- [ ] `CODEX_DONE.md` updated with R5 status and R6 focus proposal
 - [ ] `git diff --check` passes
 - [ ] No `src-tauri/` edits, no commits, no notebook writes
