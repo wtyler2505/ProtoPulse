@@ -58,33 +58,41 @@ If you find yourself creating a file in knowledge/ without having run /extract, 
 
 ## NotebookLM Notesbook System (PP-NLM)
 
-ProtoPulse's evolving knowledge lives across **18 NotebookLM notebooks** (the *PP-NLM Notesbook*, Ultra tier): 9 Tier-1 durable + 9 Tier-2 feature deep-dives. Tier-3 per-component notebooks were tried and dropped 2026-05-09 — they redundantly duplicated `pp-hardware` content; per-IC drill-in is handled by querying `pp-hardware` with the part number.
+> **Jurisdiction:** Codex owns PP-NLM. Claude does not modify `data/pp-nlm/**`, `scripts/pp-nlm/**`, the NLM skills, or `docs/notebooklm.md`. This section is meta-routing only.
 
-**Tier-1 aliases (durable, always-active):** `pp-codebase`, `pp-breadboard`, `pp-hardware`, `pp-arscontexta`, `pp-memories`, `pp-research`, `pp-backlog`, `pp-journal`, `pp-bench`.
+ProtoPulse's evolving knowledge is consolidated (2026-05-09) into **2 active hub notebooks** plus a private DevLab sandbox mirror. The earlier 18-notebook split (9 Tier-1 + 9 Tier-2) and per-component Tier-3 notebooks are retired as active query surfaces; their content lives in the hubs and old aliases are compatibility handles only.
 
-**Tier-2 aliases (`pp-feat-*`, feature deep-dives):** `pp-feat-mna-solver`, `pp-feat-parts-catalog`, `pp-feat-ai-integration`, `pp-feat-design-system`, `pp-feat-tauri-migration`, `pp-feat-arduino-ide`, `pp-feat-pcb-layout`, `pp-feat-collab-yjs`, `pp-feat-firmware-runtime`. (`pp-feat-breadboard-view` was redundant with Tier-1 `pp-breadboard` and was dropped.)
+**Active hubs (`pp:active` tag):**
+- `pp-core` — codebase, architecture, plans, Ars Contexta, memories, backlog, journal, research, and non-hardware feature/system deep dives.
+- `pp-hardware` — hardware knowledge, breadboard workflows, bench observations, parts catalog, per-component drill-in (query with part number).
+
+**Private mirror (not in default cross-query):** `pp-devlab` — Tyler's one-way exact mirror of `pp-core` + `pp-hardware` for sandbox/learning.
+
+**Compatibility aliases (resolve to a hub, not separate notebooks):** `pp-codebase`, `pp-arscontexta`, `pp-memories`, `pp-backlog`, `pp-journal`, `pp-research`, `pp-feat-*`, `pp-breadboard`, `pp-bench`, `pp-feat-parts-catalog`, `pp-cmp-*`. Resolve any alias with `nlm alias get <alias>` before writes.
 
 **Skills stack (load order):**
 1. `nlm-skill` (global) — CLI/MCP tool mechanics. References: `mcp-tool-surface.md`, `advanced-recipes.md`, `edge-cases.md`, `performance-and-batching.md`.
-2. `pp-knowledge` (project) — query-routing decisions (which notebook holds what).
+2. `pp-knowledge` (project) — hub-routing decisions; consult before any query.
 3. `pp-nlm-operator` (project) — execution layer (which slash command/hook/pipeline for which job).
 
-**When to query**: invoke `pp-knowledge` skill or `pp-nlm-operator` for routing. One-shot: `nlm notebook query <alias> "..."`. Cross-notebook: `nlm cross query --tags pp:active "..."`.
+**When to query:** invoke `pp-knowledge` for routing. One-shot: `nlm notebook query pp-core "..."` or `nlm notebook query pp-hardware "..."`. Cross-hub synthesis: `nlm cross query --tags pp:active "..."`.
 
-**When to capture**: `/pp-capture` (pp-memories), `/pp-iter` (pp-backlog with 4-field structure), `/pp-innovate` (pp-research), `/pp-bench` (pp-bench with part/vendor/equipment fields), `/pp-recap` (pp-journal), `/pp-research` (pp-research deep-research).
+**When to capture:** `/pp-capture`, `/pp-iter`, `/pp-innovate`, `/pp-bench`, `/pp-recap`, `/pp-research` route to the correct hub via the operator skill.
 
-**Studio rhythm**: Sunday 9am cron generates audio brief + Briefing Doc. On-demand via `/pp-podcast`, `/pp-mindmap`, `/pp-report`. **Every artifact auto-downloads to `docs/nlm-archive/`** — Google can vanish artifacts; we keep durable copies.
+**Studio rhythm:** Sunday 9am cron generates audio brief + Briefing Doc. On-demand via `/pp-podcast`, `/pp-mindmap`, `/pp-report`. **Every artifact auto-downloads to `docs/nlm-archive/`** — Google can vanish artifacts; we keep durable copies.
 
-**Bidirectional bridge**: Studio outputs land in `inbox/` with `provenance.source: nlm-studio` and flow through the `/extract → knowledge/` pipeline, then re-publish as new versioned sources on the appropriate notebook. The vault is the source of truth.
+**Bidirectional bridge:** Studio outputs land in `inbox/` with `provenance.source: nlm-studio` and flow through `/extract → knowledge/`, then re-publish as new versioned sources on the appropriate hub. The vault is the source of truth.
 
-**Auto-capture**: Silent for git commits → `pp-journal` (PostToolUse hook). Buffered draft for session-end recaps (Stop hooks can't prompt; SessionStart surfaces a "pending recap" notice). Manual everywhere else.
+**Versioning:** Source titles end with `vN — YYYY-MM-DD`. Refresh = new source + 30-day grace-period delete; NotebookLM does not support content mutation.
 
-**Hooks** (`.claude/hooks/pp-nlm-*.sh`): SessionStart context inject (cache 4h), commit-to-journal (PostToolUse Bash), stop-draft-recap (Stop), studio-archive (manual + cron sweep), weekly cron entry-point.
+**Auto-capture:** Silent for git commits → `pp-core` (`pp-journal` alias). Buffered draft for session-end recaps. Manual everywhere else.
+
+**Hooks** (`.claude/hooks/pp-nlm-*.sh`): SessionStart context inject (4h cache), commit-to-journal (PostToolUse Bash), stop-draft-recap (Stop), studio-archive (manual + cron sweep), weekly cron entry-point.
 
 **Hard rules** (non-negotiable):
 - NEVER claim a Studio artifact "generated" without `studio_status: completed` verification.
 - NEVER bulk-script chat configs — each notebook gets a hand-crafted, deeply tailored prompt.
-- NEVER skip the bidirectional bridge (Studio outputs route through inbox/, not directly into vault).
+- NEVER skip the bidirectional bridge (Studio outputs route through `inbox/`, not directly into vault).
 - NEVER let Studio artifacts live only in NotebookLM cloud (auto-archive to `docs/nlm-archive/`).
 - NEVER auto-confirm destructive ops (`confirm=True` requires user AskUserQuestion gate).
 - NEVER reference BrainGrid in pp-* skills/commands/hooks (per-plan exclusion).
@@ -93,7 +101,7 @@ ProtoPulse's evolving knowledge lives across **18 NotebookLM notebooks** (the *P
 - ALWAYS use `--tags` flag with `nlm tag add` (positional fails — verified Phase 1, 2026-05-08).
 - For chat configs, hand-craft each one (per `feedback_no_bulk_scripts_for_craft_work`).
 
-**Full operator reference**: `.claude/skills/pp-nlm-operator/SKILL.md`.
+**Canonical reference:** `docs/notebooklm.md` (Codex-owned). **Operator reference:** `.claude/skills/pp-nlm-operator/SKILL.md`. **Routing reference:** `.claude/skills/pp-knowledge/SKILL.md`.
 
 ## Self-Improvement
 When friction occurs:
