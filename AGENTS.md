@@ -52,6 +52,62 @@ ops/
 | "What should I work on..." | /arscontexta:next |
 | "Help / what can I do..." | /arscontexta:help |
 
+## MCP Auto-Routing (Mandatory — use these BEFORE built-in tools)
+
+> **The rule:** MCP usage is automatic, not opt-in. When the situation matches a row below, reach for the MCP tool **first** — not the built-in equivalent. Built-in `Bash`/`Read`/`Edit`/`Write`/`WebSearch` are fallbacks, not defaults, when an MCP server covers the case better.
+>
+> Established 2026-05-10 after Tyler called out under-utilization of Desktop-Commander, Clear-Thought, Context7, NotebookLM. See [feedback_mcp_auto_routing.md](https://github.com/wtyler2505/ProtoPulse/blob/main/.claude/memory/feedback_mcp_auto_routing.md) (memory note).
+
+### Trigger → MCP Server Mapping
+
+| Situation / Trigger | MCP Tool (use FIRST) | Why over built-in |
+|---|---|---|
+| Reading `.env`, `.mcp.json`, `credentials.*`, `*.key`, `*.pem`, anything secret | `mcp__desktop-commander__read_file` | Built-in `Read` blocked by permissions |
+| Editing/writing sensitive config | `mcp__desktop-commander__edit_block` / `write_file` | Same blocking issue |
+| `rm -rf`, long-running processes, file moves across boundaries | `mcp__desktop-commander__start_process` / `move_file` | Built-in `Bash` denies destructive ops |
+| Searching INSIDE sensitive files for content | `mcp__desktop-commander__start_search` | grep cannot read denied files |
+| Reading 3+ files at once | `mcp__desktop-commander__read_multiple_files` | One round-trip vs N |
+| Listing processes, checking ports, system state | `mcp__desktop-commander__list_processes` / `get_config` | Structured output beats parsing `ps`/`netstat` |
+| ANY library/framework/SDK question (React, Drizzle, Tauri, Vite, Vitest, Express, etc.) | `mcp__context7__resolve-library-id` → `query-docs` | Training data is stale; primary docs win |
+| CLI tool usage docs (npm, gh, pnpm, etc.) | `mcp__context7__resolve-library-id` → `query-docs` | Same |
+| Complex debugging (3+ hypotheses), architecture tradeoffs (3+ options), multi-step planning with dependencies | `mcp__clear-thought__clear_thought` | Branching reasoning beats linear thought |
+| Querying ProtoPulse knowledge corpus | `mcp__notebooklm-mcp__notebook_query` (`pp-core` or `pp-hardware`) | The hubs ARE the corpus — see PP-NLM section |
+| Cross-hub synthesis across vault knowledge | `mcp__notebooklm-mcp__cross_notebook_query --tags pp:active` | Single-hub query misses cross-cutting answers |
+| Vault note search by content / vector / deep search | `mcp__qmd__qmd_search` / `qmd_vector_search` / `qmd_deep_search` | Semantic search beats grep over `knowledge/` |
+| Vault note retrieval by slug | `mcp__qmd__qmd_get` | Frontmatter-aware vs naked Read |
+| Saving / recalling architectural decisions, bug fixes, preferences across sessions | `mcp__memory__create_entities` / `search_nodes` / `add_observations` | Persists across sessions; `Read`/`Edit` does not |
+| Browser DOM snapshot, accessibility tree, network inspection | `mcp__chrome-devtools__take_snapshot` / `list_network_requests` | Built-in WebFetch can't see DOM state |
+| Browser interaction (click, fill, screenshot in real session) | `mcp__chrome-devtools__click` / `fill` / `take_screenshot` | Required after `take_snapshot` |
+| Compiling Arduino sketches, uploading to MCU | `mcp__arduino-cli-mcp__compile` / `upload` | First-class Arduino toolchain |
+
+### Hard Rules
+
+1. **Library/framework questions → Context7 first, every time.** No exceptions, even for "well-known" libraries. Routing rule lives in `~/.claude/rules/context7.md` (global) and is non-negotiable. Pattern: `resolve-library-id` → `query-docs`.
+2. **Sensitive file ops → Desktop-Commander, no retries on built-ins.** First permission denial means switch immediately, not negotiate. Tool mapping in global CLAUDE.md §Desktop Commander.
+3. **Knowledge corpus questions → NotebookLM hubs first.** Don't grep `knowledge/` blind when `pp-core` / `pp-hardware` will synthesize. Routing logic owned by `pp-knowledge` skill (load before any query).
+4. **Complex reasoning → Clear-Thought, not linear chain-of-thought.** Triggers: 3+ hypotheses, 3+ tradeoffs, multi-phase plans with dependencies, decisions affecting multiple subsystems.
+5. **Browser work → snapshot FIRST.** Chrome DevTools `take_snapshot` before any click/fill/hover. "No snapshot found" = protocol violation.
+6. **Cross-session persistence → Memory MCP.** After non-trivial debugging or design decisions, store via `mcp__memory__create_entities` / `add_observations`. Future sessions benefit.
+
+### Anti-Patterns (don't do these)
+
+- Using `Read` on a path you suspect contains secrets, getting blocked, asking Tyler what to do — switch to Desktop-Commander immediately.
+- Answering a library API question from training data without `resolve-library-id` — the rule is mandatory, not advisory.
+- Grepping `knowledge/` when the corpus question would be served by `notebook_query pp-core` or `notebook_query pp-hardware`.
+- Doing linear reasoning through a 3+ hypothesis bug when `clear_thought` would branch them in parallel.
+- Clicking a Chrome DevTools UID without a fresh snapshot in the same turn.
+- Solving a tricky bug and not storing the resolution in Memory — re-solving next session is a waste.
+
+### Built-in vs MCP Quick Decision
+
+```
+Need to do X. Is there an MCP that handles X better than the built-in?
+  YES → Use MCP. (90% of the time the answer is YES for the categories above.)
+  NO  → Built-in is fine.
+Permission denied on built-in?
+  → Switch to MCP equivalent. Don't retry. Don't ask.
+```
+
 ## Pipeline Compliance
 **NEVER write directly to knowledge/.** All content routes through the pipeline: inbox/ → /extract → knowledge/. 
 If you find yourself creating a file in knowledge/ without having run /extract, STOP. Route through inbox/ first.
