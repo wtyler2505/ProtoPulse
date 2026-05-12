@@ -11,6 +11,21 @@
 //! The same conceptual deny list also appears in
 //! `src-tauri/capabilities/default.json` (for plugin-fs callers). A drift
 //! test asserts symmetry; the Rust constants here are authoritative.
+//!
+//! ## R5+ deferral: plugin-fs migration revisit
+//!
+//! Per `COLLAB_TAURI_RETRO_HANDOFF_R3.7.md` D1, this module's existence is
+//! a deliberate choice over migrating the frontend to `@tauri-apps/plugin-fs`
+//! directly. The revisit is gated on:
+//!   1. R5 #3 typed Arduino commands landing FULL implementation (currently
+//!      scaffold-only per `docs/decisions/2026-05-12-adr-arduino-typed-commands.md`).
+//!   2. Other intent-typed commands (e.g., `read_project_file`,
+//!      `write_csv_export`, `read_arduino_sketch`) stabilizing.
+//!
+//! At that point, the generic `read_file`/`write_file` commands may disappear
+//! in favor of intent-typed ones, AND the frontend may switch to plugin-fs
+//! for any remaining generic FS needs. Re-evaluate the trade-off then.
+//! Until then, this module is the authoritative validation layer.
 
 use std::path::{Path, PathBuf};
 
