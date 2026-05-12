@@ -189,7 +189,49 @@
         { "path": "$DOWNLOAD/**/*.p12" },
         { "path": "$DOWNLOAD/**/*.pfx" },
         { "path": "$DOWNLOAD/**/*.kdbx" },
-        { "path": "$DOWNLOAD/**/*.asc" }
+        { "path": "$DOWNLOAD/**/*.asc" },
+
+        { "path": "$APPDATA/protopulse/**/*api-key*" },
+        { "path": "$APPDATA/protopulse/**/*oauth*" },
+        { "path": "$APPDATA/protopulse/**/*private-key*" },
+        { "path": "$APPDATA/protopulse/**/*access-key*" },
+        { "path": "$APPDATA/protopulse/**/*secret*" },
+        { "path": "$APPDATA/protopulse/**/*password*" },
+
+        { "path": "$APPLOCALDATA/protopulse/**/*api-key*" },
+        { "path": "$APPLOCALDATA/protopulse/**/*oauth*" },
+        { "path": "$APPLOCALDATA/protopulse/**/*private-key*" },
+        { "path": "$APPLOCALDATA/protopulse/**/*access-key*" },
+        { "path": "$APPLOCALDATA/protopulse/**/*secret*" },
+        { "path": "$APPLOCALDATA/protopulse/**/*password*" },
+
+        { "path": "$HOME/Documents/ProtoPulse/**/*api-key*" },
+        { "path": "$HOME/Documents/ProtoPulse/**/*oauth*" },
+        { "path": "$HOME/Documents/ProtoPulse/**/*private-key*" },
+        { "path": "$HOME/Documents/ProtoPulse/**/*access-key*" },
+        { "path": "$HOME/Documents/ProtoPulse/**/*secret*" },
+        { "path": "$HOME/Documents/ProtoPulse/**/*password*" },
+
+        { "path": "$DESKTOP/**/*api-key*" },
+        { "path": "$DESKTOP/**/*oauth*" },
+        { "path": "$DESKTOP/**/*private-key*" },
+        { "path": "$DESKTOP/**/*access-key*" },
+        { "path": "$DESKTOP/**/*secret*" },
+        { "path": "$DESKTOP/**/*password*" },
+
+        { "path": "$DOCUMENT/**/*api-key*" },
+        { "path": "$DOCUMENT/**/*oauth*" },
+        { "path": "$DOCUMENT/**/*private-key*" },
+        { "path": "$DOCUMENT/**/*access-key*" },
+        { "path": "$DOCUMENT/**/*secret*" },
+        { "path": "$DOCUMENT/**/*password*" },
+
+        { "path": "$DOWNLOAD/**/*api-key*" },
+        { "path": "$DOWNLOAD/**/*oauth*" },
+        { "path": "$DOWNLOAD/**/*private-key*" },
+        { "path": "$DOWNLOAD/**/*access-key*" },
+        { "path": "$DOWNLOAD/**/*secret*" },
+        { "path": "$DOWNLOAD/**/*password*" }
       ]
     },
     "opener:default"
