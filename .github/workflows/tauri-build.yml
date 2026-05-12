@@ -25,10 +25,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,    label: linux-x64 }
-          - { os: macos-latest,   target: x86_64-apple-darwin,         label: macos-x64 }
-          - { os: macos-14,       target: aarch64-apple-darwin,        label: macos-arm64 }
-          - { os: windows-latest, target: x86_64-pc-windows-msvc,      label: windows-x64 }
+          - { os: ubuntu-latest,    target: x86_64-unknown-linux-gnu,    label: linux-x64 }
+          # R5 Deferral #1: Linux ARM64 expansion. ubuntu-24.04-arm is a GA
+          # GitHub-hosted runner (verified https://docs.github.com/en/actions/
+          # reference/runners/github-hosted-runners 2026-05-12). Sidecar
+          # binary SHA256 reserved in scripts/tauri/prepare-arduino-sidecar.ts
+          # since Wave 8.
+          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu,   label: linux-arm64 }
+          - { os: macos-latest,     target: x86_64-apple-darwin,         label: macos-x64 }
+          - { os: macos-14,         target: aarch64-apple-darwin,        label: macos-arm64 }
+          - { os: windows-latest,   target: x86_64-pc-windows-msvc,      label: windows-x64 }
     runs-on: ${{ matrix.os }}
     name: build (${{ matrix.label }})
 
@@ -39,7 +45,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Linux Tauri deps (WebKit2GTK + tooling)
-        if: matrix.os == 'ubuntu-latest'
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -85,6 +91,14 @@ jobs:
       - name: Frontend build (Vite + esbuild server)
         run: npm run build
 
+      # R4 retro Wave 7/8 + R5 follow-up: Arduino CLI sidecar must be
+      # downloaded + SHA256-verified + placed at
+      # src-tauri/binaries/arduino-cli-<target-triple> BEFORE tauri-action
+      # bundles. `bundle.externalBin` in tauri.conf.json declares the
+      # sidecar; missing binary = bundle failure.
+      - name: Prepare Arduino CLI sidecar
+        run: npm run tauri:prepare-sidecars -- --target ${{ matrix.target }}
+
       - name: Tauri build (release, unsigned dev preview)
         uses: tauri-apps/tauri-action@v0
         env:
@@ -113,20 +127,23 @@ jobs:
       # R4 retro Wave 7 (C8+C21): supply-chain check + SBOM generation is now
       # MANDATORY in CI. cargo-cyclonedx + @cyclonedx/cyclonedx-npm produce
       # CycloneDX JSON SBOMs uploaded as workflow artifacts with fail-on-empty.
+      # Supply-chain + SBOM generation runs ONCE on linux-x64 to avoid
+      # producing duplicate SBOMs per architecture. The npm/cargo dependency
+      # graphs are architecture-independent; one SBOM covers all targets.
       - name: Install supply-chain tools (cargo-audit, cargo-cyclonedx)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.label == 'linux-x64'
         run: |
           cargo install --locked cargo-audit
           cargo install --locked cargo-cyclonedx
 
       - name: Supply-chain check + SBOM generation (Phase 5.2 / R4 retro)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.label == 'linux-x64'
         run: bash scripts/ci/supply-chain-check.sh
         # NO continue-on-error — supply-chain failures (audit warnings, missing
         # SBOM output) block the workflow per R4 retro C8+C21 closure.
 
       - name: Upload SBOM artifacts
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.label == 'linux-x64'
         uses: actions/upload-artifact@v4
         with:
           name: sbom-${{ matrix.label }}
@@ -135,12 +152,12 @@ jobs:
           retention-days: 14
 
       - name: Packaged smoke (Phase 5 closeout)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.label == 'linux-x64'
         run: bash scripts/ci/tauri-packaged-smoke.sh
         continue-on-error: true
 
       - name: Verify signed artifacts (Phase 7.2, dry-run until secrets land)
-        if: matrix.os != 'ubuntu-latest'
+        if: ${{ !startsWith(matrix.os, 'ubuntu') }}
         run: bash scripts/ci/verify-signed-artifacts.sh --dry-run
         shell: bash
         continue-on-error: true   # signing not yet activated; flip when Tyler-owned cert lands
