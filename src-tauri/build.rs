@@ -13,6 +13,13 @@ fn main() {
         tauri_build::Attributes::new().app_manifest(
             tauri_build::AppManifest::new().commands(&[
                 "frontend_ready_for_project_open_requests",
+                // R5 #2: store wrappers (backend-only plugin use)
+                "read_user_setting",
+                "write_user_setting",
+                "read_kanban_state",
+                "write_kanban_state",
+                "read_project_design_variables",
+                "write_project_design_variables",
                 "show_save_dialog",
                 "show_open_dialog",
                 "read_file",

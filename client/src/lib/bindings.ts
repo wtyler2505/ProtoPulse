@@ -13,6 +13,12 @@ export const commands = {
 	 *  listener will pick them up).
 	 */
 	frontendReadyForProjectOpenRequests: () => __TAURI_INVOKE<PendingProjectOpenRequest[]>("frontend_ready_for_project_open_requests"),
+	readUserSetting: (key: string) => typedError<string | null, string>(__TAURI_INVOKE("read_user_setting", { key })),
+	writeUserSetting: (key: string, valueJson: string) => typedError<null, string>(__TAURI_INVOKE("write_user_setting", { key, valueJson })),
+	readKanbanState: () => typedError<string | null, string>(__TAURI_INVOKE("read_kanban_state")),
+	writeKanbanState: (valueJson: string) => typedError<null, string>(__TAURI_INVOKE("write_kanban_state", { valueJson })),
+	readProjectDesignVariables: (projectId: string) => typedError<string | null, string>(__TAURI_INVOKE("read_project_design_variables", { projectId })),
+	writeProjectDesignVariables: (projectId: string, valueJson: string) => typedError<null, string>(__TAURI_INVOKE("write_project_design_variables", { projectId, valueJson })),
 	showSaveDialog: (title: string | null, defaultPath: string | null, filters: DialogFilter[] | null) => typedError<SaveDialogResult, string>(__TAURI_INVOKE("show_save_dialog", { title, defaultPath, filters })),
 	showOpenDialog: (title: string | null, defaultPath: string | null, filters: DialogFilter[] | null, properties: string[] | null) => typedError<OpenDialogResult, string>(__TAURI_INVOKE("show_open_dialog", { title, defaultPath, filters, properties })),
 	readFile: (filePath: string) => typedError<string, string>(__TAURI_INVOKE("read_file", { filePath })),

@@ -23,6 +23,12 @@ tauri-plugin-opener = "2"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-deep-link = "2"
 tauri-plugin-window-state = "2"
+
+# R5 Deferral #2: tauri-plugin-store for user-settings / kanban-state /
+# design-variables workflows. Backend-only — `@tauri-apps/plugin-store` JS
+# package and `store:default` capability are NOT added (per Codex R2/R3
+# review). Frontend access goes through typed Rust commands only.
+tauri-plugin-store = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["process", "fs", "io-util"] }
@@ -36,7 +42,7 @@ libc = "0.2"
 # functions, eliminating IPC contract drift between Rust and the React frontend.
 # Pinned to RC versions per docs/plans/2026-05-10-tauri-v2-desktop-migration.md
 # Tech Stack; the RC is a known migration risk and must not float.
-specta = { version = "=2.0.0-rc.25", features = ["derive"] }
+specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
 specta-typescript = "=0.0.12"
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 

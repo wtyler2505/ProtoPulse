@@ -12,6 +12,10 @@ mod path_validation;
 // (cold-start + deep-link + single-instance forwarding → frontend listener).
 mod native_project_open;
 
+// R5 Deferral #2: tauri-plugin-store wrappers for user-settings,
+// kanban-state, design-variables workflows. Backend-only plugin use.
+mod desktop_store;
+
 // ── Command payloads ────────────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Deserialize, Type)]
@@ -279,6 +283,14 @@ fn get_platform() -> String {
 pub fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new().commands(collect_commands![
         native_project_open::frontend_ready_for_project_open_requests,
+        // R5 #2: tauri-plugin-store wrappers (user-settings / kanban-state /
+        // design-variables workflows). Backend-only plugin use.
+        desktop_store::read_user_setting,
+        desktop_store::write_user_setting,
+        desktop_store::read_kanban_state,
+        desktop_store::write_kanban_state,
+        desktop_store::read_project_design_variables,
+        desktop_store::write_project_design_variables,
         show_save_dialog,
         show_open_dialog,
         read_file,
@@ -540,6 +552,10 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
+        // R5 #2: tauri-plugin-store. Webview NEVER invokes plugin commands
+        // directly (no `store:default` capability granted). Backend-only via
+        // the typed `read_*`/`write_*` commands in `desktop_store.rs`.
+        .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(specta.invoke_handler())
         .setup(|app| {
             setup_menu(app)?;
