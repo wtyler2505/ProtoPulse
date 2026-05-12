@@ -1759,6 +1759,17 @@
     ]
   },
   {
+    "key": "protopulse:open-project-from-file",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/desktop/handle-project-open-outcome.ts",
+        "line": 44
+      }
+    ]
+  },
+  {
     "key": "protopulse:place-component-instance",
     "classifiedAs": "event-name-not-storage",
     "sensitive": false,
@@ -1810,7 +1821,7 @@
     "callSites": [
       {
         "file": "client/src/lib/desktop/handle-project-open-outcome.ts",
-        "line": 49
+        "line": 60
       }
     ]
   },
