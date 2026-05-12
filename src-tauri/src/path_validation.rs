@@ -123,6 +123,24 @@ pub const DENIED_EXTS: &[&str] = &[
     "key", "pem", "p12", "pfx", "kdbx", "asc",
 ];
 
+/// Substrings inside any filename that mark it as credential-bearing.
+/// R4.5 fix (Codex R4 land review): the broad secret-name family from R3.7
+/// was missing. `oauth-token.protopulse`, `private-key.svg`, `access-key.csv`,
+/// `my-api-key.json` are all rejected even though their EXTENSIONS are
+/// otherwise allowed.
+pub const DENIED_SUBSTRINGS: &[&str] = &[
+    "api-key",
+    "api_key",
+    "oauth",
+    "private-key",
+    "private_key",
+    "access-key",
+    "access_key",
+    "secret",
+    "password",
+    "passwd",
+];
+
 /// Determine WriteIntent from a file path's extension. Used by command
 /// bodies to pick the right scope-check before opening.
 pub fn write_intent_from_extension(file_path: &str) -> WriteIntent {
@@ -201,6 +219,16 @@ fn is_denied_name_or_ext(path: &Path) -> Result<(), PathValidationError> {
         for denied in DENIED_EXTS {
             if ext == denied {
                 return Err(PathValidationError::DeniedByExtension(ext.clone()));
+            }
+        }
+    }
+    // R4.5 fix: broad substring match for credential-bearing basenames.
+    // Catches `oauth-token.protopulse`, `my-api-key.csv`, `access_key.svg`,
+    // `*.secret`, etc. — even when extension is otherwise allowed.
+    if let Some(ref name) = name_lc {
+        for substr in DENIED_SUBSTRINGS {
+            if name.contains(substr) {
+                return Err(PathValidationError::DeniedByName(name.clone()));
             }
         }
     }
@@ -453,6 +481,30 @@ mod tests {
                     Err(PathValidationError::DeniedByName(_))
                 ),
                 "expected {} to be denied",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn denied_substrings_catch_credential_basenames() {
+        // R4.5 fix (Codex R4 land review): broad substring deny catches
+        // credential-bearing names even with otherwise-allowed extensions.
+        for name in &[
+            "my-api-key.csv",
+            "OAuth-token.protopulse",
+            "private-key.svg",
+            "access_key.json",
+            "secret-config.txt",
+            "user-password.csv",
+        ] {
+            let p = PathBuf::from("/tmp").join(name);
+            assert!(
+                matches!(
+                    is_denied_name_or_ext(&p),
+                    Err(PathValidationError::DeniedByName(_))
+                ),
+                "expected {} to be denied by substring",
                 name
             );
         }

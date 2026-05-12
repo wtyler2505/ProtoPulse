@@ -58,6 +58,9 @@ const WINDOW_EVENT_NAMES: ReadonlySet<string> = new Set([
   'protopulse:view-onboarding',
   'protopulse:export',
   'protopulse:bom-snapshot-cost',
+  // R4.5 fix #2: Wave 5 introduced this CustomEvent in handle-project-open-outcome.ts:49.
+  'protopulse:project-open-prompt-replace',
+  'protopulse:open-project-from-file',
 ]);
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -251,6 +254,10 @@ const PARAMETERIZED: Array<{ pattern: RegExp; bucket: StorageBucket; sensitive: 
   { pattern: /^protopulse-recent-projects(?::|$)/,              bucket: 'history-cache', sensitive: false },
   { pattern: /^protopulse-exported-/,                           bucket: 'project-data',  sensitive: false },
   { pattern: /^protopulse:bom-snapshot-cost:/,                  bucket: 'project-data',  sensitive: false },
+  // R4.5 fix #2 (Codex R4 review): parameterized variant per project ID.
+  // CURATED 'protopulse-order-history' covers the prefix; parameterized
+  // pattern catches `protopulse-order-history:<projectId>` runtime keys.
+  { pattern: /^protopulse-order-history(?::|$)/,                bucket: 'history-cache', sensitive: false },
 ];
 
 // ───────────────────────────────────────────────────────────────────────────

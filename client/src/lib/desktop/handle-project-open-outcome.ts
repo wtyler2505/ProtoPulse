@@ -23,34 +23,44 @@ import type { ProjectOpenOutcome } from './project-open-contract';
  * module is a thin policy layer.
  */
 export function handleProjectOpenOutcome(outcome: ProjectOpenOutcome): void {
+  if (typeof window === 'undefined') return;
+
   switch (outcome.action) {
     case 'load-new': {
-      if (outcome.projectPath) {
-        // Navigation hand-off to wouter via the global location.pathname.
-        // The workspace components observe URL changes and load the project.
-        const target = `/projects/${encodeURIComponent(outcome.projectPath)}`;
-        if (typeof window !== 'undefined' && window.location.pathname !== target) {
-          window.history.pushState({}, '', target);
-          window.dispatchEvent(new PopStateEvent('popstate'));
-        }
-      }
+      if (!outcome.projectPath) break;
+      // R4.5 fix #4 (Codex R4 land review blocker): the previous version
+      // navigated to `/projects/${encodeURIComponent(path)}` which broke
+      // because ProjectWorkspace expects a numeric DB project ID and
+      // redirects non-numeric IDs to /projects/1. A .protopulse FILE PATH
+      // is not a DB ID — file-backed loading is a separate code path that
+      // doesn't exist in the consumer layer yet.
+      //
+      // Honest fix: emit a CustomEvent that consumers can listen for. The
+      // actual file-loading wiring (parse .protopulse, create a session-
+      // scoped project record, navigate to its workspace route) is R5+
+      // work. R4.5 ensures the lifecycle bridge DELIVERS the event without
+      // mis-navigating; R5 wires the consumer.
+      window.dispatchEvent(
+        new CustomEvent('protopulse:open-project-from-file', {
+          detail: { projectPath: outcome.projectPath, reason: outcome.reason },
+        }),
+      );
       break;
     }
     case 'focus-existing': {
-      // The window-state plugin re-focuses the existing window. No additional
-      // action needed here; the workspace is already loaded with the project.
+      // The window-state plugin re-focuses the existing window. The
+      // workspace is already loaded with the project.
       break;
     }
     case 'prompt-replace': {
       // Dispatch a UI event the active workspace listens for to show the
       // "Replace current project?" confirm dialog. R5 wave wires the UI.
-      if (typeof window !== 'undefined' && outcome.projectPath) {
-        window.dispatchEvent(
-          new CustomEvent('protopulse:project-open-prompt-replace', {
-            detail: { projectPath: outcome.projectPath, reason: outcome.reason },
-          }),
-        );
-      }
+      if (!outcome.projectPath) break;
+      window.dispatchEvent(
+        new CustomEvent('protopulse:project-open-prompt-replace', {
+          detail: { projectPath: outcome.projectPath, reason: outcome.reason },
+        }),
+      );
       break;
     }
     case 'ignore-invalid': {

@@ -678,7 +678,7 @@
     "callSites": [
       {
         "file": "client/src/App.tsx",
-        "line": 33
+        "line": 34
       },
       {
         "file": "client/src/lib/gpu-performance.tsx",
@@ -726,7 +726,7 @@
     "callSites": [
       {
         "file": "client/src/App.tsx",
-        "line": 23
+        "line": 24
       },
       {
         "file": "client/src/hooks/useHighContrast.ts",
@@ -1352,7 +1352,7 @@
     "callSites": [
       {
         "file": "client/src/App.tsx",
-        "line": 47
+        "line": 48
       },
       {
         "file": "client/src/lib/theme-context.tsx",
@@ -1800,6 +1800,17 @@
       {
         "file": "client/src/lib/plugin-sdk.ts",
         "line": 166
+      }
+    ]
+  },
+  {
+    "key": "protopulse:project-open-prompt-replace",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/desktop/handle-project-open-outcome.ts",
+        "line": 49
       }
     ]
   },

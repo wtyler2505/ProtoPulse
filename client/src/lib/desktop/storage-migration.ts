@@ -82,6 +82,7 @@ const PARAMETERIZED_PATTERNS: ReadonlyArray<{ pattern: RegExp; bucket: StorageBu
   { pattern: /^protopulse-recent-projects(?::|$)/, bucket: 'history-cache' },
   { pattern: /^protopulse-exported-/, bucket: 'project-data' },
   { pattern: /^protopulse:bom-snapshot-cost:/, bucket: 'project-data' },
+  { pattern: /^protopulse-order-history(?::|$)/, bucket: 'history-cache' },
 ];
 
 const MIGRATION_TARGETS: Record<StorageBucket, MigrationTarget> = {

@@ -39,7 +39,11 @@
         "name": "ProtoPulse Project",
         "description": "ProtoPulse circuit design project",
         "mimeType": "application/x-protopulse",
-        "role": "Editor"
+        "role": "Editor",
+        "exportedType": {
+          "identifier": "com.protopulse.project",
+          "conformsTo": ["public.data"]
+        }
       }
     ],
     "linux": {
