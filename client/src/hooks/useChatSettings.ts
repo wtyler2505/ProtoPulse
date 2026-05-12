@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { STORAGE_KEYS } from '@/lib/constants';
 import { AI_MODELS, type RoutingStrategy } from '@/components/panels/chat/constants';
+import { getUserSettingStore } from '@/lib/desktop/desktop-store-adapter';
 
 interface ChatSettings {
   aiProvider: 'gemini';
@@ -57,7 +58,20 @@ function readLocalStorage(): ChatSettings {
   }
 }
 
-/** Write individual settings to localStorage (immediate local persistence). */
+/**
+ * Write individual settings to localStorage (immediate local persistence) AND
+ * to the desktop-store adapter via dual-write.
+ *
+ * R5 #2 consumer migration: dual-write keeps plugin-store synchronized with
+ * localStorage on every change. localStorage remains the read source for now
+ * (synchronous read at init); plugin-store catches every write so when the
+ * Bootstrap-Storage Restructure wave flips the read direction, plugin-store
+ * already has the latest values.
+ *
+ * The adapter falls back to localStorage in browser mode, so the dual write
+ * is effectively single-write in browser (write-back to localStorage twice).
+ * In Tauri mode, the adapter writes to plugin-store.
+ */
 function writeLocalStorage(patch: Partial<ChatSettings>) {
   try {
     if (patch.aiProvider !== undefined) localStorage.setItem(STORAGE_KEYS.AI_PROVIDER, patch.aiProvider);
@@ -68,6 +82,21 @@ function writeLocalStorage(patch: Partial<ChatSettings>) {
     if (patch.previewAiChanges !== undefined) localStorage.setItem(STORAGE_KEYS.AI_PREVIEW_CHANGES, String(patch.previewAiChanges));
   } catch {
     // Quota exceeded — silently ignore, server is the durable store
+  }
+  // Dual-write to desktop-store adapter (fire-and-forget; Tauri uses
+  // plugin-store, browser is a no-op redundant write to localStorage).
+  const store = getUserSettingStore();
+  const pairs: Array<[string, unknown]> = [];
+  if (patch.aiProvider !== undefined) pairs.push([STORAGE_KEYS.AI_PROVIDER, patch.aiProvider]);
+  if (patch.aiModel !== undefined) pairs.push([STORAGE_KEYS.AI_MODEL, patch.aiModel]);
+  if (patch.aiTemperature !== undefined) pairs.push([STORAGE_KEYS.AI_TEMPERATURE, patch.aiTemperature]);
+  if (patch.customSystemPrompt !== undefined) pairs.push([STORAGE_KEYS.AI_SYSTEM_PROMPT, patch.customSystemPrompt]);
+  if (patch.routingStrategy !== undefined) pairs.push([STORAGE_KEYS.ROUTING_STRATEGY, patch.routingStrategy]);
+  if (patch.previewAiChanges !== undefined) pairs.push([STORAGE_KEYS.AI_PREVIEW_CHANGES, patch.previewAiChanges]);
+  for (const [key, value] of pairs) {
+    void store.set(key, value).catch((e) => {
+      console.warn(`[useChatSettings] dual-write to plugin-store failed for ${key}:`, e);
+    });
   }
 }
 

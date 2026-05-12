@@ -481,7 +481,13 @@ export class KanbanBoard {
   // Persistence
   // -----------------------------------------------------------------------
 
-  /** Persist board state to localStorage. */
+  /**
+   * Persist board state to localStorage AND dual-write to desktop-store
+   * (plugin-store in Tauri, no-op redundant write in browser).
+   *
+   * R5 #2 consumer migration: dual-write keeps plugin-store in sync. The
+   * Bootstrap-Storage Restructure wave will flip reads to plugin-store-first.
+   */
   private save(): void {
     try {
       if (typeof window === 'undefined') {
@@ -489,6 +495,14 @@ export class KanbanBoard {
       }
       const data: KanbanBoardData = { columns: this.columns, tasks: this.tasks };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+      // Dual-write to desktop-store adapter (singleton Kanban store).
+      // Lazy import to avoid circular dependency at module-init time.
+      void import('@/lib/desktop/desktop-store-adapter').then(({ getKanbanStateStore }) => {
+        return getKanbanStateStore().set(data);
+      }).catch((e) => {
+        console.warn('[kanban-board] dual-write to plugin-store failed:', e);
+      });
     } catch {
       // localStorage may be unavailable or quota exceeded
     }

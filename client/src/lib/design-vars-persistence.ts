@@ -307,6 +307,19 @@ export class DesignVarPersistence {
         return;
       }
       localStorage.setItem(projectKey(projectId), JSON.stringify(variables));
+
+      // R5 #2 consumer migration: dual-write to plugin-store (desktop-rust)
+      // via the design-variables adapter. localStorage remains the read
+      // source until the Bootstrap-Storage Restructure wave flips it.
+      // projectId may contain `:` (e.g., `default`, or `proj-uuid`); the
+      // adapter validates it server-side via the Rust regex `^[A-Za-z0-9_-]{1,64}$`.
+      // For values that include colons or other non-conforming chars, the
+      // plugin-store write fails silently (logged) — localStorage still has it.
+      void import('@/lib/desktop/desktop-store-adapter').then(({ getDesignVariablesStore }) => {
+        return getDesignVariablesStore().set(projectId, variables);
+      }).catch((e) => {
+        console.warn(`[design-vars-persistence] dual-write to plugin-store for ${projectId} failed:`, e);
+      });
     } catch {
       // localStorage may be unavailable or quota exceeded
     }
