@@ -1,0 +1,1991 @@
+[
+  {
+    "key": "asset-custom",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/constants/storage-keys.ts",
+        "line": 23
+      }
+    ]
+  },
+  {
+    "key": "asset-favorites",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/constants/storage-keys.ts",
+        "line": 21
+      }
+    ]
+  },
+  {
+    "key": "asset-recent",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/constants/storage-keys.ts",
+        "line": 22
+      }
+    ]
+  },
+  {
+    "key": "protopulse_ai_model",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/constants/storage-keys.ts",
+        "line": 8
+      }
+    ]
+  },
+  {
+    "key": "protopulse_ai_preview_changes",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/constants/storage-keys.ts",
+        "line": 12
+      }
+    ]
+  },
+  {
+    "key": "protopulse_ai_provider",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/constants/storage-keys.ts",
+        "line": 7
+      }
+    ]
+  },
+  {
+    "key": "protopulse_ai_sysprompt",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/constants/storage-keys.ts",
+        "line": 10
+      }
+    ]
+  },
+  {
+    "key": "protopulse_ai_temp",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/constants/storage-keys.ts",
+        "line": 9
+      }
+    ]
+  },
+  {
+    "key": "protopulse_bom_sort_order",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/constants/storage-keys.ts",
+        "line": 17
+      }
+    ]
+  },
+  {
+    "key": "protopulse_optimization_goal",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/constants/storage-keys.ts",
+        "line": 15
+      }
+    ]
+  },
+  {
+    "key": "protopulse_preferred_suppliers",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/constants/storage-keys.ts",
+        "line": 16
+      }
+    ]
+  },
+  {
+    "key": "protopulse_routing_strategy",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/constants/storage-keys.ts",
+        "line": 11
+      }
+    ]
+  },
+  {
+    "key": "protopulse-activity-feed-",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/activity-feed.ts",
+        "line": 88
+      }
+    ]
+  },
+  {
+    "key": "protopulse-adaptive-hints-dismissed",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/adaptive-hints.ts",
+        "line": 271
+      }
+    ]
+  },
+  {
+    "key": "protopulse-ai-api-key",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/hooks/useApiKeys.ts",
+        "line": 35
+      }
+    ]
+  },
+  {
+    "key": "protopulse-ai-api-key-gemini",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/hooks/useApiKeys.ts",
+        "line": 35
+      }
+    ]
+  },
+  {
+    "key": "protopulse-ai-api-key-gemini-scratch",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/hooks/useApiKeys.ts",
+        "line": 25
+      }
+    ]
+  },
+  {
+    "key": "protopulse-ai-review-queue",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/ai-review-queue.ts",
+        "line": 48
+      }
+    ]
+  },
+  {
+    "key": "protopulse-ai-safety-dismissed",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/ai-safety-mode.ts",
+        "line": 45
+      }
+    ]
+  },
+  {
+    "key": "protopulse-ai-safety-mode",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/ai-safety-mode.ts",
+        "line": 44
+      }
+    ]
+  },
+  {
+    "key": "protopulse-ai-tutor",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/ai-tutor.ts",
+        "line": 666
+      },
+      {
+        "file": "client/src/lib/ai-tutor.ts",
+        "line": 677
+      }
+    ]
+  },
+  {
+    "key": "protopulse-alternate-parts",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/alternate-parts.ts",
+        "line": 102
+      }
+    ]
+  },
+  {
+    "key": "protopulse-assembly-cost-estimates",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/assembly-cost-estimator.ts",
+        "line": 169
+      }
+    ]
+  },
+  {
+    "key": "protopulse-beginner-mode",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/beginner-mode.ts",
+        "line": 24
+      }
+    ]
+  },
+  {
+    "key": "protopulse-bench-dashboard",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/bench-dashboard.ts",
+        "line": 81
+      }
+    ]
+  },
+  {
+    "key": "protopulse-bench-robot",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/bench-robot.ts",
+        "line": 187
+      }
+    ]
+  },
+  {
+    "key": "protopulse-board-packages",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/board-package-checker.ts",
+        "line": 145
+      }
+    ]
+  },
+  {
+    "key": "protopulse-board-settings",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/arduino/board-settings.ts",
+        "line": 41
+      }
+    ]
+  },
+  {
+    "key": "protopulse-board-stackup",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/board-stackup.ts",
+        "line": 94
+      }
+    ]
+  },
+  {
+    "key": "protopulse-board-viewer-3d",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/board-viewer-3d.ts",
+        "line": 218
+      }
+    ]
+  },
+  {
+    "key": "protopulse-build-envs",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/arduino/build-environments.ts",
+        "line": 110
+      }
+    ]
+  },
+  {
+    "key": "protopulse-candidate",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/generative-design/generative-adopt.ts",
+        "line": 82
+      },
+      {
+        "file": "client/src/lib/generative-design/generative-adopt.ts",
+        "line": 418
+      }
+    ]
+  },
+  {
+    "key": "protopulse-circuit-challenges",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/circuit-sandbox-game.ts",
+        "line": 663
+      }
+    ]
+  },
+  {
+    "key": "protopulse-circuit-selection",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/circuit-selector.ts",
+        "line": 38
+      }
+    ]
+  },
+  {
+    "key": "protopulse-command-history",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/scriptable-commands.ts",
+        "line": 92
+      }
+    ]
+  },
+  {
+    "key": "protopulse-community-library",
+    "classifiedAs": "catalog-shared",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/community-library.ts",
+        "line": 124
+      }
+    ]
+  },
+  {
+    "key": "protopulse-compact-mode",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/touch-safe-controls.ts",
+        "line": 35
+      }
+    ]
+  },
+  {
+    "key": "protopulse-completed-tutorials",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/tutorial-context.tsx",
+        "line": 7
+      }
+    ]
+  },
+  {
+    "key": "protopulse-component-favorites",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/component-favorites.ts",
+        "line": 41
+      }
+    ]
+  },
+  {
+    "key": "protopulse-component-links-",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/component-linkage.ts",
+        "line": 49
+      }
+    ]
+  },
+  {
+    "key": "protopulse-copper-pour",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/copper-pour.ts",
+        "line": 100
+      }
+    ]
+  },
+  {
+    "key": "protopulse-creator-profiles",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/creator-profiles.ts",
+        "line": 55
+      }
+    ]
+  },
+  {
+    "key": "protopulse-ctx-menu-hint-seen",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/views/ArchitectureView.tsx",
+        "line": 606
+      }
+    ]
+  },
+  {
+    "key": "protopulse-custom-boards",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/arduino/custom-board-def.ts",
+        "line": 131
+      }
+    ]
+  },
+  {
+    "key": "protopulse-damage-assessment-history",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/damage-assessment.ts",
+        "line": 325
+      }
+    ]
+  },
+  {
+    "key": "protopulse-deployment-profiles",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/deployment-profiles.ts",
+        "line": 56
+      }
+    ]
+  },
+  {
+    "key": "protopulse-design-imports",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/import/import-types.ts",
+        "line": 96
+      }
+    ]
+  },
+  {
+    "key": "protopulse-design-remix-history",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/design-remix.ts",
+        "line": 67
+      }
+    ]
+  },
+  {
+    "key": "protopulse-design-snippets",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/design-reuse.ts",
+        "line": 122
+      }
+    ]
+  },
+  {
+    "key": "protopulse-dfm-checker",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/dfm-checker.ts",
+        "line": 320
+      }
+    ]
+  },
+  {
+    "key": "protopulse-dismissed-reminders",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/smart-reminders.ts",
+        "line": 388
+      }
+    ]
+  },
+  {
+    "key": "protopulse-drc-suppressions",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/drc-suppression.ts",
+        "line": 62
+      }
+    ]
+  },
+  {
+    "key": "protopulse-eco-workflows",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/eco-workflow.ts",
+        "line": 114
+      }
+    ]
+  },
+  {
+    "key": "protopulse-firmware-versions",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/arduino/firmware-version-tracker.ts",
+        "line": 73
+      }
+    ]
+  },
+  {
+    "key": "protopulse-first-run-checklist",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/first-run-checklist.ts",
+        "line": 60
+      }
+    ]
+  },
+  {
+    "key": "protopulse-flex-zones",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/pcb/flex-zone-manager.ts",
+        "line": 99
+      }
+    ]
+  },
+  {
+    "key": "protopulse-font-scale",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/font-scaling.ts",
+        "line": 43
+      }
+    ]
+  },
+  {
+    "key": "protopulse-fs-upload",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/arduino/filesystem-upload.ts",
+        "line": 114
+      }
+    ]
+  },
+  {
+    "key": "protopulse-google-workspace-token",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/hooks/useChatSettings.ts",
+        "line": 26
+      },
+      {
+        "file": "client/src/hooks/useGoogleWorkspaceToken.ts",
+        "line": 34
+      }
+    ]
+  },
+  {
+    "key": "protopulse-google-workspace-token-scratch",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/hooks/useGoogleWorkspaceToken.ts",
+        "line": 32
+      }
+    ]
+  },
+  {
+    "key": "protopulse-gpu-blur-override",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/App.tsx",
+        "line": 33
+      },
+      {
+        "file": "client/src/lib/gpu-performance.tsx",
+        "line": 161
+      }
+    ]
+  },
+  {
+    "key": "protopulse-healing-config",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/proactive-healing.ts",
+        "line": 124
+      }
+    ]
+  },
+  {
+    "key": "protopulse-healing-history",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/proactive-healing.ts",
+        "line": 125
+      }
+    ]
+  },
+  {
+    "key": "protopulse-hidden-projects",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/project-picker-visibility.ts",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "key": "protopulse-high-contrast",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/App.tsx",
+        "line": 23
+      },
+      {
+        "file": "client/src/hooks/useHighContrast.ts",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "key": "protopulse-import-history",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/import-history.ts",
+        "line": 51
+      }
+    ]
+  },
+  {
+    "key": "protopulse-incident-bundles",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/incident-bundle.ts",
+        "line": 63
+      }
+    ]
+  },
+  {
+    "key": "protopulse-installed-template-packs",
+    "classifiedAs": "catalog-shared",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/community-template-packs.ts",
+        "line": 258
+      }
+    ]
+  },
+  {
+    "key": "protopulse-kanban-board",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/kanban-board.ts",
+        "line": 84
+      }
+    ]
+  },
+  {
+    "key": "protopulse-keyboard-shortcuts",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/keybinding-editor.ts",
+        "line": 11
+      },
+      {
+        "file": "client/src/lib/keyboard-shortcuts.ts",
+        "line": 58
+      }
+    ]
+  },
+  {
+    "key": "protopulse-lab-sessions",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/lab-templates.ts",
+        "line": 112
+      }
+    ]
+  },
+  {
+    "key": "protopulse-last-project",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/project-navigation-state.ts",
+        "line": 3
+      },
+      {
+        "file": "client/src/lib/project-navigation-state.ts",
+        "line": 4
+      }
+    ]
+  },
+  {
+    "key": "protopulse-lcsc-mapper",
+    "classifiedAs": "catalog-shared",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/lcsc-part-mapper.ts",
+        "line": 119
+      }
+    ]
+  },
+  {
+    "key": "protopulse-learning-path",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/learning-path.ts",
+        "line": 252
+      }
+    ]
+  },
+  {
+    "key": "protopulse-locale",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/i18n.ts",
+        "line": 65
+      }
+    ]
+  },
+  {
+    "key": "protopulse-marketplace",
+    "classifiedAs": "catalog-shared",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/marketplace.ts",
+        "line": 81
+      }
+    ]
+  },
+  {
+    "key": "protopulse-marketplace-installed",
+    "classifiedAs": "catalog-shared",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/marketplace.ts",
+        "line": 82
+      }
+    ]
+  },
+  {
+    "key": "protopulse-memory-history",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/arduino/memory-usage-parser.ts",
+        "line": 41
+      }
+    ]
+  },
+  {
+    "key": "protopulse-milestone-unlocks",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/progress-milestones.ts",
+        "line": 163
+      }
+    ]
+  },
+  {
+    "key": "protopulse-mission-mode",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/mission-mode.ts",
+        "line": 160
+      }
+    ]
+  },
+  {
+    "key": "protopulse-mobile-captures",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/mobile-capture.ts",
+        "line": 80
+      }
+    ]
+  },
+  {
+    "key": "protopulse-mobile-review-config",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/mobile-review-mode.ts",
+        "line": 106
+      }
+    ]
+  },
+  {
+    "key": "protopulse-multimodal-input",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/multimodal-input.ts",
+        "line": 108
+      }
+    ]
+  },
+  {
+    "key": "protopulse-offline",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/indexed-db-manager.ts",
+        "line": 54
+      }
+    ]
+  },
+  {
+    "key": "protopulse-onboarding-dismissed",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/views/WelcomeOverlay.tsx",
+        "line": 20
+      }
+    ]
+  },
+  {
+    "key": "protopulse-order-history",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/order-history.ts",
+        "line": 78
+      }
+    ]
+  },
+  {
+    "key": "protopulse-panel-layout",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/pages/workspace/workspace-reducer.ts",
+        "line": 64
+      }
+    ]
+  },
+  {
+    "key": "protopulse-parametric-search",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/parametric-search.ts",
+        "line": 100
+      }
+    ]
+  },
+  {
+    "key": "protopulse-pcb-bundle",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/circuit-editor/PCBLayoutView.tsx",
+        "line": 212
+      },
+      {
+        "file": "client/src/components/circuit-editor/PCBLayoutView.tsx",
+        "line": 624
+      },
+      {
+        "file": "client/src/components/circuit-editor/PCBLayoutView.tsx",
+        "line": 649
+      },
+      {
+        "file": "client/src/components/circuit-editor/PCBLayoutView.tsx",
+        "line": 720
+      }
+    ]
+  },
+  {
+    "key": "protopulse-pcb-order-tracker",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/pcb-order-tracker.ts",
+        "line": 69
+      }
+    ]
+  },
+  {
+    "key": "protopulse-pcb-orders",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/pcb-ordering.ts",
+        "line": 148
+      }
+    ]
+  },
+  {
+    "key": "protopulse-pcb-tutorial-state",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/pcb-tutorial.ts",
+        "line": 96
+      }
+    ]
+  },
+  {
+    "key": "protopulse-pending-starter-circuit",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/starter-circuit-launch.ts",
+        "line": 8
+      }
+    ]
+  },
+  {
+    "key": "protopulse-prediction-dismissals",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/ai-prediction-engine/constants.ts",
+        "line": 5
+      }
+    ]
+  },
+  {
+    "key": "protopulse-prediction-feedback",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/ai-prediction-engine/constants.ts",
+        "line": 6
+      }
+    ]
+  },
+  {
+    "key": "protopulse-pwa-manager",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/pwa-manager.ts",
+        "line": 107
+      }
+    ]
+  },
+  {
+    "key": "protopulse-rag-documents",
+    "classifiedAs": "catalog-shared",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/rag-engine.ts",
+        "line": 181
+      }
+    ]
+  },
+  {
+    "key": "protopulse-ratsnest-filter",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/pcb/ratsnest-filter.ts",
+        "line": 21
+      }
+    ]
+  },
+  {
+    "key": "protopulse-recent-projects",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/recent-projects.ts",
+        "line": 49
+      }
+    ]
+  },
+  {
+    "key": "protopulse-reduced-motion",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/reduced-motion.ts",
+        "line": 30
+      }
+    ]
+  },
+  {
+    "key": "protopulse-safe-commands",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/arduino/DeviceCommandSandbox.tsx",
+        "line": 27
+      },
+      {
+        "file": "client/src/components/arduino/DeviceCommandSandbox.tsx",
+        "line": 41
+      }
+    ]
+  },
+  {
+    "key": "protopulse-schematic-bundle",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/circuit-editor/schematic/converters.ts",
+        "line": 53
+      },
+      {
+        "file": "client/src/components/circuit-editor/schematic/use-clipboard.ts",
+        "line": 62
+      },
+      {
+        "file": "client/src/components/circuit-editor/schematic/use-clipboard.ts",
+        "line": 201
+      },
+      {
+        "file": "client/src/components/circuit-editor/schematic/use-clipboard.ts",
+        "line": 275
+      },
+      {
+        "file": "client/src/components/circuit-editor/schematic/use-keyboard-shortcuts.ts",
+        "line": 99
+      }
+    ]
+  },
+  {
+    "key": "protopulse-scriptable-commands",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/scriptable-commands.ts",
+        "line": 91
+      }
+    ]
+  },
+  {
+    "key": "protopulse-serial-last-preset",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/panels/SerialMonitorPanel.tsx",
+        "line": 136
+      },
+      {
+        "file": "client/src/components/panels/SerialMonitorPanel.tsx",
+        "line": 144
+      }
+    ]
+  },
+  {
+    "key": "protopulse-serial-presets",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/panels/SerialMonitorPanel.tsx",
+        "line": 80
+      }
+    ]
+  },
+  {
+    "key": "protopulse-session-id",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/components/panels/ChatPanel.tsx",
+        "line": 644
+      },
+      {
+        "file": "client/src/components/panels/ChatPanel.tsx",
+        "line": 671
+      },
+      {
+        "file": "client/src/components/panels/ExportPanel.tsx",
+        "line": 71
+      },
+      {
+        "file": "client/src/components/simulation/SpiceImportButton.tsx",
+        "line": 8
+      },
+      {
+        "file": "client/src/hooks/useChatSettings.ts",
+        "line": 87
+      },
+      {
+        "file": "client/src/lib/auth-context.tsx",
+        "line": 25
+      },
+      {
+        "file": "client/src/lib/client-state-scope.ts",
+        "line": 1
+      },
+      {
+        "file": "client/src/lib/queryClient.ts",
+        "line": 6
+      }
+    ]
+  },
+  {
+    "key": "protopulse-sim-compare-snapshots",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/simulation/sim-compare.ts",
+        "line": 115
+      }
+    ]
+  },
+  {
+    "key": "protopulse-sim-scenarios",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/simulation/scenario-manager.ts",
+        "line": 46
+      }
+    ]
+  },
+  {
+    "key": "protopulse-smart-hints",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/smart-hints.ts",
+        "line": 197
+      }
+    ]
+  },
+  {
+    "key": "protopulse-standards-compliance",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/compliance/compliance-constants.ts",
+        "line": 23
+      }
+    ]
+  },
+  {
+    "key": "protopulse-supplier-api",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/lib/supplier-api/config.ts",
+        "line": 12
+      }
+    ]
+  },
+  {
+    "key": "protopulse-team-command-center",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/team-command-center.ts",
+        "line": 79
+      }
+    ]
+  },
+  {
+    "key": "protopulse-team-templates",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/team-templates.ts",
+        "line": 287
+      }
+    ]
+  },
+  {
+    "key": "protopulse-telemetry",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/digital-twin/telemetry-logger.ts",
+        "line": 37
+      }
+    ]
+  },
+  {
+    "key": "protopulse-theme",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/App.tsx",
+        "line": 47
+      },
+      {
+        "file": "client/src/lib/theme-context.tsx",
+        "line": 299
+      }
+    ]
+  },
+  {
+    "key": "protopulse-tutorials",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/tutorial-system.ts",
+        "line": 95
+      }
+    ]
+  },
+  {
+    "key": "protopulse-twin",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/digital-twin/telemetry-protocol.ts",
+        "line": 144
+      }
+    ]
+  },
+  {
+    "key": "protopulse-workspace-presets",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/workspace-presets.ts",
+        "line": 82
+      }
+    ]
+  },
+  {
+    "key": "protopulse:avl-entries",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/approved-vendor-list.ts",
+        "line": 62
+      }
+    ]
+  },
+  {
+    "key": "protopulse:baud:lastUsed",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/serial/baud-rate-manager.ts",
+        "line": 48
+      }
+    ]
+  },
+  {
+    "key": "protopulse:baud:selected",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/serial/baud-rate-manager.ts",
+        "line": 47
+      }
+    ]
+  },
+  {
+    "key": "protopulse:build-journal",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/build-journal.ts",
+        "line": 58
+      }
+    ]
+  },
+  {
+    "key": "protopulse:bus-pin-mapper",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/circuit-editor/bus-pin-mapper.ts",
+        "line": 58
+      }
+    ]
+  },
+  {
+    "key": "protopulse:changelog:lastSeenVersion",
+    "classifiedAs": "ux-flags",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/changelog-panel.ts",
+        "line": 6
+      }
+    ]
+  },
+  {
+    "key": "protopulse:chat-send",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/circuit-editor/BreadboardView.tsx",
+        "line": 341
+      },
+      {
+        "file": "client/src/components/panels/ChatPanel.tsx",
+        "line": 850
+      },
+      {
+        "file": "client/src/components/panels/ChatPanel.tsx",
+        "line": 851
+      },
+      {
+        "file": "client/src/components/views/ArchitectureView.tsx",
+        "line": 560
+      }
+    ]
+  },
+  {
+    "key": "protopulse:classroom:assignments",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/classroom.ts",
+        "line": 151
+      }
+    ]
+  },
+  {
+    "key": "protopulse:classroom:submissions",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/classroom.ts",
+        "line": 152
+      }
+    ]
+  },
+  {
+    "key": "protopulse:custom-keybindings",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/keybinding-editor.ts",
+        "line": 10
+      },
+      {
+        "file": "client/src/lib/keybinding-editor.ts",
+        "line": 57
+      }
+    ]
+  },
+  {
+    "key": "protopulse:design-branches",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/design-branching.ts",
+        "line": 179
+      }
+    ]
+  },
+  {
+    "key": "protopulse:design-variables",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/panels/DesignVariablesPanel.tsx",
+        "line": 35
+      },
+      {
+        "file": "client/src/components/simulation/SpiceImportSection.tsx",
+        "line": 37
+      },
+      {
+        "file": "client/src/lib/design-vars-persistence.ts",
+        "line": 37
+      }
+    ]
+  },
+  {
+    "key": "protopulse:design-variables:migrated",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/design-vars-persistence.ts",
+        "line": 40
+      }
+    ]
+  },
+  {
+    "key": "protopulse:design-variables:project:",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/design-vars-persistence.ts",
+        "line": 34
+      }
+    ]
+  },
+  {
+    "key": "protopulse:drc-scripts",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/drc-scripting.ts",
+        "line": 89
+      }
+    ]
+  },
+  {
+    "key": "protopulse:export",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/layout/sidebar/CoachPanel.tsx",
+        "line": 85
+      },
+      {
+        "file": "client/src/components/layout/sidebar/CoachPanel.tsx",
+        "line": 86
+      },
+      {
+        "file": "client/src/components/ui/FirstRunChecklist.tsx",
+        "line": 76
+      },
+      {
+        "file": "client/src/components/ui/FirstRunChecklist.tsx",
+        "line": 77
+      }
+    ]
+  },
+  {
+    "key": "protopulse:fab-pipeline-orders",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/fab-pipeline.ts",
+        "line": 170
+      }
+    ]
+  },
+  {
+    "key": "protopulse:firmware-snapshots",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/firmware-snapshot.ts",
+        "line": 42
+      }
+    ]
+  },
+  {
+    "key": "protopulse:focus-component-search",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/circuit-editor/schematic/use-context-menu.ts",
+        "line": 59
+      },
+      {
+        "file": "client/src/components/ui/UnifiedComponentSearch.tsx",
+        "line": 67
+      },
+      {
+        "file": "client/src/components/ui/UnifiedComponentSearch.tsx",
+        "line": 68
+      }
+    ]
+  },
+  {
+    "key": "protopulse:interaction-history",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/interaction-history.ts",
+        "line": 44
+      }
+    ]
+  },
+  {
+    "key": "protopulse:keyboard-engine-history",
+    "classifiedAs": "history-cache",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/keyboard-engine.ts",
+        "line": 99
+      }
+    ]
+  },
+  {
+    "key": "protopulse:macros",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/macro-recorder.ts",
+        "line": 6
+      },
+      {
+        "file": "client/src/lib/macro-recorder.ts",
+        "line": 56
+      }
+    ]
+  },
+  {
+    "key": "protopulse:mention-notifications",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/mentions.ts",
+        "line": 112
+      }
+    ]
+  },
+  {
+    "key": "protopulse:navigate-knowledge",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/views/arduino/ArduinoConsoleOutput.tsx",
+        "line": 147
+      }
+    ]
+  },
+  {
+    "key": "protopulse:net-colors",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/circuit-editor/net-colors.ts",
+        "line": 19
+      }
+    ]
+  },
+  {
+    "key": "protopulse:op-durations",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/operation-duration.ts",
+        "line": 58
+      }
+    ]
+  },
+  {
+    "key": "protopulse:open-chat-panel",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/circuit-editor/breadboard-canvas/index.tsx",
+        "line": 603
+      },
+      {
+        "file": "client/src/components/circuit-editor/BreadboardView.tsx",
+        "line": 331
+      },
+      {
+        "file": "client/src/components/panels/ChatPanel.tsx",
+        "line": 867
+      },
+      {
+        "file": "client/src/components/panels/ChatPanel.tsx",
+        "line": 868
+      },
+      {
+        "file": "client/src/pages/ProjectWorkspace.tsx",
+        "line": 506
+      },
+      {
+        "file": "client/src/pages/ProjectWorkspace.tsx",
+        "line": 507
+      }
+    ]
+  },
+  {
+    "key": "protopulse:place-component-instance",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/circuit-editor/schematic/use-keyboard-shortcuts.ts",
+        "line": 246
+      },
+      {
+        "file": "client/src/components/circuit-editor/schematic/use-keyboard-shortcuts.ts",
+        "line": 247
+      },
+      {
+        "file": "client/src/components/ui/UnifiedComponentSearch.tsx",
+        "line": 138
+      },
+      {
+        "file": "client/src/components/ui/UnifiedComponentSearch.tsx",
+        "line": 146
+      }
+    ]
+  },
+  {
+    "key": "protopulse:plugin-data:",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/plugin-sdk.ts",
+        "line": 167
+      }
+    ]
+  },
+  {
+    "key": "protopulse:plugins:state",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/plugin-sdk.ts",
+        "line": 166
+      }
+    ]
+  },
+  {
+    "key": "protopulse:public-api:deliveries",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/lib/public-api.ts",
+        "line": 200
+      }
+    ]
+  },
+  {
+    "key": "protopulse:public-api:keys",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/lib/public-api.ts",
+        "line": 201
+      }
+    ]
+  },
+  {
+    "key": "protopulse:public-api:webhooks",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/lib/public-api.ts",
+        "line": 199
+      }
+    ]
+  },
+  {
+    "key": "protopulse:quick-jump-recents",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/quick-jump.ts",
+        "line": 10
+      },
+      {
+        "file": "client/src/lib/quick-jump.ts",
+        "line": 50
+      }
+    ]
+  },
+  {
+    "key": "protopulse:review-resolutions",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/review-resolution.ts",
+        "line": 30
+      }
+    ]
+  },
+  {
+    "key": "protopulse:role-preset",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/role-presets.ts",
+        "line": 223
+      }
+    ]
+  },
+  {
+    "key": "protopulse:run-drc",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/circuit-editor/PCBLayoutView.tsx",
+        "line": 924
+      }
+    ]
+  },
+  {
+    "key": "protopulse:run-erc",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/circuit-editor/schematic/use-context-menu.ts",
+        "line": 189
+      }
+    ]
+  },
+  {
+    "key": "protopulse:schematic-focus-parts-panel",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/circuit-editor/SchematicToolbar.tsx",
+        "line": 107
+      },
+      {
+        "file": "client/src/components/views/SchematicView.tsx",
+        "line": 85
+      },
+      {
+        "file": "client/src/components/views/SchematicView.tsx",
+        "line": 88
+      }
+    ]
+  },
+  {
+    "key": "protopulse:schematic-focus-power-panel",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/circuit-editor/SchematicToolbar.tsx",
+        "line": 109
+      },
+      {
+        "file": "client/src/components/views/SchematicView.tsx",
+        "line": 86
+      },
+      {
+        "file": "client/src/components/views/SchematicView.tsx",
+        "line": 89
+      }
+    ]
+  },
+  {
+    "key": "protopulse:serial:preferences",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/web-serial.ts",
+        "line": 198
+      }
+    ]
+  },
+  {
+    "key": "protopulse:serial:profiles",
+    "classifiedAs": "hardware-presets",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/web-serial.ts",
+        "line": 197
+      }
+    ]
+  },
+  {
+    "key": "protopulse:sidebar-group-collapsed",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/sidebar-groups.ts",
+        "line": 188
+      }
+    ]
+  },
+  {
+    "key": "protopulse:view-onboarding",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/view-onboarding.ts",
+        "line": 49
+      }
+    ]
+  },
+  {
+    "key": "sessionId",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/components/views/arduino/JobHistoryPanel.tsx",
+        "line": 101
+      }
+    ]
+  }
+]
