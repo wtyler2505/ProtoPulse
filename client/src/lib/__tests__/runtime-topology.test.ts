@@ -136,18 +136,19 @@ describe("R4 retro Wave 4 — resolutionWave + inventory exports", () => {
     expect(WORKFLOW_TOPOLOGY["arduino-serial"].resolutionWave).toBe("r5-hardware");
   });
 
-  it("storage workflows (user-settings/kanban-state/design-variables) are compat-local (R5 storage wave)", () => {
-    expect(resolveWorkflowTarget("user-settings", { isTauri: true })).toBe("compat-local");
-    expect(resolveWorkflowTarget("kanban-state", { isTauri: true })).toBe("compat-local");
-    expect(resolveWorkflowTarget("design-variables", { isTauri: true })).toBe("compat-local");
-    expect(WORKFLOW_TOPOLOGY["user-settings"].resolutionWave).toBe("r5-storage");
-    expect(WORKFLOW_TOPOLOGY["kanban-state"].resolutionWave).toBe("r5-storage");
-    expect(WORKFLOW_TOPOLOGY["design-variables"].resolutionWave).toBe("r5-storage");
+  it("storage workflows (user-settings/kanban-state/design-variables) are desktop-rust in R5 #2 (Codex R3 ratified land)", () => {
+    expect(resolveWorkflowTarget("user-settings", { isTauri: true })).toBe("desktop-rust");
+    expect(resolveWorkflowTarget("kanban-state", { isTauri: true })).toBe("desktop-rust");
+    expect(resolveWorkflowTarget("design-variables", { isTauri: true })).toBe("desktop-rust");
+    // resolutionWave should NOT be set anymore for these terminal targets
+    expect(WORKFLOW_TOPOLOGY["user-settings"].resolutionWave).toBeUndefined();
+    expect(WORKFLOW_TOPOLOGY["kanban-state"].resolutionWave).toBeUndefined();
+    expect(WORKFLOW_TOPOLOGY["design-variables"].resolutionWave).toBeUndefined();
   });
 
   it("every DESKTOP_RUST_WORKFLOWS entry has at least one registered Rust command", () => {
     // Source-of-truth list mirrors src-tauri/src/lib.rs collect_commands![] macro.
-    // Hand-maintained — R5+ wave auto-derives from cargo-metadata.
+    // Hand-maintained — future R5.5+ wave auto-derives from cargo-metadata.
     const REGISTERED_RUST_COMMANDS = new Set([
       "show_save_dialog",
       "show_open_dialog",
@@ -155,6 +156,14 @@ describe("R4 retro Wave 4 — resolutionWave + inventory exports", () => {
       "write_file",
       "get_version",
       "get_platform",
+      "frontend_ready_for_project_open_requests",
+      // R5 #2 (commit 0559467a) — tauri-plugin-store wrappers
+      "read_user_setting",
+      "write_user_setting",
+      "read_kanban_state",
+      "write_kanban_state",
+      "read_project_design_variables",
+      "write_project_design_variables",
     ]);
     const WORKFLOW_TO_COMMAND: Partial<Record<WorkflowKey, string[]>> = {
       "save-csv": ["show_save_dialog", "write_file"],
@@ -162,6 +171,13 @@ describe("R4 retro Wave 4 — resolutionWave + inventory exports", () => {
       "save-json": ["show_save_dialog", "write_file"],
       "project-export": ["show_save_dialog", "write_file"],
       "project-import": ["show_open_dialog", "read_file"],
+      // R5 #2 (Codex R3 ratified):
+      "user-settings": ["read_user_setting", "write_user_setting"],
+      "kanban-state": ["read_kanban_state", "write_kanban_state"],
+      "design-variables": [
+        "read_project_design_variables",
+        "write_project_design_variables",
+      ],
     };
     for (const key of DESKTOP_RUST_WORKFLOWS) {
       const expected = WORKFLOW_TO_COMMAND[key] ?? [];

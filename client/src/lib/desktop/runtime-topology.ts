@@ -163,27 +163,24 @@ export const WORKFLOW_TOPOLOGY: Record<WorkflowKey, RoutingDecision> = {
     why: "Session cookies / hashed tokens stay server-side per BL-0072. R5 storage wave routes Tauri auth state through OS keychain (Stronghold) for the session-auth bucket.",
     resolutionWave: "r5-storage",
   },
-  // R4 retro: these three workflows claimed `desktop-rust` but no tauri-plugin-store
-  // is in src-tauri/Cargo.toml and no typed Rust commands back them. Re-classified
-  // to compat-local with r5-storage resolution wave; that wave adds the Cargo dep
-  // + typed commands + migrates localStorage to plugin-store.
+  // R5 Deferral #2 (Codex R3 ratified): tauri-plugin-store + typed wrappers
+  // landed. resolutionWave dropped because tauri target is now terminal
+  // (`desktop-rust`). Browser mode still falls back to localStorage via the
+  // desktop-store-adapter; isTauri=false uses the browser branch directly.
   "user-settings": {
-    tauri: "compat-local",
+    tauri: "desktop-rust",
     browser: "browser",
-    why: "Cross-project preferences. R5 storage wave: tauri-plugin-store + typed set_user_setting/get_user_setting commands.",
-    resolutionWave: "r5-storage",
+    why: "Cross-project preferences. Tauri: read_user_setting / write_user_setting via tauri-plugin-store (backend-only plugin use, key-namespaced). Browser: localStorage. NOTE: 3 bootstrap-read keys (high-contrast, gpu-blur-override, theme) excluded from R5 #2 — pending Bootstrap-Storage Restructure.",
   },
   "kanban-state": {
-    tauri: "compat-local",
+    tauri: "desktop-rust",
     browser: "browser",
-    why: "Project-scoped Kanban board state. R5 storage wave: typed read_project_kanban_state/write_project_kanban_state commands.",
-    resolutionWave: "r5-storage",
+    why: "Singleton Kanban board state. Tauri: read_kanban_state() / write_kanban_state(value) via tauri-plugin-store (no project_id; current shape is one localStorage key 'protopulse-kanban-board'). Browser: localStorage. R5.5+ wave introduces per-project Kanban with project_id.",
   },
   "design-variables": {
-    tauri: "compat-local",
+    tauri: "desktop-rust",
     browser: "browser",
-    why: "Project-scoped design variables. R5 storage wave: tauri-plugin-store + typed commands.",
-    resolutionWave: "r5-storage",
+    why: "Per-project design variables. Tauri: read_project_design_variables(project_id) / write_project_design_variables(project_id, value) via tauri-plugin-store. Browser: localStorage keyed by protopulse:design-variables:project:<id>.",
   },
 };
 
