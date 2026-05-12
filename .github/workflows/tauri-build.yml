@@ -171,3 +171,27 @@ jobs:
             src-tauri/target/release/bundle/**
           if-no-files-found: warn
           retention-days: 14
+
+      # R5 Deferral #5 (per docs/decisions/2026-05-12-adr-slsa-provenance.md):
+      # SLSA Level 2+ build provenance via GitHub artifact attestations.
+      # id-token: write is already granted at the workflow level. Sigstore
+      # under the hood; no ProtoPulse-owned signing key needed.
+      #
+      # Only fires for tag pushes (release events) — feature-branch PRs don't
+      # need attestation overhead.
+      - name: Attest build provenance (SLSA Level 2+, tagged releases only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*-setup.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*-setup.exe
+            src-tauri/target/release/bundle/**/*.dmg
+        continue-on-error: false   # SLSA attestation is REQUIRED for any tagged release
