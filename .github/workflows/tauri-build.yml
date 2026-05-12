@@ -1,0 +1,156 @@
+name: Tauri build matrix
+
+# Cross-platform Tauri v2 desktop build per `docs/decisions/2026-05-10-adr-release-trust-model.md`
+# Decision 4 (initial release matrix: Win-x64, macOS x64+arm64, Linux x64 with deb+AppImage).
+# Per Q5+Q6 ratified defaults, this workflow stays dev-preview-only until Tyler provides:
+#   - Windows: Azure Artifact Signing eligibility OR an OV/HSM cert path
+#   - macOS:   a paid Apple Developer Program account + Developer ID cert + notary credentials
+# Until then, artifacts are produced UNSIGNED and labelled non-production in releases.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # tauri-action creates a draft release on tag pushes
+  id-token: write   # required for GitHub artifact attestations (Phase 5.2)
+
+jobs:
+  build-tauri:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,    label: linux-x64 }
+          - { os: macos-latest,   target: x86_64-apple-darwin,         label: macos-x64 }
+          - { os: macos-14,       target: aarch64-apple-darwin,        label: macos-arm64 }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc,      label: windows-x64 }
+    runs-on: ${{ matrix.os }}
+    name: build (${{ matrix.label }})
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Linux Tauri deps (WebKit2GTK + tooling)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            patchelf \
+            file \
+            build-essential \
+            curl \
+            wget
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.93.0"
+          targets: ${{ matrix.target }}
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npm run check
+
+      - name: Frontend build (Vite + esbuild server)
+        run: npm run build
+
+      - name: Tauri build (release, unsigned dev preview)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          # Signing/notarization secrets stay UNDEFINED until Tyler provides them.
+          # tauri-action skips signing silently when secrets are absent.
+          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tauriScript: npm run tauri --
+          args: --target ${{ matrix.target }}
+          tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('ProtoPulse {0} (dev preview)', github.ref_name) || '' }}
+          releaseBody: |
+            **Dev preview — unsigned artifacts.** Not for public distribution until signing
+            (`docs/decisions/2026-05-10-adr-release-trust-model.md` Q5+Q6) is wired in.
+          releaseDraft: true
+          prerelease: true
+
+      # R4 retro Wave 7 (C8+C21): supply-chain check + SBOM generation is now
+      # MANDATORY in CI. cargo-cyclonedx + @cyclonedx/cyclonedx-npm produce
+      # CycloneDX JSON SBOMs uploaded as workflow artifacts with fail-on-empty.
+      - name: Install supply-chain tools (cargo-audit, cargo-cyclonedx)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cargo install --locked cargo-audit
+          cargo install --locked cargo-cyclonedx
+
+      - name: Supply-chain check + SBOM generation (Phase 5.2 / R4 retro)
+        if: matrix.os == 'ubuntu-latest'
+        run: bash scripts/ci/supply-chain-check.sh
+        # NO continue-on-error — supply-chain failures (audit warnings, missing
+        # SBOM output) block the workflow per R4 retro C8+C21 closure.
+
+      - name: Upload SBOM artifacts
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.label }}
+          path: artifacts/sbom/
+          if-no-files-found: error   # R4 retro C8+C21: hard-fail if SBOM step produced nothing.
+          retention-days: 14
+
+      - name: Packaged smoke (Phase 5 closeout)
+        if: matrix.os == 'ubuntu-latest'
+        run: bash scripts/ci/tauri-packaged-smoke.sh
+        continue-on-error: true
+
+      - name: Verify signed artifacts (Phase 7.2, dry-run until secrets land)
+        if: matrix.os != 'ubuntu-latest'
+        run: bash scripts/ci/verify-signed-artifacts.sh --dry-run
+        shell: bash
+        continue-on-error: true   # signing not yet activated; flip when Tyler-owned cert lands
+
+      - name: Upload dev-preview artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: protopulse-${{ matrix.label }}-dev-preview
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**
+            src-tauri/target/release/bundle/**
+          if-no-files-found: warn
+          retention-days: 14
