@@ -1,41 +1,39 @@
 use serde::{Deserialize, Serialize};
+use specta::Type;
 use std::process::Stdio;
 use tauri::menu::{MenuBuilder, MenuItem, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{Emitter, Manager};
+use tauri_specta::{collect_commands, Builder};
+
+// Phase 2.2 (R4 retro): scoped path validation for custom file commands.
+mod path_validation;
 
 // ── Command payloads ────────────────────────────────────────────────────────
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Type)]
 pub struct DialogFilter {
     pub name: String,
     pub extensions: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Type)]
 pub struct SaveDialogResult {
     pub canceled: bool,
     #[serde(rename = "filePath")]
     pub file_path: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Type)]
 pub struct OpenDialogResult {
     pub canceled: bool,
     #[serde(rename = "filePaths")]
     pub file_paths: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SpawnResult {
-    pub stdout: String,
-    pub stderr: String,
-    #[serde(rename = "exitCode")]
-    pub exit_code: Option<i32>,
-}
-
 // ── Commands ────────────────────────────────────────────────────────────────
 
 #[tauri::command]
+#[specta::specta]
 async fn show_save_dialog(
     app: tauri::AppHandle,
     title: Option<String>,
@@ -79,6 +77,7 @@ async fn show_save_dialog(
 }
 
 #[tauri::command]
+#[specta::specta]
 async fn show_open_dialog(
     app: tauri::AppHandle,
     title: Option<String>,
@@ -172,48 +171,128 @@ async fn show_open_dialog(
         .map_err(|e| format!("Dialog channel error: {}", e))
 }
 
+// Phase 2.2 (R4 retro): scope-validated read/write.
+//
+// The custom #[tauri::command] commands `read_file` and `write_file` are
+// NOT protected by `tauri-plugin-fs` capability scopes — capabilities only
+// cover plugin-fs calls. These commands run their own validation via
+// `crate::path_validation::*` before any I/O happens. The read/write open
+// uses `O_NOFOLLOW` / `FILE_FLAG_OPEN_REPARSE_POINT` so a symlink leaf
+// planted between validate and open cannot be silently traversed.
+//
+// Per Codex R6 acceptance guard: the read MUST happen through the no-follow
+// handle (not a path-based `tokio::fs::read_to_string` after a probe).
 #[tauri::command]
-async fn read_file(file_path: String) -> Result<String, String> {
-    tokio::fs::read_to_string(&file_path)
-        .await
-        .map_err(|e| format!("Failed to read file '{}': {}", file_path, e))
-}
+#[specta::specta]
+async fn read_file(app: tauri::AppHandle, file_path: String) -> Result<String, String> {
+    let canonical = path_validation::validate_existing_read_path(
+        &app,
+        &file_path,
+        path_validation::ReadIntent::Generic,
+    )
+    .map_err(|e| e.to_string())?;
 
-#[tauri::command]
-async fn write_file(file_path: String, data: String) -> Result<(), String> {
-    tokio::fs::write(&file_path, &data)
-        .await
-        .map_err(|e| format!("Failed to write file '{}': {}", file_path, e))
-}
+    // Size check via metadata BEFORE opening — fail fast on oversized files.
+    let meta = std::fs::metadata(&canonical)
+        .map_err(|e| format!("Failed to stat file: {}", e))?;
+    if meta.len() > path_validation::MAX_READ_SIZE_BYTES {
+        return Err(format!(
+            "File too large: {} bytes > max {}",
+            meta.len(),
+            path_validation::MAX_READ_SIZE_BYTES
+        ));
+    }
 
-#[tauri::command]
-async fn spawn_process(command: String, args: Vec<String>) -> Result<SpawnResult, String> {
-    let output = tokio::process::Command::new(&command)
-        .args(&args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .await
-        .map_err(|e| format!("Failed to spawn '{}': {}", command, e))?;
-
-    Ok(SpawnResult {
-        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-        exit_code: output.status.code(),
+    // Open with no-follow; read through the OPENED HANDLE (not path-based).
+    let std_file = path_validation::open_no_follow_read(&canonical)
+        .map_err(|e| e.to_string())?;
+    let bytes = tokio::task::spawn_blocking(move || -> std::io::Result<Vec<u8>> {
+        use std::io::Read as _;
+        let mut buf = Vec::new();
+        let mut f = std_file;
+        f.read_to_end(&mut buf)?;
+        Ok(buf)
     })
+    .await
+    .map_err(|e| format!("Join error: {}", e))?
+    .map_err(|e| format!("Read failed: {}", e))?;
+
+    String::from_utf8(bytes).map_err(|e| format!("File is not valid UTF-8: {}", e))
 }
 
 #[tauri::command]
+#[specta::specta]
+async fn write_file(
+    app: tauri::AppHandle,
+    file_path: String,
+    data: String,
+) -> Result<(), String> {
+    let intent = path_validation::write_intent_from_extension(&file_path);
+    let canonical = path_validation::validate_new_write_path(&app, &file_path, intent)
+        .map_err(|e| e.to_string())?;
+
+    let canonical_for_blocking = canonical.clone();
+    let data_owned = data;
+    tokio::task::spawn_blocking(move || -> Result<(), path_validation::PathValidationError> {
+        use std::io::Write as _;
+        let mut f = path_validation::open_no_follow_write(&canonical_for_blocking)?;
+        f.write_all(data_owned.as_bytes())
+            .map_err(|e| path_validation::PathValidationError::WriteFailed(e.to_string()))?;
+        f.sync_all()
+            .map_err(|e| path_validation::PathValidationError::WriteFailed(e.to_string()))?;
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Join error: {}", e))?
+    .map_err(|e| e.to_string())
+}
+
+// `spawn_process` was removed in Phase 2.1 (Native Authority). The previous
+// `spawn_process(command, args)` was a generic process primitive with no
+// allowlist, timeout, cwd/env control, or output cap — a full RCE primitive
+// reachable from any compromised webview script. Phase 9 (Hardware Authority)
+// will add typed sidecar replacements (e.g., `arduino_compile(sketch_path)`,
+// `arduino_upload(port, fqbn, hex_path)`) with strict argument validation,
+// path scopes, and timeouts.
+
+#[tauri::command]
+#[specta::specta]
 fn get_version(app: tauri::AppHandle) -> String {
     app.package_info().version.to_string()
 }
 
 #[tauri::command]
+#[specta::specta]
 fn get_platform() -> String {
     std::env::consts::OS.to_string()
 }
 
+// ── tauri-specta Builder factory ────────────────────────────────────────────
+//
+// Single source of truth for the command set. Used by both the live `run()`
+// app and the standalone `export_bindings` binary so generated bindings.ts
+// never drifts from the registered command list.
+pub fn specta_builder() -> Builder<tauri::Wry> {
+    Builder::<tauri::Wry>::new().commands(collect_commands![
+        show_save_dialog,
+        show_open_dialog,
+        read_file,
+        write_file,
+        get_version,
+        get_platform,
+    ])
+}
+
 // ── Express server sidecar ──────────────────────────────────────────────────
+//
+// Per `docs/decisions/2026-05-10-adr-tauri-runtime-topology.md` (Path C), the
+// desktop runtime does NOT hard-require the Express sidecar. If `dist/index.cjs`
+// exists in the resource dir, we spawn Node against it for backend compatibility;
+// if it is absent, we log a warning and continue without Express. Desktop-
+// privileged work routes through typed Rust commands instead.
+//
+// A future Phase 3 decision will resolve whether Express is retired, kept as a
+// scoped sidecar with target triples + signing, or moved fully to native Rust.
 
 fn start_express_server(app: &tauri::AppHandle) {
     // In debug (dev) mode, the Express server is started separately via `npm run dev`
@@ -221,20 +300,46 @@ fn start_express_server(app: &tauri::AppHandle) {
         return;
     }
 
-    let resource_dir = app
-        .path()
-        .resource_dir()
-        .expect("Failed to resolve resource directory");
+    let resource_dir = match app.path().resource_dir() {
+        Ok(dir) => dir,
+        Err(e) => {
+            eprintln!(
+                "[tauri] Could not resolve resource directory; skipping Express sidecar: {}",
+                e
+            );
+            return;
+        }
+    };
     let server_entry = resource_dir.join("dist").join("index.cjs");
 
+    if !server_entry.exists() {
+        eprintln!(
+            "[tauri] Express sidecar binary not found at {} — continuing without sidecar. \
+            Per Path C topology, desktop runtime does not hard-require this. \
+            If you need the Express sidecar, run `npm run build` to produce dist/index.cjs.",
+            server_entry.display()
+        );
+        return;
+    }
+
     std::thread::spawn(move || {
-        let mut child = std::process::Command::new("node")
+        let mut child = match std::process::Command::new("node")
             .arg(&server_entry)
             .env("NODE_ENV", "production")
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .expect("Failed to start Express server");
+        {
+            Ok(child) => child,
+            Err(e) => {
+                eprintln!(
+                    "[tauri] Failed to spawn Express sidecar via global `node`: {}. \
+                    The desktop app will continue without the Express sidecar.",
+                    e
+                );
+                return;
+            }
+        };
 
         // Log stdout
         if let Some(stdout) = child.stdout.take() {
@@ -295,10 +400,20 @@ fn setup_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     // ── View submenu ────────────────────────────────────────────────────
+    // Phase 6.1: the "Toggle Developer Tools" menu item only ships in debug
+    // builds. Release builds get a View menu without it.
+    #[cfg(debug_assertions)]
     let toggle_devtools = MenuItem::with_id(app, "toggle-devtools", "Toggle Developer Tools", true, Some("CmdOrCtrl+Shift+I"))?;
+
+    #[cfg(debug_assertions)]
     let view_menu = SubmenuBuilder::new(app, "View")
         .item(&toggle_devtools)
         .separator()
+        .item(&PredefinedMenuItem::fullscreen(app, None)?)
+        .build()?;
+
+    #[cfg(not(debug_assertions))]
+    let view_menu = SubmenuBuilder::new(app, "View")
         .item(&PredefinedMenuItem::fullscreen(app, None)?)
         .build()?;
 
@@ -351,6 +466,8 @@ fn handle_menu_events(app: &tauri::AppHandle, event: tauri::menu::MenuEvent) {
             use tauri_plugin_opener::OpenerExt;
             let _ = app.opener().open_url("https://github.com/protopulse", None::<&str>);
         }
+        // Phase 6.1: devtools menu handler only compiles in debug builds.
+        #[cfg(debug_assertions)]
         "toggle-devtools" => {
             if let Some(window) = app.get_webview_window("main") {
                 if window.is_devtools_open() {
@@ -367,20 +484,47 @@ fn handle_menu_events(app: &tauri::AppHandle, event: tauri::menu::MenuEvent) {
 // ── App entry point ─────────────────────────────────────────────────────────
 
 pub fn run() {
-    tauri::Builder::default()
+    let specta = specta_builder();
+
+    // Re-export TypeScript bindings on every debug startup so adding/removing
+    // a Rust #[tauri::command] surfaces the diff in client/src/lib/bindings.ts
+    // before the frontend can drift. Production builds skip the export — they
+    // ship with whatever bindings.ts was committed at release time.
+    #[cfg(debug_assertions)]
+    {
+        use specta_typescript::Typescript;
+        if let Err(e) = specta.export(
+            Typescript::default().header("/* eslint-disable */\n// Generated by tauri-specta — do not edit.\n"),
+            "../client/src/lib/bindings.ts",
+        ) {
+            eprintln!("[tauri-specta] Failed to export bindings.ts: {}", e);
+        }
+    }
+
+    let mut builder = tauri::Builder::default();
+
+    // Phase 4.2 lifecycle: single-instance MUST be registered before deep-link
+    // so .protopulse file associations + protopulse:// URLs route through one
+    // running app instance via argv forwarding on Linux/Windows.
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|_app, argv, _cwd| {
+            // argv carries the cold/warm-start project path or deep-link URL.
+            // Routing decisions live in client/src/lib/desktop/project-open-contract.ts.
+            println!("[lifecycle] additional instance launched with argv: {:?}", argv);
+        }));
+    }
+
+    builder = builder
+        .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_window_state::Builder::new().build());
+
+    builder
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![
-            show_save_dialog,
-            show_open_dialog,
-            read_file,
-            write_file,
-            spawn_process,
-            get_version,
-            get_platform,
-        ])
+        .invoke_handler(specta.invoke_handler())
         .setup(|app| {
             setup_menu(app)?;
 

@@ -5,14 +5,62 @@ description = "AI-assisted EDA platform for makers, hobbyists, and embedded engi
 edition = "2021"
 
 [dependencies]
-tauri = { version = "2", features = ["devtools"] }
+# Phase 6.1: NO unconditional `devtools` feature. Tauri enables devtools in
+# debug builds automatically (via the runtime's `cfg(debug_assertions)`); the
+# `devtools` feature flag would force them on in RELEASE too, which is what
+# we don't want for distribution. The `toggle-devtools` menu item in lib.rs
+# is separately #[cfg(debug_assertions)]-gated.
+tauri = { version = "2" }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-opener = "2"
+
+# Phase 4.2 lifecycle plugins. single-instance MUST be registered before
+# deep-link in lib.rs — see https://v2.tauri.app/plugin/deep-linking — so the
+# `.protopulse` file association and `protopulse://` URL scheme route through
+# a single running app instance instead of spawning duplicates.
+tauri-plugin-single-instance = "2"
+tauri-plugin-deep-link = "2"
+tauri-plugin-window-state = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["process"] }
+tokio = { version = "1", features = ["process", "fs", "io-util"] }
+
+# Phase 2.2 (R4 retro): libc for O_NOFOLLOW symlink-refuse semantics in
+# path_validation.rs. Windows uses FILE_FLAG_OPEN_REPARSE_POINT (raw constant).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+# tauri-specta: auto-generated TypeScript bindings for #[tauri::command]
+# functions, eliminating IPC contract drift between Rust and the React frontend.
+# Pinned to RC versions per docs/plans/2026-05-10-tauri-v2-desktop-migration.md
+# Tech Stack; the RC is a known migration risk and must not float.
+specta = { version = "=2.0.0-rc.25", features = ["derive"] }
+specta-typescript = "=0.0.12"
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+
+# Phase 6.1 release-profile size optimizations per the master roadmap
+# (docs/audits/2026-05-09-tauri-v2-migration-phase0-findings.md). Cuts ~30-50%
+# off the unstripped Rust binary; the 5-10 MB Tauri claim assumes these.
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = "z"
+strip = true
+panic = "abort"
+
+# Binary that re-exports client/src/lib/bindings.ts from the live command set.
+# Run on-demand:  cargo run --bin export_bindings --manifest-path src-tauri/Cargo.toml
+# Keeps the export logic separate from the full Tauri runtime so bindings can be
+# regenerated without booting the app.
+[[bin]]
+name = "export_bindings"
+path = "src/bin/export_bindings.rs"
+
+[[bin]]
+name = "protopulse"
+path = "src/main.rs"
