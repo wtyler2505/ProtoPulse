@@ -15,6 +15,7 @@ import AuthPage from '@/pages/AuthPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
 import NotFound from '@/pages/not-found';
 import { DesktopLifecycleBridge } from '@/lib/desktop/desktop-lifecycle-bridge';
+import { DesktopStorageMigrationGate } from '@/lib/desktop/desktop-storage-migration-gate';
 
 const EmbedViewerPage = lazy(() => import('@/pages/EmbedViewerPage'));
 
@@ -135,6 +136,16 @@ function App() {
           <QueryClientProvider client={queryClient}>
             <TooltipProvider>
               {/*
+                R5 #2 Wave D: DesktopStorageMigrationGate wraps the lifecycle
+                bridge + auth providers + router. In Tauri mode, runs the
+                user-settings / kanban-state / design-variables migrations
+                BEFORE consumers (AuthProvider etc.) read storage. Browser
+                mode skips immediately (localStorage IS the canonical store).
+                Fail-open: failed migration logs + renders children anyway;
+                adapter falls back to localStorage.
+              */}
+              <DesktopStorageMigrationGate>
+              {/*
                 R4 retro Wave 5: DesktopLifecycleBridge mounts here — INSIDE
                 all providers but OUTSIDE the route switch — so cold-start
                 deep-links + .protopulse file associations route through the
@@ -152,6 +163,7 @@ function App() {
                 </AuthProvider>
               )}
               <Toaster />
+              </DesktopStorageMigrationGate>
             </TooltipProvider>
           </QueryClientProvider>
         </GpuPerformanceProvider>
