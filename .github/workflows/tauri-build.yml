@@ -151,6 +151,22 @@ jobs:
           if-no-files-found: error   # R4 retro C8+C21: hard-fail if SBOM step produced nothing.
           retention-days: 14
 
+      # R5 #5 follow-up (per docs/decisions/2026-05-12-adr-slsa-provenance.md
+      # §"SBOM attestation linkage" — deferred to a later R5.x). Chains the
+      # CycloneDX SBOMs to GitHub artifact attestations via attest-sbom@v2.
+      # Only on tagged releases (consistent with attest-build-provenance gating).
+      - name: Attest SBOM artifacts (SLSA linkage, tagged releases only)
+        if: matrix.label == 'linux-x64' && startsWith(github.ref, 'refs/tags/v')
+        uses: actions/attest-sbom@v2
+        with:
+          subject-path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.AppImage
+          sbom-path: artifacts/sbom/protopulse-rust.cdx.json
+        continue-on-error: true   # SBOM attestation is a hardening enhancement; fail-open until first tagged release validates the wiring
+
       - name: Packaged smoke (Phase 5 closeout)
         if: matrix.label == 'linux-x64'
         run: bash scripts/ci/tauri-packaged-smoke.sh
