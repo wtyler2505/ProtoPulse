@@ -556,6 +556,11 @@ pub fn run() {
         // directly (no `store:default` capability granted). Backend-only via
         // the typed `read_*`/`write_*` commands in `desktop_store.rs`.
         .plugin(tauri_plugin_store::Builder::new().build())
+        // R5 Deferral #3 scaffold (per docs/decisions/2026-05-12-adr-arduino-typed-commands.md):
+        // serialplugin loads at runtime so adoption surface is testable. NO
+        // capability granted; no arduino_serial_* commands wired yet — those
+        // arrive with the UI-feature wave that triggers full implementation.
+        .plugin(tauri_plugin_serialplugin::init())
         .invoke_handler(specta.invoke_handler())
         .setup(|app| {
             setup_menu(app)?;
