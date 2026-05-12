@@ -8,6 +8,10 @@ use tauri_specta::{collect_commands, Builder};
 // Phase 2.2 (R4 retro): scoped path validation for custom file commands.
 mod path_validation;
 
+// Phase 4.2 (R4 retro Wave 5): native project-open lifecycle bridge
+// (cold-start + deep-link + single-instance forwarding → frontend listener).
+mod native_project_open;
+
 // ── Command payloads ────────────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Deserialize, Type)]
@@ -274,6 +278,7 @@ fn get_platform() -> String {
 // never drifts from the registered command list.
 pub fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new().commands(collect_commands![
+        native_project_open::frontend_ready_for_project_open_requests,
         show_save_dialog,
         show_open_dialog,
         read_file,
@@ -501,17 +506,28 @@ pub fn run() {
         }
     }
 
-    let mut builder = tauri::Builder::default();
+    let mut builder = tauri::Builder::default()
+        // R4 retro Wave 5: managed state for the project-open lifecycle bridge.
+        // Created BEFORE single-instance plugin so the handler can access the
+        // queue/ready state via app.state().
+        .manage(native_project_open::PendingProjectOpenState::default());
 
     // Phase 4.2 lifecycle: single-instance MUST be registered before deep-link
     // so .protopulse file associations + protopulse:// URLs route through one
-    // running app instance via argv forwarding on Linux/Windows.
+    // running app instance via argv forwarding on Linux/Windows. Requires
+    // tauri-plugin-single-instance features = ["deep-link"] (set in Cargo.toml).
     #[cfg(desktop)]
     {
-        builder = builder.plugin(tauri_plugin_single_instance::init(|_app, argv, _cwd| {
-            // argv carries the cold/warm-start project path or deep-link URL.
-            // Routing decisions live in client/src/lib/desktop/project-open-contract.ts.
-            println!("[lifecycle] additional instance launched with argv: {:?}", argv);
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // Warm-start: another instance was launched with argv (possibly
+            // a .protopulse path or protopulse:// URL). Route through the
+            // project-open queue.
+            let argv_strings: Vec<String> = argv.iter().map(|s| s.clone()).collect();
+            for req in
+                native_project_open::requests_from_argv(&argv_strings, "warm-start")
+            {
+                native_project_open::enqueue_or_emit(app, req);
+            }
         }));
     }
 
@@ -527,6 +543,32 @@ pub fn run() {
         .invoke_handler(specta.invoke_handler())
         .setup(|app| {
             setup_menu(app)?;
+
+            // R4 retro Wave 5: capture cold-start argv (initial launch) and
+            // register the deep-link runtime callback. Both feed the
+            // project-open queue; the frontend drains via the
+            // frontend_ready_for_project_open_requests command on mount.
+            #[cfg(desktop)]
+            {
+                let cold_argv: Vec<String> = std::env::args().collect();
+                for req in native_project_open::requests_from_argv(&cold_argv, "cold-start") {
+                    native_project_open::enqueue_or_emit(app.handle(), req);
+                }
+
+                // Deep-link callback per official Tauri Rust API
+                // (https://v2.tauri.app/plugin/deep-linking/, verified 2026-05-12).
+                use tauri_plugin_deep_link::DeepLinkExt;
+                let app_handle = app.handle().clone();
+                app.deep_link().on_open_url(move |event| {
+                    for url in event.urls() {
+                        let req = native_project_open::PendingProjectOpenRequest {
+                            source: "deep-link".to_string(),
+                            path: url.to_string(),
+                        };
+                        native_project_open::enqueue_or_emit(&app_handle, req);
+                    }
+                });
+            }
 
             // Start Express server in production builds
             start_express_server(app.handle());

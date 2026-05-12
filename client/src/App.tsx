@@ -14,6 +14,7 @@ import ProjectPickerPage from '@/pages/ProjectPickerPage';
 import AuthPage from '@/pages/AuthPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
 import NotFound from '@/pages/not-found';
+import { DesktopLifecycleBridge } from '@/lib/desktop/desktop-lifecycle-bridge';
 
 const EmbedViewerPage = lazy(() => import('@/pages/EmbedViewerPage'));
 
@@ -133,6 +134,14 @@ function App() {
         <GpuPerformanceProvider>
           <QueryClientProvider client={queryClient}>
             <TooltipProvider>
+              {/*
+                R4 retro Wave 5: DesktopLifecycleBridge mounts here — INSIDE
+                all providers but OUTSIDE the route switch — so cold-start
+                deep-links + .protopulse file associations route through the
+                Rust queue + drain even when the user lands at /, /projects,
+                /settings, or the auth gate (not just the project workspace).
+              */}
+              <DesktopLifecycleBridge />
               {isEmbed ? (
                 <EmbedRouter />
               ) : (

@@ -20,7 +20,7 @@ tauri-plugin-opener = "2"
 # deep-link in lib.rs — see https://v2.tauri.app/plugin/deep-linking — so the
 # `.protopulse` file association and `protopulse://` URL scheme route through
 # a single running app instance instead of spawning duplicates.
-tauri-plugin-single-instance = "2"
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-deep-link = "2"
 tauri-plugin-window-state = "2"
 serde = { version = "1", features = ["derive"] }
