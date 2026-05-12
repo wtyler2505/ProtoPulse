@@ -28,3 +28,7 @@ logs/
 
 # Local MCP runtime caches
 FileScopeMCP-tree.json
+
+# R4 retro Wave 8 (C12+C23): downloaded Arduino CLI sidecar binaries are
+# fetched per-target at CI build time. Not committed to repo.
+src-tauri/binaries/arduino-cli-*
