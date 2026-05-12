@@ -558,6 +558,24 @@ pub fn run() {
                 // Deep-link callback per official Tauri Rust API
                 // (https://v2.tauri.app/plugin/deep-linking/, verified 2026-05-12).
                 use tauri_plugin_deep_link::DeepLinkExt;
+
+                // R4.5 fix #5 (Codex R4 land review): drain cold-start
+                // deep-link URLs via get_current(). On macOS, the URL that
+                // launched the app arrives via NSApplicationOpenURLEvent
+                // and is exposed by get_current() — NOT in argv. Linux/
+                // Windows pass URLs in argv (already captured above), so
+                // this primarily covers macOS, plus any platform where
+                // get_current() returns startup URLs.
+                if let Ok(Some(urls)) = app.deep_link().get_current() {
+                    for url in urls {
+                        let req = native_project_open::PendingProjectOpenRequest {
+                            source: "deep-link".to_string(),
+                            path: url.to_string(),
+                        };
+                        native_project_open::enqueue_or_emit(app.handle(), req);
+                    }
+                }
+
                 let app_handle = app.handle().clone();
                 app.deep_link().on_open_url(move |event| {
                     for url in event.urls() {
