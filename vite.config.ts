@@ -6,6 +6,9 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { metaImagesPlugin } from "./vite-plugin-meta-images";
 
 export default defineConfig({
+  // Required for packaged WebView builds so asset URLs resolve relative to
+  // bundled index.html instead of assuming an absolute server root.
+  base: "./",
   plugins: [
     react(),
     // Filter out errors that originate from user browser extensions

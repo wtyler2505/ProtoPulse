@@ -6,6 +6,32 @@ set -o pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR" || exit 1
 
+RUST_TOOLCHAIN_FILE="src-tauri/rust-toolchain.toml"
+RUST_TOOLCHAIN="${CARGO_TOOLCHAIN:-}"
+if [[ -z "$RUST_TOOLCHAIN" && -f "$RUST_TOOLCHAIN_FILE" ]]; then
+  RUST_TOOLCHAIN="$(awk -F'"' '/^channel[[:space:]]*=[[:space:]]*"/ {print $2; exit}' "$RUST_TOOLCHAIN_FILE")"
+fi
+
+if [[ -n "$RUST_TOOLCHAIN" && ! "$(command -v rustup)" ]]; then
+  fail_gate "toolchain" "Rust toolchain override '$RUST_TOOLCHAIN' requires rustup, but rustup was not found." "Install rustup or unset CARGO_TOOLCHAIN."
+fi
+
+rustc_exec() {
+  if [[ -n "$RUST_TOOLCHAIN" ]]; then
+    rustup run "$RUST_TOOLCHAIN" rustc "$@"
+  else
+    rustc "$@"
+  fi
+}
+
+cargo_exec() {
+  if [[ -n "$RUST_TOOLCHAIN" ]]; then
+    rustup run "$RUST_TOOLCHAIN" cargo "$@"
+  else
+    cargo "$@"
+  fi
+}
+
 PASSED=()
 WARNINGS=()
 ARTIFACTS=()
@@ -129,7 +155,7 @@ check_cargo_exact() {
   local expected="$2"
   local output
 
-  if ! output="$(cargo search "$crate_name" --limit 20 2>&1)"; then
+  if ! output="$(cargo_exec search "$crate_name" --limit 20 2>&1)"; then
     fail_gate "registry-cargo" "Cannot search crates.io for $crate_name: $output" "If the error is cache/home writability, export CARGO_HOME=/tmp/cargo-home-protopulse and rerun."
   fi
 
@@ -144,7 +170,7 @@ check_cargo_resolvable() {
   local crate_name="$1"
   local output
 
-  if ! output="$(cargo search "$crate_name" --limit 20 2>&1)"; then
+  if ! output="$(cargo_exec search "$crate_name" --limit 20 2>&1)"; then
     fail_gate "registry-cargo" "Cannot search crates.io for $crate_name: $output" "If the error is cache/home writability, export CARGO_HOME=/tmp/cargo-home-protopulse and rerun."
   fi
 
@@ -164,8 +190,8 @@ require_command cargo "Install Cargo before running Phase 1."
 
 node_version="$(node --version | sed 's/^v//')"
 npm_version="$(npm --version)"
-rustc_version="$(rustc --version | awk '{print $2}')"
-cargo_version="$(cargo --version | awk '{print $2}')"
+rustc_version="$(rustc_exec --version | awk '{print $2}')"
+cargo_version="$(cargo_exec --version | awk '{print $2}')"
 
 if ! semver_ge "$node_version" "20.0.0"; then
   fail_gate "toolchain" "Node.js $node_version is below the expected Node 20+ baseline for this Vite 7 / React 19 stack." "Install Node 20+ or ratify a different runtime baseline."
@@ -178,6 +204,9 @@ if ! semver_ge "$rustc_version" "1.77.2"; then
 fi
 add_pass "toolchain" "rustc $rustc_version"
 add_pass "toolchain" "cargo $cargo_version"
+if [[ -n "$RUST_TOOLCHAIN" ]]; then
+  add_pass "toolchain" "rustup toolchain override active: $RUST_TOOLCHAIN"
+fi
 
 if [[ -x "$ROOT_DIR/node_modules/.bin/tauri" ]]; then
   TAURI_BIN="$ROOT_DIR/node_modules/.bin/tauri"
@@ -200,7 +229,7 @@ if [[ -z "$npm_cache" ]]; then
 fi
 write_probe "npm-cache" "$npm_cache" "export npm_config_cache=/tmp/npm-cache-protopulse"
 
-run_required "cargo-cache-probe" cargo --list
+run_required "cargo-cache-probe" cargo_exec --list
 cargo_home="${CARGO_HOME:-$HOME/.cargo}"
 write_probe "cargo-cache" "$cargo_home" "export CARGO_HOME=/tmp/cargo-home-protopulse"
 
@@ -229,8 +258,10 @@ for crate in \
 done
 
 run_required "typescript-check" npm run check
-run_required "rust-check" cargo check --manifest-path src-tauri/Cargo.toml
-run_required "tauri-build-smoke" npm run tauri:build -- --debug
+run_required "rust-check" cargo_exec check --manifest-path src-tauri/Cargo.toml
+# Keep preflight bounded: smoke the Linux packaging path with a single bundle.
+# Full matrix bundling belongs in CI/release workflows, not this local gate.
+run_required "tauri-build-smoke" npm run tauri:build -- --debug --bundles deb
 
 if [[ -x src-tauri/target/debug/protopulse ]]; then
   ARTIFACTS+=("src-tauri/target/debug/protopulse")
