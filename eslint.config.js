@@ -219,6 +219,19 @@ export default tseslint.config(
     },
   },
 
+  // ── React Three Fiber scene overrides ───────────────────────────────
+  // R3F renders three.js objects through lowercase intrinsic JSX elements
+  // (<mesh>, <meshStandardMaterial>, …) whose props are three.js property
+  // names (geometry, castShadow, roughness, args, …). eslint-plugin-react's
+  // no-unknown-property rule only knows DOM attributes, so it false-positives
+  // on every R3F element. Scope the rule off to the WebGL viewer scene tree.
+  {
+    files: ['client/src/components/views/board-viewer-3d/**/*.tsx'],
+    rules: {
+      'react/no-unknown-property': 'off',
+    },
+  },
+
   // ── Disable formatting rules (Prettier handles formatting) ─────────
   prettierConfig,
 );
