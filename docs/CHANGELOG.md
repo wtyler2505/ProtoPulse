@@ -2,6 +2,20 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — v0.5 first slice: The Bridge — firmware in the loop
+
+### Added
+- `@protopulse/emu`: ATmega328P emulation on avr8js — McuCore contract,
+  cycle-stamped GPIO events, UART queues, Intel-HEX parser, and a
+  documented mini-assembler so tests assemble their own firmware (the
+  blink test asserts real edges on B5 at ~1206-cycle spacing). 47 tests.
+- App: Firmware panel — HEX load, frame-budgeted run/pause, serial
+  monitor with input, stacked square-wave pin traces. 33 new tests.
+
+### Known gaps (ROADMAP.md)
+- Co-sim bus, WebSerial flashing, ADC + remaining peripherals,
+  RP2040/ESP32 cores.
+
 ## 2026-06-10 — v0.4 second slice: fab outputs + board rendering truth
 
 ### Added
