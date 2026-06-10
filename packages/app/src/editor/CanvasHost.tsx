@@ -3,13 +3,26 @@ import { useEffect, useRef } from 'react';
 import { diff   } from '@protopulse/graph';
 import {
   applyDelta,
+  buildPcbScene,
   buildScene,
   Camera,
+  pcbViewOf,
   PickIndex,
+  syncPcbScene,
   WebGL2Renderer
-  
+
 } from '@protopulse/renderer';
 
+import { dashedLines, ratsnestSegments } from '../pcb/ratsnest.js';
+import {
+  PcbPlaceTool,
+  pcbDeleteSelectionOps,
+  PcbSelectTool,
+  PcbTraceTool,
+  PcbViaTool
+
+} from '../pcb/tools.js';
+import { asOpBodies, DEFAULT_TRACE_WIDTH_NM } from '../pcb/types.js';
 import { getDiffDelta, getGraph, partDb, useSession } from '../state/session.js';
 import { useUi } from '../state/ui.js';
 
@@ -19,19 +32,25 @@ import {
   PlaceTool,
   SelectTool,
   WireTool
-  
-  
-  
+
+
+
 } from './tools.js';
 
 import type {Tool, ToolEnv, ToolResult} from './tools.js';
-import type {DesignGraph, GraphDelta} from '@protopulse/graph';
+import type { PadSource, PcbTool, PcbToolEnv, PcbToolResult } from '../pcb/tools.js';
+import type {DesignGraph, GraphDelta, OpBody, Vec} from '@protopulse/graph';
 import type {OverlayState} from '@protopulse/renderer';
 
 /**
  * Owns the <canvas>: WebGL2Renderer + Camera + PickIndex + the rAF loop.
  * Renders only when one of the tracked versions changes (graph, scene,
  * camera, overlay, selection, diff target, canvas size).
+ *
+ * Two canvases live here, keyed on ui.viewMode: the schematic scene
+ * (incremental delta sync, schematic tools) and the v0.4 PCB scene
+ * (full-rebuild sync + ratsnest overlay, pcb tools). Switching modes
+ * tears the GL state down and rebuilds it — the effect re-runs.
  */
 
 function diffOverlayMap(
@@ -59,10 +78,12 @@ function isEditableTarget(target: EventTarget | null): boolean {
 
 export function CanvasHost() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const viewMode = useUi((s) => s.viewMode);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const isPcb = viewMode === 'pcb';
 
     const renderer = new WebGL2Renderer();
     try {
@@ -75,10 +96,18 @@ export function CanvasHost() {
     const camera = new Camera();
     const pickIndex = new PickIndex();
 
+    // Part footprints are a pinned in-flight contract (@protopulse/parts
+    // grows Part.footprint on a parallel track) — bridge structurally.
+    const padSource = partDb as unknown as PadSource;
+
     let graph: DesignGraph = getGraph(useSession.getState());
     let graphKey = '';
-    const scene = buildScene(graph, partDb);
+    const scene = isPcb ? buildPcbScene(graph, partDb) : buildScene(graph, partDb);
     pickIndex.rebuild(scene);
+
+    let ratsnest: Float32Array | null = isPcb
+      ? dashedLines(ratsnestSegments(graph, pcbViewOf(graph), padSource))
+      : null;
 
     const sizeOf = () => ({
       width: canvas.clientWidth || 1,
@@ -88,7 +117,7 @@ export function CanvasHost() {
     if (initialBounds) camera.fitBounds(initialBounds, sizeOf());
 
     // ── Mutable loop state ──
-    let tool: Tool = new SelectTool();
+    let tool: Tool | PcbTool = isPcb ? new PcbSelectTool() : new SelectTool();
     let toolKey = 'select';
     let ghost: Float32Array | null = null;
     let overlayVersion = 0;
@@ -118,13 +147,34 @@ export function CanvasHost() {
       queryRect: (min, max) => pickIndex.queryRect(min, max),
     });
 
-    const applyResult = (res: ToolResult): void => {
+    const pcbToolEnv = (): PcbToolEnv => ({
+      graph,
+      view: pcbViewOf(graph),
+      parts: padSource,
+      pick: (pt, tol) => pickIndex.pick(pt, tol),
+      activeLayer: useUi.getState().activeLayer,
+      traceWidthNm: DEFAULT_TRACE_WIDTH_NM,
+    });
+
+    const applyResult = (res: ToolResult | PcbToolResult): void => {
       const session = useSession.getState();
       if (res.selection) session.setSelection(res.selection);
-      if (res.ops && res.ops.length > 0) session.dispatch(res.ops, res.opsLabel);
+      if (res.ops && res.ops.length > 0) {
+        // Pcb ops are the pinned v0.4 contract — same dispatch path.
+        const ops = res.ops as unknown as OpBody[];
+        if (!session.dispatch(ops, res.opsLabel) && isPcb) {
+          useUi.getState().flashStatus('The graph engine rejected that PCB edit (pcb ops land soon).');
+        }
+      }
       if (res.ghost !== undefined) {
         ghost = res.ghost;
         overlayVersion++;
+      }
+      if ('status' in res && res.status !== undefined) {
+        useUi.getState().flashStatus(res.status);
+      }
+      if ('resetTool' in res && res.resetTool === true) {
+        useUi.getState().setPcbTool('select');
       }
     };
 
@@ -136,14 +186,42 @@ export function CanvasHost() {
     // ── Tool lifecycle (driven by ui store inside the frame loop) ──
     const syncTool = (): void => {
       const ui = useUi.getState();
-      const key = ui.tool === 'place' ? `place:${ui.placePartId ?? ''}` : ui.tool;
+      let key: string;
+      if (isPcb) {
+        key = ui.pcbTool === 'place' ? `place:${ui.pcbPlaceComponentId ?? ''}` : ui.pcbTool;
+      } else {
+        key = ui.tool === 'place' ? `place:${ui.placePartId ?? ''}` : ui.tool;
+      }
       if (key === toolKey) return;
       applyResult(tool.cancel());
       toolKey = key;
-      if (ui.tool === 'place' && ui.placePartId) tool = new PlaceTool(ui.placePartId);
-      else if (ui.tool === 'wire') tool = new WireTool();
-      else tool = new SelectTool();
+      if (isPcb) {
+        if (ui.pcbTool === 'place' && ui.pcbPlaceComponentId) {
+          tool = new PcbPlaceTool(ui.pcbPlaceComponentId);
+        } else if (ui.pcbTool === 'trace') tool = new PcbTraceTool();
+        else if (ui.pcbTool === 'via') tool = new PcbViaTool();
+        else tool = new PcbSelectTool();
+      } else {
+        if (ui.tool === 'place' && ui.placePartId) tool = new PlaceTool(ui.placePartId);
+        else if (ui.tool === 'wire') tool = new WireTool();
+        else tool = new SelectTool();
+      }
     };
+
+    // isPcb is fixed for this effect run, so the casts are sound: the
+    // tool union always matches the mode the env builders serve.
+    const toolDown = (pt: Vec): ToolResult | PcbToolResult =>
+      isPcb
+        ? (tool as PcbTool).pointerDown(pt, pcbToolEnv())
+        : (tool as Tool).pointerDown(pt, toolEnv());
+    const toolMove = (pt: Vec): ToolResult | PcbToolResult =>
+      isPcb
+        ? (tool as PcbTool).pointerMove(pt, pcbToolEnv())
+        : (tool as Tool).pointerMove(pt, toolEnv());
+    const toolUp = (pt: Vec): ToolResult | PcbToolResult =>
+      isPcb
+        ? (tool as PcbTool).pointerUp(pt, pcbToolEnv())
+        : (tool as Tool).pointerUp(pt, toolEnv());
 
     // ── Pointer / wheel / keyboard ──
     const onPointerDown = (e: PointerEvent): void => {
@@ -153,7 +231,7 @@ export function CanvasHost() {
         lastPointer = { x: e.clientX, y: e.clientY };
         return;
       }
-      if (e.button === 0) applyResult(tool.pointerDown(worldOf(e), toolEnv()));
+      if (e.button === 0) applyResult(toolDown(worldOf(e)));
     };
 
     const onPointerMove = (e: PointerEvent): void => {
@@ -164,7 +242,7 @@ export function CanvasHost() {
         lastPointer = { x: e.clientX, y: e.clientY };
         return;
       }
-      applyResult(tool.pointerMove(world, toolEnv()));
+      applyResult(toolMove(world));
     };
 
     const onPointerUp = (e: PointerEvent): void => {
@@ -173,7 +251,7 @@ export function CanvasHost() {
         lastPointer = null;
         return;
       }
-      if (e.button === 0) applyResult(tool.pointerUp(worldOf(e), toolEnv()));
+      if (e.button === 0) applyResult(toolUp(worldOf(e)));
     };
 
     const onPointerLeave = (): void => {
@@ -189,9 +267,14 @@ export function CanvasHost() {
 
     const deleteSelection = (): void => {
       const session = useSession.getState();
-      const ops = deleteSelectionOps(graph, session.selection);
+      const ops = isPcb
+        ? asOpBodies(pcbDeleteSelectionOps(pcbViewOf(graph), session.selection))
+        : deleteSelectionOps(graph, session.selection);
       if (ops.length > 0) {
-        session.dispatch(ops, 'delete selection');
+        if (!session.dispatch(ops, isPcb ? 'delete pcb selection' : 'delete selection') && isPcb) {
+          useUi.getState().flashStatus('The graph engine rejected that PCB edit (pcb ops land soon).');
+          return;
+        }
         session.clearSelection();
       }
     };
@@ -205,8 +288,16 @@ export function CanvasHost() {
       }
       if (e.key === 'Escape') {
         applyResult(tool.cancel());
-        useUi.getState().setTool('select');
+        if (isPcb) useUi.getState().setPcbTool('select');
+        else useUi.getState().setTool('select');
         useSession.getState().clearSelection();
+        return;
+      }
+      if (isPcb && (e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey) {
+        if (tool instanceof PcbPlaceTool) {
+          applyResult(tool.rotate(pcbToolEnv()));
+          e.preventDefault();
+        }
         return;
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -243,12 +334,19 @@ export function CanvasHost() {
 
       syncTool();
 
-      // Graph → scene sync (incremental, via diff + applyDelta).
+      // Graph → scene sync. Schematic: incremental via diff + applyDelta.
+      // PCB: full rebuild + ratsnest recompute (honest cut — no pcb delta).
       const session = useSession.getState();
       const key = `${session.branch}@${String(session.opsVersion)}`;
       if (key !== graphKey) {
         const next = getGraph(session);
-        applyDelta(scene, diff(graph, next), next, partDb);
+        if (isPcb) {
+          syncPcbScene(scene, next, partDb);
+          ratsnest = dashedLines(ratsnestSegments(next, pcbViewOf(next), padSource));
+          overlayVersion++;
+        } else {
+          applyDelta(scene, diff(graph, next), next, partDb);
+        }
         graph = next;
         graphKey = key;
         pickIndex.rebuild(scene);
@@ -285,8 +383,9 @@ export function CanvasHost() {
         const overlay: OverlayState = {
           selection: new Set(session.selection),
           highlight: new Set(ui.highlight),
-          diff: diffOverlayMap(getDiffDelta(session)),
+          diff: isPcb ? undefined : diffOverlayMap(getDiffDelta(session)),
           ...(ghost ? { ghost: { lines: ghost } } : {}),
+          ...(isPcb && ratsnest && ratsnest.length > 0 ? { ratsnest: { lines: ratsnest } } : {}),
           gridVisible: camera.showGrid(),
         };
         renderer.render(scene, camera, overlay);
@@ -316,7 +415,7 @@ export function CanvasHost() {
       window.removeEventListener('keyup', onKeyUp);
       renderer.dispose();
     };
-  }, []);
+  }, [viewMode]);
 
   return <canvas ref={canvasRef} className="canvas-host" data-pick-tolerance={PICK_TOLERANCE_NM} />;
 }

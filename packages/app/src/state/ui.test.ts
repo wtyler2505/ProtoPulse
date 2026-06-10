@@ -86,3 +86,68 @@ describe('useUi store (node — no DOM, no localStorage)', () => {
     expect(useUi.getState().statusFlash).toBeNull();
   });
 });
+
+describe('PCB view-mode state (v0.4)', () => {
+  it('boots on the schematic with select tools and F.Cu active', () => {
+    useUi.setState({
+      viewMode: 'schematic',
+      pcbTool: 'select',
+      pcbPlaceComponentId: null,
+      activeLayer: 'F.Cu',
+      activeTab: 'inspector',
+    });
+    const s = useUi.getState();
+    expect(s.viewMode).toBe('schematic');
+    expect(s.pcbTool).toBe('select');
+    expect(s.activeLayer).toBe('F.Cu');
+  });
+
+  it('setViewMode resets both canvases to their neutral tool', () => {
+    useUi.getState().startPlace('core:resistor');
+    useUi.getState().setViewMode('pcb');
+    let s = useUi.getState();
+    expect(s.viewMode).toBe('pcb');
+    expect(s.tool).toBe('select');
+    expect(s.placePartId).toBeNull();
+
+    useUi.getState().startPcbPlace('c1');
+    useUi.getState().setViewMode('schematic');
+    s = useUi.getState();
+    expect(s.pcbTool).toBe('select');
+    expect(s.pcbPlaceComponentId).toBeNull();
+  });
+
+  it('leaving pcb mode evicts the DRC tab (it does not exist there)', () => {
+    useUi.getState().setViewMode('pcb');
+    useUi.getState().setTab('drc');
+    useUi.getState().setViewMode('schematic');
+    expect(useUi.getState().activeTab).toBe('inspector');
+
+    // …but a non-DRC tab survives the switch.
+    useUi.getState().setViewMode('pcb');
+    useUi.getState().setTab('erc');
+    useUi.getState().setViewMode('schematic');
+    expect(useUi.getState().activeTab).toBe('erc');
+  });
+
+  it('startPcbPlace arms the place tool; setPcbTool disarms it', () => {
+    useUi.getState().setViewMode('pcb');
+    useUi.getState().startPcbPlace('c42');
+    let s = useUi.getState();
+    expect(s.pcbTool).toBe('place');
+    expect(s.pcbPlaceComponentId).toBe('c42');
+    useUi.getState().setPcbTool('trace');
+    s = useUi.getState();
+    expect(s.pcbTool).toBe('trace');
+    expect(s.pcbPlaceComponentId).toBeNull();
+    useUi.getState().setViewMode('schematic');
+  });
+
+  it('toggleLayer flips between the two copper layers', () => {
+    useUi.setState({ activeLayer: 'F.Cu' });
+    useUi.getState().toggleLayer();
+    expect(useUi.getState().activeLayer).toBe('B.Cu');
+    useUi.getState().toggleLayer();
+    expect(useUi.getState().activeLayer).toBe('F.Cu');
+  });
+});

@@ -28,6 +28,29 @@ export {
   type RGBA,
   type SceneNode,
 } from './scene.js';
+export {
+  applyPcbPlacement,
+  buildFootprintNode,
+  buildPcbScene,
+  buildTraceNode,
+  buildViaNode,
+  layerColor,
+  padWorldPosition,
+  PCB_LAYER_COLORS,
+  pcbViewOf,
+  quarterTurnsOf,
+  syncPcbScene,
+  tessellateFootprint,
+  tessellatePad,
+  VIA_COLOR,
+  type PartWithFootprint,
+  type PcbFootprintSpec,
+  type PcbPadSpec,
+  type PcbPlacementLike,
+  type PcbTraceLike,
+  type PcbViaLike,
+  type PcbViewLike,
+} from './scene-pcb.js';
 export { applyDelta } from './sync.js';
 export { PickIndex, type PickHit } from './pick.js';
 export {
