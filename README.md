@@ -244,7 +244,7 @@ npm run -w @protopulse/app dev   # new editor → http://localhost:5174
 npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
 ```
 
-**Engine roadmap:** v0.2 The Lab (ngspice-WASM sim + Analyst agent) → v0.3 The Crew (full agent crew, Design Review, teaching depths) → v0.4 The Board (PCB, push-and-shove, DRC decks) → v0.5 The Bridge (WebSerial flashing, MCU emulation, co-sim) → v0.6 The World (sync/community/fab pipeline) → v0.7 The Probe (open hardware).
+**Engine roadmap:** canonical home is [`ROADMAP.md`](./ROADMAP.md) (v0.2 The Lab → v0.7 The Probe); the frozen founding spec lives in [`docs/vision/`](./docs/vision/README.md).
 
 See [`packages/README.md`](packages/README.md) for the full package map, conventions, and format spec pointers.
 
@@ -465,17 +465,10 @@ Phase 0   ██████████████░░░░░░  Active  
 Phase 1   ░░░░░░░░░░░░░░░░░░░░  Next        Live simulation, breadboard wiring, hardware comms
 ```
 
-Engine redesign (the vision, three volumes):
-
-```
-v0.1   ████████████████████  Landed   The Engine — graph/op-log core, ERC, exports, editor, Draftsman
-v0.2   ░░░░░░░░░░░░░░░░░░░░  Next     The Lab — ngspice-WASM simulation + Analyst agent
-v0.3   ░░░░░░░░░░░░░░░░░░░░  Later    The Crew — full agent crew, Design Review, teaching depths
-v0.4   ░░░░░░░░░░░░░░░░░░░░  Later    The Board — PCB, push-and-shove, DRC decks
-v0.5   ░░░░░░░░░░░░░░░░░░░░  Later    The Bridge — WebSerial flashing, MCU emulation, co-sim
-v0.6   ░░░░░░░░░░░░░░░░░░░░  Later    The World — sync, community, fab pipeline
-v0.7   ░░░░░░░░░░░░░░░░░░░░  Later    The Probe — open hardware
-```
+Engine redesign (the vision, three volumes): v0.1 The Engine **landed
+2026-06-10 (Milestone 1)**; the canonical build order v0.2–v0.7 lives in
+[`ROADMAP.md`](./ROADMAP.md), the frozen founding spec in
+[`docs/vision/`](./docs/vision/README.md).
 
 **The Vision:** ProtoPulse aims to be the single tool a maker needs from "I've never touched electronics" to "here are my Gerbers." The engine redesign is how it gets there; see also [`docs/future-features-and-ideas-list.md`](docs/future-features-and-ideas-list.md) for the legacy-app idea backlog including camera-based component ID and engineering calculators.
 

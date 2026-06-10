@@ -1587,17 +1587,9 @@ Legacy app phases — all shipped as of 2026-03-02:
 | 13 | Firmware scaffold generator, PDF design report, FMEA, FZZ export | Shipped |
 | Future | Multi-project support, `ProjectProvider` splitting, CORS allowlist, real-time collaboration | Planned |
 
-Engine redesign build order (post-Milestone 1 — see Section 15):
-
-| Version | Name | Scope | Status |
-|---|---|---|---|
-| v0.1 | The Engine | Graph/op-log core, parts, ERC, exports, CLI, renderer, editor, Draftsman, content | **Landed (M1, 2026-06-10)** |
-| v0.2 | The Lab | ngspice-WASM simulation + Analyst agent | Next |
-| v0.3 | The Crew | Full agent crew, Design Review, teaching depths | Planned |
-| v0.4 | The Board | PCB, push-and-shove routing, DRC decks | Planned |
-| v0.5 | The Bridge | WebSerial flashing, MCU emulation, co-sim | Planned |
-| v0.6 | The World | Sync, community, fab pipeline | Planned |
-| v0.7 | The Probe | Open hardware | Planned |
+Engine redesign build order: v0.1 landed (M1, 2026-06-10); the
+canonical v0.2–v0.7 roadmap lives in [`ROADMAP.md`](../ROADMAP.md)
+(see also Section 15 and the frozen spec in [`docs/vision/`](./vision/README.md)).
 
 ---
 
