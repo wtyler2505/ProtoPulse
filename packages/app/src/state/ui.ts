@@ -1,6 +1,7 @@
 import { isTeachingDepth } from '@protopulse/ai';
 import { create } from 'zustand';
 
+import type { SimGhost } from '../sim/ghost.js';
 import type { TeachingDepth } from '@protopulse/ai';
 import type { Vec } from '@protopulse/graph';
 
@@ -106,6 +107,10 @@ export interface UiState {
   statusFlashSeq: number;
   /** Prompt pre-seeded into the Professor panel (Review handoff), or null. */
   professorSeed: string | null;
+  /** Last run's per-net voltages painted on the schematic, or null.
+   *  Drawn only while its (branch, opsVersion) stamp matches the live
+   *  session — a stale ghost is a lie. */
+  simGhost: SimGhost | null;
 
   setTool: (tool: Exclude<ToolId, 'place'>) => void;
   startPlace: (partId: string) => void;
@@ -130,6 +135,7 @@ export interface UiState {
   askProfessor: (prompt: string) => void;
   /** The Professor panel takes the seed exactly once. */
   consumeProfessorSeed: () => string | null;
+  setSimGhost: (ghost: SimGhost | null) => void;
 }
 
 export const useUi = create<UiState>()((set, get) => ({
@@ -150,6 +156,7 @@ export const useUi = create<UiState>()((set, get) => ({
   statusFlash: null,
   statusFlashSeq: 0,
   professorSeed: null,
+  simGhost: null,
 
   setTool: (tool) => { set({ tool, placePartId: null }); },
   startPlace: (partId) => { set({ tool: 'place', placePartId: partId }); },
@@ -195,4 +202,5 @@ export const useUi = create<UiState>()((set, get) => ({
     if (seed !== null) set({ professorSeed: null });
     return seed;
   },
+  setSimGhost: (ghost) => { set({ simGhost: ghost }); },
 }));

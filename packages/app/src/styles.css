@@ -627,6 +627,83 @@ input:not([type]) {
   color: var(--accent-warm);
 }
 
+/* ── Sim ghost legend ── */
+
+.ghost-legend {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted, #8aa0bd);
+  padding: 4px 0;
+}
+
+.ghost-legend-bar {
+  flex: 1;
+  max-width: 120px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.ghost-legend button {
+  font-size: 10px;
+}
+
+/* ── Blame (Inspector history section) ── */
+
+.blame-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.blame-jump {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 4px 6px;
+}
+
+.blame-jump:hover {
+  border-color: #2a4a77;
+}
+
+.blame-summary {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.blame-meta {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 11px;
+  color: var(--muted, #8aa0bd);
+  padding-left: 32px;
+}
+
+.blame-when {
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.blame-rationale {
+  font-style: italic;
+  font-size: 11px;
+  color: var(--accent);
+  padding-left: 32px;
+}
+
 /* ── Export ── */
 
 .export-warning {

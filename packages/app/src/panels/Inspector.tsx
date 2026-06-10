@@ -4,16 +4,67 @@ import { pcbViewOf } from '@protopulse/renderer';
 
 import { pcbFlipSelectionOps } from '../pcb/tools.js';
 import { asOpBodies } from '../pcb/types.js';
+import { actorLabel, blameFor } from '../state/blame.js';
 import { getGraph, partDb, useSession } from '../state/session.js';
 import { useUi } from '../state/ui.js';
 
 import type { Component, Net } from '@protopulse/graph';
 
 /**
- * Selection details: ref, part, value, DNP, and the nets it touches.
- * In PCB mode a placed footprint also shows its board side with a flip
- * button (the F key does the same on canvas).
+ * Selection details: ref, part, value, DNP, the nets it touches, and
+ * blame — every op that ever touched the selection (who/when/why from
+ * the envelopes; click an entry to time-travel there in the History
+ * tab). In PCB mode a placed footprint also shows its board side with
+ * a flip button (the F key does the same on canvas).
  */
+
+function BlameSection({ entityId }: { entityId: string }) {
+  const opsVersion = useSession((s) => s.opsVersion);
+  void opsVersion;
+  const state = useSession.getState();
+  const entries = blameFor(state.core.log.opsFor(state.branch), entityId);
+  if (entries.length === 0) return null;
+
+  const jumpTo = (index: number) => {
+    state.setReplayIndex(index);
+    useUi.getState().setTab('history');
+  };
+
+  return (
+    <>
+      <h3 className="panel-subtitle">History (blame)</h3>
+      <ul className="blame-list">
+        {entries.map((entry) => (
+          <li key={entry.index} className="blame-row">
+            <button
+              type="button"
+              className="blame-jump"
+              title={`time-travel to just after op ${String(entry.index)} (History tab)`}
+              onClick={() => {
+                jumpTo(entry.index);
+              }}
+            >
+              <span className="blame-summary">
+                <span className="history-index">{entry.index}</span>
+                {entry.summary}
+              </span>
+              <span className="blame-meta">
+                {actorLabel(entry.actor)}
+                {entry.agent !== undefined && <span className="history-agent">{entry.agent}</span>}
+                {entry.ts > 0 && (
+                  <span className="blame-when">{new Date(entry.ts).toLocaleString()}</span>
+                )}
+              </span>
+              {entry.rationale !== undefined && (
+                <span className="blame-rationale">“{entry.rationale}”</span>
+              )}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
 
 function NetRow({ net }: { net: Net }) {
   const dispatch = useSession((s) => s.dispatch);
@@ -148,6 +199,7 @@ function ComponentInspector({ component }: { component: Component }) {
           ))}
         </ul>
       )}
+      <BlameSection entityId={component.id} />
     </div>
   );
 }
@@ -174,6 +226,7 @@ export function Inspector() {
           <ul className="net-list">
             <NetRow key={selectedNet.id} net={selectedNet} />
           </ul>
+          <BlameSection entityId={selectedNet.id} />
         </div>
       ) : (
         <p className="muted">Select a symbol or wire to inspect it.</p>

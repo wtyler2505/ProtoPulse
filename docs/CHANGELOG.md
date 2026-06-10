@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — sim ghost overlay (voltages painted on the wires)
+
+### Added
+- **Canvas ghost**: after an op or transient run, every net on the
+  schematic tints by its solved voltage — cold blue at the range floor,
+  warm orange at the ceiling — with a gradient legend (instant label +
+  min/max) in the Sim panel and a hide button. Honesty built in: only
+  op/tran produce a ghost (AC/noise/sweeps have no single per-net
+  voltage), and the ghost carries a (branch, opsVersion) stamp — edit
+  anything and it vanishes instead of lying. Renderer grew a generic
+  per-node `tint` overlay channel (lowest priority, under selection/
+  highlight/diff).
+
+## 2026-06-10 — blame on canvas (the op-log trilogy completes)
+
+### Added
+- **History (blame) in the Inspector**: select any component or net and
+  see every op that ever touched it — who (actor), when (timestamp),
+  what (op summary, batch-aware), and why (meta.rationale on AI/fix
+  ops, agent chip included). Click an entry to time-travel to that
+  exact moment in the History tab. Pure op-log filter (`blameFor`) —
+  no new state, the envelopes always had the answers. With replay
+  (watch history), merge (combine histories), and blame (interrogate
+  history), the op-log thesis is now fully user-facing.
+
 ## 2026-06-10 — serverless share links (v0.6 first slice, early)
 
 ### Added

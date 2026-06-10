@@ -1213,6 +1213,7 @@ Then open `http://localhost:5174` (the main app stays on port 5000).
 - **Undo/redo** that is always exact, because every change you make is recorded as an operation in the design's history.
 - **Branches with real merging** — like saving alternate versions of your circuit. Switch between them instantly, a green/amber overlay shows exactly what differs, and the **merge** button combines two branches three-way: compatible changes merge automatically, and anything both branches changed differently is shown as a conflict you decide explicitly (yours or theirs) — nothing is ever merged silently.
 - **History (time-lapse replay)** — every design is its full operation log, and the History tab lets you scrub through it: drag the slider (or press Play) and watch the design rebuild itself op by op on the canvas. Click any operation to jump to that moment. The editor is read-only while you're in the past; **Back to live** returns to the present.
+- **Blame** — select any component or net and the Inspector shows its complete life story: who made each change, when, and (for AI-made changes) why. Click any entry to time-travel to that exact moment.
 - **ERC panel** — electrical rule checks with one-click **Apply Fix** for some findings (e.g., a missing pull-up resistor), and each finding links to a short concept article that explains *why* it matters.
 - **Export** — KiCad netlist, CSV BOM, and a single-file design bundle.
 - **Share links** — *Copy share link* puts your entire design (history and branches included) into a compressed URL. No account, no upload, no server: send the link any way you like, and it opens in the other person's editor. Opening a link never silently replaces your own work — you're asked first.
@@ -1225,6 +1226,8 @@ The newer engine milestones added simulation panels to the editor's sidebar. Two
 ![The Sim tab after a transient run: the fidelity bar tells you which parts ran as real SPICE models and which as behavioral stand-ins, above the trace toggles and the waveform plot](screenshots/sim-panel.png)
 
 *The Sim tab after a transient run. Read the **fidelity bar** before believing anything: it lists exactly which parts ran as real SPICE models and which as behavioral stand-ins.*
+
+After an operating-point or transient run, the schematic itself lights up: every wire tints by its solved voltage, cold blue at the lowest and warm orange at the highest, with a legend in the Sim panel. Edit anything and the tint disappears rather than showing stale numbers.
 
 ![The Co-sim tab: blink firmware running on the emulated ATmega328P, its B5 pin bound to the LED_A net, square wave stacked over the analog response on one time axis](screenshots/cosim.png)
 

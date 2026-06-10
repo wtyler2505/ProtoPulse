@@ -15,6 +15,7 @@ import {
 } from '@protopulse/renderer';
 
 import { dashedLines, ratsnestSegments } from '../pcb/ratsnest.js';
+import { ghostTint } from '../sim/ghost.js';
 import {
   PcbPlaceTool,
   pcbDeleteSelectionOps,
@@ -41,8 +42,9 @@ import {
 
 import type {Tool, ToolEnv, ToolResult} from './tools.js';
 import type { PadSource, PcbTool, PcbToolEnv, PcbToolResult } from '../pcb/tools.js';
+import type { SimGhost } from '../sim/ghost.js';
 import type {DesignGraph, GraphDelta, OpBody, Vec} from '@protopulse/graph';
-import type {OverlayState} from '@protopulse/renderer';
+import type {OverlayState, RGBA} from '@protopulse/renderer';
 
 /**
  * Owns the <canvas>: WebGL2Renderer + Camera + PickIndex + the rAF loop.
@@ -140,8 +142,16 @@ export function CanvasHost() {
       selection: null as ReadonlySet<string> | null,
       highlight: null as readonly string[] | null,
       diffAgainst: null as string | null,
+      simGhost: null as SimGhost | null,
       w: 0,
       h: 0,
+    };
+
+    // Tint map cached per ghost identity — rebuilt only on a new run.
+    let tintCache: { ghost: SimGhost; map: Map<string, RGBA> } | null = null;
+    const tintFor = (g: SimGhost): Map<string, RGBA> => {
+      if (tintCache?.ghost !== g) tintCache = { ghost: g, map: ghostTint(g) };
+      return tintCache.map;
     };
 
     const toolEnv = (): ToolEnv => ({
@@ -395,6 +405,17 @@ export function CanvasHost() {
       const sizeChanged = size.width !== last.w || size.height !== last.h;
       if (sizeChanged) renderer.resize();
 
+      // Sim ghost: only drawn on the schematic, at the live head, and
+      // only while its (branch, opsVersion) stamp matches the session.
+      const freshGhost =
+        !isPcb &&
+        session.replayIndex === null &&
+        ui.simGhost !== null &&
+        ui.simGhost.branch === session.branch &&
+        ui.simGhost.opsVersion === session.opsVersion
+          ? ui.simGhost
+          : null;
+
       const needsRender =
         sizeChanged ||
         graphKey !== last.graphKey ||
@@ -403,13 +424,15 @@ export function CanvasHost() {
         overlayVersion !== last.overlayV ||
         session.selection !== last.selection ||
         ui.highlight !== last.highlight ||
-        session.diffAgainst !== last.diffAgainst;
+        session.diffAgainst !== last.diffAgainst ||
+        freshGhost !== last.simGhost;
 
       if (needsRender) {
         const overlay: OverlayState = {
           selection: new Set(session.selection),
           highlight: new Set(ui.highlight),
           diff: isPcb ? undefined : diffOverlayMap(getDiffDelta(session)),
+          ...(freshGhost ? { tint: tintFor(freshGhost) } : {}),
           ...(ghost ? { ghost: { lines: ghost } } : {}),
           ...(isPcb && ratsnest && ratsnest.length > 0 ? { ratsnest: { lines: ratsnest } } : {}),
           gridVisible: camera.showGrid(),
@@ -422,6 +445,7 @@ export function CanvasHost() {
         last.selection = session.selection;
         last.highlight = ui.highlight;
         last.diffAgainst = session.diffAgainst;
+        last.simGhost = freshGhost;
         last.w = size.width;
         last.h = size.height;
       }
