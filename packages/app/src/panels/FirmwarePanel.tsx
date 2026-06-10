@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { createEmuSession } from '../emu/runner.js';
+import { sharedEmuSession } from '../emu/runner.js';
 import { buildPinTraces, traceToPlotXY } from '../emu/timeline.js';
 import { Plot, traceColor } from '../sim/Plot.js';
 import { engNotation } from '../sim/scales.js';
@@ -18,9 +18,11 @@ import type { PlotTrace } from '../sim/Plot.js';
  * square waves over a selectable virtual-time window.
  */
 
-/** Module-level session: firmware, cycles, and serial history survive
- *  tab switches; only the run loop pauses while the panel is unmounted. */
-const session = createEmuSession();
+/** The app-wide shared session: firmware, cycles, and serial history
+ *  survive tab switches; only the run loop pauses while the panel is
+ *  unmounted. The Co-sim tab borrows this session's core (and resets it
+ *  around each co-sim window — see src/cosim/runner.ts). */
+const session = sharedEmuSession;
 
 /** How far back the pin-trace window looks, in virtual seconds. */
 const WINDOWS = [

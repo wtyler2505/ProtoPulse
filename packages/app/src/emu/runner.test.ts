@@ -338,6 +338,31 @@ describe('createEmuSession — reset & inspect', () => {
     expect(session.runFrame().cycles).toBe(1); // still runs
   });
 
+  it('getCore exposes the core only after a successful load', async () => {
+    const core = new FakeCore({ clockHz: 60 });
+    const { session } = sessionWith(core, () => 0);
+    expect(session.getCore()).toBeNull();
+    await session.load(HEX);
+    expect(session.getCore()).toBe(core);
+  });
+
+  it('suspend makes runFrame a no-op until resume — the co-sim borrow latch', async () => {
+    const core = new FakeCore({ clockHz: 60 }); // budget 1 cycle/frame
+    const { session } = sessionWith(core, () => 0);
+    await session.load(HEX);
+    expect(session.suspended).toBe(false);
+
+    session.suspend();
+    expect(session.suspended).toBe(true);
+    expect(session.runFrame()).toEqual({ cycles: 0, events: 0 });
+    expect(core.stepCalls).toHaveLength(0); // the core was never touched
+    expect(session.cycles).toBe(0);
+
+    session.resume();
+    expect(session.suspended).toBe(false);
+    expect(session.runFrame().cycles).toBe(1);
+  });
+
   it('setPin forwards to the core only once loaded; inspect passes through', async () => {
     const core = new FakeCore({ clockHz: 60 });
     const { session } = sessionWith(core, () => 0);

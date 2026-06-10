@@ -8,6 +8,7 @@ import { deleteSelectionOps } from './editor/tools.js';
 import { AnalystPanel } from './panels/AnalystPanel.js';
 import { BranchPanel } from './panels/BranchPanel.js';
 import { ConceptViewer } from './panels/ConceptViewer.js';
+import { CosimPanel } from './panels/CosimPanel.js';
 import { DraftsmanPanel } from './panels/DraftsmanPanel.js';
 import { DrcPanel } from './panels/DrcPanel.js';
 import { ErcPanel } from './panels/ErcPanel.js';
@@ -35,6 +36,7 @@ const SCHEMATIC_TABS: { id: TabId; label: string }[] = [
   { id: 'draftsman', label: 'Draftsman' },
   { id: 'sim', label: 'Sim' },
   { id: 'firmware', label: 'Firmware' },
+  { id: 'cosim', label: 'Co-sim' },
   { id: 'analyst', label: 'Analyst' },
   { id: 'professor', label: 'Professor' },
 ];
@@ -252,6 +254,7 @@ function SidePanel() {
       {activeTab === 'draftsman' && <DraftsmanPanel />}
       {activeTab === 'sim' && <SimPanel />}
       {activeTab === 'firmware' && <FirmwarePanel />}
+      {activeTab === 'cosim' && <CosimPanel />}
       {activeTab === 'analyst' && <AnalystPanel />}
       {activeTab === 'professor' && <ProfessorPanel />}
     </aside>

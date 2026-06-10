@@ -85,8 +85,13 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       blink toggles B5 at ~1206-cycle spacing in test
 - [x] Firmware panel: HEX load, run/pause with frame-budgeted stepping,
       serial monitor with input, logic-analyzer-lite stacked pin traces
-- [ ] The co-sim bus (Vol II §D.3): conservative lockstep, ADC as hard
-      sync point, GPIO behavioral boundary into SPICE
+- [x] The co-sim bus, first slice (Vol II §D.3): MCU→SPICE one-way —
+      GPIO edges as PWL sources behind the 30Ω behavioral boundary; the
+      thesis test measures 0.94Vpp RC ripple vs ~0.9Vpp theory; Co-sim
+      panel with bindings, slowdown-honesty readout, square-wave-over-
+      analog money plot
+- [ ] Co-sim feedback direction: digital input comparators + ADC as
+      hard sync point (windowed fixed-point iteration)
 - [ ] WebSerial/WebUSB flashing (needs real hardware to verify)
 - [ ] RP2040 / ESP32 cores; timers 1/2, SPI, TWI, ADC peripherals
 

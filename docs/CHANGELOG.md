@@ -2,6 +2,23 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — v0.5 second slice: the co-sim bus (the crown jewel, one way)
+
+### Added
+- `@protopulse/cosim`: firmware GPIO edges become PWL sources behind a
+  series-Rout behavioral boundary, injected via sim's additive
+  extraCards hook. The thesis test runs real avr8js blink firmware into
+  a real ngspice RC low-pass: 0.94Vpp settled ripple measured vs ~0.9Vpp
+  predicted. 31 tests.
+- App: Co-sim panel — pin→net bindings, window/step controls, the Vol II
+  D.3 slowdown-factor honesty readout, digital traces stacked above the
+  analog response in one plot. Shared emu session with a documented
+  suspend/reset borrow protocol. 36 new tests (app at 284).
+
+### Known gaps (ROADMAP.md)
+- Feedback direction (digital inputs + ADC hard sync), WebSerial
+  flashing, RP2040/ESP32 cores.
+
 ## 2026-06-10 — v0.5 first slice: The Bridge — firmware in the loop
 
 ### Added

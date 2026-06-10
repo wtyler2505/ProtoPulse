@@ -50,7 +50,8 @@ const KINDS: { id: PickerKind; label: string }[] = [
 
 const MC_MAX_RUNS = 200;
 
-function Field({
+/** One labelled text field, house style (shared with the Co-sim panel). */
+export function Field({
   label,
   value,
   onChange,
@@ -73,7 +74,8 @@ function Field({
   );
 }
 
-function SelectField({
+/** One labelled select, house style (shared with the Co-sim panel). */
+export function SelectField({
   label,
   value,
   options,
@@ -112,7 +114,8 @@ function num(label: string, raw: string): number | string {
   return v;
 }
 
-function FidelityBar({ fidelity, manifest }: { fidelity: string; manifest: FidelityEntry[] }) {
+/** The read-this-before-believing-anything bar (shared with Co-sim). */
+export function FidelityBar({ fidelity, manifest }: { fidelity: string; manifest: FidelityEntry[] }) {
   return (
     <div className="fidelity-bar">
       <p className="fidelity-summary">{fidelity}</p>
