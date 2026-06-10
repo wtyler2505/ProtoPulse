@@ -8,6 +8,20 @@ operation log underneath. It lives alongside the legacy app
 of the old code are ported in deliberately, and the app migrates onto
 this engine in later milestones.
 
+<table>
+<tr>
+<td width="50%"><img src="../docs/screenshots/schematic.png" alt="Schematic canvas: the traffic-light-555 golden fixture, zoom-fit"></td>
+<td width="50%"><img src="../docs/screenshots/pcb-mode.png" alt="PCB canvas: routed-led fixture — pads, F.Cu trace, via"></td>
+</tr>
+<tr>
+<td align="center"><em>Schematic canvas — the <code>traffic-light-555</code> golden fixture</em></td>
+<td align="center"><em>PCB canvas (v0.4) — <code>routed-led</code>: pads, stroked trace, via</em></td>
+</tr>
+</table>
+
+Screenshots are artifacts of [`tools/screenshots/`](../tools/screenshots/README.md)
+— regenerate the set when a UI change alters these views.
+
 ## Packages
 
 | Package | What it is | Depends on |

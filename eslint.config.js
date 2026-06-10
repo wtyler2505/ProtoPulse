@@ -209,6 +209,15 @@ export default tseslint.config(
     },
   },
 
+  // ── Tooling scripts (tools/) ────────────────────────────────────────
+  {
+    files: ['tools/screenshots/**/*.ts'],
+    rules: {
+      // The rig narrates its progress to the terminal by design.
+      'no-console': 'off',
+    },
+  },
+
   // ── Test file overrides ─────────────────────────────────────────────
   {
     files: ['**/*.test.ts', '**/*.test.tsx', '**/__tests__/**'],
