@@ -4,7 +4,14 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createSimRunner, fallbackFidelitySummary } from './runner.js';
 
-import type { Analysis, SimModule, SimResultWithManifest } from './types.js';
+import type {
+  Analysis,
+  McTrial,
+  MonteCarloSpec,
+  SimModule,
+  SimResultWithManifest,
+  StepSpec,
+} from './types.js';
 
 /** A mocked engine module — the real @protopulse/sim is NEVER imported here. */
 function mockResult(analysis: Analysis): SimResultWithManifest {
@@ -130,6 +137,135 @@ describe('createSimRunner', () => {
     await runner.simulate(graph, parts, TRAN);
     await runner.simulate(graph, parts, TRAN);
     expect(mod.simulate).toHaveBeenCalledTimes(2);
+  });
+});
+
+function mcTrial(analysis: Analysis, n: number): McTrial {
+  const base = mockResult(analysis);
+  return { ...base, trial: n, jitter: { R1: 1 + n * 0.01 } };
+}
+
+function makeMultiModule() {
+  const simulateMonteCarlo = vi.fn((_g: unknown, _p: unknown, spec: MonteCarloSpec) =>
+    Promise.resolve({
+      trials: Array.from({ length: spec.runs }, (_, n) => mcTrial(spec.base, n)),
+      manifest: mockResult(spec.base).manifest,
+      seed: spec.seed ?? 1234,
+    }),
+  );
+  const simulateStep = vi.fn((_g: unknown, _p: unknown, spec: StepSpec) =>
+    Promise.resolve({
+      runs: spec.values.map((value) => ({ ...mockResult(spec.base), value })),
+      manifest: mockResult(spec.base).manifest,
+    }),
+  );
+  return { simulateMonteCarlo, simulateStep };
+}
+
+const MC_SPEC: MonteCarloSpec = { base: TRAN, runs: 3, seed: 7, tolerances: { resistor: 0.05 } };
+const STEP_SPEC: StepSpec = { base: TRAN, componentRef: 'R1', values: ['220', '330'] };
+
+describe('runMonteCarlo / runStep caching', () => {
+  it('caches Monte Carlo per (branch, opsVersion, spec): identical spec does not re-run', async () => {
+    const mod = makeMultiModule();
+    const runner = createSimRunner(() => Promise.resolve(mod as unknown as Partial<SimModule>));
+
+    const a = await runner.runMonteCarlo(graph, parts, MC_SPEC, { branch: 'main', opsVersion: 2 });
+    const b = await runner.runMonteCarlo(graph, parts, MC_SPEC, { branch: 'main', opsVersion: 2 });
+    expect(mod.simulateMonteCarlo).toHaveBeenCalledTimes(1);
+    expect(b).toBe(a);
+    expect(a.ok).toBe(true);
+    if (a.ok) {
+      expect(a.result.trials).toHaveLength(3);
+      expect(a.result.seed).toBe(7);
+    }
+  });
+
+  it('the Monte Carlo cache key includes the spec — runs/seed/tolerance changes re-run', async () => {
+    const mod = makeMultiModule();
+    const runner = createSimRunner(() => Promise.resolve(mod as unknown as Partial<SimModule>));
+    const key = { branch: 'main', opsVersion: 2 };
+
+    await runner.runMonteCarlo(graph, parts, MC_SPEC, key);
+    await runner.runMonteCarlo(graph, parts, { ...MC_SPEC, runs: 5 }, key);
+    expect(mod.simulateMonteCarlo).toHaveBeenCalledTimes(2);
+    await runner.runMonteCarlo(graph, parts, { ...MC_SPEC, seed: 99 }, key);
+    expect(mod.simulateMonteCarlo).toHaveBeenCalledTimes(3);
+    await runner.runMonteCarlo(graph, parts, { ...MC_SPEC, tolerances: { resistor: 0.1 } }, key);
+    expect(mod.simulateMonteCarlo).toHaveBeenCalledTimes(4);
+    await runner.runMonteCarlo(graph, parts, MC_SPEC, { branch: 'exp', opsVersion: 2 });
+    expect(mod.simulateMonteCarlo).toHaveBeenCalledTimes(5);
+  });
+
+  it('caches step per (branch, opsVersion, spec) and re-runs on value-list changes', async () => {
+    const mod = makeMultiModule();
+    const runner = createSimRunner(() => Promise.resolve(mod as unknown as Partial<SimModule>));
+    const key = { branch: 'main', opsVersion: 1 };
+
+    const a = await runner.runStep(graph, parts, STEP_SPEC, key);
+    const b = await runner.runStep(graph, parts, STEP_SPEC, key);
+    expect(mod.simulateStep).toHaveBeenCalledTimes(1);
+    expect(b).toBe(a);
+    if (a.ok) {
+      expect(a.result.runs.map((r) => r.value)).toEqual(['220', '330']);
+    }
+
+    await runner.runStep(graph, parts, { ...STEP_SPEC, values: ['220', '330', '1k'] }, key);
+    expect(mod.simulateStep).toHaveBeenCalledTimes(2);
+    await runner.runStep(graph, parts, { ...STEP_SPEC, componentRef: 'R2' }, key);
+    expect(mod.simulateStep).toHaveBeenCalledTimes(3);
+    await runner.runStep(graph, parts, STEP_SPEC, { branch: 'main', opsVersion: 2 });
+    expect(mod.simulateStep).toHaveBeenCalledTimes(4);
+  });
+
+  it('sim, mc, and step results for the same key coexist in the cache', async () => {
+    const mod = { ...makeModule(), ...makeMultiModule() };
+    const runner = createSimRunner(() => Promise.resolve(mod as unknown as Partial<SimModule>));
+    const key = { branch: 'main', opsVersion: 3 };
+
+    await runner.run(graph, parts, TRAN, key);
+    await runner.runMonteCarlo(graph, parts, MC_SPEC, key);
+    await runner.runStep(graph, parts, STEP_SPEC, key);
+    // Re-hitting each is served from cache — no extra engine calls.
+    await runner.run(graph, parts, TRAN, key);
+    await runner.runMonteCarlo(graph, parts, MC_SPEC, key);
+    await runner.runStep(graph, parts, STEP_SPEC, key);
+    expect(mod.simulate).toHaveBeenCalledTimes(1);
+    expect(mod.simulateMonteCarlo).toHaveBeenCalledTimes(1);
+    expect(mod.simulateStep).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces Monte Carlo rejections as error values and retries re-run', async () => {
+    let fail = true;
+    const simulateMonteCarlo = vi.fn((_g: unknown, _p: unknown, spec: MonteCarloSpec) =>
+      fail
+        ? Promise.reject(new Error('noise unsupported'))
+        : Promise.resolve({ trials: [mcTrial(spec.base, 0)], manifest: [], seed: 1 }),
+    );
+    const runner = createSimRunner(() =>
+      Promise.resolve({ simulateMonteCarlo } as unknown as Partial<SimModule>),
+    );
+    const key = { branch: 'main', opsVersion: 1 };
+
+    const first = await runner.runMonteCarlo(graph, parts, MC_SPEC, key);
+    expect(first).toEqual({ ok: false, error: 'noise unsupported' });
+    fail = false;
+    const second = await runner.runMonteCarlo(graph, parts, MC_SPEC, key);
+    expect(second.ok).toBe(true);
+    expect(simulateMonteCarlo).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports friendly errors while the engine lacks the new entry points', async () => {
+    const runner = createSimRunner(() => Promise.resolve({} as Partial<SimModule>));
+    const key = { branch: 'main', opsVersion: 1 };
+
+    const mc = await runner.runMonteCarlo(graph, parts, MC_SPEC, key);
+    expect(mc.ok).toBe(false);
+    if (!mc.ok) expect(mc.error).toMatch(/lacks simulateMonteCarlo/);
+
+    const step = await runner.runStep(graph, parts, STEP_SPEC, key);
+    expect(step.ok).toBe(false);
+    if (!step.ok) expect(step.error).toMatch(/lacks simulateStep/);
   });
 });
 

@@ -5,6 +5,8 @@ import { AnthropicProvider, runAnalyst } from '@protopulse/ai';
 import { simulateViaEngine } from '../sim/runner.js';
 import { getGraph, partDb, useSession } from '../state/session.js';
 
+import type { PinnedSimulateFn } from '@protopulse/ai';
+
 /**
  * The Analyst panel — the first LIVE agent chat in the editor (the
  * Draftsman panel is still a stub). The user's own Anthropic API key is
@@ -14,6 +16,15 @@ import { getGraph, partDb, useSession } from '../state/session.js';
  */
 
 const KEY_STORAGE = 'pp-anthropic-key';
+
+/**
+ * The ai package pins the v0.2 four-kind Analysis; the app's sim types
+ * have since grown (noise, Monte Carlo, stepping) but stay a superset,
+ * so the engine fn still satisfies the pinned contract — the assertion
+ * only narrows the analysis the engine echoes back.
+ */
+const simulateForAnalyst: PinnedSimulateFn = (graph, parts, analysis) =>
+  simulateViaEngine(graph, parts, analysis) as ReturnType<PinnedSimulateFn>;
 
 function loadKey(): string {
   try {
@@ -65,7 +76,7 @@ export function AnalystPanel() {
         graph: getGraph(s),
         parts: partDb,
         provider,
-        simulate: simulateViaEngine,
+        simulate: simulateForAnalyst,
         onEvent: (ev) => {
           if (ev.kind === 'tool_use') {
             push({ who: 'tool', text: `${ev.name} ${JSON.stringify(ev.input)}` });

@@ -14,6 +14,12 @@ export interface PlotTrace {
   xs: number[];
   ys: number[];
   color: string;
+  /** Line dash pattern (ctx.setLineDash); solid when omitted. */
+  dash?: number[];
+  /** Stroke opacity 0..1; 1 when omitted (Monte Carlo spaghetti ~0.15). */
+  alpha?: number;
+  /** False hides this trace from the legend and cursor readout. */
+  legend?: boolean;
 }
 
 export const TRACE_COLORS = [
@@ -174,6 +180,8 @@ function draw(
   for (const trace of traces) {
     ctx.strokeStyle = trace.color;
     ctx.lineWidth = 1.5;
+    ctx.globalAlpha = trace.alpha ?? 1;
+    ctx.setLineDash(trace.dash ?? []);
     ctx.beginPath();
     let started = false;
     for (let i = 0; i < trace.xs.length; i++) {
@@ -195,12 +203,17 @@ function draw(
     }
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
+  ctx.setLineDash([]);
   ctx.restore();
+
+  // Spaghetti / overlay-hidden traces stay out of legend and readout.
+  const labeledTraces = traces.filter((t) => t.legend !== false);
 
   // ── Legend ──
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  traces.forEach((trace, i) => {
+  labeledTraces.forEach((trace, i) => {
     const ly = top + 10 + i * 15;
     const lx = right - 120;
     ctx.fillStyle = trace.color;
@@ -226,7 +239,7 @@ function draw(
     ctx.setLineDash([]);
 
     const lines: { color: string; text: string }[] = [];
-    for (const trace of traces) {
+    for (const trace of labeledTraces) {
       let bestI = -1;
       let bestD = Infinity;
       for (let i = 0; i < trace.xs.length; i++) {
