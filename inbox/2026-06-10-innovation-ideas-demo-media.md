@@ -30,6 +30,10 @@ got any more good creative/innovative ideas?").
    open (links load into the full editor for now).
 4. **Blame on canvas** — click any net/component → who/when/why from op
    envelopes (agent ops already carry meta.rationale). Cheap now.
+   ✅ SHIPPED 2026-06-10 — "History (blame)" section in the Inspector
+   (`state/blame.ts` blameFor + actorLabel), batch-aware summaries,
+   agent chips, rationale lines, click-to-time-travel into the History
+   tab. Browser-verified on R1's full life story.
 5. **Sim ghost overlay** — render the last simulation's node voltages
    as live badges at net labels on the schematic: the Probe's live
    overlay UX, fed by simulation today, hardware later. One UX, two
