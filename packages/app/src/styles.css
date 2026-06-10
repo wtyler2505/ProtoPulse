@@ -688,6 +688,10 @@ input:not([type]) {
 
 .plot-wrap {
   height: 240px;
+  /* The Firmware/Co-sim panels are flex columns: once their content
+     overflows, a shrinkable plot (min-content 0) collapses to its
+     borders and the waveform vanishes. Never shrink the plot. */
+  flex-shrink: 0;
   border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
