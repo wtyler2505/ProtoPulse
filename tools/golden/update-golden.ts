@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { exportBomCsv, exportKicadNetlist } from '@protopulse/export';
+import { exportBomCsv, exportExcellon, exportGerberLayer, exportKicadNetlist, exportPickPlace } from '@protopulse/export';
 import { materialize  } from '@protopulse/graph';
 import { seedPartDb } from '@protopulse/parts';
 
@@ -27,6 +27,14 @@ for (const [name, ops] of Object.entries(FIXTURES)) {
   writeFileSync(join(dir, 'ops.json'), JSON.stringify(ops, null, 2) + '\n');
   writeFileSync(join(dir, 'expected.net'), exportKicadNetlist(graph, seedPartDb(), { date: GOLDEN_DATE }));
   writeFileSync(join(dir, 'expected.bom.csv'), exportBomCsv(graph, seedPartDb()));
+  // Fab exports only for fixtures that carry PCB content — the
+  // schematic-only fixtures keep their existing files byte-identical.
+  if (graph.pcb.placements.size > 0 || graph.pcb.traces.size > 0 || graph.pcb.vias.size > 0) {
+    writeFileSync(join(dir, 'expected.F.Cu.gbr'), exportGerberLayer(graph, seedPartDb(), 'F.Cu', { date: GOLDEN_DATE }));
+    writeFileSync(join(dir, 'expected.B.Cu.gbr'), exportGerberLayer(graph, seedPartDb(), 'B.Cu', { date: GOLDEN_DATE }));
+    writeFileSync(join(dir, 'expected.drl'), exportExcellon(graph, seedPartDb(), { date: GOLDEN_DATE }));
+    writeFileSync(join(dir, 'expected.pos.csv'), exportPickPlace(graph, seedPartDb()));
+  }
   const bundle: DesignBundle = {
     format: 'ppx-bundle',
     version: 1,

@@ -24,6 +24,7 @@ export type TabId =
   | 'export'
   | 'draftsman'
   | 'sim'
+  | 'firmware'
   | 'analyst'
   | 'professor';
 export type CameraCommand = { kind: 'fit' } | { kind: 'center'; at: Vec };

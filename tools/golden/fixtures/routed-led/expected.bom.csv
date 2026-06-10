@@ -1,0 +1,4 @@
+Refs,Qty,Value,Part,MPN,DNP
+BT1,1,9V,Battery,,
+D1,1,red,LED,,
+R1,1,330,Resistor,,

@@ -71,14 +71,24 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
 - [x] In-browser visual QA pass of PCB mode (footprint render, tray
       with footprint-less parts disabled, trace preview, live cross-net
       refusal, DRC against the deck — verified 2026-06-10)
-- [ ] Push-and-shove routing (Vol II §E.1); stroked trace widths +
-      filled pads in the GL layer; pcb scene delta sync; side-flip UI
-- [ ] Gerber/drill/PnP export; zones/pours; panelization
+- [x] Stroked trace widths + filled pads/vias in the GL layer (triangle
+      pipeline), pcb scene delta sync, side-flip UI (F key + Inspector)
+- [x] Gerber X2 / Excellon drill / pick-and-place export with byte-exact
+      golden fixtures (routed-led)
+- [ ] Push-and-shove routing (Vol II §E.1); zones/pours; panelization
 
-## v0.5 — The Bridge ⬜
+## v0.5 — The Bridge 🔨
 
-WebSerial/WebUSB flashing, MCU emulation (AVR first per Vol III §3.2),
-then the co-sim bus (Vol II §D.3).
+- [x] `@protopulse/emu` — ATmega328P core on avr8js (Vol II §D.2 McuCore
+      contract): cycle-stamped pin events, external pin drive, UART
+      queues, Intel-HEX parser, hand-assembler test rig — the assembled
+      blink toggles B5 at ~1206-cycle spacing in test
+- [x] Firmware panel: HEX load, run/pause with frame-budgeted stepping,
+      serial monitor with input, logic-analyzer-lite stacked pin traces
+- [ ] The co-sim bus (Vol II §D.3): conservative lockstep, ADC as hard
+      sync point, GPIO behavioral boundary into SPICE
+- [ ] WebSerial/WebUSB flashing (needs real hardware to verify)
+- [ ] RP2040 / ESP32 cores; timers 1/2, SPI, TWI, ADC peripherals
 
 ## v0.6 — The World ⬜
 

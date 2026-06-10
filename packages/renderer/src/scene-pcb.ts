@@ -1,21 +1,26 @@
 import { SceneGraph } from './scene.js';
-import { boundsOfLines, CIRCLE_SEGMENTS } from './tessellate.js';
+import { boundsOfLines, CIRCLE_SEGMENTS, unionBounds } from './tessellate.js';
 
 import type { RGBA, SceneNode } from './scene.js';
 import type { Bounds, TessText } from './tessellate.js';
-import type { Component, DesignGraph, Uuid, Vec } from '@protopulse/graph';
+import type { Component, DesignGraph, GraphDelta, Uuid, Vec } from '@protopulse/graph';
 import type { Part, PartDb } from '@protopulse/parts';
 
 /**
  * PCB scene support (v0.4) — buildPcbScene/syncPcbScene turn the graph's
- * pcb view into SceneGraph nodes the existing GL layer can draw:
+ * pcb view into SceneGraph nodes the GL layer's line + triangle paths
+ * can draw:
  *
- *   footprint — courtyard outline + each pad as a line-loop outline with
- *               an X through it (the GL layer only draws lines today;
- *               filled pads are an honest cut),
- *   trace     — one polyline per trace (stroke width is NOT drawn; the
- *               app surfaces widthNm in the readout — honest cut),
- *   via       — two concentric circle loops (pad ring + drill).
+ *   footprint — courtyard + pad outlines as lines (selection legibility)
+ *               plus filled pad triangles (rect = 2 tris, circle =
+ *               16-segment fan); pad drills punch through as holeTris,
+ *   trace     — centerline polyline (picking keys on it) plus the
+ *               stroked width: one quad per segment expanded
+ *               perpendicular by widthNm/2, with circle-fan joints at
+ *               every path vertex (round caps + round joins),
+ *   via       — filled annulus approximation: outer fan in copper color
+ *               (tris) + drill fan in the board background (holeTris),
+ *               with the two outline loops kept on top.
  *
  * The Pcb*Like / PcbFootprintSpec types below are PINNED structural
  * contracts (v0.4): @protopulse/graph's pcb view and @protopulse/parts'
@@ -28,6 +33,8 @@ import type { Part, PartDb } from '@protopulse/parts';
  *   world = rotate_ccw(rotMilli) ∘ mirrorX(side=bottom) ∘ local + at
  * Only 90° steps are supported; other angles snap to the nearest quarter
  * turn (honest cut — the pinned op contract only emits 0/90/180/270).
+ * Triangles wind CCW for top-side placements; the bottom-side mirror
+ * flips winding (harmless — the GL layer never culls).
  */
 
 // ── Pinned structural contracts ──────────────────────────────────────
@@ -161,48 +168,127 @@ function circleLoop(lines: number[], center: Vec, r: number): void {
   if (prev && first) pushLine(lines, prev, first);
 }
 
+function pushTri(tris: number[], a: Vec, b: Vec, c: Vec): void {
+  tris.push(a.x, a.y, b.x, b.y, c.x, c.y);
+}
+
+/** Local rect corners (center ± half extents) in CCW order. */
+function rectCorners(at: Vec, hw: number, hh: number): [Vec, Vec, Vec, Vec] {
+  return [
+    { x: at.x - hw, y: at.y - hh },
+    { x: at.x + hw, y: at.y - hh },
+    { x: at.x + hw, y: at.y + hh },
+    { x: at.x - hw, y: at.y + hh },
+  ];
+}
+
+/** A convex quad (CCW corners) as two triangles — 12 floats. */
+export function quadTris(c0: Vec, c1: Vec, c2: Vec, c3: Vec): number[] {
+  const tris: number[] = [];
+  pushTri(tris, c0, c1, c2);
+  pushTri(tris, c0, c2, c3);
+  return tris;
+}
+
 /**
- * One pad: outline (rect loop or circle loop) + an X through it. Filled
- * shapes need a triangle pipeline the GL layer doesn't have yet — the
- * X marks the pad as "solid" until then (honest cut).
+ * Filled circle as a CIRCLE_SEGMENTS-triangle fan (CCW, integer-rounded
+ * rim) — 16 tris / 48 vertices / 96 floats at the house segment count.
+ */
+export function circleFanTris(center: Vec, r: number): number[] {
+  const tris: number[] = [];
+  const rim = (i: number): Vec => {
+    const theta = ((i % CIRCLE_SEGMENTS) / CIRCLE_SEGMENTS) * Math.PI * 2;
+    return {
+      x: Math.round(center.x + r * Math.cos(theta)),
+      y: Math.round(center.y + r * Math.sin(theta)),
+    };
+  };
+  for (let i = 0; i < CIRCLE_SEGMENTS; i++) {
+    pushTri(tris, center, rim(i), rim(i + 1));
+  }
+  return tris;
+}
+
+/**
+ * One stroked segment: a quad expanded perpendicular by widthNm/2 (two
+ * CCW triangles). The normal is rounded once so the quad stays a true
+ * parallelogram in integer nm. Zero-length segments emit nothing.
+ */
+export function strokeSegmentTris(a: Vec, b: Vec, widthNm: number): number[] {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  if (len === 0 || widthNm <= 0) return [];
+  const nx = Math.round((-dy / len) * (widthNm / 2));
+  const ny = Math.round((dx / len) * (widthNm / 2));
+  return quadTris(
+    { x: a.x - nx, y: a.y - ny },
+    { x: b.x - nx, y: b.y - ny },
+    { x: b.x + nx, y: b.y + ny },
+    { x: a.x + nx, y: a.y + ny },
+  );
+}
+
+/** One pad's filled copper: rect = 2 tris, circle = 16-segment fan. */
+export function tessellatePadTris(pad: PcbPadSpec, placement: PcbPlacementLike): number[] {
+  const hw = Math.round(pad.wNm / 2);
+  if (pad.shape === 'rect') {
+    const hh = Math.round(pad.hNm / 2);
+    const [l0, l1, l2, l3] = rectCorners(pad.at, hw, hh);
+    return quadTris(
+      applyPcbPlacement(l0, placement),
+      applyPcbPlacement(l1, placement),
+      applyPcbPlacement(l2, placement),
+      applyPcbPlacement(l3, placement),
+    );
+  }
+  // wNm is the circle pad's diameter; circles are rotation-invariant, so
+  // the fan is built around the transformed center directly.
+  return circleFanTris(applyPcbPlacement(pad.at, placement), hw);
+}
+
+/** One pad's drill hole (board-background fan); [] for SMD pads. */
+export function tessellatePadHoleTris(pad: PcbPadSpec, placement: PcbPlacementLike): number[] {
+  if (pad.drillNm === undefined || pad.drillNm <= 0) return [];
+  return circleFanTris(applyPcbPlacement(pad.at, placement), Math.round(pad.drillNm / 2));
+}
+
+/**
+ * One trace's stroked copper: a width-expanded quad per path segment
+ * plus a circle-fan joint at every path vertex (round caps + joins).
+ */
+export function tessellateTraceTris(trace: PcbTraceLike): number[] {
+  const tris: number[] = [];
+  for (let i = 0; i + 1 < trace.path.length; i++) {
+    const a = trace.path[i];
+    const b = trace.path[i + 1];
+    if (a && b) tris.push(...strokeSegmentTris(a, b, trace.widthNm));
+  }
+  const r = Math.round(trace.widthNm / 2);
+  if (r > 0 && trace.path.length > 1) {
+    for (const v of trace.path) tris.push(...circleFanTris(v, r));
+  }
+  return tris;
+}
+
+/**
+ * One pad's outline: rect loop or circle loop, plus the drill loop when
+ * present. Thin outline only — the fill comes from tessellatePadTris.
  */
 export function tessellatePad(pad: PcbPadSpec, placement: PcbPlacementLike): number[] {
   const lines: number[] = [];
   const hw = Math.round(pad.wNm / 2);
-  const hh = Math.round(pad.hNm / 2);
   if (pad.shape === 'rect') {
-    const corners = [
-      { x: pad.at.x - hw, y: pad.at.y - hh },
-      { x: pad.at.x + hw, y: pad.at.y - hh },
-      { x: pad.at.x + hw, y: pad.at.y + hh },
-      { x: pad.at.x - hw, y: pad.at.y + hh },
-    ].map((c) => applyPcbPlacement(c, placement));
+    const hh = Math.round(pad.hNm / 2);
+    const corners = rectCorners(pad.at, hw, hh).map((c) => applyPcbPlacement(c, placement));
     for (let i = 0; i < 4; i++) {
       const a = corners[i];
       const b = corners[(i + 1) % 4];
       if (a && b) pushLine(lines, a, b);
     }
-    const c0 = corners[0];
-    const c1 = corners[1];
-    const c2 = corners[2];
-    const c3 = corners[3];
-    if (c0 && c2) pushLine(lines, c0, c2);
-    if (c1 && c3) pushLine(lines, c1, c3);
   } else {
-    const r = hw; // wNm is the circle pad's diameter
-    const center = applyPcbPlacement(pad.at, placement);
-    circleLoop(lines, center, r);
-    const k = Math.round(r * Math.SQRT1_2);
-    pushLine(
-      lines,
-      { x: center.x - k, y: center.y - k },
-      { x: center.x + k, y: center.y + k },
-    );
-    pushLine(
-      lines,
-      { x: center.x - k, y: center.y + k },
-      { x: center.x + k, y: center.y - k },
-    );
+    // wNm is the circle pad's diameter
+    circleLoop(lines, applyPcbPlacement(pad.at, placement), hw);
   }
   if (pad.drillNm !== undefined && pad.drillNm > 0) {
     circleLoop(lines, applyPcbPlacement(pad.at, placement), Math.round(pad.drillNm / 2));
@@ -240,14 +326,25 @@ export function tessellateFootprint(
 const LABEL_SIZE_NM = 500_000;
 const LABEL_GAP_NM = 250_000;
 
-/** Build the retained node for one placed footprint. */
+/**
+ * Build the retained node for one placed footprint: courtyard + pad
+ * outlines as lines, filled pad copper as tris, pad drills as holeTris.
+ * Bottom-side placements mirror (applyPcbPlacement) and take the B.Cu
+ * palette color, so flipped parts read as bottom copper at a glance.
+ */
 export function buildFootprintNode(
   component: Component,
   footprint: PcbFootprintSpec,
   placement: PcbPlacementLike,
 ): SceneNode {
   const lines = tessellateFootprint(footprint, placement);
-  const body: Bounds = boundsOfLines(lines) ?? {
+  const tris: number[] = [];
+  const holeTris: number[] = [];
+  for (const pad of footprint.pads) {
+    tris.push(...tessellatePadTris(pad, placement));
+    holeTris.push(...tessellatePadHoleTris(pad, placement));
+  }
+  const body: Bounds = unionBounds(boundsOfLines(lines), boundsOfLines(tris)) ?? {
     minX: placement.at.x,
     minY: placement.at.y,
     maxX: placement.at.x,
@@ -264,6 +361,8 @@ export function buildFootprintNode(
     id: component.id,
     kind: 'footprint',
     lines: Float32Array.from(lines),
+    tris: Float32Array.from(tris),
+    holeTris: Float32Array.from(holeTris),
     texts,
     bounds: { ...body, maxY: body.maxY + LABEL_GAP_NM + LABEL_SIZE_NM * 2 },
     color: PCB_LAYER_COLORS[placement.side === 'bottom' ? 'B.Cu' : 'F.Cu'],
@@ -271,9 +370,9 @@ export function buildFootprintNode(
 }
 
 /**
- * Build the retained node for one trace: a single polyline along the
- * path centerline. Stroke width is not rendered (honest cut) — the app
- * shows widthNm in the status readout instead.
+ * Build the retained node for one trace: the centerline polyline (the
+ * pick index keys trace proximity on it) plus the stroked width as
+ * filled triangles. The app still surfaces widthNm in the readout.
  */
 export function buildTraceNode(traceId: Uuid, trace: PcbTraceLike): SceneNode {
   const lines: number[] = [];
@@ -282,17 +381,25 @@ export function buildTraceNode(traceId: Uuid, trace: PcbTraceLike): SceneNode {
     const b = trace.path[i + 1];
     if (a && b) pushLine(lines, a, b);
   }
+  const tris = tessellateTraceTris(trace);
   return {
     id: traceId,
     kind: 'trace',
     lines: Float32Array.from(lines),
+    tris: Float32Array.from(tris),
     texts: [],
-    bounds: boundsOfLines(lines) ?? { minX: 0, minY: 0, maxX: 0, maxY: 0 },
+    bounds:
+      unionBounds(boundsOfLines(lines), boundsOfLines(tris)) ??
+      { minX: 0, minY: 0, maxX: 0, maxY: 0 },
     color: layerColor(trace.layerId),
   };
 }
 
-/** Build the retained node for one via: pad ring + drill loops. */
+/**
+ * Build the retained node for one via: a filled annulus approximation —
+ * outer copper fan (tris) with the drill punched out in the board
+ * background color (holeTris) — under the pad-ring + drill loops.
+ */
 export function buildViaNode(viaId: Uuid, via: PcbViaLike): SceneNode {
   const lines: number[] = [];
   circleLoop(lines, via.at, Math.round(via.padNm / 2));
@@ -301,6 +408,8 @@ export function buildViaNode(viaId: Uuid, via: PcbViaLike): SceneNode {
     id: viaId,
     kind: 'via',
     lines: Float32Array.from(lines),
+    tris: Float32Array.from(circleFanTris(via.at, Math.round(via.padNm / 2))),
+    holeTris: Float32Array.from(circleFanTris(via.at, Math.round(via.drillNm / 2))),
     texts: [],
     bounds: boundsOfLines(lines) ?? { minX: via.at.x, minY: via.at.y, maxX: via.at.x, maxY: via.at.y },
     color: VIA_COLOR,
@@ -367,15 +476,89 @@ export function buildPcbScene(graph: DesignGraph, parts: PartDb): SceneGraph {
 }
 
 /**
- * Re-sync a PCB scene in place after a graph change. Full rebuild —
- * no incremental pcb delta yet (honest cut; pcb designs at this scale
- * re-tessellate in microseconds). Object identity is NOT preserved.
+ * Full re-sync of a PCB scene in place — every node is rebuilt (object
+ * identity is NOT preserved). The fallback path for branch switches and
+ * other cases where no GraphDelta relates the old graph to the new one;
+ * ordinary edits go through syncPcbScene below.
  */
-export function syncPcbScene(scene: SceneGraph, graph: DesignGraph, parts: PartDb): void {
+export function rebuildPcbScene(scene: SceneGraph, graph: DesignGraph, parts: PartDb): void {
   const fresh = buildPcbNodes(graph, parts);
   const keep = new Set(fresh.map((n) => n.id));
   for (const id of [...scene.nodes.keys()]) {
     if (!keep.has(id)) scene.remove(id);
   }
   for (const node of fresh) scene.update(node);
+}
+
+function syncFootprint(
+  scene: SceneGraph,
+  graph: DesignGraph,
+  view: PcbViewLike,
+  parts: PartDb,
+  id: Uuid,
+): void {
+  const component = graph.components.get(id);
+  const placement = view.placements.get(id);
+  if (!component || !placement) {
+    scene.remove(id);
+    return;
+  }
+  const part = parts.get(component.partId, component.partRev) as PartWithFootprint | undefined;
+  const footprint = part?.footprint;
+  if (!footprint) {
+    scene.remove(id);
+    return;
+  }
+  scene.update(buildFootprintNode(component, footprint, placement));
+}
+
+/**
+ * Incremental PCB scene sync: re-tessellate ONLY the entities a
+ * GraphDelta's pcbView (plus component prop changes — the ref label)
+ * names. The delta is diff(prevGraph, nextGraph); `graph` is nextGraph.
+ * Untouched nodes keep their object identity (tested), mirroring the
+ * schematic applyDelta contract. A trace/via changed in place arrives
+ * as removed + added under the same id — handled as one update.
+ *
+ * Delta ids are real graph ids, so this path requires the Map-backed
+ * pcb view; legacy array-backed graphs go through rebuildPcbScene.
+ */
+export function syncPcbScene(
+  scene: SceneGraph,
+  delta: GraphDelta,
+  graph: DesignGraph,
+  parts: PartDb,
+): void {
+  const view = pcbViewOf(graph);
+
+  // ── Footprints ──
+  for (const id of delta.pcbView.unplaced) scene.remove(id);
+  for (const id of delta.components.removed) scene.remove(id);
+  const footprintResync = new Set<Uuid>([...delta.pcbView.placed, ...delta.pcbView.moved]);
+  for (const id of delta.components.changed.keys()) {
+    if (view.placements.has(id)) footprintResync.add(id);
+  }
+  for (const id of footprintResync) syncFootprint(scene, graph, view, parts, id);
+
+  // ── Traces ──
+  const tracesAdded = new Set<Uuid>(delta.pcbView.tracesAdded);
+  for (const id of delta.pcbView.tracesRemoved) {
+    if (!tracesAdded.has(id)) scene.remove(id);
+  }
+  for (const id of tracesAdded) {
+    const trace = view.traces.get(id);
+    if (trace && trace.path.length >= 2) scene.update(buildTraceNode(id, trace));
+    else scene.remove(id);
+  }
+
+  // ── Vias ──
+  const viasAdded = new Set<Uuid>(delta.pcbView.viasAdded);
+  for (const id of delta.pcbView.viasRemoved) {
+    if (!viasAdded.has(id)) scene.remove(id);
+  }
+  for (const id of viasAdded) {
+    const via = view.vias.get(id);
+    if (via) scene.update(buildViaNode(id, via));
+    else scene.remove(id);
+  }
 }

@@ -7,15 +7,20 @@ import type { RGBA, SceneGraph, SceneNode } from '../scene.js';
 
 /**
  * Thin WebGL2 layer (not unit-tested — everything interesting lives in
- * the DOM-free modules). One line shader + one textured-quad shader.
+ * the DOM-free modules). One flat-color shader (lines AND filled
+ * triangles — same vertex layout, different primitive) + one
+ * textured-quad shader for text.
  *
  * Coordinates upload as millimeter floats (nm / 1e6): f32 holds mm-scale
  * schematic coordinates exactly enough, while raw nm magnitudes (1e8+)
  * would chew through the mantissa.
  *
  * Per-node draw calls with a u_color uniform are fine at M1 scale: the
- * concatenated vertex buffer is cached and rebuilt only when the scene
- * version changes; draws then index ranges of it.
+ * concatenated vertex buffers (one for lines, one for triangles) are
+ * cached and rebuilt only when the scene version changes; draws then
+ * index ranges of them. Triangles draw first so outlines stay legible
+ * on top of fills; a node's holeTris draw right after its tris in the
+ * board background color (drills punch through their own copper).
  */
 
 export interface OverlayState {
@@ -28,6 +33,9 @@ export interface OverlayState {
   ratsnest?: { lines: Float32Array };
   gridVisible: boolean;
 }
+
+/** Canvas clear color — holeTris draw in it so drills read as board. */
+const BACKGROUND: RGBA = [0.045, 0.055, 0.08, 1.0];
 
 const COLORS = {
   grid: [0.16, 0.19, 0.24, 1.0] as RGBA,
@@ -81,6 +89,12 @@ interface NodeRange {
   /** First vertex (not float) in the concatenated line buffer. */
   first: number;
   count: number;
+  /** First vertex in the concatenated triangle buffer (node color). */
+  triFirst: number;
+  triCount: number;
+  /** First vertex of the node's hole triangles (background color). */
+  holeFirst: number;
+  holeCount: number;
   kind: SceneNode['kind'];
   color: RGBA;
 }
@@ -120,6 +134,9 @@ export class WebGL2Renderer {
   private lineVao: WebGLVertexArrayObject | null = null;
   private lineVbo: WebGLBuffer | null = null;
 
+  private triVao: WebGLVertexArrayObject | null = null;
+  private triVbo: WebGLBuffer | null = null;
+
   private textProgram: WebGLProgram | null = null;
   private textTransformLoc: WebGLUniformLocation | null = null;
   private textColorLoc: WebGLUniformLocation | null = null;
@@ -154,6 +171,9 @@ export class WebGL2Renderer {
     this.lineColorLoc = gl.getUniformLocation(this.lineProgram, 'u_color');
     this.lineVbo = gl.createBuffer();
     this.lineVao = this.makeLineVao(gl, this.lineProgram, this.lineVbo);
+    // Filled triangles share the flat-color program and vertex layout.
+    this.triVbo = gl.createBuffer();
+    this.triVao = this.makeLineVao(gl, this.lineProgram, this.triVbo);
 
     this.gridVbo = gl.createBuffer();
     this.gridVao = this.makeLineVao(gl, this.lineProgram, this.gridVbo);
@@ -223,7 +243,7 @@ export class WebGL2Renderer {
     return Float32Array.of(sx, 0, 0, 0, sy, 0, -cxMm * sx, -cyMm * sy, 1);
   }
 
-  /** Rebuild the concatenated vertex buffer when the scene changed. */
+  /** Rebuild the concatenated vertex buffers when the scene changed. */
   private syncBuffers(scene: SceneGraph): void {
     const gl = this.gl;
     if (!gl || scene.version === this.cachedSceneVersion) return;
@@ -244,13 +264,37 @@ export class WebGL2Renderer {
     );
 
     let totalFloats = 0;
-    for (const node of nodes) totalFloats += node.lines.length;
-    const data = new Float32Array(totalFloats);
-    let offset = 0;
+    let totalTriFloats = 0;
     for (const node of nodes) {
+      totalFloats += node.lines.length;
+      totalTriFloats += (node.tris?.length ?? 0) + (node.holeTris?.length ?? 0);
+    }
+    const data = new Float32Array(totalFloats);
+    const triData = new Float32Array(totalTriFloats);
+    let offset = 0;
+    let triOffset = 0;
+    for (const node of nodes) {
+      const tris = node.tris ?? null;
+      const holeTris = node.holeTris ?? null;
+      const triFirst = triOffset / 2;
+      if (tris) {
+        for (let i = 0; i < tris.length; i++) triData[triOffset + i] = (tris[i] ?? 0) * NM_TO_MM;
+        triOffset += tris.length;
+      }
+      const holeFirst = triOffset / 2;
+      if (holeTris) {
+        for (let i = 0; i < holeTris.length; i++) {
+          triData[triOffset + i] = (holeTris[i] ?? 0) * NM_TO_MM;
+        }
+        triOffset += holeTris.length;
+      }
       this.ranges.set(node.id, {
         first: offset / 2,
         count: node.lines.length / 2,
+        triFirst,
+        triCount: (tris?.length ?? 0) / 2,
+        holeFirst,
+        holeCount: (holeTris?.length ?? 0) / 2,
         kind: node.kind,
         color: node.color,
       });
@@ -261,6 +305,8 @@ export class WebGL2Renderer {
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, this.lineVbo);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.triVbo);
+    gl.bufferData(gl.ARRAY_BUFFER, triData, gl.STATIC_DRAW);
 
     // Text quads rebuild alongside (single color, single atlas size).
     if (this.atlas.ensure(gl)) {
@@ -336,7 +382,7 @@ export class WebGL2Renderer {
     if (!gl || !this.lineProgram) return;
     this.syncBuffers(scene);
 
-    gl.clearColor(0.045, 0.055, 0.08, 1);
+    gl.clearColor(BACKGROUND[0], BACKGROUND[1], BACKGROUND[2], BACKGROUND[3]);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     const transform = this.transform(camera);
@@ -360,7 +406,22 @@ export class WebGL2Renderer {
       gl.bindVertexArray(null);
     }
 
-    // Per-node draws over the cached concatenated buffer.
+    // Filled triangles first (copper fills, then their drill holes in
+    // the background color), so the outline pass stays legible on top.
+    gl.bindVertexArray(this.triVao);
+    for (const [id, range] of this.ranges) {
+      if (range.triCount > 0) {
+        gl.uniform4fv(this.lineColorLoc, this.colorFor(id, range.color, overlay));
+        gl.drawArrays(gl.TRIANGLES, range.triFirst, range.triCount);
+      }
+      if (range.holeCount > 0) {
+        gl.uniform4fv(this.lineColorLoc, BACKGROUND);
+        gl.drawArrays(gl.TRIANGLES, range.holeFirst, range.holeCount);
+      }
+    }
+    gl.bindVertexArray(null);
+
+    // Per-node line draws over the cached concatenated buffer.
     gl.bindVertexArray(this.lineVao);
     for (const [id, range] of this.ranges) {
       if (range.count === 0) continue;
@@ -398,7 +459,14 @@ export class WebGL2Renderer {
   dispose(): void {
     const gl = this.gl;
     if (!gl) return;
-    for (const buf of [this.lineVbo, this.gridVbo, this.ghostVbo, this.ratsnestVbo, this.textVbo]) {
+    for (const buf of [
+      this.lineVbo,
+      this.triVbo,
+      this.gridVbo,
+      this.ghostVbo,
+      this.ratsnestVbo,
+      this.textVbo,
+    ]) {
       if (buf) gl.deleteBuffer(buf);
     }
     this.gl = null;

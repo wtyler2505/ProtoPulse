@@ -31,6 +31,22 @@ function ledResistor(): OpBody[] {
   ];
 }
 
+/**
+ * led-resistor plus a routed PCB: R1 + D1 placed top-side, the LED_A
+ * net routed on F.Cu from R1:2's pad (5.95mm, 0) through (10mm, 0) to
+ * D1:A's pad (14.05mm, 0), with a via on the net at the midpoint.
+ * Freezes the fab exports: Gerber F.Cu/B.Cu, Excellon, pick-and-place.
+ */
+function routedLed(): OpBody[] {
+  return [
+    ...ledResistor(),
+    { kind: 'place_footprint', componentId: 'r1', at: { x: 5000000, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+    { kind: 'place_footprint', componentId: 'd1', at: { x: 15000000, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+    { kind: 'route_trace', id: 'trace-led-a', netId: 'net-led', layerId: 'F.Cu', widthNm: 250000, path: [{ x: 5950000, y: 0 }, { x: 10000000, y: 0 }, { x: 14050000, y: 0 }] },
+    { kind: 'place_via', id: 'via-led', netId: 'net-led', at: { x: 10000000, y: 0 }, drillNm: 300000, padNm: 600000, span: ['F.Cu', 'B.Cu'] },
+  ];
+}
+
 /** Track 1 deliverable shape: 555 astable blinking LEDs. */
 function trafficLight555(): OpBody[] {
   return [
@@ -139,6 +155,7 @@ function probeInputProtection(): OpBody[] {
 
 export const FIXTURES: Record<string, OpEnvelope[]> = {
   'led-resistor': envelopes(ledResistor()),
+  'routed-led': envelopes(routedLed()),
   'traffic-light-555': envelopes(trafficLight555()),
   'probe-input-protection': envelopes(probeInputProtection()),
 };

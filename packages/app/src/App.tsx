@@ -12,6 +12,7 @@ import { DraftsmanPanel } from './panels/DraftsmanPanel.js';
 import { DrcPanel } from './panels/DrcPanel.js';
 import { ErcPanel } from './panels/ErcPanel.js';
 import { ExportPanel } from './panels/ExportPanel.js';
+import { FirmwarePanel } from './panels/FirmwarePanel.js';
 import { Inspector } from './panels/Inspector.js';
 import { Palette } from './panels/Palette.js';
 import { PcbTray } from './panels/PcbTray.js';
@@ -33,6 +34,7 @@ const SCHEMATIC_TABS: { id: TabId; label: string }[] = [
   { id: 'export', label: 'Export' },
   { id: 'draftsman', label: 'Draftsman' },
   { id: 'sim', label: 'Sim' },
+  { id: 'firmware', label: 'Firmware' },
   { id: 'analyst', label: 'Analyst' },
   { id: 'professor', label: 'Professor' },
 ];
@@ -205,7 +207,7 @@ function StatusBar() {
       </span>
       <span className="status-cell">{opCount} ops</span>
       {viewMode === 'pcb' && (
-        <span className="status-cell" title="active layer · trace width (traces draw as centerlines)">
+        <span className="status-cell" title="active layer · width new traces route at">
           {activeLayer} · trace {(DEFAULT_TRACE_WIDTH_NM / MM).toFixed(2)} mm
         </span>
       )}
@@ -249,6 +251,7 @@ function SidePanel() {
       {activeTab === 'export' && <ExportPanel />}
       {activeTab === 'draftsman' && <DraftsmanPanel />}
       {activeTab === 'sim' && <SimPanel />}
+      {activeTab === 'firmware' && <FirmwarePanel />}
       {activeTab === 'analyst' && <AnalystPanel />}
       {activeTab === 'professor' && <ProfessorPanel />}
     </aside>

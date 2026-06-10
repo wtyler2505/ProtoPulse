@@ -190,6 +190,59 @@ function footprintGhost(footprint: PcbFootprintSpec, placement: PcbPlacementLike
   return Float32Array.from(tessellateFootprint(footprint, placement));
 }
 
+export interface PcbFlipResult {
+  ops: PcbOpBody[];
+  /** One-line status-bar announcement, or null when there is nothing to say. */
+  status: string | null;
+}
+
+/**
+ * Flip ops for a pcb selection: every selected, unlocked footprint
+ * placement toggles side top<->bottom (position and rotation are kept).
+ * Locked placements are skipped — the lock means "leave me alone" —
+ * and traces/vias are side-less, so they are ignored.
+ */
+export function pcbFlipSelectionOps(
+  graph: DesignGraph,
+  view: PcbViewLike,
+  selection: ReadonlySet<string>,
+): PcbFlipResult {
+  const ops: PcbOpBody[] = [];
+  const flipped: { ref: string; side: 'top' | 'bottom' }[] = [];
+  let lockedCount = 0;
+  for (const id of [...selection].sort()) {
+    const placement = view.placements.get(id);
+    if (!placement) continue;
+    if (placement.locked) {
+      lockedCount++;
+      continue;
+    }
+    const side = placement.side === 'top' ? 'bottom' : 'top';
+    ops.push({
+      kind: 'move_footprint',
+      componentId: id,
+      at: { ...placement.at },
+      rotMilli: placement.rotMilli,
+      side,
+      locked: placement.locked,
+    });
+    flipped.push({ ref: graph.components.get(id)?.ref ?? id, side });
+  }
+  let status: string | null = null;
+  const first = flipped[0];
+  if (flipped.length === 1 && first) {
+    status = `Flipped ${first.ref} to the ${first.side === 'bottom' ? 'bottom (B.Cu)' : 'top (F.Cu)'}.`;
+  } else if (flipped.length > 1) {
+    status = `Flipped ${String(flipped.length)} footprints.`;
+  } else if (lockedCount > 0) {
+    status =
+      lockedCount === 1
+        ? 'That footprint is locked — unlock it to flip it.'
+        : 'Those footprints are locked — unlock them to flip.';
+  }
+  return { ops, status };
+}
+
 /**
  * Delete ops for a pcb selection: placements unplace (locked ones are
  * skipped — the lock means "leave me alone"), traces and vias remove.
