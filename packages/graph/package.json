@@ -1,0 +1,20 @@
+{
+  "name": "@protopulse/graph",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The canonical ProtoPulse design graph: typed operations, materializer, invariants, branch/diff/merge. The design IS its op-log.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fs-store": "./src/store/fs-store.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "uuid": "^11.1.0",
+    "zod": "^3.25.76"
+  }
+}

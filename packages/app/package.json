@@ -1,0 +1,29 @@
+{
+  "name": "@protopulse/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The ProtoPulse schematic editor: WebGL canvas, palette, wiring tools, branches, diff overlay, ERC panel, Draftsman.",
+  "main": "./src/main.tsx",
+  "scripts": {
+    "dev": "vite --port 5174",
+    "build": "vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@protopulse/ai": "*",
+    "@protopulse/content": "*",
+    "@protopulse/erc": "*",
+    "@protopulse/export": "*",
+    "@protopulse/graph": "*",
+    "@protopulse/parts": "*",
+    "@protopulse/renderer": "*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.4"
+  }
+}
