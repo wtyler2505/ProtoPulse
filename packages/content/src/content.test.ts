@@ -1,4 +1,5 @@
-import { resolve } from 'node:path';
+import { readdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ERC_CODES } from '@protopulse/erc';
@@ -9,10 +10,15 @@ import { loadConceptDir, loadDeckFile, loadTrackDir, parseConceptFrontmatter, pa
 // packages/content/src → repo root.
 const repoRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '../../..');
 const deckPath = resolve(repoRoot, 'content/decks/jlcpcb-2layer-standard.json');
-const conceptsDir = resolve(repoRoot, 'content/concepts/fundamentals');
+const conceptsRoot = resolve(repoRoot, 'content/concepts');
 const trackDir = resolve(repoRoot, 'content/tracks/01-first-light');
 
-const concepts = loadConceptDir(conceptsDir);
+// The wiki is a tree of category directories; every category validates.
+const categoryDirs = readdirSync(conceptsRoot, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)
+  .sort();
+const concepts = categoryDirs.flatMap((dir) => loadConceptDir(join(conceptsRoot, dir)));
 const steps = loadTrackDir(trackDir);
 const slugs = new Set(concepts.map((c) => c.frontmatter.slug));
 
@@ -41,8 +47,9 @@ describe('deck seed', () => {
 });
 
 describe('concept seed articles', () => {
-  it('loads the full fundamentals set', () => {
-    expect(concepts.length).toBeGreaterThanOrEqual(13);
+  it('loads the full wiki across its category directories', () => {
+    expect(categoryDirs).toEqual(['fundamentals', 'passives', 'semiconductors']);
+    expect(concepts.length).toBeGreaterThanOrEqual(33);
   });
 
   it('contains every specced M1 slug', () => {
@@ -63,6 +70,41 @@ describe('concept seed articles', () => {
     ];
     for (const slug of expected) {
       expect(slugs.has(slug), slug).toBe(true);
+    }
+  });
+
+  it('contains every Passives and Semiconductors block slug', () => {
+    const expected = [
+      'resistor-power-sizing',
+      'capacitor-types',
+      'esr-and-why-it-matters',
+      'inductor-saturation',
+      'ferrite-beads-are-not-inductors',
+      'rc-time-constants',
+      'voltage-divider-output-impedance',
+      'ntc-inrush-limiting',
+      'diode-drop-and-flyback',
+      'schottky-vs-silicon',
+      'zener-clamping',
+      'led-forward-current',
+      'bjt-as-a-switch',
+      'base-resistor-sizing',
+      'mosfet-gate-basics',
+      'logic-level-vs-standard-mosfets',
+      'gate-charge-and-switching-loss',
+      'body-diode',
+      'thermal-runaway',
+    ];
+    for (const slug of expected) {
+      expect(slugs.has(slug), slug).toBe(true);
+    }
+  });
+
+  it('every intra-wiki Related link resolves to a real article slug', () => {
+    for (const concept of concepts) {
+      for (const [, linked = ''] of concept.body.matchAll(/\]\(([a-z0-9]+(?:-[a-z0-9]+)*)\)/g)) {
+        expect(slugs.has(linked), `${concept.frontmatter.slug} links to ${linked}`).toBe(true);
+      }
     }
   });
 
