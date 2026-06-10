@@ -7,18 +7,23 @@ import {
   invertOp,
   MAIN_BRANCH,
   materialize,
-  newUuid
-  
-  
-  
-  
-  
+  newUuid,
+  resolveConflict,
+  threeWayMerge
 } from '@protopulse/graph';
 import { seedPartDb  } from '@protopulse/parts';
 import { create } from 'zustand';
 
 import type {Finding} from '@protopulse/erc';
-import type {DesignBundle, DesignGraph, GraphDelta, OpBody, OpMeta} from '@protopulse/graph';
+import type {
+  DesignBundle,
+  DesignGraph,
+  GraphDelta,
+  MergeChoice,
+  MergeConflict,
+  OpBody,
+  OpMeta,
+} from '@protopulse/graph';
 import type {PartDb} from '@protopulse/parts';
 
 /**
@@ -151,6 +156,18 @@ export class SessionCore {
   }
 }
 
+/** An in-progress merge: computed once by startMerge, resolved choice
+ *  by choice, landed (or abandoned) as a whole. Conflicts are data —
+ *  nothing applies until every one has a pick. */
+export interface MergeSession {
+  /** Branch being merged INTO the current branch. */
+  from: string;
+  autoOps: OpBody[];
+  conflicts: MergeConflict[];
+  /** Index-aligned with conflicts; null = not yet decided. */
+  choices: (MergeChoice | null)[];
+}
+
 export interface SessionState {
   core: SessionCore;
   designId: string;
@@ -164,6 +181,8 @@ export interface SessionState {
    *  current branch (0..opCount). null = live head. The session is
    *  read-only while replaying — dispatch/undo/redo refuse. */
   replayIndex: number | null;
+  /** In-progress merge into the current branch, or null. */
+  merge: MergeSession | null;
   canUndo: boolean;
   canRedo: boolean;
 
@@ -177,6 +196,13 @@ export interface SessionState {
   setDiffAgainst: (name: string | null) => void;
   /** Enter/scrub/exit replay; the index clamps to [0, opCount]. */
   setReplayIndex: (index: number | null) => void;
+  /** Compute a three-way merge of `from` into the current branch. */
+  startMerge: (from: string) => boolean;
+  setMergeChoice: (index: number, choice: MergeChoice) => void;
+  cancelMerge: () => void;
+  /** Land autoOps + every resolution as ONE batch (parents recorded).
+   *  Refuses while any conflict is undecided. */
+  applyMerge: () => boolean;
   replaceWithBundle: (bundle: DesignBundle) => void;
 }
 
@@ -191,6 +217,7 @@ export function createSessionStore(initial?: DesignBundle) {
     selection: new Set<string>(),
     diffAgainst: null,
     replayIndex: null,
+    merge: null,
     canUndo: false,
     canRedo: false,
 
@@ -218,7 +245,8 @@ export function createSessionStore(initial?: DesignBundle) {
       c.append(branch, forward, meta);
       c.undoStack.push({ forward, inverse });
       c.redoStack = [];
-      set({ opsVersion: opsVersion + 1, canUndo: true, canRedo: false });
+      // Any landed edit invalidates a merge computed against the old head.
+      set({ opsVersion: opsVersion + 1, canUndo: true, canRedo: false, merge: null });
       return true;
     },
 
@@ -271,6 +299,7 @@ export function createSessionStore(initial?: DesignBundle) {
         opsVersion: opsVersion + 1,
         selection: new Set<string>(),
         replayIndex: null,
+        merge: null,
         canUndo: false,
         canRedo: false,
       });
@@ -290,6 +319,7 @@ export function createSessionStore(initial?: DesignBundle) {
         selection: new Set<string>(),
         diffAgainst: diffAgainst === name ? null : diffAgainst,
         replayIndex: null,
+        merge: null,
         canUndo: false,
         canRedo: false,
       });
@@ -319,6 +349,61 @@ export function createSessionStore(initial?: DesignBundle) {
       set({ replayIndex: clamped, selection: new Set<string>() });
     },
 
+    startMerge: (from) => {
+      const { core: c, branch, replayIndex } = get();
+      if (replayIndex !== null || from === branch || !c.log.has(from)) return false;
+      const base = materialize(c.log.mergeBaseOps(branch, from)).graph;
+      const result = threeWayMerge(base, c.graphFor(branch), c.graphFor(from));
+      set({
+        merge: {
+          from,
+          autoOps: result.autoOps,
+          conflicts: result.conflicts,
+          choices: result.conflicts.map(() => null),
+        },
+      });
+      return true;
+    },
+
+    setMergeChoice: (index, choice) => {
+      const { merge } = get();
+      if (!merge || index < 0 || index >= merge.choices.length) return;
+      const choices = [...merge.choices];
+      choices[index] = choice;
+      set({ merge: { ...merge, choices } });
+    },
+
+    cancelMerge: () => {
+      set({ merge: null });
+    },
+
+    applyMerge: () => {
+      const { core: c, branch, merge, replayIndex } = get();
+      if (!merge || replayIndex !== null) return false;
+      const graphs = { ours: c.graphFor(branch), theirs: c.graphFor(merge.from) };
+      const ops: OpBody[] = [...merge.autoOps];
+      for (const [i, conflict] of merge.conflicts.entries()) {
+        const choice = merge.choices[i];
+        if (choice === null || choice === undefined) return false; // undecided
+        const resolved = resolveConflict(conflict, choice, graphs, ops);
+        if (resolved === null) return false; // inexpressible pick — merge stays open
+        ops.push(...resolved);
+      }
+      if (ops.length === 0) {
+        set({ merge: null });
+        return true; // already up to date
+      }
+      const batch: OpBody = {
+        kind: 'batch',
+        ops,
+        label: `merge ${merge.from}`,
+        parents: [branch, merge.from],
+      };
+      // dispatch clears `merge` on success; a refused apply keeps the
+      // merge (and the user's resolutions) open instead of losing them.
+      return get().dispatch([batch]);
+    },
+
     replaceWithBundle: (bundle) => {
       const next = SessionCore.fromBundle(bundle);
       set({
@@ -329,6 +414,7 @@ export function createSessionStore(initial?: DesignBundle) {
         selection: new Set<string>(),
         diffAgainst: null,
         replayIndex: null,
+        merge: null,
         canUndo: false,
         canRedo: false,
       });

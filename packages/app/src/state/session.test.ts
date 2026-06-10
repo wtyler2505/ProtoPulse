@@ -218,3 +218,117 @@ describe('replay (time-travel)', () => {
     expect(getGraph(store.getState()).components.size).toBe(3);
   });
 });
+
+describe('merge (interactive three-way)', () => {
+  function forked() {
+    const store = createSessionStore();
+    store.getState().dispatch(placeResistor('r1', 'R1'));
+    store.getState().createBranch('feature');
+    return store;
+  }
+
+  it('clean merge: feature work lands on main as one batch', () => {
+    const store = forked();
+    store.getState().dispatch(placeResistor('r2', 'R2', 10 * G), 'add R2');
+    store.getState().switchBranch('main');
+
+    expect(store.getState().startMerge('feature')).toBe(true);
+    const merge = store.getState().merge;
+    expect(merge?.conflicts).toEqual([]);
+    expect(merge?.autoOps.length).toBeGreaterThan(0);
+
+    expect(store.getState().applyMerge()).toBe(true);
+    expect(store.getState().merge).toBeNull();
+    const graph = getGraph(store.getState());
+    expect(graph.components.has('r2')).toBe(true);
+    // One batch landed, parents recorded.
+    const head = store.getState().core.log.opsFor('main').at(-1)?.op;
+    expect(head).toMatchObject({ kind: 'batch', parents: ['main', 'feature'] });
+  });
+
+  it('conflicting values: nothing lands until every conflict is decided', () => {
+    const store = forked();
+    // feature edits R1's value…
+    store.getState().dispatch(
+      [{ kind: 'set_component_props', id: 'r1', props: { value: '1k' } }],
+      'feature edit',
+    );
+    // …and main edits it differently.
+    store.getState().switchBranch('main');
+    store.getState().dispatch(
+      [{ kind: 'set_component_props', id: 'r1', props: { value: '47k' } }],
+      'main edit',
+    );
+
+    expect(store.getState().startMerge('feature')).toBe(true);
+    expect(store.getState().merge?.conflicts).toHaveLength(1);
+    expect(store.getState().applyMerge()).toBe(false); // undecided
+    expect(store.getState().merge).not.toBeNull();
+
+    store.getState().setMergeChoice(0, 'theirs');
+    expect(store.getState().applyMerge()).toBe(true);
+    expect(getGraph(store.getState()).components.get('r1')?.value).toBe('1k');
+  });
+
+  it("choosing 'ours' keeps the current branch's value", () => {
+    const store = forked();
+    store.getState().dispatch(
+      [{ kind: 'set_component_props', id: 'r1', props: { value: '1k' } }],
+    );
+    store.getState().switchBranch('main');
+    store.getState().dispatch(
+      [{ kind: 'set_component_props', id: 'r1', props: { value: '47k' } }],
+    );
+    store.getState().startMerge('feature');
+    store.getState().setMergeChoice(0, 'ours');
+    expect(store.getState().applyMerge()).toBe(true);
+    expect(getGraph(store.getState()).components.get('r1')?.value).toBe('47k');
+  });
+
+  it('up-to-date merge resolves without appending ops', () => {
+    const store = forked();
+    store.getState().switchBranch('main');
+    const before = getOpCount(store.getState());
+    store.getState().startMerge('feature');
+    expect(store.getState().applyMerge()).toBe(true);
+    expect(getOpCount(store.getState())).toBe(before);
+  });
+
+  it('guards: self-merge, unknown branch, replay mode', () => {
+    const store = forked();
+    expect(store.getState().startMerge('feature')).toBe(false); // current branch
+    expect(store.getState().startMerge('ghost')).toBe(false);
+    store.getState().setReplayIndex(0);
+    expect(store.getState().startMerge('main')).toBe(false);
+    store.getState().setReplayIndex(null);
+  });
+
+  it('an edit landed mid-merge invalidates the computed merge', () => {
+    const store = forked();
+    store.getState().dispatch(placeResistor('r2', 'R2', 10 * G));
+    store.getState().switchBranch('main');
+    store.getState().startMerge('feature');
+    expect(store.getState().merge).not.toBeNull();
+    store.getState().dispatch(placeResistor('r3', 'R3', 20 * G));
+    expect(store.getState().merge).toBeNull();
+  });
+
+  it('branch switches cancel an open merge', () => {
+    const store = forked();
+    store.getState().switchBranch('main');
+    store.getState().startMerge('feature');
+    store.getState().switchBranch('feature');
+    expect(store.getState().merge).toBeNull();
+  });
+
+  it('the merge batch is undoable like any other edit', () => {
+    const store = forked();
+    store.getState().dispatch(placeResistor('r2', 'R2', 10 * G));
+    store.getState().switchBranch('main');
+    store.getState().startMerge('feature');
+    store.getState().applyMerge();
+    expect(getGraph(store.getState()).components.has('r2')).toBe(true);
+    store.getState().undo();
+    expect(getGraph(store.getState()).components.has('r2')).toBe(false);
+  });
+});

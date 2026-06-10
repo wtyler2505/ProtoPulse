@@ -1211,7 +1211,7 @@ Then open `http://localhost:5174` (the main app stays on port 5000).
 
 - **Place and wire components** — wires route automatically in clean right-angle (Manhattan) segments.
 - **Undo/redo** that is always exact, because every change you make is recorded as an operation in the design's history.
-- **Branches** — like saving alternate versions of your circuit. Switch between them instantly, and a green/amber overlay shows you exactly what differs between two branches.
+- **Branches with real merging** — like saving alternate versions of your circuit. Switch between them instantly, a green/amber overlay shows exactly what differs, and the **merge** button combines two branches three-way: compatible changes merge automatically, and anything both branches changed differently is shown as a conflict you decide explicitly (yours or theirs) — nothing is ever merged silently.
 - **History (time-lapse replay)** — every design is its full operation log, and the History tab lets you scrub through it: drag the slider (or press Play) and watch the design rebuild itself op by op on the canvas. Click any operation to jump to that moment. The editor is read-only while you're in the past; **Back to live** returns to the present.
 - **ERC panel** — electrical rule checks with one-click **Apply Fix** for some findings (e.g., a missing pull-up resistor), and each finding links to a short concept article that explains *why* it matters.
 - **Export** — KiCad netlist, CSV BOM, and a single-file design bundle.

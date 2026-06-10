@@ -26,7 +26,13 @@ export {
   type NetMembershipDelta,
   type PropDelta,
 } from './diff.js';
-export { threeWayMerge, type MergeConflict, type MergeResult } from './merge.js';
+export {
+  resolveConflict,
+  threeWayMerge,
+  type MergeChoice,
+  type MergeConflict,
+  type MergeResult,
+} from './merge.js';
 export {
   parseValue,
   type ComponentClass,

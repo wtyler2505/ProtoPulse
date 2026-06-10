@@ -85,6 +85,43 @@ export class BranchLog {
     return this.opsFor(b.base.branch).slice(0, b.base.opCount);
   }
 
+  /** Ancestry chain of a branch: branch name → how many of that
+   *  branch's effective ops are visible from `name` (the branch itself
+   *  maps to its full head). Insertion order is leaf → root. */
+  private chainOf(name: string): Map<string, number> {
+    const chain = new Map<string, number>();
+    chain.set(name, this.opsFor(name).length);
+    let b = this.get(name);
+    while (b.base.branch !== null) {
+      const parent = b.base.branch;
+      // Beyond the direct fork, visibility is capped by the recorded
+      // prefix counts — fork counts never exceed the parent's inherited
+      // prefix retroactively, so the static base.opCount is exact.
+      chain.set(parent, b.base.opCount);
+      b = this.get(parent);
+    }
+    return chain;
+  }
+
+  /**
+   * The op prefix at the merge base (nearest common ancestor) of two
+   * branches — what threeWayMerge wants as `base`. Walks `a`'s ancestry
+   * leaf→root and meets it with `b`'s; at the meet, the shared prefix
+   * is the shorter of the two visible counts.
+   */
+  mergeBaseOps(a: string, b: string): OpEnvelope[] {
+    const chainA = this.chainOf(a);
+    const chainB = this.chainOf(b);
+    for (const [branch, countA] of chainA) {
+      const countB = chainB.get(branch);
+      if (countB !== undefined) {
+        return this.opsFor(branch).slice(0, Math.min(countA, countB));
+      }
+    }
+    // Single-root logs always meet at main; unreachable in practice.
+    return [];
+  }
+
   /** Snapshot for serialization. */
   entries(): BranchState[] {
     return [...this.branches.values()];

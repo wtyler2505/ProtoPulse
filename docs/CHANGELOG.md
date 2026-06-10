@@ -2,6 +2,23 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — interactive merge resolver (M1 straggler closed)
+
+### Added
+- **Merge in the Branches panel**: any branch merges into the current
+  one. Engine half in `@protopulse/graph`: `BranchLog.mergeBaseOps`
+  (nearest-common-ancestor prefix across forks, siblings, nested
+  branches) and `resolveConflict` (one conflict + one ours/theirs pick →
+  ops; returns null for picks M1 cannot express, so the UI disables
+  them instead of lying). UI half: auto-merged changes listed, every
+  conflict an explicit pick, Apply gated until all are decided; the
+  merge lands as ONE undoable batch with `parents: [ours, theirs]`
+  recorded in the op-log. Verified end-to-end in the browser: forked
+  value conflict (47k vs 1k) surfaced, resolved theirs, landed.
+- 17 new tests (engine merge-base topologies + every resolveConflict
+  path; store merge workflow incl. stale-merge invalidation); graph
+  coverage gate held.
+
 ## 2026-06-10 — time-lapse replay (History tab) + demo media rig
 
 ### Added
