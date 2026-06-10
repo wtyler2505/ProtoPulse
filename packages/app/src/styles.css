@@ -627,6 +627,16 @@ input:not([type]) {
   color: var(--accent-warm);
 }
 
+.trace-mode-chip {
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.trace-mode-chip.active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 /* ── Sim ghost legend ── */
 
 .ghost-legend {

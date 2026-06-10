@@ -76,6 +76,10 @@ const defaultDeckLoader: DeckLoader = async () => {
   throw new Error(`rule deck ${DEFAULT_DECK_FILE} is missing from content/decks`);
 };
 
+/** The default rule deck, for callers outside the DRC cache (the trace
+ *  tool's walk/shove modes need min_clearance_nm). */
+export const loadDefaultDeck: DeckLoader = defaultDeckLoader;
+
 /** Primary branch + a few alternates without unbounded growth. */
 const CACHE_LIMIT = 16;
 

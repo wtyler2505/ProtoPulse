@@ -21,12 +21,14 @@ import { PcbTray } from './panels/PcbTray.js';
 import { ProfessorPanel } from './panels/ProfessorPanel.js';
 import { ReviewPanel } from './panels/ReviewPanel.js';
 import { SimPanel } from './panels/SimPanel.js';
+import { withSpringBack } from './pcb/springback.js';
 import { pcbDeleteSelectionOps } from './pcb/tools.js';
 import { asOpBodies, DEFAULT_TRACE_WIDTH_NM } from './pcb/types.js';
-import { getFindings, getGraph, getOpCount, useSession } from './state/session.js';
+import { getFindings, getGraph, getOpCount, partDb, useSession } from './state/session.js';
 import { useUi  } from './state/ui.js';
 
-import type {TabId} from './state/ui.js';
+import type {TabId, TraceMode} from './state/ui.js';
+import type { FootprintSource } from '@protopulse/route';
 
 const SCHEMATIC_TABS: { id: TabId; label: string }[] = [
   { id: 'inspector', label: 'Inspector' },
@@ -60,6 +62,8 @@ function Toolbar() {
   const setViewMode = useUi((s) => s.setViewMode);
   const pcbTool = useUi((s) => s.pcbTool);
   const setPcbTool = useUi((s) => s.setPcbTool);
+  const traceMode = useUi((s) => s.traceMode);
+  const setTraceMode = useUi((s) => s.setTraceMode);
   const activeLayer = useUi((s) => s.activeLayer);
   const toggleLayer = useUi((s) => s.toggleLayer);
   const requestFit = useUi((s) => s.requestFit);
@@ -75,7 +79,14 @@ function Toolbar() {
     const session = useSession.getState();
     const graph = getGraph(session);
     const ops = isPcb
-      ? asOpBodies(pcbDeleteSelectionOps(pcbViewOf(graph), session.selection))
+      ? asOpBodies(
+          withSpringBack(
+            pcbDeleteSelectionOps(pcbViewOf(graph), session.selection),
+            session.core.log.opsFor(session.branch),
+            graph,
+            partDb as unknown as FootprintSource,
+          ),
+        )
       : deleteSelectionOps(graph, session.selection);
     if (ops.length > 0) {
       if (!session.dispatch(ops, isPcb ? 'delete pcb selection' : 'delete selection') && isPcb) {
@@ -122,6 +133,24 @@ function Toolbar() {
           >
             Trace
           </button>
+          {pcbTool === 'trace' &&
+            (['manual', 'walk', 'shove'] as TraceMode[]).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className={`trace-mode-chip${traceMode === mode ? ' active' : ''}`}
+                title={
+                  mode === 'manual'
+                    ? 'hand-drawn octilinear segments'
+                    : mode === 'walk'
+                      ? 'auto-detour around copper at deck clearance'
+                      : 'route straight; blocking traces are pushed aside (spring back when this trace is deleted)'
+                }
+                onClick={() => { setTraceMode(mode); }}
+              >
+                {mode}
+              </button>
+            ))}
           <button
             type="button"
             className={pcbTool === 'via' ? 'active' : ''}

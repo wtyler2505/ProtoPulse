@@ -30,4 +30,11 @@ export {
   type RouteHeadOpts,
   type RouteHeadResult,
 } from './walkaround.js';
+export {
+  pathIsLegal,
+  planShove,
+  type ShoveOpts,
+  type ShoveReroute,
+  type ShoveResult,
+} from './shove.js';
 export type { Aabb, Rect } from './geom.js';

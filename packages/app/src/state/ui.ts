@@ -16,8 +16,9 @@ export type ToolId = 'select' | 'wire' | 'place';
 export type ViewMode = 'schematic' | 'pcb';
 export type PcbToolId = 'select' | 'trace' | 'via' | 'place';
 export type PcbLayer = 'F.Cu' | 'B.Cu';
-/** Trace tool routing mode: hand octilinear vs walkaround autoroute. */
-export type TraceMode = 'manual' | 'walk';
+/** Trace tool routing mode: hand octilinear, walkaround autoroute, or
+ *  shove (the new trace goes straight; blocking traces detour). */
+export type TraceMode = 'manual' | 'walk' | 'shove';
 export type TabId =
   | 'inspector'
   | 'erc'
@@ -117,6 +118,7 @@ export interface UiState {
   /** Switch canvases; the DRC tab only exists on the board side. */
   setViewMode: (mode: ViewMode) => void;
   setPcbTool: (tool: Exclude<PcbToolId, 'place'>) => void;
+  setTraceMode: (mode: TraceMode) => void;
   /** Arm footprint placement for a tray component. */
   startPcbPlace: (componentId: string) => void;
   toggleLayer: () => void;
@@ -174,6 +176,7 @@ export const useUi = create<UiState>()((set, get) => ({
     });
   },
   setPcbTool: (tool) => { set({ pcbTool: tool, pcbPlaceComponentId: null }); },
+  setTraceMode: (mode) => { set({ traceMode: mode }); },
   startPcbPlace: (componentId) =>
     { set({ pcbTool: 'place', pcbPlaceComponentId: componentId }); },
   toggleLayer: () =>

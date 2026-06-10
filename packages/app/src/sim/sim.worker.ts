@@ -1,7 +1,7 @@
 import { SpiceEngine } from '@protopulse/sim';
 
-import type { SimWorkerRequest, SimWorkerResponse } from './worker.js';
 import type { Analysis, SimResult } from './types.js';
+import type { SimWorkerRequest, SimWorkerResponse } from './worker.js';
 
 /**
  * The worker side of the sim worker pair (protocol: worker.ts). Holds

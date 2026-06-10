@@ -120,7 +120,7 @@ function MergeSection() {
               <summary>auto-merged changes</summary>
               <ul className="merge-auto-list">
                 {merge.autoOps.map((op, i) => (
-                  // eslint-disable-next-line react/no-array-index-key -- static computed list
+                   
                   <li key={i}>{describeOp(op)}</li>
                 ))}
               </ul>
@@ -136,7 +136,7 @@ function MergeSection() {
               setMergeChoice(i, c);
             };
             return (
-              // eslint-disable-next-line react/no-array-index-key -- conflicts are a stable computed list
+               
               <div key={i} className="merge-conflict">
                 <div className="merge-conflict-what">{view.what}</div>
                 <div className="merge-conflict-choices">

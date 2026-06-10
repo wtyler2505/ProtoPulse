@@ -1,5 +1,6 @@
 import { makePortRef, netOfPort, newUuid } from '@protopulse/graph';
 import { tessellateFootprint } from '@protopulse/renderer';
+import { buildObstacleSet, planShove, routeHead } from '@protopulse/route';
 
 import {
   DEFAULT_VIA_DRILL_NM,
@@ -16,6 +17,7 @@ import type {
   PcbViewLike,
   PickHit,
 } from '@protopulse/renderer';
+import type { FootprintSource } from '@protopulse/route';
 
 /**
  * PCB editor tool state machines — pure logic, no DOM, unit-tested in
@@ -43,6 +45,10 @@ export interface PcbToolEnv {
   /** Where the trace tool routes. */
   activeLayer: 'F.Cu' | 'B.Cu';
   traceWidthNm: number;
+  /** Trace tool routing mode (manual / walkaround / shove). */
+  traceMode: 'manual' | 'walk' | 'shove';
+  /** Deck min_clearance for walk/shove, or null while the deck loads. */
+  clearanceNm: number | null;
 }
 
 export interface PcbToolResult {
@@ -407,6 +413,9 @@ export class PcbPlaceTool {
 
 // ── Trace tool ───────────────────────────────────────────────────────
 
+/** Batch label for shove commits — spring-back keys on it. */
+export const SHOVE_LABEL = 'shove';
+
 export type TraceEndpoint =
   | { kind: 'pad'; at: Vec; netId: Uuid | null; port: PortRef }
   | { kind: 'trace'; at: Vec; netId: Uuid; traceId: Uuid };
@@ -434,6 +443,27 @@ export class PcbTraceTool {
     return this.netId !== null;
   }
 
+  /** One leg from `last` to `target` in the active mode. Walk mode
+   *  detours via the walkaround engine; manual and shove draw straight
+   *  octilinear (shove resolves at commit). String = refusal flash. */
+  private planLeg(last: Vec, target: Vec, env: PcbToolEnv, netId: Uuid): Vec[] | string {
+    if (env.traceMode !== 'walk') return octilinearPath(last, target);
+    if (env.clearanceNm === null) {
+      return 'Rule deck still loading — walk mode needs its clearance. Try again in a second.';
+    }
+    const set = buildObstacleSet(env.graph, env.parts as unknown as FootprintSource, {
+      layerId: env.activeLayer,
+      clearanceNm: env.clearanceNm,
+      widthNm: env.traceWidthNm,
+      netId,
+    });
+    const r = routeHead(last, target, set);
+    if (r.blocked) {
+      return 'Walkaround found no clear corridor — try another way, or shove mode.';
+    }
+    return r.path;
+  }
+
   pointerDown(pt: Vec, env: PcbToolEnv): PcbToolResult {
     const end = resolveTraceEndpoint(pt, env);
 
@@ -459,30 +489,81 @@ export class PcbTraceTool {
         return { status: 'That pad has no net — traces only join pads of the same net.' };
       }
       const last = this.points[this.points.length - 1] ?? end.at;
-      const path = dedupePath([...this.points, ...octilinearPath(last, end.at)]);
       const netId = this.netId;
+      const leg = this.planLeg(last, end.at, env, netId);
+      if (typeof leg === 'string') return { status: leg };
+      const path = dedupePath([...this.points, ...leg]);
+      if (path.length < 2) {
+        // Clicked the start pad again — nothing to commit.
+        this.netId = null;
+        this.points = [];
+        return { ghost: null };
+      }
+
+      const newOp: PcbOpBody = {
+        kind: 'route_trace',
+        id: this.makeId(),
+        netId,
+        layerId: env.activeLayer,
+        widthNm: env.traceWidthNm,
+        path,
+      };
+
+      if (env.traceMode === 'shove') {
+        if (env.clearanceNm === null) {
+          return { status: 'Rule deck still loading — shove needs its clearance. Try again in a second.' };
+        }
+        const plan = planShove(path, env.graph, env.parts as unknown as FootprintSource, {
+          layerId: env.activeLayer,
+          clearanceNm: env.clearanceNm,
+          widthNm: env.traceWidthNm,
+          netId,
+        });
+        if (plan.kind === 'blocked') {
+          // Keep the routing state — the user adjusts and tries again.
+          return { status: `Shove refused: ${plan.reason}` };
+        }
+        if (plan.kind === 'shove') {
+          const ops: PcbOpBody[] = [newOp];
+          for (const r of plan.reroutes) {
+            const victim = env.view.traces.get(r.traceId);
+            if (!victim) continue; // unreachable — reroutes come from the graph
+            ops.push(
+              { kind: 'remove_trace', id: r.traceId },
+              {
+                kind: 'route_trace',
+                id: r.traceId,
+                netId: victim.netId,
+                layerId: env.activeLayer,
+                widthNm: victim.widthNm,
+                path: r.path,
+              },
+            );
+          }
+          this.netId = null;
+          this.points = [];
+          return {
+            ops,
+            opsLabel: SHOVE_LABEL,
+            status: `Shoved ${String(plan.reroutes.length)} trace(s) aside.`,
+            ghost: null,
+          };
+        }
+        // 'clear' falls through to the plain commit.
+      }
+
       this.netId = null;
       this.points = [];
-      if (path.length < 2) return { ghost: null }; // clicked the start pad again
-      return {
-        ops: [
-          {
-            kind: 'route_trace',
-            id: this.makeId(),
-            netId,
-            layerId: env.activeLayer,
-            widthNm: env.traceWidthNm,
-            path,
-          },
-        ],
-        opsLabel: 'route trace',
-        ghost: null,
-      };
+      return { ops: [newOp], opsLabel: 'route trace', ghost: null };
     }
 
     // Empty board: drop a waypoint and keep routing.
     const last = this.points[this.points.length - 1];
-    if (last) this.points = dedupePath([...this.points, ...octilinearPath(last, snapPcb(pt))]);
+    if (last) {
+      const leg = this.planLeg(last, snapPcb(pt), env, this.netId);
+      if (typeof leg === 'string') return { status: leg };
+      this.points = dedupePath([...this.points, ...leg]);
+    }
     return {};
   }
 
@@ -492,7 +573,11 @@ export class PcbTraceTool {
     const target = end?.netId === this.netId ? end.at : snapPcb(pt);
     const last = this.points[this.points.length - 1];
     if (!last) return {};
-    return { ghost: ghostFromPoints([...this.points, ...octilinearPath(last, target).slice(1)]) };
+    // Preview in the active mode; a blocked walk previews the straight
+    // shot (the refusal flash fires on click, not per-move).
+    const leg = this.planLeg(last, target, env, this.netId);
+    const legPts = typeof leg === 'string' ? octilinearPath(last, target) : leg;
+    return { ghost: ghostFromPoints([...this.points, ...legPts.slice(1)]) };
   }
 
   pointerUp(): PcbToolResult {
