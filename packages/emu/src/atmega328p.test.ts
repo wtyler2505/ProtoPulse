@@ -1,7 +1,24 @@
 import { PinState } from 'avr8js';
 import { describe, expect, it } from 'vitest';
 
-import { BRNE, CBI, DEC, IN, IO, LDI, MEM, OUT, RJMP, SBI, STS, assemble } from './asm.js';
+import {
+  BRLO,
+  BRNE,
+  CBI,
+  CPI,
+  DEC,
+  IN,
+  IO,
+  LDI,
+  LDS,
+  MEM,
+  OUT,
+  RJMP,
+  SBI,
+  SBRC,
+  STS,
+  assemble,
+} from './asm.js';
 import { Atmega328pCore } from './atmega328p.js';
 
 /**
@@ -290,5 +307,239 @@ describe('Atmega328pCore — timer0', () => {
     core.step(100);
     const { cpu } = core.raw();
     expect(cpu.readData(0x46)).toBeGreaterThan(0); // TCNT0 advanced
+  });
+});
+
+// ── ADC ──────────────────────────────────────────────────────────────
+
+const ADSC = 0x40;
+const ADIF = 0x10;
+const ADLAR = 0x20;
+/** ADEN | ADSC | ADPS=÷4 — one ADC clock = 4 CPU cycles. */
+const START_DIV4 = 0xc2;
+
+/**
+ * Poke ADMUX/ADCSRA directly (flash stays an all-NOP sled, so step()
+ * just burns cycles while the conversion runs).
+ */
+function startConversion(core: Atmega328pCore, admux: number, adcsra: number): void {
+  const { cpu } = core.raw();
+  cpu.writeData(MEM.ADMUX, admux);
+  cpu.writeData(MEM.ADCSRA, adcsra);
+}
+
+/** One full conversion of `volts` on a fresh core; returns ADCL/ADCH. */
+function convert(volts: number, admux = 0, aVccVolts?: number): { adcl: number; adch: number } {
+  const core = new Atmega328pCore(aVccVolts === undefined ? {} : { aVccVolts });
+  core.setAdcSampler(() => volts);
+  startConversion(core, admux, START_DIV4);
+  core.step(100); // first conversion = 25 ADC clocks × ÷4
+  const { cpu } = core.raw();
+  return { adcl: cpu.data[MEM.ADCL] ?? 0, adch: cpu.data[MEM.ADCH] ?? 0 };
+}
+
+describe('Atmega328pCore — ADC (register-level)', () => {
+  it('first conversion takes 25 ADC clocks (datasheet first-conversion cost)', () => {
+    const core = new Atmega328pCore();
+    core.setAdcSampler(() => 2.5);
+    startConversion(core, 0, START_DIV4); // 25 × 4 = 100 CPU cycles
+    const { cpu } = core.raw();
+    core.step(99);
+    expect((cpu.data[MEM.ADCSRA] ?? 0) & ADSC).toBe(ADSC); // still converting
+    core.step(1);
+    expect((cpu.data[MEM.ADCSRA] ?? 0) & ADSC).toBe(0);
+    expect(core.drainAdcReads()).toEqual([{ channel: 0, cycle: 100 }]);
+  });
+
+  it('subsequent conversions take 13 ADC clocks at the configured prescaler', () => {
+    const core = new Atmega328pCore();
+    core.setAdcSampler(() => 2.5);
+    startConversion(core, 0, START_DIV4);
+    core.step(100); // first conversion done at cycle 100
+    const { cpu } = core.raw();
+    cpu.writeData(MEM.ADCSRA, START_DIV4); // restart: 13 × 4 = 52 cycles
+    core.step(51);
+    expect((cpu.data[MEM.ADCSRA] ?? 0) & ADSC).toBe(ADSC);
+    core.step(1);
+    expect((cpu.data[MEM.ADCSRA] ?? 0) & ADSC).toBe(0);
+    expect(core.drainAdcReads().map((r) => r.cycle)).toEqual([100, 152]);
+  });
+
+  it('honors the ADPS prescaler bits (÷128 → 25 × 128 cycles for the first conversion)', () => {
+    const core = new Atmega328pCore();
+    startConversion(core, 0, 0xc7); // ADEN | ADSC | ADPS=÷128
+    const { cpu } = core.raw();
+    core.step(3199);
+    expect((cpu.data[MEM.ADCSRA] ?? 0) & ADSC).toBe(ADSC);
+    core.step(1);
+    expect((cpu.data[MEM.ADCSRA] ?? 0) & ADSC).toBe(0);
+    expect(core.drainAdcReads()).toEqual([{ channel: 0, cycle: 3200 }]);
+  });
+
+  it('calls the sampler with the ADMUX channel at the completion cycle, not the start', () => {
+    const calls: { channel: number; cycle: number }[] = [];
+    const core = new Atmega328pCore();
+    core.setAdcSampler((channel, cycle) => {
+      calls.push({ channel, cycle });
+      return 1;
+    });
+    startConversion(core, 3, START_DIV4); // channel 3, started at cycle 0
+    core.step(100);
+    expect(calls).toEqual([{ channel: 3, cycle: 100 }]);
+  });
+
+  it('quantizes the rails exactly: 0 V → 0, 5 V → 1023', () => {
+    expect(convert(0)).toEqual({ adcl: 0x00, adch: 0x00 });
+    expect(convert(5)).toEqual({ adcl: 0xff, adch: 0x03 }); // 1023
+  });
+
+  it('quantizes the 2.5 V midpoint to 512 (round-half-up of 511.5; 511 equally defensible)', () => {
+    expect(convert(2.5)).toEqual({ adcl: 0x00, adch: 0x02 }); // 512
+  });
+
+  it('clamps out-of-range voltages to the rails', () => {
+    expect(convert(7.3)).toEqual({ adcl: 0xff, adch: 0x03 }); // 1023
+    expect(convert(-2)).toEqual({ adcl: 0x00, adch: 0x00 });
+  });
+
+  it('left-adjusts the result when ADLAR is set', () => {
+    expect(convert(5, ADLAR)).toEqual({ adcl: 0xc0, adch: 0xff }); // 1023 << 6
+    expect(convert(2.5, ADLAR)).toEqual({ adcl: 0x00, adch: 0x80 }); // 512 << 6
+  });
+
+  it('scales full-scale to the aVccVolts option (AREF strapped to AVcc)', () => {
+    expect(convert(3.3, 0, 3.3)).toEqual({ adcl: 0xff, adch: 0x03 }); // 1023
+    expect(convert(1.65, 0, 3.3)).toEqual({ adcl: 0x00, adch: 0x02 }); // 512
+  });
+
+  it('rejects a non-positive or non-finite aVccVolts', () => {
+    expect(() => new Atmega328pCore({ aVccVolts: 0 })).toThrow(/positive number of volts/);
+    expect(() => new Atmega328pCore({ aVccVolts: -5 })).toThrow(/positive number of volts/);
+    expect(() => new Atmega328pCore({ aVccVolts: Number.NaN })).toThrow(
+      /positive number of volts/,
+    );
+  });
+
+  it('completion sets ADIF and clears ADSC', () => {
+    const core = new Atmega328pCore();
+    startConversion(core, 0, START_DIV4);
+    const { cpu } = core.raw();
+    expect((cpu.data[MEM.ADCSRA] ?? 0) & ADIF).toBe(0);
+    core.step(100);
+    expect((cpu.data[MEM.ADCSRA] ?? 0) & ADIF).toBe(ADIF);
+    expect((cpu.data[MEM.ADCSRA] ?? 0) & ADSC).toBe(0);
+  });
+
+  it('drainAdcReads drains: empty before any conversion and after every drain', () => {
+    const core = new Atmega328pCore();
+    expect(core.drainAdcReads()).toEqual([]);
+    startConversion(core, 0, START_DIV4);
+    core.step(100);
+    core.raw().cpu.writeData(MEM.ADCSRA, START_DIV4);
+    core.step(52);
+    expect(core.drainAdcReads().map((r) => r.cycle)).toEqual([100, 152]);
+    expect(core.drainAdcReads()).toEqual([]);
+  });
+
+  it('reset() drops undrained reads but keeps the sampler (bench wiring)', () => {
+    const core = new Atmega328pCore();
+    core.setAdcSampler(() => 5);
+    startConversion(core, 0, START_DIV4);
+    core.step(100);
+    core.reset();
+    expect(core.drainAdcReads()).toEqual([]); // pending read dropped
+    startConversion(core, 0, START_DIV4); // sampler still installed
+    core.step(100);
+    const { cpu } = core.raw();
+    expect(cpu.data[MEM.ADCH] ?? 0).toBe(0x03); // 5 V → 1023 again
+    expect(core.drainAdcReads()).toEqual([{ channel: 0, cycle: 100 }]);
+  });
+
+  it('reads 0 V with no sampler installed, and still records the conversion', () => {
+    const core = new Atmega328pCore();
+    startConversion(core, 0, START_DIV4);
+    core.step(100);
+    const { cpu } = core.raw();
+    expect(cpu.data[MEM.ADCL] ?? 0).toBe(0);
+    expect(cpu.data[MEM.ADCH] ?? 0).toBe(0);
+    expect((cpu.data[MEM.ADCSRA] ?? 0) & ADIF).toBe(ADIF);
+    expect(core.drainAdcReads()).toEqual([{ channel: 0, cycle: 100 }]);
+  });
+
+  it('surfaces a non-finite sampler result as an error from step()', () => {
+    const core = new Atmega328pCore();
+    core.setAdcSampler(() => Number.NaN);
+    startConversion(core, 0, START_DIV4);
+    expect(() => core.step(200)).toThrow(/non-finite volts/);
+  });
+});
+
+/**
+ * Bang-bang controller on ADC channel 0 (word indices in comments):
+ * start a conversion (ADEN|ADSC, ÷4 prescaler), busy-wait for ADSC to
+ * clear, read ADCL then ADCH (left-adjusted, so ADCH is the top 8
+ * bits), and drive B5 high when ADCH ≥ 0x80 (half of vref = 2.5 V),
+ * low otherwise. Then start the next conversion. Forever.
+ */
+const BANG_BANG = assemble([
+  LDI(16, 0x20), //  0: r16 = 1<<5
+  OUT(IO.DDRB, 16), //  1: B5 → output (driven low)
+  LDI(16, ADLAR), //  2: ADLAR | MUX=0 → channel 0, left-adjusted
+  STS(MEM.ADMUX, 16), //  3-4
+  LDI(16, START_DIV4), //  5: loop — ADEN|ADSC|÷4, fresh ADSC each pass
+  STS(MEM.ADCSRA, 16), //  6-7: start conversion
+  LDS(17, MEM.ADCSRA), //  8-9: wait — poll ADCSRA
+  SBRC(17, 6), // 10: ADSC clear? skip the rjmp
+  RJMP(8 - 12), // 11: → 8 (still converting)
+  LDS(18, MEM.ADCL), // 12-13: read ADCL first (datasheet read order)
+  LDS(19, MEM.ADCH), // 14-15: top 8 bits of the result
+  CPI(19, 0x80), // 16: compare against the 2.5 V threshold
+  BRLO(2), // 17: below → 20 (drive low)
+  SBI(IO.PORTB, 5), // 18: at/above → B5 high
+  RJMP(1), // 19: → 21 (skip the CBI)
+  CBI(IO.PORTB, 5), // 20: B5 low
+  RJMP(5 - 22), // 21: → 5 (next conversion)
+]);
+
+describe('Atmega328pCore — ADC bang-bang firmware', () => {
+  it('toggles B5 as a triangle ramp crosses the CPI threshold both ways', () => {
+    const core = new Atmega328pCore();
+    core.loadFirmware(BANG_BANG);
+    // Triangle: 0 V → 5 V over the first 20k cycles, back to 0 V by
+    // 40k. Crosses 2.5 V upward at cycle 10 000, downward at 30 000.
+    core.setAdcSampler((_channel, cycle) =>
+      cycle < 20_000 ? (cycle / 20_000) * 5 : ((40_000 - cycle) / 20_000) * 5,
+    );
+    const { events } = core.step(40_000);
+
+    const b5 = events.filter((e) => e.pin === 'B5');
+    expect(b5.length).toBe(2); // exactly one rise and one fall
+    expect(b5[0]?.level).toBe(1);
+    expect(b5[0]?.cycle ?? Number.NaN).toBeGreaterThan(10_000);
+    expect(b5[0]?.cycle ?? Number.NaN).toBeLessThan(10_500); // ≈ one loop after crossing
+    expect(b5[1]?.level).toBe(0);
+    expect(b5[1]?.cycle ?? Number.NaN).toBeGreaterThan(29_900); // quantization edge ≈ 29 996
+    expect(b5[1]?.cycle ?? Number.NaN).toBeLessThan(30_500);
+  });
+
+  it('never raises B5 while the input stays below the threshold', () => {
+    const core = new Atmega328pCore();
+    core.loadFirmware(BANG_BANG);
+    core.setAdcSampler(() => 1.0);
+    const { events } = core.step(20_000);
+    expect(events.some((e) => e.pin === 'B5' && e.level === 1)).toBe(false);
+  });
+
+  it('honesty readout: records every loop conversion on channel 0, cycles strictly increasing', () => {
+    const core = new Atmega328pCore();
+    core.loadFirmware(BANG_BANG);
+    core.setAdcSampler(() => 4.0);
+    core.step(20_000);
+    const reads = core.drainAdcReads();
+    expect(reads.length).toBeGreaterThan(100); // ~75-cycle loop → ~260 conversions
+    expect(reads.every((r) => r.channel === 0)).toBe(true);
+    for (let i = 1; i < reads.length; i++) {
+      expect(reads[i]?.cycle ?? Number.NaN).toBeGreaterThan(reads[i - 1]?.cycle ?? Number.NaN);
+    }
   });
 });

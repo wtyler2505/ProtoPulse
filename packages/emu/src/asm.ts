@@ -64,6 +64,41 @@ export function RJMP(k: number): number {
   return 0xc000 | (k & 0x0fff);
 }
 
+/** ORI Rd,K (16 ≤ d ≤ 31) — 0110 KKKK dddd KKKK. 1 cycle. */
+export function ORI(d: number, k: number): number {
+  assertRange(d, 16, 31, 'ORI register');
+  assertRange(k, 0, 0xff, 'ORI constant');
+  return 0x6000 | ((k & 0xf0) << 4) | ((d - 16) << 4) | (k & 0x0f);
+}
+
+/** ANDI Rd,K (16 ≤ d ≤ 31) — 0111 KKKK dddd KKKK. 1 cycle. */
+export function ANDI(d: number, k: number): number {
+  assertRange(d, 16, 31, 'ANDI register');
+  assertRange(k, 0, 0xff, 'ANDI constant');
+  return 0x7000 | ((k & 0xf0) << 4) | ((d - 16) << 4) | (k & 0x0f);
+}
+
+/** CPI Rd,K (16 ≤ d ≤ 31) — 0011 KKKK dddd KKKK. 1 cycle. */
+export function CPI(d: number, k: number): number {
+  assertRange(d, 16, 31, 'CPI register');
+  assertRange(k, 0, 0xff, 'CPI constant');
+  return 0x3000 | ((k & 0xf0) << 4) | ((d - 16) << 4) | (k & 0x0f);
+}
+
+/** SBRC Rr,b (skip next if bit clear) — 1111 110r rrrr 0bbb. 1 cycle, +1/+2 on skip. */
+export function SBRC(r: number, b: number): number {
+  assertRange(r, 0, 31, 'SBRC register');
+  assertRange(b, 0, 7, 'SBRC bit');
+  return 0xfc00 | (r << 4) | b;
+}
+
+/** SBRS Rr,b (skip next if bit set) — 1111 111r rrrr 0bbb. 1 cycle, +1/+2 on skip. */
+export function SBRS(r: number, b: number): number {
+  assertRange(r, 0, 31, 'SBRS register');
+  assertRange(b, 0, 7, 'SBRS bit');
+  return 0xfe00 | (r << 4) | b;
+}
+
 /** DEC Rd — 1001 010d dddd 1010. 1 cycle. */
 export function DEC(d: number): number {
   assertRange(d, 0, 31, 'DEC register');
@@ -74,6 +109,18 @@ export function DEC(d: number): number {
 export function BRNE(k: number): number {
   assertRange(k, -64, 63, 'BRNE offset');
   return 0xf401 | ((k & 0x7f) << 3);
+}
+
+/** BRLO k (= BRBS 0, branch if C set; −64 ≤ k ≤ 63 words) — 1111 00kk kkkk k000. 1/2 cycles. */
+export function BRLO(k: number): number {
+  assertRange(k, -64, 63, 'BRLO offset');
+  return 0xf000 | ((k & 0x7f) << 3);
+}
+
+/** BRSH k (= BRBC 0, branch if C clear; −64 ≤ k ≤ 63 words) — 1111 01kk kkkk k000. 1/2 cycles. */
+export function BRSH(k: number): number {
+  assertRange(k, -64, 63, 'BRSH offset');
+  return 0xf400 | ((k & 0x7f) << 3);
 }
 
 /**
@@ -128,6 +175,11 @@ export const IO = {
 
 /** ATmega328P data-space addresses (for LDS/STS). Datasheet §36. */
 export const MEM = {
+  ADCL: 0x78,
+  ADCH: 0x79,
+  ADCSRA: 0x7a,
+  ADCSRB: 0x7b,
+  ADMUX: 0x7c,
   UCSR0A: 0xc0,
   UCSR0B: 0xc1,
   UCSR0C: 0xc2,
