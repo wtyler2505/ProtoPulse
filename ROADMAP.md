@@ -91,8 +91,14 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       golden fixtures (routed-led)
 - [x] Walkaround interactive routing (`@protopulse/route`, E.1 step 1):
       CW/CCW hull walks over DRC-grade obstacle hulls, same-net copper
-      legal, 'manual | walk' toggle on the trace tool
-- [ ] Shove + spring-back (E.1 steps 2-3); zones/pours; panelization
+      legal, 'manual | walk' toggle on the trace tool (toggle actually
+      wired to the tool 2026-06-10 — the engine landed first)
+- [x] Shove + spring-back (E.1 steps 2-3, landed 2026-06-10): shove
+      mode routes the new trace straight and re-routes blocking traces
+      around it (cluster-merged hulls; pads/vias never move; cascades
+      refuse honestly); deleting the shover springs victims back to
+      their pre-shove paths when still legal — the op-log IS the memory
+- [ ] Zones/pours; panelization; cascading shove
 
 ## v0.5 — The Bridge 🔨
 

@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — shove + spring-back routing (E.1 steps 2–3)
+
+### Added
+- **Shove mode** on the PCB trace tool: the new trace goes where you
+  drew it; different-net traces in the way are re-routed around it by
+  the walkaround engine (`planShove` in @protopulse/route) — victims
+  plan sequentially with cumulative obstacle insertion so the final
+  configuration is mutually clear by construction. Hull-cluster merging
+  makes detours around shover-touching pads possible. Honest cuts:
+  pads/vias never move, victims re-route end-to-end, single-level shove
+  (cascades refuse with a reason).
+- **Spring-back**: deleting the shover restores its victims to their
+  pre-shove paths — read straight from the op-log (shove commits are
+  batches labeled 'shove'). A victim only springs back if the user
+  hasn't re-routed it since AND the original path is still
+  clearance-legal. Rides in the same delete batch, so undo is atomic.
+- The 'manual | walk | shove' mode chips on the trace toolbar — and the
+  walk mode is now actually wired to the tool (the engine landed in the
+  v0.4 slice; the toggle claim preceded the wiring — debt paid).
+
+### Verified
+- 11 new engine tests + 4 tool tests + 6 spring-back tests; browser
+  end-to-end: shove flashed "Shoved 1 trace(s) aside" with the victim
+  visibly detouring, deleting the shover restored its straight path.
+
 ## 2026-06-10 — sim ghost overlay (voltages painted on the wires)
 
 ### Added

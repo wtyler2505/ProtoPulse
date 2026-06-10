@@ -15,7 +15,8 @@ import {
 } from '@protopulse/renderer';
 
 import { dashedLines, ratsnestSegments } from '../pcb/ratsnest.js';
-import { ghostTint } from '../sim/ghost.js';
+import { ensureRoutingClearance, routingClearanceNm } from '../pcb/routing.js';
+import { withSpringBack } from '../pcb/springback.js';
 import {
   PcbPlaceTool,
   pcbDeleteSelectionOps,
@@ -26,6 +27,7 @@ import {
 
 } from '../pcb/tools.js';
 import { asOpBodies, DEFAULT_TRACE_WIDTH_NM } from '../pcb/types.js';
+import { ghostTint } from '../sim/ghost.js';
 import { getDiffDelta, getGraph, partDb, useSession } from '../state/session.js';
 import { useUi } from '../state/ui.js';
 
@@ -45,6 +47,7 @@ import type { PadSource, PcbTool, PcbToolEnv, PcbToolResult } from '../pcb/tools
 import type { SimGhost } from '../sim/ghost.js';
 import type {DesignGraph, GraphDelta, OpBody, Vec} from '@protopulse/graph';
 import type {OverlayState, RGBA} from '@protopulse/renderer';
+import type { FootprintSource } from '@protopulse/route';
 
 /**
  * Owns the <canvas>: WebGL2Renderer + Camera + PickIndex + the rAF loop.
@@ -162,6 +165,8 @@ export function CanvasHost() {
       queryRect: (min, max) => pickIndex.queryRect(min, max),
     });
 
+    if (isPcb) ensureRoutingClearance(); // walk/shove need the deck's clearance
+
     const pcbToolEnv = (): PcbToolEnv => ({
       graph,
       view: pcbViewOf(graph),
@@ -169,6 +174,8 @@ export function CanvasHost() {
       pick: (pt, tol) => pickIndex.pick(pt, tol),
       activeLayer: useUi.getState().activeLayer,
       traceWidthNm: DEFAULT_TRACE_WIDTH_NM,
+      traceMode: useUi.getState().traceMode,
+      clearanceNm: routingClearanceNm(),
     });
 
     const applyResult = (res: ToolResult | PcbToolResult): void => {
@@ -283,7 +290,14 @@ export function CanvasHost() {
     const deleteSelection = (): void => {
       const session = useSession.getState();
       const ops = isPcb
-        ? asOpBodies(pcbDeleteSelectionOps(pcbViewOf(graph), session.selection))
+        ? asOpBodies(
+            withSpringBack(
+              pcbDeleteSelectionOps(pcbViewOf(graph), session.selection),
+              session.core.log.opsFor(session.branch),
+              graph,
+              padSource as unknown as FootprintSource,
+            ),
+          )
         : deleteSelectionOps(graph, session.selection);
       if (ops.length > 0) {
         if (!session.dispatch(ops, isPcb ? 'delete pcb selection' : 'delete selection') && isPcb) {

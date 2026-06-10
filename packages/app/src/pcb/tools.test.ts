@@ -97,6 +97,8 @@ function env(graph: DesignGraph, overrides: Partial<PcbToolEnv> = {}): PcbToolEn
     pick: () => [],
     activeLayer: 'F.Cu',
     traceWidthNm: DEFAULT_TRACE_WIDTH_NM,
+    traceMode: 'manual',
+    clearanceNm: 127_000,
     ...overrides,
   };
 }
@@ -539,5 +541,150 @@ describe('pcbFlipSelectionOps', () => {
       expect(applyOp(graph, op).ok).toBe(true);
     }
     expect(graph.pcb.placements.get('r1')?.side).toBe('bottom');
+  });
+});
+
+describe('PcbTraceTool — walk and shove modes', () => {
+  /** wiredGraph + placements + a vertical nb trace crossing the na
+   *  corridor at x=5mm. Built with real ops so graph.pcb is populated
+   *  (planShove reads the graph, not the mocked view). */
+  function boardWithCrossing(): DesignGraph {
+    const g = emptyGraph();
+    const ops: OpBody[] = [
+      { kind: 'add_component', id: 'r1', ref: 'R1', partId: 'core:resistor', partRev: 1 },
+      { kind: 'add_component', id: 'r2', ref: 'R2', partId: 'core:resistor', partRev: 1 },
+      { kind: 'connect', port: 'r1:2', newNetId: 'na' },
+      { kind: 'connect', port: 'r2:1', netId: 'na' },
+      { kind: 'connect', port: 'r1:1', newNetId: 'nb' },
+      { kind: 'connect', port: 'r2:2', netId: 'nb' },
+      { kind: 'place_footprint', componentId: 'r1', at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+      { kind: 'place_footprint', componentId: 'r2', at: { x: 10 * MM, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+      {
+        kind: 'route_trace',
+        id: 'crossing',
+        netId: 'nb',
+        layerId: 'F.Cu',
+        widthNm: 250_000,
+        path: [
+          { x: 5 * MM, y: -3 * MM },
+          { x: 5 * MM, y: 3 * MM },
+        ],
+      },
+    ];
+    for (const op of ops) {
+      const res = applyOp(g, op);
+      if (!res.ok) throw new Error(res.error);
+    }
+    return g;
+  }
+
+  function crossingEnv(graph: DesignGraph, overrides: Partial<PcbToolEnv> = {}): PcbToolEnv {
+    return env(graph, {
+      view: view({
+        placements: [
+          ['r1', placement()],
+          ['r2', placement({ at: { x: 10 * MM, y: 0 } })],
+        ],
+        traces: [
+          [
+            'crossing',
+            {
+              netId: 'nb',
+              layerId: 'F.Cu',
+              widthNm: 250_000,
+              path: [
+                { x: 5 * MM, y: -3 * MM },
+                { x: 5 * MM, y: 3 * MM },
+              ],
+            },
+          ],
+        ],
+      }),
+      ...overrides,
+    });
+  }
+
+  it('walk mode detours around the crossing trace', () => {
+    const tool = new PcbTraceTool(makeId);
+    const e = crossingEnv(boardWithCrossing(), { traceMode: 'walk' });
+    tool.pointerDown({ x: 1 * MM, y: 0 }, e);
+    const res = tool.pointerDown({ x: 9 * MM, y: 0 }, e);
+    const op = res.ops?.[0];
+    expect(op).toMatchObject({ kind: 'route_trace', netId: 'na' });
+    if (op?.kind !== 'route_trace') throw new Error('expected a route');
+    expect(op.path.length).toBeGreaterThan(2); // it walked, not straight
+    expect(res.opsLabel).toBe('route trace');
+  });
+
+  it('walk mode refuses while the deck is still loading', () => {
+    const tool = new PcbTraceTool(makeId);
+    const e = crossingEnv(boardWithCrossing(), { traceMode: 'walk', clearanceNm: null });
+    tool.pointerDown({ x: 1 * MM, y: 0 }, e);
+    const res = tool.pointerDown({ x: 9 * MM, y: 0 }, e);
+    expect(res.ops).toBeUndefined();
+    expect(res.status).toContain('still loading');
+    expect(tool.routing).toBe(true); // state kept — try again after load
+  });
+
+  it('shove mode routes straight and pushes the crossing trace aside', () => {
+    const tool = new PcbTraceTool(makeId);
+    const e = crossingEnv(boardWithCrossing(), { traceMode: 'shove' });
+    tool.pointerDown({ x: 1 * MM, y: 0 }, e);
+    const res = tool.pointerDown({ x: 9 * MM, y: 0 }, e);
+    expect(res.opsLabel).toBe('shove');
+    expect(res.ops?.map((o) => o.kind)).toEqual(['route_trace', 'remove_trace', 'route_trace']);
+    const [newTrace, , victim] = res.ops ?? [];
+    expect(newTrace).toMatchObject({
+      kind: 'route_trace',
+      netId: 'na',
+      path: [
+        { x: 1 * MM, y: 0 },
+        { x: 9 * MM, y: 0 },
+      ],
+    });
+    if (victim?.kind !== 'route_trace') throw new Error('expected the victim reroute');
+    expect(victim.id).toBe('crossing');
+    expect(victim.netId).toBe('nb');
+    expect(victim.widthNm).toBe(250_000);
+    expect(victim.path[0]).toEqual({ x: 5 * MM, y: -3 * MM });
+    expect(victim.path.at(-1)).toEqual({ x: 5 * MM, y: 3 * MM });
+    expect(victim.path.length).toBeGreaterThan(2); // it moved
+  });
+
+  it('shove mode refuses when the victim has nowhere to go, keeping the route alive', () => {
+    // Shrink the crossing trace so its endpoints sit inside the new
+    // trace's clearance hull — unshovable.
+    const g = emptyGraph();
+    const ops: OpBody[] = [
+      { kind: 'add_component', id: 'r1', ref: 'R1', partId: 'core:resistor', partRev: 1 },
+      { kind: 'add_component', id: 'r2', ref: 'R2', partId: 'core:resistor', partRev: 1 },
+      { kind: 'connect', port: 'r1:2', newNetId: 'na' },
+      { kind: 'connect', port: 'r2:1', netId: 'na' },
+      { kind: 'connect', port: 'r1:1', newNetId: 'nb' },
+      { kind: 'place_footprint', componentId: 'r1', at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+      { kind: 'place_footprint', componentId: 'r2', at: { x: 10 * MM, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+      {
+        kind: 'route_trace',
+        id: 'stuck',
+        netId: 'nb',
+        layerId: 'F.Cu',
+        widthNm: 250_000,
+        path: [
+          { x: 5 * MM, y: -200_000 },
+          { x: 5 * MM, y: 200_000 },
+        ],
+      },
+    ];
+    for (const op of ops) {
+      const res = applyOp(g, op);
+      if (!res.ok) throw new Error(res.error);
+    }
+    const tool = new PcbTraceTool(makeId);
+    const e = crossingEnv(g, { traceMode: 'shove' });
+    tool.pointerDown({ x: 1 * MM, y: 0 }, e);
+    const res = tool.pointerDown({ x: 9 * MM, y: 0 }, e);
+    expect(res.ops).toBeUndefined();
+    expect(res.status).toContain('Shove refused');
+    expect(tool.routing).toBe(true); // user adjusts and retries
   });
 });
