@@ -1,10 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { applyOp, emptyGraph, type DesignGraph } from '@protopulse/graph';
+import { applyOp, emptyGraph  } from '@protopulse/graph';
 import { seedPartDb } from '@protopulse/parts';
+import { describe, expect, it } from 'vitest';
+
 import { runDraftsman } from './agent.js';
 import { FakeProvider } from './fake-provider.js';
 import { createDraftsmanRegistry } from './tools/draftsman.js';
+
 import type { AgentEvent } from './provider.js';
+import type {DesignGraph} from '@protopulse/graph';
 
 const parts = seedPartDb();
 
@@ -78,7 +81,7 @@ describe('runDraftsman end-to-end (scripted FakeProvider)', () => {
     expect(Array.isArray(blocks)).toBe(true);
     if (Array.isArray(blocks)) {
       expect(blocks[0]).toMatchObject({ type: 'tool_result', tool_use_id: 't1' });
-      expect(String(blocks[0]?.type === 'tool_result' ? blocks[0].content : '')).toMatch(/ERC clean/);
+      expect(blocks[0]?.type === 'tool_result' ? blocks[0].content : '').toMatch(/ERC clean/);
     }
     expect(result.transcript.length).toBeGreaterThanOrEqual(4);
   });
@@ -175,8 +178,9 @@ describe('runDraftsman end-to-end (scripted FakeProvider)', () => {
     });
     expect(result.ops).toEqual([]);
     const secondTurn = provider.turns[1];
-    const blocks = Array.isArray(secondTurn?.messages.at(-1)?.content)
-      ? (secondTurn?.messages.at(-1)?.content as { type: string; content?: string; is_error?: boolean }[])
+    const lastContent = secondTurn?.messages.at(-1)?.content;
+    const blocks = Array.isArray(lastContent)
+      ? (lastContent as { type: string; content?: string; is_error?: boolean }[])
       : [];
     expect(blocks[0]?.is_error).toBe(true);
     expect(blocks[0]?.content).toMatch(/invalid input for connect/);
@@ -203,7 +207,7 @@ describe('runDraftsman end-to-end (scripted FakeProvider)', () => {
     const blocks = provider.turns[1]?.messages.at(-1)?.content;
     if (Array.isArray(blocks)) {
       expect(blocks[0]).toMatchObject({ type: 'tool_result', is_error: true });
-      expect(String(blocks[0]?.type === 'tool_result' ? blocks[0].content : '')).toMatch(
+      expect(blocks[0]?.type === 'tool_result' ? blocks[0].content : '').toMatch(
         /unknown or out-of-scope/,
       );
     }

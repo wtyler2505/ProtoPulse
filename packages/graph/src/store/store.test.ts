@@ -1,21 +1,26 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
 import { afterEach, describe, expect, it } from 'vitest';
+
 import { BranchLog, MAIN_BRANCH } from '../branch.js';
 import { materialize } from '../materialize.js';
-import type { OpEnvelope } from '../ops.js';
 import { envelopes, ledCircuitOps } from '../test-helpers.js';
+
+import { loadDesignDir, saveDesignDir, SEGMENT_BYTE_CAP } from './fs-store.js';
 import {
   decodeBundle,
   decodeOpl,
   encodeBundle,
   encodeOpl,
   graphFromJson,
-  graphToJson,
-  type DesignBundle,
+  graphToJson
+  
 } from './serialize.js';
-import { loadDesignDir, saveDesignDir, SEGMENT_BYTE_CAP } from './fs-store.js';
+
+import type {DesignBundle} from './serialize.js';
+import type { OpEnvelope } from '../ops.js';
 
 const tmpDirs: string[] = [];
 function tmp(): string {

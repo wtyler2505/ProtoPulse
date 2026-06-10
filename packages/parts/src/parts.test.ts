@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
 import { SCHEMATIC_GRID } from '@protopulse/graph';
+import { describe, expect, it } from 'vitest';
+
 import { PartDb, seedPartDb } from './db.js';
 import { SEED_PARTS } from './seed/index.js';
 import { partSchema } from './types.js';

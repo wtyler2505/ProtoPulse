@@ -1,5 +1,6 @@
-import type { Part, PinElectricalType } from './types.js';
 import { SEED_PARTS } from './seed/index.js';
+
+import type { Part, PinElectricalType } from './types.js';
 
 /**
  * In-memory part registry. Designs pin (partId, rev); lookups that miss
@@ -47,8 +48,7 @@ export class PartDb {
   }
 
   pinExists(partId: string, rev: number, pinKey: string): boolean {
-    const part = this.get(partId, rev);
-    return part !== undefined && part.pins.some((p) => p.key === pinKey);
+    return this.get(partId, rev)?.pins.some((p) => p.key === pinKey) ?? false;
   }
 
   pinType(partId: string, rev: number, pinKey: string): PinElectricalType | undefined {

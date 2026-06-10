@@ -1,6 +1,7 @@
+import { materialize } from './materialize.js';
+
 import type { OpBody, OpEnvelope } from './ops.js';
 import type { DesignGraph } from './types.js';
-import { materialize } from './materialize.js';
 
 /**
  * Order-insensitive canonical JSON: sorts Map entries and object keys so

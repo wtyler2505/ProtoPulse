@@ -20,7 +20,7 @@ export interface ParsedValue {
   raw: string;
 }
 
-export type ParseError = { error: string; raw: string };
+export interface ParseError { error: string; raw: string }
 
 const MULTIPLIERS: Record<string, number> = {
   p: 1e-12,
@@ -77,7 +77,7 @@ export function parseValue(
     if (sep === 'R') {
       return { value: num, unit: 'ohm', raw };
     }
-    const mult = MULTIPLIERS[sep as string];
+    const mult = MULTIPLIERS[sep!];
     if (mult === undefined) return { error: `unknown multiplier ${String(sep)}`, raw };
     // Infix values are unambiguous: the multiplier implies the class unit
     // (2n2 on a capacitor is 2.2nF, never "bare 2.2").

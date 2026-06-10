@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
-import type { Part } from '@protopulse/parts';
+
 import { partDb } from '../state/session.js';
 import { useUi } from '../state/ui.js';
+
+import type { Part } from '@protopulse/parts';
 
 /** Seed-library palette: parts grouped by class; click arms PlaceTool. */
 
@@ -62,7 +64,7 @@ export function Palette() {
                   <button
                     type="button"
                     className={`palette-part${active ? ' active' : ''}`}
-                    onClick={() => startPlace(part.id)}
+                    onClick={() => { startPlace(part.id); }}
                     title={`${part.name} (${part.refPrefix})`}
                   >
                     <span className="palette-prefix">{part.refPrefix}</span>

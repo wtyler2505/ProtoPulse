@@ -1,7 +1,12 @@
-import { applyOp, type ApplyWarning } from './apply.js';
-import { compareEnvelopes, opId, type OpEnvelope, type OpId } from './ops.js';
-import { validateGraph, type InvariantOpts, type InvariantViolation } from './invariants.js';
-import { cloneGraph, emptyGraph, type DesignGraph } from './types.js';
+import { applyOp  } from './apply.js';
+import { validateGraph   } from './invariants.js';
+import { compareEnvelopes, opId   } from './ops.js';
+import { cloneGraph, emptyGraph  } from './types.js';
+
+import type {ApplyWarning} from './apply.js';
+import type {InvariantOpts, InvariantViolation} from './invariants.js';
+import type {OpEnvelope, OpId} from './ops.js';
+import type {DesignGraph} from './types.js';
 
 /**
  * The graph is a materialized view of the op log. Materialization is

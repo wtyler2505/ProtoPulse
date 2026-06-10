@@ -1,9 +1,13 @@
 import { writeFileSync } from 'node:fs';
-import { Command } from 'commander';
-import { runErc, type Finding } from '@protopulse/erc';
+
+import { runErc  } from '@protopulse/erc';
 import { exportBomCsv, exportKicadNetlist } from '@protopulse/export';
 import { seedPartDb } from '@protopulse/parts';
+import { Command } from 'commander';
+
 import { loadDesign } from './load.js';
+
+import type {Finding} from '@protopulse/erc';
 
 /**
  * protopulse — CI for circuits. `protopulse check` fails your pipeline

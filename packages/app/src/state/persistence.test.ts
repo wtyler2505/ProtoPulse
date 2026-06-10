@@ -1,15 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { decodeBundle, encodeBundle } from '@protopulse/graph';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
   bundleFromCore,
   createAutosave,
   loadBundle,
   loadFixture,
   saveBundle,
-  STORAGE_KEY,
-  type StorageLike,
+  STORAGE_KEY
+  
 } from './persistence.js';
 import { createSessionStore } from './session.js';
+
+import type {StorageLike} from './persistence.js';
 
 function fakeStorage(): StorageLike & { data: Map<string, string> } {
   const data = new Map<string, string>();

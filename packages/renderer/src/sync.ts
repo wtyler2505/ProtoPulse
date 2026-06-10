@@ -1,6 +1,8 @@
+import { buildSymbolNode, buildWireNode  } from './scene.js';
+
+import type {SceneGraph} from './scene.js';
 import type { DesignGraph, GraphDelta, Uuid } from '@protopulse/graph';
 import type { PartDb } from '@protopulse/parts';
-import { buildSymbolNode, buildWireNode, type SceneGraph } from './scene.js';
 
 /**
  * Incremental scene sync: re-tessellate ONLY the entities a GraphDelta

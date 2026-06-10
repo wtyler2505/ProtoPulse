@@ -1,15 +1,19 @@
-import { describe, expect, it } from 'vitest';
 import {
   SCHEMATIC_GRID,
   applyOp,
-  materialize,
-  type DesignGraph,
-  type OpBody,
-  type OpEnvelope,
+  materialize
+  
+  
+  
 } from '@protopulse/graph';
-import { seedPartDb, type PartDb } from '@protopulse/parts';
+import { seedPartDb  } from '@protopulse/parts';
+import { describe, expect, it } from 'vitest';
+
 import { createDraftsmanRegistry, snapMmToGrid, DRAFTSMAN_TOOL_NAMES } from './draftsman.js';
+
 import type { ToolCtx, ToolResult } from '../registry.js';
+import type {DesignGraph, OpBody, OpEnvelope} from '@protopulse/graph';
+import type {PartDb} from '@protopulse/parts';
 
 const parts: PartDb = seedPartDb();
 

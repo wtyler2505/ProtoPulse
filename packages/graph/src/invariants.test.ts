@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+
 import { validateGraph } from './invariants.js';
-import { emptyGraph } from './types.js';
 import { buildGraph, ledCircuitOps } from './test-helpers.js';
+import { emptyGraph } from './types.js';
 
 /**
  * apply() makes these states unrepresentable, so the corrupt states are

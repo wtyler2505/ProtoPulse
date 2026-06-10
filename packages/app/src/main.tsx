@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+
 import { App } from './App.js';
 import {
   bundleFromCore,
@@ -24,8 +25,8 @@ const autosave = createAutosave(() => {
   const s = useSession.getState();
   return bundleFromCore(s.core, s.branch);
 });
-useSession.subscribe(() => autosave.schedule());
-window.addEventListener('beforeunload', () => autosave.flush());
+useSession.subscribe(() => { autosave.schedule(); });
+window.addEventListener('beforeunload', () => { autosave.flush(); });
 
 const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('missing #root element');

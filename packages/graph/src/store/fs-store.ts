@@ -1,9 +1,14 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+
 import { z } from 'zod';
-import { BranchLog, type BranchState } from '../branch.js';
-import type { OpEnvelope } from '../ops.js';
+
+import { BranchLog  } from '../branch.js';
+
 import { decodeOpl, encodeOpl, PPX_FORMAT_VERSION } from './serialize.js';
+
+import type {BranchState} from '../branch.js';
+import type { OpEnvelope } from '../ops.js';
 
 /**
  * The on-disk design directory — Vol II §A.6:

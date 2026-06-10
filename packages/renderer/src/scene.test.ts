@@ -1,13 +1,16 @@
-import { describe, expect, it } from 'vitest';
 import {
   applyOp,
   emptyGraph,
-  SCHEMATIC_GRID,
-  type DesignGraph,
-  type OpBody,
+  SCHEMATIC_GRID
+  
+  
 } from '@protopulse/graph';
 import { seedPartDb } from '@protopulse/parts';
+import { describe, expect, it } from 'vitest';
+
 import { buildScene, buildWireNode, SceneGraph, SYMBOL_COLOR, WIRE_COLOR } from './scene.js';
+
+import type {DesignGraph, OpBody} from '@protopulse/graph';
 
 const G = SCHEMATIC_GRID;
 const parts = seedPartDb();

@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest';
-import { z } from 'zod';
 import { emptyGraph } from '@protopulse/graph';
 import { seedPartDb } from '@protopulse/parts';
-import { ToolRegistry, zodToJsonSchema, type AiTool, type ToolCtx } from './registry.js';
+import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
+
+import { ToolRegistry, zodToJsonSchema   } from './registry.js';
+
+import type {AiTool, ToolCtx} from './registry.js';
 
 function ctx(): ToolCtx {
   return { graph: emptyGraph(), parts: seedPartDb() };
@@ -25,7 +28,7 @@ const echoTool: AiTool<typeof echoSchema> = {
 };
 
 /** A Buyer-ish tool that must not leak into the Draftsman's slice. */
-const buyPartsTool: AiTool<z.ZodType> = {
+const buyPartsTool: AiTool = {
   name: 'buy_parts',
   description: 'Order parts from a distributor',
   schema: z.object({ mpn: z.string() }),
@@ -56,7 +59,7 @@ describe('ToolRegistry', () => {
   it('scoped() returns a slice that cannot dispatch out-of-scope tools', () => {
     const reg = new ToolRegistry();
     reg.register(echoTool as AiTool);
-    reg.register(buyPartsTool as AiTool);
+    reg.register(buyPartsTool);
     const draftsmanish = reg.scoped(['echo']);
 
     expect(draftsmanish.get('buy_parts')).toBeUndefined();
@@ -94,7 +97,7 @@ describe('ToolRegistry', () => {
 
   it('dispatch converts execute() throws into errors', () => {
     const reg = new ToolRegistry();
-    const bomb: AiTool<z.ZodType> = {
+    const bomb: AiTool = {
       ...echoTool,
       name: 'bomb',
       execute() {
@@ -148,7 +151,7 @@ describe('zodToJsonSchema', () => {
         flag: { type: 'boolean' },
       },
     });
-    expect((json['required'] as string[])).toContain('at');
-    expect((json['required'] as string[])).not.toContain('rot');
+    expect((json.required as string[])).toContain('at');
+    expect((json.required as string[])).not.toContain('rot');
   });
 });

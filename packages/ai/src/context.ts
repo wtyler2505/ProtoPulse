@@ -1,6 +1,8 @@
-import { MM, parsePortRef, type DesignGraph, type OpEnvelope } from '@protopulse/graph';
-import type { PartDb } from '@protopulse/parts';
+import { MM, parsePortRef   } from '@protopulse/graph';
+
 import type { Finding } from '@protopulse/erc';
+import type {DesignGraph, OpEnvelope} from '@protopulse/graph';
+import type { PartDb } from '@protopulse/parts';
 
 /**
  * Context assembler — budgeted sections, chars as a token proxy

@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { SCHEMATIC_GRID, type SymbolPlacement } from '@protopulse/graph';
+import { SCHEMATIC_GRID  } from '@protopulse/graph';
 import { seedPartDb } from '@protopulse/parts';
+import { describe, expect, it } from 'vitest';
+
 import {
   applyPlacement,
   boundsOfLines,
@@ -12,6 +13,8 @@ import {
   unionBounds,
   wireBounds,
 } from './tessellate.js';
+
+import type {SymbolPlacement} from '@protopulse/graph';
 
 const G = SCHEMATIC_GRID;
 const parts = seedPartDb();

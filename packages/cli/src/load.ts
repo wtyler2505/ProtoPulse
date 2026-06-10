@@ -1,6 +1,9 @@
 import { readFileSync, statSync } from 'node:fs';
-import { BranchLog, decodeBundle, materialize, type MaterializeResult } from '@protopulse/graph';
+
+import { BranchLog, decodeBundle, materialize  } from '@protopulse/graph';
 import { loadDesignDir } from '@protopulse/graph/fs-store';
+
+import type {MaterializeResult} from '@protopulse/graph';
 
 export interface LoadedForCli {
   designId: string;

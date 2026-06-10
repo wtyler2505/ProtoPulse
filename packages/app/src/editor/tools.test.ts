@@ -1,14 +1,15 @@
-import { describe, expect, it } from 'vitest';
 import {
   applyOp,
   emptyGraph,
   netOfPort,
-  SCHEMATIC_GRID,
-  type DesignGraph,
-  type OpBody,
+  SCHEMATIC_GRID
+  
+  
 } from '@protopulse/graph';
 import { seedPartDb } from '@protopulse/parts';
-import type { PickHit } from '@protopulse/renderer';
+import { describe, expect, it } from 'vitest';
+
+
 import {
   deleteSelectionOps,
   deriveWireOps,
@@ -18,9 +19,13 @@ import {
   PlaceTool,
   SelectTool,
   snapToGrid,
-  WireTool,
-  type ToolEnv,
+  WireTool
+  
 } from './tools.js';
+
+import type {ToolEnv} from './tools.js';
+import type {DesignGraph, OpBody} from '@protopulse/graph';
+import type { PickHit } from '@protopulse/renderer';
 
 const G = SCHEMATIC_GRID;
 const parts = seedPartDb();

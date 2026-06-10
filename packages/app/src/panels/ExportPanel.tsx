@@ -1,5 +1,7 @@
 import { useRef } from 'react';
+
 import { exportBomCsv, exportKicadNetlist } from '@protopulse/export';
+
 import {
   bundleFromCore,
   downloadText,
@@ -42,6 +44,7 @@ export function ExportPanel() {
       const bundle = await importFile(file);
       useSession.getState().replaceWithBundle(bundle);
     } catch (err) {
+      // eslint-disable-next-line no-alert -- M1 error surface; toast post-M1
       window.alert(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };

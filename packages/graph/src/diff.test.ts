@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+
 import { diff, isEmptyDelta, netFingerprint } from './diff.js';
 import { buildGraph, FIX, ledCircuitOps } from './test-helpers.js';
+
 import type { OpBody } from './ops.js';
 
 function withExtra(extra: OpBody[]): ReturnType<typeof buildGraph> {

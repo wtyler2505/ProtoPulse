@@ -1,7 +1,10 @@
-import type { DesignGraph } from '@protopulse/graph';
 import { parsePortRef } from '@protopulse/graph';
-import type { PartDb } from '@protopulse/parts';
+
 import { escapeKicad } from './sexpr.js';
+
+import type { DesignGraph } from '@protopulse/graph';
+import type { PartDb } from '@protopulse/parts';
+
 
 /**
  * KiCad legacy-E S-expression netlist — the format pcbnew's
@@ -43,7 +46,7 @@ export function exportKicadNetlist(
   const compBlocks = components.map((comp) => {
     const part = parts.get(comp.partId, comp.partRev);
     const value = comp.value ?? part?.name ?? comp.ref;
-    const footprint = comp.fields['footprint'] ?? 'Unknown:Unknown';
+    const footprint = comp.fields.footprint ?? 'Unknown:Unknown';
     const datasheet = part?.datasheetUrl ?? '~';
     return `    (comp (ref "${escapeKicad(comp.ref)}")
       (value "${escapeKicad(value)}")

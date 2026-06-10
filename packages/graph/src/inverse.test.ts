@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
+
 import { applyOp } from './apply.js';
 import { invertOp } from './inverse.js';
-import type { OpBody } from './ops.js';
-import { cloneGraph, type DesignGraph } from './types.js';
 import { buildGraph, canonicalGraph as canonical, FIX, ledCircuitOps } from './test-helpers.js';
+import { cloneGraph  } from './types.js';
+
+import type { OpBody } from './ops.js';
+import type {DesignGraph} from './types.js';
+
 
 /** Apply op, then its inverses; the visible graph must round-trip. */
 function expectRoundTrip(start: DesignGraph, op: OpBody): void {

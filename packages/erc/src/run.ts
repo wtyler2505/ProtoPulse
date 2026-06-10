@@ -1,8 +1,11 @@
-import type { DesignGraph, Net, OpBody, PortRef, Uuid } from '@protopulse/graph';
 import { parsePortRef } from '@protopulse/graph';
-import type { PartDb, PinElectricalType } from '@protopulse/parts';
-import { compareFindings, type Anchor, type Finding } from './findings.js';
+
+import { compareFindings   } from './findings.js';
 import { pinPairVerdict } from './matrix.js';
+
+import type {Anchor, Finding} from './findings.js';
+import type { DesignGraph, OpBody, PortRef, Uuid } from '@protopulse/graph';
+import type { PartDb, PinElectricalType } from '@protopulse/parts';
 
 /**
  * The ERC engine: each rule is a pure function (graph, parts) → findings.
@@ -194,7 +197,7 @@ function rulePullupMissing(ctx: ErcCtx): Finding[] {
 function netHasPullupToPower(ctx: ErcCtx, netId: Uuid): boolean {
   for (const comp of ctx.graph.components.values()) {
     const part = ctx.parts.get(comp.partId, comp.partRev);
-    if (!part || part.class !== 'resistor' || comp.dnp) continue;
+    if (part?.class !== 'resistor' || comp.dnp) continue;
     let onNet = false;
     let otherNetId: Uuid | undefined;
     for (const pin of part.pins) {
@@ -233,9 +236,6 @@ function findNetOf(ctx: ErcCtx, port: PortRef): Uuid | undefined {
   return undefined;
 }
 
-function netHasPowerSource(ctx: ErcCtx, netId: Uuid): boolean {
-  return (ctx.netPorts.get(netId) ?? []).some((p) => p.type === 'power_out');
-}
 
 function buildPullupFix(ctx: ErcCtx, netId: Uuid): OpBody[] | undefined {
   // Candidate rail: a powered net that isn't ground-flavored.

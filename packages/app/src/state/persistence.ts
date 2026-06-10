@@ -2,10 +2,12 @@ import {
   decodeBundle,
   encodeBundle,
   MAIN_BRANCH,
-  PPX_FORMAT_VERSION,
-  type DesignBundle,
+  PPX_FORMAT_VERSION
+  
 } from '@protopulse/graph';
+
 import type { SessionCore } from './session.js';
+import type {DesignBundle} from '@protopulse/graph';
 
 /**
  * Persistence: debounced localStorage autosave of the DesignBundle,

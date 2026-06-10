@@ -1,6 +1,9 @@
 import { z } from 'zod';
-import { opEnvelopeSchema, type OpEnvelope } from '../ops.js';
+
+import { opEnvelopeSchema  } from '../ops.js';
+
 import type { BranchState } from '../branch.js';
+import type {OpEnvelope} from '../ops.js';
 import type { DesignGraph } from '../types.js';
 
 /**

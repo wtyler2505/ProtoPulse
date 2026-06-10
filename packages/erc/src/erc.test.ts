@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import type { OpBody } from '@protopulse/graph';
 import { materialize } from '@protopulse/graph';
-import { seedPartDb } from '@protopulse/parts';
-import { runErc } from './run.js';
-import { pinPairVerdict } from './matrix.js';
+import { seedPartDb, PIN_ELECTRICAL_TYPES  } from '@protopulse/parts';
+import { describe, expect, it } from 'vitest';
+
 import { ERC_CODES, conceptFor } from './codes.js';
-import { PIN_ELECTRICAL_TYPES } from '@protopulse/parts';
+import { pinPairVerdict } from './matrix.js';
+import { runErc } from './run.js';
+
+
+import type { OpBody } from '@protopulse/graph';
 
 const parts = seedPartDb();
 

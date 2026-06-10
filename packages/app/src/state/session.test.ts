@@ -1,6 +1,9 @@
+import { SCHEMATIC_GRID  } from '@protopulse/graph';
 import { describe, expect, it } from 'vitest';
-import { SCHEMATIC_GRID, type OpBody } from '@protopulse/graph';
+
 import { createSessionStore, getDiffDelta, getGraph, getOpCount } from './session.js';
+
+import type {OpBody} from '@protopulse/graph';
 
 const G = SCHEMATIC_GRID;
 

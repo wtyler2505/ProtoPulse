@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest';
-import type { OpBody } from '@protopulse/graph';
 import { materialize } from '@protopulse/graph';
 import { seedPartDb } from '@protopulse/parts';
+import { describe, expect, it } from 'vitest';
+
 import { exportBomCsv } from './bom-csv.js';
 import { compareRefs, exportKicadNetlist } from './kicad-netlist.js';
+
+import type { OpBody } from '@protopulse/graph';
 
 const parts = seedPartDb();
 const DATE = '2026-01-01T00:00:00.000Z';

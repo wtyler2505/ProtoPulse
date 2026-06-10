@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+
 import { BranchLog, MAIN_BRANCH } from './branch.js';
 import { materialize } from './materialize.js';
 import { threeWayMerge } from './merge.js';
-import type { OpBody, OpEnvelope } from './ops.js';
 import { envelopes, ledCircuitOps, FIX } from './test-helpers.js';
+
+import type { OpBody, OpEnvelope } from './ops.js';
 import type { DesignGraph } from './types.js';
 
 function env(op: OpBody, lamport: number, actor = 'a'): OpEnvelope {

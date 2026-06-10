@@ -1,4 +1,5 @@
 import { SCHEMATIC_GRID } from '@protopulse/graph';
+
 import type { Part, Pin, PinElectricalType, SymbolGeom, SymbolPrimitive } from '../types.js';
 
 /** One schematic grid unit (1.27mm) in nm. */

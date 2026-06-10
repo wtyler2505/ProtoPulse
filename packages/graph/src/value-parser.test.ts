@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseValue, type ComponentClass } from './value-parser.js';
+
+import { parseValue  } from './value-parser.js';
+
+import type {ComponentClass} from './value-parser.js';
 
 function val(raw: string, cls?: ComponentClass): { value: number; unit: string } {
   const r = parseValue(raw, cls);

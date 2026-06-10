@@ -1,7 +1,9 @@
 import { MM, SCHEMATIC_GRID } from '@protopulse/graph';
+
+import { GlyphAtlas } from './text.js';
+
 import type { Camera } from '../camera.js';
 import type { RGBA, SceneGraph, SceneNode } from '../scene.js';
-import { GlyphAtlas } from './text.js';
 
 /**
  * Thin WebGL2 layer (not unit-tested — everything interesting lives in

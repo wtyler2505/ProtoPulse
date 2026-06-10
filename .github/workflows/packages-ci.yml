@@ -38,6 +38,9 @@ jobs:
       - name: Typecheck packages
         run: npm run check:packages
 
+      - name: Lint packages
+        run: npx eslint packages tools/golden
+
       - name: Test all workspaces (graph coverage gate enforced in-package)
         run: npm run test:packages
 

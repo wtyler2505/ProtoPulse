@@ -1,7 +1,8 @@
 import Flatbush from 'flatbush';
-import type { Vec } from '@protopulse/graph';
+
 import type { SceneGraph, SceneNode } from './scene.js';
 import type { Bounds } from './tessellate.js';
+import type { Vec } from '@protopulse/graph';
 
 /**
  * CPU picking over scene-node AABBs via flatbush (no GPU pick buffer at

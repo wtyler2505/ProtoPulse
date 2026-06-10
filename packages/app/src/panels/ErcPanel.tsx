@@ -1,8 +1,12 @@
-import { conceptFor, type Anchor, type Finding, type Severity } from '@protopulse/erc';
-import { parsePortRef, type DesignGraph, type Vec } from '@protopulse/graph';
+import { conceptFor    } from '@protopulse/erc';
+import { parsePortRef   } from '@protopulse/graph';
 import { pinWorldPosition } from '@protopulse/renderer';
+
 import { getFindings, getGraph, partDb, useSession } from '../state/session.js';
 import { useUi } from '../state/ui.js';
+
+import type {Anchor, Finding, Severity} from '@protopulse/erc';
+import type {DesignGraph, Vec} from '@protopulse/graph';
 
 /**
  * ERC findings grouped by severity. Clicking selects the anchors and
@@ -70,8 +74,8 @@ function FindingRow({ finding, graph }: { finding: Finding; graph: DesignGraph }
   return (
     <li
       className={`finding finding-${finding.severity}`}
-      onMouseEnter={() => setHighlight(finding.anchors.flatMap(anchorIds))}
-      onMouseLeave={() => setHighlight([])}
+      onMouseEnter={() => { setHighlight(finding.anchors.flatMap(anchorIds)); }}
+      onMouseLeave={() => { setHighlight([]); }}
     >
       <button type="button" className="finding-main" onClick={focus}>
         <span className="code-chip">{finding.code}</span>
@@ -92,7 +96,7 @@ function FindingRow({ finding, graph }: { finding: Finding; graph: DesignGraph }
             type="button"
             className="concept-chip"
             title={concept.title}
-            onClick={() => openConcept(concept.conceptSlug)}
+            onClick={() => { openConcept(concept.conceptSlug); }}
           >
             learn: {concept.title}
           </button>

@@ -1,5 +1,6 @@
-import type Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
+
+import type Anthropic from '@anthropic-ai/sdk';
 import type { DesignGraph, OpBody } from '@protopulse/graph';
 import type { PartDb } from '@protopulse/parts';
 
@@ -53,7 +54,7 @@ export type DispatchResult =
 export function zodToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
   const def = schema._def as { typeName?: string; description?: string };
   const describe = (out: Record<string, unknown>): Record<string, unknown> => {
-    if (def.description !== undefined) out['description'] = def.description;
+    if (def.description !== undefined) out.description = def.description;
     return out;
   };
 
@@ -95,7 +96,7 @@ export function zodToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
       if (!value.isOptional()) required.push(key);
     }
     const out: Record<string, unknown> = { type: 'object', properties, additionalProperties: false };
-    if (required.length > 0) out['required'] = required;
+    if (required.length > 0) out.required = required;
     return describe(out);
   }
   if (schema instanceof z.ZodUnknown || schema instanceof z.ZodAny) {

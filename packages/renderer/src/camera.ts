@@ -1,6 +1,7 @@
-import type { Vec } from '@protopulse/graph';
 import { MM } from '@protopulse/graph';
+
 import type { Bounds } from './tessellate.js';
+import type { Vec } from '@protopulse/graph';
 
 /**
  * Camera: world (integer nm, Y-up) ↔ screen (CSS px, Y-down). Pure math,

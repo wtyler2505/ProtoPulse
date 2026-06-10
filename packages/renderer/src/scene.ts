@@ -1,15 +1,19 @@
-import type { Component, DesignGraph, SymbolPlacement, Uuid, WireSegment } from '@protopulse/graph';
 import { SCHEMATIC_GRID } from '@protopulse/graph';
-import type { Part, PartDb } from '@protopulse/parts';
+
 import {
   boundsOfLines,
   symbolBounds,
   tessellateSymbol,
   tessellateWire,
-  unionBounds,
-  type Bounds,
-  type TessText,
+  unionBounds
+  
+  
 } from './tessellate.js';
+
+import type {Bounds, TessText} from './tessellate.js';
+import type { Component, DesignGraph, SymbolPlacement, Uuid, WireSegment } from '@protopulse/graph';
+import type { Part, PartDb } from '@protopulse/parts';
+
 
 /**
  * Retained scene graph — a Map of flat, GPU-ready nodes. The renderer

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { runErc  } from '@protopulse/erc';
 import {
   MM,
   SCHEMATIC_GRID,
@@ -6,19 +6,24 @@ import {
   cloneGraph,
   makePortRef,
   netOfPort,
-  newUuid,
-  type Component,
-  type DesignGraph,
-  type Net,
-  type Nm,
-  type OpBody,
-  type PortRef,
-  type Rot,
-  type WireSegment,
+  newUuid
+  
+  
+  
+  
+  
+  
+  
+  
 } from '@protopulse/graph';
-import { runErc, type Finding } from '@protopulse/erc';
-import type { AiTool, ToolCtx, ToolResult } from '../registry.js';
+import { z } from 'zod';
+
+
 import { ToolRegistry } from '../registry.js';
+
+import type { AiTool, ToolCtx, ToolResult } from '../registry.js';
+import type {Finding} from '@protopulse/erc';
+import type {Component, DesignGraph, Net, Nm, OpBody, PortRef, Rot, WireSegment} from '@protopulse/graph';
 
 /**
  * The Draftsman's 8 tools — Vol III §6 Milestone 1. Inputs speak the
@@ -189,7 +194,7 @@ const connect: AiTool<typeof connectSchema> = {
         summary: `Connected ${input.from_port} and ${input.to_port} on new net ${predictedName}`,
       };
     }
-    if (netA && netB && netA.id === netB.id) {
+    if (netA && netA.id === netB?.id) {
       return {
         ops: [],
         data: { net_id: netA.id, net_name: netA.name },
@@ -203,7 +208,7 @@ const connect: AiTool<typeof connectSchema> = {
         summary: `Merged net ${netB.name} into ${netA.name} (${input.from_port} ↔ ${input.to_port})`,
       };
     }
-    const net = (netA ?? netB) as Net;
+    const net = (netA ?? netB)!;
     const loose = netA ? b : a;
     const loosePortLabel = netA ? input.to_port : input.from_port;
     return {

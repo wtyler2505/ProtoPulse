@@ -1,6 +1,7 @@
-import { z } from 'zod';
-import type { Nm, Vec } from '@protopulse/graph';
 import { SCHEMATIC_GRID } from '@protopulse/graph';
+import { z } from 'zod';
+
+import type { Nm, Vec } from '@protopulse/graph';
 
 /**
  * The minimal M1 part model — a trimmed Vol II §I schema. The graph is

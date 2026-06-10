@@ -60,7 +60,7 @@ export class BranchLog {
    */
   createBranch(name: string, from: string): BranchState {
     if (this.branches.has(name)) throw new Error(`branch ${name} already exists`);
-    const base = this.get(from);
+    this.get(from); // throws if the base branch does not exist
     const state: BranchState = {
       name,
       base: { branch: from, opCount: this.opsFor(from).length },

@@ -1,25 +1,32 @@
 import { useEffect, useRef } from 'react';
-import { diff, type DesignGraph, type GraphDelta } from '@protopulse/graph';
+
+import { diff   } from '@protopulse/graph';
 import {
   applyDelta,
   buildScene,
   Camera,
   PickIndex,
-  WebGL2Renderer,
-  type OverlayState,
+  WebGL2Renderer
+  
 } from '@protopulse/renderer';
+
 import { getDiffDelta, getGraph, partDb, useSession } from '../state/session.js';
 import { useUi } from '../state/ui.js';
+
 import {
   deleteSelectionOps,
   PICK_TOLERANCE_NM,
   PlaceTool,
   SelectTool,
-  WireTool,
-  type Tool,
-  type ToolEnv,
-  type ToolResult,
+  WireTool
+  
+  
+  
 } from './tools.js';
+
+import type {Tool, ToolEnv, ToolResult} from './tools.js';
+import type {DesignGraph, GraphDelta} from '@protopulse/graph';
+import type {OverlayState} from '@protopulse/renderer';
 
 /**
  * Owns the <canvas>: WebGL2Renderer + Camera + PickIndex + the rAF loop.

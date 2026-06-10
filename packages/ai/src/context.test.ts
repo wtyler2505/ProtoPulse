@@ -1,13 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { runErc } from '@protopulse/erc';
 import {
   applyOp,
-  emptyGraph,
-  type DesignGraph,
-  type OpEnvelope,
+  emptyGraph
+  
+  
 } from '@protopulse/graph';
 import { seedPartDb } from '@protopulse/parts';
-import { runErc } from '@protopulse/erc';
+import { describe, expect, it } from 'vitest';
+
 import { assembleContext, CONTEXT_BUDGETS } from './context.js';
+
+import type {DesignGraph, OpEnvelope} from '@protopulse/graph';
 
 const parts = seedPartDb();
 

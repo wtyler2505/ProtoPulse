@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
 import { MM } from '@protopulse/graph';
+import { describe, expect, it } from 'vitest';
+
 import {
   Camera,
   GRID_LOD_PX_PER_MM,

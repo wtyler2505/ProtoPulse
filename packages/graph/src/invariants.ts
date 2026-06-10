@@ -1,5 +1,6 @@
-import type { DesignGraph, Uuid } from './types.js';
 import { parsePortRef } from './types.js';
+
+import type { DesignGraph, Uuid } from './types.js';
 
 /**
  * Graph invariants — Vol II §A.4. Violations after materialization mean

@@ -23,8 +23,10 @@ export function BranchPanel() {
   const otherGraph = diffAgainst !== null ? state.core.graphFor(diffAgainst) : null;
 
   const onCreate = () => {
+    // eslint-disable-next-line no-alert -- M1 branch naming; proper dialog post-M1
     const name = window.prompt('New branch name (forks from the current head):');
     if (name) {
+      // eslint-disable-next-line no-alert -- M1 error surface; toast post-M1
       if (!createBranch(name)) window.alert(`Branch "${name}" already exists or is invalid.`);
     }
   };
@@ -41,7 +43,7 @@ export function BranchPanel() {
               type="button"
               className="branch-name"
               disabled={name === branch}
-              onClick={() => switchBranch(name)}
+              onClick={() => { switchBranch(name); }}
               title={name === branch ? 'current branch' : `switch to ${name}`}
             >
               {name === branch ? `● ${name}` : name}
@@ -50,7 +52,7 @@ export function BranchPanel() {
               <button
                 type="button"
                 className={`diff-toggle${diffAgainst === name ? ' active' : ''}`}
-                onClick={() => setDiffAgainst(diffAgainst === name ? null : name)}
+                onClick={() => { setDiffAgainst(diffAgainst === name ? null : name); }}
               >
                 {diffAgainst === name ? 'diff: on' : 'diff vs'}
               </button>

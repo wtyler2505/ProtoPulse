@@ -1,7 +1,8 @@
 import { diff } from './diff.js';
+import { netOfPort } from './types.js';
+
 import type { OpBody } from './ops.js';
 import type { DesignGraph, PortRef, Uuid } from './types.js';
-import { netOfPort } from './types.js';
 
 /**
  * Three-way merge over materialized graphs — Vol II §A.7.

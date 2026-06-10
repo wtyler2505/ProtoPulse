@@ -134,7 +134,7 @@ export interface Via {
 }
 
 export interface Annotation {
-  anchor: Uuid | PortRef;
+  anchor: Uuid  ;
   text: string;
 }
 

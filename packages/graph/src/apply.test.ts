@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
+
 import { applyOp } from './apply.js';
-import type { OpBody } from './ops.js';
-import { emptyGraph, makePortRef, netOfPort } from './types.js';
 import { buildGraph, FIX, ledCircuitOps } from './test-helpers.js';
+import { emptyGraph, makePortRef, netOfPort } from './types.js';
+
+import type { OpBody } from './ops.js';
+
 
 function expectFail(graph = emptyGraph()) {
   return (op: OpBody, errorPart: string): void => {

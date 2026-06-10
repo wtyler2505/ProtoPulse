@@ -1,5 +1,6 @@
-import type { Part } from '../types.js';
 import { definePart, G, passivePins, pin, twoPinSymbol } from './helpers.js';
+
+import type { Part } from '../types.js';
 
 /**
  * The M1 seed library — ~15 parts, enough for Track 1 ("First Light")

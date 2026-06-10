@@ -2,17 +2,20 @@ import {
   netOfPort,
   newUuid,
   SCHEMATIC_GRID,
-  makePortRef,
-  type DesignGraph,
-  type OpBody,
-  type PortRef,
-  type SymbolPlacement,
-  type Uuid,
-  type Vec,
-  type WireSegment,
+  makePortRef
+  
+  
+  
+  
+  
+  
+  
 } from '@protopulse/graph';
+import { pinWorldPosition, tessellateSymbol  } from '@protopulse/renderer';
+
+import type {DesignGraph, OpBody, PortRef, SymbolPlacement, Uuid, Vec, WireSegment} from '@protopulse/graph';
 import type { Part, PartDb } from '@protopulse/parts';
-import { pinWorldPosition, tessellateSymbol, type PickHit } from '@protopulse/renderer';
+import type {PickHit} from '@protopulse/renderer';
 
 /**
  * Editor tool state machines — pure logic, no DOM, unit-tested in node.

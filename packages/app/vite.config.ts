@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
 
 /**
  * Workspace TS sources resolve directly (each @protopulse/* package's

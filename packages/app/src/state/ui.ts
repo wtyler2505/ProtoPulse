@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+
 import type { Vec } from '@protopulse/graph';
 
 /**
@@ -45,15 +46,15 @@ export const useUi = create<UiState>()((set, get) => ({
   cameraCommand: null,
   cameraCommandSeq: 0,
 
-  setTool: (tool) => set({ tool, placePartId: null }),
-  startPlace: (partId) => set({ tool: 'place', placePartId: partId }),
-  setTab: (tab) => set({ activeTab: tab }),
-  setCursorWorld: (v) => set({ cursorWorld: v }),
-  openConcept: (slug) => set({ conceptSlug: slug }),
-  closeConcept: () => set({ conceptSlug: null }),
-  setHighlight: (ids) => set({ highlight: ids }),
+  setTool: (tool) => { set({ tool, placePartId: null }); },
+  startPlace: (partId) => { set({ tool: 'place', placePartId: partId }); },
+  setTab: (tab) => { set({ activeTab: tab }); },
+  setCursorWorld: (v) => { set({ cursorWorld: v }); },
+  openConcept: (slug) => { set({ conceptSlug: slug }); },
+  closeConcept: () => { set({ conceptSlug: null }); },
+  setHighlight: (ids) => { set({ highlight: ids }); },
   requestFit: () =>
-    set({ cameraCommand: { kind: 'fit' }, cameraCommandSeq: get().cameraCommandSeq + 1 }),
+    { set({ cameraCommand: { kind: 'fit' }, cameraCommandSeq: get().cameraCommandSeq + 1 }); },
   requestCenter: (at) =>
-    set({ cameraCommand: { kind: 'center', at }, cameraCommandSeq: get().cameraCommandSeq + 1 }),
+    { set({ cameraCommand: { kind: 'center', at }, cameraCommandSeq: get().cameraCommandSeq + 1 }); },
 }));

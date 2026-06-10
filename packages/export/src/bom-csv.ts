@@ -1,6 +1,7 @@
+import { compareRefs } from './kicad-netlist.js';
+
 import type { DesignGraph } from '@protopulse/graph';
 import type { PartDb } from '@protopulse/parts';
-import { compareRefs } from './kicad-netlist.js';
 
 /**
  * CSV BOM, grouped by (partId, value). RFC 4180 quoting; deterministic

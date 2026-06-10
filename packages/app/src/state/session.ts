@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { runErc  } from '@protopulse/erc';
 import {
   applyOp,
   BranchLog,
@@ -7,15 +7,19 @@ import {
   invertOp,
   MAIN_BRANCH,
   materialize,
-  newUuid,
-  type DesignBundle,
-  type DesignGraph,
-  type GraphDelta,
-  type OpBody,
-  type OpMeta,
+  newUuid
+  
+  
+  
+  
+  
 } from '@protopulse/graph';
-import { runErc, type Finding } from '@protopulse/erc';
-import { seedPartDb, type PartDb } from '@protopulse/parts';
+import { seedPartDb  } from '@protopulse/parts';
+import { create } from 'zustand';
+
+import type {Finding} from '@protopulse/erc';
+import type {DesignBundle, DesignGraph, GraphDelta, OpBody, OpMeta} from '@protopulse/graph';
+import type {PartDb} from '@protopulse/parts';
 
 /**
  * The design session. The BranchLog is mutable, so it lives inside a

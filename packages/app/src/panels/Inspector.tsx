@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import type { Component, Net } from '@protopulse/graph';
+
 import { getGraph, partDb, useSession } from '../state/session.js';
+
+import type { Component, Net } from '@protopulse/graph';
 
 /** Selection details: ref, part, value, DNP, and the nets it touches. */
 
@@ -20,7 +22,7 @@ function NetRow({ net }: { net: Net }) {
       <input
         className="net-name-input"
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        onChange={(e) => { setName(e.target.value); }}
         onBlur={rename}
         onKeyDown={(e) => {
           if (e.key === 'Enter') rename();
@@ -65,7 +67,7 @@ function ComponentInspector({ component }: { component: Component }) {
             className="value-input"
             value={value}
             placeholder="e.g. 10k"
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => { setValue(e.target.value); }}
             onBlur={commitValue}
             onKeyDown={(e) => {
               if (e.key === 'Enter') commitValue();

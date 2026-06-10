@@ -1,14 +1,18 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+
 import { load as parseYaml } from 'js-yaml';
+
 import {
   ConceptFrontmatterSchema,
   DeckSchema,
-  TrackStepSchema,
-  type ConceptArticle,
-  type Deck,
-  type TrackStep,
+  TrackStepSchema
+  
+  
+  
 } from './schemas.js';
+
+import type {ConceptArticle, Deck, TrackStep} from './schemas.js';
 
 /**
  * Loaders. The parse* functions are pure (string in, validated value
@@ -27,13 +31,13 @@ export function parseDeck(json: string): Deck {
 
 /** Hand-rolled frontmatter split: leading `---` block, YAML inside. */
 export function parseConceptFrontmatter(md: string): ConceptArticle {
-  const normalized = md.replace(/^﻿/, '');
+  const normalized = md.replace(/^\uFEFF/, '');
   if (!normalized.startsWith('---\n') && !normalized.startsWith('---\r\n')) {
     throw new Error('concept article must start with a --- frontmatter block');
   }
   const afterOpen = normalized.replace(/^---\r?\n/, '');
-  const close = afterOpen.match(/\r?\n---[ \t]*(\r?\n|$)/);
-  if (!close || close.index === undefined) {
+  const close = /\r?\n---[ \t]*(\r?\n|$)/.exec(afterOpen);
+  if (close?.index === undefined) {
     throw new Error('concept article frontmatter block is not closed with ---');
   }
   const yamlText = afterOpen.slice(0, close.index);

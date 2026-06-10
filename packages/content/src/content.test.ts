@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { ERC_CODES } from '@protopulse/erc';
+import { describe, expect, it } from 'vitest';
+
 import { loadConceptDir, loadDeckFile, loadTrackDir, parseConceptFrontmatter, parseDeck, parseTrackStep } from './load.js';
 
 // packages/content/src → repo root.
@@ -136,7 +138,7 @@ describe('track 01 first-light', () => {
   it('steps 2–5 carry the machine-checkable erc: clean goal', () => {
     for (const step of steps.slice(1)) {
       const hasErcClean = step.goal.some(
-        (g) => typeof g === 'object' && g['erc'] === 'clean',
+        (g) => typeof g === 'object' && g.erc === 'clean',
       );
       expect(hasErcClean, `${step.id} must gate on erc: clean`).toBe(true);
     }

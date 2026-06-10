@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+
 import { materialize } from './materialize.js';
-import type { OpEnvelope } from './ops.js';
 import { compareEnvelopes, opEnvelopeSchema, opId } from './ops.js';
-import { envelopes, ledCircuitOps } from './test-helpers.js';
 import { graphFromJson, graphToJson } from './store/serialize.js';
+import { envelopes, ledCircuitOps } from './test-helpers.js';
+
+import type { OpEnvelope } from './ops.js';
 
 /** Deterministic shuffle (LCG) so failures reproduce. */
 function shuffled<T>(items: readonly T[], seed: number): T[] {
@@ -163,8 +165,8 @@ describe('materialize', () => {
       const compIds = ['x1', 'x2', 'x3', 'x4'];
       const netIds = ['m1', 'm2', 'm3'];
       for (let i = 0; i < 60; i++) {
-        const c = compIds[rand(compIds.length)] as string;
-        const n = netIds[rand(netIds.length)] as string;
+        const c = compIds[rand(compIds.length)]!;
+        const n = netIds[rand(netIds.length)]!;
         const pick = rand(7);
         if (pick === 0) {
           ops.push({ kind: 'add_component', id: c, ref: `R${c}`, partId: 'p1', partRev: 1 } as const);
@@ -185,7 +187,7 @@ describe('materialize', () => {
             mirror: false,
           } as const);
         } else {
-          ops.push({ kind: 'merge_nets', survivor: n, absorbed: netIds[rand(netIds.length)] as string } as const);
+          ops.push({ kind: 'merge_nets', survivor: n, absorbed: netIds[rand(netIds.length)]! } as const);
         }
       }
       const { violations } = materialize(envelopes([...ops]));

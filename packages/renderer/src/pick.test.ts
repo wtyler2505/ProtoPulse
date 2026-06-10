@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
 import { SCHEMATIC_GRID } from '@protopulse/graph';
+import { describe, expect, it } from 'vitest';
+
 import { PickIndex } from './pick.js';
-import { SceneGraph, type SceneNode } from './scene.js';
+import { SceneGraph  } from './scene.js';
+
+import type {SceneNode} from './scene.js';
 
 const G = SCHEMATIC_GRID;
 

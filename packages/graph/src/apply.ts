@@ -1,6 +1,7 @@
+import { cloneGraph, insertPortSorted, netOfPort, parsePortRef } from './types.js';
+
 import type { OpBody } from './ops.js';
 import type { DesignGraph, Net, Uuid } from './types.js';
-import { cloneGraph, insertPortSorted, netOfPort, parsePortRef } from './types.js';
 
 /**
  * Applying an op mutates a draft graph. A failed op is a no-op with a

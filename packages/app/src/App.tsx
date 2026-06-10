@@ -1,8 +1,7 @@
 import { MM } from '@protopulse/graph';
+
 import { CanvasHost } from './editor/CanvasHost.js';
 import { deleteSelectionOps } from './editor/tools.js';
-import { getFindings, getGraph, getOpCount, useSession } from './state/session.js';
-import { useUi, type TabId } from './state/ui.js';
 import { BranchPanel } from './panels/BranchPanel.js';
 import { ConceptViewer } from './panels/ConceptViewer.js';
 import { DraftsmanPanel } from './panels/DraftsmanPanel.js';
@@ -10,6 +9,10 @@ import { ErcPanel } from './panels/ErcPanel.js';
 import { ExportPanel } from './panels/ExportPanel.js';
 import { Inspector } from './panels/Inspector.js';
 import { Palette } from './panels/Palette.js';
+import { getFindings, getGraph, getOpCount, useSession } from './state/session.js';
+import { useUi  } from './state/ui.js';
+
+import type {TabId} from './state/ui.js';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'inspector', label: 'Inspector' },
@@ -44,14 +47,14 @@ function Toolbar() {
       <button
         type="button"
         className={tool === 'select' ? 'active' : ''}
-        onClick={() => setTool('select')}
+        onClick={() => { setTool('select'); }}
       >
         Select
       </button>
       <button
         type="button"
         className={tool === 'wire' ? 'active' : ''}
-        onClick={() => setTool('wire')}
+        onClick={() => { setTool('wire'); }}
       >
         Wire
       </button>
@@ -113,7 +116,7 @@ function SidePanel() {
             key={tab.id}
             type="button"
             className={`tab${activeTab === tab.id ? ' active' : ''}`}
-            onClick={() => setTab(tab.id)}
+            onClick={() => { setTab(tab.id); }}
           >
             {tab.label}
           </button>

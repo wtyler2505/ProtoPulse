@@ -1,6 +1,7 @@
+import { netOfPort, parsePortRef } from './types.js';
+
 import type { OpBody } from './ops.js';
 import type { DesignGraph, Net, Uuid, WireSegment } from './types.js';
-import { netOfPort, parsePortRef } from './types.js';
 
 /**
  * Undo emits the inverse op — the log is forward-only and honest about

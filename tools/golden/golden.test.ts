@@ -1,11 +1,12 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+
+import { runErc } from '@protopulse/erc';
+import { exportBomCsv, exportKicadNetlist } from '@protopulse/export';
+import { materialize, opEnvelopeSchema } from '@protopulse/graph';
+import { seedPartDb } from '@protopulse/parts';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { materialize, opEnvelopeSchema } from '@protopulse/graph';
-import { runErc } from '@protopulse/erc';
-import { seedPartDb } from '@protopulse/parts';
-import { exportBomCsv, exportKicadNetlist } from '@protopulse/export';
 
 /**
  * Golden-file tests: known op-logs → known exports, byte-exact.
