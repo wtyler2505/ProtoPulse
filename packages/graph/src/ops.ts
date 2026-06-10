@@ -65,9 +65,13 @@ const zConstraintBody: z.ZodType<ConstraintBody> = z.discriminatedUnion('kind', 
 
 // ── Graph ops ────────────────────────────────────────────────────────
 
+// Component IDs are the left half of PortRefs (componentId:pinKey), so
+// they must never contain the separator.
+const zComponentId = z.string().min(1).regex(/^[^:]+$/, 'component id must not contain ":"');
+
 const zAddComponent = z.object({
   kind: z.literal('add_component'),
-  id: zUuid,
+  id: zComponentId,
   ref: z.string().min(1),
   partId: zUuid,
   partRev: z.number().int().nonnegative(),

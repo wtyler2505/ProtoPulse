@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1781093938570" clover="3.2.0">
-  <project timestamp="1781093938570" name="All files">
-    <metrics statements="651" coveredstatements="646" conditionals="507" coveredconditionals="460" methods="74" coveredmethods="73" elements="1232" coveredelements="1179" complexity="0" loc="651" ncloc="651" packages="2" files="13" classes="13"/>
+<coverage generated="1781094564006" clover="3.2.0">
+  <project timestamp="1781094564006" name="All files">
+    <metrics statements="652" coveredstatements="647" conditionals="507" coveredconditionals="460" methods="74" coveredmethods="73" elements="1233" coveredelements="1180" complexity="0" loc="652" ncloc="652" packages="2" files="13" classes="13"/>
     <package name="src">
-      <metrics statements="593" coveredstatements="588" conditionals="493" coveredconditionals="446" methods="62" coveredmethods="61"/>
+      <metrics statements="594" coveredstatements="589" conditionals="493" coveredconditionals="446" methods="62" coveredmethods="61"/>
       <file name="apply.ts" path="/home/user/ProtoPulse/packages/graph/src/apply.ts">
         <metrics statements="135" coveredstatements="135" conditionals="110" coveredconditionals="110" methods="9" coveredmethods="9"/>
         <line num="21" count="403" type="stmt"/>
@@ -520,7 +520,7 @@
         <line num="283" count="1" type="stmt"/>
       </file>
       <file name="ops.ts" path="/home/user/ProtoPulse/packages/graph/src/ops.ts">
-        <metrics statements="36" coveredstatements="36" conditionals="6" coveredconditionals="6" methods="3" coveredmethods="3"/>
+        <metrics statements="37" coveredstatements="37" conditionals="6" coveredconditionals="6" methods="3" coveredmethods="3"/>
         <line num="23" count="7" type="stmt"/>
         <line num="24" count="7" type="stmt"/>
         <line num="25" count="7" type="stmt"/>
@@ -529,34 +529,35 @@
         <line num="33" count="7" type="stmt"/>
         <line num="35" count="7" type="stmt"/>
         <line num="40" count="7" type="stmt"/>
-        <line num="68" count="7" type="stmt"/>
-        <line num="77" count="7" type="stmt"/>
-        <line num="79" count="7" type="stmt"/>
-        <line num="94" count="7" type="stmt"/>
-        <line num="101" count="7" type="stmt"/>
-        <line num="103" count="7" type="stmt"/>
-        <line num="109" count="7" type="stmt"/>
-        <line num="116" count="7" type="stmt"/>
-        <line num="117" count="7" type="stmt"/>
-        <line num="119" count="7" type="stmt"/>
-        <line num="125" count="7" type="stmt"/>
+        <line num="70" count="7" type="stmt"/>
+        <line num="72" count="7" type="stmt"/>
+        <line num="81" count="7" type="stmt"/>
+        <line num="83" count="7" type="stmt"/>
+        <line num="98" count="7" type="stmt"/>
+        <line num="105" count="7" type="stmt"/>
+        <line num="107" count="7" type="stmt"/>
+        <line num="113" count="7" type="stmt"/>
+        <line num="120" count="7" type="stmt"/>
+        <line num="121" count="7" type="stmt"/>
+        <line num="123" count="7" type="stmt"/>
         <line num="129" count="7" type="stmt"/>
-        <line num="136" count="7" type="stmt"/>
-        <line num="144" count="7" type="stmt"/>
-        <line num="146" count="7" type="stmt"/>
-        <line num="154" count="7" type="stmt"/>
-        <line num="162" count="7" type="stmt"/>
-        <line num="169" count="7" type="stmt"/>
-        <line num="180" count="7" type="stmt"/>
-        <line num="181" count="7" type="stmt"/>
-        <line num="186" count="7" type="stmt"/>
-        <line num="217" count="7" type="stmt"/>
-        <line num="219" count="3" type="stmt"/>
-        <line num="225" count="7" type="stmt"/>
-        <line num="272" count="7" type="stmt"/>
-        <line num="289" count="1158" type="stmt"/>
-        <line num="294" count="2859" type="cond" truecount="2" falsecount="0"/>
-        <line num="295" count="4" type="cond" truecount="4" falsecount="0"/>
+        <line num="133" count="7" type="stmt"/>
+        <line num="140" count="7" type="stmt"/>
+        <line num="148" count="7" type="stmt"/>
+        <line num="150" count="7" type="stmt"/>
+        <line num="158" count="7" type="stmt"/>
+        <line num="166" count="7" type="stmt"/>
+        <line num="173" count="7" type="stmt"/>
+        <line num="184" count="7" type="stmt"/>
+        <line num="185" count="7" type="stmt"/>
+        <line num="190" count="7" type="stmt"/>
+        <line num="221" count="7" type="stmt"/>
+        <line num="223" count="3" type="stmt"/>
+        <line num="229" count="7" type="stmt"/>
+        <line num="276" count="7" type="stmt"/>
+        <line num="293" count="1158" type="stmt"/>
+        <line num="298" count="2859" type="cond" truecount="2" falsecount="0"/>
+        <line num="299" count="4" type="cond" truecount="4" falsecount="0"/>
       </file>
       <file name="types.ts" path="/home/user/ProtoPulse/packages/graph/src/types.ts">
         <metrics statements="20" coveredstatements="20" conditionals="10" coveredconditionals="10" methods="6" coveredmethods="6"/>
