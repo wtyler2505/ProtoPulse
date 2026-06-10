@@ -154,7 +154,11 @@ const zSetWireGeometry = z.object({
   segments: z.array(zWireSegment),
 });
 
-// ── PCB view ops (typed in the union; apply() reports unimplemented) ──
+// ── PCB view ops ─────────────────────────────────────────────────────
+
+// Trace/via IDs are pre-allocated by the op (self-contained ops rule)
+// and colon-free like component IDs, keeping every entity ID grep-safe.
+const zPcbGeomId = z.string().min(1).regex(/^[^:]+$/, 'pcb geometry id must not contain ":"');
 
 const zPlaceFootprint = z.object({
   kind: z.literal('place_footprint'),
@@ -164,21 +168,36 @@ const zPlaceFootprint = z.object({
   side: z.union([z.literal('top'), z.literal('bottom')]),
   locked: z.boolean(),
 });
+const zMoveFootprint = z.object({
+  kind: z.literal('move_footprint'),
+  componentId: zUuid,
+  at: zVec,
+  rotMilli: z.number().int().min(0).max(359999),
+  side: z.union([z.literal('top'), z.literal('bottom')]),
+  locked: z.boolean(),
+});
+/** Inverse of a first footprint placement — op set stays closed under inversion. */
+const zUnplaceFootprint = z.object({ kind: z.literal('unplace_footprint'), componentId: zUuid });
+
 const zRouteTrace = z.object({
   kind: z.literal('route_trace'),
+  id: zPcbGeomId,
   netId: zUuid,
   layerId: z.string(),
   widthNm: zNm,
   path: z.array(zVec).min(2),
 });
+const zRemoveTrace = z.object({ kind: z.literal('remove_trace'), id: zUuid });
 const zPlaceVia = z.object({
   kind: z.literal('place_via'),
+  id: zPcbGeomId,
   netId: zUuid,
   at: zVec,
   drillNm: zNm,
   padNm: zNm,
   span: z.tuple([z.string(), z.string()]),
 });
+const zRemoveVia = z.object({ kind: z.literal('remove_via'), id: zUuid });
 
 // ── Meta ops ─────────────────────────────────────────────────────────
 
@@ -210,8 +229,12 @@ export type OpBody =
   | z.infer<typeof zUnplaceSymbol>
   | z.infer<typeof zSetWireGeometry>
   | z.infer<typeof zPlaceFootprint>
+  | z.infer<typeof zMoveFootprint>
+  | z.infer<typeof zUnplaceFootprint>
   | z.infer<typeof zRouteTrace>
+  | z.infer<typeof zRemoveTrace>
   | z.infer<typeof zPlaceVia>
+  | z.infer<typeof zRemoveVia>
   | z.infer<typeof zCheckpoint>
   | z.infer<typeof zAnnotate>
   | z.infer<typeof zSetDesignMeta>
@@ -245,8 +268,12 @@ export const opBodySchema: z.ZodType<OpBody> = z.union([
     zUnplaceSymbol,
     zSetWireGeometry,
     zPlaceFootprint,
+    zMoveFootprint,
+    zUnplaceFootprint,
     zRouteTrace,
+    zRemoveTrace,
     zPlaceVia,
+    zRemoveVia,
     zCheckpoint,
     zAnnotate,
     zSetDesignMeta,

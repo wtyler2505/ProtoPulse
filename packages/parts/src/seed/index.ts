@@ -1,4 +1,4 @@
-import { definePart, G, passivePins, pin, twoPinSymbol } from './helpers.js';
+import { definePart, footprint0805, footprintDip8, footprintSot23, G, passivePins, pin, twoPinSymbol } from './helpers.js';
 
 import type { Part } from '../types.js';
 
@@ -10,6 +10,10 @@ import type { Part } from '../types.js';
  * Pin NUMBERS appear only where verified against a datasheet (see
  * inbox/2026-06-10-m1-seed-part-pinouts.md); everything else carries
  * functional pin names and provenance: unverified.
+ *
+ * Footprints below are generic IPC-class footprints, unverified —
+ * replace per-MPN before fab. Parts with no board-ready package
+ * (battery, headers, USB-C stub, pushbutton, power rails) carry none.
  */
 
 const resistor = definePart({
@@ -17,6 +21,7 @@ const resistor = definePart({
   name: 'Resistor',
   refPrefix: 'R',
   class: 'resistor',
+  footprint: footprint0805(), // generic IPC-class footprint, unverified — replace per-MPN before fab
   pins: passivePins(['1', '2']),
   symbol: twoPinSymbol([
     { kind: 'rect', x: -G, y: -Math.round(G / 2), w: 2 * G, h: G },
@@ -30,6 +35,7 @@ const capacitor = definePart({
   name: 'Capacitor (ceramic)',
   refPrefix: 'C',
   class: 'capacitor',
+  footprint: footprint0805(), // generic IPC-class footprint, unverified — replace per-MPN before fab
   pins: passivePins(['1', '2']),
   symbol: twoPinSymbol([
     { kind: 'line', a: { x: -2 * G, y: 0 }, b: { x: -Math.round(G / 4), y: 0 } },
@@ -44,6 +50,7 @@ const capacitorElectrolytic = definePart({
   name: 'Capacitor (electrolytic, polarized)',
   refPrefix: 'C',
   class: 'capacitor',
+  footprint: footprint0805(), // generic IPC-class footprint, unverified — replace per-MPN before fab
   pins: passivePins(['+', '−']),
   symbol: twoPinSymbol(
     [
@@ -73,6 +80,7 @@ const led = definePart({
   name: 'LED',
   refPrefix: 'D',
   class: 'led',
+  footprint: footprint0805(['A', 'K']), // generic IPC-class footprint, unverified — replace per-MPN before fab
   pins: passivePins(['A', 'K'], ['A', 'K']),
   symbol: diodeSymbol(),
   parametrics: { currentDrawA: 0.02 },
@@ -83,6 +91,7 @@ const diode1n4148 = definePart({
   name: 'Small-signal diode 1N4148',
   refPrefix: 'D',
   class: 'diode',
+  footprint: footprint0805(['A', 'K']), // generic IPC-class footprint, unverified — replace per-MPN before fab
   mpn: '1N4148',
   pins: passivePins(['A', 'K'], ['A', 'K']),
   symbol: diodeSymbol(),
@@ -93,6 +102,7 @@ const schottky1n5819 = definePart({
   name: 'Schottky diode 1N5819',
   refPrefix: 'D',
   class: 'diode',
+  footprint: footprint0805(['A', 'K']), // generic IPC-class footprint, unverified — replace per-MPN before fab
   mpn: '1N5819',
   pins: passivePins(['A', 'K'], ['A', 'K']),
   symbol: diodeSymbol(),
@@ -103,6 +113,7 @@ const tvsUni = definePart({
   name: 'TVS diode (unidirectional)',
   refPrefix: 'D',
   class: 'diode',
+  footprint: footprint0805(['A', 'K']), // generic IPC-class footprint, unverified — replace per-MPN before fab
   pins: passivePins(['A', 'K'], ['A', 'K']),
   symbol: diodeSymbol(),
 });
@@ -112,6 +123,9 @@ const bat54s = definePart({
   name: 'BAT54S dual series Schottky',
   refPrefix: 'D',
   class: 'diode',
+  // generic IPC-class footprint, unverified — replace per-MPN before fab
+  // (SOT-23 pad order matches the verified pin map: 1=A1, 2=K2, 3=COM).
+  footprint: footprintSot23(['1', '2', '3']),
   mpn: 'BAT54S',
   datasheetUrl: 'https://www.vishay.com/docs/86410/bat54_bat54a_bat54c_bat54s.pdf',
   pins: [
@@ -140,6 +154,9 @@ const npn2n3904 = definePart({
   name: 'NPN transistor 2N3904',
   refPrefix: 'Q',
   class: 'transistor',
+  // generic IPC-class footprint, unverified — replace per-MPN before fab
+  // (SOT-23 B/E/C order follows the common MMBT3904 convention).
+  footprint: footprintSot23(['B', 'E', 'C']),
   mpn: '2N3904',
   pins: [pin('B', 'B', 'passive'), pin('C', 'C', 'passive'), pin('E', 'E', 'passive')],
   symbol: {
@@ -163,6 +180,9 @@ const nmosAo3400 = definePart({
   name: 'N-MOSFET (AO3400-class, logic level)',
   refPrefix: 'Q',
   class: 'transistor',
+  // generic IPC-class footprint, unverified — replace per-MPN before fab
+  // (SOT-23 G/S/D order follows the common small-signal MOSFET convention).
+  footprint: footprintSot23(['G', 'S', 'D']),
   mpn: 'AO3400A',
   pins: [pin('G', 'G', 'passive'), pin('D', 'D', 'passive'), pin('S', 'S', 'passive')],
   symbol: {
@@ -187,6 +207,9 @@ const ne555 = definePart({
   name: 'NE555 timer',
   refPrefix: 'U',
   class: 'ic',
+  // generic IPC-class footprint, unverified — replace per-MPN before fab
+  // (DIP-8: pins 1–4 down the left side, 5–8 up the right, per datasheet).
+  footprint: footprintDip8(),
   mpn: 'NE555',
   manufacturer: 'Texas Instruments',
   datasheetUrl: 'https://www.ti.com/lit/ds/symlink/ne555.pdf',

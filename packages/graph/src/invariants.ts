@@ -77,13 +77,31 @@ export function validateGraph(graph: DesignGraph, opts: InvariantOpts = {}): Inv
     }
   }
 
-  // 4. Wire geometry must sit on a live net.
+  // 4. Wire/trace/via geometry must sit on a live net.
   for (const netId of graph.schematic.wires.keys()) {
     if (!graph.nets.has(netId)) {
       out.push({
         code: 'geometry_on_dead_net',
         message: `wire geometry attached to missing net ${netId}`,
         entityId: netId,
+      });
+    }
+  }
+  for (const trace of graph.pcb.traces.values()) {
+    if (!graph.nets.has(trace.netId)) {
+      out.push({
+        code: 'geometry_on_dead_net',
+        message: `trace ${trace.id} attached to missing net ${trace.netId}`,
+        entityId: trace.id,
+      });
+    }
+  }
+  for (const via of graph.pcb.vias.values()) {
+    if (!graph.nets.has(via.netId)) {
+      out.push({
+        code: 'geometry_on_dead_net',
+        message: `via ${via.id} attached to missing net ${via.netId}`,
+        entityId: via.id,
       });
     }
   }
@@ -94,6 +112,15 @@ export function validateGraph(graph: DesignGraph, opts: InvariantOpts = {}): Inv
       out.push({
         code: 'placement_without_component',
         message: `schematic placement for missing component ${componentId}`,
+        entityId: componentId,
+      });
+    }
+  }
+  for (const componentId of graph.pcb.placements.keys()) {
+    if (!graph.components.has(componentId)) {
+      out.push({
+        code: 'placement_without_component',
+        message: `footprint placement for missing component ${componentId}`,
         entityId: componentId,
       });
     }
@@ -124,6 +151,33 @@ export function validateGraph(graph: DesignGraph, opts: InvariantOpts = {}): Inv
         });
         break;
       }
+    }
+  }
+  for (const [componentId, placement] of graph.pcb.placements) {
+    if (!Number.isInteger(placement.at.x) || !Number.isInteger(placement.at.y)) {
+      out.push({
+        code: 'non_integer_coordinate',
+        message: `footprint placement of ${componentId} has non-integer coordinates`,
+        entityId: componentId,
+      });
+    }
+  }
+  for (const trace of graph.pcb.traces.values()) {
+    if (trace.path.some((p) => !Number.isInteger(p.x) || !Number.isInteger(p.y))) {
+      out.push({
+        code: 'non_integer_coordinate',
+        message: `trace ${trace.id} has non-integer coordinates`,
+        entityId: trace.id,
+      });
+    }
+  }
+  for (const via of graph.pcb.vias.values()) {
+    if (!Number.isInteger(via.at.x) || !Number.isInteger(via.at.y)) {
+      out.push({
+        code: 'non_integer_coordinate',
+        message: `via ${via.id} has non-integer coordinates`,
+        entityId: via.id,
+      });
     }
   }
 

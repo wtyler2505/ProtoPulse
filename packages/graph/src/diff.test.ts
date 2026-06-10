@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { diff, isEmptyDelta, netFingerprint } from './diff.js';
-import { buildGraph, FIX, ledCircuitOps } from './test-helpers.js';
+import { buildGraph, FIX, ledCircuitOps, pcbViewOps } from './test-helpers.js';
 
 import type { OpBody } from './ops.js';
 
@@ -140,6 +140,73 @@ describe('diff — coverage edges', () => {
     ]);
     const b = buildGraph(ledCircuitOps());
     expect(diff(a, b).schematicView.wiresChanged).toEqual([FIX.netA]);
+  });
+});
+
+describe('diff — PCB view', () => {
+  const moveR1 = (patch: Partial<{ x: number; y: number; rotMilli: number; side: 'top' | 'bottom'; locked: boolean }>): OpBody => ({
+    kind: 'move_footprint',
+    componentId: FIX.r1,
+    at: { x: patch.x ?? 0, y: patch.y ?? 0 },
+    rotMilli: patch.rotMilli ?? 0,
+    side: patch.side ?? 'top',
+    locked: patch.locked ?? false,
+  });
+
+  it('identical pcb views produce an empty delta', () => {
+    const ops = [...ledCircuitOps(), ...pcbViewOps()];
+    expect(isEmptyDelta(diff(buildGraph(ops), buildGraph(ops)))).toBe(true);
+  });
+
+  it('detects footprint placement and unplacement', () => {
+    const a = buildGraph(ledCircuitOps());
+    const b = buildGraph([...ledCircuitOps(), ...pcbViewOps()]);
+    const d = diff(a, b);
+    expect(d.pcbView.placed.sort()).toEqual([FIX.led, FIX.r1]);
+    expect(isEmptyDelta(d)).toBe(false);
+    expect(diff(b, a).pcbView.unplaced.sort()).toEqual([FIX.led, FIX.r1]);
+  });
+
+  it('detects footprint moves on every field: x, y, rotation, side, lock', () => {
+    const base = [...ledCircuitOps(), ...pcbViewOps()];
+    const a = buildGraph(base);
+    const cases: Parameters<typeof moveR1>[0][] = [
+      { x: 1_000_000 },
+      { y: 1_000_000 },
+      { rotMilli: 90_000 },
+      { side: 'bottom' },
+      { locked: true },
+    ];
+    for (const patch of cases) {
+      const b = buildGraph([...base, moveR1(patch)]);
+      expect(diff(a, b).pcbView.moved, JSON.stringify(patch)).toEqual([FIX.r1]);
+    }
+  });
+
+  it('detects added and removed traces and vias', () => {
+    const a = buildGraph(ledCircuitOps());
+    const b = buildGraph([...ledCircuitOps(), ...pcbViewOps()]);
+    const d = diff(a, b);
+    expect(d.pcbView.tracesAdded).toEqual(['t1']);
+    expect(d.pcbView.viasAdded).toEqual(['v1']);
+    const back = diff(b, a);
+    expect(back.pcbView.tracesRemoved).toEqual(['t1']);
+    expect(back.pcbView.viasRemoved).toEqual(['v1']);
+  });
+
+  it('a trace changed under the same id reads as removed + added', () => {
+    const a = buildGraph([...ledCircuitOps(), ...pcbViewOps()]);
+    const b = buildGraph([
+      ...ledCircuitOps(),
+      ...pcbViewOps(),
+      { kind: 'remove_trace', id: 't1' },
+      { kind: 'route_trace', id: 't1', netId: FIX.netB, layerId: 'F.Cu', widthNm: 300_000, path: [{ x: 0, y: 0 }, { x: 5_000_000, y: 0 }] },
+    ]);
+    const d = diff(a, b);
+    expect(d.pcbView.tracesAdded).toEqual(['t1']);
+    expect(d.pcbView.tracesRemoved).toEqual(['t1']);
+    expect(d.pcbView.viasAdded).toEqual([]);
+    expect(d.pcbView.viasRemoved).toEqual([]);
   });
 });
 

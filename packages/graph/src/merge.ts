@@ -74,6 +74,17 @@ export function threeWayMerge(
         mirror: placement.mirror,
       });
     }
+    const footprint = theirs.pcb.placements.get(id);
+    if (footprint) {
+      autoOps.push({
+        kind: 'place_footprint',
+        componentId: id,
+        at: { ...footprint.at },
+        rotMilli: footprint.rotMilli,
+        side: footprint.side,
+        locked: footprint.locked,
+      });
+    }
   }
 
   // ── Components removed in theirs ──
@@ -249,6 +260,64 @@ export function threeWayMerge(
       kind: 'set_wire_geometry',
       netId,
       segments: segments.map((s) => ({ a: { ...s.a }, b: { ...s.b } })),
+    });
+  }
+
+  // PCB geometry mirrors the schematic rules: theirs-only changes replay,
+  // ours wins geometry races.
+  for (const id of baseToTheirs.pcbView.moved) {
+    if (!ours.pcb.placements.has(id)) continue;
+    if (baseToOurs.pcbView.moved.includes(id)) continue;
+    const p = theirs.pcb.placements.get(id);
+    if (!p) continue;
+    autoOps.push({
+      kind: 'move_footprint',
+      componentId: id,
+      at: { ...p.at },
+      rotMilli: p.rotMilli,
+      side: p.side,
+      locked: p.locked,
+    });
+  }
+  // Removals before additions so a changed trace/via (remove+add, same id)
+  // replays in an order apply() accepts.
+  const oursTouchedTraces = new Set([...baseToOurs.pcbView.tracesAdded, ...baseToOurs.pcbView.tracesRemoved]);
+  for (const id of baseToTheirs.pcbView.tracesRemoved) {
+    if (!ours.pcb.traces.has(id) || oursTouchedTraces.has(id)) continue;
+    autoOps.push({ kind: 'remove_trace', id });
+  }
+  for (const id of baseToTheirs.pcbView.tracesAdded) {
+    if (oursTouchedTraces.has(id)) continue;
+    const t = theirs.pcb.traces.get(id);
+    if (!t || !ours.nets.has(t.netId)) continue;
+    if (ours.pcb.traces.has(id) && !baseToTheirs.pcbView.tracesRemoved.includes(id)) continue;
+    autoOps.push({
+      kind: 'route_trace',
+      id: t.id,
+      netId: t.netId,
+      layerId: t.layerId,
+      widthNm: t.widthNm,
+      path: t.path.map((p) => ({ ...p })),
+    });
+  }
+  const oursTouchedVias = new Set([...baseToOurs.pcbView.viasAdded, ...baseToOurs.pcbView.viasRemoved]);
+  for (const id of baseToTheirs.pcbView.viasRemoved) {
+    if (!ours.pcb.vias.has(id) || oursTouchedVias.has(id)) continue;
+    autoOps.push({ kind: 'remove_via', id });
+  }
+  for (const id of baseToTheirs.pcbView.viasAdded) {
+    if (oursTouchedVias.has(id)) continue;
+    const v = theirs.pcb.vias.get(id);
+    if (!v || !ours.nets.has(v.netId)) continue;
+    if (ours.pcb.vias.has(id) && !baseToTheirs.pcbView.viasRemoved.includes(id)) continue;
+    autoOps.push({
+      kind: 'place_via',
+      id: v.id,
+      netId: v.netId,
+      at: { ...v.at },
+      drillNm: v.drillNm,
+      padNm: v.padNm,
+      span: [v.span[0], v.span[1]],
     });
   }
 

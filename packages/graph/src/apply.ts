@@ -13,7 +13,7 @@ export type ApplyResult =
   | { ok: false; error: string };
 
 export interface ApplyWarning {
-  code: 'net_gc' | 'wire_gc';
+  code: 'net_gc' | 'wire_gc' | 'trace_gc' | 'via_gc';
   message: string;
   netId?: Uuid;
 }
@@ -23,12 +23,24 @@ function autoNetName(graph: DesignGraph): string {
   return `N$${String(graph.counters.net)}`;
 }
 
-/** Remove a net and its dependent geometry (wires). */
+/** Remove a net and its dependent geometry (wires, traces, vias). */
 function gcNet(graph: DesignGraph, netId: Uuid, warnings: ApplyWarning[]): void {
   graph.nets.delete(netId);
   if (graph.schematic.wires.has(netId)) {
     graph.schematic.wires.delete(netId);
     warnings.push({ code: 'wire_gc', message: `Wire geometry on dead net GC'd`, netId });
+  }
+  for (const [id, trace] of graph.pcb.traces) {
+    if (trace.netId === netId) {
+      graph.pcb.traces.delete(id);
+      warnings.push({ code: 'trace_gc', message: `Trace ${id} on dead net GC'd`, netId });
+    }
+  }
+  for (const [id, via] of graph.pcb.vias) {
+    if (via.netId === netId) {
+      graph.pcb.vias.delete(id);
+      warnings.push({ code: 'via_gc', message: `Via ${id} on dead net GC'd`, netId });
+    }
   }
   warnings.push({ code: 'net_gc', message: `Empty net GC'd`, netId });
 }
@@ -141,6 +153,13 @@ export function applyOp(graph: DesignGraph, op: OpBody): ApplyResult {
         graph.schematic.wires.set(op.survivor, [...survivorWires, ...absorbedWires]);
         graph.schematic.wires.delete(op.absorbed);
       }
+      // PCB geometry follows its copper: re-point absorbed traces/vias.
+      for (const trace of graph.pcb.traces.values()) {
+        if (trace.netId === op.absorbed) trace.netId = op.survivor;
+      }
+      for (const via of graph.pcb.vias.values()) {
+        if (via.netId === op.absorbed) via.netId = op.survivor;
+      }
       graph.nets.delete(op.absorbed);
       return ok();
     }
@@ -227,9 +246,68 @@ export function applyOp(graph: DesignGraph, op: OpBody): ApplyResult {
     }
 
     case 'place_footprint':
-    case 'route_trace':
-    case 'place_via':
-      return fail(`${op.kind}: PCB view ops are unimplemented in M1`);
+    case 'move_footprint': {
+      if (!graph.components.has(op.componentId)) {
+        return fail(`component ${op.componentId} not found`);
+      }
+      if (op.kind === 'move_footprint' && !graph.pcb.placements.has(op.componentId)) {
+        return fail(`component ${op.componentId} has no footprint placement to move`);
+      }
+      graph.pcb.placements.set(op.componentId, {
+        at: { ...op.at },
+        rotMilli: op.rotMilli,
+        side: op.side,
+        locked: op.locked,
+      });
+      return ok();
+    }
+
+    case 'unplace_footprint': {
+      if (!graph.pcb.placements.has(op.componentId)) {
+        return fail(`component ${op.componentId} has no footprint placement`);
+      }
+      graph.pcb.placements.delete(op.componentId);
+      return ok();
+    }
+
+    case 'route_trace': {
+      if (!graph.nets.has(op.netId)) return fail(`net ${op.netId} not found`);
+      if (graph.pcb.traces.has(op.id)) return fail(`trace ${op.id} already exists`);
+      graph.pcb.traces.set(op.id, {
+        id: op.id,
+        netId: op.netId,
+        layerId: op.layerId,
+        widthNm: op.widthNm,
+        path: op.path.map((p) => ({ ...p })),
+      });
+      return ok();
+    }
+
+    case 'remove_trace': {
+      if (!graph.pcb.traces.has(op.id)) return fail(`trace ${op.id} not found`);
+      graph.pcb.traces.delete(op.id);
+      return ok();
+    }
+
+    case 'place_via': {
+      if (!graph.nets.has(op.netId)) return fail(`net ${op.netId} not found`);
+      if (graph.pcb.vias.has(op.id)) return fail(`via ${op.id} already exists`);
+      graph.pcb.vias.set(op.id, {
+        id: op.id,
+        netId: op.netId,
+        at: { ...op.at },
+        drillNm: op.drillNm,
+        padNm: op.padNm,
+        span: [op.span[0], op.span[1]],
+      });
+      return ok();
+    }
+
+    case 'remove_via': {
+      if (!graph.pcb.vias.has(op.id)) return fail(`via ${op.id} not found`);
+      graph.pcb.vias.delete(op.id);
+      return ok();
+    }
 
     case 'checkpoint':
       return ok();

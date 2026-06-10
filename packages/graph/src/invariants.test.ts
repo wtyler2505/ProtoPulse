@@ -51,10 +51,18 @@ describe('validateGraph', () => {
     expect(validateGraph(g).map((v) => v.code)).toContain('geometry_on_dead_net');
   });
 
+  it('flags traces and vias on dead nets', () => {
+    const g = emptyGraph();
+    g.pcb.traces.set('t1', { id: 't1', netId: 'ghost', layerId: 'F.Cu', widthNm: 250000, path: [{ x: 0, y: 0 }, { x: 1, y: 0 }] });
+    g.pcb.vias.set('v1', { id: 'v1', netId: 'ghost', at: { x: 0, y: 0 }, drillNm: 300000, padNm: 600000, span: ['F.Cu', 'B.Cu'] });
+    expect(validateGraph(g).filter((v) => v.code === 'geometry_on_dead_net')).toHaveLength(2);
+  });
+
   it('flags placements without components', () => {
     const g = emptyGraph();
     g.schematic.placements.set('ghost', { at: { x: 0, y: 0 }, rot: 0, mirror: false });
-    expect(validateGraph(g).map((v) => v.code)).toContain('placement_without_component');
+    g.pcb.placements.set('ghost', { at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false });
+    expect(validateGraph(g).filter((v) => v.code === 'placement_without_component')).toHaveLength(2);
   });
 
   it('flags non-integer coordinates in placements and wires', () => {
@@ -68,5 +76,24 @@ describe('validateGraph', () => {
     g.schematic.wires.set('n1', [{ a: { x: 0, y: 0.25 }, b: { x: 1, y: 0 } }]);
     const codes = validateGraph(g).map((v) => v.code);
     expect(codes.filter((c) => c === 'non_integer_coordinate')).toHaveLength(2);
+  });
+
+  it('flags non-integer coordinates in footprints, traces, and vias', () => {
+    const g = buildGraph([
+      { kind: 'add_component', id: 'c1', ref: 'R1', partId: 'p1', partRev: 1 },
+      { kind: 'connect', port: 'c1:1', newNetId: 'n1' },
+      { kind: 'place_footprint', componentId: 'c1', at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+      { kind: 'route_trace', id: 't1', netId: 'n1', layerId: 'F.Cu', widthNm: 250000, path: [{ x: 0, y: 0 }, { x: 1, y: 0 }] },
+      { kind: 'place_via', id: 'v1', netId: 'n1', at: { x: 0, y: 0 }, drillNm: 300000, padNm: 600000, span: ['F.Cu', 'B.Cu'] },
+    ]);
+    expect(validateGraph(g)).toEqual([]);
+    const placement = g.pcb.placements.get('c1');
+    if (placement) placement.at = { x: 0.5, y: 0 };
+    const trace = g.pcb.traces.get('t1');
+    if (trace) trace.path = [{ x: 0, y: 0 }, { x: 1.5, y: 0 }];
+    const via = g.pcb.vias.get('v1');
+    if (via) via.at = { x: 0, y: 0.5 };
+    const codes = validateGraph(g).map((v) => v.code);
+    expect(codes.filter((c) => c === 'non_integer_coordinate')).toHaveLength(3);
   });
 });

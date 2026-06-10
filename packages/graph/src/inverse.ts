@@ -1,7 +1,7 @@
 import { netOfPort, parsePortRef } from './types.js';
 
 import type { OpBody } from './ops.js';
-import type { DesignGraph, Net, Uuid, WireSegment } from './types.js';
+import type { DesignGraph, Net, Trace, Uuid, Via, WireSegment } from './types.js';
 
 /**
  * Undo emits the inverse op — the log is forward-only and honest about
@@ -55,6 +55,9 @@ export function invertOp(before: DesignGraph, op: OpBody): OpBody[] {
       ];
       out.push(...restoreWires(before, op.survivor));
       out.push(...restoreWires(before, op.absorbed));
+      // Merge re-pointed the absorbed net's traces/vias at the survivor;
+      // recreate them on the restored net (same ids, original geometry).
+      out.push(...repointPcbGeometry(before, op.absorbed));
       return out;
     }
 
@@ -126,6 +129,59 @@ export function invertOp(before: DesignGraph, op: OpBody): OpBody[] {
       return [{ kind: 'set_wire_geometry', netId: op.netId, segments: cloneSegments(prev) }];
     }
 
+    case 'place_footprint':
+    case 'move_footprint': {
+      const prev = before.pcb.placements.get(op.componentId);
+      if (!prev) {
+        return op.kind === 'place_footprint'
+          ? [{ kind: 'unplace_footprint', componentId: op.componentId }]
+          : [];
+      }
+      return [
+        {
+          kind: 'move_footprint',
+          componentId: op.componentId,
+          at: { ...prev.at },
+          rotMilli: prev.rotMilli,
+          side: prev.side,
+          locked: prev.locked,
+        },
+      ];
+    }
+
+    case 'unplace_footprint': {
+      const prev = before.pcb.placements.get(op.componentId);
+      if (!prev) return [];
+      return [
+        {
+          kind: 'place_footprint',
+          componentId: op.componentId,
+          at: { ...prev.at },
+          rotMilli: prev.rotMilli,
+          side: prev.side,
+          locked: prev.locked,
+        },
+      ];
+    }
+
+    case 'route_trace':
+      return [{ kind: 'remove_trace', id: op.id }];
+
+    case 'remove_trace': {
+      const trace = before.pcb.traces.get(op.id);
+      if (!trace) return [];
+      return [routeTraceOp(trace)];
+    }
+
+    case 'place_via':
+      return [{ kind: 'remove_via', id: op.id }];
+
+    case 'remove_via': {
+      const via = before.pcb.vias.get(op.id);
+      if (!via) return [];
+      return [placeViaOp(via)];
+    }
+
     case 'set_design_meta': {
       const patch: Record<string, string> = {};
       for (const key of Object.keys(op.patch)) {
@@ -149,9 +205,6 @@ export function invertOp(before: DesignGraph, op: OpBody): OpBody[] {
       return [{ kind: 'batch', ops: inverses, label: `undo: ${op.label}` }];
     }
 
-    case 'place_footprint':
-    case 'route_trace':
-    case 'place_via':
     case 'checkpoint':
     case 'annotate':
       return [];
@@ -169,7 +222,30 @@ function cloneSegments(segments: readonly WireSegment[]): WireSegment[] {
   return segments.map((s) => ({ a: { ...s.a }, b: { ...s.b } }));
 }
 
-/** Ops that restore a GC'd net: identity, name, class, membership, wires. */
+function routeTraceOp(trace: Trace): OpBody {
+  return {
+    kind: 'route_trace',
+    id: trace.id,
+    netId: trace.netId,
+    layerId: trace.layerId,
+    widthNm: trace.widthNm,
+    path: trace.path.map((p) => ({ ...p })),
+  };
+}
+
+function placeViaOp(via: Via): OpBody {
+  return {
+    kind: 'place_via',
+    id: via.id,
+    netId: via.netId,
+    at: { ...via.at },
+    drillNm: via.drillNm,
+    padNm: via.padNm,
+    span: [via.span[0], via.span[1]],
+  };
+}
+
+/** Ops that restore a GC'd net: identity, name, class, membership, geometry. */
 function restoreNet(before: DesignGraph, net: Net, ports: readonly string[]): OpBody[] {
   const [first, ...rest] = ports;
   if (first === undefined) return [];
@@ -178,6 +254,7 @@ function restoreNet(before: DesignGraph, net: Net, ports: readonly string[]): Op
   out.push({ kind: 'rename_net', netId: net.id, name: net.name });
   out.push({ kind: 'set_net_class', netId: net.id, netClass: net.netClass });
   out.push(...restoreWires(before, net.id));
+  out.push(...restorePcbGeometry(before, net.id));
   return out;
 }
 
@@ -185,6 +262,31 @@ function restoreWires(before: DesignGraph, netId: Uuid): OpBody[] {
   const wires = before.schematic.wires.get(netId);
   if (!wires || wires.length === 0) return [];
   return [{ kind: 'set_wire_geometry', netId, segments: cloneSegments(wires) }];
+}
+
+/** Re-route the traces and re-place the vias a dead net's GC swept away. */
+function restorePcbGeometry(before: DesignGraph, netId: Uuid): OpBody[] {
+  const out: OpBody[] = [];
+  for (const trace of before.pcb.traces.values()) {
+    if (trace.netId === netId) out.push(routeTraceOp(trace));
+  }
+  for (const via of before.pcb.vias.values()) {
+    if (via.netId === netId) out.push(placeViaOp(via));
+  }
+  return out;
+}
+
+/** After un-merging, traces/vias the merge re-pointed at the survivor get
+ *  removed and re-routed with their original net (ids preserved). */
+function repointPcbGeometry(before: DesignGraph, netId: Uuid): OpBody[] {
+  const out: OpBody[] = [];
+  for (const trace of before.pcb.traces.values()) {
+    if (trace.netId === netId) out.push({ kind: 'remove_trace', id: trace.id }, routeTraceOp(trace));
+  }
+  for (const via of before.pcb.vias.values()) {
+    if (via.netId === netId) out.push({ kind: 'remove_via', id: via.id }, placeViaOp(via));
+  }
+  return out;
 }
 
 /**
@@ -219,6 +321,17 @@ function resurrectComponent(before: DesignGraph, componentId: Uuid): OpBody[] {
       at: { ...placement.at },
       rot: placement.rot,
       mirror: placement.mirror,
+    });
+  }
+  const footprint = before.pcb.placements.get(componentId);
+  if (footprint) {
+    out.push({
+      kind: 'place_footprint',
+      componentId,
+      at: { ...footprint.at },
+      rotMilli: footprint.rotMilli,
+      side: footprint.side,
+      locked: footprint.locked,
     });
   }
   for (const net of before.nets.values()) {

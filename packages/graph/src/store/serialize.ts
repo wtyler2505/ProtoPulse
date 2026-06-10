@@ -53,8 +53,8 @@ export function graphToJson(graph: DesignGraph): GraphSnapshotJson {
     },
     pcb: {
       placements: [...graph.pcb.placements.entries()],
-      traces: graph.pcb.traces,
-      vias: graph.pcb.vias,
+      traces: [...graph.pcb.traces.entries()],
+      vias: [...graph.pcb.vias.entries()],
     },
     annotations: graph.annotations,
     meta: graph.meta,
@@ -74,8 +74,8 @@ export function graphFromJson(json: GraphSnapshotJson): DesignGraph {
     },
     pcb: {
       placements: new Map(json.pcb.placements as [string, never][]),
-      traces: json.pcb.traces as never[],
-      vias: json.pcb.vias as never[],
+      traces: new Map(json.pcb.traces as [string, never][]),
+      vias: new Map(json.pcb.vias as [string, never][]),
     },
     annotations: json.annotations as never[],
     meta: json.meta,
