@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "workspaces": [
+    "packages/*",
+    "tools/golden"
+  ],
   "scripts": {
     "dev:client": "vite dev --port 5000",
     "dev": "NODE_ENV=development tsx server/index.ts",
@@ -10,6 +14,8 @@
     "build": "tsx scripts/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "NODE_OPTIONS='--max-old-space-size=16384' tsc",
+    "check:packages": "tsc -p packages",
+    "test:packages": "npm run test --workspaces --if-present",
     "test": "NODE_OPTIONS='--max-old-space-size=8192' vitest run",
     "test:watch": "NODE_OPTIONS='--max-old-space-size=8192' vitest",
     "test:coverage": "NODE_OPTIONS='--max-old-space-size=8192' vitest run --coverage",

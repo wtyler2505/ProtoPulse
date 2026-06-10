@@ -1,0 +1,505 @@
+[
+  {
+    "actor": "golden",
+    "lamport": 1,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "u1",
+      "ref": "U1",
+      "partId": "core:ne555",
+      "partRev": 1
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 2,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "vcc",
+      "ref": "PWR1",
+      "partId": "core:pwr-vcc",
+      "partRev": 1
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 3,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "gnd",
+      "ref": "PWR2",
+      "partId": "core:pwr-gnd",
+      "partRev": 1
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 4,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "ra",
+      "ref": "R1",
+      "partId": "core:resistor",
+      "partRev": 1,
+      "value": "10k"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 5,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "rb",
+      "ref": "R2",
+      "partId": "core:resistor",
+      "partRev": 1,
+      "value": "47k"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 6,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "ct",
+      "ref": "C1",
+      "partId": "core:capacitor",
+      "partRev": 1,
+      "value": "10uF"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 7,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "rg",
+      "ref": "R3",
+      "partId": "core:resistor",
+      "partRev": 1,
+      "value": "330"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 8,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "ry",
+      "ref": "R4",
+      "partId": "core:resistor",
+      "partRev": 1,
+      "value": "330"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 9,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "rr",
+      "ref": "R5",
+      "partId": "core:resistor",
+      "partRev": 1,
+      "value": "330"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 10,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "dg",
+      "ref": "D1",
+      "partId": "core:led",
+      "partRev": 1,
+      "value": "green"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 11,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "dy",
+      "ref": "D2",
+      "partId": "core:led",
+      "partRev": 1,
+      "value": "yellow"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 12,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "dr",
+      "ref": "D3",
+      "partId": "core:led",
+      "partRev": 1,
+      "value": "red"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 13,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "vcc:1",
+      "newNetId": "net-vcc"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 14,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "u1:8",
+      "netId": "net-vcc"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 15,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "u1:4",
+      "netId": "net-vcc"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 16,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "ra:1",
+      "netId": "net-vcc"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 17,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "gnd:1",
+      "newNetId": "net-gnd"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 18,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "u1:1",
+      "netId": "net-gnd"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 19,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "ct:2",
+      "netId": "net-gnd"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 20,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "ra:2",
+      "newNetId": "net-disch"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 21,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "u1:7",
+      "netId": "net-disch"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 22,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "rb:1",
+      "netId": "net-disch"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 23,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "rb:2",
+      "newNetId": "net-timing"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 24,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "u1:2",
+      "netId": "net-timing"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 25,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "u1:6",
+      "netId": "net-timing"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 26,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "ct:1",
+      "netId": "net-timing"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 27,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "u1:3",
+      "newNetId": "net-out"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 28,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "rg:1",
+      "netId": "net-out"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 29,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "ry:1",
+      "netId": "net-out"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 30,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "rr:1",
+      "netId": "net-out"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 31,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "rg:2",
+      "newNetId": "net-ag"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 32,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "dg:A",
+      "netId": "net-ag"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 33,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "ry:2",
+      "newNetId": "net-ay"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 34,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "dy:A",
+      "netId": "net-ay"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 35,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "rr:2",
+      "newNetId": "net-ar"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 36,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "dr:A",
+      "netId": "net-ar"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 37,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "dg:K",
+      "netId": "net-gnd"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 38,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "dy:K",
+      "netId": "net-gnd"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 39,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "dr:K",
+      "netId": "net-gnd"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 40,
+    "ts": 0,
+    "op": {
+      "kind": "rename_net",
+      "netId": "net-vcc",
+      "name": "VCC"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 41,
+    "ts": 0,
+    "op": {
+      "kind": "rename_net",
+      "netId": "net-gnd",
+      "name": "GND"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 42,
+    "ts": 0,
+    "op": {
+      "kind": "rename_net",
+      "netId": "net-disch",
+      "name": "DISCH"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 43,
+    "ts": 0,
+    "op": {
+      "kind": "rename_net",
+      "netId": "net-timing",
+      "name": "TIMING"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 44,
+    "ts": 0,
+    "op": {
+      "kind": "rename_net",
+      "netId": "net-out",
+      "name": "OUT_555"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 45,
+    "ts": 0,
+    "op": {
+      "kind": "rename_net",
+      "netId": "net-ag",
+      "name": "LED_G"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 46,
+    "ts": 0,
+    "op": {
+      "kind": "rename_net",
+      "netId": "net-ay",
+      "name": "LED_Y"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 47,
+    "ts": 0,
+    "op": {
+      "kind": "rename_net",
+      "netId": "net-ar",
+      "name": "LED_R"
+    }
+  }
+]

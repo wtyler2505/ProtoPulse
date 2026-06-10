@@ -1,0 +1,38 @@
+# Step 5 — the deliverable: a 3-LED traffic light sequenced by a 555
+# treated as a black box. ERC-clean is the machine-checkable gate.
+id: first-light-05
+title: "Deliverable: 3-LED traffic light with a 555 black box"
+mode: challenge
+unlocks:
+  - duty-cycle
+  - power-and-heat
+given: null
+goal:
+  - erc: clean
+  - "Red, yellow, and green LEDs each have their own current-limiting resistor"
+  - "555 VCC and GND connected to the rails; TRIG/THRES/RESET at defined levels"
+  - sim: "Output toggles and each LED stays at or below 15mA"
+professor:
+  beginner: >-
+    Build a traffic light: red, yellow, green, each with its own
+    resistor, driven from a 555 timer. You don't need to understand the
+    555's insides yet — treat it as a box that toggles its OUT pin.
+    Wire power, wire the LEDs, run ERC until it's clean.
+  intermediate: >-
+    Budget the current: three LEDs at ~10mA plus the 555's own draw on
+    one battery rail. Add a current_max constraint on the supply net and
+    let ERC check the math. Pick resistor values per LED color — red and
+    green don't drop the same voltage.
+  expert: >-
+    The 555 in astable mode sets the sequence timing; its duty cycle is
+    fixed by the two timing resistors — work out why it can't go below
+    50% in the classic two-resistor astable. Sketch the timing network
+    you'd add in Track 2, but ship the black-box version now.
+failure_puzzle: >-
+  A previous builder's traffic light glows dimly on all three LEDs at
+  once and the 555 runs hot. Their schematic shares one 100Ω resistor on
+  the 555 output for all three LEDs. Diagnose before you build yours.
+deliverable: >-
+  An ERC-clean schematic: 3 LEDs with individual resistors, a 555 black
+  box powered and defined on every input, and a current_max constraint
+  on the supply net that passes.

@@ -1,0 +1,11 @@
+Refs,Qty,Value,Part,MPN,DNP
+C1,1,10uF,Capacitor (ceramic),,
+D1,1,green,LED,,
+D2,1,yellow,LED,,
+D3,1,red,LED,,
+PWR1,1,,VCC rail,,
+PWR2,1,,GND rail,,
+R1,1,10k,Resistor,,
+R2,1,47k,Resistor,,
+R3 R4 R5,3,330,Resistor,,
+U1,1,,NE555 timer,NE555,

@@ -17,6 +17,8 @@ export default tseslint.config(
       'server/public/**',
       'temp/**',
       'attached_assets/**',
+      'packages/*/dist/**',
+      'packages/*/coverage/**',
     ],
   },
 

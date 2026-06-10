@@ -1,0 +1,336 @@
+{
+  "format": "ppx-bundle",
+  "version": 1,
+  "designId": "probe-input-protection",
+  "head": "main",
+  "branches": [
+    {
+      "name": "main",
+      "base": {
+        "branch": null,
+        "opCount": 0
+      },
+      "ops": [
+        {
+          "actor": "golden",
+          "lamport": 1,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "j1",
+            "ref": "J1",
+            "partId": "core:header-2x10",
+            "partRev": 1
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 2,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "rs",
+            "ref": "R1",
+            "partId": "core:resistor",
+            "partRev": 1,
+            "value": "100k"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 3,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "dclamp",
+            "ref": "D1",
+            "partId": "core:bat54s",
+            "partRev": 1
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 4,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "dtvs",
+            "ref": "D2",
+            "partId": "core:tvs-unidirectional",
+            "partRev": 1,
+            "value": "24V"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 5,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "vcc",
+            "ref": "PWR1",
+            "partId": "core:pwr-vcc",
+            "partRev": 1
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 6,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "gnd",
+            "ref": "PWR2",
+            "partId": "core:pwr-gnd",
+            "partRev": 1
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 7,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "vcc:1",
+            "newNetId": "net-3v3"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 8,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "gnd:1",
+            "newNetId": "net-gnd"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 9,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "j1:19",
+            "netId": "net-gnd"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 10,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "j1:20",
+            "netId": "net-gnd"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 11,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "j1:1",
+            "newNetId": "net-ch1-in"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 12,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "rs:1",
+            "netId": "net-ch1-in"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 13,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "dtvs:K",
+            "netId": "net-ch1-in"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 14,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "dtvs:A",
+            "netId": "net-gnd"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 15,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "rs:2",
+            "newNetId": "net-ch1-prot"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 16,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "dclamp:3",
+            "netId": "net-ch1-prot"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 17,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "dclamp:1",
+            "netId": "net-gnd"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 18,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "dclamp:2",
+            "netId": "net-3v3"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 19,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "j1:2",
+            "netId": "net-ch1-prot"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 20,
+          "ts": 0,
+          "op": {
+            "kind": "add_constraint",
+            "id": "k-ch1-budget",
+            "body": {
+              "kind": "current_max",
+              "netId": "net-ch1-prot",
+              "amps": 0.001
+            },
+            "rationale": "protected ADC node — clamp diodes carry fault current, not the AFE"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 21,
+          "ts": 0,
+          "op": {
+            "kind": "rename_net",
+            "netId": "net-3v3",
+            "name": "3V3"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 22,
+          "ts": 0,
+          "op": {
+            "kind": "rename_net",
+            "netId": "net-gnd",
+            "name": "GND"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 23,
+          "ts": 0,
+          "op": {
+            "kind": "rename_net",
+            "netId": "net-ch1-in",
+            "name": "CH1_IN"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 24,
+          "ts": 0,
+          "op": {
+            "kind": "rename_net",
+            "netId": "net-ch1-prot",
+            "name": "CH1_PROT"
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 25,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "j1",
+            "at": {
+              "x": 0,
+              "y": 0
+            },
+            "rot": 0,
+            "mirror": false
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 26,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "rs",
+            "at": {
+              "x": 12700000,
+              "y": 0
+            },
+            "rot": 0,
+            "mirror": false
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 27,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "dclamp",
+            "at": {
+              "x": 25400000,
+              "y": -12700000
+            },
+            "rot": 0,
+            "mirror": false
+          }
+        },
+        {
+          "actor": "golden",
+          "lamport": 28,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "dtvs",
+            "at": {
+              "x": 6350000,
+              "y": -12700000
+            },
+            "rot": 90,
+            "mirror": false
+          }
+        }
+      ]
+    }
+  ]
+}

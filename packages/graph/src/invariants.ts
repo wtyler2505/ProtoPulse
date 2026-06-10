@@ -1,0 +1,131 @@
+import { parsePortRef } from './types.js';
+
+import type { DesignGraph, Uuid } from './types.js';
+
+/**
+ * Graph invariants — Vol II §A.4. Violations after materialization mean
+ * a corrupt log: apply() should have made these unrepresentable.
+ */
+export interface InvariantViolation {
+  code:
+    | 'dangling_port'
+    | 'unknown_pin'
+    | 'port_in_multiple_nets'
+    | 'duplicate_ref'
+    | 'geometry_on_dead_net'
+    | 'placement_without_component'
+    | 'non_integer_coordinate';
+  message: string;
+  entityId?: Uuid;
+}
+
+export interface InvariantOpts {
+  /** When the caller has a parts registry, pins are checked for existence. */
+  pinExists?: (partId: Uuid, partRev: number, pinKey: string) => boolean;
+}
+
+export function validateGraph(graph: DesignGraph, opts: InvariantOpts = {}): InvariantViolation[] {
+  const out: InvariantViolation[] = [];
+
+  // 1. Every PortRef in every net resolves to a live component pin.
+  // 2. A port belongs to at most one net.
+  const seenPorts = new Map<string, Uuid>();
+  for (const net of graph.nets.values()) {
+    for (const port of net.ports) {
+      const { componentId, pinKey } = parsePortRef(port);
+      const comp = graph.components.get(componentId);
+      if (!comp) {
+        out.push({
+          code: 'dangling_port',
+          message: `net ${net.name} references port ${port} on a missing component`,
+          entityId: net.id,
+        });
+        continue;
+      }
+      if (opts.pinExists && !opts.pinExists(comp.partId, comp.partRev, pinKey)) {
+        out.push({
+          code: 'unknown_pin',
+          message: `net ${net.name} references pin ${pinKey} that does not exist on part ${comp.partId}`,
+          entityId: net.id,
+        });
+      }
+      const prior = seenPorts.get(port);
+      if (prior !== undefined) {
+        out.push({
+          code: 'port_in_multiple_nets',
+          message: `port ${port} appears on nets ${prior} and ${net.id}`,
+          entityId: net.id,
+        });
+      } else {
+        seenPorts.set(port, net.id);
+      }
+    }
+  }
+
+  // 3. Ref designators unique per design.
+  const refs = new Map<string, Uuid>();
+  for (const comp of graph.components.values()) {
+    const prior = refs.get(comp.ref);
+    if (prior !== undefined) {
+      out.push({
+        code: 'duplicate_ref',
+        message: `ref designator ${comp.ref} used by ${prior} and ${comp.id}`,
+        entityId: comp.id,
+      });
+    } else {
+      refs.set(comp.ref, comp.id);
+    }
+  }
+
+  // 4. Wire geometry must sit on a live net.
+  for (const netId of graph.schematic.wires.keys()) {
+    if (!graph.nets.has(netId)) {
+      out.push({
+        code: 'geometry_on_dead_net',
+        message: `wire geometry attached to missing net ${netId}`,
+        entityId: netId,
+      });
+    }
+  }
+
+  // View records must have entities.
+  for (const componentId of graph.schematic.placements.keys()) {
+    if (!graph.components.has(componentId)) {
+      out.push({
+        code: 'placement_without_component',
+        message: `schematic placement for missing component ${componentId}`,
+        entityId: componentId,
+      });
+    }
+  }
+
+  // 6. All coordinates integers (zod guards the boundary; re-check the data).
+  for (const [componentId, placement] of graph.schematic.placements) {
+    if (!Number.isInteger(placement.at.x) || !Number.isInteger(placement.at.y)) {
+      out.push({
+        code: 'non_integer_coordinate',
+        message: `placement of ${componentId} has non-integer coordinates`,
+        entityId: componentId,
+      });
+    }
+  }
+  for (const [netId, segments] of graph.schematic.wires) {
+    for (const s of segments) {
+      if (
+        !Number.isInteger(s.a.x) ||
+        !Number.isInteger(s.a.y) ||
+        !Number.isInteger(s.b.x) ||
+        !Number.isInteger(s.b.y)
+      ) {
+        out.push({
+          code: 'non_integer_coordinate',
+          message: `wire segment on net ${netId} has non-integer coordinates`,
+          entityId: netId,
+        });
+        break;
+      }
+    }
+  }
+
+  return out;
+}

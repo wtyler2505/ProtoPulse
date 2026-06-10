@@ -85,6 +85,7 @@ This guide will walk you through every feature in detail so you can get the most
 16. [Tips and Best Practices](#16-tips-and-best-practices)
 17. [Troubleshooting](#17-troubleshooting)
 18. [Glossary](#18-glossary)
+19. [Preview: The New Schematic Editor](#19-preview-the-new-schematic-editor)
 
 ---
 
@@ -1189,6 +1190,35 @@ If you encounter a problem not listed here, try these general steps:
 | **UART** | Universal Asynchronous Receiver/Transmitter — a serial communication protocol commonly used for debugging. |
 | **USB** | Universal Serial Bus — a standard for data transfer and power delivery. |
 | **Validation** | The process of checking your design for errors, warnings, and improvement opportunities. |
+
+---
+
+## 19. Preview: The New Schematic Editor
+
+ProtoPulse is being rebuilt from the ground up on a new engine, and the first piece you can actually use landed with Milestone 1: a brand-new schematic editor. It runs **alongside** the main app — everything described in this guide keeps working exactly as before.
+
+### Running it
+
+The new editor is a separate dev app on its own port:
+
+```bash
+npm run -w @protopulse/app dev
+```
+
+Then open `http://localhost:5174` (the main app stays on port 5000).
+
+### What it can do today
+
+- **Place and wire components** — wires route automatically in clean right-angle (Manhattan) segments.
+- **Undo/redo** that is always exact, because every change you make is recorded as an operation in the design's history.
+- **Branches** — like saving alternate versions of your circuit. Switch between them instantly, and a green/amber overlay shows you exactly what differs between two branches.
+- **ERC panel** — electrical rule checks with one-click **Apply Fix** for some findings (e.g., a missing pull-up resistor), and each finding links to a short concept article that explains *why* it matters.
+- **Export** — KiCad netlist, CSV BOM, and a single-file design bundle.
+- **The Draftsman** — an AI assistant panel that can place and wire components for you. It uses your own Anthropic API key, asks before doing anything destructive, and explains what it's doing as it goes.
+
+### What's coming
+
+The new editor grows in stages: circuit simulation with an Analyst agent comes next, then a fuller AI design crew, PCB layout, flashing real boards over WebSerial, and community/fab features. None of those exist in the new editor yet — for SPICE simulation and PCB views today, use the main app described in the rest of this guide.
 
 ---
 

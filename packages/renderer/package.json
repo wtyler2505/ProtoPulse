@@ -1,0 +1,17 @@
+{
+  "name": "@protopulse/renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "WebGL2 schematic renderer: retained scene graph, batched geometry, flatbush picking, nm->px camera.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@protopulse/graph": "*",
+    "@protopulse/parts": "*",
+    "flatbush": "^4.4.0"
+  }
+}

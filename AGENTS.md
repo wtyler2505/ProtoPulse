@@ -34,6 +34,43 @@ Every session follows: **Orient → Work → Persist**
 | Processing state, queue, config | ops/ | Queue state, task files, session logs |
 | Friction signals, patterns | ops/observations/ | Search failures, methodology improvements |
 
+## The Engine Redesign (packages/)
+Milestone 1 of the ground-up redesign ("the vision", three volumes) landed: a greenfield npm-workspaces monorepo at `packages/` (`@protopulse/*`) living **alongside** the legacy app (`client/ server/ shared/` — untouched, still the shipping product). The legacy app migrates onto the new engine in later milestones.
+
+**What lives there:** `graph` (the core — one canonical design graph; every mutation is a typed op; the design IS its op-log, the graph is a materialized view), `parts`, `erc`, `export`, `cli`, `renderer`, `app` (new schematic editor), `ai` (provider-agnostic agent runtime + the Draftsman), `content`. 346 tests, own CI (`.github/workflows/packages-ci.yml`). Overview: `packages/README.md`.
+
+**Jurisdiction / contracts:**
+- Golden files in `tools/golden/` and the `.ppx` on-disk format (spec: `packages/graph/README.md`) are **contracts**. Never re-freeze goldens casually — deliberate changes only, via `tools/golden/update-golden.ts`.
+- New hardware seed parts in `@protopulse/parts` follow the Hardware & Component Verification Protocol above — vault first, real datasheets, no invented dimensions or pinouts.
+
+**Conventions:** integer-nanometer coordinates (no floats — they break diff determinism); ops are self-contained; packages ship TS source (`main: ./src/index.ts`); never write directly to `knowledge/` (pipeline rule applies here too).
+
+**Key commands:**
+```bash
+npm run check:packages           # typecheck all packages
+npm run test:packages            # all 346 package tests
+npm run -w @protopulse/app dev   # new editor on http://localhost:5174
+npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
+```
+
+## Documentation Rules (Mandatory)
+One home per fact; pointers everywhere else. Before editing any doc, know which kind it is:
+
+| Doc | Role | Editing rule |
+|---|---|---|
+| `docs/vision/*` | The frozen founding spec (3 volumes) | **NEVER edit in place.** Deviations → ADR; genuine vision changes → new versioned amendment file |
+| `ROADMAP.md` | Canonical build order + status | The ONLY place roadmap/status lives; other docs link, never restate |
+| `docs/adr/NNNN-*.md` | Decision records (legacy + engine) | Append-only: new ADR with next number, house format (Status/Date/Deciders/Context/Decision/Rationale + "Revisit when" for deviations). Supersede, don't rewrite |
+| `ARCHITECTURE.md` | Thin pointer index | Keep it links-only; real architecture lives in `packages/README.md`, `packages/graph/README.md`, `DESIGN.md` |
+| `tools/golden/README.md` + fixtures | Export contracts | Re-freeze only deliberately via `tools/golden/update-golden.ts`, review the diff like an API change |
+| `docs/CHANGELOG.md` | History | Prepend an entry per milestone/significant landing; never rewrite old entries |
+| `docs/FEATURE_MATURITY.md` | Status matrix | Update when maturity genuinely changes; honest labels (never claim roadmap features exist) |
+| `CODEX_*`, `CLAUDE_RESPONSE_*`, `COLLAB_*`, audits, checklists | Point-in-time records | Do not update — they are history, not documentation |
+| `docs/notebooklm.md`, `data/pp-nlm/**` | Codex-owned | Do not touch (see PP-NLM section) |
+| `AGENTS.md` (this file, = `CLAUDE.md`/`GEMINI.md` symlinks) | Operating manual | Propose changes after 3+ friction occurrences (see Self-Improvement); keep additions concise |
+
+When code changes make any doc stale, fix the doc in the same PR — a doc that drifts is worse than no doc.
+
 ## Operational Space (ops/)
 ops/
 ├── derivation.md      — why this system was configured this way

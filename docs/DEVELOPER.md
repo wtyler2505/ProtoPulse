@@ -1,10 +1,12 @@
 # ProtoPulse — Developer Documentation
 
-> **Last updated:** 2026-03-03
-> **Codebase:** ~30,000+ lines of TypeScript
-> **Stack:** React 19 · TypeScript 5.6 · Vite 7 · Express 5 · PostgreSQL · Drizzle ORM · TanStack React Query · shadcn/ui · @xyflow/react · Tailwind CSS v4
+> **Last updated:** 2026-06-10
+> **Codebase:** ~30,000+ lines of TypeScript (legacy app) + the `packages/` engine monorepo
+> **Stack (legacy app):** React 19 · TypeScript 5.6 · Vite 7 · Express 5 · PostgreSQL · Drizzle ORM · TanStack React Query · shadcn/ui · @xyflow/react · Tailwind CSS v4
 
 **ProtoPulse** is an all-in-one browser-based EDA platform built for makers and learners who want a single tool from "I don't know electronics" to "here are my Gerbers." Think TinkerCad + Fritzing + KiCad unified with AI. See `docs/future-features-and-ideas-list.md` for the full feature vision.
+
+> **Two codebases coexist in this repo** as of Milestone 1 of the engine redesign (2026-06-10). Sections 1–14 below document the **legacy app** (`client/ server/ shared/`) — still the shipping product. The redesigned engine is a greenfield npm-workspaces monorepo at `packages/` (`@protopulse/*`); the legacy app migrates onto it in later milestones. See [Section 15](#15-the-engine-monorepo-packages) and `packages/README.md`.
 
 ---
 
@@ -24,6 +26,7 @@
 12. [Code Conventions & Patterns](#12-code-conventions--patterns)
 13. [Known Issues & Technical Debt](#13-known-issues--technical-debt)
 14. [Roadmap / Phase Plan](#14-roadmap--phase-plan)
+15. [The Engine Monorepo (packages/)](#15-the-engine-monorepo-packages)
 
 ---
 
@@ -75,9 +78,20 @@ The app will be available at `http://localhost:5000`.
 | `npm run test:watch` | `vitest` | Interactive watch mode |
 | `npm run test:coverage` | `vitest run --coverage` | Coverage report (v8 provider) |
 
+Engine monorepo scripts (no database required — see [Section 15](#15-the-engine-monorepo-packages)):
+
+| Script | Description |
+|---|---|
+| `npm run check:packages` | Typecheck every `@protopulse/*` package |
+| `npm run test:packages` | Run all 346 engine tests |
+| `npm run -w @protopulse/app dev` | New schematic editor on `http://localhost:5174` |
+| `npm run -w @protopulse/cli build` | Build the CLI → `node packages/cli/dist/protopulse.js` |
+
 ---
 
 ## 2. Architecture Overview
+
+> This section and Sections 3–13 describe the **legacy app**. The redesigned engine's architecture is covered in [Section 15](#15-the-engine-monorepo-packages).
 
 ### High-Level System Diagram
 
@@ -1554,7 +1568,7 @@ See `docs/product-analysis-checklist.md` for full list. Key items:
 
 ## 14. Roadmap / Phase Plan
 
-All phases shipped as of 2026-03-02:
+Legacy app phases — all shipped as of 2026-03-02:
 
 | Phase | Description | Status |
 |---|---|---|
@@ -1572,3 +1586,59 @@ All phases shipped as of 2026-03-02:
 | 12 | Simulation (SPICE netlist generation + solver, power analysis, signal integrity) | Shipped |
 | 13 | Firmware scaffold generator, PDF design report, FMEA, FZZ export | Shipped |
 | Future | Multi-project support, `ProjectProvider` splitting, CORS allowlist, real-time collaboration | Planned |
+
+Engine redesign build order: v0.1 landed (M1, 2026-06-10); the
+canonical v0.2–v0.7 roadmap lives in [`ROADMAP.md`](../ROADMAP.md)
+(see also Section 15 and the frozen spec in [`docs/vision/`](./vision/README.md)).
+
+---
+
+## 15. The Engine Monorepo (packages/)
+
+Milestone 1 of the ground-up redesign. A greenfield npm-workspaces monorepo at `packages/` (`@protopulse/*`) living **alongside** the legacy app — nothing in `client/ server/ shared/` was touched. The legacy app migrates onto the engine in later milestones. The canonical overview is `packages/README.md`; the `.ppx` on-disk format spec is `packages/graph/README.md`.
+
+### The core idea
+
+One canonical design graph, many projections. Every mutation is a typed operation; **the design IS its op-log** (JSON Lines) and the graph is a materialized view. Integer-nanometer coordinates, UUIDv7 entity IDs, ports as `componentId:pinKey`. Materialization is deterministic, ordered by `(lamport, actorId)`. Undo emits inverse ops (forward-only history); branches are O(1) pointers; visual diff via `GraphDelta` (connectivity-fingerprint fallback); three-way merge surfaces conflicts as data — never silently. On disk: a `.ppx` directory (`manifest.json` + `ops/<branch>/NNNNNN.opl` segments) or a single-file `.ppx.json` bundle.
+
+### Packages
+
+| Package | What it is |
+|---|---|
+| `@protopulse/graph` | The core: typed ops, materializer, invariants, branch/diff/merge, `.ppx` stores. **100% branch coverage gate enforced in CI.** |
+| `@protopulse/parts` | Minimal part model — pins with ERC electrical types, 1.27mm-grid symbol geometry, provenance tiers (unverified / community-tested / verified). 17 seed parts; NE555 + BAT54S pin maps datasheet-verified. |
+| `@protopulse/erc` | 10×10 pin-conflict matrix + net rules (floating inputs, unpowered supplies, single-port nets, open-collector-missing-pull-up with an **executable** fix, current budgets). Every finding code maps to a concepts-wiki article slug. |
+| `@protopulse/export` | Deterministic KiCad legacy-E netlist + CSV BOM. Exports are contracts — `tools/golden/` holds byte-exact golden tests (fixtures: led-resistor, traffic-light-555, probe-input-protection). |
+| `@protopulse/cli` | `protopulse check <design>` / `protopulse export` — headless ERC in CI ("CI for circuits"), exit codes 0/1/2. |
+| `@protopulse/renderer` | WebGL2 retained scene graph, flatbush picking, canvas-glyph-atlas text, nm→px camera with LOD. |
+| `@protopulse/app` | The new schematic editor: place/wire (Manhattan, 4-case connect derivation), undo/redo, branch switcher with green/amber diff overlay, ERC panel with apply-fix + concept links, KiCad/BOM/bundle export, Draftsman panel. |
+| `@protopulse/ai` | Provider-agnostic agent runtime: zod tool registry with scope slices enforced at dispatch, destructive-confirm gating, `explain()` narration, budgeted context assembly. The Draftsman agent has exactly 8 tools. Anthropic adapter (default `claude-sonnet-4-6`, browser-direct with user key). Every applied op carries `meta {agent, rationale}` for op-log blame. |
+| `@protopulse/content` | Schemas + loaders for `content/`: JLCPCB 2-layer DRC rule deck (versioned JSON), 14 concept articles (builder-voiced, ≤600 words), curriculum Track 1 "First Light" steps 01–05 (YAML, machine-checkable `erc: clean` goals). |
+
+### Commands
+
+```bash
+npm run check:packages           # typecheck every package (one program)
+npm run test:packages            # all 346 package tests
+npm run -w @protopulse/app dev   # new editor → http://localhost:5174
+npm run -w @protopulse/cli build # then: node packages/cli/dist/protopulse.js check <design>
+```
+
+### Conventions (differ from the legacy app)
+
+- **Integer nanometers everywhere** — floats break diff determinism; zod rejects them at the boundary.
+- **Ops are self-contained** — every op carries what's needed to apply and invert it.
+- **Packages ship TypeScript source** (`main: ./src/index.ts`); only the CLI builds a bundle.
+- **Golden files are contracts** — never re-freeze casually; deliberate changes only, via `tools/golden/update-golden.ts`.
+- ESLint covers `packages/` with the zero-errors policy.
+
+### CI
+
+`.github/workflows/packages-ci.yml` (path-filtered; the legacy `ci.yml` is independent): typecheck, lint, tests, golden smoke, builds.
+
+### Known M1 gaps
+
+- KiCad pcbnew import of the golden netlists awaits one manual verification (checkbox in `tools/golden/README.md`).
+- Merge conflicts surface as data; no interactive resolver UI yet.
+- MSDF text rendering and GPU picking deferred; ESP32-S3 seed part deferred.
+- Simulation, PCB, and hardware bridge are roadmap (v0.2+), not present.

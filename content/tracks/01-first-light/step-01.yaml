@@ -1,0 +1,31 @@
+# Track 1 "First Light", step 1 — Vol III §1.2.
+# Failure is the first lesson: hook an LED straight to a battery and
+# watch it exceed its forward current. Nothing protects you yet.
+id: first-light-01
+title: Light an LED the wrong way
+mode: guided
+unlocks:
+  - voltage-vs-current
+given: snippet:led-battery-naive
+goal:
+  - sim: "LED current exceeds 20mA rated If — observe the overcurrent readout"
+  - "Explain in one sentence why the current is not limited"
+professor:
+  beginner: >-
+    Wire the battery straight to the LED and run it. Watch the current
+    number — it goes way past what the LED can survive. We did this on
+    purpose: the question to sit with is "what decides how much current
+    flows?" The battery sets the push (voltage); nothing here sets the
+    flow (current).
+  intermediate: >-
+    The LED's V-I curve is exponential past Vf, so a 3V source across a
+    ~2V diode drop leaves ~1V across almost zero resistance. Estimate the
+    current and compare it to the 20mA absolute maximum.
+  expert: >-
+    Treat the LED as Vf ≈ 2.0V plus a small dynamic resistance (a few
+    ohms). Compute I = (Vbat − Vf) / r_d and note how violently it swings
+    with Vf tolerance. This is why voltage sources never drive diodes
+    directly.
+deliverable: >-
+  A one-sentence answer in the lab notebook: why does the bare
+  battery+LED circuit exceed the LED's rated current?

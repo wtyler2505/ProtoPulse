@@ -1,6 +1,6 @@
 # ProtoPulse Feature Maturity Classification
 
-**Date:** 2026-03-27
+**Date:** 2026-03-27 (Tables 1–3) · **Updated:** 2026-06-10 (Table 4 — engine redesign addendum)
 **Source evidence:** `reports/ai-audit/00-MASTER-REPORT.md`, `reports/ai-audit/05-client-ai-features.md`, `docs/checklist/MASTER_AUDIT_CHECKLIST.md` (Section 4 — Fresh Verification Results), `docs/checklist/WORKFLOW_VERIFICATION_MATRIX.md`
 
 **Purpose:** This document classifies every major ProtoPulse feature's real implementation status based on live browser verification, code inspection, and audit findings. It exists to close the gap between what the UI promises and what actually works, so that development effort can be directed at the right maturity tier.
@@ -186,3 +186,27 @@ This does not mean they are low quality. Many are well-engineered, well-tested, 
    - `ai-co-designer` scoring (placeholder returns)
 
 5. **The ordering workflow is the biggest truthfulness gap at the view level.** The full wizard flow works beautifully in the UI but places orders to localStorage only — no server API call. A user could reasonably believe they placed a real order.
+
+---
+
+## Table 4: The Engine Redesign (packages/) — Milestone 1 Addendum
+
+**Added:** 2026-06-10
+**Source evidence:** packages CI (`.github/workflows/packages-ci.yml` — typecheck, lint, 346 tests, golden smoke, builds), golden-file tests in `tools/golden/`, `packages/README.md`. Unlike Tables 1–3, these maturity calls are based on automated test/CI evidence, not live browser audit sessions.
+
+Everything in Tables 1–3 describes the **legacy app**, which is unchanged. Milestone 1 added the greenfield `@protopulse/*` monorepo alongside it.
+
+| Component | Maturity | Honest status |
+|-----------|----------|---------------|
+| `@protopulse/graph` (op-log core) | Production | Solid and tested. 100% branch coverage gate on ops/apply/materialize/diff enforced in CI. Deterministic materialization, undo, branches, diff, three-way merge all covered. Merge conflict *resolution* is data-only — no interactive resolver UI yet. |
+| `@protopulse/parts` (seed library) | Functional | 17 seed parts. NE555 and BAT54S pin maps datasheet-verified; the rest carry the `unverified`/`community-tested` provenance tiers they declare. ESP32-S3 deferred. |
+| `@protopulse/erc` | Functional | Pin-conflict matrix + net rules tested; one finding (open-collector-missing-pull-up) ships an executable fix. Every finding code maps to a concept article. Rule set is intentionally small at M1. |
+| `@protopulse/export` (KiCad netlist, CSV BOM) | Functional | Byte-exact golden tests pass for all three fixtures. One honesty gap: KiCad pcbnew *import* of the golden netlists still awaits a single manual verification (open checkbox in `tools/golden/README.md`). Not Production until that box is checked. |
+| `@protopulse/cli` (`protopulse check`/`export`) | Functional | Headless ERC with exit codes 0/1/2; runs in CI as the golden smoke. Build step required (`npm run -w @protopulse/cli build`). |
+| `@protopulse/renderer` (WebGL2) | Partial | Retained scene graph, flatbush picking, glyph-atlas text, nm→px camera with LOD all work. MSDF text and GPU picking deferred — known quality ceiling on text at extreme zoom and pick performance on huge designs. |
+| `@protopulse/app` (new schematic editor) | Functional | M1 daily-drivable: place/wire, undo/redo, branch switcher with diff overlay, ERC panel with apply-fix, exports, Draftsman panel. Dev-server only (port 5174); not the shipping product. |
+| `@protopulse/ai` (agent runtime + Draftsman) | Functional | Runtime (scoped registry, destructive gating, explain(), context budgets) is tested **with a fake provider**; the Anthropic adapter is browser-direct with a user key and has not had the same automated coverage. Op-log blame (`meta {agent, rationale}`) verified. |
+| `@protopulse/content` + `content/` | Functional | JLCPCB rule deck (versioned JSON), 14 concept articles, Track 1 steps 01–05 with machine-checkable `erc: clean` goals. Schemas + loaders tested; corpus is intentionally small. |
+| Simulation (v0.2 "The Lab") | Not started | Roadmap only. Do not confuse with the legacy app's SPICE features (Table 1, `simulation` view). |
+| PCB (v0.4 "The Board") | Not started | Roadmap only. The legacy `pcb` view is unrelated. |
+| Hardware bridge / probe (v0.5 / v0.7) | Not started | Roadmap only. |

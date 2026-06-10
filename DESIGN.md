@@ -286,6 +286,16 @@ The canonical visual identity is the default Neon Cyan dark theme verified in th
 
 ProtoPulse is dense by design. It is for people who are actively building, debugging, comparing, validating, and exporting. Use progressive disclosure to reduce overwhelm, but do not flatten the product into a toy. Dense surfaces are acceptable when the hierarchy is explicit, labels are disciplined, and interaction states are unmistakable.
 
+## Architecture — The Engine Redesign (packages/)
+
+Two products share this repository, and design work must know which one it is touching.
+
+The **legacy app (pre-redesign)** is `client/ server/ shared/` — the React 19 + Express 5 + PostgreSQL workbench. It is still the shipping product, and every reference in this document to the "verified app shell," its runtime tokens, `ProjectWorkspace`, or the three-panel layout describes that app. None of that guidance is retired; the legacy app keeps running until it migrates.
+
+The **engine** is the `packages/` monorepo (`@protopulse/*`), Milestone 1 of the ground-up redesign. Its architectural thesis is *one canonical design graph, many projections*: every mutation is a typed operation, the design IS its op-log, and schematic, BOM, and (later) breadboard, PCB, and simulation are views materialized from that single model. Coordinates are integer nanometers; branches are pointers; diffs and merges are first-class. The package map: `graph` (the core), `parts`, `erc`, `export`, `cli`, `renderer` (WebGL2 retained scene graph), `app` (the new schematic editor on port 5174), `ai` (the Draftsman agent runtime), and `content` (rule decks, concept articles, curriculum).
+
+Design implications: the new editor (`@protopulse/app`) inherits this document's visual identity wholesale — neon-cyan dark palette, semantic hardware colors, sharp machined shapes, the three-family type system. The renderer's canvas is WebGL2 rather than DOM/SVG, so hierarchy there comes from the camera, LOD, and glyph-atlas text rather than CSS, but the palette and semantic color map still govern what gets drawn. Diff overlays in the branch switcher use green/amber — treat those as semantic, not decorative. Where this document's structural specifics (workspace header rows, `ProjectProvider`-driven panels) conflict with the new editor, read them as legacy app (pre-redesign) guidance; the visual language itself carries forward unchanged.
+
 ## Colors
 
 ProtoPulse color is functional before it is decorative. The palette is organized around three jobs: identity, interaction, and engineering semantics. Brand cyan says "this is ProtoPulse." Interactive emphasis says "this is the thing you can act on now." Semantic status colors say "this is power, signal, data, warning, success, info, or error." Do not collapse those jobs into a single accent.
