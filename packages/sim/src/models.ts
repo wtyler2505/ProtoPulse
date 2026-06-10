@@ -1,0 +1,252 @@
+import { parseValue } from '@protopulse/graph';
+
+import { spiceNum } from './analyses.js';
+
+import type { Component, ComponentClass } from '@protopulse/graph';
+import type { Part } from '@protopulse/parts';
+
+/**
+ * Model tiers — the honesty system (Vol II §D.4).
+ *
+ * Every simulated component declares what its model really is:
+ *   - 'spice'      — vendor/datasheet-grade SPICE parameters
+ *   - 'behavioral' — captures the dominant behavior, knowingly approximate
+ *   - 'stub'       — no model at all; the component is excluded and the
+ *                    manifest says so. Simulations never lie about what
+ *                    they are.
+ */
+export type ModelTier = 'spice' | 'behavioral' | 'stub';
+
+export interface FidelityEntry {
+  ref: string;
+  partId: string;
+  tier: ModelTier;
+  note?: string;
+}
+
+/** Context handed to an emitter for one component. */
+export interface EmitCtx {
+  component: Component;
+  part: Part;
+  /** SPICE node name for a pin key (dangling pins pre-assigned nc_*). */
+  node: (pinKey: string) => string;
+}
+
+/** What one component contributes to the deck. */
+export interface Emission {
+  /** Element lines (may be empty for stubs/aliases). */
+  lines: string[];
+  /** `.model` cards required by the element lines (deduped later). */
+  models: string[];
+  entry: Omit<FidelityEntry, 'ref' | 'partId'>;
+}
+
+/**
+ * SPICE element name: the ref, prefixed with the required element letter
+ * only when the ref does not already start with it ("R1" stays R1;
+ * battery "BT1" becomes VBT1; pushbutton "SW1" becomes RSW1).
+ */
+export function elementName(letter: string, ref: string): string {
+  const clean = ref.replace(/[^A-Za-z0-9_]/g, '_');
+  return clean.toUpperCase().startsWith(letter.toUpperCase()) ? clean : `${letter}${clean}`;
+}
+
+interface NumericValue {
+  value: number;
+  note?: string;
+}
+
+/** Parse a component value; fall back to a default with a manifest note. */
+function numericValue(
+  component: Component,
+  cls: ComponentClass,
+  fallback: number,
+  fallbackLabel: string,
+): NumericValue {
+  const raw = component.value;
+  if (raw === undefined || raw.trim() === '') {
+    return { value: fallback, note: `no value — defaulted to ${fallbackLabel}` };
+  }
+  const parsed = parseValue(raw, cls);
+  if ('error' in parsed) {
+    return { value: fallback, note: `value "${raw}" unparseable — defaulted to ${fallbackLabel}` };
+  }
+  return { value: parsed.value };
+}
+
+type Emitter = (ctx: EmitCtx) => Emission;
+
+const emitResistor: Emitter = ({ component, node }) => {
+  const v = numericValue(component, 'resistor', 1000, '1k');
+  return {
+    lines: [`${elementName('R', component.ref)} ${node('1')} ${node('2')} ${spiceNum(v.value)}`],
+    models: [],
+    entry: { tier: 'spice', ...(v.note !== undefined ? { note: v.note } : {}) },
+  };
+};
+
+const emitCapacitor: Emitter = ({ component, node }) => {
+  const v = numericValue(component, 'capacitor', 100e-9, '100nF');
+  return {
+    lines: [`${elementName('C', component.ref)} ${node('1')} ${node('2')} ${spiceNum(v.value)}`],
+    models: [],
+    entry: { tier: 'spice', ...(v.note !== undefined ? { note: v.note } : {}) },
+  };
+};
+
+const emitLed: Emitter = ({ component, node }) => {
+  const name = elementName('D', component.ref);
+  const model = `DLED_${name}`;
+  return {
+    lines: [`${name} ${node('A')} ${node('K')} ${model}`],
+    models: [`.model ${model} D(IS=1e-20 N=2.0)`],
+    entry: { tier: 'behavioral', note: 'behavioral two-parameter diode, no color binning' },
+  };
+};
+
+const emit1n4148: Emitter = ({ component, node }) => ({
+  lines: [`${elementName('D', component.ref)} ${node('A')} ${node('K')} D1N4148`],
+  models: ['.model D1N4148 D(IS=4.352e-9 N=1.906 RS=0.6458 CJO=7.048e-13 TT=3.48e-9 BV=100)'],
+  entry: { tier: 'spice' },
+});
+
+const emit1n5819: Emitter = ({ component, node }) => ({
+  lines: [`${elementName('D', component.ref)} ${node('A')} ${node('K')} D1N5819`],
+  models: ['.model D1N5819 D(IS=3.1e-6 N=1.0 RS=0.06 CJO=110e-12 TT=0 BV=40)'],
+  entry: { tier: 'behavioral', note: 'approximate datasheet-class Schottky parameters' },
+});
+
+const emitTvs: Emitter = ({ component, node }) => {
+  const bv = numericValue(component, 'voltage', 24, '24V');
+  const name = elementName('D', component.ref);
+  const model = `DTVS_${name}`;
+  const baseNote = 'breakdown clamp only — no transient energy model';
+  return {
+    lines: [`${name} ${node('A')} ${node('K')} ${model}`],
+    models: [`.model ${model} D(IS=1e-12 N=1.0 BV=${spiceNum(bv.value)} IBV=1e-3)`],
+    entry: {
+      tier: 'behavioral',
+      note: bv.note !== undefined ? `${baseNote}; ${bv.note}` : baseNote,
+    },
+  };
+};
+
+const emitBat54s: Emitter = ({ component, node }) => {
+  // Pin map (verified, Vishay 86410): 1 = anode of D1, 3 = common
+  // midpoint (cathode of D1 + anode of D2), 2 = cathode of D2.
+  const name = elementName('D', component.ref);
+  return {
+    lines: [
+      `${name}A ${node('1')} ${node('3')} DBAT54`,
+      `${name}B ${node('3')} ${node('2')} DBAT54`,
+    ],
+    models: ['.model DBAT54 D(IS=1e-7 N=1.08 RS=0.8)'],
+    entry: { tier: 'behavioral', note: 'dual series Schottky as two identical diodes' },
+  };
+};
+
+const emit2n3904: Emitter = ({ component, node }) => ({
+  // SPICE BJT node order: collector, base, emitter.
+  lines: [`${elementName('Q', component.ref)} ${node('C')} ${node('B')} ${node('E')} Q2N3904`],
+  models: [
+    '.model Q2N3904 NPN(IS=6.734e-15 BF=416.4 VAF=74.03 IKF=66.78e-3 RB=10 RC=1 CJE=4.493e-12 CJC=3.638e-12 TF=301.2e-12)',
+  ],
+  entry: { tier: 'spice' },
+});
+
+const emitNmosAo3400: Emitter = ({ component, node }) => {
+  // SPICE MOSFET node order: drain, gate, source, bulk (tied to source).
+  const s = node('S');
+  return {
+    lines: [`${elementName('M', component.ref)} ${node('D')} ${node('G')} ${s} ${s} NMOS_AO3400`],
+    models: ['.model NMOS_AO3400 NMOS(VTO=1.05 KP=20 LAMBDA=0.01)'],
+    entry: { tier: 'behavioral', note: 'first-order level-1; no gate charge' },
+  };
+};
+
+const emitBattery: Emitter = ({ component, node }) => {
+  const v = numericValue(component, 'voltage', 9, '9V');
+  const baseNote = 'ideal DC source (no internal resistance)';
+  return {
+    lines: [`${elementName('V', component.ref)} ${node('+')} ${node('-')} DC ${spiceNum(v.value)}`],
+    models: [],
+    entry: {
+      tier: 'behavioral',
+      note: v.note !== undefined ? `${baseNote}; ${v.note}` : baseNote,
+    },
+  };
+};
+
+const emitPwrVcc: Emitter = ({ component, node }) => {
+  const v = numericValue(component, 'voltage', 5, '5V');
+  const baseNote = 'ideal rail';
+  return {
+    lines: [`${elementName('V', component.ref)} ${node('1')} 0 DC ${spiceNum(v.value)}`],
+    models: [],
+    entry: {
+      tier: 'behavioral',
+      note: v.note !== undefined ? `${baseNote}; ${v.note}` : baseNote,
+    },
+  };
+};
+
+const emitPwrGnd: Emitter = () => ({
+  // The net wired to this symbol IS ground; the netlist generator
+  // aliases it to node 0. No element is emitted.
+  lines: [],
+  models: [],
+  entry: { tier: 'behavioral', note: 'ground reference — net aliased to node 0' },
+});
+
+const emitPushbutton: Emitter = ({ component, node }) => ({
+  lines: [`${elementName('R', component.ref)} ${node('1')} ${node('2')} 0.001`],
+  models: [],
+  entry: { tier: 'behavioral', note: 'modeled closed (pressed)' },
+});
+
+const stubEmission: Emission = {
+  lines: [],
+  models: [],
+  entry: { tier: 'stub', note: 'no model — excluded from simulation' },
+};
+
+const EMITTERS_BY_PART_ID: ReadonlyMap<string, Emitter> = new Map<string, Emitter>([
+  ['core:resistor', emitResistor],
+  ['core:capacitor', emitCapacitor],
+  ['core:capacitor-electrolytic', emitCapacitor],
+  ['core:led', emitLed],
+  ['core:1n4148', emit1n4148],
+  ['core:1n5819', emit1n5819],
+  ['core:tvs-unidirectional', emitTvs],
+  ['core:bat54s', emitBat54s],
+  ['core:2n3904', emit2n3904],
+  ['core:nmos-ao3400', emitNmosAo3400],
+  ['core:battery', emitBattery],
+  ['core:pwr-vcc', emitPwrVcc],
+  ['core:pwr-gnd', emitPwrGnd],
+  ['core:pushbutton', emitPushbutton],
+]);
+
+/** Generic class fallbacks for parts outside the seed library. */
+const EMITTERS_BY_CLASS: Partial<Record<Part['class'], Emitter>> = {
+  resistor: emitResistor,
+  capacitor: emitCapacitor,
+  led: emitLed,
+  battery: emitBattery,
+};
+
+/** True when the part's net should be aliased to SPICE ground (node 0). */
+export function isGroundPart(part: Part): boolean {
+  return part.id === 'core:pwr-gnd';
+}
+
+/**
+ * Emit the SPICE contribution for one (component, part) pair.
+ * Unknown parts produce a stub: no element, an honest manifest note.
+ * DNP is handled by the caller (excluded before emission).
+ */
+export function emitComponent(ctx: EmitCtx): Emission {
+  const emitter = EMITTERS_BY_PART_ID.get(ctx.part.id) ?? EMITTERS_BY_CLASS[ctx.part.class];
+  if (!emitter) return stubEmission;
+  return emitter(ctx);
+}
