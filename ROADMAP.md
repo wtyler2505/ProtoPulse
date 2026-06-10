@@ -112,10 +112,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
 - [ ] WebSerial/WebUSB flashing (needs real hardware to verify)
 - [ ] RP2040 / ESP32 cores; timers 1/2, SPI, TWI, ADC peripherals
 
-## v0.6 — The World ⬜
+## v0.6 — The World 🔨 *(first slice landed early)*
 
-Sync relay, share links, community library with provenance tiers
-(Vol III §4), manufacturing pipeline (Vol II §H).
+Sync relay, community library with provenance tiers (Vol III §4),
+manufacturing pipeline (Vol II §H).
+
+- [x] Serverless share links (landed 2026-06-10): the whole design —
+      op-log, branches and all — deflate-compressed into the URL
+      fragment (`#d=…`). No server, no upload; Copy-share-link in the
+      Export panel, confirm-guarded load on the receiving end. The
+      67-op 555 fixture travels as a ~2.1k-char URL.
+- [ ] Sync relay (real-time multi-actor; the op-log is CRDT-shaped)
+- [ ] Community library with provenance tiers
+- [ ] Manufacturing pipeline (Vol II §H)
 
 ## Migration milestone — legacy retirement (between v0.6 and v0.7) ⬜
 
