@@ -4,7 +4,15 @@ import { createEmuSession } from '../emu/runner.js';
 
 import { createCosimRunner } from './runner.js';
 
-import type { CosimModule, CosimResult, CosimWindowSpec, RunCosimWindowFn } from './types.js';
+import type {
+  ClosedLoopResult,
+  ClosedLoopSpec,
+  CosimModule,
+  CosimResult,
+  CosimWindowSpec,
+  RunCosimClosedLoopFn,
+  RunCosimWindowFn,
+} from './types.js';
 import type { EmuSession } from '../emu/runner.js';
 import type { DigitalLevel, EmuModule, McuCore, PinEvent } from '../emu/types.js';
 import type { DesignGraph } from '@protopulse/graph';
@@ -225,6 +233,134 @@ describe('createCosimRunner — the borrow protocol', () => {
     const runner = createCosimRunner({ loader, session });
     await runner.run(graph, parts, spec());
     await runner.run(graph, parts, spec());
+    expect(loader).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── The FEEDBACK direction: runClosedLoop ────────────────────────────
+
+const closedSpec = (over: Partial<ClosedLoopSpec> = {}): ClosedLoopSpec => ({
+  ...spec(),
+  quantumS: 50e-6,
+  inputs: [{ pin: 'PD2', netId: 'net-2' }],
+  adc: [{ channel: 0, netId: 'net-2' }],
+  ...over,
+});
+
+const okClosedResult = (): ClosedLoopResult => ({
+  ...okResult(),
+  quanta: 10,
+  adcReads: [{ channel: 0, cycle: 1234, volts: 2.2 }],
+  inputEdges: [{ pin: 'PD2', level: 1, cycle: 1600 }],
+  rerunSolves: 10,
+});
+
+describe('createCosimRunner — runClosedLoop', () => {
+  it('refuses an invalid closed-loop spec before touching module or core', async () => {
+    const loader = vi.fn(() => Promise.resolve({}));
+    const session = await loadedSession(new FakeCore());
+    const runner = createCosimRunner({ loader, session });
+    const out = await runner.runClosedLoop(graph, parts, closedSpec({ quantumS: 0.5e-6 }));
+    expect(out).toEqual({ ok: false, error: 'quantum cannot be finer than the solver step' });
+    expect(loader).not.toHaveBeenCalled();
+  });
+
+  it('asks for firmware first when the emu session has none loaded', async () => {
+    const loader = vi.fn(() => Promise.resolve({}));
+    const session = createEmuSession({ loader: () => Promise.resolve({}) }); // never loads
+    const runner = createCosimRunner({ loader, session });
+    const out = await runner.runClosedLoop(graph, parts, closedSpec());
+    expect(out.ok).toBe(false);
+    if (!out.ok) expect(out.error).toMatch(/load firmware first/);
+    expect(loader).not.toHaveBeenCalled();
+  });
+
+  it('surfaces "not in this build" when the module lacks runCosimClosedLoop', async () => {
+    const session = await loadedSession(new FakeCore());
+    // A build with ONLY the open-loop slice: closed loop is honestly absent.
+    const runner = createCosimRunner({
+      loader: () =>
+        Promise.resolve({ runCosimWindow: () => Promise.resolve(okResult()) } satisfies Partial<CosimModule>),
+      session,
+    });
+    const out = await runner.runClosedLoop(graph, parts, closedSpec());
+    expect(out).toEqual({
+      ok: false,
+      error:
+        'closed-loop co-simulation not in this build — @protopulse/cosim lacks runCosimClosedLoop',
+    });
+    expect(session.suspended).toBe(false); // the borrow never started
+  });
+
+  it('runs the loop against the SESSION’S core and reports the honesty numbers', async () => {
+    const core = new FakeCore();
+    const session = await loadedSession(core);
+    const runCosimClosedLoop = vi.fn<RunCosimClosedLoopFn>(() =>
+      Promise.resolve(okClosedResult()),
+    );
+    const runner = createCosimRunner({
+      loader: () => Promise.resolve({ runCosimClosedLoop }),
+      session,
+    });
+    const theSpec = closedSpec();
+    const out = await runner.runClosedLoop(graph, parts, theSpec);
+    expect(out.ok).toBe(true);
+    expect(runCosimClosedLoop).toHaveBeenCalledWith({ graph, parts, core, spec: theSpec });
+    if (!out.ok) return;
+    expect(out.result.rerunSolves).toBe(10);
+    expect(out.result.quanta).toBe(10);
+    expect(out.result.adcReads).toHaveLength(1);
+    expect(out.result.inputEdges).toHaveLength(1);
+    expect(out.fidelity).toContain('1 spice');
+  });
+
+  it('follows the same borrow protocol: suspend + reset before, reset + resume after', async () => {
+    const core = new FakeCore();
+    const session = await loadedSession(core);
+    let stateAtRun: { suspended: boolean; resets: number } | null = null;
+    const runCosimClosedLoop: RunCosimClosedLoopFn = () => {
+      stateAtRun = { suspended: session.suspended, resets: core.resets };
+      return Promise.resolve(okClosedResult());
+    };
+    const runner = createCosimRunner({
+      loader: () => Promise.resolve({ runCosimClosedLoop }),
+      session,
+    });
+    const out = await runner.runClosedLoop(graph, parts, closedSpec());
+    expect(out.ok).toBe(true);
+    expect(stateAtRun).toEqual({ suspended: true, resets: 2 }); // load + before-window
+    expect(core.resets).toBe(3); // …and once after
+    expect(session.suspended).toBe(false);
+    expect(session.cycles).toBe(0);
+  });
+
+  it('surfaces a quantum-loop throw as a value AND hands the core back reset + resumed', async () => {
+    const core = new FakeCore();
+    const session = await loadedSession(core);
+    const runCosimClosedLoop: RunCosimClosedLoopFn = () =>
+      Promise.reject(new Error('singular matrix at quantum 7'));
+    const runner = createCosimRunner({
+      loader: () => Promise.resolve({ runCosimClosedLoop }),
+      session,
+    });
+    const out = await runner.runClosedLoop(graph, parts, closedSpec());
+    expect(out).toEqual({ ok: false, error: 'singular matrix at quantum 7' });
+    expect(session.suspended).toBe(false);
+    expect(core.resets).toBe(3);
+    expect(session.loaded).toBe(true);
+  });
+
+  it('open-loop and closed-loop share one lazily loaded module', async () => {
+    const session = await loadedSession(new FakeCore());
+    const loader = vi.fn(() =>
+      Promise.resolve({
+        runCosimWindow: () => Promise.resolve(okResult()),
+        runCosimClosedLoop: () => Promise.resolve(okClosedResult()),
+      } satisfies Partial<CosimModule>),
+    );
+    const runner = createCosimRunner({ loader, session });
+    await runner.run(graph, parts, spec());
+    await runner.runClosedLoop(graph, parts, closedSpec());
     expect(loader).toHaveBeenCalledTimes(1);
   });
 });

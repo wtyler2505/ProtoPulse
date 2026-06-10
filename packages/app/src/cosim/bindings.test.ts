@@ -1,17 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ADC_CHANNEL_CANDIDATES,
+  addAdcBinding,
   addBinding,
+  addInputBinding,
   candidateNets,
   candidatePins,
   DEFAULT_PIN_CANDIDATES,
+  MAX_COSIM_QUANTA,
   MAX_COSIM_STEPS,
+  removeAdcBinding,
   removeBinding,
+  removeInputBinding,
+  validateAdcBinding,
   validateBinding,
+  validateClosedLoopSpec,
+  validateInputBinding,
   validateSpec,
 } from './bindings.js';
 
-import type { CosimWindowSpec, PinBinding } from './types.js';
+import type { AdcBinding, ClosedLoopSpec, CosimWindowSpec, InputBinding, PinBinding } from './types.js';
 import type { DesignGraph, Net } from '@protopulse/graph';
 
 const bind = (pin: string, extra: Partial<PinBinding> = {}): PinBinding => ({
@@ -127,5 +136,141 @@ describe('validateSpec', () => {
 
   it('surfaces a bad binding with the pin named', () => {
     expect(validateSpec(spec({ bindings: [bind('PD2', { routOhms: 0 })] }))).toMatch(/PD2/);
+  });
+});
+
+// ── Closed loop (FEEDBACK direction) ─────────────────────────────────
+
+const closedSpec = (over: Partial<ClosedLoopSpec> = {}): ClosedLoopSpec => ({
+  ...spec(),
+  quantumS: 50e-6,
+  inputs: [{ pin: 'PD2', netId: 'net-2' }],
+  adc: [{ channel: 0, netId: 'net-2' }],
+  ...over,
+});
+
+describe('input bindings (comparator feedback)', () => {
+  it('validates pin and net presence', () => {
+    expect(validateInputBinding({ pin: '', netId: 'net-1' })).toMatch(/pin/);
+    expect(validateInputBinding({ pin: 'PD2', netId: ' ' })).toMatch(/PD2.*net/);
+    expect(validateInputBinding({ pin: 'PD2', netId: 'net-1' })).toBeNull();
+  });
+
+  it('addInputBinding appends without mutating; duplicates refused', () => {
+    const before: InputBinding[] = [{ pin: 'PD2', netId: 'net-1' }];
+    const out = addInputBinding(before, { pin: 'PD3', netId: 'net-2' });
+    expect(out.ok).toBe(true);
+    if (out.ok) expect(out.inputs.map((i) => i.pin)).toEqual(['PD2', 'PD3']);
+    expect(before).toHaveLength(1);
+    expect(addInputBinding(before, { pin: 'PD2', netId: 'net-9' })).toEqual({
+      ok: false,
+      error: 'PD2 is already an input — remove it first',
+    });
+  });
+
+  it('removeInputBinding drops only the named pin, without mutating', () => {
+    const before: InputBinding[] = [
+      { pin: 'PD2', netId: 'net-1' },
+      { pin: 'PD3', netId: 'net-2' },
+    ];
+    expect(removeInputBinding(before, 'PD2').map((i) => i.pin)).toEqual(['PD3']);
+    expect(before).toHaveLength(2);
+  });
+});
+
+describe('ADC bindings (sampler feedback)', () => {
+  it('validates the channel range and net presence', () => {
+    expect(validateAdcBinding({ channel: -1, netId: 'net-1' })).toMatch(/0–15/);
+    expect(validateAdcBinding({ channel: 16, netId: 'net-1' })).toMatch(/0–15/);
+    expect(validateAdcBinding({ channel: 1.5, netId: 'net-1' })).toMatch(/integer/);
+    expect(validateAdcBinding({ channel: 0, netId: '' })).toMatch(/net/);
+    expect(validateAdcBinding({ channel: 7, netId: 'net-1' })).toBeNull();
+  });
+
+  it('addAdcBinding appends without mutating; duplicate channels refused', () => {
+    const before: AdcBinding[] = [{ channel: 0, netId: 'net-1' }];
+    const out = addAdcBinding(before, { channel: 3, netId: 'net-2' });
+    expect(out.ok).toBe(true);
+    if (out.ok) expect(out.adc.map((a) => a.channel)).toEqual([0, 3]);
+    expect(before).toHaveLength(1);
+    expect(addAdcBinding(before, { channel: 0, netId: 'net-9' })).toEqual({
+      ok: false,
+      error: 'ADC channel 0 is already bound — remove it first',
+    });
+  });
+
+  it('removeAdcBinding drops only the named channel, without mutating', () => {
+    const before: AdcBinding[] = [
+      { channel: 0, netId: 'net-1' },
+      { channel: 5, netId: 'net-2' },
+    ];
+    expect(removeAdcBinding(before, 0).map((a) => a.channel)).toEqual([5]);
+    expect(before).toHaveLength(2);
+  });
+
+  it('offers the eight ATmega328P single-ended channels', () => {
+    expect([...ADC_CHANNEL_CANDIDATES]).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+  });
+});
+
+describe('validateClosedLoopSpec', () => {
+  it('accepts a full closed-loop spec, and one with quantum left to the engine default', () => {
+    expect(validateClosedLoopSpec(closedSpec())).toBeNull();
+    expect(validateClosedLoopSpec(closedSpec({ quantumS: undefined }))).toBeNull();
+    expect(validateClosedLoopSpec(closedSpec({ inputs: undefined, adc: undefined }))).toBeNull();
+  });
+
+  it('still enforces the open-loop base rules first', () => {
+    expect(validateClosedLoopSpec(closedSpec({ bindings: [] }))).toMatch(/at least one/);
+    expect(validateClosedLoopSpec(closedSpec({ windowS: 0 }))).toMatch(/window/);
+  });
+
+  it('rejects a quantum finer than the step or larger than the window', () => {
+    expect(validateClosedLoopSpec(closedSpec({ quantumS: 0.5e-6 }))).toMatch(/finer than/);
+    expect(validateClosedLoopSpec(closedSpec({ quantumS: 1e-3 }))).toMatch(/larger than the window/);
+    expect(validateClosedLoopSpec(closedSpec({ quantumS: 0 }))).toMatch(/quantum/);
+    expect(validateClosedLoopSpec(closedSpec({ quantumS: NaN }))).toMatch(/quantum/);
+  });
+
+  it('caps the re-solve count — every quantum re-runs the transient from zero', () => {
+    const fine = closedSpec({ windowS: 0.5, stepS: 1e-6, quantumS: 1e-6 });
+    expect(validateClosedLoopSpec(fine)).toMatch(/re-solves/);
+    expect(
+      validateClosedLoopSpec(
+        closedSpec({ windowS: MAX_COSIM_QUANTA * 50e-6, quantumS: 50e-6 }),
+      ),
+    ).toBeNull();
+  });
+
+  it('rejects duplicate input pins and output/input collisions', () => {
+    expect(
+      validateClosedLoopSpec(
+        closedSpec({
+          inputs: [
+            { pin: 'PD2', netId: 'net-1' },
+            { pin: 'PD2', netId: 'net-2' },
+          ],
+        }),
+      ),
+    ).toMatch(/input twice/);
+    expect(
+      validateClosedLoopSpec(closedSpec({ inputs: [{ pin: 'PB5', netId: 'net-1' }] })),
+    ).toMatch(/both an output binding and an input/);
+  });
+
+  it('rejects duplicate or out-of-range ADC channels', () => {
+    expect(
+      validateClosedLoopSpec(
+        closedSpec({
+          adc: [
+            { channel: 0, netId: 'net-1' },
+            { channel: 0, netId: 'net-2' },
+          ],
+        }),
+      ),
+    ).toMatch(/bound twice/);
+    expect(
+      validateClosedLoopSpec(closedSpec({ adc: [{ channel: 16, netId: 'net-1' }] })),
+    ).toMatch(/0–15/);
   });
 });

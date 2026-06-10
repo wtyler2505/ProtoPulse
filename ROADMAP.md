@@ -90,8 +90,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       thesis test measures 0.94Vpp RC ripple vs ~0.9Vpp theory; Co-sim
       panel with bindings, slowdown-honesty readout, square-wave-over-
       analog money plot
-- [ ] Co-sim feedback direction: digital input comparators + ADC as
-      hard sync point (windowed fixed-point iteration)
+- [x] Co-sim feedback direction (the loop is CLOSED): ADC peripheral
+      with conversion-completion hard sync, comparator-fed digital
+      inputs with hysteresis, quantum loop with honest from-zero
+      re-solves — bang-bang firmware regulates its own RC node in test
+      (136 conversions, sustained oscillation 1.83-3.20V around the
+      2.5V threshold)
 - [ ] WebSerial/WebUSB flashing (needs real hardware to verify)
 - [ ] RP2040 / ESP32 cores; timers 1/2, SPI, TWI, ADC peripherals
 

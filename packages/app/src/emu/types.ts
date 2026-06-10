@@ -22,9 +22,21 @@ export interface McuInspection {
   sp: number;
 }
 
+/** PINNED addition (emu ADC track): one firmware-initiated ADC
+ *  conversion, stamped with the CPU cycle it started on. */
+export interface AdcReadRequest {
+  channel: number;
+  cycle: number;
+}
+
 /**
  * The pinned MCU-core contract: load firmware, step in bounded cycle
  * batches, observe pin events and UART bytes, poke pins and UART back in.
+ *
+ * The ADC pair is OPTIONAL here: it is the pinned addition landing on
+ * the emu ADC track. Consumers probe for it at runtime (closed-loop
+ * co-sim refuses ADC bindings when the loaded core lacks it) — older
+ * cores and test fakes stay valid without it.
  */
 export interface McuCore {
   readonly clockHz: number;
@@ -35,6 +47,11 @@ export interface McuCore {
   drainUart(): Uint8Array;
   inspect(): McuInspection;
   reset(): void;
+  /** PINNED (emu ADC track): install the host conversion callback —
+   *  volts back per (channel, cycle) request. */
+  setAdcSampler?(fn: (channel: number, cycle: number) => number): void;
+  /** PINNED (emu ADC track): conversions made since the last drain. */
+  drainAdcReads?(): AdcReadRequest[];
 }
 
 /** Shape of the lazily imported '@protopulse/emu' module. Partial in

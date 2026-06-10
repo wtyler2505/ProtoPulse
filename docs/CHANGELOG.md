@@ -2,6 +2,26 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — v0.5 third slice: the loop closes
+
+### Added
+- `@protopulse/emu`: ADC peripheral (datasheet-accurate 25/13-clock
+  conversions, completion-time host sampler — the D.3 hard sync point),
+  assembler grows CPI/branch opcodes; bang-bang firmware verified
+  reacting to analog input. 69 emu tests.
+- `@protopulse/cosim`: runCosimClosedLoop — conservative quantum loop
+  with comparator-fed digital inputs (VIH/VIL + hysteresis), ADC
+  sampling against the previous solve, and loudly-counted from-zero
+  re-solves. THE closed-loop test passes: firmware charges an RC node
+  through its own pin, reads it back, and regulates — sustained
+  oscillation around its 2.5V threshold. 65 cosim tests.
+- App: closed-loop mode in the Co-sim panel (input/ADC bindings,
+  quantum field, re-solve/ADC-read honesty readout). 304 app tests.
+
+### Known gaps (ROADMAP.md)
+- WebSerial flashing (hardware required), RP2040/ESP32 cores, solver
+  state continuity (currently O(quanta²) re-solves, counted honestly).
+
 ## 2026-06-10 — v0.5 second slice: the co-sim bus (the crown jewel, one way)
 
 ### Added

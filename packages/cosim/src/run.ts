@@ -24,7 +24,7 @@ import type { SpiceEngine } from '@protopulse/sim';
  */
 
 /** Cycles per emulation chunk — keeps each step() call bounded. */
-const STEP_CHUNK_CYCLES = 100_000;
+export const STEP_CHUNK_CYCLES = 100_000;
 
 export interface RunCosimWindowArgs {
   graph: DesignGraph;
@@ -41,7 +41,7 @@ export interface RunCosimWindowArgs {
  * before the first edge is its opposite. A pin with no edges in the
  * window is taken as idle-low (reset-default GPIO state).
  */
-function inferInitialLevel(edges: readonly PinEvent[]): DigitalLevel {
+export function inferInitialLevel(edges: readonly PinEvent[]): DigitalLevel {
   const first = edges[0];
   if (first === undefined) return 0;
   return first.level === 1 ? 0 : 1;
@@ -104,7 +104,12 @@ export async function runCosimWindow(args: RunCosimWindowArgs): Promise<CosimRes
   };
 }
 
-function bindingCard(
+/**
+ * One output binding's SPICE card pair (V…PWL + series Rout) over
+ * `windowS`, built from a (possibly mixed-pin) event stream. Shared by
+ * the open-loop window and every closed-loop quantum re-solve.
+ */
+export function bindingCard(
   binding: PinBinding,
   events: readonly PinEvent[],
   clockHz: number,

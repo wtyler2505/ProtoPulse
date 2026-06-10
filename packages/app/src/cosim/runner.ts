@@ -1,10 +1,17 @@
 import { sharedEmuSession } from '../emu/runner.js';
 import { fallbackFidelitySummary } from '../sim/runner.js';
 
-import { validateSpec } from './bindings.js';
+import { validateClosedLoopSpec, validateSpec } from './bindings.js';
 
-import type { CosimModule, CosimResult, CosimWindowSpec } from './types.js';
+import type {
+  ClosedLoopResult,
+  ClosedLoopSpec,
+  CosimModule,
+  CosimResult,
+  CosimWindowSpec,
+} from './types.js';
 import type { EmuSession } from '../emu/runner.js';
+import type { McuCore } from '../emu/types.js';
 import type { DesignGraph } from '@protopulse/graph';
 import type { PartDb } from '@protopulse/parts';
 
@@ -48,6 +55,17 @@ export type CosimOutcome =
     }
   | { ok: false; error: string };
 
+export type CosimClosedOutcome =
+  | {
+      ok: true;
+      result: ClosedLoopResult;
+      /** Human fidelity summary of result.sim.manifest. */
+      fidelity: string;
+      /** Wall-clock cost of the whole quantum loop. */
+      wallMs: number;
+    }
+  | { ok: false; error: string };
+
 type CosimModuleLoader = () => Promise<Partial<CosimModule>>;
 
 const defaultLoader: CosimModuleLoader = async () => {
@@ -70,6 +88,12 @@ export interface CosimRunnerOpts {
 
 export interface CosimRunner {
   run: (graph: DesignGraph, parts: PartDb, spec: CosimWindowSpec) => Promise<CosimOutcome>;
+  /** The FEEDBACK direction: MCU↔SPICE on a conservative quantum. */
+  runClosedLoop: (
+    graph: DesignGraph,
+    parts: PartDb,
+    spec: ClosedLoopSpec,
+  ) => Promise<CosimClosedOutcome>;
 }
 
 export function createCosimRunner(opts: CosimRunnerOpts = {}): CosimRunner {
@@ -80,13 +104,21 @@ export function createCosimRunner(opts: CosimRunnerOpts = {}): CosimRunner {
   let modulePromise: Promise<Partial<CosimModule>> | null = null;
   const loadModule = (): Promise<Partial<CosimModule>> => (modulePromise ??= loader());
 
-  const run = async (
-    graph: DesignGraph,
-    parts: PartDb,
-    spec: CosimWindowSpec,
-  ): Promise<CosimOutcome> => {
-    const invalid = validateSpec(spec);
-    if (invalid !== null) return { ok: false, error: invalid };
+  /**
+   * The shared run shape for both directions: validate, gate on
+   * firmware, lazy-load the module, then the exclusive borrow — pause
+   * the Firmware run loop, start the window from power-on, and hand the
+   * core back at power-on afterwards (also on error).
+   */
+  const borrowAndRun = async <R extends CosimResult>(
+    validationError: string | null,
+    pickEngine: (
+      mod: Partial<CosimModule>,
+    ) => { ok: true; exec: (core: McuCore) => Promise<R> } | { ok: false; error: string },
+  ): Promise<
+    { ok: true; result: R; fidelity: string; wallMs: number } | { ok: false; error: string }
+  > => {
+    if (validationError !== null) return { ok: false, error: validationError };
 
     const core = session.getCore();
     if (core === null || !session.loaded) {
@@ -102,20 +134,14 @@ export function createCosimRunner(opts: CosimRunnerOpts = {}): CosimRunner {
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
-    if (typeof mod.runCosimWindow !== 'function') {
-      return {
-        ok: false,
-        error: 'co-simulation not available yet — @protopulse/cosim is not in this build',
-      };
-    }
+    const picked = pickEngine(mod);
+    if (!picked.ok) return picked;
 
-    // ── Exclusive borrow: pause the Firmware run loop, start the window
-    // from power-on, and hand the core back at power-on afterwards. ──
     session.suspend();
     const t0 = now();
     try {
       session.reset();
-      const result = await mod.runCosimWindow({ graph, parts, core, spec });
+      const result = await picked.exec(core);
       return {
         ok: true,
         result,
@@ -130,7 +156,40 @@ export function createCosimRunner(opts: CosimRunnerOpts = {}): CosimRunner {
     }
   };
 
-  return { run };
+  const run = (
+    graph: DesignGraph,
+    parts: PartDb,
+    spec: CosimWindowSpec,
+  ): Promise<CosimOutcome> =>
+    borrowAndRun<CosimResult>(validateSpec(spec), (mod) => {
+      if (typeof mod.runCosimWindow !== 'function') {
+        return {
+          ok: false,
+          error: 'co-simulation not available yet — @protopulse/cosim is not in this build',
+        };
+      }
+      const fn = mod.runCosimWindow;
+      return { ok: true, exec: (core) => fn({ graph, parts, core, spec }) };
+    });
+
+  const runClosedLoop = (
+    graph: DesignGraph,
+    parts: PartDb,
+    spec: ClosedLoopSpec,
+  ): Promise<CosimClosedOutcome> =>
+    borrowAndRun<ClosedLoopResult>(validateClosedLoopSpec(spec), (mod) => {
+      if (typeof mod.runCosimClosedLoop !== 'function') {
+        return {
+          ok: false,
+          error:
+            'closed-loop co-simulation not in this build — @protopulse/cosim lacks runCosimClosedLoop',
+        };
+      }
+      const fn = mod.runCosimClosedLoop;
+      return { ok: true, exec: (core) => fn({ graph, parts, core, spec }) };
+    });
+
+  return { run, runClosedLoop };
 }
 
 /** The app-wide runner instance (borrows the shared emu session). */
@@ -143,4 +202,13 @@ export function runCosim(
   spec: CosimWindowSpec,
 ): Promise<CosimOutcome> {
   return cosimRunner.run(graph, parts, spec);
+}
+
+/** Panel entry point for the FEEDBACK direction — equally uncached. */
+export function runCosimClosed(
+  graph: DesignGraph,
+  parts: PartDb,
+  spec: ClosedLoopSpec,
+): Promise<CosimClosedOutcome> {
+  return cosimRunner.runClosedLoop(graph, parts, spec);
 }

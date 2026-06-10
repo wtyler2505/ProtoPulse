@@ -55,8 +55,64 @@ export type RunCosimWindowFn = (args: {
   spec: CosimWindowSpec;
 }) => Promise<CosimResult>;
 
+// ── Closed loop (FEEDBACK direction) ─────────────────────────────────
+
+/** One analog net fed back onto an MCU *digital input* pin through the
+ *  engine's Schmitt comparator (state retained per pin). */
+export interface InputBinding {
+  /** The graph net whose voltage is comparator-sampled, by net id. */
+  netId: string;
+  /** Digital input pin to drive, e.g. 'D2'. */
+  pin: string;
+}
+
+/** One analog net fed back into an MCU ADC channel via the sampler. */
+export interface AdcBinding {
+  /** The graph net whose voltage the ADC converts, by net id. */
+  netId: string;
+  /** ADC mux channel. */
+  channel: number;
+}
+
+/** A closed-loop window: outputs out, comparator + ADC back in,
+ *  lock-stepped on a conservative quantum (engine default 50 µs). */
+export interface ClosedLoopSpec extends CosimWindowSpec {
+  /** Conservative quantum, seconds; engine defaults it when omitted. */
+  quantumS?: number;
+  inputs?: InputBinding[];
+  adc?: AdcBinding[];
+}
+
+/** Pinned with the emu ADC track: one firmware-initiated conversion. */
+export interface AdcReadRecord {
+  channel: number;
+  cycle: number;
+  /** The volts the engine fed back for this conversion. */
+  volts: number;
+}
+
+export interface ClosedLoopResult extends CosimResult {
+  /** Conservative quanta the window was cut into. */
+  quanta: number;
+  /** Every firmware ADC conversion, with the volts it was fed. */
+  adcReads: AdcReadRecord[];
+  /** Comparator transitions driven onto digital input pins. */
+  inputEdges: PinEvent[];
+  /** Full from-zero re-solves — the batch engine cannot pause/resume,
+   *  so each quantum re-runs the transient. The honesty counter. */
+  rerunSolves: number;
+}
+
+export type RunCosimClosedLoopFn = (args: {
+  graph: DesignGraph;
+  parts: PartDb;
+  core: McuCore;
+  spec: ClosedLoopSpec;
+}) => Promise<ClosedLoopResult>;
+
 /** Shape of the lazily imported '@protopulse/cosim' module. Partial in
- *  practice until the cosim track lands — runner.ts checks at runtime. */
+ *  practice until the cosim tracks land — runner.ts checks at runtime. */
 export interface CosimModule {
   runCosimWindow: RunCosimWindowFn;
+  runCosimClosedLoop: RunCosimClosedLoopFn;
 }
