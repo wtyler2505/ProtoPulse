@@ -1,0 +1,32 @@
+# Step 4 — a switch, a floating node on purpose, and the first ERC run.
+id: first-light-04
+title: Add a switch and meet the ERC
+mode: guided
+unlocks:
+  - floating-inputs
+  - ground-three-meanings
+given: snippet:led-resistor-battery
+goal:
+  - "Deliberately leave the 555 RESET pin unconnected and run ERC"
+  - "Read the ERC-FLOATING-INPUT finding and follow its concept link"
+  - erc: clean
+professor:
+  beginner: >-
+    Add a pushbutton in series so you can blink by hand. Then we break
+    something on purpose: drop in a 555 timer and leave its RESET pin
+    floating. Run ERC and read what it says — the checker found a bug
+    you couldn't see.
+  intermediate: >-
+    A floating input isn't "off" — it's undefined. The ERC flags every
+    unconnected input pin. Tie RESET high (it's active-low) and re-run
+    until the report is clean. Notice every finding links to a concept
+    article: the error message is the curriculum index.
+  expert: >-
+    CMOS inputs are high-impedance gates; a floating one couples to
+    whatever field is nearby and can also bias the input stage into
+    shoot-through. Audit each 555 pin: which are inputs, which need
+    defined levels at all times, and what the datasheet says RESET does
+    below 0.7V.
+deliverable: >-
+  The switch+LED circuit with the 555 present, every input pin given a
+  defined level, and a clean ERC report (erc: clean).

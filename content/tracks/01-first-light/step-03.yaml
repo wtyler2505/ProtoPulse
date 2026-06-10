@@ -1,0 +1,34 @@
+# Step 3 — series vs parallel LEDs; tolerance ruins the naive plan.
+id: first-light-03
+title: Two LEDs — series, parallel, and why parallel cheats you
+mode: explore
+unlocks:
+  - series-vs-parallel
+  - tolerance-stacking
+given: null
+goal:
+  - sim: "Series pair: same current through both LEDs"
+  - sim: "Parallel pair sharing one resistor: currents differ between LEDs"
+  - erc: clean
+professor:
+  beginner: >-
+    Build it both ways. In series the same current threads both LEDs —
+    they match. In parallel off one shared resistor, one LED hogs the
+    current and glows brighter. Same parts, different wiring, different
+    physics.
+  intermediate: >-
+    Series stacks voltage drops (check the battery can afford 2×Vf);
+    parallel shares current by each LED's Vf, and a 0.1V Vf mismatch can
+    skew current badly. One resistor per LED fixes it.
+  expert: >-
+    Quantify the parallel imbalance: with r_d of a few ohms, ΔIf ≈
+    ΔVf / r_d between siblings. Then stack tolerances — battery sag,
+    resistor 5%, Vf bin spread — and bound worst-case current. This is
+    tolerance stacking in miniature.
+failure_puzzle: >-
+  A builder parallels three LEDs on one 100Ω resistor. One LED is
+  noticeably brighter and dies a week later. Reconstruct the failure
+  chain before you simulate it.
+deliverable: >-
+  Two ERC-clean schematics (series pair; parallel pair done right with
+  one resistor per LED) and a note on when each topology wins.

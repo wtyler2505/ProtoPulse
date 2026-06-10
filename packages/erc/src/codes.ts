@@ -15,6 +15,7 @@ export const ERC_CODES: Record<string, CodeInfo> = {
   'ERC-TRISTATE-DRIVEN': { title: 'Tri-state bus driven push-pull', conceptSlug: 'push-pull-vs-open-collector' },
   'ERC-OC-DRIVEN': { title: 'Open-collector net driven push-pull', conceptSlug: 'push-pull-vs-open-collector' },
   'ERC-OC-ON-RAIL': { title: 'Open-collector pin on a rail', conceptSlug: 'pull-up-pull-down' },
+  'ERC-TRISTATE-ON-RAIL': { title: 'Tri-state pin on a rail', conceptSlug: 'push-pull-vs-open-collector' },
   'ERC-BIDI-DRIVEN': { title: 'Bidirectional pin driven push-pull', conceptSlug: 'push-pull-vs-open-collector' },
   'ERC-NC-CONNECTED': { title: 'No-connect pin connected', conceptSlug: 'reading-a-datasheet' },
   'ERC-FLOATING-INPUT': { title: 'Floating input', conceptSlug: 'floating-inputs' },
