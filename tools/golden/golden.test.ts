@@ -1,8 +1,14 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { runErc } from '@protopulse/erc';
-import { exportBomCsv, exportKicadNetlist } from '@protopulse/export';
+import {
+  exportBomCsv,
+  exportExcellon,
+  exportGerberLayer,
+  exportKicadNetlist,
+  exportPickPlace,
+} from '@protopulse/export';
 import { materialize, opEnvelopeSchema } from '@protopulse/graph';
 import { seedPartDb } from '@protopulse/parts';
 import { describe, expect, it } from 'vitest';
@@ -21,8 +27,8 @@ const names = readdirSync(fixturesDir, { withFileTypes: true })
   .sort();
 
 describe('golden exports', () => {
-  it('has the three M1 fixtures', () => {
-    expect(names).toEqual(['led-resistor', 'probe-input-protection', 'traffic-light-555']);
+  it('has the four fixtures', () => {
+    expect(names).toEqual(['led-resistor', 'probe-input-protection', 'routed-led', 'traffic-light-555']);
   });
 
   for (const name of names) {
@@ -50,6 +56,29 @@ describe('golden exports', () => {
         const expected = readFileSync(join(dir, 'expected.bom.csv'), 'utf8');
         expect(exportBomCsv(result.graph, seedPartDb())).toBe(expected);
       });
+
+      // Fab exports exist only for fixtures with PCB content.
+      if (existsSync(join(dir, 'expected.F.Cu.gbr'))) {
+        it('F.Cu Gerber matches byte-exactly', () => {
+          const expected = readFileSync(join(dir, 'expected.F.Cu.gbr'), 'utf8');
+          expect(exportGerberLayer(result.graph, seedPartDb(), 'F.Cu', { date: GOLDEN_DATE })).toBe(expected);
+        });
+
+        it('B.Cu Gerber matches byte-exactly', () => {
+          const expected = readFileSync(join(dir, 'expected.B.Cu.gbr'), 'utf8');
+          expect(exportGerberLayer(result.graph, seedPartDb(), 'B.Cu', { date: GOLDEN_DATE })).toBe(expected);
+        });
+
+        it('Excellon drill file matches byte-exactly', () => {
+          const expected = readFileSync(join(dir, 'expected.drl'), 'utf8');
+          expect(exportExcellon(result.graph, seedPartDb(), { date: GOLDEN_DATE })).toBe(expected);
+        });
+
+        it('pick-and-place CSV matches byte-exactly', () => {
+          const expected = readFileSync(join(dir, 'expected.pos.csv'), 'utf8');
+          expect(exportPickPlace(result.graph, seedPartDb())).toBe(expected);
+        });
+      }
     });
   }
 });

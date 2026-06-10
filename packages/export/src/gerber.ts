@@ -1,0 +1,164 @@
+import { compareRefs } from './kicad-netlist.js';
+import { applyPcbPlacement, formatMm, quarterTurnsOf } from './pcb-common.js';
+
+import type { DesignGraph, Vec } from '@protopulse/graph';
+import type { PartDb } from '@protopulse/parts';
+
+/**
+ * Gerber X2 (RS-274X) copper-layer exporter. FSLAX46Y46 + MOMM means
+ * coordinates carry 6 decimal places of a millimeter — i.e. the body
+ * coordinate integers ARE nanometers, emitted directly with no float
+ * arithmetic anywhere.
+ *
+ * Deterministic by construction: apertures sorted (circles before
+ * rects, then by dimensions), objects sorted by (type, entity ref/id,
+ * index). Pad flashing rules: SMD pads land on the placement side's
+ * copper layer; through-hole pads and via pads flash on BOTH copper
+ * layers. The date is injected (never `new Date()`).
+ */
+
+export type CopperLayer = 'F.Cu' | 'B.Cu';
+
+export interface GerberOpts {
+  /** ISO timestamp recorded in %TF.CreationDate. */
+  date: string;
+}
+
+type Aperture = { kind: 'C'; dNm: number } | { kind: 'R'; wNm: number; hNm: number };
+
+function apertureKey(a: Aperture): string {
+  return a.kind === 'C' ? `C:${String(a.dNm)}` : `R:${String(a.wNm)}x${String(a.hNm)}`;
+}
+
+function apertureTemplate(a: Aperture): string {
+  return a.kind === 'C' ? `C,${formatMm(a.dNm)}` : `R,${formatMm(a.wNm)}X${formatMm(a.hNm)}`;
+}
+
+function compareApertures(a: Aperture, b: Aperture): number {
+  if (a.kind !== b.kind) return a.kind < b.kind ? -1 : 1; // C before R
+  if (a.kind === 'C' && b.kind === 'C') return a.dNm - b.dNm;
+  if (a.kind === 'R' && b.kind === 'R') return a.wNm - b.wNm || a.hNm - b.hNm;
+  return 0;
+}
+
+/** Sort key: (type, entity ref/id via natural order, index). */
+interface GerberObject {
+  type: 0 | 1 | 2; // 0 = pad flash, 1 = via flash, 2 = trace draw
+  entity: string; // component ref / via id / trace id
+  index: number; // pad index within the footprint; 0 otherwise
+  aperture: Aperture;
+  /** Flash position (types 0/1) or polyline (type 2). */
+  at?: Vec;
+  path?: Vec[];
+}
+
+function compareObjects(a: GerberObject, b: GerberObject): number {
+  return a.type - b.type || compareRefs(a.entity, b.entity) || a.index - b.index;
+}
+
+function xy(p: Vec): string {
+  return `X${String(Math.round(p.x))}Y${String(Math.round(p.y))}`;
+}
+
+export function exportGerberLayer(
+  graph: DesignGraph,
+  parts: PartDb,
+  layer: CopperLayer,
+  opts: GerberOpts,
+): string {
+  const objects: GerberObject[] = [];
+
+  // Pads. Copper exists on the board whether or not the part is
+  // populated, so DNP does not filter here (it filters pick-and-place).
+  for (const [componentId, placement] of graph.pcb.placements) {
+    const comp = graph.components.get(componentId);
+    if (!comp) continue;
+    const footprint = parts.get(comp.partId, comp.partRev)?.footprint;
+    if (!footprint) continue;
+    const sideLayer: CopperLayer = placement.side === 'bottom' ? 'B.Cu' : 'F.Cu';
+    const swap = quarterTurnsOf(placement.rotMilli) % 2 === 1;
+    footprint.pads.forEach((pad, index) => {
+      const throughHole = pad.drillNm !== undefined;
+      if (!throughHole && sideLayer !== layer) return; // SMD: one layer only
+      const aperture: Aperture =
+        pad.shape === 'circle'
+          ? { kind: 'C', dNm: pad.wNm }
+          : { kind: 'R', wNm: swap ? pad.hNm : pad.wNm, hNm: swap ? pad.wNm : pad.hNm };
+      objects.push({
+        type: 0,
+        entity: comp.ref,
+        index,
+        aperture,
+        at: applyPcbPlacement(pad.at, placement),
+      });
+    });
+  }
+
+  // Vias flash their pad on both copper layers.
+  for (const via of graph.pcb.vias.values()) {
+    objects.push({
+      type: 1,
+      entity: via.id,
+      index: 0,
+      aperture: { kind: 'C', dNm: via.padNm },
+      at: via.at,
+    });
+  }
+
+  // Traces draw on their own layer only.
+  for (const trace of graph.pcb.traces.values()) {
+    if (trace.layerId !== layer) continue;
+    if (trace.path.length < 2) continue;
+    objects.push({
+      type: 2,
+      entity: trace.id,
+      index: 0,
+      aperture: { kind: 'C', dNm: trace.widthNm },
+      path: trace.path,
+    });
+  }
+
+  objects.sort(compareObjects);
+
+  // Aperture table: dedupe, sort, assign D-codes from D10.
+  const unique = new Map<string, Aperture>();
+  for (const obj of objects) unique.set(apertureKey(obj.aperture), obj.aperture);
+  const apertures = [...unique.values()].sort(compareApertures);
+  const dcodes = new Map<string, number>();
+  apertures.forEach((a, i) => dcodes.set(apertureKey(a), 10 + i));
+
+  const lines: string[] = [
+    '%TF.GenerationSoftware,ProtoPulse,export,0.1.0*%',
+    `%TF.CreationDate,${opts.date}*%`,
+    layer === 'F.Cu' ? '%TF.FileFunction,Copper,L1,Top*%' : '%TF.FileFunction,Copper,L2,Bot*%',
+    '%TF.FilePolarity,Positive*%',
+    '%FSLAX46Y46*%',
+    '%MOMM*%',
+    'G01*',
+    '%LPD*%',
+  ];
+  for (const a of apertures) {
+    lines.push(`%ADD${String(dcodes.get(apertureKey(a)))}${apertureTemplate(a)}*%`);
+  }
+
+  let current: number | undefined;
+  for (const obj of objects) {
+    const code = dcodes.get(apertureKey(obj.aperture));
+    if (code === undefined) continue; // unreachable: every object registered its aperture
+    if (code !== current) {
+      lines.push(`D${String(code)}*`);
+      current = code;
+    }
+    if (obj.path) {
+      const [first, ...rest] = obj.path;
+      if (!first) continue;
+      lines.push(`${xy(first)}D02*`);
+      for (const p of rest) lines.push(`${xy(p)}D01*`);
+    } else if (obj.at) {
+      lines.push(`${xy(obj.at)}D03*`);
+    }
+  }
+
+  lines.push('M02*');
+  return lines.join('\n') + '\n';
+}

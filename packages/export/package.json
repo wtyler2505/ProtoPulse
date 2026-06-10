@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Deterministic exporters: KiCad legacy-E S-expression netlist and CSV BOM. Exports are contracts.",
+  "description": "Deterministic exporters: KiCad legacy-E S-expression netlist, CSV BOM, Gerber X2 copper layers, Excellon drill, pick-and-place CSV. Exports are contracts.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {

@@ -11,11 +11,16 @@ deterministic by construction.
 | Fixture | What it is |
 |---|---|
 | `led-resistor` | Track 1 step 2: battery → 330Ω → LED, named rails |
+| `routed-led` | `led-resistor` plus a routed PCB: R1 + D1 placed top-side, LED_A net traced on F.Cu pad-to-pad with a via at the midpoint — freezes the fab exports |
 | `traffic-light-555` | Track 1 deliverable shape: NE555 astable driving 3 LED branches |
 | `probe-input-protection` | The Probe's channel input stage: header → 100k series → BAT54S rail clamp (pin 3 midpoint) + TVS, with a current_max constraint carrying its rationale |
 
 Each directory: `ops.json` (literal op-log, schema-validated on load) +
-`expected.net` (KiCad legacy-E netlist) + `expected.bom.csv`.
+`expected.net` (KiCad legacy-E netlist) + `expected.bom.csv`. Fixtures
+with PCB content additionally freeze the fab exports:
+`expected.F.Cu.gbr` / `expected.B.Cu.gbr` (Gerber X2 copper, FSLAX46Y46
+mm — body coordinates are integer nanometers), `expected.drl` (Excellon
+drill, METRIC, mm 3.3) and `expected.pos.csv` (pick-and-place).
 
 ## KiCad acceptance status
 

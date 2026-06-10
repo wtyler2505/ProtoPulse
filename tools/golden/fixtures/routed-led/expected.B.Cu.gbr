@@ -1,0 +1,12 @@
+%TF.GenerationSoftware,ProtoPulse,export,0.1.0*%
+%TF.CreationDate,2026-01-01T00:00:00.000Z*%
+%TF.FileFunction,Copper,L2,Bot*%
+%TF.FilePolarity,Positive*%
+%FSLAX46Y46*%
+%MOMM*%
+G01*
+%LPD*%
+%ADD10C,0.6*%
+D10*
+X10000000Y0D03*
+M02*
