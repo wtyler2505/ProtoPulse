@@ -92,8 +92,27 @@ export class GlyphAtlas {
    * world-mm, glyph height `sizeMm`. Layout: [x, y, u, v] × 6 per glyph.
    * The cell's full height maps onto sizeMm; glyphs stay upright.
    */
-  appendRun(out: number[], text: string, xMm: number, yMm: number, sizeMm: number): void {
-    let penX = xMm;
+  /** Sum of advances for a run, in mm at the given size. */
+  measure(text: string, sizeMm: number): number {
+    let w = 0;
+    for (const ch of text) {
+      const g = this.glyph(ch);
+      if (g) w += sizeMm * g.advance;
+    }
+    return w;
+  }
+
+  appendRun(
+    out: number[],
+    text: string,
+    xMm: number,
+    yMm: number,
+    sizeMm: number,
+    align: 'left' | 'center' = 'left',
+  ): void {
+    let penX = align === 'center' ? xMm - this.measure(text, sizeMm) / 2 : xMm;
+    // sizeMm is the requested cap height; the quad is slightly taller so
+    // the cell's ascender/descender padding doesn't shrink the visible glyph.
     const h = sizeMm * (CELL_H / FONT_PX);
     const yBottom = yMm - sizeMm * 0.25; // descender room below the anchor
     for (const ch of text) {

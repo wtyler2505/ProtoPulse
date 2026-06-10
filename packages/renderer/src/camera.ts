@@ -88,7 +88,7 @@ export class Camera {
   }
 
   /** Fit bounds into the canvas with a pixel margin. */
-  fitBounds(bounds: Bounds, size: CanvasSize, marginPx = 40): void {
+  fitBounds(bounds: Bounds, size: CanvasSize, marginPx = 64): void {
     const w = bounds.maxX - bounds.minX;
     const h = bounds.maxY - bounds.minY;
     this.center = {

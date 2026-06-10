@@ -160,7 +160,7 @@ describe('tessellateSymbol', () => {
       },
     };
     const t = tessellateSymbol(part, place({ x: 0, y: 0 }, 90));
-    expect(t.texts).toEqual([{ at: { x: 0, y: G }, text: '+', sizeNm: G }]);
+    expect(t.texts).toEqual([{ at: { x: 0, y: G }, text: '+', sizeNm: G, align: 'center' }]);
   });
 
   it('pinDots are the transformed pin endpoints', () => {

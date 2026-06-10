@@ -25,6 +25,8 @@ export interface TessText {
   at: Vec;
   text: string;
   sizeNm: number;
+  /** Horizontal anchor; symbol body text centers, labels read left-out. */
+  align?: 'left' | 'center';
 }
 
 export interface Tessellation {
@@ -141,6 +143,7 @@ function tessellatePrimitive(
         at: applyPlacement(prim.at, placement),
         text: prim.text,
         sizeNm: prim.sizeNm,
+        align: 'center',
       });
       break;
     }

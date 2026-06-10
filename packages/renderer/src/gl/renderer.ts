@@ -251,12 +251,18 @@ export class WebGL2Renderer {
       const verts: number[] = [];
       for (const node of nodes) {
         for (const run of node.texts) {
+          const sizeMm = run.sizeNm * NM_TO_MM;
+          const yMm =
+            run.align === 'center'
+              ? run.at.y * NM_TO_MM - sizeMm / 2
+              : run.at.y * NM_TO_MM;
           this.atlas.appendRun(
             verts,
             run.text,
             run.at.x * NM_TO_MM,
-            run.at.y * NM_TO_MM,
-            run.sizeNm * NM_TO_MM,
+            yMm,
+            sizeMm,
+            run.align ?? 'left',
           );
         }
       }

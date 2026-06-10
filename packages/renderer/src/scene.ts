@@ -85,15 +85,20 @@ export function buildSymbolNode(
     lines.push(dot.x - PIN_MARK, dot.y, dot.x + PIN_MARK, dot.y);
     lines.push(dot.x, dot.y - PIN_MARK, dot.x, dot.y + PIN_MARK);
   }
-  const bounds = symbolBounds(part, placement);
+  const symBounds = symbolBounds(part, placement);
   const texts: TessText[] = [...tess.texts];
   // Ref designator (and value, when set) float above the symbol body.
-  const labelSize = Math.round(SCHEMATIC_GRID * 0.9);
+  const labelSize = Math.round(SCHEMATIC_GRID * 0.55);
   texts.push({
-    at: { x: bounds.minX, y: bounds.maxY + Math.round(SCHEMATIC_GRID / 2) },
+    at: { x: symBounds.minX, y: symBounds.maxY + Math.round(SCHEMATIC_GRID / 2) },
     text: component.value ? `${component.ref} ${component.value}` : component.ref,
     sizeNm: labelSize,
   });
+  // Node bounds cover the label too, so zoom-fit and picking see it.
+  const bounds = {
+    ...symBounds,
+    maxY: symBounds.maxY + Math.round(SCHEMATIC_GRID / 2) + labelSize * 2,
+  };
   return {
     id: component.id,
     kind: 'symbol',
