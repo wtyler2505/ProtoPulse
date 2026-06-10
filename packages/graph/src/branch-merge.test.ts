@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { BranchLog, MAIN_BRANCH } from './branch.js';
 import { materialize } from './materialize.js';
-import { threeWayMerge } from './merge.js';
+import { resolveConflict, threeWayMerge } from './merge.js';
 import { envelopes, ledCircuitOps, FIX } from './test-helpers.js';
 
 import type { OpBody, OpEnvelope } from './ops.js';
@@ -358,5 +358,378 @@ describe('threeWayMerge', () => {
     // Theirs-only move replays.
     expect(merged.schematic.placements.get(FIX.led)?.at.y).toBe(7620000);
     expect(merged.schematic.wires.get(FIX.netA)).toHaveLength(1);
+  });
+});
+
+describe('BranchLog.mergeBaseOps', () => {
+  function seededLog(): BranchLog {
+    const log = new BranchLog();
+    for (const e of envelopes(ledCircuitOps())) log.append(MAIN_BRANCH, e);
+    return log;
+  }
+
+  it('child vs parent: the base is the fork point even after both advance', () => {
+    const log = seededLog();
+    const forkLen = log.opsFor(MAIN_BRANCH).length;
+    log.createBranch('feature', MAIN_BRANCH);
+    log.append(MAIN_BRANCH, env({ kind: 'rename_net', netId: FIX.netA, name: 'MAIN' }, 50));
+    log.append('feature', env({ kind: 'rename_net', netId: FIX.netA, name: 'FEAT' }, 50, 'b'));
+
+    for (const [a, b] of [['feature', MAIN_BRANCH], [MAIN_BRANCH, 'feature']] as const) {
+      const base = log.mergeBaseOps(a, b);
+      expect(base).toHaveLength(forkLen);
+      expect(materialize(base).graph.nets.get(FIX.netA)?.name).toBe('N$1');
+    }
+  });
+
+  it('siblings: two forks of main meet at the earlier fork point', () => {
+    const log = seededLog();
+    log.createBranch('s1', MAIN_BRANCH);
+    const forkLen1 = log.opsFor(MAIN_BRANCH).length;
+    log.append(MAIN_BRANCH, env({ kind: 'rename_net', netId: FIX.netA, name: 'LATER' }, 60));
+    log.createBranch('s2', MAIN_BRANCH); // forks after the rename
+    const base = log.mergeBaseOps('s1', 's2');
+    expect(base).toHaveLength(forkLen1); // the EARLIER fork wins
+    expect(materialize(base).graph.nets.get(FIX.netA)?.name).toBe('N$1');
+  });
+
+  it('nested: grandchild vs main meets at the outermost fork prefix', () => {
+    const log = seededLog();
+    const forkLen = log.opsFor(MAIN_BRANCH).length;
+    log.createBranch('b1', MAIN_BRANCH);
+    log.append('b1', env({ kind: 'rename_net', netId: FIX.netB, name: 'B1' }, 70, 'b'));
+    log.createBranch('b2', 'b1');
+    log.append('b2', env({ kind: 'rename_net', netId: FIX.netGnd, name: 'B2GND' }, 71, 'c'));
+    const base = log.mergeBaseOps('b2', MAIN_BRANCH);
+    expect(base).toHaveLength(forkLen);
+    // And b2 vs b1 meets at b1's head as of b2's fork.
+    const sibBase = log.mergeBaseOps('b2', 'b1');
+    expect(materialize(sibBase).graph.nets.get(FIX.netB)?.name).toBe('B1');
+  });
+});
+
+describe('resolveConflict', () => {
+  function forkGraphs(oursExtra: OpBody[], theirsExtra: OpBody[]) {
+    const baseOps = ledCircuitOps();
+    const base = materialize(envelopes(baseOps)).graph;
+    const ours = materialize(envelopes([...baseOps, ...oursExtra])).graph;
+    const theirs = materialize(envelopes([...baseOps, ...theirsExtra])).graph;
+    return { base, ours, theirs };
+  }
+
+  /** Apply autoOps + resolutions on ours and assert a clean result. */
+  function applyResolution(ours: DesignGraph, ops: OpBody[]): DesignGraph {
+    const result = materialize(
+      ops.map((op, i) => ({ actor: 'merge', lamport: i + 1, ts: 0, op })),
+      { from: ours },
+    );
+    expect(result.warnings.filter((w) => w.kind === 'apply_failed')).toEqual([]);
+    expect(result.violations).toEqual([]);
+    return result.graph;
+  }
+
+  it("'ours' is always an empty resolution", () => {
+    const { base, ours, theirs } = forkGraphs(
+      [{ kind: 'set_component_props', id: FIX.r1, props: { value: '1k' } }],
+      [{ kind: 'set_component_props', id: FIX.r1, props: { value: '47k' } }],
+    );
+    const { conflicts } = threeWayMerge(base, ours, theirs);
+    expect(conflicts).toHaveLength(1);
+    expect(resolveConflict(conflicts[0]!, 'ours', { ours, theirs })).toEqual([]);
+  });
+
+  it('property/value conflict: theirs lands their value', () => {
+    const { base, ours, theirs } = forkGraphs(
+      [{ kind: 'set_component_props', id: FIX.r1, props: { value: '1k' } }],
+      [{ kind: 'set_component_props', id: FIX.r1, props: { value: '47k' } }],
+    );
+    const { autoOps, conflicts } = threeWayMerge(base, ours, theirs);
+    const res = resolveConflict(conflicts[0]!, 'theirs', { ours, theirs }, autoOps);
+    expect(res).not.toBeNull();
+    const merged = applyResolution(ours, [...autoOps, ...res!]);
+    expect(merged.components.get(FIX.r1)?.value).toBe('47k');
+  });
+
+  it('property/net-name conflict: theirs lands their name', () => {
+    const { base, ours, theirs } = forkGraphs(
+      [{ kind: 'rename_net', netId: FIX.netA, name: 'VCC_OURS' }],
+      [{ kind: 'rename_net', netId: FIX.netA, name: 'VCC_THEIRS' }],
+    );
+    const { autoOps, conflicts } = threeWayMerge(base, ours, theirs);
+    expect(conflicts[0]?.kind).toBe('property');
+    const res = resolveConflict(conflicts[0]!, 'theirs', { ours, theirs }, autoOps);
+    const merged = applyResolution(ours, [...autoOps, ...res!]);
+    expect(merged.nets.get(FIX.netA)?.name).toBe('VCC_THEIRS');
+  });
+
+  it('structural conflict: theirs replays their connectivity', () => {
+    // Both sides move the same port to different nets.
+    const { base, ours, theirs } = forkGraphs(
+      [
+        { kind: 'disconnect', port: `${FIX.led}:A` },
+        { kind: 'connect', port: `${FIX.led}:A`, netId: FIX.netA },
+      ],
+      [
+        { kind: 'disconnect', port: `${FIX.led}:A` },
+        { kind: 'connect', port: `${FIX.led}:A`, newNetId: 'n-theirs' },
+        { kind: 'rename_net', netId: 'n-theirs', name: 'THEIRS_NET' },
+      ],
+    );
+    const { autoOps, conflicts } = threeWayMerge(base, ours, theirs);
+    const structural = conflicts.find((c) => c.kind === 'structural');
+    expect(structural).toBeDefined();
+    const res = resolveConflict(structural!, 'theirs', { ours, theirs }, autoOps);
+    const merged = applyResolution(ours, [...autoOps, ...res!]);
+    expect(merged.nets.get('n-theirs')?.name).toBe('THEIRS_NET');
+    expect([...(merged.nets.get('n-theirs')?.ports ?? [])]).toContain(`${FIX.led}:A`);
+  });
+
+  it('remove_vs_modify (theirs removed): theirs removes the component', () => {
+    const { base, ours, theirs } = forkGraphs(
+      [{ kind: 'set_component_props', id: FIX.led, props: { value: 'red' } }],
+      [{ kind: 'remove_component', id: FIX.led }],
+    );
+    const { autoOps, conflicts } = threeWayMerge(base, ours, theirs);
+    const rvm = conflicts.find((c) => c.kind === 'remove_vs_modify');
+    expect(rvm).toBeDefined();
+    const res = resolveConflict(rvm!, 'theirs', { ours, theirs }, autoOps);
+    const merged = applyResolution(ours, [...autoOps, ...res!]);
+    expect(merged.components.has(FIX.led)).toBe(false);
+  });
+
+  it('remove_vs_modify (ours removed): theirs resurrects their version, wiring intact', () => {
+    const { base, ours, theirs } = forkGraphs(
+      [{ kind: 'remove_component', id: FIX.led }],
+      [{ kind: 'set_component_props', id: FIX.led, props: { value: 'green' } }],
+    );
+    const { autoOps, conflicts } = threeWayMerge(base, ours, theirs);
+    const rvm = conflicts.find((c) => c.kind === 'remove_vs_modify');
+    expect(rvm).toBeDefined();
+    const res = resolveConflict(rvm!, 'theirs', { ours, theirs }, autoOps);
+    expect(res).not.toBeNull();
+    const merged = applyResolution(ours, [...autoOps, ...res!]);
+    const led = merged.components.get(FIX.led);
+    expect(led?.value).toBe('green');
+    expect(merged.schematic.placements.has(FIX.led)).toBe(true);
+    expect([...(merged.nets.get(FIX.netB)?.ports ?? [])]).toContain(`${FIX.led}:A`);
+    expect([...(merged.nets.get(FIX.netGnd)?.ports ?? [])]).toContain(`${FIX.led}:K`);
+  });
+
+  it('returns null for choices M1 cannot express as ops', () => {
+    const { ours, theirs } = forkGraphs([], []);
+    expect(
+      resolveConflict(
+        { kind: 'property', entity: FIX.r1, entityKind: 'component', field: 'partId', base: 'a', ours: 'a', theirs: 'b' },
+        'theirs',
+        { ours, theirs },
+      ),
+    ).toBeNull();
+    expect(
+      resolveConflict(
+        { kind: 'remove_vs_modify', entity: FIX.netA, entityKind: 'net', removedBy: 'theirs' },
+        'theirs',
+        { ours, theirs },
+      ),
+    ).toBeNull();
+  });
+});
+
+describe('resolveConflict — branch coverage of the guard rails', () => {
+  function graphs(oursExtra: OpBody[] = [], theirsExtra: OpBody[] = []) {
+    const baseOps = ledCircuitOps();
+    return {
+      ours: materialize(envelopes([...baseOps, ...oursExtra])).graph,
+      theirs: materialize(envelopes([...baseOps, ...theirsExtra])).graph,
+    };
+  }
+
+  it('component ref / dnp / fields conflicts: theirs lands each prop', () => {
+    const g = graphs();
+    const mk = (field: string, theirs: unknown) =>
+      ({ kind: 'property', entity: FIX.r1, entityKind: 'component', field, base: undefined, ours: undefined, theirs }) as const;
+    expect(resolveConflict(mk('ref', 'R99'), 'theirs', g)).toEqual([
+      { kind: 'set_component_props', id: FIX.r1, props: { ref: 'R99' } },
+    ]);
+    expect(resolveConflict(mk('dnp', true), 'theirs', g)).toEqual([
+      { kind: 'set_component_props', id: FIX.r1, props: { dnp: true } },
+    ]);
+    expect(resolveConflict(mk('fields', { tol: '1%' }), 'theirs', g)).toEqual([
+      { kind: 'set_component_props', id: FIX.r1, props: { fields: { tol: '1%' } } },
+    ]);
+    // value cleared on theirs → null-valued prop
+    expect(resolveConflict(mk('value', undefined), 'theirs', g)).toEqual([
+      { kind: 'set_component_props', id: FIX.r1, props: { value: null } },
+    ]);
+  });
+
+  it('guards: missing entities and inexpressible kinds return null', () => {
+    const g = graphs([{ kind: 'remove_component', id: FIX.led }]);
+    // component gone in ours
+    expect(
+      resolveConflict(
+        { kind: 'property', entity: FIX.led, entityKind: 'component', field: 'value', base: 'a', ours: 'a', theirs: 'b' },
+        'theirs', g,
+      ),
+    ).toBeNull();
+    // net name: unknown net / non-string name
+    expect(
+      resolveConflict(
+        { kind: 'property', entity: 'n-ghost', entityKind: 'net', field: 'name', base: 'x', ours: 'x', theirs: 'y' },
+        'theirs', g,
+      ),
+    ).toBeNull();
+    expect(
+      resolveConflict(
+        { kind: 'property', entity: FIX.netA, entityKind: 'net', field: 'name', base: 'x', ours: 'x', theirs: 7 },
+        'theirs', g,
+      ),
+    ).toBeNull();
+    // constraint with theirs still defined (both-changed) — not expressible
+    expect(
+      resolveConflict(
+        { kind: 'property', entity: 'k1', entityKind: 'constraint', field: 'body', base: {}, ours: {}, theirs: {} },
+        'theirs', g,
+      ),
+    ).toBeNull();
+    // meta — never emitted today, never resolvable
+    expect(
+      resolveConflict(
+        { kind: 'property', entity: 'm', entityKind: 'meta', field: 'x', base: 'a', ours: 'b', theirs: 'c' },
+        'theirs', g,
+      ),
+    ).toBeNull();
+    // structural on a component ours no longer has
+    expect(
+      resolveConflict(
+        { kind: 'structural', port: `${FIX.led}:A`, oursNet: null, theirsNet: FIX.netB },
+        'theirs', g,
+      ),
+    ).toBeNull();
+    // remove_vs_modify resurrect when theirs lacks the component too
+    expect(
+      resolveConflict(
+        { kind: 'remove_vs_modify', entity: 'c-ghost', entityKind: 'component', removedBy: 'ours' },
+        'theirs', g,
+      ),
+    ).toBeNull();
+  });
+
+  it('constraint removed-by-theirs resolves to remove_constraint', () => {
+    const withConstraint: OpBody[] = [
+      { kind: 'add_constraint', id: 'k1', body: { kind: 'current_max', netId: FIX.netB, amps: 0.02 } },
+    ];
+    const g = graphs(withConstraint, withConstraint);
+    expect(
+      resolveConflict(
+        { kind: 'property', entity: 'k1', entityKind: 'constraint', field: 'body', base: {}, ours: {}, theirs: undefined },
+        'theirs', g,
+      ),
+    ).toEqual([{ kind: 'remove_constraint', id: 'k1' }]);
+  });
+
+  it('structural: disconnect-only and connect-to-existing paths', () => {
+    const g = graphs();
+    // theirs disconnected the port entirely
+    expect(
+      resolveConflict(
+        { kind: 'structural', port: `${FIX.led}:A`, oursNet: FIX.netB, theirsNet: null },
+        'theirs', g,
+      ),
+    ).toEqual([{ kind: 'disconnect', port: `${FIX.led}:A` }]);
+    // port floating in ours, theirs put it on a net ours already has
+    expect(
+      resolveConflict(
+        { kind: 'structural', port: `${FIX.led}:A`, oursNet: null, theirsNet: FIX.netA },
+        'theirs', g,
+      ),
+    ).toEqual([{ kind: 'connect', port: `${FIX.led}:A`, netId: FIX.netA }]);
+  });
+
+  it('structural: prior ops that already created the net suppress re-create and rename', () => {
+    const g = graphs([], [
+      { kind: 'disconnect', port: `${FIX.led}:A` },
+      { kind: 'connect', port: `${FIX.led}:A`, newNetId: 'n-new' },
+      { kind: 'rename_net', netId: 'n-new', name: 'NEW' },
+      { kind: 'set_net_class', netId: 'n-new', netClass: 'power' },
+    ]);
+    const prior: OpBody[] = [
+      { kind: 'connect', port: `${FIX.bat}:+`, newNetId: 'n-new' },
+      { kind: 'rename_net', netId: 'n-new', name: 'NEW' },
+    ];
+    expect(
+      resolveConflict(
+        { kind: 'structural', port: `${FIX.led}:A`, oursNet: FIX.netB, theirsNet: 'n-new' },
+        'theirs', g, prior,
+      ),
+    ).toEqual([
+      { kind: 'disconnect', port: `${FIX.led}:A` },
+      { kind: 'connect', port: `${FIX.led}:A`, netId: 'n-new' },
+    ]);
+  });
+
+  it('structural: creating theirs net replicates name and non-default class', () => {
+    const g = graphs([], [
+      { kind: 'disconnect', port: `${FIX.led}:A` },
+      { kind: 'connect', port: `${FIX.led}:A`, newNetId: 'n-pwr' },
+      { kind: 'rename_net', netId: 'n-pwr', name: 'PWR' },
+      { kind: 'set_net_class', netId: 'n-pwr', netClass: 'power' },
+    ]);
+    expect(
+      resolveConflict(
+        { kind: 'structural', port: `${FIX.led}:A`, oursNet: FIX.netB, theirsNet: 'n-pwr' },
+        'theirs', g,
+      ),
+    ).toEqual([
+      { kind: 'disconnect', port: `${FIX.led}:A` },
+      { kind: 'connect', port: `${FIX.led}:A`, newNetId: 'n-pwr' },
+      { kind: 'rename_net', netId: 'n-pwr', name: 'PWR' },
+      { kind: 'set_net_class', netId: 'n-pwr', netClass: 'power' },
+    ]);
+  });
+
+  it('remove_vs_modify (theirs removed) when ours already dropped it: empty resolution', () => {
+    const g = graphs([{ kind: 'remove_component', id: FIX.led }]);
+    expect(
+      resolveConflict(
+        { kind: 'remove_vs_modify', entity: FIX.led, entityKind: 'component', removedBy: 'theirs' },
+        'theirs', g,
+      ),
+    ).toEqual([]);
+  });
+
+  it('resurrection copies dnp/fields and the footprint placement', () => {
+    const g = graphs(
+      [{ kind: 'remove_component', id: FIX.led }],
+      [
+        { kind: 'set_component_props', id: FIX.led, props: { dnp: true, fields: { note: 'spare' } } },
+        { kind: 'place_footprint', componentId: FIX.led, at: { x: 1_000_000, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+      ],
+    );
+    const res = resolveConflict(
+      { kind: 'remove_vs_modify', entity: FIX.led, entityKind: 'component', removedBy: 'ours' },
+      'theirs', g,
+    );
+    expect(res).not.toBeNull();
+    const kinds = res!.map((o) => o.kind);
+    expect(kinds).toContain('set_component_props');
+    expect(kinds).toContain('place_footprint');
+    const merged = materialize(
+      res!.map((op, i) => ({ actor: 'm', lamport: i + 1, ts: 0, op })),
+      { from: g.ours },
+    );
+    expect(merged.warnings.filter((w) => w.kind === 'apply_failed')).toEqual([]);
+    expect(merged.graph.components.get(FIX.led)?.dnp).toBe(true);
+    expect(merged.graph.pcb.placements.has(FIX.led)).toBe(true);
+  });
+});
+
+describe('mergeBaseOps — degenerate logs', () => {
+  it('two independent roots (hand-built map) meet at the empty design', () => {
+    const initial = new Map([
+      ['rootA', { name: 'rootA', base: { branch: null, opCount: 0 }, ops: [env({ kind: 'checkpoint', label: 'a' }, 1)] }],
+      ['rootB', { name: 'rootB', base: { branch: null, opCount: 0 }, ops: [env({ kind: 'checkpoint', label: 'b' }, 1)] }],
+    ]);
+    const log = new BranchLog(initial);
+    expect(log.mergeBaseOps('rootA', 'rootB')).toEqual([]);
   });
 });

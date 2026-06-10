@@ -23,6 +23,7 @@ export type TabId =
   | 'review'
   | 'drc'
   | 'branches'
+  | 'history'
   | 'export'
   | 'draftsman'
   | 'sim'

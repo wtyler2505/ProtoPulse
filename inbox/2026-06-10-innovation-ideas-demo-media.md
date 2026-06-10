@@ -15,6 +15,11 @@ got any more good creative/innovative ideas?").
    (vision Vol I §1.2): an app scrubber that re-materializes the design
    op-by-op, animated. One feature = teaching tool + demo generator +
    "most honest tutorial format ever made."
+   ✅ SHIPPED 2026-06-10 — History tab in `@protopulse/app` (scrubber,
+   play/pause, per-op jump list, read-only time travel) + the GIF half:
+   `tools/screenshots/capture-replay-gif.ts` → `docs/screenshots/
+   replay-demo.gif` (the 555 fixture building itself, embedded in
+   README + USER_GUIDE).
 3. **Serverless share links** — design bundle compressed into a URL
    fragment (#design=...) + read-only viewer route. Forum-pasteable
    live schematics before v0.6's server exists.

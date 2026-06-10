@@ -18,9 +18,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
 - [x] `protopulse check` CLI — CI for circuits
 - [x] Draftsman agent with exactly 8 tools (`@protopulse/ai`)
 - [x] Content seeds: JLC rule deck, concepts wiki (14 articles), Track 1 steps
+- [x] Time-lapse replay (M1 stretch, landed 2026-06-10): History tab
+      scrubs the op-log — prefix materialization on the canvas, play/
+      pause, read-only while in the past; doubles as the demo-GIF
+      generator (`tools/screenshots/capture-replay-gif.ts`)
+- [x] Interactive merge resolver (M1 straggler, landed 2026-06-10):
+      merge any branch into the current one from the Branches panel —
+      auto-merged changes listed, every conflict an explicit ours/theirs
+      pick (engine: `mergeBaseOps` + `resolveConflict`), lands as one
+      undoable batch with both parents recorded
 - [ ] M1 stragglers: pcbnew import manually verified once
-      (`tools/golden/README.md`), interactive merge-resolver UI, MSDF
-      text + GPU picking, ESP32-S3 verified part
+      (`tools/golden/README.md`), MSDF text + GPU picking, ESP32-S3
+      verified part
 
 ## v0.2 — The Lab 🔨
 

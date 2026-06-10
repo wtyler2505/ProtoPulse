@@ -10,8 +10,9 @@ import type { DesignGraph, PortRef, Uuid } from './types.js';
  * Auto-merges: disjoint entities; same entity, different properties;
  * view-geometry vs graph changes. Conflicts are surfaced as data — a
  * wrong silent merge in EDA is a fried board, so nothing structural is
- * ever resolved silently. (The interactive resolver is post-M1; callers
- * present `conflicts` and refuse to merge until the list is empty.)
+ * ever resolved silently. Callers present `conflicts` and refuse to
+ * merge until every one has a resolution (see resolveConflict below —
+ * the app's Branches panel is the interactive resolver).
  *
  * `autoOps` transform OURS into the merged result by replaying THEIRS'
  * non-conflicting changes.
@@ -322,6 +323,174 @@ export function threeWayMerge(
   }
 
   return { autoOps, conflicts };
+}
+
+// ── Interactive resolution (the resolver UI's engine half) ───────────
+
+export type MergeChoice = 'ours' | 'theirs';
+
+/**
+ * Ops that apply ONE conflict's resolution onto OURS. Choosing 'ours'
+ * keeps the current branch's state — always expressible, always `[]`.
+ * Choosing 'theirs' replays the other side's version; returns null when
+ * that cannot be expressed as ops in M1 (partId/partRev swaps, net
+ * removals) so callers can disable the choice instead of lying.
+ *
+ * `prior` is the op list the resolution will be appended to (autoOps +
+ * earlier resolutions) — needed so two resolutions recreating the same
+ * net agree on connect-vs-create, mirroring threeWayMerge's own checks.
+ */
+export function resolveConflict(
+  conflict: MergeConflict,
+  choice: MergeChoice,
+  graphs: { ours: DesignGraph; theirs: DesignGraph },
+  prior: readonly OpBody[] = [],
+): OpBody[] | null {
+  if (choice === 'ours') return [];
+  const { ours, theirs } = graphs;
+
+  switch (conflict.kind) {
+    case 'property': {
+      if (conflict.entityKind === 'component') {
+        const id = conflict.entity;
+        if (!ours.components.has(id)) return null;
+        if (conflict.field === 'ref' && typeof conflict.theirs === 'string') {
+          return [{ kind: 'set_component_props', id, props: { ref: conflict.theirs } }];
+        }
+        if (conflict.field === 'value') {
+          return [
+            {
+              kind: 'set_component_props',
+              id,
+              props: { value: (conflict.theirs as string | undefined) ?? null },
+            },
+          ];
+        }
+        if (conflict.field === 'dnp' && typeof conflict.theirs === 'boolean') {
+          return [{ kind: 'set_component_props', id, props: { dnp: conflict.theirs } }];
+        }
+        if (conflict.field === 'fields') {
+          return [
+            {
+              kind: 'set_component_props',
+              id,
+              props: { fields: { ...(conflict.theirs as Record<string, string>) } },
+            },
+          ];
+        }
+        return null; // partId/partRev — not expressible as an op in M1
+      }
+      if (conflict.entityKind === 'net' && conflict.field === 'name') {
+        if (!ours.nets.has(conflict.entity) || typeof conflict.theirs !== 'string') return null;
+        return [{ kind: 'rename_net', netId: conflict.entity, name: conflict.theirs }];
+      }
+      if (conflict.entityKind === 'constraint') {
+        // The only constraint conflict emitted: theirs removed it while
+        // ours changed it — taking theirs means removing.
+        if (conflict.theirs === undefined && ours.constraints.has(conflict.entity)) {
+          return [{ kind: 'remove_constraint', id: conflict.entity }];
+        }
+        return null;
+      }
+      return null; // meta — not emitted today
+    }
+
+    case 'structural': {
+      const componentId = conflict.port.split(':')[0] ?? '';
+      if (!ours.components.has(componentId)) return null;
+      const ops: OpBody[] = [];
+      if (conflict.oursNet !== null) ops.push({ kind: 'disconnect', port: conflict.port });
+      if (conflict.theirsNet !== null) {
+        ops.push(...connectLikeTheirs(conflict.port, conflict.theirsNet, ours, theirs, [...prior, ...ops]));
+      }
+      return ops;
+    }
+
+    case 'remove_vs_modify': {
+      if (conflict.entityKind !== 'component') return null; // nets die with their last port
+      const id = conflict.entity;
+      if (conflict.removedBy === 'theirs') {
+        // Theirs deleted the component ours modified — taking theirs removes it.
+        return ours.components.has(id) ? [{ kind: 'remove_component', id }] : [];
+      }
+      // Ours deleted it, theirs modified it — taking theirs resurrects
+      // theirs' version: identity, props, placement(s), connectivity.
+      const comp = theirs.components.get(id);
+      if (!comp) return null;
+      const ops: OpBody[] = [
+        {
+          kind: 'add_component',
+          id: comp.id,
+          ref: comp.ref,
+          partId: comp.partId,
+          partRev: comp.partRev,
+          ...(comp.value !== undefined ? { value: comp.value } : {}),
+        },
+      ];
+      if (comp.dnp || Object.keys(comp.fields).length > 0) {
+        ops.push({
+          kind: 'set_component_props',
+          id: comp.id,
+          props: { dnp: comp.dnp, fields: { ...comp.fields } },
+        });
+      }
+      const placement = theirs.schematic.placements.get(id);
+      if (placement) {
+        ops.push({
+          kind: 'place_symbol',
+          componentId: id,
+          at: { ...placement.at },
+          rot: placement.rot,
+          mirror: placement.mirror,
+        });
+      }
+      const footprint = theirs.pcb.placements.get(id);
+      if (footprint) {
+        ops.push({
+          kind: 'place_footprint',
+          componentId: id,
+          at: { ...footprint.at },
+          rotMilli: footprint.rotMilli,
+          side: footprint.side,
+          locked: footprint.locked,
+        });
+      }
+      for (const net of theirs.nets.values()) {
+        for (const port of net.ports) {
+          if (!port.startsWith(`${id}:`)) continue;
+          ops.push(...connectLikeTheirs(port, net.id, ours, theirs, [...prior, ...ops]));
+        }
+      }
+      return ops;
+    }
+  }
+}
+
+/** Connect `port` to theirs' net, creating it in ours (with theirs'
+ *  name and class) when neither ours nor the op list built so far has
+ *  it yet. */
+function connectLikeTheirs(
+  port: PortRef,
+  theirsNetId: Uuid,
+  ours: DesignGraph,
+  theirs: DesignGraph,
+  prior: readonly OpBody[],
+): OpBody[] {
+  const ops: OpBody[] = [];
+  const exists = ours.nets.has(theirsNetId) || autoOpsCreateNet(prior, theirsNetId);
+  ops.push(
+    exists
+      ? { kind: 'connect', port, netId: theirsNetId }
+      : { kind: 'connect', port, newNetId: theirsNetId },
+  );
+  const theirNet = theirs.nets.get(theirsNetId);
+  if (theirNet && !exists && !netRenamedIn(prior, theirsNetId)) {
+    ops.push({ kind: 'rename_net', netId: theirsNetId, name: theirNet.name });
+    if (theirNet.netClass !== 'default') {
+      ops.push({ kind: 'set_net_class', netId: theirsNetId, netClass: theirNet.netClass });
+    }
+  }
+  return ops;
 }
 
 function autoOpsCreateNet(ops: readonly OpBody[], netId: Uuid): boolean {
