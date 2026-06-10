@@ -847,3 +847,93 @@ input:not([type]) {
   color: var(--text-dim);
   align-self: flex-start;
 }
+
+/* ── Review (the design-review board) ── */
+
+.review-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.review-run {
+  align-self: flex-start;
+  margin-bottom: 8px;
+}
+
+.review-meta {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.review-delta {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent-warm);
+  background: #221b0d;
+  border: 1px solid #4a3c1c;
+  border-radius: 4px;
+  padding: 3px 8px;
+  margin: 0 0 8px;
+  align-self: flex-start;
+}
+
+.check-chip {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+
+.professor-chip {
+  font-size: 12px;
+  color: var(--accent);
+  border-color: #2a4a77;
+}
+
+/* ── Professor (the teaching chat) ── */
+
+.professor .analyst-professor .analyst-who {
+  color: var(--good);
+}
+
+.depth-dial {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.depth-dial-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 4px;
+}
+
+.depth-stop {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.depth-stop.active {
+  background: #1c2a45;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Status-bar narration flash ── */
+
+.status-flash {
+  color: var(--accent-warm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  text-align: right;
+}

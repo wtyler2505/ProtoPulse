@@ -1,12 +1,12 @@
-import { parsePortRef } from '@protopulse/graph';
 import { z } from 'zod';
 
 import { ToolRegistry } from '../registry.js';
 import { fidelitySummary } from '../sim-types.js';
 
-import type { AiTool, ToolCtx, ToolResult } from '../registry.js';
+import { designDigest, digestSummary } from './digest.js';
+
+import type { AiTool, ToolResult } from '../registry.js';
 import type { Analysis, PinnedSimulateFn, SimResultWithManifest, SimVector } from '../sim-types.js';
-import type { DesignGraph } from '@protopulse/graph';
 
 /**
  * The Analyst's 3 tools — v0.2 Lab milestone. The simulate function is
@@ -107,48 +107,6 @@ function computeMetric(values: number[], metric: Metric): number {
     case 'rms':
       return Math.sqrt(values.reduce((s, v) => s + v * v, 0) / values.length);
   }
-}
-
-// ── read_design helpers ──────────────────────────────────────────────
-
-function designDigest(ctx: ToolCtx): {
-  components: string[];
-  nets: string[];
-  constraints: string[];
-} {
-  const graph: DesignGraph = ctx.graph;
-  const refOf = new Map([...graph.components.values()].map((c) => [c.id, c.ref]));
-
-  const components = [...graph.components.values()]
-    .sort((a, b) => (a.ref < b.ref ? -1 : a.ref > b.ref ? 1 : 0))
-    .map((c) => {
-      const part = ctx.parts.get(c.partId, c.partRev);
-      return `${c.ref} ${c.value ?? ''} ${part?.name ?? c.partId}${c.dnp ? ' (DNP)' : ''}`.replace(/\s+/g, ' ');
-    });
-
-  const nets = [...graph.nets.values()]
-    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
-    .map((n) => {
-      const members = n.ports
-        .map((p) => {
-          const { componentId, pinKey } = parsePortRef(p);
-          return `${refOf.get(componentId) ?? componentId}:${pinKey}`;
-        })
-        .sort();
-      return `${n.name}: ${members.join(', ')}`;
-    });
-
-  const constraints = [...graph.constraints.values()].map((c) => {
-    const body = c.body;
-    const why = c.rationale ? ` — ${c.rationale}` : '';
-    if (body.kind === 'current_max') {
-      const netName = graph.nets.get(body.netId)?.name ?? body.netId;
-      return `current_max on ${netName}: ${String(body.amps)}A${why}`;
-    }
-    return `${body.kind}${why}`;
-  });
-
-  return { components, nets, constraints };
 }
 
 // ── Tool assembly ────────────────────────────────────────────────────
@@ -277,7 +235,7 @@ export function createAnalystRegistry(simulate: PinnedSimulateFn): ToolRegistry 
       return {
         ops: [],
         data: digest,
-        summary: `${String(digest.components.length)} component(s), ${String(digest.nets.length)} net(s), ${String(digest.constraints.length)} constraint(s)`,
+        summary: digestSummary(digest),
       };
     },
     explain(): string {

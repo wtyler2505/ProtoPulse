@@ -39,6 +39,24 @@ export {
 } from './agent.js';
 export { createAnalystRegistry, sweepVectorName, ANALYST_TOOL_NAMES } from './tools/analyst.js';
 export { runAnalyst, type AnalystResult, type RunAnalystOptions } from './analyst.js';
+export { designDigest, digestSummary, type DesignDigest } from './tools/digest.js';
+export {
+  createProfessorRegistry,
+  PROFESSOR_TOOL_NAMES,
+  type CodeToConcept,
+  type ConceptArticleData,
+  type ConceptLookup,
+} from './tools/professor.js';
+export { runProfessor, type ProfessorResult, type RunProfessorOptions } from './professor.js';
+export {
+  CONCEPT_PAUSE_MARKER,
+  isTeachingDepth,
+  narrationFor,
+  stripConceptPause,
+  TEACHING_DEPTHS,
+  wantsConceptPause,
+  type TeachingDepth,
+} from './depth.js';
 export {
   fidelitySummary,
   type Analysis,

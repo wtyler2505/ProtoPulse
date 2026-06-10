@@ -44,11 +44,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       on the main thread via lazy chunk)
 - [ ] Plot FFT; AC-source emitter for graph-driven noise runs
 
-## v0.3 — The Crew ⬜
+## v0.3 — The Crew 🔨
 
-Full agent crew (Architect/Router/Analyst/Buyer/Professor), Design
-Review as a first-class artifact (Vol II §G.4), the three teaching
-depths, concepts wiki growth toward the 88-article seed list.
+- [x] Design Review as a first-class artifact (`@protopulse/review`,
+      Vol II §G.4): six checks, executable fixes, stored/diffable
+      reports with opened/closed deltas, ReviewPanel in the app
+- [x] The Professor — third crew member: lookup_concept/explain_finding
+      grounded in the wiki; "Ask the Professor" handoff from any finding
+- [x] The three teaching depths (do-it/show-me/teach-me): persisted dial,
+      show-me status narration, teach-me concept pauses
+- [ ] Architect / Router / Buyer (need buses+sheets, PCB, and sourcing —
+      v0.4+ substrates)
+- [ ] Concepts wiki growth toward the 88-article seed list
+- [ ] Review deck versioning + community-extensible review rules
 
 ## v0.4 — The Board ⬜
 

@@ -2,6 +2,21 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — v0.3 first slice: Design Review + the Professor
+
+### Added
+- `@protopulse/review`: the Vol II G.4 Design Review — embedded ERC,
+  decoupling-per-IC (executable 100nF fix), power-tree rollup,
+  unverified-parts-in-load-bearing-roles, unwired ICs, DNP-killed rails;
+  stored/diffable ReviewReport with opened/closed deltas. 40 tests;
+  golden Probe fixture reviews with zero errors.
+- The Professor — depth-adjustable crew member with lookup_concept /
+  explain_finding grounded in the concepts wiki; ReviewPanel's
+  per-finding "Ask the Professor" handoff seeds it with the finding.
+- The three teaching depths (do-it/show-me/teach-me): persisted dial,
+  apply-fix narration through the status bar, teach-me auto-opens the
+  mapped concept article.
+
 ## 2026-06-10 — v0.2 second slice: Monte Carlo, stepping, noise, the 555 lives
 
 ### Added
