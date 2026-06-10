@@ -8,7 +8,14 @@ import type { Vec } from '@protopulse/graph';
  */
 
 export type ToolId = 'select' | 'wire' | 'place';
-export type TabId = 'inspector' | 'erc' | 'branches' | 'export' | 'draftsman';
+export type TabId =
+  | 'inspector'
+  | 'erc'
+  | 'branches'
+  | 'export'
+  | 'draftsman'
+  | 'sim'
+  | 'analyst';
 export type CameraCommand = { kind: 'fit' } | { kind: 'center'; at: Vec };
 
 export interface UiState {

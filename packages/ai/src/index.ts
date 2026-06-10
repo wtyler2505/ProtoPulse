@@ -1,7 +1,8 @@
 /**
  * @protopulse/ai — the AI crew runtime. Tool registry with scoped slices
- * enforced at dispatch, the budgeted context assembler, the Draftsman
- * agent loop, and provider adapters (Anthropic + scripted fake).
+ * enforced at dispatch, the budgeted context assembler, the shared agent
+ * loop with the Draftsman and Analyst personas, and provider adapters
+ * (Anthropic + scripted fake).
  */
 export {
   ToolRegistry,
@@ -28,4 +29,23 @@ export type {
 } from './provider.js';
 export { AnthropicProvider, type AnthropicProviderOptions } from './anthropic.js';
 export { FakeProvider } from './fake-provider.js';
-export { runDraftsman, type DraftsmanResult, type RunDraftsmanOptions } from './agent.js';
+export {
+  runAgentLoop,
+  runDraftsman,
+  type AgentLoopResult,
+  type DraftsmanResult,
+  type RunAgentLoopOptions,
+  type RunDraftsmanOptions,
+} from './agent.js';
+export { createAnalystRegistry, sweepVectorName, ANALYST_TOOL_NAMES } from './tools/analyst.js';
+export { runAnalyst, type AnalystResult, type RunAnalystOptions } from './analyst.js';
+export {
+  fidelitySummary,
+  type Analysis,
+  type FidelityEntry,
+  type ModelTier,
+  type PinnedSimulateFn,
+  type SimResult,
+  type SimResultWithManifest,
+  type SimVector,
+} from './sim-types.js';

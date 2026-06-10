@@ -22,11 +22,21 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       (`tools/golden/README.md`), interactive merge-resolver UI, MSDF
       text + GPU picking, ESP32-S3 verified part
 
-## v0.2 — The Lab ⬜
+## v0.2 — The Lab 🔨
 
-ngspice-WASM in a worker (op/dc/tran/ac/noise/Monte-Carlo), plot
-workspace with cursors/math channels/branch overlays, the Analyst agent,
-model tiers with the fidelity bar (Vol II §D.1/D.4).
+- [x] `@protopulse/sim` — graph→SPICE netlist with model tiers, ngspice-WASM
+      engine (eecircuit-engine), analyses: op/tran/dc/ac (48 tests incl.
+      real-WASM integration)
+- [x] Fidelity bar (Vol II §D.4) — per-component tier chips; simulations
+      never lie about what they are
+- [x] Plot workspace v1 — canvas plot, eng-notation axes, crosshair
+      cursors, dB/log-x for AC (math channels, FFT, branch overlays ⬜)
+- [x] The Analyst — run_simulation/measure/read_design tools on the shared
+      agent loop; first live Anthropic panel in the app
+- [ ] Noise + Monte Carlo + parameter stepping analyses
+- [ ] Dedicated sim worker + result streaming (currently run-to-completion
+      on the main thread via lazy chunk)
+- [ ] SPICE models for NE555 (currently stub) and remaining seed parts
 
 ## v0.3 — The Crew ⬜
 

@@ -2,6 +2,28 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — v0.2 first slice: The Lab is live
+
+### Added
+- `@protopulse/sim`: deterministic graph→SPICE netlist generation with the
+  model-tier honesty system (spice/behavioral/stub + fidelity manifest),
+  op/tran/dc/ac analyses, ngspice-WASM engine wrapper (eecircuit-engine,
+  MIT). 48 tests including real-WASM integration against the golden
+  led-resistor fixture.
+- App: "Sim" panel (analysis picker, fidelity bar with tier chips, trace
+  list) and a dependency-free canvas plot workspace (engineering-notation
+  axes, crosshair readout, dB/log-x for AC).
+- The Analyst — second crew member ("skeptical of everything until it's
+  plotted"): run_simulation/measure/read_design tools, shared runAgentLoop
+  extracted from the Draftsman, first live Anthropic-wired panel
+  (localStorage key with plain-text warning).
+- Verified in-browser: golden LED circuit simulated end-to-end (1008-point
+  transient; v(led_a)≈2.2 V, loop ≈20 mA — physically correct).
+
+### Known gaps (tracked in ROADMAP.md)
+- Noise/Monte-Carlo/param-step analyses, sim worker + streaming, NE555
+  model (stub), plot math channels/FFT/branch overlays.
+
 ## 2026-06-10 — Milestone 1: the engine redesign lands
 
 The first milestone of the ground-up redesign ("the vision", three volumes) landed on branch `claude/protopulse-vision-geapzy`: a greenfield npm-workspaces monorepo at `packages/` (`@protopulse/*`), living alongside the legacy app (`client/ server/ shared/` — untouched, still the shipping product; it migrates onto the engine in later milestones).

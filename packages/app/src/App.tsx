@@ -2,6 +2,7 @@ import { MM } from '@protopulse/graph';
 
 import { CanvasHost } from './editor/CanvasHost.js';
 import { deleteSelectionOps } from './editor/tools.js';
+import { AnalystPanel } from './panels/AnalystPanel.js';
 import { BranchPanel } from './panels/BranchPanel.js';
 import { ConceptViewer } from './panels/ConceptViewer.js';
 import { DraftsmanPanel } from './panels/DraftsmanPanel.js';
@@ -9,6 +10,7 @@ import { ErcPanel } from './panels/ErcPanel.js';
 import { ExportPanel } from './panels/ExportPanel.js';
 import { Inspector } from './panels/Inspector.js';
 import { Palette } from './panels/Palette.js';
+import { SimPanel } from './panels/SimPanel.js';
 import { getFindings, getGraph, getOpCount, useSession } from './state/session.js';
 import { useUi  } from './state/ui.js';
 
@@ -20,6 +22,8 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'branches', label: 'Branches' },
   { id: 'export', label: 'Export' },
   { id: 'draftsman', label: 'Draftsman' },
+  { id: 'sim', label: 'Sim' },
+  { id: 'analyst', label: 'Analyst' },
 ];
 
 function Toolbar() {
@@ -127,6 +131,8 @@ function SidePanel() {
       {activeTab === 'branches' && <BranchPanel />}
       {activeTab === 'export' && <ExportPanel />}
       {activeTab === 'draftsman' && <DraftsmanPanel />}
+      {activeTab === 'sim' && <SimPanel />}
+      {activeTab === 'analyst' && <AnalystPanel />}
     </aside>
   );
 }
