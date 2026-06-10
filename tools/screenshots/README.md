@@ -1,13 +1,14 @@
 # Screenshot rig
 
-The PNGs in `docs/screenshots/` are **artifacts of a script, never hand
-crops** — the same philosophy as `tools/golden/`: screenshots drift like
-prose unless a machine regenerates them.
+The PNGs (and the demo GIF) in `docs/screenshots/` are **artifacts of a
+script, never hand crops** — the same philosophy as `tools/golden/`:
+screenshots drift like prose unless a machine regenerates them.
 
 ## Refresh
 
 ```bash
-npx tsx tools/screenshots/capture.ts
+npx tsx tools/screenshots/capture.ts      # the five stills
+npx tsx tools/screenshots/capture-gif.ts  # cosim-demo.gif (~20 s loop)
 ```
 
 The rig starts the new editor's dev server (`npm run -w @protopulse/app
@@ -38,6 +39,23 @@ commit the new PNGs alongside the change.
 ¹ The fallback fires when the 555 solve errors, or when its macromodel's
 ~25 internal vectors make the trace list too tall to frame the fidelity
 bar and the plot together.
+
+## The animated demo (`cosim-demo.gif`)
+
+`capture-gif.ts` records the co-sim story as a ~20 s loop at 1280×720:
+schematic → blink firmware (assembled in-script) loaded into the AVR
+emulator → a burst of live frames while it runs (the cycle counter and
+logic traces genuinely move) → B5 bound to LED_A → the square-wave-over-
+analog money plot. A caption pill is injected into the page for
+narration — cosmetic only, it never exists outside the recording
+session.
+
+Encoding is pure JS (`gif.ts`, gifenc + pngjs — no ffmpeg needed): one
+global 255-color palette quantized across all frames, and every pixel
+unchanged since the previous frame written as a transparent index with
+"keep previous" disposal. That inter-frame diffing is why an 18-frame
+720p GIF lands around 220 KB instead of several MB. Shared rig plumbing
+(fixture bundles, server lifecycle, locator helpers) lives in `rig.ts`.
 
 ## Determinism
 

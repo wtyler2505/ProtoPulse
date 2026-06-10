@@ -7,6 +7,10 @@ got any more good creative/innovative ideas?").
    best marketing asset: firmware square wave + analog response drawing
    themselves. Implementation: canvas MediaRecorder or frame capture in
    the screenshot rig.
+   ✅ SHIPPED 2026-06-10 as `docs/screenshots/cosim-demo.gif`
+   (`tools/screenshots/capture-gif.ts` — frame capture + pure-JS gifenc
+   encode with inter-frame diffing, 18 frames / ~220 KB, embedded in the
+   root README).
 2. **Time-lapse replay as the GIF generator** — the op-log IS a replay
    (vision Vol I §1.2): an app scrubber that re-materializes the design
    op-by-op, animated. One feature = teaching tool + demo generator +

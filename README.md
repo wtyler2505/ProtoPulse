@@ -226,6 +226,11 @@ ProtoPulse is being redesigned from the ground up ("the vision", three volumes).
 
 The thesis: **one canonical design graph, many projections.** Every mutation is a typed operation; the design IS its op-log (JSON Lines), and the graph is just a materialized view. That one decision buys deterministic exports, exact undo (inverse ops), O(1) branches, visual diff, and three-way merge with conflicts surfaced as data — never silently resolved.
 
+<p align="center">
+<img src="docs/screenshots/cosim-demo.gif" alt="20-second demo loop: blink firmware assembled from raw AVR opcodes runs live in the emulator, pin B5 is bound to net LED_A, and ngspice solves the circuit the firmware drives — square wave over analog response on one axis" width="830">
+</p>
+<p align="center"><em>The whole thesis in one ~20 s loop: real AVR firmware → live emulation → pin bound to a net → SPICE-solved response, one axis.</em></p>
+
 <table>
 <tr>
 <td width="50%"><img src="docs/screenshots/schematic.png" alt="The new schematic editor: a 555 astable driving three LED branches"></td>
