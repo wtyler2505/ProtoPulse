@@ -104,6 +104,26 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
 Sync relay, share links, community library with provenance tiers
 (Vol III §4), manufacturing pipeline (Vol II §H).
 
+## Migration milestone — legacy retirement (between v0.6 and v0.7) ⬜
+
+The answer to "when do we weed out the old codebase": not by date, by
+checklist. A legacy area is deletable only when (1) the engine covers
+its user-visible function at equal-or-better quality, (2) the
+legacy-Postgres → .ppx op-log importer exists and has moved Tyler's
+real projects, (3) nothing depends on it (the Tauri shell wraps the
+legacy server; Codex works in legacy/Tauri on main), and (4) Tyler has
+stopped using it. Sequence: v0.6 gives the engine its server/persistence
+→ build the importer → flip the default UI to the engine app with
+legacy read-only for a grace period → delete area-by-area in deliberate
+PRs, biggest-dependency-last, one ADR per removal.
+
+- [ ] Legacy → .ppx importer (projects, designs, nets, placements)
+- [ ] Default-UI flip + legacy read-only grace period
+- [ ] Area-by-area retirement with ADRs (server core + Tauri last)
+- [ ] Early safe weeding (independent of the above): root collab
+      artifacts → docs/collab/ (coordinate with Codex), fix-or-disable
+      the permanently-red legacy CI jobs, legacy dead-code audit
+
 ## v0.7 — The Probe ⬜
 
 The open-hardware companion ships (Vol II §F): 8-ch LA, 2-ch analog,
