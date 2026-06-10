@@ -53,6 +53,24 @@ npm run -w @protopulse/app dev   # new editor on http://localhost:5174
 npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
 ```
 
+## Documentation Rules (Mandatory)
+One home per fact; pointers everywhere else. Before editing any doc, know which kind it is:
+
+| Doc | Role | Editing rule |
+|---|---|---|
+| `docs/vision/*` | The frozen founding spec (3 volumes) | **NEVER edit in place.** Deviations → ADR; genuine vision changes → new versioned amendment file |
+| `ROADMAP.md` | Canonical build order + status | The ONLY place roadmap/status lives; other docs link, never restate |
+| `docs/adr/NNNN-*.md` | Decision records (legacy + engine) | Append-only: new ADR with next number, house format (Status/Date/Deciders/Context/Decision/Rationale + "Revisit when" for deviations). Supersede, don't rewrite |
+| `ARCHITECTURE.md` | Thin pointer index | Keep it links-only; real architecture lives in `packages/README.md`, `packages/graph/README.md`, `DESIGN.md` |
+| `tools/golden/README.md` + fixtures | Export contracts | Re-freeze only deliberately via `tools/golden/update-golden.ts`, review the diff like an API change |
+| `docs/CHANGELOG.md` | History | Prepend an entry per milestone/significant landing; never rewrite old entries |
+| `docs/FEATURE_MATURITY.md` | Status matrix | Update when maturity genuinely changes; honest labels (never claim roadmap features exist) |
+| `CODEX_*`, `CLAUDE_RESPONSE_*`, `COLLAB_*`, audits, checklists | Point-in-time records | Do not update — they are history, not documentation |
+| `docs/notebooklm.md`, `data/pp-nlm/**` | Codex-owned | Do not touch (see PP-NLM section) |
+| `AGENTS.md` (this file, = `CLAUDE.md`/`GEMINI.md` symlinks) | Operating manual | Propose changes after 3+ friction occurrences (see Self-Improvement); keep additions concise |
+
+When code changes make any doc stale, fix the doc in the same PR — a doc that drifts is worse than no doc.
+
 ## Operational Space (ops/)
 ops/
 ├── derivation.md      — why this system was configured this way
