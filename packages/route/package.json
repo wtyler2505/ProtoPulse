@@ -1,0 +1,18 @@
+{
+  "name": "@protopulse/route",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Interactive routing — walkaround head routing (Vol II §E.1, step 1): obstacle sets from the design graph, hull-walk detours around inflated copper. Push-and-shove is deliberately deferred.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@protopulse/graph": "*",
+    "@protopulse/parts": "*",
+    "flatbush": "^4.4.0",
+    "zod": "^3.25.76"
+  }
+}

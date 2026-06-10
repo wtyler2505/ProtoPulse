@@ -223,6 +223,82 @@ describe('generateSpiceNetlist — exclusions', () => {
   });
 });
 
+describe('generateSpiceNetlist — AC source magnitude (fields.ac)', () => {
+  it('emits exactly the same bytes when fields.ac is absent (other fields too)', () => {
+    const plain = generateSpiceNetlist(graphOf(ledOps()), parts);
+    const withOtherField = generateSpiceNetlist(
+      graphOf([
+        ...ledOps(),
+        { kind: 'set_component_props', id: 'bat', props: { fields: { mfr: 'Duracell' } } },
+      ]),
+      parts,
+    );
+    // Byte-compat contract: no fields.ac → today's deck, byte for byte.
+    expect(withOtherField.netlist).toBe(plain.netlist);
+    expect(withOtherField.manifest).toEqual(plain.manifest);
+    expect(plain.netlist).toContain('VBT1 vbat 0 DC 9\n');
+  });
+
+  it('appends AC <mag> to the battery V card when fields.ac is set', () => {
+    const { netlist, manifest } = generateSpiceNetlist(
+      graphOf([
+        ...ledOps(),
+        { kind: 'set_component_props', id: 'bat', props: { fields: { ac: '1' } } },
+      ]),
+      parts,
+    );
+    expect(netlist).toContain('VBT1 vbat 0 DC 9 AC 1\n');
+    expect(manifest.find((e) => e.ref === 'BT1')?.note).toBe(
+      'ideal DC source (no internal resistance); AC small-signal magnitude 1 (fields.ac)',
+    );
+  });
+
+  it('appends AC <mag> to a pwr-vcc rail when fields.ac is set', () => {
+    const { netlist, manifest } = generateSpiceNetlist(
+      graphOf([
+        { kind: 'add_component', id: 'p1', ref: 'PWR1', partId: 'core:pwr-vcc', partRev: 1, value: '3.3V' },
+        { kind: 'connect', port: 'p1:1', newNetId: 'nv' },
+        { kind: 'rename_net', netId: 'nv', name: 'V33' },
+        { kind: 'set_component_props', id: 'p1', props: { fields: { ac: '0.5' } } },
+      ]),
+      parts,
+    );
+    expect(netlist).toContain('VPWR1 v33 0 DC 3.3 AC 0.5\n');
+    expect(manifest[0]?.note).toBe('ideal rail; AC small-signal magnitude 0.5 (fields.ac)');
+  });
+
+  it('skips an unparseable or negative fields.ac with an honest manifest note', () => {
+    const plainLine = 'VBT1 vbat 0 DC 9\n';
+    for (const bad of ['lots', '-1']) {
+      const { netlist, manifest } = generateSpiceNetlist(
+        graphOf([
+          ...ledOps(),
+          { kind: 'set_component_props', id: 'bat', props: { fields: { ac: bad } } },
+        ]),
+        parts,
+      );
+      expect(netlist).toContain(plainLine);
+      expect(netlist).not.toContain(' AC ');
+      expect(manifest.find((e) => e.ref === 'BT1')?.note).toBe(
+        `ideal DC source (no internal resistance); fields.ac "${bad}" unparseable — AC magnitude not emitted`,
+      );
+    }
+  });
+
+  it('a blank fields.ac behaves exactly like an absent one', () => {
+    const plain = generateSpiceNetlist(graphOf(ledOps()), parts);
+    const blank = generateSpiceNetlist(
+      graphOf([
+        ...ledOps(),
+        { kind: 'set_component_props', id: 'bat', props: { fields: { ac: '  ' } } },
+      ]),
+      parts,
+    );
+    expect(blank.netlist).toBe(plain.netlist);
+    expect(blank.manifest).toEqual(plain.manifest);
+  });
+});
+
 describe('generateSpiceNetlist — model zoo', () => {
   it('emits BAT54S as two series diodes through the common pin 3', () => {
     const { netlist } = generateSpiceNetlist(

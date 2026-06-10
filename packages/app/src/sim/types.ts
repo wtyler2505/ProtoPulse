@@ -113,6 +113,39 @@ export type SimulateStepFn = (
   spec: StepSpec,
 ) => Promise<StepResult>;
 
+// ── Worker-path planning ──
+// The sim worker protocol is graph-less: the MAIN thread builds netlist
+// bodies with these engine entry points and ships plain strings to the
+// worker (see worker.ts). Pinned to @protopulse/sim's exports.
+
+export interface NetlistWithManifest {
+  /** SPICE netlist body — no analysis card, no `.end`. */
+  netlist: string;
+  manifest: FidelityEntry[];
+}
+
+export interface McDeck {
+  netlist: string;
+  /** ref → value multiplier drawn for this trial. */
+  jitter: Record<string, number>;
+}
+
+export interface MonteCarloPlan {
+  decks: McDeck[];
+  manifest: FidelityEntry[];
+  seed: number;
+}
+
+export interface StepDeck {
+  netlist: string;
+  value: string;
+}
+
+export interface StepPlan {
+  decks: StepDeck[];
+  manifest: FidelityEntry[];
+}
+
 /** Shape of the lazily imported '@protopulse/sim' module. Partial in
  *  practice until the engine track lands — runner.ts checks at runtime. */
 export interface SimModule {
@@ -120,6 +153,9 @@ export interface SimModule {
   fidelitySummary: (manifest: FidelityEntry[]) => string;
   simulateMonteCarlo: SimulateMonteCarloFn;
   simulateStep: SimulateStepFn;
+  generateSpiceNetlist: (graph: DesignGraph, parts: PartDb) => NetlistWithManifest;
+  planMonteCarloNetlists: (graph: DesignGraph, parts: PartDb, spec: MonteCarloSpec) => MonteCarloPlan;
+  planStepNetlists: (graph: DesignGraph, parts: PartDb, spec: StepSpec) => StepPlan;
 }
 
 /** Name of the sweep (x-axis) vector for a result, or null for op. */

@@ -2,6 +2,21 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — walkaround routing + the Lab stragglers
+
+### Added
+- `@protopulse/route`: walkaround interactive routing (Vol II E.1 first
+  slice) — obstacle hulls inflated by clearance+width, flatbush broad
+  phase, CW/CCW corner walks with recursion cap; 'manual | walk' toggle
+  on the PCB trace tool with blocked-corridor refusal. 39 tests.
+- Sim worker (ngspice off the main thread, node fallback preserved),
+  plot FFT (radix-2 + Hann over resampled windows, per-trace toggle,
+  log-x dB spectrum plot), AC-capable battery/rail emitters via
+  fields.ac — graph-driven .ac and .noise now run end-to-end.
+- Seam fixes from the parallel build: distributive worker-request types,
+  traceMode initializer, and the FFT spectrum plot actually rendered
+  (the computation existed; the lint gate caught the missing render).
+
 ## 2026-06-10 — v0.5 third slice: the loop closes
 
 ### Added

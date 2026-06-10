@@ -130,12 +130,36 @@ function jitterTargets(
   return targets.sort((a, b) => compareRefs(a.ref, b.ref));
 }
 
-export async function simulateMonteCarlo(
+/** One pre-built Monte Carlo deck: the netlist body plus its jitters. */
+export interface McDeck {
+  /** Netlist body (no analysis card, no `.end`). */
+  netlist: string;
+  /** ref → value multiplier drawn for this trial. */
+  jitter: Record<string, number>;
+}
+
+export interface MonteCarloPlan {
+  /** One deck per trial, in trial order. */
+  decks: McDeck[];
+  /** Fidelity manifest (identical across trials — jitter never changes tiers). */
+  manifest: FidelityEntry[];
+  /** The seed actually used — feed it back for an identical plan. */
+  seed: number;
+}
+
+/**
+ * Build every trial's netlist WITHOUT running anything: validates the
+ * spec, draws the seeded jitters, and emits one deck per trial. This is
+ * the graph-side half of a Monte Carlo run — callers that execute SPICE
+ * elsewhere (the app's sim worker) ship these bodies over the wire and
+ * zip the results back up with each deck's jitter.
+ */
+export function planMonteCarloNetlists(
   graph: DesignGraph,
   parts: PartDb,
   spec: MonteCarloSpec,
-  opts: SimulateOpts = {},
-): Promise<MonteCarloResult> {
+  opts: Pick<SimulateOpts, 'title' | 'valueOverrides'> = {},
+): MonteCarloPlan {
   if (!Number.isInteger(spec.runs) || spec.runs < 1) {
     throw new Error(`runs must be a positive integer (got ${String(spec.runs)})`);
   }
@@ -150,28 +174,48 @@ export async function simulateMonteCarlo(
   const rand = mulberry32(seed);
   const targets = jitterTargets(graph, parts, tolerances);
 
+  const decks: McDeck[] = [];
+  let manifest: FidelityEntry[] = [];
+  for (let trial = 0; trial < spec.runs; trial++) {
+    const overrides = new Map<Uuid, string>(opts.valueOverrides ?? []);
+    const jitter: Record<string, number> = {};
+    for (const target of targets) {
+      const multiplier = 1 + target.tol * (2 * rand() - 1);
+      jitter[target.ref] = multiplier;
+      overrides.set(target.id, siValueString(target.value * multiplier, UNIT_LETTER[target.cls]));
+    }
+    const { netlist, manifest: trialManifest } = generateSpiceNetlist(graph, parts, {
+      title: opts.title,
+      valueOverrides: overrides,
+    });
+    if (trial === 0) manifest = trialManifest;
+    decks.push({ netlist, jitter });
+  }
+  return { decks, manifest, seed };
+}
+
+export async function simulateMonteCarlo(
+  graph: DesignGraph,
+  parts: PartDb,
+  spec: MonteCarloSpec,
+  opts: SimulateOpts = {},
+): Promise<MonteCarloResult> {
+  const plan = planMonteCarloNetlists(graph, parts, spec, {
+    title: opts.title,
+    valueOverrides: opts.valueOverrides,
+  });
+
   const engine = opts.engine ?? new SpiceEngine();
   const trials: McTrial[] = [];
-  let manifest: FidelityEntry[] = [];
   try {
-    for (let trial = 0; trial < spec.runs; trial++) {
-      const overrides = new Map<Uuid, string>(opts.valueOverrides ?? []);
-      const jitter: Record<string, number> = {};
-      for (const target of targets) {
-        const multiplier = 1 + target.tol * (2 * rand() - 1);
-        jitter[target.ref] = multiplier;
-        overrides.set(target.id, siValueString(target.value * multiplier, UNIT_LETTER[target.cls]));
-      }
-      const { netlist, manifest: trialManifest } = generateSpiceNetlist(graph, parts, {
-        title: opts.title,
-        valueOverrides: overrides,
-      });
-      if (trial === 0) manifest = trialManifest;
-      const result = await engine.run(netlist, spec.base);
-      trials.push({ ...result, trial, jitter });
+    for (let trial = 0; trial < plan.decks.length; trial++) {
+      const deck = plan.decks[trial];
+      if (!deck) continue;
+      const result = await engine.run(deck.netlist, spec.base);
+      trials.push({ ...result, trial, jitter: deck.jitter });
     }
   } finally {
     if (opts.engine === undefined) await engine.stop();
   }
-  return { trials, manifest, seed };
+  return { trials, manifest: plan.manifest, seed: plan.seed };
 }

@@ -27,11 +27,22 @@ export { fidelitySummary, simulate, type SimulateOpts, type SimulateResult } fro
 export {
   DEFAULT_TOLERANCES,
   mulberry32,
+  planMonteCarloNetlists,
   simulateMonteCarlo,
   siValueString,
   type JitterClass,
+  type McDeck,
   type McTrial,
+  type MonteCarloPlan,
   type MonteCarloResult,
   type MonteCarloSpec,
 } from './montecarlo.js';
-export { simulateStep, type StepResult, type StepRun, type StepSpec } from './step.js';
+export {
+  planStepNetlists,
+  simulateStep,
+  type StepDeck,
+  type StepPlan,
+  type StepResult,
+  type StepRun,
+  type StepSpec,
+} from './step.js';

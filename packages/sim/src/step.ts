@@ -32,12 +32,33 @@ export interface StepResult {
   manifest: FidelityEntry[];
 }
 
-export async function simulateStep(
+/** One pre-built step deck: the netlist body plus the value it carries. */
+export interface StepDeck {
+  /** Netlist body (no analysis card, no `.end`). */
+  netlist: string;
+  /** The stepped component value this deck embeds. */
+  value: string;
+}
+
+export interface StepPlan {
+  /** One deck per stepped value, in spec order. */
+  decks: StepDeck[];
+  /** Fidelity manifest (identical across runs — values never change tiers). */
+  manifest: FidelityEntry[];
+}
+
+/**
+ * Build every stepped netlist WITHOUT running anything: validates the
+ * spec and emits one deck per candidate value. The graph-side half of a
+ * parameter step — callers that execute SPICE elsewhere (the app's sim
+ * worker) ship these bodies over the wire and zip results back by index.
+ */
+export function planStepNetlists(
   graph: DesignGraph,
   parts: PartDb,
   spec: StepSpec,
-  opts: SimulateOpts = {},
-): Promise<StepResult> {
+  opts: Pick<SimulateOpts, 'title' | 'valueOverrides'> = {},
+): StepPlan {
   if (spec.values.length === 0) {
     throw new Error('values must contain at least one entry');
   }
@@ -46,23 +67,41 @@ export async function simulateStep(
     throw new Error(`unknown component ref "${spec.componentRef}"`);
   }
 
+  const decks: StepDeck[] = [];
+  let manifest: FidelityEntry[] = [];
+  for (const value of spec.values) {
+    const overrides = new Map<Uuid, string>(opts.valueOverrides ?? []);
+    overrides.set(component.id, value);
+    const { netlist, manifest: runManifest } = generateSpiceNetlist(graph, parts, {
+      title: opts.title,
+      valueOverrides: overrides,
+    });
+    if (decks.length === 0) manifest = runManifest;
+    decks.push({ netlist, value });
+  }
+  return { decks, manifest };
+}
+
+export async function simulateStep(
+  graph: DesignGraph,
+  parts: PartDb,
+  spec: StepSpec,
+  opts: SimulateOpts = {},
+): Promise<StepResult> {
+  const plan = planStepNetlists(graph, parts, spec, {
+    title: opts.title,
+    valueOverrides: opts.valueOverrides,
+  });
+
   const engine = opts.engine ?? new SpiceEngine();
   const runs: StepRun[] = [];
-  let manifest: FidelityEntry[] = [];
   try {
-    for (const value of spec.values) {
-      const overrides = new Map<Uuid, string>(opts.valueOverrides ?? []);
-      overrides.set(component.id, value);
-      const { netlist, manifest: runManifest } = generateSpiceNetlist(graph, parts, {
-        title: opts.title,
-        valueOverrides: overrides,
-      });
-      if (runs.length === 0) manifest = runManifest;
-      const result = await engine.run(netlist, spec.base);
-      runs.push({ ...result, value });
+    for (const deck of plan.decks) {
+      const result = await engine.run(deck.netlist, spec.base);
+      runs.push({ ...result, value: deck.value });
     }
   } finally {
     if (opts.engine === undefined) await engine.stop();
   }
-  return { runs, manifest };
+  return { runs, manifest: plan.manifest };
 }

@@ -40,9 +40,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       'plot the same node on two design branches against each other'
 - [x] NE555 behavioral macromodel — the traffic-light fixture oscillates
       at 0.719s measured vs 0.721s theory
-- [ ] Dedicated sim worker + result streaming (currently run-to-completion
-      on the main thread via lazy chunk)
-- [ ] Plot FFT; AC-source emitter for graph-driven noise runs
+- [x] Sim worker — ngspice off the main thread (node fallback kept;
+      streaming still ⬜)
+- [x] Plot FFT (radix-2, Hann, resampled) + AC-source emitter
+      (fields.ac) unlocking graph-driven .ac/.noise runs
 
 ## v0.3 — The Crew 🔨
 
@@ -75,7 +76,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       pipeline), pcb scene delta sync, side-flip UI (F key + Inspector)
 - [x] Gerber X2 / Excellon drill / pick-and-place export with byte-exact
       golden fixtures (routed-led)
-- [ ] Push-and-shove routing (Vol II §E.1); zones/pours; panelization
+- [x] Walkaround interactive routing (`@protopulse/route`, E.1 step 1):
+      CW/CCW hull walks over DRC-grade obstacle hulls, same-net copper
+      legal, 'manual | walk' toggle on the trace tool
+- [ ] Shove + spring-back (E.1 steps 2-3); zones/pours; panelization
 
 ## v0.5 — The Bridge 🔨
 
