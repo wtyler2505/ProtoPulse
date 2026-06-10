@@ -1,7 +1,10 @@
+import { useEffect } from 'react';
+
 import { MM } from '@protopulse/graph';
 
 import { CanvasHost } from './editor/CanvasHost.js';
 import { deleteSelectionOps } from './editor/tools.js';
+import { AnalystPanel } from './panels/AnalystPanel.js';
 import { BranchPanel } from './panels/BranchPanel.js';
 import { ConceptViewer } from './panels/ConceptViewer.js';
 import { DraftsmanPanel } from './panels/DraftsmanPanel.js';
@@ -9,6 +12,9 @@ import { ErcPanel } from './panels/ErcPanel.js';
 import { ExportPanel } from './panels/ExportPanel.js';
 import { Inspector } from './panels/Inspector.js';
 import { Palette } from './panels/Palette.js';
+import { ProfessorPanel } from './panels/ProfessorPanel.js';
+import { ReviewPanel } from './panels/ReviewPanel.js';
+import { SimPanel } from './panels/SimPanel.js';
 import { getFindings, getGraph, getOpCount, useSession } from './state/session.js';
 import { useUi  } from './state/ui.js';
 
@@ -17,10 +23,17 @@ import type {TabId} from './state/ui.js';
 const TABS: { id: TabId; label: string }[] = [
   { id: 'inspector', label: 'Inspector' },
   { id: 'erc', label: 'ERC' },
+  { id: 'review', label: 'Review' },
   { id: 'branches', label: 'Branches' },
   { id: 'export', label: 'Export' },
   { id: 'draftsman', label: 'Draftsman' },
+  { id: 'sim', label: 'Sim' },
+  { id: 'analyst', label: 'Analyst' },
+  { id: 'professor', label: 'Professor' },
 ];
+
+/** How long a narration flash stays on the status bar. */
+const FLASH_MS = 4000;
 
 function Toolbar() {
   const tool = useUi((s) => s.tool);
@@ -81,6 +94,8 @@ function Toolbar() {
 
 function StatusBar() {
   const cursor = useUi((s) => s.cursorWorld);
+  const statusFlash = useUi((s) => s.statusFlash);
+  const statusFlashSeq = useUi((s) => s.statusFlashSeq);
   const opsVersion = useSession((s) => s.opsVersion);
   void opsVersion;
   const state = useSession.getState();
@@ -88,6 +103,16 @@ function StatusBar() {
   const findings = getFindings(state);
   const errors = findings.filter((f) => f.severity === 'error').length;
   const warns = findings.filter((f) => f.severity === 'warn').length;
+
+  // Auto-clear: each flash arms a timer keyed on its seq; a newer flash
+  // makes the stale timer a no-op (clearStatusFlash checks the seq).
+  useEffect(() => {
+    if (statusFlash === null) return;
+    const timer = setTimeout(() => {
+      useUi.getState().clearStatusFlash(statusFlashSeq);
+    }, FLASH_MS);
+    return () => { clearTimeout(timer); };
+  }, [statusFlash, statusFlashSeq]);
 
   return (
     <div className="status-bar">
@@ -100,6 +125,11 @@ function StatusBar() {
       <span className={`status-cell${errors > 0 ? ' status-error' : ''}`}>
         ERC: {errors} errors, {warns} warnings
       </span>
+      {statusFlash !== null && (
+        <span className="status-cell status-flash" role="status">
+          {statusFlash}
+        </span>
+      )}
     </div>
   );
 }
@@ -124,9 +154,13 @@ function SidePanel() {
       </nav>
       {activeTab === 'inspector' && <Inspector />}
       {activeTab === 'erc' && <ErcPanel />}
+      {activeTab === 'review' && <ReviewPanel />}
       {activeTab === 'branches' && <BranchPanel />}
       {activeTab === 'export' && <ExportPanel />}
       {activeTab === 'draftsman' && <DraftsmanPanel />}
+      {activeTab === 'sim' && <SimPanel />}
+      {activeTab === 'analyst' && <AnalystPanel />}
+      {activeTab === 'professor' && <ProfessorPanel />}
     </aside>
   );
 }

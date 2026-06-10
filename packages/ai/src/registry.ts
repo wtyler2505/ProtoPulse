@@ -32,8 +32,10 @@ export interface AiTool<S extends z.ZodType = z.ZodType> {
   destructive: boolean;
   costClass: CostClass;
   /** Pure: returns proposed ops, MUST NOT mutate ctx.graph. May throw on
-   *  domain errors (unknown ref, missing net) — dispatch catches. */
-  execute(input: z.infer<S>, ctx: ToolCtx): ToolResult;
+   *  domain errors (unknown ref, missing net) — dispatch catches. Tools
+   *  that wrap genuinely async work (the Analyst's run_simulation) may
+   *  return a Promise; those must be dispatched via dispatchAsync. */
+  execute(input: z.infer<S>, ctx: ToolCtx): ToolResult | Promise<ToolResult>;
   /** One-line narration for the depth dial / destructive-gate prompt. */
   explain(input: z.infer<S>): string;
   /** Per-invocation destructiveness (batch is destructive iff a member is).
@@ -146,7 +148,11 @@ export class ToolRegistry {
     }));
   }
 
-  dispatch(name: string, rawInput: unknown, ctx: ToolCtx): DispatchResult {
+  /** Validate name + input; shared by sync and async dispatch. */
+  private prepare(
+    name: string,
+    rawInput: unknown,
+  ): { ok: true; tool: AiTool; input: unknown } | { ok: false; error: string } {
     const tool = this.tools.get(name);
     if (!tool) {
       return { ok: false, error: `unknown or out-of-scope tool: ${name}` };
@@ -158,8 +164,34 @@ export class ToolRegistry {
         .join('; ');
       return { ok: false, error: `invalid input for ${name}: ${issues}` };
     }
+    return { ok: true, tool, input: parsed.data };
+  }
+
+  dispatch(name: string, rawInput: unknown, ctx: ToolCtx): DispatchResult {
+    const prep = this.prepare(name, rawInput);
+    if (!prep.ok) return prep;
     try {
-      return { ok: true, result: tool.execute(parsed.data, ctx) };
+      const result = prep.tool.execute(prep.input, ctx);
+      if (result instanceof Promise) {
+        // Swallow the orphaned promise so a rejection can't go unhandled.
+        void result.catch(() => undefined);
+        return {
+          ok: false,
+          error: `tool ${name} is asynchronous — dispatch it via dispatchAsync`,
+        };
+      }
+      return { ok: true, result };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  /** Like dispatch, but awaits async tools. Sync tools pass through. */
+  async dispatchAsync(name: string, rawInput: unknown, ctx: ToolCtx): Promise<DispatchResult> {
+    const prep = this.prepare(name, rawInput);
+    if (!prep.ok) return prep;
+    try {
+      return { ok: true, result: await prep.tool.execute(prep.input, ctx) };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }

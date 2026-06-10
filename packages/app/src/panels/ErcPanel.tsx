@@ -1,55 +1,19 @@
 import { conceptFor    } from '@protopulse/erc';
-import { parsePortRef   } from '@protopulse/graph';
-import { pinWorldPosition } from '@protopulse/renderer';
 
-import { getFindings, getGraph, partDb, useSession } from '../state/session.js';
+import { anchorIds, anchorPosition } from '../editor/anchors.js';
+import { narrateApply } from '../state/narration.js';
+import { getFindings, getGraph, useSession } from '../state/session.js';
 import { useUi } from '../state/ui.js';
 
-import type {Anchor, Finding, Severity} from '@protopulse/erc';
-import type {DesignGraph, Vec} from '@protopulse/graph';
+import type {Finding, Severity} from '@protopulse/erc';
+import type {DesignGraph} from '@protopulse/graph';
 
 /**
  * ERC findings grouped by severity. Clicking selects the anchors and
  * centers the camera on the first one; fixes dispatch as ops; every code
- * links its concepts-wiki article.
+ * links its concepts-wiki article. Anchor focusing lives in the shared
+ * editor/anchors module (the Review panel uses the same helpers).
  */
-
-function anchorIds(anchor: Anchor): string[] {
-  switch (anchor.kind) {
-    case 'net':
-      return [anchor.netId];
-    case 'component':
-      return [anchor.componentId];
-    case 'port':
-      return [parsePortRef(anchor.port).componentId];
-  }
-}
-
-function anchorPosition(graph: DesignGraph, anchor: Anchor): Vec | null {
-  switch (anchor.kind) {
-    case 'component':
-      return graph.schematic.placements.get(anchor.componentId)?.at ?? null;
-    case 'port': {
-      const { componentId, pinKey } = parsePortRef(anchor.port);
-      const placement = graph.schematic.placements.get(componentId);
-      const comp = graph.components.get(componentId);
-      if (!placement || !comp) return null;
-      const part = partDb.get(comp.partId, comp.partRev);
-      if (!part) return placement.at;
-      try {
-        return pinWorldPosition(part, placement, pinKey);
-      } catch {
-        return placement.at;
-      }
-    }
-    case 'net': {
-      const net = graph.nets.get(anchor.netId);
-      const firstPort = net?.ports[0];
-      if (firstPort) return anchorPosition(graph, { kind: 'port', port: firstPort });
-      return null;
-    }
-  }
-}
 
 const SEVERITY_ORDER: Severity[] = ['error', 'warn', 'info'];
 
@@ -86,7 +50,11 @@ function FindingRow({ finding, graph }: { finding: Finding; graph: DesignGraph }
           <button
             type="button"
             className="fix-button"
-            onClick={() => dispatch(finding.fix ?? [], `fix ${finding.code}`)}
+            onClick={() => {
+              if (dispatch(finding.fix ?? [], `fix ${finding.code}`)) {
+                narrateApply(`Applied fix for ${finding.code}: ${finding.message}`, concept?.conceptSlug);
+              }
+            }}
           >
             Apply fix
           </button>

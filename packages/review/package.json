@@ -1,0 +1,18 @@
+{
+  "name": "@protopulse/review",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The Design Review deck (Vol II §G.4): ERC plus design-level checks rolled into a versioned, diffable report. Findings carry executable fixes.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@protopulse/erc": "*",
+    "@protopulse/graph": "*",
+    "@protopulse/parts": "*",
+    "zod": "^3.25.76"
+  }
+}

@@ -22,17 +22,41 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       (`tools/golden/README.md`), interactive merge-resolver UI, MSDF
       text + GPU picking, ESP32-S3 verified part
 
-## v0.2 — The Lab ⬜
+## v0.2 — The Lab 🔨
 
-ngspice-WASM in a worker (op/dc/tran/ac/noise/Monte-Carlo), plot
-workspace with cursors/math channels/branch overlays, the Analyst agent,
-model tiers with the fidelity bar (Vol II §D.1/D.4).
+- [x] `@protopulse/sim` — graph→SPICE netlist with model tiers, ngspice-WASM
+      engine (eecircuit-engine), analyses: op/tran/dc/ac (48 tests incl.
+      real-WASM integration)
+- [x] Fidelity bar (Vol II §D.4) — per-component tier chips; simulations
+      never lie about what they are
+- [x] Plot workspace v1 — canvas plot, eng-notation axes, crosshair
+      cursors, dB/log-x for AC (math channels, FFT, branch overlays ⬜)
+- [x] The Analyst — run_simulation/measure/read_design tools on the shared
+      agent loop; first live Anthropic panel in the app
+- [x] Monte Carlo (seeded, per-class tolerances, spaghetti plots) +
+      parameter stepping + noise analysis (engine supports .noise;
+      graph-driven noise needs an AC-capable source emitter ⬜)
+- [x] Math channels (safe expression evaluator) + branch overlay —
+      'plot the same node on two design branches against each other'
+- [x] NE555 behavioral macromodel — the traffic-light fixture oscillates
+      at 0.719s measured vs 0.721s theory
+- [ ] Dedicated sim worker + result streaming (currently run-to-completion
+      on the main thread via lazy chunk)
+- [ ] Plot FFT; AC-source emitter for graph-driven noise runs
 
-## v0.3 — The Crew ⬜
+## v0.3 — The Crew 🔨
 
-Full agent crew (Architect/Router/Analyst/Buyer/Professor), Design
-Review as a first-class artifact (Vol II §G.4), the three teaching
-depths, concepts wiki growth toward the 88-article seed list.
+- [x] Design Review as a first-class artifact (`@protopulse/review`,
+      Vol II §G.4): six checks, executable fixes, stored/diffable
+      reports with opened/closed deltas, ReviewPanel in the app
+- [x] The Professor — third crew member: lookup_concept/explain_finding
+      grounded in the wiki; "Ask the Professor" handoff from any finding
+- [x] The three teaching depths (do-it/show-me/teach-me): persisted dial,
+      show-me status narration, teach-me concept pauses
+- [ ] Architect / Router / Buyer (need buses+sheets, PCB, and sourcing —
+      v0.4+ substrates)
+- [ ] Concepts wiki growth toward the 88-article seed list
+- [ ] Review deck versioning + community-extensible review rules
 
 ## v0.4 — The Board ⬜
 

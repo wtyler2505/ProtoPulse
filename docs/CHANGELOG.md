@@ -2,6 +2,60 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — v0.3 first slice: Design Review + the Professor
+
+### Added
+- `@protopulse/review`: the Vol II G.4 Design Review — embedded ERC,
+  decoupling-per-IC (executable 100nF fix), power-tree rollup,
+  unverified-parts-in-load-bearing-roles, unwired ICs, DNP-killed rails;
+  stored/diffable ReviewReport with opened/closed deltas. 40 tests;
+  golden Probe fixture reviews with zero errors.
+- The Professor — depth-adjustable crew member with lookup_concept /
+  explain_finding grounded in the concepts wiki; ReviewPanel's
+  per-finding "Ask the Professor" handoff seeds it with the finding.
+- The three teaching depths (do-it/show-me/teach-me): persisted dial,
+  apply-fix narration through the status bar, teach-me auto-opens the
+  mapped concept article.
+
+## 2026-06-10 — v0.2 second slice: Monte Carlo, stepping, noise, the 555 lives
+
+### Added
+- `@protopulse/sim`: seeded Monte Carlo (R 5% / C 20% / L 10% defaults,
+  deterministic mulberry32, value-override netlists), parameter stepping,
+  .noise analysis (engine verified; input source must carry an AC value),
+  and the NE555 behavioral macromodel — hysteretic discharge switch +
+  regenerative latch; the golden traffic-light fixture oscillates at
+  0.719-0.720s measured vs 0.721s theory. 69 sim tests.
+- App: math channels (safe parser — v(a)-v(b), db/abs/mag, complex-aware),
+  branch overlay with dashed traces and dual fidelity bars, Monte Carlo
+  spaghetti + step trace families, noise UI. 129 app tests.
+
+### Known gaps (ROADMAP.md)
+- Sim worker + streaming; plot FFT; AC-source emitter for graph-driven
+  noise.
+
+## 2026-06-10 — v0.2 first slice: The Lab is live
+
+### Added
+- `@protopulse/sim`: deterministic graph→SPICE netlist generation with the
+  model-tier honesty system (spice/behavioral/stub + fidelity manifest),
+  op/tran/dc/ac analyses, ngspice-WASM engine wrapper (eecircuit-engine,
+  MIT). 48 tests including real-WASM integration against the golden
+  led-resistor fixture.
+- App: "Sim" panel (analysis picker, fidelity bar with tier chips, trace
+  list) and a dependency-free canvas plot workspace (engineering-notation
+  axes, crosshair readout, dB/log-x for AC).
+- The Analyst — second crew member ("skeptical of everything until it's
+  plotted"): run_simulation/measure/read_design tools, shared runAgentLoop
+  extracted from the Draftsman, first live Anthropic-wired panel
+  (localStorage key with plain-text warning).
+- Verified in-browser: golden LED circuit simulated end-to-end (1008-point
+  transient; v(led_a)≈2.2 V, loop ≈20 mA — physically correct).
+
+### Known gaps (tracked in ROADMAP.md)
+- Noise/Monte-Carlo/param-step analyses, sim worker + streaming, NE555
+  model (stub), plot math channels/FFT/branch overlays.
+
 ## 2026-06-10 — Milestone 1: the engine redesign lands
 
 The first milestone of the ground-up redesign ("the vision", three volumes) landed on branch `claude/protopulse-vision-geapzy`: a greenfield npm-workspaces monorepo at `packages/` (`@protopulse/*`), living alongside the legacy app (`client/ server/ shared/` — untouched, still the shipping product; it migrates onto the engine in later milestones).

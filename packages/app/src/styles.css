@@ -566,3 +566,374 @@ input:not([type]) {
 .close-button {
   font-size: 12px;
 }
+
+/* ── Sim (the Lab) ── */
+
+.sim-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.sim-field {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 3px 0;
+  font-size: 13px;
+}
+
+.sim-field-label {
+  color: var(--text-dim);
+  font-size: 12px;
+  min-width: 76px;
+}
+
+.sim-field input,
+.sim-field select {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+.sim-run {
+  margin: 8px 0;
+}
+
+.sim-error {
+  color: var(--bad);
+  background: #331313;
+  border: 1px solid #5a2424;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.fidelity-bar {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-warm);
+  border-radius: 6px;
+  background: var(--bg-raised);
+  padding: 8px 10px;
+  margin: 8px 0;
+}
+
+.fidelity-summary {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--accent-warm);
+}
+
+.fidelity-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tier-chip {
+  font-family: var(--mono);
+  font-size: 11px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.tier-chip.tier-spice {
+  color: var(--good);
+  background: #11301c;
+  border-color: #1f4630;
+}
+
+.tier-chip.tier-behavioral {
+  color: var(--accent);
+  background: #14233c;
+  border-color: #2a4a77;
+}
+
+.tier-chip.tier-stub {
+  color: var(--warn);
+  background: #33260f;
+  border-color: #6b500f;
+  font-weight: 600;
+}
+
+.trace-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trace-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.trace-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.plot-wrap {
+  height: 240px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.plot-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.op-values {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.op-value-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.op-value-name {
+  color: var(--text-dim);
+}
+
+.math-channel-add {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.math-channel-add input {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+.math-channel-add button {
+  font-size: 12px;
+}
+
+.math-channel-row {
+  flex: 1;
+}
+
+.math-channel-row .trace-name {
+  flex: 1;
+}
+
+.math-channel-remove {
+  font-size: 12px;
+  line-height: 1;
+  padding: 1px 6px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.math-channel-remove:hover {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+
+.overlay-fidelity-label {
+  margin: 6px 0 -4px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+/* ── Analyst ── */
+
+.analyst {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.analyst-warning {
+  color: var(--warn);
+  background: #33260f;
+  border: 1px solid #4a3c1c;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.analyst-feed {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+}
+
+.analyst-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.analyst-who {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.analyst-you .analyst-who {
+  color: var(--accent-warm);
+}
+
+.analyst-analyst .analyst-who {
+  color: var(--accent);
+}
+
+.analyst-tool {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.analyst-error .analyst-text {
+  color: var(--bad);
+}
+
+.analyst-input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.analyst-input {
+  flex: 1;
+}
+
+.analyst-forget {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  align-self: flex-start;
+}
+
+/* ── Review (the design-review board) ── */
+
+.review-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.review-run {
+  align-self: flex-start;
+  margin-bottom: 8px;
+}
+
+.review-meta {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.review-delta {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent-warm);
+  background: #221b0d;
+  border: 1px solid #4a3c1c;
+  border-radius: 4px;
+  padding: 3px 8px;
+  margin: 0 0 8px;
+  align-self: flex-start;
+}
+
+.check-chip {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+
+.professor-chip {
+  font-size: 12px;
+  color: var(--accent);
+  border-color: #2a4a77;
+}
+
+/* ── Professor (the teaching chat) ── */
+
+.professor .analyst-professor .analyst-who {
+  color: var(--good);
+}
+
+.depth-dial {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.depth-dial-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 4px;
+}
+
+.depth-stop {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.depth-stop.active {
+  background: #1c2a45;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Status-bar narration flash ── */
+
+.status-flash {
+  color: var(--accent-warm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  text-align: right;
+}

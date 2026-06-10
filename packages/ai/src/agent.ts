@@ -1,27 +1,148 @@
 import { runErc } from '@protopulse/erc';
-import {
-  applyOp,
-  cloneGraph
-  
-  
-  
-} from '@protopulse/graph';
-
+import { applyOp, cloneGraph } from '@protopulse/graph';
 
 import { assembleContext } from './context.js';
 
 import type { AgentEvent, ProviderContentBlock, ProviderMessage, LlmProvider } from './provider.js';
-import type { ToolRegistry } from './registry.js';
-import type {DesignGraph, OpBody, OpEnvelope} from '@protopulse/graph';
+import type { ToolCtx, ToolRegistry, ToolResult } from './registry.js';
+import type { DesignGraph, OpBody, OpEnvelope } from '@protopulse/graph';
 import type { PartDb } from '@protopulse/parts';
 import type { z } from 'zod';
 
 /**
- * The Draftsman agent loop — Vol III §6 M1. The provider proposes tool
- * calls; the registry validates and derives ops; the loop applies them to
- * a WORKING COPY and returns all applied ops so the host (app) can
- * dispatch them into its session for real.
+ * The agent loop machinery — Vol III §6. One loop, many personas: the
+ * provider proposes tool calls; the registry validates and executes;
+ * persona-specific hooks build the system prompt and commit results.
+ * runDraftsman and runAnalyst are both thin wrappers over runAgentLoop.
  */
+
+// ── Shared loop ──────────────────────────────────────────────────────
+
+export interface RunAgentLoopOptions {
+  prompt: string;
+  provider: LlmProvider;
+  registry: ToolRegistry;
+  /** Recomputed every turn — closures over mutable state are expected. */
+  buildSystem: () => string;
+  /** ToolCtx handed to dispatch — also recomputed every call. */
+  getCtx: () => ToolCtx;
+  /** Called after a successful dispatch with the tool's result and its
+   *  explain() line. Return an error string to fail the tool call (its
+   *  tool_result becomes is_error), undefined to accept it. */
+  commit?: (result: ToolResult, rationale: string) => string | undefined;
+  onEvent?: (ev: AgentEvent) => void;
+  /** Gate for destructive tool calls; receives the tool's explain() line. */
+  confirmDestructive?: (explain: string) => Promise<boolean> | boolean;
+  maxTurns?: number;
+}
+
+export interface AgentLoopResult {
+  transcript: ProviderMessage[];
+  finalText: string;
+}
+
+export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<AgentLoopResult> {
+  const {
+    prompt,
+    provider,
+    registry,
+    buildSystem,
+    getCtx,
+    commit,
+    onEvent,
+    confirmDestructive,
+    maxTurns = 8,
+  } = opts;
+
+  const messages: ProviderMessage[] = [{ role: 'user', content: prompt }];
+  let finalText = '';
+
+  for (let turn = 0; turn < maxTurns; turn++) {
+    const events = await provider.turn({
+      system: buildSystem(),
+      // Snapshot: providers must not observe later mutations of the log.
+      messages: [...messages],
+      tools: registry.toAnthropicTools(),
+    });
+
+    const assistantBlocks: ProviderContentBlock[] = [];
+    const toolUses: { id: string; name: string; input: unknown }[] = [];
+    for (const ev of events) {
+      onEvent?.(ev);
+      if (ev.kind === 'text') {
+        finalText = ev.text;
+        assistantBlocks.push({ type: 'text', text: ev.text });
+      } else if (ev.kind === 'tool_use') {
+        toolUses.push(ev);
+        assistantBlocks.push({ type: 'tool_use', id: ev.id, name: ev.name, input: ev.input });
+      }
+    }
+    if (assistantBlocks.length > 0) {
+      messages.push({ role: 'assistant', content: assistantBlocks });
+    }
+
+    if (toolUses.length === 0) break; // done / no-tool-use turn
+
+    const results: ProviderContentBlock[] = [];
+    for (const use of toolUses) {
+      const fail = (error: string): void => {
+        results.push({ type: 'tool_result', tool_use_id: use.id, content: error, is_error: true });
+      };
+
+      const tool = registry.get(use.name);
+      if (!tool) {
+        fail(`unknown or out-of-scope tool: ${use.name}`);
+        continue;
+      }
+      const parsed = (tool.schema as z.ZodTypeAny).safeParse(use.input);
+      if (!parsed.success) {
+        const issues = parsed.error.issues
+          .map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
+          .join('; ');
+        fail(`invalid input for ${use.name}: ${issues}`);
+        continue;
+      }
+      const rationale = tool.explain(parsed.data);
+      const destructive = tool.destructiveFor?.(parsed.data) ?? tool.destructive;
+      if (destructive && confirmDestructive) {
+        const allowed = await confirmDestructive(rationale);
+        if (!allowed) {
+          fail('user declined');
+          continue;
+        }
+      }
+
+      const dispatched = await registry.dispatchAsync(use.name, use.input, getCtx());
+      if (!dispatched.ok) {
+        fail(dispatched.error);
+        continue;
+      }
+
+      const commitError = commit?.(dispatched.result, rationale);
+      if (commitError !== undefined) {
+        fail(commitError);
+        continue;
+      }
+
+      results.push({
+        type: 'tool_result',
+        tool_use_id: use.id,
+        content: JSON.stringify({
+          summary: dispatched.result.summary,
+          data: dispatched.result.data ?? null,
+        }),
+      });
+    }
+    messages.push({ role: 'user', content: results });
+  }
+
+  return { transcript: messages, finalText };
+}
+
+// ── The Draftsman ────────────────────────────────────────────────────
+// The provider proposes tool calls; the registry validates and derives
+// ops; the loop applies them to a WORKING COPY and returns all applied
+// ops so the host (app) can dispatch them into its session for real.
 
 export interface RunDraftsmanOptions {
   prompt: string;
@@ -88,90 +209,28 @@ export async function runDraftsman(opts: RunDraftsmanOptions): Promise<Draftsman
   let lamport = recentOps.reduce((max, env) => Math.max(max, env.lamport), 0);
   const opLog: OpEnvelope[] = [...recentOps];
 
-  const messages: ProviderMessage[] = [{ role: 'user', content: prompt }];
-  let finalText = '';
-
-  for (let turn = 0; turn < maxTurns; turn++) {
-    const findings = runErc(working, parts);
-    const context = assembleContext(working, parts, findings, opLog);
-    const system = buildSystemPrompt(parts, context);
-    const events = await provider.turn({
-      system,
-      // Snapshot: providers must not observe later mutations of the log.
-      messages: [...messages],
-      tools: registry.toAnthropicTools(),
-    });
-
-    const assistantBlocks: ProviderContentBlock[] = [];
-    const toolUses: { id: string; name: string; input: unknown }[] = [];
-    for (const ev of events) {
-      onEvent?.(ev);
-      if (ev.kind === 'text') {
-        finalText = ev.text;
-        assistantBlocks.push({ type: 'text', text: ev.text });
-      } else if (ev.kind === 'tool_use') {
-        toolUses.push(ev);
-        assistantBlocks.push({ type: 'tool_use', id: ev.id, name: ev.name, input: ev.input });
-      }
-    }
-    if (assistantBlocks.length > 0) {
-      messages.push({ role: 'assistant', content: assistantBlocks });
-    }
-
-    if (toolUses.length === 0) break; // done / no-tool-use turn
-
-    const results: ProviderContentBlock[] = [];
-    for (const use of toolUses) {
-      const fail = (error: string): void => {
-        results.push({ type: 'tool_result', tool_use_id: use.id, content: error, is_error: true });
-      };
-
-      const tool = registry.get(use.name);
-      if (!tool) {
-        fail(`unknown or out-of-scope tool: ${use.name}`);
-        continue;
-      }
-      const parsed = (tool.schema as z.ZodTypeAny).safeParse(use.input);
-      if (!parsed.success) {
-        const issues = parsed.error.issues
-          .map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
-          .join('; ');
-        fail(`invalid input for ${use.name}: ${issues}`);
-        continue;
-      }
-      const rationale = tool.explain(parsed.data);
-      const destructive = tool.destructiveFor?.(parsed.data) ?? tool.destructive;
-      if (destructive && confirmDestructive) {
-        const allowed = await confirmDestructive(rationale);
-        if (!allowed) {
-          fail('user declined');
-          continue;
-        }
-      }
-
-      const dispatched = registry.dispatch(use.name, use.input, { graph: working, parts });
-      if (!dispatched.ok) {
-        fail(dispatched.error);
-        continue;
-      }
-
+  const loop = await runAgentLoop({
+    prompt,
+    provider,
+    registry,
+    onEvent,
+    confirmDestructive,
+    maxTurns,
+    buildSystem: () => {
+      const findings = runErc(working, parts);
+      return buildSystemPrompt(parts, assembleContext(working, parts, findings, opLog));
+    },
+    getCtx: () => ({ graph: working, parts }),
+    commit: (result, rationale) => {
       // Apply transactionally: all of this call's ops or none.
       const draft = cloneGraph(working);
-      let applyError: string | undefined;
-      for (const op of dispatched.result.ops) {
+      for (const op of result.ops) {
         const res = applyOp(draft, op);
-        if (!res.ok) {
-          applyError = res.error;
-          break;
-        }
-      }
-      if (applyError !== undefined) {
-        fail(`op apply failed: ${applyError}`);
-        continue;
+        if (!res.ok) return `op apply failed: ${res.error}`;
       }
       // Commit the draft.
       Object.assign(working, draft);
-      for (const op of dispatched.result.ops) {
+      for (const op of result.ops) {
         appliedOps.push(op);
         lamport += 1;
         const env: OpEnvelope = {
@@ -184,17 +243,14 @@ export async function runDraftsman(opts: RunDraftsmanOptions): Promise<Draftsman
         envelopes.push(env);
         opLog.push(env);
       }
-      results.push({
-        type: 'tool_result',
-        tool_use_id: use.id,
-        content: JSON.stringify({
-          summary: dispatched.result.summary,
-          data: dispatched.result.data ?? null,
-        }),
-      });
-    }
-    messages.push({ role: 'user', content: results });
-  }
+      return undefined;
+    },
+  });
 
-  return { ops: appliedOps, envelopes, transcript: messages, finalText };
+  return {
+    ops: appliedOps,
+    envelopes,
+    transcript: loop.transcript,
+    finalText: loop.finalText,
+  };
 }
