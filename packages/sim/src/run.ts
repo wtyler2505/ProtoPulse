@@ -17,6 +17,8 @@ import type { PartDb } from '@protopulse/parts';
 export interface SimulateOpts extends NetlistOpts {
   /** Reuse a booted engine (recommended — WASM boot takes seconds). */
   engine?: SpiceEngine;
+  // All NetlistOpts (title, valueOverrides, extraCards) pass straight
+  // through to generateSpiceNetlist — co-sim relies on extraCards here.
 }
 
 export interface SimulateResult extends SimResult {

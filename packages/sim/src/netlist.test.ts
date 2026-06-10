@@ -104,6 +104,26 @@ describe('generateSpiceNetlist — battery + R + LED', () => {
   });
 });
 
+describe('generateSpiceNetlist — extraCards', () => {
+  it('leaves the deck byte-identical when extraCards is absent or empty', () => {
+    const plain = generateSpiceNetlist(graphOf(ledOps()), parts);
+    const empty = generateSpiceNetlist(graphOf(ledOps()), parts, { extraCards: [] });
+    expect(empty.netlist).toBe(plain.netlist);
+    expect(empty.manifest).toEqual(plain.manifest);
+  });
+
+  it('appends extra cards verbatim, in order, after element and model lines', () => {
+    const plain = generateSpiceNetlist(graphOf(ledOps()), parts);
+    const { netlist, manifest } = generateSpiceNetlist(graphOf(ledOps()), parts, {
+      extraCards: ['Vb5 b5_drv 0 PWL(0 0 1e-6 5)', 'Rb5 b5_drv vbat 30'],
+    });
+    expect(netlist).toBe(
+      `${plain.netlist.slice(0, -1)}\nVb5 b5_drv 0 PWL(0 0 1e-6 5)\nRb5 b5_drv vbat 30\n`,
+    );
+    expect(manifest).toEqual(plain.manifest);
+  });
+});
+
 describe('generateSpiceNetlist — ground aliasing and node names', () => {
   it('aliases any net wired to core:pwr-gnd to node 0', () => {
     const { netlist, nodeOf } = generateSpiceNetlist(
