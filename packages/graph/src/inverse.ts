@@ -185,3 +185,52 @@ function restoreWires(before: DesignGraph, netId: Uuid): OpBody[] {
   if (!wires || wires.length === 0) return [];
   return [{ kind: 'set_wire_geometry', netId, segments: cloneSegments(wires) }];
 }
+
+/**
+ * Inverse of remove_component: recreate the component, its placement,
+ * and every net membership it had — including nets the removal GC'd.
+ */
+function resurrectComponent(before: DesignGraph, componentId: Uuid): OpBody[] {
+  const comp = before.components.get(componentId);
+  if (!comp) return [];
+  const out: OpBody[] = [
+    {
+      kind: 'add_component',
+      id: comp.id,
+      ref: comp.ref,
+      partId: comp.partId,
+      partRev: comp.partRev,
+      ...(comp.value !== undefined ? { value: comp.value } : {}),
+    },
+  ];
+  if (comp.dnp || Object.keys(comp.fields).length > 0) {
+    out.push({
+      kind: 'set_component_props',
+      id: comp.id,
+      props: { dnp: comp.dnp, fields: { ...comp.fields } },
+    });
+  }
+  const placement = before.schematic.placements.get(componentId);
+  if (placement) {
+    out.push({
+      kind: 'place_symbol',
+      componentId,
+      at: { ...placement.at },
+      rot: placement.rot,
+      mirror: placement.mirror,
+    });
+  }
+  for (const net of before.nets.values()) {
+    const memberPorts = net.ports.filter((p) => parsePortRef(p).componentId === componentId);
+    if (memberPorts.length === 0) continue;
+    const survives = net.ports.length > memberPorts.length;
+    if (survives) {
+      // The net still exists after removal — just reconnect.
+      for (const p of memberPorts) out.push({ kind: 'connect', port: p, netId: net.id });
+    } else {
+      // Removal GC'd this net — restore identity, name, class, wires.
+      out.push(...restoreNet(before, net, memberPorts));
+    }
+  }
+  return out;
+}

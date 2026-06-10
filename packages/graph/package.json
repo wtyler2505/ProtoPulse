@@ -11,7 +11,7 @@
     "./fs-store": "./src/store/fs-store.ts"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run --coverage"
   },
   "dependencies": {
     "uuid": "^11.1.0",
