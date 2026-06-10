@@ -205,7 +205,7 @@ function StatusBar() {
       </span>
       <span className="status-cell">{opCount} ops</span>
       {viewMode === 'pcb' && (
-        <span className="status-cell" title="active layer · trace width (traces draw as centerlines)">
+        <span className="status-cell" title="active layer · width new traces route at">
           {activeLayer} · trace {(DEFAULT_TRACE_WIDTH_NM / MM).toFixed(2)} mm
         </span>
       )}

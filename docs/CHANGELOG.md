@@ -2,6 +2,20 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — v0.4 second slice: fab outputs + board rendering truth
+
+### Added
+- `@protopulse/export`: Gerber X2 copper layers (integer-nm FSLAX46, no
+  float arithmetic in emission), Excellon drill, pick-and-place CSV;
+  routed-led golden fixture freezes all fab artifacts byte-exact.
+- Renderer: GL triangle pipeline — filled pads, real stroked trace
+  widths with round caps/joins, vias as annuli with background drills;
+  PCB scene delta sync (identity-preserving); side-flip (F key +
+  Inspector) with mirrored bottom rendering.
+
+### Known gaps (ROADMAP.md)
+- Push-and-shove routing, zones/pours, panelization.
+
 ## 2026-06-10 — v0.4 first slice: The Board
 
 ### Added

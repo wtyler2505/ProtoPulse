@@ -959,3 +959,18 @@ input:not([type]) {
   padding: 8px 10px;
   font-size: 12px;
 }
+
+.side-cell {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.side-cell .layer-chip {
+  font-size: 12px;
+}
+
+.flip-button {
+  font-size: 12px;
+  padding: 2px 8px;
+}

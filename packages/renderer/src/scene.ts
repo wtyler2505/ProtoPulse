@@ -32,6 +32,17 @@ export interface SceneNode {
   kind: 'symbol' | 'wire' | 'footprint' | 'trace' | 'via';
   /** x1,y1,x2,y2 line segments, world nm. */
   lines: Float32Array;
+  /**
+   * Filled triangles as x,y per vertex (3 vertices per triangle), world
+   * nm — drawn in the node's color, under the outline lines. Optional:
+   * schematic nodes are line-only.
+   */
+  tris?: Float32Array;
+  /**
+   * Triangles always drawn in the board background color, after `tris`
+   * — drilled holes (pad drills, via barrels) "punch through" the fill.
+   */
+  holeTris?: Float32Array;
   texts: TessText[];
   bounds: Bounds;
   color: RGBA;

@@ -1,10 +1,19 @@
 import { useState } from 'react';
 
+import { pcbViewOf } from '@protopulse/renderer';
+
+import { pcbFlipSelectionOps } from '../pcb/tools.js';
+import { asOpBodies } from '../pcb/types.js';
 import { getGraph, partDb, useSession } from '../state/session.js';
+import { useUi } from '../state/ui.js';
 
 import type { Component, Net } from '@protopulse/graph';
 
-/** Selection details: ref, part, value, DNP, and the nets it touches. */
+/**
+ * Selection details: ref, part, value, DNP, and the nets it touches.
+ * In PCB mode a placed footprint also shows its board side with a flip
+ * button (the F key does the same on canvas).
+ */
 
 function NetRow({ net }: { net: Net }) {
   const dispatch = useSession((s) => s.dispatch);
@@ -37,9 +46,26 @@ function NetRow({ net }: { net: Net }) {
 function ComponentInspector({ component }: { component: Component }) {
   const dispatch = useSession((s) => s.dispatch);
   const opsVersion = useSession((s) => s.opsVersion);
+  const viewMode = useUi((s) => s.viewMode);
   const graph = getGraph(useSession.getState());
   const part = partDb.get(component.partId, component.partRev);
   const [value, setValue] = useState(component.value ?? '');
+
+  const placement =
+    viewMode === 'pcb' ? pcbViewOf(graph).placements.get(component.id) : undefined;
+
+  const flipSide = () => {
+    const flip = pcbFlipSelectionOps(graph, pcbViewOf(graph), new Set([component.id]));
+    if (flip.ops.length === 0) {
+      if (flip.status !== null) useUi.getState().flashStatus(flip.status);
+      return;
+    }
+    if (dispatch(asOpBodies(flip.ops), 'flip footprint side')) {
+      if (flip.status !== null) useUi.getState().flashStatus(flip.status);
+    } else {
+      useUi.getState().flashStatus('The graph engine rejected that flip.');
+    }
+  };
 
   const commitValue = () => {
     const next = value.trim();
@@ -90,6 +116,27 @@ function ComponentInspector({ component }: { component: Component }) {
             do not populate
           </label>
         </dd>
+        {placement && (
+          <>
+            <dt>Side</dt>
+            <dd className="side-cell">
+              <span
+                className={`layer-chip ${placement.side === 'top' ? 'layer-f' : 'layer-b'}`}
+                title="board side this footprint sits on"
+              >
+                {placement.side === 'top' ? 'top (F.Cu)' : 'bottom (B.Cu)'}
+              </span>
+              <button
+                type="button"
+                className="flip-button"
+                title="flip the footprint to the other board side (F)"
+                onClick={flipSide}
+              >
+                Flip to {placement.side === 'top' ? 'bottom' : 'top'}
+              </button>
+            </dd>
+          </>
+        )}
       </dl>
       <h3 className="panel-subtitle">Nets</h3>
       {nets.length === 0 ? (

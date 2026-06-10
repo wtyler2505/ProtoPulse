@@ -8,13 +8,14 @@ import {
   octilinearPath,
   PcbPlaceTool,
   pcbDeleteSelectionOps,
+  pcbFlipSelectionOps,
   PcbSelectTool,
   PcbTraceTool,
   PcbViaTool,
   resolveTraceEndpoint,
   snapPcb
 } from './tools.js';
-import { DEFAULT_TRACE_WIDTH_NM, DEFAULT_VIA_DRILL_NM, DEFAULT_VIA_PAD_NM, PCB_SNAP_NM } from './types.js';
+import { asOpBodies, DEFAULT_TRACE_WIDTH_NM, DEFAULT_VIA_DRILL_NM, DEFAULT_VIA_PAD_NM, PCB_SNAP_NM } from './types.js';
 
 import type { PadSource, PcbToolEnv } from './tools.js';
 import type { DesignGraph, OpBody } from '@protopulse/graph';
@@ -456,5 +457,87 @@ describe('pcbDeleteSelectionOps', () => {
       { kind: 'remove_trace', id: 't1' },
       { kind: 'remove_via', id: 'v1' },
     ]);
+  });
+});
+
+describe('pcbFlipSelectionOps', () => {
+  it('flips a top-side footprint to the bottom, keeping position and rotation', () => {
+    const graph = wiredGraph();
+    const v = view({ placements: [['r1', placement({ at: { x: 2 * MM, y: -1 * MM }, rotMilli: 90_000 })]] });
+    const res = pcbFlipSelectionOps(graph, v, new Set(['r1']));
+    expect(res.ops).toEqual([
+      {
+        kind: 'move_footprint',
+        componentId: 'r1',
+        at: { x: 2 * MM, y: -1 * MM },
+        rotMilli: 90_000,
+        side: 'bottom',
+        locked: false,
+      },
+    ]);
+    expect(res.status).toBe('Flipped R1 to the bottom (B.Cu).');
+  });
+
+  it('flips a bottom-side footprint back to the top', () => {
+    const graph = wiredGraph();
+    const v = view({ placements: [['r1', placement({ side: 'bottom' })]] });
+    const res = pcbFlipSelectionOps(graph, v, new Set(['r1']));
+    expect(res.ops[0]).toMatchObject({ kind: 'move_footprint', side: 'top' });
+    expect(res.status).toBe('Flipped R1 to the top (F.Cu).');
+  });
+
+  it('skips locked placements and says so when nothing else flipped', () => {
+    const graph = wiredGraph();
+    const v = view({ placements: [['r1', placement({ locked: true })]] });
+    const res = pcbFlipSelectionOps(graph, v, new Set(['r1']));
+    expect(res.ops).toEqual([]);
+    expect(res.status).toBe('That footprint is locked — unlock it to flip it.');
+  });
+
+  it('ignores traces, vias, and unplaced ids — empty selection is silent', () => {
+    const graph = wiredGraph();
+    const v = view({
+      placements: [['r1', placement()]],
+      traces: [['t1', TRACE_NA]],
+    });
+    const res = pcbFlipSelectionOps(graph, v, new Set(['t1', 'ghost']));
+    expect(res.ops).toEqual([]);
+    expect(res.status).toBeNull();
+  });
+
+  it('flips every unlocked footprint in a multi-selection (deterministic order)', () => {
+    const graph = wiredGraph();
+    const v = view({
+      placements: [
+        ['r2', placement({ at: { x: 10 * MM, y: 0 } })],
+        ['r1', placement()],
+      ],
+    });
+    const res = pcbFlipSelectionOps(graph, v, new Set(['r2', 'r1']));
+    expect(res.ops.map((op) => (op.kind === 'move_footprint' ? op.componentId : ''))).toEqual([
+      'r1',
+      'r2',
+    ]);
+    expect(res.ops.every((op) => op.kind === 'move_footprint' && op.side === 'bottom')).toBe(true);
+    expect(res.status).toBe('Flipped 2 footprints.');
+  });
+
+  it('flip ops round-trip through the real graph apply (side lands)', () => {
+    const graph = wiredGraph();
+    const place: OpBody = {
+      kind: 'place_footprint',
+      componentId: 'r1',
+      at: { x: 0, y: 0 },
+      rotMilli: 0,
+      side: 'top',
+      locked: false,
+    };
+    expect(applyOp(graph, place).ok).toBe(true);
+    const v = view({ placements: [['r1', placement()]] });
+    const res = pcbFlipSelectionOps(graph, v, new Set(['r1']));
+    for (const op of asOpBodies(res.ops)) {
+      expect(applyOp(graph, op).ok).toBe(true);
+    }
+    expect(graph.pcb.placements.get('r1')?.side).toBe('bottom');
   });
 });

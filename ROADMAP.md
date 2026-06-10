@@ -71,9 +71,11 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
 - [x] In-browser visual QA pass of PCB mode (footprint render, tray
       with footprint-less parts disabled, trace preview, live cross-net
       refusal, DRC against the deck — verified 2026-06-10)
-- [ ] Push-and-shove routing (Vol II §E.1); stroked trace widths +
-      filled pads in the GL layer; pcb scene delta sync; side-flip UI
-- [ ] Gerber/drill/PnP export; zones/pours; panelization
+- [x] Stroked trace widths + filled pads/vias in the GL layer (triangle
+      pipeline), pcb scene delta sync, side-flip UI (F key + Inspector)
+- [x] Gerber X2 / Excellon drill / pick-and-place export with byte-exact
+      golden fixtures (routed-led)
+- [ ] Push-and-shove routing (Vol II §E.1); zones/pours; panelization
 
 ## v0.5 — The Bridge ⬜
 

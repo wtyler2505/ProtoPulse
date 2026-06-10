@@ -8,6 +8,7 @@ import {
   Camera,
   pcbViewOf,
   PickIndex,
+  rebuildPcbScene,
   syncPcbScene,
   WebGL2Renderer
 
@@ -17,6 +18,7 @@ import { dashedLines, ratsnestSegments } from '../pcb/ratsnest.js';
 import {
   PcbPlaceTool,
   pcbDeleteSelectionOps,
+  pcbFlipSelectionOps,
   PcbSelectTool,
   PcbTraceTool,
   PcbViaTool
@@ -49,8 +51,10 @@ import type {OverlayState} from '@protopulse/renderer';
  *
  * Two canvases live here, keyed on ui.viewMode: the schematic scene
  * (incremental delta sync, schematic tools) and the v0.4 PCB scene
- * (full-rebuild sync + ratsnest overlay, pcb tools). Switching modes
- * tears the GL state down and rebuilds it — the effect re-runs.
+ * (incremental delta sync + ratsnest overlay, pcb tools; branch
+ * switches fall back to a full rebuild — no delta relates two heads).
+ * Switching modes tears the GL state down and rebuilds it — the effect
+ * re-runs.
  */
 
 function diffOverlayMap(
@@ -102,6 +106,7 @@ export function CanvasHost() {
 
     let graph: DesignGraph = getGraph(useSession.getState());
     let graphKey = '';
+    let lastBranch = useSession.getState().branch;
     const scene = isPcb ? buildPcbScene(graph, partDb) : buildScene(graph, partDb);
     pickIndex.rebuild(scene);
 
@@ -300,6 +305,22 @@ export function CanvasHost() {
         }
         return;
       }
+      if (isPcb && (e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey) {
+        // Flip the selected footprint(s) top<->bottom in place.
+        const session = useSession.getState();
+        const flip = pcbFlipSelectionOps(graph, pcbViewOf(graph), session.selection);
+        if (flip.ops.length > 0) {
+          if (session.dispatch(asOpBodies(flip.ops), 'flip footprint side')) {
+            if (flip.status !== null) useUi.getState().flashStatus(flip.status);
+          } else {
+            useUi.getState().flashStatus('The graph engine rejected that flip.');
+          }
+        } else if (flip.status !== null) {
+          useUi.getState().flashStatus(flip.status);
+        }
+        e.preventDefault();
+        return;
+      }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         deleteSelection();
         return;
@@ -334,14 +355,17 @@ export function CanvasHost() {
 
       syncTool();
 
-      // Graph → scene sync. Schematic: incremental via diff + applyDelta.
-      // PCB: full rebuild + ratsnest recompute (honest cut — no pcb delta).
+      // Graph → scene sync — incremental via diff + the per-view delta
+      // appliers; ratsnest still recomputes whole (it is net-global).
+      // Branch switches have no delta relating the two heads, so the
+      // pcb path falls back to a full rebuild there.
       const session = useSession.getState();
       const key = `${session.branch}@${String(session.opsVersion)}`;
       if (key !== graphKey) {
         const next = getGraph(session);
         if (isPcb) {
-          syncPcbScene(scene, next, partDb);
+          if (session.branch === lastBranch) syncPcbScene(scene, diff(graph, next), next, partDb);
+          else rebuildPcbScene(scene, next, partDb);
           ratsnest = dashedLines(ratsnestSegments(next, pcbViewOf(next), padSource));
           overlayVersion++;
         } else {
@@ -349,6 +373,7 @@ export function CanvasHost() {
         }
         graph = next;
         graphKey = key;
+        lastBranch = session.branch;
         pickIndex.rebuild(scene);
       }
 
