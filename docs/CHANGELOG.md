@@ -2,6 +2,23 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — v0.2 second slice: Monte Carlo, stepping, noise, the 555 lives
+
+### Added
+- `@protopulse/sim`: seeded Monte Carlo (R 5% / C 20% / L 10% defaults,
+  deterministic mulberry32, value-override netlists), parameter stepping,
+  .noise analysis (engine verified; input source must carry an AC value),
+  and the NE555 behavioral macromodel — hysteretic discharge switch +
+  regenerative latch; the golden traffic-light fixture oscillates at
+  0.719-0.720s measured vs 0.721s theory. 69 sim tests.
+- App: math channels (safe parser — v(a)-v(b), db/abs/mag, complex-aware),
+  branch overlay with dashed traces and dual fidelity bars, Monte Carlo
+  spaghetti + step trace families, noise UI. 129 app tests.
+
+### Known gaps (ROADMAP.md)
+- Sim worker + streaming; plot FFT; AC-source emitter for graph-driven
+  noise.
+
 ## 2026-06-10 — v0.2 first slice: The Lab is live
 
 ### Added

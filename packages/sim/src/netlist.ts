@@ -17,6 +17,12 @@ import type { Part, PartDb } from '@protopulse/parts';
 export interface NetlistOpts {
   /** Title line (SPICE requires one; defaults to 'ProtoPulse design'). */
   title?: string;
+  /**
+   * Per-component value replacement (componentId → value string), parsed
+   * exactly like the component's own value. Used by Monte Carlo and
+   * parameter stepping; the graph itself is never mutated.
+   */
+  valueOverrides?: ReadonlyMap<Uuid, string>;
 }
 
 export interface NetlistResult {
@@ -157,8 +163,9 @@ export function generateSpiceNetlist(
       });
       continue;
     }
+    const override = opts.valueOverrides?.get(component.id);
     const emission = emitComponent({
-      component,
+      component: override !== undefined ? { ...component, value: override } : component,
       part,
       node: makeNodeLookup(graph, nodeOf, component, part),
     });

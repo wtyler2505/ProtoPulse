@@ -113,6 +113,57 @@ describe('SpiceEngine — AC', () => {
   });
 });
 
+describe('SpiceEngine — noise', () => {
+  it('returns a positive output-noise spectrum for a resistor divider', async () => {
+    const body = [
+      '* noise divider',
+      'V1 in 0 DC 5 AC 1',
+      'R1 in out 10k',
+      'R2 out 0 10k',
+      '',
+    ].join('\n');
+    const result = await engine.run(body, {
+      kind: 'noise',
+      output: 'out',
+      source: 'V1',
+      variation: 'dec',
+      points: 10,
+      fStart: 10,
+      fStop: 1e5,
+    });
+    expect(result.analysis.kind).toBe('noise');
+    expect(result.points).toBeGreaterThan(0);
+    expect(result.variables).toContain('frequency');
+
+    const onoise = vectorByName(result, 'onoise_spectrum');
+    expect(onoise).toBeDefined();
+    expect(onoise?.values.length).toBe(result.points);
+    // Thermal noise of 10k ∥ 10k is flat: 4kTR ≈ 8.3e-17 V²/Hz.
+    for (const v of onoise?.values ?? []) {
+      expect(v).toBeGreaterThan(0);
+      expect(v).toBeLessThan(1e-6);
+    }
+    expect(vectorByName(result, 'inoise_spectrum')).toBeDefined();
+  });
+
+  it('throws a clear error when the noise input source has no AC value', async () => {
+    const body = ['* dc-only source', 'V1 in 0 DC 5', 'R1 in out 10k', 'R2 out 0 10k', ''].join(
+      '\n',
+    );
+    await expect(
+      engine.run(body, {
+        kind: 'noise',
+        output: 'out',
+        source: 'V1',
+        variation: 'dec',
+        points: 10,
+        fStart: 10,
+        fStop: 1e5,
+      }),
+    ).rejects.toThrow(/no AC value/i);
+  });
+});
+
 describe('SpiceEngine — DC sweep', () => {
   it('returns a monotonic sweep variable across the commanded range', async () => {
     const body = [

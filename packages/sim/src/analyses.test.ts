@@ -27,6 +27,14 @@ describe('analysisCard', () => {
     [{ kind: 'dc', source: 'V1', start: 0, stop: 9, step: 0.1 }, '.dc V1 0 9 0.1'],
     [{ kind: 'ac', variation: 'dec', points: 20, fStart: 1, fStop: 1e6 }, '.ac dec 20 1 1e6'],
     [{ kind: 'ac', variation: 'lin', points: 100, fStart: 50, fStop: 5000 }, '.ac lin 100 50 5000'],
+    [
+      { kind: 'noise', output: 'out', source: 'V1', variation: 'dec', points: 10, fStart: 10, fStop: 1e5 },
+      '.noise v(out) V1 dec 10 10 1e5',
+    ],
+    [
+      { kind: 'noise', output: 'led_a', source: 'VBT1', variation: 'lin', points: 50, fStart: 1, fStop: 1000 },
+      '.noise v(led_a) VBT1 lin 50 1 1000',
+    ],
   ];
   it.each(cases)('emits %j as %s', (analysis, card) => {
     expect(analysisCard(analysis)).toBe(card);
@@ -41,12 +49,13 @@ describe('analysisSchema', () => {
       { kind: 'tran', stepS: 1e-6, stopS: 1e-3, startS: 0 },
       { kind: 'dc', source: 'V1', start: -5, stop: 5, step: 0.5 },
       { kind: 'ac', variation: 'oct', points: 5, fStart: 10, fStop: 10 },
+      { kind: 'noise', output: 'out', source: 'V1', variation: 'dec', points: 10, fStart: 10, fStop: 1e5 },
     ];
     for (const a of ok) expect(analysisSchema.safeParse(a).success).toBe(true);
   });
 
   it('rejects unknown kinds', () => {
-    expect(analysisSchema.safeParse({ kind: 'noise' }).success).toBe(false);
+    expect(analysisSchema.safeParse({ kind: 'fft' }).success).toBe(false);
   });
 
   it('rejects non-positive tran steps', () => {
@@ -78,6 +87,49 @@ describe('analysisSchema', () => {
       analysisSchema.safeParse({ kind: 'ac', variation: 'dec', points: 10, fStart: 1e6, fStop: 1 })
         .success,
     ).toBe(false);
+  });
+
+  it('rejects noise with missing fields, empty names, or fStart >= fStop', () => {
+    expect(analysisSchema.safeParse({ kind: 'noise' }).success).toBe(false);
+    expect(
+      analysisSchema.safeParse({
+        kind: 'noise',
+        output: '',
+        source: 'V1',
+        variation: 'dec',
+        points: 10,
+        fStart: 10,
+        fStop: 1e5,
+      }).success,
+    ).toBe(false);
+    expect(
+      analysisSchema.safeParse({
+        kind: 'noise',
+        output: 'out',
+        source: '',
+        variation: 'dec',
+        points: 10,
+        fStart: 10,
+        fStop: 1e5,
+      }).success,
+    ).toBe(false);
+    // Strictly increasing range: equal endpoints are rejected too.
+    for (const [fStart, fStop] of [
+      [1e5, 10],
+      [100, 100],
+    ]) {
+      expect(
+        analysisSchema.safeParse({
+          kind: 'noise',
+          output: 'out',
+          source: 'V1',
+          variation: 'dec',
+          points: 10,
+          fStart,
+          fStop,
+        }).success,
+      ).toBe(false);
+    }
   });
 
   it('rejects extra keys (strict objects)', () => {

@@ -198,6 +198,63 @@ const emitPwrGnd: Emitter = () => ({
   entry: { tier: 'behavioral', note: 'ground reference — net aliased to node 0' },
 });
 
+/**
+ * Simplified NE555 behavioral macromodel, validated to converge and
+ * oscillate in the eecircuit-engine (ngspice WASM) build:
+ *   - 5k/5k/5k CONT divider sets the 2/3 and 1/3 Vcc thresholds
+ *   - ideal comparators as tanh B-sources (0..1 logic levels)
+ *   - regenerative SR latch (steep hold sigmoid + RC state memory);
+ *     a DC-high PULSE "kick" releases 1µs into the transient so the
+ *     latch has a consistent DC operating point instead of a
+ *     metastable one (an astable has no true DC solution)
+ *   - hysteretic S-element discharge switch (on below qeff≈0.2, off
+ *     above ≈0.8) — a smooth switch creates a stable analog
+ *     equilibrium at the threshold and kills the oscillation
+ *   - approximate output stage: ~Vcc-1.2 high through 10Ω, ~50mV low
+ * Not modeled: supply current, comparator offsets/bias currents,
+ * propagation delays, temperature behavior.
+ */
+const NE555_SUBCKT = [
+  '.subckt NE555_PP gnd trig out reset cont thres disch vcc',
+  '* control divider: 2/3 and 1/3 Vcc thresholds',
+  'RD1 vcc cont 5k',
+  'RD2 cont thlo 5k',
+  'RD3 thlo gnd 5k',
+  '* startup kick: high at DC, releases 1us into the transient',
+  'VKICK kick 0 PULSE(1 0 1u 1u 1u 100 200)',
+  '* ideal comparators (0..1 logic levels)',
+  'BCMPS sset 0 V=0.5*(1+tanh((v(thlo,gnd)-v(trig,gnd))*50))',
+  'BCMPR srst 0 V=0.5*(1+tanh((v(thres,gnd)-v(cont,gnd))*50))',
+  'BRSTOK rstok 0 V=0.5*(1+tanh((v(reset,gnd)-0.9)*20))',
+  '* regenerative SR latch: set dominant, steep hold sigmoid, RC memory',
+  'BSEFF seff 0 V=1-(1-v(sset))*(1-v(kick))',
+  'BQNEXT qnext 0 V=v(seff)+(1-v(seff))*(1-v(srst))*0.5*(1+tanh((v(q)-0.5)*30))',
+  'RQ qnext q 1k',
+  'CQ q 0 10n',
+  'BQEFF qeff 0 V=v(q)*v(rstok)',
+  '* output stage: ~Vcc-1.2 high through 10 ohm, ~50mV low',
+  'BOUT outi gnd V=0.5*(1+tanh((v(qeff)-0.5)*20))*(v(vcc,gnd)-1.2)+0.05',
+  'ROUT outi out 10',
+  '* hysteretic discharge switch: on when qeff < 0.2, off above 0.8',
+  'BQINV qinv 0 V=1-v(qeff)',
+  'SDIS disch gnd qinv 0 SWDIS_PP OFF',
+  '.model SWDIS_PP SW(VT=0.5 VH=0.3 RON=20 ROFF=1G)',
+  '.ends NE555_PP',
+].join('\n');
+
+const emitNe555: Emitter = ({ component, node }) => ({
+  // Subcircuit port order mirrors the DIP-8 pinout: GND TRIG OUT RESET
+  // CONT THRES DISCH VCC (pin keys 1..8).
+  lines: [
+    `${elementName('X', component.ref)} ${node('1')} ${node('2')} ${node('3')} ${node('4')} ${node('5')} ${node('6')} ${node('7')} ${node('8')} NE555_PP`,
+  ],
+  models: [NE555_SUBCKT],
+  entry: {
+    tier: 'behavioral',
+    note: 'behavioral macromodel — ideal comparators, simplified SR latch, approximate output stage; no supply-current modeling',
+  },
+});
+
 const emitPushbutton: Emitter = ({ component, node }) => ({
   lines: [`${elementName('R', component.ref)} ${node('1')} ${node('2')} 0.001`],
   models: [],
@@ -221,6 +278,7 @@ const EMITTERS_BY_PART_ID: ReadonlyMap<string, Emitter> = new Map<string, Emitte
   ['core:bat54s', emitBat54s],
   ['core:2n3904', emit2n3904],
   ['core:nmos-ao3400', emitNmosAo3400],
+  ['core:ne555', emitNe555],
   ['core:battery', emitBattery],
   ['core:pwr-vcc', emitPwrVcc],
   ['core:pwr-gnd', emitPwrGnd],

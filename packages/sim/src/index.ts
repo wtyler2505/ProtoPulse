@@ -24,3 +24,14 @@ export {
 } from './netlist.js';
 export { SpiceEngine, vectorByName, type SimResult, type SimVector } from './engine.js';
 export { fidelitySummary, simulate, type SimulateOpts, type SimulateResult } from './run.js';
+export {
+  DEFAULT_TOLERANCES,
+  mulberry32,
+  simulateMonteCarlo,
+  siValueString,
+  type JitterClass,
+  type McTrial,
+  type MonteCarloResult,
+  type MonteCarloSpec,
+} from './montecarlo.js';
+export { simulateStep, type StepResult, type StepRun, type StepSpec } from './step.js';

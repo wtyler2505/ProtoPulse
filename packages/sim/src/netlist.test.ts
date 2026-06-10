@@ -170,10 +170,9 @@ describe('generateSpiceNetlist — exclusions', () => {
     });
   });
 
-  it('stubs unmodelable parts (NE555, header, USB-C) without emitting elements', () => {
+  it('stubs unmodelable parts (header, USB-C) without emitting elements', () => {
     const { netlist, manifest } = generateSpiceNetlist(
       graphOf([
-        { kind: 'add_component', id: 'u1', ref: 'U1', partId: 'core:ne555', partRev: 1 },
         { kind: 'add_component', id: 'j1', ref: 'J1', partId: 'core:header-2x10', partRev: 1 },
         { kind: 'add_component', id: 'j2', ref: 'J2', partId: 'core:usbc-power-stub', partRev: 1 },
       ]),
@@ -183,7 +182,6 @@ describe('generateSpiceNetlist — exclusions', () => {
     expect(manifest.map((e) => [e.ref, e.tier, e.note])).toEqual([
       ['J1', 'stub', 'no model — excluded from simulation'],
       ['J2', 'stub', 'no model — excluded from simulation'],
-      ['U1', 'stub', 'no model — excluded from simulation'],
     ]);
   });
 
@@ -276,6 +274,48 @@ describe('generateSpiceNetlist — model zoo', () => {
     expect(manifest.map((e) => e.tier)).toEqual(['spice', 'behavioral']);
   });
 
+  it('instantiates the NE555 as a behavioral subcircuit in DIP-8 pin order', () => {
+    const { netlist, manifest } = generateSpiceNetlist(
+      graphOf([
+        { kind: 'add_component', id: 'u1', ref: 'U1', partId: 'core:ne555', partRev: 1 },
+        { kind: 'connect', port: 'u1:1', newNetId: 'ng' },
+        { kind: 'connect', port: 'u1:2', newNetId: 'nt' },
+        { kind: 'connect', port: 'u1:3', newNetId: 'no' },
+        { kind: 'connect', port: 'u1:6', netId: 'nt' },
+        { kind: 'connect', port: 'u1:8', newNetId: 'nv' },
+        { kind: 'rename_net', netId: 'ng', name: 'GND' },
+        { kind: 'rename_net', netId: 'nt', name: 'TIMING' },
+        { kind: 'rename_net', netId: 'no', name: 'OUT' },
+        { kind: 'rename_net', netId: 'nv', name: 'VCC' },
+      ]),
+      parts,
+    );
+    // GND TRIG OUT RESET CONT THRES DISCH VCC; pins 4/5/7 dangle.
+    expect(netlist).toContain('XU1 0 timing out nc_u1_4 nc_u1_5 timing nc_u1_7 vcc NE555_PP');
+    expect(netlist).toContain('.subckt NE555_PP gnd trig out reset cont thres disch vcc');
+    expect(netlist).toContain('.ends NE555_PP');
+    expect(manifest).toEqual([
+      {
+        ref: 'U1',
+        partId: 'core:ne555',
+        tier: 'behavioral',
+        note: 'behavioral macromodel — ideal comparators, simplified SR latch, approximate output stage; no supply-current modeling',
+      },
+    ]);
+  });
+
+  it('emits the NE555 subcircuit definition once for multiple instances', () => {
+    const { netlist } = generateSpiceNetlist(
+      graphOf([
+        { kind: 'add_component', id: 'u1', ref: 'U1', partId: 'core:ne555', partRev: 1 },
+        { kind: 'add_component', id: 'u2', ref: 'U2', partId: 'core:ne555', partRev: 1 },
+      ]),
+      parts,
+    );
+    expect(netlist.match(/^\.subckt NE555_PP /gm)).toHaveLength(1);
+    expect(netlist.match(/^XU\d /gm)).toHaveLength(2);
+  });
+
   it('takes the TVS breakdown voltage from the component value', () => {
     const { netlist } = generateSpiceNetlist(
       graphOf([
@@ -317,6 +357,38 @@ describe('generateSpiceNetlist — model zoo', () => {
     expect(manifest[0]?.note).toContain('ideal rail');
     expect(manifest[0]?.note).toContain('defaulted to 5V');
     expect(manifest[1]?.note).toBe('ideal rail');
+  });
+
+  it('applies valueOverrides by component id without mutating the graph', () => {
+    const graph = graphOf(ledOps());
+    const { netlist, manifest } = generateSpiceNetlist(graph, parts, {
+      valueOverrides: new Map([
+        ['r1', '1k'],
+        ['bat', '5V'],
+      ]),
+    });
+    expect(netlist).toContain('R1 vbat led_a 1000');
+    expect(netlist).toContain('VBT1 vbat 0 DC 5');
+    expect(manifest.map((e) => [e.ref, e.tier])).toEqual([
+      ['BT1', 'behavioral'],
+      ['D1', 'behavioral'],
+      ['R1', 'spice'],
+    ]);
+    // The graph still carries the original values.
+    expect(graph.components.get('r1')?.value).toBe('330');
+    expect(graph.components.get('bat')?.value).toBe('9V');
+    // Without overrides the original deck comes back.
+    expect(generateSpiceNetlist(graph, parts).netlist).toContain('R1 vbat led_a 330');
+  });
+
+  it('routes unparseable overrides through the default-with-note path', () => {
+    const { netlist, manifest } = generateSpiceNetlist(graphOf(ledOps()), parts, {
+      valueOverrides: new Map([['r1', 'garbage']]),
+    });
+    expect(netlist).toContain('R1 vbat led_a 1000');
+    expect(manifest.find((e) => e.ref === 'R1')?.note).toBe(
+      'value "garbage" unparseable — defaulted to 1k',
+    );
   });
 
   it('defaults unparseable values with a manifest note', () => {

@@ -33,10 +33,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       cursors, dB/log-x for AC (math channels, FFT, branch overlays ⬜)
 - [x] The Analyst — run_simulation/measure/read_design tools on the shared
       agent loop; first live Anthropic panel in the app
-- [ ] Noise + Monte Carlo + parameter stepping analyses
+- [x] Monte Carlo (seeded, per-class tolerances, spaghetti plots) +
+      parameter stepping + noise analysis (engine supports .noise;
+      graph-driven noise needs an AC-capable source emitter ⬜)
+- [x] Math channels (safe expression evaluator) + branch overlay —
+      'plot the same node on two design branches against each other'
+- [x] NE555 behavioral macromodel — the traffic-light fixture oscillates
+      at 0.719s measured vs 0.721s theory
 - [ ] Dedicated sim worker + result streaming (currently run-to-completion
       on the main thread via lazy chunk)
-- [ ] SPICE models for NE555 (currently stub) and remaining seed parts
+- [ ] Plot FFT; AC-source emitter for graph-driven noise runs
 
 ## v0.3 — The Crew ⬜
 

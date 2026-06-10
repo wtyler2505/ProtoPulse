@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Analysis configs — Vol II §D.1, honest v0.2 cut.
  *
- * Four classic SPICE analyses. Each config validates at the zod boundary
+ * Five classic SPICE analyses. Each config validates at the zod boundary
  * and emits exactly one analysis card; the engine wrapper appends the
  * card plus `.end` to a netlist body.
  */
@@ -44,6 +44,20 @@ const analysisUnion = z.discriminatedUnion('kind', [
       fStop: zPositive,
     })
     .strict(),
+  z
+    .object({
+      kind: z.literal('noise'),
+      /** Output node name ("out") — emitted as v(out). */
+      output: z.string().min(1),
+      /** Name of the noise input source element ("VBT1"). */
+      source: z.string().min(1),
+      variation: z.enum(['dec', 'oct', 'lin']),
+      /** Points per decade/octave, or total points for 'lin'. */
+      points: z.number().int().positive(),
+      fStart: zPositive,
+      fStop: zPositive,
+    })
+    .strict(),
 ]);
 
 export type Analysis = z.infer<typeof analysisUnion>;
@@ -54,6 +68,9 @@ export const analysisSchema: z.ZodType<Analysis> = analysisUnion.superRefine((a,
   }
   if (a.kind === 'ac' && a.fStop < a.fStart) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'fStop must be >= fStart' });
+  }
+  if (a.kind === 'noise' && a.fStop <= a.fStart) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'fStop must exceed fStart' });
   }
 });
 
@@ -83,5 +100,7 @@ export function analysisCard(a: Analysis): string {
       return `.dc ${a.source} ${spiceNum(a.start)} ${spiceNum(a.stop)} ${spiceNum(a.step)}`;
     case 'ac':
       return `.ac ${a.variation} ${String(a.points)} ${spiceNum(a.fStart)} ${spiceNum(a.fStop)}`;
+    case 'noise':
+      return `.noise v(${a.output}) ${a.source} ${a.variation} ${String(a.points)} ${spiceNum(a.fStart)} ${spiceNum(a.fStop)}`;
   }
 }
