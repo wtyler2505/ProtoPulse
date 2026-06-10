@@ -24,6 +24,8 @@ export interface OverlayState {
   diff?: Map<string, 'added' | 'removed' | 'changed'>;
   /** Tool preview geometry, world nm (x1,y1,x2,y2 …). */
   ghost?: { lines: Float32Array };
+  /** Ratsnest geometry (pre-dashed CPU-side), world nm (x1,y1,x2,y2 …). */
+  ratsnest?: { lines: Float32Array };
   gridVisible: boolean;
 }
 
@@ -35,6 +37,7 @@ const COLORS = {
   diffRemoved: [1.0, 0.35, 0.35, 1.0] as RGBA,
   diffChanged: [1.0, 0.72, 0.25, 1.0] as RGBA,
   ghost: [0.75, 0.75, 0.85, 0.5] as RGBA,
+  ratsnest: [0.62, 0.62, 0.68, 0.55] as RGBA,
   text: [0.78, 0.82, 0.9, 1.0] as RGBA,
 };
 
@@ -131,6 +134,9 @@ export class WebGL2Renderer {
   private ghostVao: WebGLVertexArrayObject | null = null;
   private ghostVbo: WebGLBuffer | null = null;
 
+  private ratsnestVao: WebGLVertexArrayObject | null = null;
+  private ratsnestVbo: WebGLBuffer | null = null;
+
   private atlas = new GlyphAtlas();
   private ranges = new Map<string, NodeRange>();
   private cachedSceneVersion = -1;
@@ -153,6 +159,8 @@ export class WebGL2Renderer {
     this.gridVao = this.makeLineVao(gl, this.lineProgram, this.gridVbo);
     this.ghostVbo = gl.createBuffer();
     this.ghostVao = this.makeLineVao(gl, this.lineProgram, this.ghostVbo);
+    this.ratsnestVbo = gl.createBuffer();
+    this.ratsnestVao = this.makeLineVao(gl, this.lineProgram, this.ratsnestVbo);
 
     this.textProgram = link(gl, TEXT_VS, TEXT_FS);
     this.textTransformLoc = gl.getUniformLocation(this.textProgram, 'u_transform');
@@ -222,9 +230,17 @@ export class WebGL2Renderer {
     this.cachedSceneVersion = scene.version;
     this.ranges.clear();
 
-    // Wires first so symbols draw on top.
-    const nodes = [...scene.nodes.values()].sort((a, b) =>
-      a.kind === b.kind ? 0 : a.kind === 'wire' ? -1 : 1,
+    // Line-ish geometry first so bodies draw on top (wires under symbols;
+    // traces under vias under footprints).
+    const drawRank: Record<SceneNode['kind'], number> = {
+      wire: 0,
+      trace: 0,
+      via: 1,
+      symbol: 2,
+      footprint: 2,
+    };
+    const nodes = [...scene.nodes.values()].sort(
+      (a, b) => drawRank[a.kind] - drawRank[b.kind],
     );
 
     let totalFloats = 0;
@@ -329,6 +345,21 @@ export class WebGL2Renderer {
 
     if (overlay.gridVisible) this.drawGrid(camera);
 
+    // Ratsnest — dashed-on-CPU airwires under the copper geometry.
+    const ratsnest = overlay.ratsnest;
+    if (ratsnest && ratsnest.lines.length >= 4) {
+      const mm = new Float32Array(ratsnest.lines.length);
+      for (let i = 0; i < ratsnest.lines.length; i++) {
+        mm[i] = (ratsnest.lines[i] ?? 0) * NM_TO_MM;
+      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.ratsnestVbo);
+      gl.bufferData(gl.ARRAY_BUFFER, mm, gl.DYNAMIC_DRAW);
+      gl.bindVertexArray(this.ratsnestVao);
+      gl.uniform4fv(this.lineColorLoc, COLORS.ratsnest);
+      gl.drawArrays(gl.LINES, 0, mm.length / 2);
+      gl.bindVertexArray(null);
+    }
+
     // Per-node draws over the cached concatenated buffer.
     gl.bindVertexArray(this.lineVao);
     for (const [id, range] of this.ranges) {
@@ -367,7 +398,7 @@ export class WebGL2Renderer {
   dispose(): void {
     const gl = this.gl;
     if (!gl) return;
-    for (const buf of [this.lineVbo, this.gridVbo, this.ghostVbo, this.textVbo]) {
+    for (const buf of [this.lineVbo, this.gridVbo, this.ghostVbo, this.ratsnestVbo, this.textVbo]) {
       if (buf) gl.deleteBuffer(buf);
     }
     this.gl = null;

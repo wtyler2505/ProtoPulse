@@ -2,6 +2,24 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — v0.4 first slice: The Board
+
+### Added
+- Graph: PCB ops are live — place/move/unplace_footprint, route_trace,
+  place_via, remove_trace/via as id-keyed entities with GC, inverse,
+  diff, and merge support; 100% core coverage gate held.
+- Parts: footprint model with generic IPC-class seeds (0805, SOT-23,
+  DIP-8), explicitly unverified-until-per-MPN.
+- `@protopulse/drc`: width/clearance/annular/drill/unrouted checks
+  against the shipped JLC deck. 34 tests.
+- App: PCB mode — unplaced tray, footprint placement with rotation,
+  octilinear trace tool with cross-net refusal, vias, dashed ratsnest,
+  layer toggle, DRC panel with deck rev. 63 new app/renderer tests.
+
+### Known gaps (ROADMAP.md)
+- Push-and-shove, stroked widths/filled pads, Gerber export, in-browser
+  visual QA of PCB mode.
+
 ## 2026-06-10 — v0.3 first slice: Design Review + the Professor
 
 ### Added

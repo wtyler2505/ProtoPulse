@@ -38,6 +38,16 @@ export interface GraphDelta {
     moved: Uuid[];
     wiresChanged: Uuid[];
   };
+  pcbView: {
+    placed: Uuid[];
+    unplaced: Uuid[];
+    moved: Uuid[];
+    /** A trace changed in place reads as removed + added (same id). */
+    tracesAdded: Uuid[];
+    tracesRemoved: Uuid[];
+    viasAdded: Uuid[];
+    viasRemoved: Uuid[];
+  };
 }
 
 export function isEmptyDelta(d: GraphDelta): boolean {
@@ -56,7 +66,14 @@ export function isEmptyDelta(d: GraphDelta): boolean {
     d.schematicView.placed.length === 0 &&
     d.schematicView.unplaced.length === 0 &&
     d.schematicView.moved.length === 0 &&
-    d.schematicView.wiresChanged.length === 0
+    d.schematicView.wiresChanged.length === 0 &&
+    d.pcbView.placed.length === 0 &&
+    d.pcbView.unplaced.length === 0 &&
+    d.pcbView.moved.length === 0 &&
+    d.pcbView.tracesAdded.length === 0 &&
+    d.pcbView.tracesRemoved.length === 0 &&
+    d.pcbView.viasAdded.length === 0 &&
+    d.pcbView.viasRemoved.length === 0
   );
 }
 
@@ -84,6 +101,15 @@ export function diff(a: DesignGraph, b: DesignGraph): GraphDelta {
     nets: { added: [], removed: [], membership: new Map(), renamed: new Map(), recreated: [] },
     constraints: { added: [], removed: [], changed: [] },
     schematicView: { placed: [], unplaced: [], moved: [], wiresChanged: [] },
+    pcbView: {
+      placed: [],
+      unplaced: [],
+      moved: [],
+      tracesAdded: [],
+      tracesRemoved: [],
+      viasAdded: [],
+      viasRemoved: [],
+    },
   };
 
   // ── Components ──
@@ -168,7 +194,50 @@ export function diff(a: DesignGraph, b: DesignGraph): GraphDelta {
     if (JSON.stringify(wA) !== JSON.stringify(wB)) delta.schematicView.wiresChanged.push(netId);
   }
 
+  // ── PCB view ──
+  for (const [id, pB] of b.pcb.placements) {
+    const pA = a.pcb.placements.get(id);
+    if (!pA) {
+      delta.pcbView.placed.push(id);
+    } else if (
+      pA.at.x !== pB.at.x ||
+      pA.at.y !== pB.at.y ||
+      pA.rotMilli !== pB.rotMilli ||
+      pA.side !== pB.side ||
+      pA.locked !== pB.locked
+    ) {
+      delta.pcbView.moved.push(id);
+    }
+  }
+  for (const id of a.pcb.placements.keys()) {
+    if (!b.pcb.placements.has(id)) delta.pcbView.unplaced.push(id);
+  }
+  diffGeometryMaps(a.pcb.traces, b.pcb.traces, delta.pcbView.tracesAdded, delta.pcbView.tracesRemoved);
+  diffGeometryMaps(a.pcb.vias, b.pcb.vias, delta.pcbView.viasAdded, delta.pcbView.viasRemoved);
+
   return delta;
+}
+
+/** Traces/vias have identity but no patch op — a changed entry reads as
+ *  removed (old content) + added (new content) under the same id. */
+function diffGeometryMaps<T>(
+  a: Map<Uuid, T>,
+  b: Map<Uuid, T>,
+  added: Uuid[],
+  removed: Uuid[],
+): void {
+  for (const [id, itemB] of b) {
+    const itemA = a.get(id);
+    if (itemA === undefined) {
+      added.push(id);
+    } else if (JSON.stringify(itemA) !== JSON.stringify(itemB)) {
+      removed.push(id);
+      added.push(id);
+    }
+  }
+  for (const id of a.keys()) {
+    if (!b.has(id)) removed.push(id);
+  }
 }
 
 function compareNetPair(delta: GraphDelta, netA: Net, netB: Net, id: Uuid): void {

@@ -252,6 +252,94 @@ describe('threeWayMerge', () => {
     expect(conflictMerge.conflicts.some((c) => c.kind === 'property' && c.entityKind === 'constraint')).toBe(true);
   });
 
+  it('pcb: theirs-only footprint moves, traces, and vias replay; races resolve to ours', () => {
+    const { baseOps } = fork();
+    const pcbBaseOps: OpBody[] = [
+      ...baseOps,
+      { kind: 'place_footprint', componentId: FIX.r1, at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+      { kind: 'place_footprint', componentId: FIX.led, at: { x: 5_000_000, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+      { kind: 'route_trace', id: 't-old', netId: FIX.netA, layerId: 'F.Cu', widthNm: 250_000, path: [{ x: 0, y: 0 }, { x: 9, y: 0 }] },
+    ];
+    const base = materialize(envelopes(pcbBaseOps)).graph;
+    const ours = applyAll(pcbBaseOps, [
+      { kind: 'move_footprint', componentId: FIX.r1, at: { x: 0, y: 2_000_000 }, rotMilli: 0, side: 'top', locked: false },
+    ]);
+    const theirs = applyAll(pcbBaseOps, [
+      // Race on r1: ours wins.
+      { kind: 'move_footprint', componentId: FIX.r1, at: { x: 0, y: 9_000_000 }, rotMilli: 0, side: 'top', locked: false },
+      // Theirs-only changes: led move, new trace + via, trace removal.
+      { kind: 'move_footprint', componentId: FIX.led, at: { x: 7_000_000, y: 0 }, rotMilli: 90_000, side: 'top', locked: false },
+      { kind: 'route_trace', id: 't-new', netId: FIX.netB, layerId: 'F.Cu', widthNm: 250_000, path: [{ x: 0, y: 0 }, { x: 5_000_000, y: 0 }] },
+      { kind: 'place_via', id: 'v-new', netId: FIX.netB, at: { x: 5_000_000, y: 0 }, drillNm: 300_000, padNm: 600_000, span: ['F.Cu', 'B.Cu'] },
+      { kind: 'remove_trace', id: 't-old' },
+    ]);
+    const { autoOps, conflicts } = threeWayMerge(base, ours, theirs);
+    expect(conflicts).toEqual([]);
+    const merged = mergedGraph(ours, autoOps);
+    expect(merged.pcb.placements.get(FIX.r1)?.at.y).toBe(2_000_000); // ours wins
+    expect(merged.pcb.placements.get(FIX.led)?.rotMilli).toBe(90_000); // theirs replays
+    expect(merged.pcb.traces.has('t-new')).toBe(true);
+    expect(merged.pcb.vias.has('v-new')).toBe(true);
+    expect(merged.pcb.traces.has('t-old')).toBe(false);
+  });
+
+  it('pcb: a trace re-routed in theirs replays as remove + route; ours-touched traces stay', () => {
+    const { baseOps } = fork();
+    const via = (id: string, padNm: number): OpBody => ({
+      kind: 'place_via',
+      id,
+      netId: FIX.netA,
+      at: { x: 0, y: 0 },
+      drillNm: 300_000,
+      padNm,
+      span: ['F.Cu', 'B.Cu'],
+    });
+    const pcbBaseOps: OpBody[] = [
+      ...baseOps,
+      { kind: 'route_trace', id: 't1', netId: FIX.netA, layerId: 'F.Cu', widthNm: 250_000, path: [{ x: 0, y: 0 }, { x: 9, y: 0 }] },
+      { kind: 'route_trace', id: 't2', netId: FIX.netA, layerId: 'F.Cu', widthNm: 250_000, path: [{ x: 0, y: 9 }, { x: 9, y: 9 }] },
+      via('v1', 600_000),
+      via('v2', 600_000),
+    ];
+    const base = materialize(envelopes(pcbBaseOps)).graph;
+    const ours = applyAll(pcbBaseOps, [
+      { kind: 'remove_trace', id: 't2' },
+      { kind: 'route_trace', id: 't2', netId: FIX.netA, layerId: 'B.Cu', widthNm: 400_000, path: [{ x: 0, y: 9 }, { x: 9, y: 9 }] },
+      { kind: 'remove_via', id: 'v2' },
+      via('v2', 900_000),
+    ]);
+    const theirs = applyAll(pcbBaseOps, [
+      { kind: 'remove_trace', id: 't1' },
+      { kind: 'route_trace', id: 't1', netId: FIX.netA, layerId: 'F.Cu', widthNm: 500_000, path: [{ x: 0, y: 0 }, { x: 9, y: 0 }] },
+      // Races on t2/v2: ours wins.
+      { kind: 'remove_trace', id: 't2' },
+      { kind: 'remove_via', id: 'v2' },
+      // Theirs-only via change: re-place v1.
+      { kind: 'remove_via', id: 'v1' },
+      via('v1', 800_000),
+    ]);
+    const { autoOps, conflicts } = threeWayMerge(base, ours, theirs);
+    expect(conflicts).toEqual([]);
+    const merged = mergedGraph(ours, autoOps);
+    expect(merged.pcb.traces.get('t1')?.widthNm).toBe(500_000);
+    expect(merged.pcb.traces.get('t2')?.layerId).toBe('B.Cu'); // ours wins
+    expect(merged.pcb.vias.get('v1')?.padNm).toBe(800_000);
+    expect(merged.pcb.vias.get('v2')?.padNm).toBe(900_000); // ours wins
+  });
+
+  it('pcb: a component added in theirs brings its footprint placement along', () => {
+    const { base, baseOps } = fork();
+    const ours = materialize(envelopes(baseOps)).graph;
+    const theirs = applyAll(baseOps, [
+      { kind: 'add_component', id: 'c9', ref: 'C9', partId: 'p-cap', partRev: 1 },
+      { kind: 'place_footprint', componentId: 'c9', at: { x: 1, y: 2 }, rotMilli: 0, side: 'bottom', locked: false },
+    ]);
+    const { autoOps, conflicts } = threeWayMerge(base, ours, theirs);
+    expect(conflicts).toEqual([]);
+    const merged = mergedGraph(ours, autoOps);
+    expect(merged.pcb.placements.get('c9')).toEqual({ at: { x: 1, y: 2 }, rotMilli: 0, side: 'bottom', locked: false });
+  });
+
   it('geometry: theirs-only moves and wires replay; geometry races resolve to ours', () => {
     const { base, baseOps } = fork();
     const ours = applyAll(baseOps, [

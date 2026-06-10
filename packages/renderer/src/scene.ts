@@ -28,7 +28,8 @@ export const WIRE_COLOR: RGBA = [0.45, 0.92, 0.62, 1.0];
 
 export interface SceneNode {
   id: string;
-  kind: 'symbol' | 'wire';
+  /** symbol/wire = schematic scene; footprint/trace/via = pcb scene. */
+  kind: 'symbol' | 'wire' | 'footprint' | 'trace' | 'via';
   /** x1,y1,x2,y2 line segments, world nm. */
   lines: Float32Array;
   texts: TessText[];

@@ -13,10 +13,22 @@ import type { Vec } from '@protopulse/graph';
 
 export interface PickHit {
   id: string;
-  kind: 'symbol' | 'wire';
+  kind: SceneNode['kind'];
   bounds: Bounds;
   area: number;
 }
+
+/** Pick priority: bodies before line-ish geometry; vias in between. */
+const KIND_RANK: Record<SceneNode['kind'], number> = {
+  symbol: 0,
+  footprint: 0,
+  via: 1,
+  wire: 2,
+  trace: 2,
+};
+
+/** Kinds whose AABB is mostly empty — require proximity to a segment. */
+const LINEAR_KINDS = new Set<SceneNode['kind']>(['wire', 'trace']);
 
 function area(b: Bounds): number {
   return Math.max(0, b.maxX - b.minX) * Math.max(0, b.maxY - b.minY);
@@ -86,11 +98,11 @@ export class PickIndex {
     for (const i of found) {
       const node = this.entries[i];
       if (!node) continue;
-      if (node.kind === 'wire' && !nearAnyLine(node, pt, toleranceNm)) continue;
+      if (LINEAR_KINDS.has(node.kind) && !nearAnyLine(node, pt, toleranceNm)) continue;
       hits.push({ id: node.id, kind: node.kind, bounds: node.bounds, area: area(node.bounds) });
     }
     hits.sort((a, b) => {
-      if (a.kind !== b.kind) return a.kind === 'symbol' ? -1 : 1;
+      if (KIND_RANK[a.kind] !== KIND_RANK[b.kind]) return KIND_RANK[a.kind] - KIND_RANK[b.kind];
       if (a.area !== b.area) return a.area - b.area;
       return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
     });

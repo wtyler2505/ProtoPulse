@@ -58,10 +58,22 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
 - [ ] Concepts wiki growth toward the 88-article seed list
 - [ ] Review deck versioning + community-extensible review rules
 
-## v0.4 — The Board ⬜
+## v0.4 — The Board 🔨
 
-PCB view, push-and-shove routing (Vol II §E.1), DRC rule decks
-(the JLC deck ships already — the checker doesn't), Gerber/drill/PnP.
+- [x] PCB ops in the graph (footprints/traces/vias as identified entities,
+      inverse/diff/merge closure, coverage gate held)
+- [x] Footprint model + generic IPC-class seeds (0805/SOT-23/DIP-8 —
+      unverified, replace per-MPN before fab)
+- [x] `@protopulse/drc` — width/clearance/annular/drill/unrouted against
+      the JLC deck (flatbush broad phase + exact distance math)
+- [x] PCB view in the app: Schematic|PCB toggle, unplaced tray, trace
+      tool (octilinear, cross-net refusal), vias, ratsnest, DRC panel
+- [x] In-browser visual QA pass of PCB mode (footprint render, tray
+      with footprint-less parts disabled, trace preview, live cross-net
+      refusal, DRC against the deck — verified 2026-06-10)
+- [ ] Push-and-shove routing (Vol II §E.1); stroked trace widths +
+      filled pads in the GL layer; pcb scene delta sync; side-flip UI
+- [ ] Gerber/drill/PnP export; zones/pours; panelization
 
 ## v0.5 — The Bridge ⬜
 

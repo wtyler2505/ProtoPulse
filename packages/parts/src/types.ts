@@ -57,6 +57,24 @@ export interface SymbolGeom {
   pins: SymbolPin[];
 }
 
+/** One copper land of a footprint, origin-centered like the symbol. */
+export interface FootprintPad {
+  /** Pin this pad lands — must reference an existing pin key. */
+  pinKey: string;
+  at: Vec;
+  wNm: Nm;
+  hNm: Nm;
+  shape: 'rect' | 'circle';
+  /** Present on through-hole pads; absent means SMD. */
+  drillNm?: Nm;
+}
+
+/** Minimal physical land pattern: pads plus a courtyard envelope. */
+export interface Footprint {
+  pads: FootprintPad[];
+  courtyard: { wNm: Nm; hNm: Nm };
+}
+
 export type PartClass =
   | 'resistor'
   | 'capacitor'
@@ -85,6 +103,9 @@ export interface Part {
   datasheetUrl?: string;
   pins: Pin[];
   symbol: SymbolGeom;
+  /** Physical land pattern for the PCB view; absent for parts that have
+   *  no board presence yet (rails, stubs, unverified connectors). */
+  footprint?: Footprint;
   /** Typed parametrics for ERC/sim (declared current draw, ratings…). */
   parametrics?: {
     /** Worst-case supply draw in amps, for current-budget checks. */
@@ -106,6 +127,20 @@ const pinSchema: z.ZodType<Pin> = z.object({
   name: z.string().min(1),
   electricalType: z.enum(PIN_ELECTRICAL_TYPES),
   number: z.string().optional(),
+});
+
+const footprintPadSchema: z.ZodType<FootprintPad> = z.object({
+  pinKey: z.string().min(1),
+  at: zVec,
+  wNm: zNm.positive(),
+  hNm: zNm.positive(),
+  shape: z.enum(['rect', 'circle']),
+  drillNm: zNm.positive().optional(),
+});
+
+const footprintSchema: z.ZodType<Footprint> = z.object({
+  pads: z.array(footprintPadSchema).min(1),
+  courtyard: z.object({ wNm: zNm.positive(), hNm: zNm.positive() }),
 });
 
 const symbolPrimitiveSchema: z.ZodType<SymbolPrimitive> = z.discriminatedUnion('kind', [
@@ -144,6 +179,7 @@ export const partSchema: z.ZodType<Part> = z
       primitives: z.array(symbolPrimitiveSchema),
       pins: z.array(z.object({ key: z.string().min(1), at: zVec, dir: z.enum(['N', 'S', 'E', 'W']) })),
     }),
+    footprint: footprintSchema.optional(),
     parametrics: z
       .object({
         currentDrawA: z.number().positive().optional(),
@@ -176,6 +212,14 @@ export const partSchema: z.ZodType<Part> = z
     for (const pin of part.pins) {
       if (!symbolKeys.has(pin.key)) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: `pin ${pin.key} missing from symbol` });
+      }
+    }
+    for (const pad of part.footprint?.pads ?? []) {
+      if (!pinKeys.has(pad.pinKey)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `footprint pad ${pad.pinKey} has no electrical pin`,
+        });
       }
     }
   });

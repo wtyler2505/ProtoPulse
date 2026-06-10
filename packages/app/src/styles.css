@@ -937,3 +937,25 @@ input:not([type]) {
   flex: 1;
   text-align: right;
 }
+
+/* ── PCB view (v0.4) ── */
+
+.layer-chip {
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+.layer-chip.layer-f {
+  color: #ee5c52;
+  border-color: #ee5c52;
+}
+
+.layer-chip.layer-b {
+  color: #5c8ef2;
+  border-color: #5c8ef2;
+}
+
+.tray-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+}

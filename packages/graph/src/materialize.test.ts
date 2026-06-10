@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { materialize } from './materialize.js';
 import { compareEnvelopes, opEnvelopeSchema, opId } from './ops.js';
 import { graphFromJson, graphToJson } from './store/serialize.js';
-import { envelopes, ledCircuitOps } from './test-helpers.js';
+import { envelopes, ledCircuitOps, pcbViewOps } from './test-helpers.js';
 
 import type { OpEnvelope } from './ops.js';
 
@@ -148,6 +148,29 @@ describe('materialize', () => {
         lamport: 1,
         ts: 0,
         op: { kind: 'place_symbol', componentId: 'c1', at: { x: 0, y: 0 }, rot: 45, mirror: false },
+      }),
+    ).toThrow();
+  });
+
+  it('pcb ops round-trip the schema; colon-bearing geometry ids are rejected', () => {
+    const envs = envelopes([...ledCircuitOps(), ...pcbViewOps()]);
+    for (const env of envs) {
+      expect(opEnvelopeSchema.parse(JSON.parse(JSON.stringify(env)))).toEqual(env);
+    }
+    expect(() =>
+      opEnvelopeSchema.parse({
+        actor: 'a',
+        lamport: 1,
+        ts: 0,
+        op: { kind: 'route_trace', id: 't:1', netId: 'n1', layerId: 'F.Cu', widthNm: 1, path: [{ x: 0, y: 0 }, { x: 1, y: 0 }] },
+      }),
+    ).toThrow();
+    expect(() =>
+      opEnvelopeSchema.parse({
+        actor: 'a',
+        lamport: 1,
+        ts: 0,
+        op: { kind: 'place_via', id: 'v:1', netId: 'n1', at: { x: 0, y: 0 }, drillNm: 1, padNm: 2, span: ['F.Cu', 'B.Cu'] },
       }),
     ).toThrow();
   });

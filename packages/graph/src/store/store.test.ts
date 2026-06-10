@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { BranchLog, MAIN_BRANCH } from '../branch.js';
 import { materialize } from '../materialize.js';
-import { envelopes, ledCircuitOps } from '../test-helpers.js';
+import { envelopes, ledCircuitOps, pcbViewOps } from '../test-helpers.js';
 
 import { loadDesignDir, saveDesignDir, SEGMENT_BYTE_CAP } from './fs-store.js';
 import {
@@ -52,12 +52,16 @@ describe('opl encoding', () => {
 });
 
 describe('graph snapshot JSON', () => {
-  it('round-trips Maps through entry arrays', () => {
-    const graph = materialize(envelopes(ledCircuitOps())).graph;
+  it('round-trips Maps through entry arrays, pcb geometry included', () => {
+    const graph = materialize(envelopes([...ledCircuitOps(), ...pcbViewOps()])).graph;
     const restored = graphFromJson(JSON.parse(JSON.stringify(graphToJson(graph))));
     expect(JSON.stringify(graphToJson(restored))).toBe(JSON.stringify(graphToJson(graph)));
     expect(restored.components).toBeInstanceOf(Map);
     expect(restored.nets.size).toBe(graph.nets.size);
+    expect(restored.pcb.traces).toBeInstanceOf(Map);
+    expect(restored.pcb.vias).toBeInstanceOf(Map);
+    expect(restored.pcb.traces.get('t1')).toEqual(graph.pcb.traces.get('t1'));
+    expect(restored.pcb.vias.get('v1')).toEqual(graph.pcb.vias.get('v1'));
   });
 });
 

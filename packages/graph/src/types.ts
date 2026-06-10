@@ -119,6 +119,9 @@ export interface FootprintPlacement {
 }
 
 export interface Trace {
+  /** Pre-allocated by the routing op — traces have identity so removal
+   *  and inversion address them directly. */
+  id: Uuid;
   netId: Uuid;
   layerId: string;
   widthNm: Nm;
@@ -126,6 +129,7 @@ export interface Trace {
 }
 
 export interface Via {
+  id: Uuid;
   netId: Uuid;
   at: Vec;
   drillNm: Nm;
@@ -148,8 +152,8 @@ export interface SchematicView {
 
 export interface PcbView {
   placements: Map<Uuid, FootprintPlacement>;
-  traces: Trace[];
-  vias: Via[];
+  traces: Map<Uuid, Trace>;
+  vias: Map<Uuid, Via>;
 }
 
 export interface DesignGraph {
@@ -173,7 +177,7 @@ export function emptyGraph(): DesignGraph {
     buses: new Map(),
     constraints: new Map(),
     schematic: { placements: new Map(), wires: new Map() },
-    pcb: { placements: new Map(), traces: [], vias: [] },
+    pcb: { placements: new Map(), traces: new Map(), vias: new Map() },
     annotations: [],
     meta: {},
     counters: { net: 0 },

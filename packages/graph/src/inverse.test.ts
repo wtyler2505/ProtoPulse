@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { applyOp } from './apply.js';
 import { invertOp } from './inverse.js';
-import { buildGraph, canonicalGraph as canonical, FIX, ledCircuitOps } from './test-helpers.js';
+import { buildGraph, canonicalGraph as canonical, FIX, ledCircuitOps, pcbViewOps } from './test-helpers.js';
 import { cloneGraph  } from './types.js';
 
 import type { OpBody } from './ops.js';
@@ -171,9 +171,6 @@ describe('invertOp — round-trips', () => {
     const g = buildGraph(ledCircuitOps());
     expect(invertOp(g, { kind: 'checkpoint', label: 'x' })).toEqual([]);
     expect(invertOp(g, { kind: 'annotate', anchor: 'n1', text: 'note' })).toEqual([]);
-    expect(
-      invertOp(g, { kind: 'route_trace', netId: 'n1', layerId: 'F.Cu', widthNm: 1, path: [{ x: 0, y: 0 }, { x: 1, y: 0 }] }),
-    ).toEqual([]);
   });
 
   it('inverting ops against stale state degrades to [] instead of throwing', () => {
@@ -187,6 +184,69 @@ describe('invertOp — round-trips', () => {
     expect(invertOp(g, { kind: 'set_net_class', netId: 'ghost', netClass: 'x' })).toEqual([]);
     expect(invertOp(g, { kind: 'remove_constraint', id: 'ghost' })).toEqual([]);
     expect(invertOp(g, { kind: 'unplace_symbol', componentId: 'ghost' })).toEqual([]);
+    expect(invertOp(g, { kind: 'move_footprint', componentId: 'ghost', at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false })).toEqual([]);
+    expect(invertOp(g, { kind: 'unplace_footprint', componentId: 'ghost' })).toEqual([]);
+    expect(invertOp(g, { kind: 'remove_trace', id: 'ghost' })).toEqual([]);
+    expect(invertOp(g, { kind: 'remove_via', id: 'ghost' })).toEqual([]);
+  });
+});
+
+describe('invertOp — PCB view round-trips', () => {
+  const pcbBase = (): DesignGraph => buildGraph([...ledCircuitOps(), ...pcbViewOps()]);
+
+  it('place (fresh → unplace), re-place (→ restore), move (→ restore), unplace (→ place)', () => {
+    const g = pcbBase();
+    expectRoundTrip(g, { kind: 'place_footprint', componentId: FIX.bat, at: { x: 0, y: 9_000_000 }, rotMilli: 0, side: 'top', locked: false });
+    expectRoundTrip(g, { kind: 'place_footprint', componentId: FIX.r1, at: { x: 7, y: 7 }, rotMilli: 180_000, side: 'bottom', locked: true });
+    expectRoundTrip(g, { kind: 'move_footprint', componentId: FIX.r1, at: { x: 1, y: 1 }, rotMilli: 270_000, side: 'top', locked: false });
+    expectRoundTrip(g, { kind: 'unplace_footprint', componentId: FIX.r1 });
+  });
+
+  it('route_trace / remove_trace and place_via / remove_via', () => {
+    const g = pcbBase();
+    expectRoundTrip(g, {
+      kind: 'route_trace',
+      id: 't9',
+      netId: FIX.netA,
+      layerId: 'B.Cu',
+      widthNm: 300_000,
+      path: [{ x: 0, y: 0 }, { x: 0, y: 9 }],
+    });
+    expectRoundTrip(g, { kind: 'remove_trace', id: 't1' });
+    expectRoundTrip(g, {
+      kind: 'place_via',
+      id: 'v9',
+      netId: FIX.netA,
+      at: { x: 4, y: 4 },
+      drillNm: 300_000,
+      padNm: 600_000,
+      span: ['F.Cu', 'B.Cu'],
+    });
+    expectRoundTrip(g, { kind: 'remove_via', id: 'v1' });
+  });
+
+  it('merge_nets restores the absorbed net’s traces and vias to it', () => {
+    expectRoundTrip(pcbBase(), { kind: 'merge_nets', survivor: FIX.netA, absorbed: FIX.netB });
+  });
+
+  it('disconnect that GCs a net restores its traces and vias', () => {
+    const g = buildGraph([
+      ...ledCircuitOps(),
+      { kind: 'add_component', id: 'c9', ref: 'R9', partId: 'p1', partRev: 1 },
+      { kind: 'connect', port: 'c9:1', newNetId: 'n9' },
+      { kind: 'route_trace', id: 't9', netId: 'n9', layerId: 'F.Cu', widthNm: 250_000, path: [{ x: 0, y: 0 }, { x: 9, y: 0 }] },
+      { kind: 'place_via', id: 'v9', netId: 'n9', at: { x: 9, y: 0 }, drillNm: 300_000, padNm: 600_000, span: ['F.Cu', 'B.Cu'] },
+    ]);
+    expectRoundTrip(g, { kind: 'disconnect', port: 'c9:1' });
+  });
+
+  it('remove_component resurrects its footprint placement and GC’d pcb geometry', () => {
+    const g = buildGraph([...ledCircuitOps(), ...pcbViewOps()]);
+    // Removing r1 and led in sequence GCs netB (with t1/v1 on it).
+    expectRoundTrip(g, { kind: 'remove_component', id: FIX.r1 });
+    const g2 = cloneGraph(g);
+    expect(applyOp(g2, { kind: 'remove_component', id: FIX.r1 }).ok).toBe(true);
+    expectRoundTrip(g2, { kind: 'remove_component', id: FIX.led });
   });
 });
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { applyOp } from './apply.js';
-import { buildGraph, FIX, ledCircuitOps } from './test-helpers.js';
+import { buildGraph, FIX, ledCircuitOps, pcbViewOps } from './test-helpers.js';
 import { emptyGraph, makePortRef, netOfPort } from './types.js';
 
 import type { OpBody } from './ops.js';
@@ -290,12 +290,6 @@ describe('applyOp — constraints, view, meta', () => {
     expectFail(g)({ kind: 'set_wire_geometry', netId: 'ghost', segments: [] }, 'not found');
   });
 
-  it('PCB ops report unimplemented in M1', () => {
-    expectFail()({ kind: 'place_footprint', componentId: 'c1', at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false }, 'unimplemented');
-    expectFail()({ kind: 'route_trace', netId: 'n1', layerId: 'F.Cu', widthNm: 200000, path: [{ x: 0, y: 0 }, { x: 1, y: 0 }] }, 'unimplemented');
-    expectFail()({ kind: 'place_via', netId: 'n1', at: { x: 0, y: 0 }, drillNm: 300000, padNm: 600000, span: ['F.Cu', 'B.Cu'] }, 'unimplemented');
-  });
-
   it('checkpoint is a no-op; annotate appends; set_design_meta merges', () => {
     const g = emptyGraph();
     expect(applyOp(g, { kind: 'checkpoint', label: 'before review' }).ok).toBe(true);
@@ -304,6 +298,111 @@ describe('applyOp — constraints, view, meta', () => {
     expect(applyOp(g, { kind: 'set_design_meta', patch: { title: 'Probe' } }).ok).toBe(true);
     expect(applyOp(g, { kind: 'set_design_meta', patch: { rev: 'A' } }).ok).toBe(true);
     expect(g.meta).toEqual({ title: 'Probe', rev: 'A' });
+  });
+});
+
+describe('applyOp — PCB view', () => {
+  it('place, re-place (= move), move, unplace footprint with failure paths', () => {
+    const g = buildGraph([{ kind: 'add_component', id: 'c1', ref: 'R1', partId: 'p1', partRev: 1 }]);
+    expectFail(g)({ kind: 'place_footprint', componentId: 'ghost', at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false }, 'not found');
+    expectFail(g)({ kind: 'move_footprint', componentId: 'ghost', at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false }, 'not found');
+    expectFail(g)({ kind: 'move_footprint', componentId: 'c1', at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false }, 'no footprint placement');
+    expect(applyOp(g, { kind: 'place_footprint', componentId: 'c1', at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false }).ok).toBe(true);
+    // Re-place is a move: the placement is replaced, not duplicated.
+    expect(applyOp(g, { kind: 'place_footprint', componentId: 'c1', at: { x: 1_000_000, y: 0 }, rotMilli: 90_000, side: 'bottom', locked: true }).ok).toBe(true);
+    expect(g.pcb.placements.get('c1')).toEqual({ at: { x: 1_000_000, y: 0 }, rotMilli: 90_000, side: 'bottom', locked: true });
+    expect(applyOp(g, { kind: 'move_footprint', componentId: 'c1', at: { x: 0, y: 2_000_000 }, rotMilli: 0, side: 'top', locked: false }).ok).toBe(true);
+    expect(g.pcb.placements.get('c1')).toEqual({ at: { x: 0, y: 2_000_000 }, rotMilli: 0, side: 'top', locked: false });
+    expect(applyOp(g, { kind: 'unplace_footprint', componentId: 'c1' }).ok).toBe(true);
+    expect(g.pcb.placements.has('c1')).toBe(false);
+    expectFail(g)({ kind: 'unplace_footprint', componentId: 'c1' }, 'no footprint placement');
+  });
+
+  it('route_trace appends keyed by id, with failure paths', () => {
+    const g = buildGraph([
+      { kind: 'add_component', id: 'c1', ref: 'R1', partId: 'p1', partRev: 1 },
+      { kind: 'connect', port: 'c1:1', newNetId: 'n1' },
+    ]);
+    const route: OpBody = {
+      kind: 'route_trace',
+      id: 't1',
+      netId: 'n1',
+      layerId: 'F.Cu',
+      widthNm: 250_000,
+      path: [{ x: 0, y: 0 }, { x: 1_000_000, y: 0 }],
+    };
+    expectFail(g)({ ...route, netId: 'ghost' }, 'not found');
+    expect(applyOp(g, route).ok).toBe(true);
+    expect(g.pcb.traces.get('t1')).toMatchObject({ id: 't1', netId: 'n1', layerId: 'F.Cu', widthNm: 250_000 });
+    expectFail(g)(route, 'already exists');
+    expect(applyOp(g, { kind: 'remove_trace', id: 't1' }).ok).toBe(true);
+    expect(g.pcb.traces.size).toBe(0);
+    expectFail(g)({ kind: 'remove_trace', id: 't1' }, 'not found');
+  });
+
+  it('place_via appends keyed by id, with failure paths', () => {
+    const g = buildGraph([
+      { kind: 'add_component', id: 'c1', ref: 'R1', partId: 'p1', partRev: 1 },
+      { kind: 'connect', port: 'c1:1', newNetId: 'n1' },
+    ]);
+    const via: OpBody = {
+      kind: 'place_via',
+      id: 'v1',
+      netId: 'n1',
+      at: { x: 0, y: 0 },
+      drillNm: 300_000,
+      padNm: 600_000,
+      span: ['F.Cu', 'B.Cu'],
+    };
+    expectFail(g)({ ...via, netId: 'ghost' }, 'not found');
+    expect(applyOp(g, via).ok).toBe(true);
+    expect(g.pcb.vias.get('v1')).toMatchObject({ id: 'v1', netId: 'n1', span: ['F.Cu', 'B.Cu'] });
+    expectFail(g)(via, 'already exists');
+    expect(applyOp(g, { kind: 'remove_via', id: 'v1' }).ok).toBe(true);
+    expect(g.pcb.vias.size).toBe(0);
+    expectFail(g)({ kind: 'remove_via', id: 'v1' }, 'not found');
+  });
+
+  it('GCs traces and vias when their net empties; other nets keep theirs', () => {
+    const g = buildGraph([
+      { kind: 'add_component', id: 'c1', ref: 'R1', partId: 'p1', partRev: 1 },
+      { kind: 'connect', port: 'c1:1', newNetId: 'n1' },
+      { kind: 'connect', port: 'c1:2', newNetId: 'n2' },
+      { kind: 'route_trace', id: 't1', netId: 'n1', layerId: 'F.Cu', widthNm: 250_000, path: [{ x: 0, y: 0 }, { x: 9, y: 0 }] },
+      { kind: 'place_via', id: 'v1', netId: 'n1', at: { x: 0, y: 0 }, drillNm: 300_000, padNm: 600_000, span: ['F.Cu', 'B.Cu'] },
+      { kind: 'route_trace', id: 't2', netId: 'n2', layerId: 'B.Cu', widthNm: 250_000, path: [{ x: 0, y: 9 }, { x: 9, y: 9 }] },
+      { kind: 'place_via', id: 'v2', netId: 'n2', at: { x: 9, y: 9 }, drillNm: 300_000, padNm: 600_000, span: ['F.Cu', 'B.Cu'] },
+    ]);
+    const res = applyOp(g, { kind: 'disconnect', port: 'c1:1' });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.warnings.map((w) => w.code).sort()).toEqual(['net_gc', 'trace_gc', 'via_gc']);
+    }
+    expect(g.pcb.traces.has('t1')).toBe(false);
+    expect(g.pcb.vias.has('v1')).toBe(false);
+    expect(g.pcb.traces.has('t2')).toBe(true);
+    expect(g.pcb.vias.has('v2')).toBe(true);
+  });
+
+  it('merge_nets re-points the absorbed net’s traces and vias at the survivor', () => {
+    const g = buildGraph([
+      ...ledCircuitOps(),
+      ...pcbViewOps(),
+      { kind: 'route_trace', id: 't-a', netId: FIX.netA, layerId: 'F.Cu', widthNm: 250_000, path: [{ x: 0, y: 9 }, { x: 9, y: 9 }] },
+      { kind: 'place_via', id: 'v-a', netId: FIX.netA, at: { x: 9, y: 9 }, drillNm: 300_000, padNm: 600_000, span: ['F.Cu', 'B.Cu'] },
+    ]);
+    expect(applyOp(g, { kind: 'merge_nets', survivor: FIX.netA, absorbed: FIX.netB }).ok).toBe(true);
+    expect(g.pcb.traces.get('t1')?.netId).toBe(FIX.netA);
+    expect(g.pcb.vias.get('v1')?.netId).toBe(FIX.netA);
+    expect(g.pcb.traces.get('t-a')?.netId).toBe(FIX.netA);
+    expect(g.pcb.vias.get('v-a')?.netId).toBe(FIX.netA);
+  });
+
+  it('remove_component drops its footprint placement', () => {
+    const g = buildGraph([...ledCircuitOps(), ...pcbViewOps()]);
+    expect(applyOp(g, { kind: 'remove_component', id: FIX.r1 }).ok).toBe(true);
+    expect(g.pcb.placements.has(FIX.r1)).toBe(false);
+    expect(g.pcb.placements.has(FIX.led)).toBe(true);
   });
 });
 

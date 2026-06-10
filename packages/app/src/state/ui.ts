@@ -12,10 +12,14 @@ import type { Vec } from '@protopulse/graph';
  */
 
 export type ToolId = 'select' | 'wire' | 'place';
+export type ViewMode = 'schematic' | 'pcb';
+export type PcbToolId = 'select' | 'trace' | 'via' | 'place';
+export type PcbLayer = 'F.Cu' | 'B.Cu';
 export type TabId =
   | 'inspector'
   | 'erc'
   | 'review'
+  | 'drc'
   | 'branches'
   | 'export'
   | 'draftsman'
@@ -69,6 +73,14 @@ export interface UiState {
   tool: ToolId;
   /** Part being placed when tool === 'place'. */
   placePartId: string | null;
+  /** Which canvas the editor shows: the schematic or the board. */
+  viewMode: ViewMode;
+  /** Active tool while viewMode === 'pcb'. */
+  pcbTool: PcbToolId;
+  /** Component being placed when pcbTool === 'place' (from the tray). */
+  pcbPlaceComponentId: string | null;
+  /** Copper layer the trace tool routes on. */
+  activeLayer: PcbLayer;
   activeTab: TabId;
   cursorWorld: Vec | null;
   /** Concept wiki slug shown in the viewer overlay, or null. */
@@ -89,6 +101,12 @@ export interface UiState {
 
   setTool: (tool: Exclude<ToolId, 'place'>) => void;
   startPlace: (partId: string) => void;
+  /** Switch canvases; the DRC tab only exists on the board side. */
+  setViewMode: (mode: ViewMode) => void;
+  setPcbTool: (tool: Exclude<PcbToolId, 'place'>) => void;
+  /** Arm footprint placement for a tray component. */
+  startPcbPlace: (componentId: string) => void;
+  toggleLayer: () => void;
   setTab: (tab: TabId) => void;
   setCursorWorld: (v: Vec | null) => void;
   openConcept: (slug: string) => void;
@@ -109,6 +127,10 @@ export interface UiState {
 export const useUi = create<UiState>()((set, get) => ({
   tool: 'select',
   placePartId: null,
+  viewMode: 'schematic',
+  pcbTool: 'select',
+  pcbPlaceComponentId: null,
+  activeLayer: 'F.Cu',
   activeTab: 'inspector',
   cursorWorld: null,
   conceptSlug: null,
@@ -122,6 +144,24 @@ export const useUi = create<UiState>()((set, get) => ({
 
   setTool: (tool) => { set({ tool, placePartId: null }); },
   startPlace: (partId) => { set({ tool: 'place', placePartId: partId }); },
+  setViewMode: (mode) => {
+    if (mode === get().viewMode) return;
+    set({
+      viewMode: mode,
+      // Both canvases come back in their neutral tool.
+      tool: 'select',
+      placePartId: null,
+      pcbTool: 'select',
+      pcbPlaceComponentId: null,
+      // The DRC tab doesn't exist on the schematic side.
+      ...(mode === 'schematic' && get().activeTab === 'drc' ? { activeTab: 'inspector' as const } : {}),
+    });
+  },
+  setPcbTool: (tool) => { set({ pcbTool: tool, pcbPlaceComponentId: null }); },
+  startPcbPlace: (componentId) =>
+    { set({ pcbTool: 'place', pcbPlaceComponentId: componentId }); },
+  toggleLayer: () =>
+    { set({ activeLayer: get().activeLayer === 'F.Cu' ? 'B.Cu' : 'F.Cu' }); },
   setTab: (tab) => { set({ activeTab: tab }); },
   setCursorWorld: (v) => { set({ cursorWorld: v }); },
   openConcept: (slug) => { set({ conceptSlug: slug }); },

@@ -68,6 +68,31 @@ export const FIX = {
   partLed: 'p-led',
 };
 
+/** PCB view ops over the LED fixture: two footprints, a trace, a via. */
+export function pcbViewOps(): OpBody[] {
+  return [
+    { kind: 'place_footprint', componentId: FIX.r1, at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+    { kind: 'place_footprint', componentId: FIX.led, at: { x: 5_000_000, y: 0 }, rotMilli: 90_000, side: 'top', locked: false },
+    {
+      kind: 'route_trace',
+      id: 't1',
+      netId: FIX.netB,
+      layerId: 'F.Cu',
+      widthNm: 250_000,
+      path: [{ x: 0, y: 0 }, { x: 5_000_000, y: 0 }],
+    },
+    {
+      kind: 'place_via',
+      id: 'v1',
+      netId: FIX.netB,
+      at: { x: 2_500_000, y: 0 },
+      drillNm: 300_000,
+      padNm: 600_000,
+      span: ['F.Cu', 'B.Cu'],
+    },
+  ];
+}
+
 export function ledCircuitOps(): OpBody[] {
   return [
     { kind: 'add_component', id: FIX.bat, ref: 'BT1', partId: FIX.partBattery, partRev: 1 },
