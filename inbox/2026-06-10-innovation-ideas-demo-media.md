@@ -38,6 +38,12 @@ got any more good creative/innovative ideas?").
    as live badges at net labels on the schematic: the Probe's live
    overlay UX, fed by simulation today, hardware later. One UX, two
    data sources.
+   ✅ SHIPPED 2026-06-10 (wire-tint form) — nets tint cold-blue→warm-
+   orange by solved voltage after op/tran runs (`sim/ghost.ts` +
+   renderer `tint` channel), gradient legend + hide in the Sim panel,
+   (branch, opsVersion)-stamped so a stale ghost never draws. Numeric
+   badges at net labels (the Probe overlay UX) still open — needs
+   canvas text overlay positioning.
 6. **CI circuit badges** — `protopulse check --badge` emits a
    shields-style SVG (ERC clean / N errors) for hardware repo READMEs.
    CI-for-circuits becomes visible.

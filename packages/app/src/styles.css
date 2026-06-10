@@ -627,6 +627,29 @@ input:not([type]) {
   color: var(--accent-warm);
 }
 
+/* ── Sim ghost legend ── */
+
+.ghost-legend {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted, #8aa0bd);
+  padding: 4px 0;
+}
+
+.ghost-legend-bar {
+  flex: 1;
+  max-width: 120px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.ghost-legend button {
+  font-size: 10px;
+}
+
 /* ── Blame (Inspector history section) ── */
 
 .blame-list {

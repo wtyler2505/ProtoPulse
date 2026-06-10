@@ -27,6 +27,9 @@ export interface OverlayState {
   selection: Set<string>;
   highlight: Set<string>;
   diff?: Map<string, 'added' | 'removed' | 'changed'>;
+  /** Per-node color override (lowest overlay priority) — e.g. the sim
+   *  ghost tinting nets by their solved voltage. */
+  tint?: Map<string, RGBA>;
   /** Tool preview geometry, world nm (x1,y1,x2,y2 …). */
   ghost?: { lines: Float32Array };
   /** Ratsnest geometry (pre-dashed CPU-side), world nm (x1,y1,x2,y2 …). */
@@ -341,6 +344,8 @@ export class WebGL2Renderer {
     if (d === 'added') return COLORS.diffAdded;
     if (d === 'removed') return COLORS.diffRemoved;
     if (d === 'changed') return COLORS.diffChanged;
+    const t = overlay.tint?.get(id);
+    if (t) return t;
     return base;
   }
 

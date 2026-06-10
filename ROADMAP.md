@@ -53,6 +53,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       streaming still ⬜)
 - [x] Plot FFT (radix-2, Hann, resampled) + AC-source emitter
       (fields.ac) unlocking graph-driven .ac/.noise runs
+- [x] Sim ghost overlay (landed 2026-06-10): after op/tran runs the
+      schematic wires tint by solved voltage (cold→warm), gradient
+      legend in the panel, (branch, opsVersion)-stamped so stale
+      ghosts never draw — the Probe's live-overlay UX, sim-fed today
 
 ## v0.3 — The Crew 🔨
 

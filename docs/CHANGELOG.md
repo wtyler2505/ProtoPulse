@@ -2,6 +2,19 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — sim ghost overlay (voltages painted on the wires)
+
+### Added
+- **Canvas ghost**: after an op or transient run, every net on the
+  schematic tints by its solved voltage — cold blue at the range floor,
+  warm orange at the ceiling — with a gradient legend (instant label +
+  min/max) in the Sim panel and a hide button. Honesty built in: only
+  op/tran produce a ghost (AC/noise/sweeps have no single per-net
+  voltage), and the ghost carries a (branch, opsVersion) stamp — edit
+  anything and it vanishes instead of lying. Renderer grew a generic
+  per-node `tint` overlay channel (lowest priority, under selection/
+  highlight/diff).
+
 ## 2026-06-10 — blame on canvas (the op-log trilogy completes)
 
 ### Added

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { fftSpectrum } from '../sim/fft.js';
+import { computeGhost, ghostLegendGradient } from '../sim/ghost.js';
 import { evaluate } from '../sim/math-channels.js';
 import { flattenMcTrials, flattenStepRuns, traceKeys } from '../sim/multi.js';
 import { combineRuns } from '../sim/overlay.js';
@@ -9,6 +10,7 @@ import { runMonteCarlo, runSimulation, runStep } from '../sim/runner.js';
 import { engNotation, vectorDb } from '../sim/scales.js';
 import { sweepVectorName } from '../sim/types.js';
 import { getGraph, partDb, useSession } from '../state/session.js';
+import { useUi } from '../state/ui.js';
 
 import type { PlotTrace } from '../sim/Plot.js';
 import type { McOutcome, SimOutcome, StepOutcome } from '../sim/runner.js';
@@ -157,7 +159,7 @@ type RunData =
 export function SimPanel() {
   const opsVersion = useSession((s) => s.opsVersion);
   const branch = useSession((s) => s.branch);
-  void opsVersion;
+  const simGhost = useUi((s) => s.simGhost);
 
   const [kind, setKind] = useState<PickerKind>('tran');
   /** Base analysis when kind is mc/step (they WRAP a base analysis). */
@@ -363,6 +365,12 @@ export function SimPanel() {
         )
           .map((t) => t.key)
           .filter((k, i, arr) => arr.indexOf(k) === i);
+        // Ghost overlay: paint the solved net voltages on the canvas.
+        useUi
+          .getState()
+          .setSimGhost(
+            await computeGhost(g, partDb, outcome.result.analysis.kind, outcome.result.vectors, key),
+          );
       }
     }
     setData(next);
@@ -689,6 +697,24 @@ export function SimPanel() {
               <FidelityBar fidelity={bar.fidelity} manifest={bar.manifest} />
             </div>
           ))}
+          {simGhost !== null &&
+            simGhost.branch === branch &&
+            simGhost.opsVersion === opsVersion && (
+              <div className="ghost-legend" title="net voltages painted on the schematic wires">
+                <span className="ghost-legend-label">canvas ghost · {simGhost.label}</span>
+                <span className="ghost-legend-min">{engNotation(simGhost.min)}V</span>
+                <span className="ghost-legend-bar" style={{ background: ghostLegendGradient() }} />
+                <span className="ghost-legend-max">{engNotation(simGhost.max)}V</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    useUi.getState().setSimGhost(null);
+                  }}
+                >
+                  hide
+                </button>
+              </div>
+            )}
           {pointsLine !== null && <p className="muted">{pointsLine}</p>}
           {opResult ? (
             <OpTable result={opResult} />

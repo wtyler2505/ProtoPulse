@@ -1227,6 +1227,8 @@ The newer engine milestones added simulation panels to the editor's sidebar. Two
 
 *The Sim tab after a transient run. Read the **fidelity bar** before believing anything: it lists exactly which parts ran as real SPICE models and which as behavioral stand-ins.*
 
+After an operating-point or transient run, the schematic itself lights up: every wire tints by its solved voltage, cold blue at the lowest and warm orange at the highest, with a legend in the Sim panel. Edit anything and the tint disappears rather than showing stale numbers.
+
 ![The Co-sim tab: blink firmware running on the emulated ATmega328P, its B5 pin bound to the LED_A net, square wave stacked over the analog response on one time axis](screenshots/cosim.png)
 
 *The Co-sim tab: real AVR firmware (the classic blink) stepped together with the analog solver — the MCU pin's square wave and the solved node voltages on one time axis, with an honest slowdown readout.*
