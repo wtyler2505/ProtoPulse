@@ -40,9 +40,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       'plot the same node on two design branches against each other'
 - [x] NE555 behavioral macromodel — the traffic-light fixture oscillates
       at 0.719s measured vs 0.721s theory
-- [ ] Dedicated sim worker + result streaming (currently run-to-completion
-      on the main thread via lazy chunk)
-- [ ] Plot FFT; AC-source emitter for graph-driven noise runs
+- [x] Sim worker — ngspice off the main thread (node fallback kept;
+      streaming still ⬜)
+- [x] Plot FFT (radix-2, Hann, resampled) + AC-source emitter
+      (fields.ac) unlocking graph-driven .ac/.noise runs
 
 ## v0.3 — The Crew 🔨
 
@@ -75,7 +76,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       pipeline), pcb scene delta sync, side-flip UI (F key + Inspector)
 - [x] Gerber X2 / Excellon drill / pick-and-place export with byte-exact
       golden fixtures (routed-led)
-- [ ] Push-and-shove routing (Vol II §E.1); zones/pours; panelization
+- [x] Walkaround interactive routing (`@protopulse/route`, E.1 step 1):
+      CW/CCW hull walks over DRC-grade obstacle hulls, same-net copper
+      legal, 'manual | walk' toggle on the trace tool
+- [ ] Shove + spring-back (E.1 steps 2-3); zones/pours; panelization
 
 ## v0.5 — The Bridge 🔨
 
@@ -85,8 +89,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       blink toggles B5 at ~1206-cycle spacing in test
 - [x] Firmware panel: HEX load, run/pause with frame-budgeted stepping,
       serial monitor with input, logic-analyzer-lite stacked pin traces
-- [ ] The co-sim bus (Vol II §D.3): conservative lockstep, ADC as hard
-      sync point, GPIO behavioral boundary into SPICE
+- [x] The co-sim bus, first slice (Vol II §D.3): MCU→SPICE one-way —
+      GPIO edges as PWL sources behind the 30Ω behavioral boundary; the
+      thesis test measures 0.94Vpp RC ripple vs ~0.9Vpp theory; Co-sim
+      panel with bindings, slowdown-honesty readout, square-wave-over-
+      analog money plot
+- [x] Co-sim feedback direction (the loop is CLOSED): ADC peripheral
+      with conversion-completion hard sync, comparator-fed digital
+      inputs with hysteresis, quantum loop with honest from-zero
+      re-solves — bang-bang firmware regulates its own RC node in test
+      (136 conversions, sustained oscillation 1.83-3.20V around the
+      2.5V threshold)
 - [ ] WebSerial/WebUSB flashing (needs real hardware to verify)
 - [ ] RP2040 / ESP32 cores; timers 1/2, SPI, TWI, ADC peripherals
 
@@ -94,6 +107,26 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
 
 Sync relay, share links, community library with provenance tiers
 (Vol III §4), manufacturing pipeline (Vol II §H).
+
+## Migration milestone — legacy retirement (between v0.6 and v0.7) ⬜
+
+The answer to "when do we weed out the old codebase": not by date, by
+checklist. A legacy area is deletable only when (1) the engine covers
+its user-visible function at equal-or-better quality, (2) the
+legacy-Postgres → .ppx op-log importer exists and has moved Tyler's
+real projects, (3) nothing depends on it (the Tauri shell wraps the
+legacy server; Codex works in legacy/Tauri on main), and (4) Tyler has
+stopped using it. Sequence: v0.6 gives the engine its server/persistence
+→ build the importer → flip the default UI to the engine app with
+legacy read-only for a grace period → delete area-by-area in deliberate
+PRs, biggest-dependency-last, one ADR per removal.
+
+- [ ] Legacy → .ppx importer (projects, designs, nets, placements)
+- [ ] Default-UI flip + legacy read-only grace period
+- [ ] Area-by-area retirement with ADRs (server core + Tauri last)
+- [ ] Early safe weeding (independent of the above): root collab
+      artifacts → docs/collab/ (coordinate with Codex), fix-or-disable
+      the permanently-red legacy CI jobs, legacy dead-code audit
 
 ## v0.7 — The Probe ⬜
 

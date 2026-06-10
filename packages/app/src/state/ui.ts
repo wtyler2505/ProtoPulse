@@ -15,6 +15,8 @@ export type ToolId = 'select' | 'wire' | 'place';
 export type ViewMode = 'schematic' | 'pcb';
 export type PcbToolId = 'select' | 'trace' | 'via' | 'place';
 export type PcbLayer = 'F.Cu' | 'B.Cu';
+/** Trace tool routing mode: hand octilinear vs walkaround autoroute. */
+export type TraceMode = 'manual' | 'walk';
 export type TabId =
   | 'inspector'
   | 'erc'
@@ -25,6 +27,7 @@ export type TabId =
   | 'draftsman'
   | 'sim'
   | 'firmware'
+  | 'cosim'
   | 'analyst'
   | 'professor';
 export type CameraCommand = { kind: 'fit' } | { kind: 'center'; at: Vec };
@@ -82,6 +85,9 @@ export interface UiState {
   pcbPlaceComponentId: string | null;
   /** Copper layer the trace tool routes on. */
   activeLayer: PcbLayer;
+  /** How the trace tool plans the head: manual octilinear segments or
+   *  walkaround (auto-detour around copper at deck clearance). */
+  traceMode: TraceMode;
   activeTab: TabId;
   cursorWorld: Vec | null;
   /** Concept wiki slug shown in the viewer overlay, or null. */
@@ -131,6 +137,7 @@ export const useUi = create<UiState>()((set, get) => ({
   viewMode: 'schematic',
   pcbTool: 'select',
   pcbPlaceComponentId: null,
+  traceMode: 'manual',
   activeLayer: 'F.Cu',
   activeTab: 'inspector',
   cursorWorld: null,

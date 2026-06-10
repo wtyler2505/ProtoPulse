@@ -164,28 +164,57 @@ const emitNmosAo3400: Emitter = ({ component, node }) => {
   };
 };
 
+/**
+ * Optional small-signal AC magnitude for a voltage source, read from the
+ * component's `fields.ac` ('1' → ` AC 1` appended to the V card). This
+ * is what lets graph-driven `.ac` and `.noise` analyses run — ngspice
+ * needs an AC value on the input source. An absent or blank field emits
+ * an empty suffix, keeping the element line byte-identical to a deck
+ * without the field; an unparseable field is skipped with an honest
+ * manifest note rather than guessed at.
+ */
+function acMagnitude(component: Component): { suffix: string; note?: string } {
+  const raw = component.fields.ac;
+  if (raw === undefined || raw.trim() === '') return { suffix: '' };
+  const mag = Number(raw);
+  if (!Number.isFinite(mag) || mag < 0) {
+    return { suffix: '', note: `fields.ac "${raw}" unparseable — AC magnitude not emitted` };
+  }
+  return {
+    suffix: ` AC ${spiceNum(mag)}`,
+    note: `AC small-signal magnitude ${spiceNum(mag)} (fields.ac)`,
+  };
+}
+
+/** Join the honesty notes that apply ('base; value-fallback; ac'). */
+function joinNotes(base: string, ...extra: (string | undefined)[]): string {
+  return [base, ...extra].filter((n): n is string => n !== undefined).join('; ');
+}
+
 const emitBattery: Emitter = ({ component, node }) => {
   const v = numericValue(component, 'voltage', 9, '9V');
-  const baseNote = 'ideal DC source (no internal resistance)';
+  const ac = acMagnitude(component);
   return {
-    lines: [`${elementName('V', component.ref)} ${node('+')} ${node('-')} DC ${spiceNum(v.value)}`],
+    lines: [
+      `${elementName('V', component.ref)} ${node('+')} ${node('-')} DC ${spiceNum(v.value)}${ac.suffix}`,
+    ],
     models: [],
     entry: {
       tier: 'behavioral',
-      note: v.note !== undefined ? `${baseNote}; ${v.note}` : baseNote,
+      note: joinNotes('ideal DC source (no internal resistance)', v.note, ac.note),
     },
   };
 };
 
 const emitPwrVcc: Emitter = ({ component, node }) => {
   const v = numericValue(component, 'voltage', 5, '5V');
-  const baseNote = 'ideal rail';
+  const ac = acMagnitude(component);
   return {
-    lines: [`${elementName('V', component.ref)} ${node('1')} 0 DC ${spiceNum(v.value)}`],
+    lines: [`${elementName('V', component.ref)} ${node('1')} 0 DC ${spiceNum(v.value)}${ac.suffix}`],
     models: [],
     entry: {
       tier: 'behavioral',
-      note: v.note !== undefined ? `${baseNote}; ${v.note}` : baseNote,
+      note: joinNotes('ideal rail', v.note, ac.note),
     },
   };
 };

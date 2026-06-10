@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "MCU emulation (Vol II §D.2): cycle-accurate AVR cores via avr8js behind the McuCore contract. Firmware runs for real; pins and UART are observable.",
+  "description": "MCU emulation (Vol II §D.2): cycle-accurate AVR cores via avr8js behind the McuCore contract. Firmware runs for real; pins, UART and the ADC are observable.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {

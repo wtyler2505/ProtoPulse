@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { fftSpectrum } from '../sim/fft.js';
 import { evaluate } from '../sim/math-channels.js';
 import { flattenMcTrials, flattenStepRuns, traceKeys } from '../sim/multi.js';
 import { combineRuns } from '../sim/overlay.js';
@@ -50,7 +51,8 @@ const KINDS: { id: PickerKind; label: string }[] = [
 
 const MC_MAX_RUNS = 200;
 
-function Field({
+/** One labelled text field, house style (shared with the Co-sim panel). */
+export function Field({
   label,
   value,
   onChange,
@@ -73,7 +75,8 @@ function Field({
   );
 }
 
-function SelectField({
+/** One labelled select, house style (shared with the Co-sim panel). */
+export function SelectField({
   label,
   value,
   options,
@@ -112,7 +115,8 @@ function num(label: string, raw: string): number | string {
   return v;
 }
 
-function FidelityBar({ fidelity, manifest }: { fidelity: string; manifest: FidelityEntry[] }) {
+/** The read-this-before-believing-anything bar (shared with Co-sim). */
+export function FidelityBar({ fidelity, manifest }: { fidelity: string; manifest: FidelityEntry[] }) {
   return (
     <div className="fidelity-bar">
       <p className="fidelity-summary">{fidelity}</p>
@@ -184,6 +188,8 @@ export function SimPanel() {
   const [formError, setFormError] = useState<string | null>(null);
   const [data, setData] = useState<RunData | null>(null);
   const [visible, setVisible] = useState<ReadonlySet<string>>(new Set());
+  /** Trace keys whose FFT renders in the second (spectrum) plot. */
+  const [fftKeys, setFftKeys] = useState<ReadonlySet<string>>(new Set());
   const [mathInput, setMathInput] = useState('');
   const [mathExprs, setMathExprs] = useState<string[]>([]);
 
@@ -361,6 +367,7 @@ export function SimPanel() {
     }
     setData(next);
     if (keys.length > 0) setVisible(new Set(keys.slice(0, 2)));
+    setFftKeys(new Set());
     setBusy(false);
   };
 
@@ -372,6 +379,16 @@ export function SimPanel() {
       next.add(name);
     }
     setVisible(next);
+  };
+
+  const toggleFft = (name: string) => {
+    const next = new Set(fftKeys);
+    if (next.has(name)) {
+      next.delete(name);
+    } else {
+      next.add(name);
+    }
+    setFftKeys(next);
   };
 
   const addMathExpr = () => {
@@ -485,6 +502,26 @@ export function SimPanel() {
       xLabel: sweep ?? 'sample',
       yLabel: isAc ? 'magnitude (dB)' : refKind === 'noise' ? 'noise' : 'value',
     };
+  }
+
+  // ── FFT (transient only): per-trace toggled spectra, log-x dB ──
+  const canFft = data?.mode === 'single' && referenceResult?.analysis.kind === 'tran';
+  let fftTraces: PlotTrace[] | null = null;
+  if (canFft && fftKeys.size > 0) {
+    const traces: PlotTrace[] = [];
+    for (const t of baseTraces) {
+      if (!fftKeys.has(t.key)) continue;
+      const spectrum = fftSpectrum(t.xs, t.ys);
+      if (!spectrum) continue;
+      traces.push({
+        name: `fft ${t.name}`,
+        xs: spectrum.freqs,
+        ys: spectrum.db,
+        color: traceColor(t.colorIndex),
+        ...(t.dash !== undefined ? { dash: t.dash } : {}),
+      });
+    }
+    if (traces.length > 0) fftTraces = traces;
   }
 
   return (
@@ -672,6 +709,19 @@ export function SimPanel() {
                       <span className="trace-swatch" style={{ background: traceColor(i) }} />
                       <span className="trace-name">{name}</span>
                     </label>
+                    {canFft && (
+                      <button
+                        type="button"
+                        className={`fft-toggle${fftKeys.has(name) ? ' fft-toggle-on' : ''}`}
+                        aria-pressed={fftKeys.has(name)}
+                        title="toggle the FFT of this trace in the spectrum plot"
+                        onClick={() => {
+                          toggleFft(name);
+                        }}
+                      >
+                        FFT
+                      </button>
+                    )}
                   </li>
                 ))}
                 {mathExprs.map((expr, i) => (
@@ -727,6 +777,14 @@ export function SimPanel() {
                     xLabel={plot.xLabel}
                     yLabel={plot.yLabel}
                   />
+                  {fftTraces && (
+                    <Plot
+                      traces={fftTraces}
+                      logX
+                      xLabel="frequency"
+                      yLabel="dB"
+                    />
+                  )}
                 </div>
               )}
             </>

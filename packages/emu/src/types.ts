@@ -3,9 +3,9 @@
  *
  * An McuCore runs real firmware cycle-by-cycle and exposes exactly the
  * surfaces the co-sim loop needs: digital pin edges out, external pin
- * drive in, a UART byte stream both ways, and an inspectable machine
- * state. Everything analog (ADC, comparators) belongs to the co-sim
- * slice and is deliberately absent here.
+ * drive in, a UART byte stream both ways, an ADC fed by a host-side
+ * voltage sampler, and an inspectable machine state. Analog
+ * comparators remain out of scope.
  */
 
 /** A digital logic level. Analog values are out of scope for v0.5. */
@@ -34,6 +34,24 @@ export interface McuStepResult {
   /** Output pin edges observed during this step, in order. */
   events: PinEvent[];
 }
+
+/** One completed ADC conversion — the co-sim honesty readout unit. */
+export interface AdcReadRequest {
+  /**
+   * Mux channel latched at conversion start (ADMUX MUX bits): 0-7 are
+   * the ADC pins, 8 is the temperature sensor, 14/15 are the internal
+   * 1.1 V bandgap and GND.
+   */
+  channel: number;
+  /** Absolute CPU cycle count at conversion COMPLETION. */
+  cycle: number;
+}
+
+/**
+ * Host-side analog source. Called at conversion COMPLETION time — the
+ * co-sim hard sync point — and returns the channel's voltage in volts.
+ */
+export type AdcSampler = (channel: number, cycle: number) => number;
 
 /** Snapshot of core machine state for debugging / assertions. */
 export interface McuState {
@@ -72,6 +90,27 @@ export interface McuCore {
 
   /** MCU → host: all UART bytes transmitted since the last drain. */
   drainUart(): Uint8Array;
+
+  /**
+   * Install the analog source the ADC consults when a conversion
+   * completes. The returned voltage is quantized to 10 bits as
+   * clamp(round(volts / vref * 1023), 0, 1023). Without a sampler,
+   * every conversion reads 0 V. The sampler survives reset(), like
+   * loaded firmware: it is bench wiring, not machine state.
+   *
+   * Optional in the contract only because not every core has an ADC
+   * (and existing co-sim fakes predate it); Atmega328pCore always
+   * implements it.
+   */
+  setAdcSampler?(fn: AdcSampler): void;
+
+  /**
+   * All ADC conversions completed since the last drain, in completion
+   * order — the honesty readout that lets the co-sim loop verify what
+   * the firmware actually sampled. Optional for the same reason as
+   * setAdcSampler.
+   */
+  drainAdcReads?(): AdcReadRequest[];
 
   /** Snapshot pc / cycles / SREG / SP. */
   inspect(): McuState;

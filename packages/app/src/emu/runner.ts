@@ -76,7 +76,8 @@ export interface EmuSession {
   /** Lazily boots the core (once) and loads Intel-HEX firmware.
    *  Errors come back as values — bad hex never throws into the panel. */
   load(hex: Uint8Array | string): Promise<EmuLoadOutcome>;
-  /** One animation frame of emulation; no-op before a successful load. */
+  /** One animation frame of emulation; no-op before a successful load
+   *  and while suspended. */
   runFrame(): EmuFrameResult;
   /** Write text into the core's UART receiver, byte by byte (7-bit ASCII). */
   sendSerial(text: string): void;
@@ -96,6 +97,15 @@ export interface EmuSession {
   /** Every pin name seen in events since load/reset, sorted. */
   pins(): string[];
   inspect(): McuInspection | null;
+  /** The loaded MCU core, for a borrower (co-sim) to step directly;
+   *  null until firmware has loaded successfully. */
+  getCore(): McuCore | null;
+  /** Exclusive-borrow latch: while suspended, runFrame() is a no-op, so
+   *  the Firmware panel's RAF loop (if any is alive) cannot advance the
+   *  core underneath a borrower stepping it deterministically. */
+  suspend(): void;
+  resume(): void;
+  readonly suspended: boolean;
 }
 
 export function createEmuSession(opts: EmuSessionOpts = {}): EmuSession {
@@ -105,6 +115,7 @@ export function createEmuSession(opts: EmuSessionOpts = {}): EmuSession {
   let modulePromise: Promise<Partial<EmuModule>> | null = null;
   let core: McuCore | null = null;
   let loaded = false;
+  let suspended = false;
   let cycles = 0;
   let ring: PinEvent[] = [];
   let serial = '';
@@ -156,7 +167,7 @@ export function createEmuSession(opts: EmuSessionOpts = {}): EmuSession {
   };
 
   const runFrame = (): EmuFrameResult => {
-    if (core === null || !loaded) return { cycles: 0, events: 0 };
+    if (core === null || !loaded || suspended) return { cycles: 0, events: 0 };
     const budget = frameCycleBudget(core.clockHz);
     const chunk = frameChunkSize(core.clockHz);
     const deadline = now() + FRAME_WALL_BUDGET_MS;
@@ -217,5 +228,23 @@ export function createEmuSession(opts: EmuSessionOpts = {}): EmuSession {
     },
     pins: () => [...pinSet].sort(),
     inspect: () => (core !== null && loaded ? core.inspect() : null),
+    getCore: () => (core !== null && loaded ? core : null),
+    suspend: () => {
+      suspended = true;
+    },
+    resume: () => {
+      suspended = false;
+    },
+    get suspended() {
+      return suspended;
+    },
   };
 }
+
+/**
+ * The app-wide shared session. Module-level so firmware, cycles, and
+ * serial history survive tab switches; the Firmware panel drives its run
+ * loop, and the co-sim runner borrows its loaded core (suspending the
+ * run loop for the duration — see src/cosim/runner.ts).
+ */
+export const sharedEmuSession: EmuSession = createEmuSession();

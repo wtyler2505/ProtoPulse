@@ -1,6 +1,9 @@
+import { SimWorkerClient, simWorkerSupported } from './worker.js';
+
 import type {
   Analysis,
   FidelityEntry,
+  McTrial,
   MonteCarloResult,
   MonteCarloSpec,
   SimModule,
@@ -19,6 +22,15 @@ import type { PartDb } from '@protopulse/parts';
  * pairs don't re-run, and surfaces errors as values — the panel renders
  * them, it never catches. Errors are never served from cache: a retry
  * re-runs.
+ *
+ * Execution placement: in browsers (`typeof Worker !== 'undefined'`)
+ * run/runMonteCarlo/runStep build their netlists on the main thread
+ * (cheap, pure) and ship them to the sim worker (worker.ts) so ngspice
+ * never blocks the UI. Under node — and whenever the loaded module
+ * lacks the netlist-planning entry points — the inline lazy-import path
+ * runs exactly as before. runner.simulate() (the Analyst) and the
+ * co-sim closed loop stay inline by design: see worker.ts for why the
+ * quantum loop would serialize poorly.
  */
 
 export type SimOutcome =
@@ -86,7 +98,25 @@ export interface SimRunner {
   simulate: SimulateFn;
 }
 
-export function createSimRunner(loader: SimModuleLoader = defaultLoader): SimRunner {
+export interface SimRunnerOpts {
+  /**
+   * Worker client for run/runMonteCarlo/runStep; null forces the inline
+   * path. Default: a real SimWorkerClient where Worker exists
+   * (browsers), null elsewhere (node tests — behavior unchanged).
+   */
+  workerClient?: SimWorkerClient | null;
+}
+
+export function createSimRunner(
+  loader: SimModuleLoader = defaultLoader,
+  opts: SimRunnerOpts = {},
+): SimRunner {
+  const workerClient =
+    opts.workerClient !== undefined
+      ? opts.workerClient
+      : simWorkerSupported()
+        ? new SimWorkerClient()
+        : null;
   let modulePromise: Promise<Partial<SimModule>> | null = null;
   const cache = new Map<string, { ok: true; result: unknown; fidelity: string } | { ok: false; error: string }>();
 
@@ -134,7 +164,13 @@ export function createSimRunner(loader: SimModuleLoader = defaultLoader): SimRun
   ): Promise<SimOutcome> =>
     runCached(
       `sim:${key.branch}@${String(key.opsVersion)}@${JSON.stringify(analysis)}`,
-      async (_mod) => {
+      async (mod) => {
+        if (workerClient && typeof mod.generateSpiceNetlist === 'function') {
+          // Worker path: netlist on the main thread, SPICE off it.
+          const { netlist, manifest } = mod.generateSpiceNetlist(graph, parts);
+          const result = await workerClient.simulate(netlist, analysis);
+          return { result: { ...result, manifest }, manifest };
+        }
         const result = await simulate(graph, parts, analysis);
         return { result, manifest: result.manifest };
       },
@@ -147,6 +183,22 @@ export function createSimRunner(loader: SimModuleLoader = defaultLoader): SimRun
     key: SimRunKey,
   ): Promise<McOutcome> =>
     runCached(`mc:${key.branch}@${String(key.opsVersion)}@${JSON.stringify(spec)}`, async (mod) => {
+      if (workerClient && typeof mod.planMonteCarloNetlists === 'function') {
+        // Worker path: pre-jittered decks here, execution over there.
+        const plan = mod.planMonteCarloNetlists(graph, parts, spec);
+        const results = await workerClient.runBatch(
+          'mc',
+          plan.decks.map((d) => d.netlist),
+          spec.base,
+        );
+        const trials: McTrial[] = results.map((r, i) => ({
+          ...r,
+          trial: i,
+          jitter: plan.decks[i]?.jitter ?? {},
+        }));
+        const result: MonteCarloResult = { trials, manifest: plan.manifest, seed: plan.seed };
+        return { result, manifest: plan.manifest };
+      }
       if (typeof mod.simulateMonteCarlo !== 'function') {
         throw new Error(
           'Monte Carlo not available yet — this @protopulse/sim build lacks simulateMonteCarlo',
@@ -163,6 +215,20 @@ export function createSimRunner(loader: SimModuleLoader = defaultLoader): SimRun
     key: SimRunKey,
   ): Promise<StepOutcome> =>
     runCached(`step:${key.branch}@${String(key.opsVersion)}@${JSON.stringify(spec)}`, async (mod) => {
+      if (workerClient && typeof mod.planStepNetlists === 'function') {
+        // Worker path: one deck per stepped value, zipped back by index.
+        const plan = mod.planStepNetlists(graph, parts, spec);
+        const results = await workerClient.runBatch(
+          'step',
+          plan.decks.map((d) => d.netlist),
+          spec.base,
+        );
+        const result: StepResult = {
+          runs: results.map((r, i) => ({ ...r, value: plan.decks[i]?.value ?? '' })),
+          manifest: plan.manifest,
+        };
+        return { result, manifest: plan.manifest };
+      }
       if (typeof mod.simulateStep !== 'function') {
         throw new Error('Stepping not available yet — this @protopulse/sim build lacks simulateStep');
       }

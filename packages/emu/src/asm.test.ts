@@ -1,6 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
-import { BRNE, CBI, DEC, IN, LDI, LDS, NOP, OUT, RJMP, SBI, STS, assemble } from './asm.js';
+import {
+  ANDI,
+  BRLO,
+  BRNE,
+  BRSH,
+  CBI,
+  CPI,
+  DEC,
+  IN,
+  LDI,
+  LDS,
+  NOP,
+  ORI,
+  OUT,
+  RJMP,
+  SBI,
+  SBRC,
+  SBRS,
+  STS,
+  assemble,
+} from './asm.js';
 
 // Expected words cross-checked against avr-gcc disassembly of the same
 // mnemonics (e.g. `sbi 0x05, 5` → 0x9A2D, `rjmp .-2` → 0xCFFF).
@@ -40,6 +60,34 @@ describe('opcode encodings', () => {
 
   it('BRNE uses a 7-bit two’s-complement word offset', () => {
     expect(BRNE(-2)).toBe(0xf7f1); // brne .-4 (classic delay loop)
+  });
+
+  it('ORI/ANDI/CPI share the LDI-style immediate split with their own prefixes', () => {
+    expect(ORI(16, 0x40)).toBe(0x6400); // ori r16, 0x40
+    expect(ANDI(17, 0x0f)).toBe(0x701f); // andi r17, 0x0F
+    expect(CPI(19, 0x80)).toBe(0x3830); // cpi r19, 0x80
+    expect(CPI(16, 0x00)).toBe(0x3000); // cpi r16, 0
+  });
+
+  it('SBRC/SBRS pack register and bit with the skip-direction bit', () => {
+    expect(SBRC(17, 6)).toBe(0xfd16); // sbrc r17, 6
+    expect(SBRS(17, 6)).toBe(0xff16); // sbrs r17, 6
+  });
+
+  it('BRLO/BRSH are BRBS/BRBC on the carry flag (SREG bit 0)', () => {
+    expect(BRLO(-2)).toBe(0xf3f0); // brlo .-4
+    expect(BRLO(0)).toBe(0xf000); // brlo .+0
+    expect(BRSH(1)).toBe(0xf408); // brsh .+2
+  });
+
+  it('rejects out-of-range operands on the new opcodes', () => {
+    expect(() => ORI(5, 0)).toThrow(/ORI register out of range/);
+    expect(() => ANDI(16, 256)).toThrow(/ANDI constant out of range/);
+    expect(() => CPI(15, 0)).toThrow(/CPI register out of range/);
+    expect(() => SBRC(32, 0)).toThrow(/SBRC register out of range/);
+    expect(() => SBRS(0, 8)).toThrow(/SBRS bit out of range/);
+    expect(() => BRLO(64)).toThrow(/BRLO offset out of range/);
+    expect(() => BRSH(-65)).toThrow(/BRSH offset out of range/);
   });
 
   it('STS/LDS emit two words: opcode then raw data address', () => {

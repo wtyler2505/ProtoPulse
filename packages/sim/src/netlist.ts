@@ -23,6 +23,12 @@ export interface NetlistOpts {
    * parameter stepping; the graph itself is never mutated.
    */
   valueOverrides?: ReadonlyMap<Uuid, string>;
+  /**
+   * Extra SPICE cards appended verbatim after the element and model
+   * lines. Used by the co-sim bus (Vol II §D.3) to inject PWL sources
+   * that stand in for MCU pin drivers; the graph itself never sees them.
+   */
+  extraCards?: readonly string[];
 }
 
 export interface NetlistResult {
@@ -178,6 +184,7 @@ export function generateSpiceNetlist(
     `* ${opts.title ?? 'ProtoPulse design'}`,
     ...elementLines,
     ...[...modelCards].sort(),
+    ...(opts.extraCards ?? []),
   ];
   return { netlist: `${lines.join('\n')}\n`, manifest, nodeOf };
 }

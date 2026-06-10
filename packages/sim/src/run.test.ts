@@ -9,7 +9,7 @@ import { SpiceEngine, vectorByName } from './engine.js';
 import { fidelitySummary, simulate } from './run.js';
 
 import type { FidelityEntry } from './models.js';
-import type { DesignGraph } from '@protopulse/graph';
+import type { DesignGraph, OpBody } from '@protopulse/graph';
 
 const parts = seedPartDb();
 
@@ -70,6 +70,101 @@ describe('simulate — led-resistor golden fixture end to end', () => {
     expect(result.points).toBe(1);
     const vBat = vectorByName(result, 'v(vbat)');
     expect(vBat?.values[0]).toBeCloseTo(9, 6);
+  });
+});
+
+function graphOf(ops: OpBody[]): DesignGraph {
+  return materialize(ops.map((op, i) => ({ actor: 't', lamport: i + 1, ts: 0, op }))).graph;
+}
+
+/** Battery driving a 10k/10k divider; fields.ac optionally set on BT1. */
+function dividerOps(ac: string | null): OpBody[] {
+  const ops: OpBody[] = [
+    { kind: 'add_component', id: 'bat', ref: 'BT1', partId: 'core:battery', partRev: 1, value: '5V' },
+    { kind: 'add_component', id: 'r1', ref: 'R1', partId: 'core:resistor', partRev: 1, value: '10k' },
+    { kind: 'add_component', id: 'r2', ref: 'R2', partId: 'core:resistor', partRev: 1, value: '10k' },
+    { kind: 'connect', port: 'bat:+', newNetId: 'nin' },
+    { kind: 'connect', port: 'r1:1', netId: 'nin' },
+    { kind: 'connect', port: 'r1:2', newNetId: 'nout' },
+    { kind: 'connect', port: 'r2:1', netId: 'nout' },
+    { kind: 'connect', port: 'r2:2', newNetId: 'ng' },
+    { kind: 'connect', port: 'bat:-', netId: 'ng' },
+    { kind: 'rename_net', netId: 'nin', name: 'IN' },
+    { kind: 'rename_net', netId: 'nout', name: 'OUT' },
+    { kind: 'rename_net', netId: 'ng', name: 'GND' },
+  ];
+  if (ac !== null) {
+    ops.push({ kind: 'set_component_props', id: 'bat', props: { fields: { ac } } });
+  }
+  return ops;
+}
+
+describe('simulate — graph-driven AC and noise via fields.ac', () => {
+  it('runs a graph-driven .ac end to end: the divider reads ~0.5 across the band', async () => {
+    const result = await simulate(
+      graphOf(dividerOps('1')),
+      parts,
+      { kind: 'ac', variation: 'dec', points: 5, fStart: 10, fStop: 1e5 },
+      { engine },
+    );
+    expect(result.points).toBeGreaterThan(0);
+    const out = vectorByName(result, 'v(out)');
+    expect(out).toBeDefined();
+    expect(out?.imag).toBeDefined();
+    for (let i = 0; i < (out?.values.length ?? 0); i++) {
+      const mag = Math.hypot(out?.values[i] ?? NaN, out?.imag?.[i] ?? NaN);
+      expect(mag).toBeGreaterThan(0.499);
+      expect(mag).toBeLessThan(0.501);
+    }
+    // The manifest is honest about where the AC magnitude came from.
+    expect(result.manifest.find((e) => e.ref === 'BT1')?.note).toContain(
+      'AC small-signal magnitude 1 (fields.ac)',
+    );
+  });
+
+  it('runs a graph-driven .noise end to end (previously: "no AC value" error)', async () => {
+    const result = await simulate(
+      graphOf(dividerOps('1')),
+      parts,
+      {
+        kind: 'noise',
+        output: 'out',
+        source: 'VBT1',
+        variation: 'dec',
+        points: 5,
+        fStart: 10,
+        fStop: 1e5,
+      },
+      { engine },
+    );
+    expect(result.analysis.kind).toBe('noise');
+    expect(result.points).toBeGreaterThan(0);
+    const onoise = vectorByName(result, 'onoise_spectrum');
+    expect(onoise).toBeDefined();
+    // Thermal noise of 10k ∥ 10k is flat: 4kTR ≈ 8.3e-17 V²/Hz.
+    for (const v of onoise?.values ?? []) {
+      expect(v).toBeGreaterThan(0);
+      expect(v).toBeLessThan(1e-6);
+    }
+  });
+
+  it('still rejects .noise without fields.ac — the field is what unlocks it', async () => {
+    await expect(
+      simulate(
+        graphOf(dividerOps(null)),
+        parts,
+        {
+          kind: 'noise',
+          output: 'out',
+          source: 'VBT1',
+          variation: 'dec',
+          points: 5,
+          fStart: 10,
+          fStop: 1e5,
+        },
+        { engine },
+      ),
+    ).rejects.toThrow(/no AC value/i);
   });
 });
 

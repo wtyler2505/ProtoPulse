@@ -2,6 +2,58 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — walkaround routing + the Lab stragglers
+
+### Added
+- `@protopulse/route`: walkaround interactive routing (Vol II E.1 first
+  slice) — obstacle hulls inflated by clearance+width, flatbush broad
+  phase, CW/CCW corner walks with recursion cap; 'manual | walk' toggle
+  on the PCB trace tool with blocked-corridor refusal. 39 tests.
+- Sim worker (ngspice off the main thread, node fallback preserved),
+  plot FFT (radix-2 + Hann over resampled windows, per-trace toggle,
+  log-x dB spectrum plot), AC-capable battery/rail emitters via
+  fields.ac — graph-driven .ac and .noise now run end-to-end.
+- Seam fixes from the parallel build: distributive worker-request types,
+  traceMode initializer, and the FFT spectrum plot actually rendered
+  (the computation existed; the lint gate caught the missing render).
+
+## 2026-06-10 — v0.5 third slice: the loop closes
+
+### Added
+- `@protopulse/emu`: ADC peripheral (datasheet-accurate 25/13-clock
+  conversions, completion-time host sampler — the D.3 hard sync point),
+  assembler grows CPI/branch opcodes; bang-bang firmware verified
+  reacting to analog input. 69 emu tests.
+- `@protopulse/cosim`: runCosimClosedLoop — conservative quantum loop
+  with comparator-fed digital inputs (VIH/VIL + hysteresis), ADC
+  sampling against the previous solve, and loudly-counted from-zero
+  re-solves. THE closed-loop test passes: firmware charges an RC node
+  through its own pin, reads it back, and regulates — sustained
+  oscillation around its 2.5V threshold. 65 cosim tests.
+- App: closed-loop mode in the Co-sim panel (input/ADC bindings,
+  quantum field, re-solve/ADC-read honesty readout). 304 app tests.
+
+### Known gaps (ROADMAP.md)
+- WebSerial flashing (hardware required), RP2040/ESP32 cores, solver
+  state continuity (currently O(quanta²) re-solves, counted honestly).
+
+## 2026-06-10 — v0.5 second slice: the co-sim bus (the crown jewel, one way)
+
+### Added
+- `@protopulse/cosim`: firmware GPIO edges become PWL sources behind a
+  series-Rout behavioral boundary, injected via sim's additive
+  extraCards hook. The thesis test runs real avr8js blink firmware into
+  a real ngspice RC low-pass: 0.94Vpp settled ripple measured vs ~0.9Vpp
+  predicted. 31 tests.
+- App: Co-sim panel — pin→net bindings, window/step controls, the Vol II
+  D.3 slowdown-factor honesty readout, digital traces stacked above the
+  analog response in one plot. Shared emu session with a documented
+  suspend/reset borrow protocol. 36 new tests (app at 284).
+
+### Known gaps (ROADMAP.md)
+- Feedback direction (digital inputs + ADC hard sync), WebSerial
+  flashing, RP2040/ESP32 cores.
+
 ## 2026-06-10 — v0.5 first slice: The Bridge — firmware in the loop
 
 ### Added
