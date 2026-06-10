@@ -65,6 +65,7 @@ export class SessionCore {
   private graphCache = new Map<string, DesignGraph>();
   private findingsCache = new Map<string, Finding[]>();
   private diffCache = new Map<string, GraphDelta>();
+  private replayCache = new Map<string, DesignGraph>();
 
   constructor(designId: string, log?: BranchLog) {
     this.designId = designId;
@@ -105,6 +106,24 @@ export class SessionCore {
     return graph;
   }
 
+  /** The graph after only the first `count` ops of `branch` — replay
+   *  time-travel. The design IS its op-log, so any moment in its history
+   *  is just a prefix materialization. Memoized per (branch, version,
+   *  count) with a larger budget than head graphs: scrubbing touches
+   *  many prefixes of the same log. */
+  graphAt(branch: string, count: number): DesignGraph {
+    const ops = this.log.opsFor(branch);
+    const n = Math.max(0, Math.min(Math.floor(count), ops.length));
+    if (n === ops.length) return this.graphFor(branch);
+    const key = `${branch}@${String(this.version)}#${String(n)}`;
+    const hit = this.replayCache.get(key);
+    if (hit) return hit;
+    if (this.replayCache.size > 64) this.replayCache.clear();
+    const graph = materialize(ops.slice(0, n)).graph;
+    this.replayCache.set(key, graph);
+    return graph;
+  }
+
   /** ERC findings for a branch head, memoized like graphFor. */
   findingsFor(branch: string): Finding[] {
     const key = `${branch}@${String(this.version)}`;
@@ -141,6 +160,10 @@ export interface SessionState {
   selection: ReadonlySet<string>;
   /** Branch name to diff the current branch against (overlay), or null. */
   diffAgainst: string | null;
+  /** Time-travel position: materialize only the first N ops of the
+   *  current branch (0..opCount). null = live head. The session is
+   *  read-only while replaying — dispatch/undo/redo refuse. */
+  replayIndex: number | null;
   canUndo: boolean;
   canRedo: boolean;
 
@@ -152,6 +175,8 @@ export interface SessionState {
   setSelection: (ids: Iterable<string>) => void;
   clearSelection: () => void;
   setDiffAgainst: (name: string | null) => void;
+  /** Enter/scrub/exit replay; the index clamps to [0, opCount]. */
+  setReplayIndex: (index: number | null) => void;
   replaceWithBundle: (bundle: DesignBundle) => void;
 }
 
@@ -165,11 +190,16 @@ export function createSessionStore(initial?: DesignBundle) {
     opsVersion: 0,
     selection: new Set<string>(),
     diffAgainst: null,
+    replayIndex: null,
     canUndo: false,
     canRedo: false,
 
     dispatch: (ops, label = 'edit', meta) => {
       if (ops.length === 0) return false;
+      if (get().replayIndex !== null) {
+        console.warn('dispatch ignored: the session is replaying history (read-only)');
+        return false;
+      }
       const { core: c, branch, opsVersion } = get();
       const before = c.graphFor(branch);
       const first = ops[0];
@@ -193,6 +223,7 @@ export function createSessionStore(initial?: DesignBundle) {
     },
 
     undo: () => {
+      if (get().replayIndex !== null) return;
       const { core: c, branch, opsVersion } = get();
       const entry = c.undoStack.pop();
       if (!entry) return;
@@ -213,6 +244,7 @@ export function createSessionStore(initial?: DesignBundle) {
     },
 
     redo: () => {
+      if (get().replayIndex !== null) return;
       const { core: c, branch, opsVersion } = get();
       const entry = c.redoStack.pop();
       if (!entry) return;
@@ -238,6 +270,7 @@ export function createSessionStore(initial?: DesignBundle) {
         branch: trimmed,
         opsVersion: opsVersion + 1,
         selection: new Set<string>(),
+        replayIndex: null,
         canUndo: false,
         canRedo: false,
       });
@@ -256,6 +289,7 @@ export function createSessionStore(initial?: DesignBundle) {
         opsVersion: opsVersion + 1,
         selection: new Set<string>(),
         diffAgainst: diffAgainst === name ? null : diffAgainst,
+        replayIndex: null,
         canUndo: false,
         canRedo: false,
       });
@@ -274,6 +308,17 @@ export function createSessionStore(initial?: DesignBundle) {
       set({ diffAgainst: name === branch ? null : name });
     },
 
+    setReplayIndex: (index) => {
+      if (index === null) {
+        set({ replayIndex: null });
+        return;
+      }
+      const { core: c, branch } = get();
+      const clamped = Math.max(0, Math.min(Math.floor(index), c.opCount(branch)));
+      // A past graph may not contain the current selection — drop it.
+      set({ replayIndex: clamped, selection: new Set<string>() });
+    },
+
     replaceWithBundle: (bundle) => {
       const next = SessionCore.fromBundle(bundle);
       set({
@@ -283,6 +328,7 @@ export function createSessionStore(initial?: DesignBundle) {
         opsVersion: get().opsVersion + 1,
         selection: new Set<string>(),
         diffAgainst: null,
+        replayIndex: null,
         canUndo: false,
         canRedo: false,
       });
@@ -297,8 +343,12 @@ export const useSession: SessionStore = createSessionStore();
 
 // ── Derived accessors (memoized in core, keyed on branch+version) ────
 
+/** The graph every view renders: the live head, or — while replaying —
+ *  the prefix materialization at the scrub position. */
 export function getGraph(s: SessionState): DesignGraph {
-  return s.core.graphFor(s.branch);
+  return s.replayIndex === null
+    ? s.core.graphFor(s.branch)
+    : s.core.graphAt(s.branch, s.replayIndex);
 }
 
 export function getFindings(s: SessionState): Finding[] {

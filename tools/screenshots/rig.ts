@@ -98,21 +98,23 @@ const LAYOUTS: Record<string, LayoutSpec> = {
   'led-resistor': LED_RESISTOR_LAYOUT,
 };
 
-interface OpEnvelope {
+export interface RigOpEnvelope {
   actor: string;
   lamport: number;
   ts: number;
   op: Record<string, unknown>;
 }
 
-interface BundleShape {
+export interface RigBundle {
   head: string;
-  branches: { name: string; ops: OpEnvelope[] }[];
+  branches: { name: string; ops: RigOpEnvelope[] }[];
 }
+
+type BundleShape = RigBundle;
 
 /** Load a golden fixture bundle and append the rig's layout ops to its
  *  main branch — pure data transform, deterministic by construction. */
-function fixtureBundle(name: string): string {
+export function fixtureBundle(name: string): string {
   const raw = readFileSync(path.join(FIXTURES, name, 'design.ppx.json'), 'utf8');
   const layout = LAYOUTS[name];
   if (!layout) return raw;
@@ -200,7 +202,7 @@ export function stopServer(child: ChildProcess | null): void {
 export async function openEditor(
   browser: Browser,
   fixture: string,
-  opts?: { viewport?: { width: number; height: number } },
+  opts?: { viewport?: { width: number; height: number }; bundle?: string },
 ): Promise<Page> {
   const context = await browser.newContext({
     viewport: opts?.viewport ?? VIEWPORT,
@@ -213,7 +215,7 @@ export async function openEditor(
       // The Branches panel names new branches via window.prompt (M1 cut).
       window.prompt = () => branchName;
     },
-    { bundle: fixtureBundle(fixture), branchName: BRANCH_NAME },
+    { bundle: opts?.bundle ?? fixtureBundle(fixture), branchName: BRANCH_NAME },
   );
   await page.goto(BASE_URL, { waitUntil: 'load' });
   await page.waitForSelector('.canvas-wrap canvas', { timeout: 20_000 });
@@ -309,6 +311,36 @@ export function selectField(page: Page, label: string) {
       has: page.locator('.sim-field-label', { hasText: new RegExp(`^${label}$`) }),
     })
     .locator('select');
+}
+
+/** Cosmetic narration overlay for animated captures — exists only in
+ *  the recording session, never in the real app. */
+export async function caption(page: Page, text: string): Promise<void> {
+  await page.evaluate((t: string) => {
+    let el = document.getElementById('pp-gif-caption');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'pp-gif-caption';
+      el.style.cssText = [
+        'position:fixed',
+        'left:50%',
+        'bottom:18px',
+        'transform:translateX(-50%)',
+        'background:rgba(10,14,20,0.92)',
+        'border:1px solid rgba(120,160,255,0.45)',
+        'border-radius:999px',
+        'padding:8px 18px',
+        'color:#dbe6ff',
+        'font:600 15px/1.3 system-ui,sans-serif',
+        'letter-spacing:0.2px',
+        'z-index:99999',
+        'pointer-events:none',
+        'box-shadow:0 4px 18px rgba(0,0,0,0.5)',
+      ].join(';');
+      document.body.appendChild(el);
+    }
+    el.textContent = t;
+  }, text);
 }
 
 // ── Firmware: the classic blink, hand-assembled (see packages/emu) ──

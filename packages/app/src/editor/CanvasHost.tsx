@@ -360,7 +360,8 @@ export function CanvasHost() {
       // Branch switches have no delta relating the two heads, so the
       // pcb path falls back to a full rebuild there.
       const session = useSession.getState();
-      const key = `${session.branch}@${String(session.opsVersion)}`;
+      const replay = session.replayIndex === null ? 'live' : String(session.replayIndex);
+      const key = `${session.branch}@${String(session.opsVersion)}#${replay}`;
       if (key !== graphKey) {
         const next = getGraph(session);
         if (isPcb) {

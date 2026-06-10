@@ -2,6 +2,23 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — time-lapse replay (History tab) + demo media rig
+
+### Added
+- **History tab** in the new editor: time-lapse replay of the op-log.
+  The design IS its op-log, so any moment is a prefix materialization —
+  scrub the slider, press play (3 speeds), or click any op to jump.
+  Every graph reader (canvas, Inspector) follows the scrub position;
+  the session is read-only until "Back to live" (dispatch/undo/redo
+  refuse, branch switches exit replay). Status bar shows ⏪ replay k/N.
+- `describeOp` — one human-readable line per op kind for the History
+  list (pure, payload-only; ops are self-contained by design).
+- Demo media rig: `tools/screenshots/capture-gif.ts` (co-sim story →
+  `cosim-demo.gif`) and `capture-replay-gif.ts` (the 555 fixture
+  building itself via the real History scrubber → `replay-demo.gif`),
+  encoded pure-JS (gifenc + pngjs) with global palette + inter-frame
+  diff transparency. Embedded in README and USER_GUIDE §19.
+
 ## 2026-06-10 — walkaround routing + the Lab stragglers
 
 ### Added

@@ -14,6 +14,7 @@ import { DrcPanel } from './panels/DrcPanel.js';
 import { ErcPanel } from './panels/ErcPanel.js';
 import { ExportPanel } from './panels/ExportPanel.js';
 import { FirmwarePanel } from './panels/FirmwarePanel.js';
+import { HistoryPanel } from './panels/HistoryPanel.js';
 import { Inspector } from './panels/Inspector.js';
 import { Palette } from './panels/Palette.js';
 import { PcbTray } from './panels/PcbTray.js';
@@ -32,6 +33,7 @@ const SCHEMATIC_TABS: { id: TabId; label: string }[] = [
   { id: 'erc', label: 'ERC' },
   { id: 'review', label: 'Review' },
   { id: 'branches', label: 'Branches' },
+  { id: 'history', label: 'History' },
   { id: 'export', label: 'Export' },
   { id: 'draftsman', label: 'Draftsman' },
   { id: 'sim', label: 'Sim' },
@@ -184,6 +186,7 @@ function StatusBar() {
   const activeLayer = useUi((s) => s.activeLayer);
   const opsVersion = useSession((s) => s.opsVersion);
   void opsVersion;
+  const replayIndex = useSession((s) => s.replayIndex);
   const state = useSession.getState();
   const opCount = getOpCount(state);
   const findings = getFindings(state);
@@ -208,6 +211,11 @@ function StatusBar() {
           : '—'}
       </span>
       <span className="status-cell">{opCount} ops</span>
+      {replayIndex !== null && (
+        <span className="status-cell status-replay" title="time-travel replay — editing paused">
+          ⏪ replay {replayIndex}/{opCount}
+        </span>
+      )}
       {viewMode === 'pcb' && (
         <span className="status-cell" title="active layer · width new traces route at">
           {activeLayer} · trace {(DEFAULT_TRACE_WIDTH_NM / MM).toFixed(2)} mm
@@ -250,6 +258,7 @@ function SidePanel() {
       {activeTab === 'review' && <ReviewPanel />}
       {activeTab === 'drc' && <DrcPanel />}
       {activeTab === 'branches' && <BranchPanel />}
+      {activeTab === 'history' && <HistoryPanel />}
       {activeTab === 'export' && <ExportPanel />}
       {activeTab === 'draftsman' && <DraftsmanPanel />}
       {activeTab === 'sim' && <SimPanel />}

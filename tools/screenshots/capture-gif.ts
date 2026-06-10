@@ -27,6 +27,7 @@ import { encodeGif } from './gif';
 import {
   blinkFirmware,
   bytesToIntelHex,
+  caption,
   CHROME,
   closeEditor,
   ensureServer,
@@ -61,35 +62,6 @@ class Recorder {
     const png = await this.page.screenshot();
     this.frames.push({ png, delayMs });
   }
-}
-
-/** Cosmetic narration overlay — exists only in the recording session. */
-async function caption(page: Page, text: string): Promise<void> {
-  await page.evaluate((t: string) => {
-    let el = document.getElementById('pp-gif-caption');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'pp-gif-caption';
-      el.style.cssText = [
-        'position:fixed',
-        'left:50%',
-        'bottom:18px',
-        'transform:translateX(-50%)',
-        'background:rgba(10,14,20,0.92)',
-        'border:1px solid rgba(120,160,255,0.45)',
-        'border-radius:999px',
-        'padding:8px 18px',
-        'color:#dbe6ff',
-        'font:600 15px/1.3 system-ui,sans-serif',
-        'letter-spacing:0.2px',
-        'z-index:99999',
-        'pointer-events:none',
-        'box-shadow:0 4px 18px rgba(0,0,0,0.5)',
-      ].join(';');
-      document.body.appendChild(el);
-    }
-    el.textContent = t;
-  }, text);
 }
 
 async function recordCosimStory(): Promise<GifFrame[]> {

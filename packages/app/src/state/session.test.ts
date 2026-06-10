@@ -149,3 +149,72 @@ describe('selection', () => {
     expect(store.getState().selection.size).toBe(0);
   });
 });
+
+describe('replay (time-travel)', () => {
+  function threeOps(store: ReturnType<typeof createSessionStore>): void {
+    store.getState().dispatch(placeResistor('r1', 'R1'), 'add R1');
+    store.getState().dispatch(placeResistor('r2', 'R2', 10 * G), 'add R2');
+    store.getState().dispatch(placeResistor('r3', 'R3', 20 * G), 'add R3');
+  }
+
+  it('getGraph returns the prefix materialization at the scrub position', () => {
+    const store = createSessionStore();
+    threeOps(store);
+    store.getState().setReplayIndex(1);
+    expect(getGraph(store.getState()).components.size).toBe(1);
+    store.getState().setReplayIndex(2);
+    expect(getGraph(store.getState()).components.size).toBe(2);
+    store.getState().setReplayIndex(0);
+    expect(getGraph(store.getState()).components.size).toBe(0);
+    store.getState().setReplayIndex(null);
+    expect(getGraph(store.getState()).components.size).toBe(3);
+  });
+
+  it('clamps the index to [0, opCount]', () => {
+    const store = createSessionStore();
+    threeOps(store);
+    store.getState().setReplayIndex(99);
+    expect(store.getState().replayIndex).toBe(3);
+    store.getState().setReplayIndex(-5);
+    expect(store.getState().replayIndex).toBe(0);
+  });
+
+  it('the session is read-only while replaying', () => {
+    const store = createSessionStore();
+    threeOps(store);
+    store.getState().setReplayIndex(1);
+    expect(store.getState().dispatch(placeResistor('r4', 'R4', 30 * G))).toBe(false);
+    expect(getOpCount(store.getState())).toBe(3);
+    store.getState().undo();
+    expect(getOpCount(store.getState())).toBe(3); // no inverse appended
+    store.getState().redo();
+    expect(getOpCount(store.getState())).toBe(3);
+  });
+
+  it('entering replay drops the selection (past graphs may lack it)', () => {
+    const store = createSessionStore();
+    threeOps(store);
+    store.getState().setSelection(['r3']);
+    store.getState().setReplayIndex(1);
+    expect(store.getState().selection.size).toBe(0);
+  });
+
+  it('branch switches and bundle loads exit replay', () => {
+    const store = createSessionStore();
+    threeOps(store);
+    store.getState().setReplayIndex(1);
+    store.getState().createBranch('b2');
+    expect(store.getState().replayIndex).toBeNull();
+
+    store.getState().setReplayIndex(1);
+    store.getState().switchBranch('main');
+    expect(store.getState().replayIndex).toBeNull();
+  });
+
+  it('an index at the head equals the live graph', () => {
+    const store = createSessionStore();
+    threeOps(store);
+    store.getState().setReplayIndex(3);
+    expect(getGraph(store.getState()).components.size).toBe(3);
+  });
+});

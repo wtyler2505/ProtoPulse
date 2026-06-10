@@ -7,8 +7,9 @@ screenshots drift like prose unless a machine regenerates them.
 ## Refresh
 
 ```bash
-npx tsx tools/screenshots/capture.ts      # the five stills
-npx tsx tools/screenshots/capture-gif.ts  # cosim-demo.gif (~20 s loop)
+npx tsx tools/screenshots/capture.ts             # the five stills
+npx tsx tools/screenshots/capture-gif.ts         # cosim-demo.gif (~20 s loop)
+npx tsx tools/screenshots/capture-replay-gif.ts  # replay-demo.gif (time-lapse)
 ```
 
 The rig starts the new editor's dev server (`npm run -w @protopulse/app
@@ -56,6 +57,18 @@ unchanged since the previous frame written as a transparent index with
 "keep previous" disposal. That inter-frame diffing is why an 18-frame
 720p GIF lands around 220 KB instead of several MB. Shared rig plumbing
 (fixture bundles, server lifecycle, locator helpers) lives in `rig.ts`.
+
+## The time-lapse demo (`replay-demo.gif`)
+
+`capture-replay-gif.ts` records the History tab replaying the
+traffic-light-555 fixture: the rig rewinds to op 0 through the real
+scrubber, then steps the prefix forward one frame per few ops — the
+design rebuilds itself on the canvas. The fixture's ops are reordered
+into human-drawing order first (`storyOrderBundle`: each add followed
+by its place, nets wired as they connect — same ops, same final graph)
+so the film shows steady visual progress instead of 56 invisible
+electrical ops and a placement burst. The replay feature is the GIF
+generator: point the same script at any fixture.
 
 ## Determinism
 
