@@ -2,6 +2,18 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-10 — serverless share links (v0.6 first slice, early)
+
+### Added
+- **Copy share link** in the Export panel: the whole DesignBundle —
+  op-log, branches and all — deflate-compressed (native
+  CompressionStream, no deps) and base64url-encoded into the URL
+  fragment. No server, no upload; the fragment never leaves the
+  browser. Receiving end loads after a confirm guard (never silently
+  replaces a working design; empty sessions load directly) and strips
+  the hash. Browser-verified: the 67-op traffic-light-555 travels as a
+  2,129-char URL and lands intact in a pristine browser.
+
 ## 2026-06-10 — interactive merge resolver (M1 straggler closed)
 
 ### Added

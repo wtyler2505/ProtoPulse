@@ -23,6 +23,11 @@ got any more good creative/innovative ideas?").
 3. **Serverless share links** — design bundle compressed into a URL
    fragment (#design=...) + read-only viewer route. Forum-pasteable
    live schematics before v0.6's server exists.
+   ✅ SHIPPED 2026-06-10 (core) — `packages/app/src/state/share.ts`
+   (#d= fragment, CompressionStream deflate + base64url), Copy-share-
+   link in Export panel, confirm-guarded receive. 67-op 555 ≈ 2.1k-char
+   URL, verified across browser contexts. Read-only viewer route still
+   open (links load into the full editor for now).
 4. **Blame on canvas** — click any net/component → who/when/why from op
    envelopes (agent ops already carry meta.rationale). Cheap now.
 5. **Sim ghost overlay** — render the last simulation's node voltages

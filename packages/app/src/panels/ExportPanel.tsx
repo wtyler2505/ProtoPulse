@@ -9,6 +9,8 @@ import {
   importFile,
 } from '../state/persistence.js';
 import { getFindings, getGraph, partDb, useSession } from '../state/session.js';
+import { shareUrl } from '../state/share.js';
+import { useUi } from '../state/ui.js';
 
 /** Exports: KiCad netlist + BOM CSV, gated (softly) on ERC errors; plus
  *  whole-design .ppx.json save/load. */
@@ -39,6 +41,23 @@ export function ExportPanel() {
     exportFile(bundleFromCore(s.core, s.branch));
   };
 
+  const copyShareLink = async () => {
+    const s = useSession.getState();
+    try {
+      const url = await shareUrl(bundleFromCore(s.core, s.branch), window.location);
+      await navigator.clipboard.writeText(url);
+      useUi
+        .getState()
+        .flashStatus(
+          `Share link copied (${String(url.length)} chars) — the whole design lives in the URL, no server involved.`,
+        );
+    } catch (err) {
+      useUi
+        .getState()
+        .flashStatus(`Share link failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
   const onImport = async (file: File) => {
     try {
       const bundle = await importFile(file);
@@ -67,6 +86,16 @@ export function ExportPanel() {
       </div>
       <h3 className="panel-subtitle">Design file</h3>
       <div className="export-buttons">
+        <button
+          type="button"
+          className="primary-button"
+          title="the whole design (op-log, branches and all) compressed into a URL — no server, no upload"
+          onClick={() => {
+            void copyShareLink();
+          }}
+        >
+          Copy share link
+        </button>
         <button type="button" onClick={exportDesign}>
           Save design (.ppx.json)
         </button>

@@ -1215,6 +1215,7 @@ Then open `http://localhost:5174` (the main app stays on port 5000).
 - **History (time-lapse replay)** — every design is its full operation log, and the History tab lets you scrub through it: drag the slider (or press Play) and watch the design rebuild itself op by op on the canvas. Click any operation to jump to that moment. The editor is read-only while you're in the past; **Back to live** returns to the present.
 - **ERC panel** — electrical rule checks with one-click **Apply Fix** for some findings (e.g., a missing pull-up resistor), and each finding links to a short concept article that explains *why* it matters.
 - **Export** — KiCad netlist, CSV BOM, and a single-file design bundle.
+- **Share links** — *Copy share link* puts your entire design (history and branches included) into a compressed URL. No account, no upload, no server: send the link any way you like, and it opens in the other person's editor. Opening a link never silently replaces your own work — you're asked first.
 - **The Draftsman** — an AI assistant panel that can place and wire components for you. It uses your own Anthropic API key, asks before doing anything destructive, and explains what it's doing as it goes.
 
 ### A look at the Lab and Co-sim
