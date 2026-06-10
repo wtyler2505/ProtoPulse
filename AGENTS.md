@@ -34,6 +34,25 @@ Every session follows: **Orient → Work → Persist**
 | Processing state, queue, config | ops/ | Queue state, task files, session logs |
 | Friction signals, patterns | ops/observations/ | Search failures, methodology improvements |
 
+## The Engine Redesign (packages/)
+Milestone 1 of the ground-up redesign ("the vision", three volumes) landed: a greenfield npm-workspaces monorepo at `packages/` (`@protopulse/*`) living **alongside** the legacy app (`client/ server/ shared/` — untouched, still the shipping product). The legacy app migrates onto the new engine in later milestones.
+
+**What lives there:** `graph` (the core — one canonical design graph; every mutation is a typed op; the design IS its op-log, the graph is a materialized view), `parts`, `erc`, `export`, `cli`, `renderer`, `app` (new schematic editor), `ai` (provider-agnostic agent runtime + the Draftsman), `content`. 346 tests, own CI (`.github/workflows/packages-ci.yml`). Overview: `packages/README.md`.
+
+**Jurisdiction / contracts:**
+- Golden files in `tools/golden/` and the `.ppx` on-disk format (spec: `packages/graph/README.md`) are **contracts**. Never re-freeze goldens casually — deliberate changes only, via `tools/golden/update-golden.ts`.
+- New hardware seed parts in `@protopulse/parts` follow the Hardware & Component Verification Protocol above — vault first, real datasheets, no invented dimensions or pinouts.
+
+**Conventions:** integer-nanometer coordinates (no floats — they break diff determinism); ops are self-contained; packages ship TS source (`main: ./src/index.ts`); never write directly to `knowledge/` (pipeline rule applies here too).
+
+**Key commands:**
+```bash
+npm run check:packages           # typecheck all packages
+npm run test:packages            # all 346 package tests
+npm run -w @protopulse/app dev   # new editor on http://localhost:5174
+npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
+```
+
 ## Operational Space (ops/)
 ops/
 ├── derivation.md      — why this system was configured this way

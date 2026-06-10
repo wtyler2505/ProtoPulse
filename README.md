@@ -18,7 +18,7 @@
 [![Vitest](https://img.shields.io/badge/Tests-1,553_passing-6da13f?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-00F0FF?style=flat-square)](LICENSE)
 
-[**Features**](#features) · [**Why ProtoPulse**](#why-protopulse) · [**Quick Start**](#quick-start) · [**AI Engine**](#ai-engine) · [**Architecture**](#architecture) · [**Roadmap**](#roadmap) · [**Docs**](#documentation)
+[**Features**](#features) · [**Why ProtoPulse**](#why-protopulse) · [**Quick Start**](#quick-start) · [**The Engine**](#the-engine-packages) · [**AI Engine**](#ai-engine) · [**Architecture**](#architecture) · [**Roadmap**](#roadmap) · [**Docs**](#documentation)
 
 </div>
 
@@ -220,7 +220,39 @@ npx prettier --write .  # Format
 
 <br>
 
+## The Engine (packages/)
+
+ProtoPulse is being redesigned from the ground up ("the vision", three volumes). **Milestone 1 has landed**: a greenfield npm-workspaces monorepo at [`packages/`](packages/README.md) that lives *alongside* the legacy app above — which keeps running untouched and migrates onto the engine in later milestones.
+
+The thesis: **one canonical design graph, many projections.** Every mutation is a typed operation; the design IS its op-log (JSON Lines), and the graph is just a materialized view. That one decision buys deterministic exports, exact undo (inverse ops), O(1) branches, visual diff, and three-way merge with conflicts surfaced as data — never silently resolved.
+
+| Package | What it does |
+|:--------|:-------------|
+| `@protopulse/graph` | The core — typed ops, integer-nm coordinates, branch/diff/merge, `.ppx` stores. 100% branch coverage gate on the core, enforced in CI. |
+| `@protopulse/parts` · `erc` · `export` | Seed part library with provenance tiers · pin-conflict ERC with executable fixes · byte-exact KiCad netlist + CSV BOM |
+| `@protopulse/cli` | `protopulse check` / `export` — headless ERC, "CI for circuits" (exit 0/1/2) |
+| `@protopulse/renderer` · `app` | WebGL2 retained scene graph · the new schematic editor (place/wire, undo, branch switcher with diff overlay, ERC panel, Draftsman) |
+| `@protopulse/ai` | Provider-agnostic agent runtime — scoped tool registry, destructive-confirm gating, the **Draftsman** agent (8 tools), op-log blame on every applied op |
+| `@protopulse/content` | JLCPCB DRC rule deck, 14 concept articles, curriculum Track 1 "First Light" |
+
+**346 tests**, own CI (`.github/workflows/packages-ci.yml`): typecheck, lint, tests, golden smoke, builds.
+
+```bash
+npm run check:packages           # typecheck every package
+npm run test:packages            # all 346 engine tests
+npm run -w @protopulse/app dev   # new editor → http://localhost:5174
+npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
+```
+
+**Engine roadmap:** v0.2 The Lab (ngspice-WASM sim + Analyst agent) → v0.3 The Crew (full agent crew, Design Review, teaching depths) → v0.4 The Board (PCB, push-and-shove, DRC decks) → v0.5 The Bridge (WebSerial flashing, MCU emulation, co-sim) → v0.6 The World (sync/community/fab pipeline) → v0.7 The Probe (open hardware).
+
+See [`packages/README.md`](packages/README.md) for the full package map, conventions, and format spec pointers.
+
+<br>
+
 ## AI Engine
+
+> This section describes the **legacy app's** AI stack (`server/ai.ts`, Genkit). The redesigned engine has its own provider-agnostic agent runtime, [`@protopulse/ai`](#the-engine-packages), home of the Draftsman — new agent work targets that runtime.
 
 The AI doesn't just chat — it has **82 tool actions** that directly manipulate your design:
 
@@ -263,6 +295,8 @@ All in a single streamed response. Every action logged and undoable.
 <br>
 
 ## Architecture
+
+> Two architectures coexist in this repo. The diagram below is the **legacy app** (`client/` `server/` `shared/`) — still the shipping product. The redesigned engine is the [`packages/`](#the-engine-packages) monorepo, and the legacy app migrates onto it in later milestones.
 
 ```mermaid
 graph TB
@@ -412,12 +446,15 @@ shared/
 - **happy-dom** for client-side component testing
 - **@testing-library/react** for behavior-driven UI tests
 - **v8 coverage** reporting
-- **ESLint** strict TypeScript rules + **Prettier** formatting
+- **ESLint** strict TypeScript rules + **Prettier** formatting (covers `packages/` too — zero errors policy)
 - **Zod** validation on every API boundary
+- The engine adds its own **346 tests** (`npm run test:packages`), byte-exact golden-file export tests in `tools/golden/`, and a **100% branch coverage gate** on the graph core — all enforced in a separate CI workflow
 
 <br>
 
 ## Roadmap
+
+Legacy app phases:
 
 ```
 Phase 2   ████████████████████  Complete    Component Editor (SVG, connectors, buses)
@@ -428,7 +465,19 @@ Phase 0   ██████████████░░░░░░  Active  
 Phase 1   ░░░░░░░░░░░░░░░░░░░░  Next        Live simulation, breadboard wiring, hardware comms
 ```
 
-**The Vision:** ProtoPulse aims to be the single tool a maker needs from "I've never touched electronics" to "here are my Gerbers." See [`docs/future-features-and-ideas-list.md`](docs/future-features-and-ideas-list.md) for the full roadmap including live simulation, Web Serial hardware communication, camera-based component ID, and engineering calculators.
+Engine redesign (the vision, three volumes):
+
+```
+v0.1   ████████████████████  Landed   The Engine — graph/op-log core, ERC, exports, editor, Draftsman
+v0.2   ░░░░░░░░░░░░░░░░░░░░  Next     The Lab — ngspice-WASM simulation + Analyst agent
+v0.3   ░░░░░░░░░░░░░░░░░░░░  Later    The Crew — full agent crew, Design Review, teaching depths
+v0.4   ░░░░░░░░░░░░░░░░░░░░  Later    The Board — PCB, push-and-shove, DRC decks
+v0.5   ░░░░░░░░░░░░░░░░░░░░  Later    The Bridge — WebSerial flashing, MCU emulation, co-sim
+v0.6   ░░░░░░░░░░░░░░░░░░░░  Later    The World — sync, community, fab pipeline
+v0.7   ░░░░░░░░░░░░░░░░░░░░  Later    The Probe — open hardware
+```
+
+**The Vision:** ProtoPulse aims to be the single tool a maker needs from "I've never touched electronics" to "here are my Gerbers." The engine redesign is how it gets there; see also [`docs/future-features-and-ideas-list.md`](docs/future-features-and-ideas-list.md) for the legacy-app idea backlog including camera-based component ID and engineering calculators.
 
 <br>
 
@@ -440,6 +489,7 @@ Phase 1   ░░░░░░░░░░░░░░░░░░░░  Next    
 | **[USER_GUIDE.md](docs/USER_GUIDE.md)** | End users | Feature walkthroughs, keyboard shortcuts, troubleshooting, glossary |
 | **[AI_AGENT_GUIDE.md](docs/AI_AGENT_GUIDE.md)** | AI assistants | Conventions, file organization, audit status, phase roadmap, all 82 AI tools |
 | **[CHANGELOG.md](docs/CHANGELOG.md)** | Everyone | Version history, feature additions, breaking changes |
+| **[packages/README.md](packages/README.md)** | Engineers | The redesigned engine — package map, conventions, `.ppx` format pointers |
 
 <br>
 
