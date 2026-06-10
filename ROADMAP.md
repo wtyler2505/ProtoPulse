@@ -68,8 +68,9 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       the JLC deck (flatbush broad phase + exact distance math)
 - [x] PCB view in the app: Schematic|PCB toggle, unplaced tray, trace
       tool (octilinear, cross-net refusal), vias, ratsnest, DRC panel
-- [ ] In-browser visual QA pass of PCB mode (tools verified by unit
-      tests; pixels not yet eyeballed)
+- [x] In-browser visual QA pass of PCB mode (footprint render, tray
+      with footprint-less parts disabled, trace preview, live cross-net
+      refusal, DRC against the deck — verified 2026-06-10)
 - [ ] Push-and-shove routing (Vol II §E.1); stroked trace widths +
       filled pads in the GL layer; pcb scene delta sync; side-flip UI
 - [ ] Gerber/drill/PnP export; zones/pours; panelization
