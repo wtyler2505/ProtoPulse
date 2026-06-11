@@ -14,6 +14,8 @@ import {
 import { seedPartDb  } from '@protopulse/parts';
 import { create } from 'zustand';
 
+import { loadStoredPacks } from './packs.js';
+
 import type {Finding} from '@protopulse/erc';
 import type {
   DesignBundle,
@@ -35,6 +37,9 @@ import type {PartDb} from '@protopulse/parts';
  */
 
 export const partDb: PartDb = seedPartDb();
+// Stored part packs join the seeds before anything renders. Browser
+// only — Node test environments have no localStorage to read.
+if (typeof localStorage !== 'undefined') loadStoredPacks(partDb);
 
 const ACTOR_KEY = 'pp-actor';
 
