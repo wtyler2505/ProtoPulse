@@ -2,6 +2,22 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — Firmware-panel core picker
+
+### Added
+- The Firmware tab grew a **core** selector: ATmega328P (16 MHz) or
+  RP2040 (125 MHz), applied at load time. The emu session rebuilds
+  the core when the kind changes; a build missing the requested
+  constructor errors as a value, not a crash. Serial monitor and the
+  logic-analyzer traces work for both cores (RP2040 pins show as
+  GP0…GP29). Honest note: co-sim bindings still speak AVR pin names.
+
+### Verified
+- New runner test: rp2040 selection constructs the other core,
+  switching kinds rebuilds, missing-constructor builds error cleanly.
+  Browser-verified: the picker renders both cores in the Firmware
+  tab. 385 app tests green; typecheck + lint clean.
+
 ## 2026-06-11 — RP2040 core: the second MCU
 
 ### Added

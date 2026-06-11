@@ -58,4 +58,13 @@ export interface McuCore {
  *  practice until the emulation track lands — runner.ts checks at runtime. */
 export interface EmuModule {
   Atmega328pCore: new () => McuCore;
+  Rp2040Core: new () => McuCore;
 }
+
+/** Selectable MCU cores, keyed by the emu module's constructor names. */
+export const CORE_KINDS = {
+  atmega328p: { ctor: 'Atmega328pCore', label: 'ATmega328P (AVR, 16 MHz)' },
+  rp2040: { ctor: 'Rp2040Core', label: 'RP2040 (Cortex-M0+, 125 MHz)' },
+} as const;
+
+export type CoreKind = keyof typeof CORE_KINDS;

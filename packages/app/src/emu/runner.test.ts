@@ -116,6 +116,36 @@ describe('createEmuSession — load', () => {
     expect(loader).toHaveBeenCalledTimes(1); // module + core reused
   });
 
+  it('core picker: rp2040 loads the other constructor; switching kinds rebuilds', async () => {
+    const avr = new FakeCore({ clockHz: 16_000_000 });
+    const rp = new FakeCore({ clockHz: 125_000_000 });
+    const Atmega328pCore = function (this: unknown) { return avr; } as unknown as new () => McuCore;
+    const Rp2040Core = function (this: unknown) { return rp; } as unknown as new () => McuCore;
+    const loader = vi.fn(() => Promise.resolve({ Atmega328pCore, Rp2040Core } as Partial<EmuModule>));
+    const session = createEmuSession({ loader });
+
+    expect(session.coreKind).toBe('atmega328p');
+    const out = await session.load(HEX, 'rp2040');
+    expect(out).toEqual({ ok: true, clockHz: 125_000_000 });
+    expect(session.coreKind).toBe('rp2040');
+    expect(rp.loads).toEqual([HEX]);
+    expect(avr.loads).toEqual([]);
+
+    // Switch back: the AVR constructor is used, same lazy module.
+    await session.load(HEX, 'atmega328p');
+    expect(session.coreKind).toBe('atmega328p');
+    expect(avr.loads).toEqual([HEX]);
+    expect(loader).toHaveBeenCalledTimes(1);
+
+    // A build without the requested core errors as a value.
+    const partial = createEmuSession({
+      loader: () => Promise.resolve({ Atmega328pCore } as Partial<EmuModule>),
+    });
+    const missing = await partial.load(HEX, 'rp2040');
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) expect(missing.error).toMatch(/Rp2040Core/);
+  });
+
   it('surfaces a friendly error while @protopulse/emu is not in the build', async () => {
     const session = createEmuSession({ loader: () => Promise.resolve({}) });
     const out = await session.load(HEX);

@@ -164,10 +164,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       the host sampler (12-bit @ 3.3 V; the AVR is 10-bit @ 5 V — each
       core states its own truth). Tests are hand-assembled Thumb
       (thumb-asm.ts, the asm.ts sibling) poking real registers. Honest
-      cuts: raw-code entry (no bootrom/UF2), instant ADC conversions,
-      engine-level only — the Firmware panel still drives the AVR
-- [ ] ESP32 core; AVR timers 1/2, SPI, TWI peripherals; Firmware-panel
-      core picker
+      cuts: raw-code entry (no bootrom/UF2), instant ADC conversions
+- [x] Firmware-panel core picker (landed 2026-06-11): choose
+      ATmega328P or RP2040 at load time; the session rebuilds the core
+      on a kind switch (serial monitor + logic analyzer work for both;
+      co-sim bindings remain AVR-flavored pin names)
+- [ ] ESP32 core; AVR timers 1/2, SPI, TWI peripherals
 
 ## v0.6 — The World 🔨 *(first slice landed early)*
 
