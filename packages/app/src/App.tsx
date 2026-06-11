@@ -20,6 +20,7 @@ import { Palette } from './panels/Palette.js';
 import { PcbTray } from './panels/PcbTray.js';
 import { ProfessorPanel } from './panels/ProfessorPanel.js';
 import { ReviewPanel } from './panels/ReviewPanel.js';
+import { RouterPanel } from './panels/RouterPanel.js';
 import { SimPanel } from './panels/SimPanel.js';
 import { SyncPanel } from './panels/SyncPanel.js';
 import { withSpringBack } from './pcb/springback.js';
@@ -44,6 +45,7 @@ const SCHEMATIC_TABS: { id: TabId; label: string }[] = [
   { id: 'firmware', label: 'Firmware' },
   { id: 'cosim', label: 'Co-sim' },
   { id: 'analyst', label: 'Analyst' },
+  { id: 'router', label: 'Router' },
   { id: 'professor', label: 'Professor' },
 ];
 
@@ -297,6 +299,7 @@ function SidePanel() {
       {activeTab === 'firmware' && <FirmwarePanel />}
       {activeTab === 'cosim' && <CosimPanel />}
       {activeTab === 'analyst' && <AnalystPanel />}
+      {activeTab === 'router' && <RouterPanel />}
       {activeTab === 'professor' && <ProfessorPanel />}
     </aside>
   );

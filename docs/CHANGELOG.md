@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — the Router: fourth crew member
+
+### Added
+- **The Router** (`runRouter` in @protopulse/ai + Router tab in the
+  editor): copper is geometry, clearance is law, the ratsnest is a
+  to-do list. Four tools — read_board (placements/traces/ratsnest
+  digest), route_connection (walk-first; shove when walk reports no
+  corridor; refusals surface as tool errors the model adapts to),
+  run_drc, remove_trace. Engines are dependency-injected (RouterHooks,
+  pinned like sim-types): the app wires the REAL walkaround/shove/DRC
+  stack — the same machinery the human trace tool drives.
+- Routes apply to a working copy inside the loop (Draftsman pattern);
+  on completion they land in the session as ONE undoable batch with
+  meta {agent: 'router'} — blameable and syncable like any edit.
+- Ratsnest segments now carry their endpoint port refs (aPort/bPort),
+  so airwires can be named ("R1:2 → R2:1") by every consumer.
+
+### Verified
+- 5 ai tests (FakeProvider end-to-end: read → walk refusal → shove →
+  DRC-clean on the working copy; destructive confirm gate) + 5 app
+  host tests over the REAL engines (labeled ratsnest, walk routes
+  emptying the ratsnest, shove with victim ops, deck-loading refusal,
+  real DRC findings). Live Anthropic runs need Tyler's key (same as
+  Analyst/Professor).
+
 ## 2026-06-11 — CI circuit badges
 
 ### Added

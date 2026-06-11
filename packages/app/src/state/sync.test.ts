@@ -5,9 +5,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createSessionStore, getGraph } from './session.js';
 import { SyncClient } from './sync.js';
 
-import type { RelayServer } from '@protopulse/relay';
 import type { SyncInfo } from './sync.js';
 import type { OpBody } from '@protopulse/graph';
+import type { RelayServer } from '@protopulse/relay';
 
 /**
  * The real thing end to end: two real session stores, two SyncClients

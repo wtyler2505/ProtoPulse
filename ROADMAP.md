@@ -67,8 +67,14 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       grounded in the wiki; "Ask the Professor" handoff from any finding
 - [x] The three teaching depths (do-it/show-me/teach-me): persisted dial,
       show-me status narration, teach-me concept pauses
-- [ ] Architect / Router / Buyer (need buses+sheets, PCB, and sourcing —
-      v0.4+ substrates)
+- [x] The Router (landed 2026-06-11) — fourth crew member on the shared
+      agent loop: read_board / route_connection (walk-first, shove when
+      cornered) / run_drc / remove_trace over the REAL routing stack;
+      routes land in the session as one undoable batch with
+      meta {agent: 'router'}. Its substrate (PCB + DRC + walkaround +
+      shove) made it an assembly job — exactly the vision's bet
+- [ ] Architect / Buyer (still need buses+sheets and sourcing
+      substrates)
 - [ ] Concepts wiki growth toward the 88-article seed list
 - [ ] Review deck versioning + community-extensible review rules
 

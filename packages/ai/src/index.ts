@@ -48,6 +48,19 @@ export {
   type ConceptLookup,
 } from './tools/professor.js';
 export { runProfessor, type ProfessorResult, type RunProfessorOptions } from './professor.js';
+export { createRouterRegistry, ROUTER_TOOLS } from './tools/router.js';
+export { runRouter, type RouterResult, type RunRouterOptions } from './router.js';
+export {
+  type PinnedDrcDigestFinding,
+  type PinnedDrcFn,
+  type PinnedRatsnestFn,
+  type PinnedRouteFn,
+  type PinnedRouteMode,
+  type PinnedRouteOutcome,
+  type PinnedRouteRequest,
+  type PinnedUnroutedPair,
+  type RouterHooks,
+} from './route-types.js';
 export {
   CONCEPT_PAUSE_MARKER,
   isTeachingDepth,
