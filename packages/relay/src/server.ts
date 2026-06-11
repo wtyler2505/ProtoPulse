@@ -64,9 +64,15 @@ export function createRelayServer(opts: { port?: number } = {}): Promise<RelaySe
 
   wss.on('connection', (ws) => {
     ws.on('message', (data) => {
+      // ws RawData is Buffer | ArrayBuffer | Buffer[] — decode explicitly.
+      const text = Buffer.isBuffer(data)
+        ? data.toString('utf8')
+        : Array.isArray(data)
+          ? Buffer.concat(data).toString('utf8')
+          : Buffer.from(data).toString('utf8');
       let msg;
       try {
-        msg = clientMessageSchema.parse(JSON.parse(String(data)));
+        msg = clientMessageSchema.parse(JSON.parse(text));
       } catch (err) {
         send(ws, {
           kind: 'error',
