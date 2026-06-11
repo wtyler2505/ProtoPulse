@@ -27,9 +27,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       auto-merged changes listed, every conflict an explicit ours/theirs
       pick (engine: `mergeBaseOps` + `resolveConflict`), lands as one
       undoable batch with both parents recorded
+- [x] ESP32-S3 verified part (M1 straggler, landed 2026-06-11):
+      core:esp32-s3-wroom-1 — all 41 module pins verified against the
+      Espressif datasheet pin table, cross-checked against an
+      independent community pinout (sources in inbox/). Strapping
+      pins and EN noted; schematic-usable. Honest cut: no footprint
+      yet — the land pattern is a later datasheet-exact slice
 - [ ] M1 stragglers: pcbnew import manually verified once
-      (`tools/golden/README.md`), MSDF text + GPU picking, ESP32-S3
-      verified part
+      (`tools/golden/README.md` — Tyler), MSDF text + GPU picking
+      (renderer epic)
 
 ## v0.2 — The Lab ✅ *(complete 2026-06-11)*
 

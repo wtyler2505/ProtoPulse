@@ -26,7 +26,11 @@ describe('seed library', () => {
 
   it('verified parts carry datasheet-backed pin numbers and a provenance note', () => {
     const verified = SEED_PARTS.filter((p) => p.provenance === 'verified');
-    expect(verified.map((p) => p.id).sort()).toEqual(['core:bat54s', 'core:ne555']);
+    expect(verified.map((p) => p.id).sort()).toEqual([
+      'core:bat54s',
+      'core:esp32-s3-wroom-1',
+      'core:ne555',
+    ]);
     for (const part of verified) {
       expect(part.provenanceNote).toBeTruthy();
       expect(part.pins.every((pin) => pin.number !== undefined)).toBe(true);
@@ -51,6 +55,26 @@ describe('seed library', () => {
     expect(db.pinType('core:pwr-vcc', 1, '1')).toBe('power_out');
     expect(db.pinType('core:pwr-gnd', 1, '1')).toBe('power_out');
     expect(db.pinType('core:battery', 1, '+')).toBe('power_out');
+  });
+});
+
+describe('esp32-s3-wroom-1', () => {
+  it('carries all 41 datasheet pins with unique keys and a stated footprint cut', () => {
+    const esp = SEED_PARTS.find((p) => p.id === 'core:esp32-s3-wroom-1');
+    expect(esp).toBeDefined();
+    expect(esp?.pins).toHaveLength(41);
+    expect(new Set(esp?.pins.map((pin) => pin.key)).size).toBe(41);
+    expect(new Set(esp?.symbol.pins.map((pin) => pin.key)).size).toBe(41);
+    // The datasheet corners: 1 GND, 2 3V3, 3 EN, 27 IO0, 36 RXD0, 37 TXD0, 41 EPAD.
+    const byKey = new Map(esp?.pins.map((pin) => [pin.key, pin.name]));
+    expect(byKey.get('1')).toBe('GND');
+    expect(byKey.get('2')).toBe('3V3');
+    expect(byKey.get('3')).toBe('EN');
+    expect(byKey.get('27')).toBe('IO0');
+    expect(byKey.get('36')).toBe('RXD0');
+    expect(byKey.get('37')).toBe('TXD0');
+    expect(byKey.get('41')).toBe('EPAD');
+    expect(esp?.footprint).toBeUndefined(); // stated cut: schematic-only for now
   });
 });
 

@@ -2,6 +2,29 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — ESP32-S3 verified part
+
+### Added
+- **core:esp32-s3-wroom-1** (@protopulse/parts): the Probe's brain
+  joins the seed library with all 41 module pins verified against
+  the Espressif ESP32-S3-WROOM-1/-1U datasheet pin table and
+  cross-checked against an independent community pinout (sources +
+  full table in inbox/2026-06-11-esp32-s3-wroom-1-pinout.md, per the
+  Hardware Verification Protocol). Strapping pins (IO0/IO3/IO45/IO46)
+  and the EN pull-up flagged in the part docs; symbol splits EN+IOs
+  left, UART/JTAG/USB right, 3V3 up, grounds down.
+
+### Honest cut
+- No footprint yet — the 18×25.5mm castellated land pattern is a
+  later datasheet-exact slice; the part is schematic-usable and the
+  unplaced tray flags it on the board side.
+
+### Verified
+- New test: 41 pins, unique pin + symbol keys, the datasheet corner
+  pins by number (1 GND, 2 3V3, 3 EN, 27 IO0, 36 RXD0, 37 TXD0,
+  41 EPAD), and the stated footprint absence. Full test:packages
+  green; eslint 0 errors.
+
 ## 2026-06-11 — branch sync
 
 ### Added
