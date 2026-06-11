@@ -165,7 +165,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       construction, capped at MAX_CASCADE_ROUNDS. The corridor
       heuristic can over-shove a neighbor that didn't strictly need to
       move — safe churn, and spring-back undoes it
-- [ ] Panelization
+- [x] Board outline in the graph core (landed 2026-06-11,
+      panelization's prerequisite): set_board_outline (singleton,
+      null clears) with full closure — inverse restores the previous
+      polygon, diff flags outlineChanged, merge replays theirs-only
+      changes (ours wins races), JSON round-trips, the 100% gate held.
+      Gerber Edge.Cuts profile layer (0.1mm stroke, KiCad convention;
+      null when no outline — honest absence). Substrate-first like
+      buses+sheets: outline drawing tool, renderer display, and the
+      DRC copper-to-edge check are the open surfaces
+- [ ] Outline UI (draw/edit tool, renderer display) + DRC
+      copper-to-edge check (the deck rule finally has an edge)
+- [ ] Panelization (outline substrate now exists)
 
 ## v0.5 — The Bridge 🔨
 

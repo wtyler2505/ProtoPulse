@@ -243,6 +243,16 @@ export function invertOp(before: DesignGraph, op: OpBody): OpBody[] {
       return [placeZoneOp(zone)];
     }
 
+    case 'set_board_outline': {
+      const prev = before.pcb.outline;
+      return [
+        {
+          kind: 'set_board_outline',
+          outline: prev ? prev.map((v) => ({ ...v })) : null,
+        },
+      ];
+    }
+
     case 'remove_via': {
       const via = before.pcb.vias.get(op.id);
       if (!via) return [];

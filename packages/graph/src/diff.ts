@@ -53,6 +53,8 @@ export interface GraphDelta {
     viasRemoved: Uuid[];
     zonesAdded: Uuid[];
     zonesRemoved: Uuid[];
+    /** Board outline set, cleared, or reshaped. */
+    outlineChanged: boolean;
   };
 }
 
@@ -87,7 +89,8 @@ export function isEmptyDelta(d: GraphDelta): boolean {
     d.pcbView.viasAdded.length === 0 &&
     d.pcbView.viasRemoved.length === 0 &&
     d.pcbView.zonesAdded.length === 0 &&
-    d.pcbView.zonesRemoved.length === 0
+    d.pcbView.zonesRemoved.length === 0 &&
+    !d.pcbView.outlineChanged
   );
 }
 
@@ -130,6 +133,7 @@ export function diff(a: DesignGraph, b: DesignGraph): GraphDelta {
       viasRemoved: [],
       zonesAdded: [],
       zonesRemoved: [],
+      outlineChanged: false,
     },
   };
 
@@ -236,6 +240,9 @@ export function diff(a: DesignGraph, b: DesignGraph): GraphDelta {
   diffGeometryMaps(a.pcb.traces, b.pcb.traces, delta.pcbView.tracesAdded, delta.pcbView.tracesRemoved);
   diffGeometryMaps(a.pcb.vias, b.pcb.vias, delta.pcbView.viasAdded, delta.pcbView.viasRemoved);
   diffGeometryMaps(a.pcb.zones, b.pcb.zones, delta.pcbView.zonesAdded, delta.pcbView.zonesRemoved);
+  if (JSON.stringify(a.pcb.outline ?? null) !== JSON.stringify(b.pcb.outline ?? null)) {
+    delta.pcbView.outlineChanged = true;
+  }
 
   // ── Buses & sheets ──
   for (const [id, busB] of b.buses) {

@@ -406,6 +406,13 @@ export function threeWayMerge(
       ...(zn.connect !== undefined ? { connect: zn.connect } : {}),
     });
   }
+  // Board outline: singleton, ours-wins when both touched it.
+  if (baseToTheirs.pcbView.outlineChanged && !baseToOurs.pcbView.outlineChanged) {
+    autoOps.push({
+      kind: 'set_board_outline',
+      outline: theirs.pcb.outline ? theirs.pcb.outline.map((p) => ({ ...p })) : null,
+    });
+  }
   const oursTouchedVias = new Set([...baseToOurs.pcbView.viasAdded, ...baseToOurs.pcbView.viasRemoved]);
   for (const id of baseToTheirs.pcbView.viasRemoved) {
     if (!ours.pcb.vias.has(id) || oursTouchedVias.has(id)) continue;

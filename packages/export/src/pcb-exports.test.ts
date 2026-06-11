@@ -3,7 +3,7 @@ import { seedPartDb } from '@protopulse/parts';
 import { describe, expect, it } from 'vitest';
 
 import { exportExcellon } from './excellon.js';
-import { exportGerberLayer } from './gerber.js';
+import { exportEdgeCuts, exportGerberLayer } from './gerber.js';
 import { exportPickPlace } from './pick-place.js';
 
 import type { OpBody } from '@protopulse/graph';
@@ -37,6 +37,55 @@ function dipOps(): OpBody[] {
     { kind: 'place_footprint', componentId: 'u1', at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false },
   ];
 }
+
+describe('exportEdgeCuts', () => {
+  it('returns null without an outline; emits a closed Profile stroke with one', () => {
+    expect(exportEdgeCuts(graphOf(routedSmdOps()), { date: DATE })).toBeNull();
+
+    const out = exportEdgeCuts(
+      graphOf([
+        ...routedSmdOps(),
+        {
+          kind: 'set_board_outline',
+          outline: [
+            { x: 0, y: 0 },
+            { x: 20_000_000, y: 0 },
+            { x: 20_000_000, y: 10_000_000 },
+            { x: 0, y: 10_000_000 },
+          ],
+        },
+      ]),
+      { date: DATE },
+    );
+    expect(out).not.toBeNull();
+    if (out === null) return;
+    expect(out).toContain('%TF.FileFunction,Profile,NP*%');
+    expect(out).toContain('%ADD10C,0.100000*%');
+    // Closed: the move target reappears as the final draw.
+    const move = /^(X\d+Y\d+)D02\*$/m.exec(out)?.[1];
+    expect(move).toBeDefined();
+    expect(out).toContain(`${move ?? ''}D01*`);
+    expect(out.trimEnd().endsWith('M02*')).toBe(true);
+    // Deterministic: same inputs, same bytes.
+    expect(
+      exportEdgeCuts(
+        graphOf([
+          ...routedSmdOps(),
+          {
+            kind: 'set_board_outline',
+            outline: [
+              { x: 0, y: 0 },
+              { x: 20_000_000, y: 0 },
+              { x: 20_000_000, y: 10_000_000 },
+              { x: 0, y: 10_000_000 },
+            ],
+          },
+        ]),
+        { date: DATE },
+      ),
+    ).toBe(out);
+  });
+});
 
 describe('exportGerberLayer', () => {
   it('emits the X2 header shape with injected date and M02 end', () => {
