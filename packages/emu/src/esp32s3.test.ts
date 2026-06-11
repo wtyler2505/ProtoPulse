@@ -731,6 +731,54 @@ describe('Esp32s3Core — peripheral interrupt lines through the matrix (slice 6
   });
 });
 
+describe('Esp32s3Core — flash-mapped IROM/DROM segments (slice 9)', () => {
+  const IROM = 0x42000000;
+  const DROM = 0x3c000000;
+
+  it('boots an XIP image: code runs from IROM, consts read from DROM', () => {
+    // No SRAM segment at all — code executes in place from the IROM
+    // window and pulls a constant from DROM, like a real app image's
+    // .flash.text/.flash.rodata. The stack still lives in DRAM.
+    const code = assembleXtensa(IROM, [UART, DROM], [
+      L32R(2, 0), // a2 = UART
+      L32R(3, 1), // a3 = DROM const
+      L32I(4, 3, 0),
+      S32I(4, 2, 0x00), // tx the flash-resident constant
+      J(BR(-1)),
+    ]);
+    const image = buildEspImage(IROM, [
+      { addr: IROM, data: code },
+      { addr: DROM, data: Uint8Array.from([0xc3, 0, 0, 0]) },
+    ]);
+    const c = core(image);
+    expect(c.inspect().pc).toBe(IROM);
+    c.step(30);
+    expect([...c.drainUart()]).toEqual([0xc3]);
+    c.reset(); // segments are firmware — they survive
+    c.step(30);
+    expect([...c.drainUart()]).toEqual([0xc3]);
+  });
+
+  it('flash is read-only through the cache; unmapped cache reads refuse', () => {
+    // A raw SRAM program that pokes the DROM window must refuse.
+    const writer = assembleXtensa(ESP32S3_IRAM_BASE, [DROM], [
+      L32R(2, 0),
+      MOVI(3, 1),
+      S32I(3, 2, 0x00),
+    ]);
+    const c = core(writer);
+    expect(() => c.step(10)).toThrow('read-only through the cache');
+
+    // Reading inside the window but outside any mapped segment.
+    const reader = assembleXtensa(ESP32S3_IRAM_BASE, [IROM + 0x100000], [
+      L32R(2, 0),
+      L32I(3, 2, 0x00),
+    ]);
+    const d = core(reader);
+    expect(() => d.step(10)).toThrow('unmapped flash-cache address');
+  });
+});
+
 describe('Esp32s3Core — TIMG0 timer 0 (slice 8)', () => {
   const SCRATCH = 0x3fc88000 + 0xa00;
   const TIMG0 = 0x6001f000;
@@ -947,41 +995,41 @@ describe('Esp32s3Core — SAR ADC1 oneshot (slice 7)', () => {
   });
 });
 
+/**
+ * Build an esptool-shaped app image: 24-byte header (magic 0xE9,
+ * segment count, entry @4, chip_id @12), the segments, and the XOR
+ * checksum (seed 0xEF) as the last byte of the 16-byte-aligned body.
+ */
+function buildEspImage(
+  entry: number,
+  segs: { addr: number; data: Uint8Array }[],
+  opts: { chipId?: number; corruptChecksum?: boolean } = {},
+): Uint8Array {
+  const bytes: number[] = new Array<number>(24).fill(0);
+  bytes[0] = 0xe9;
+  bytes[1] = segs.length;
+  bytes[2] = 0x02; // spi_mode DIO — the loader ignores flash fields
+  for (let i = 0; i < 4; i++) bytes[4 + i] = (entry >>> (8 * i)) & 0xff;
+  const chipId = opts.chipId ?? 9;
+  bytes[12] = chipId & 0xff;
+  bytes[13] = (chipId >> 8) & 0xff;
+  let checksum = 0xef;
+  for (const seg of segs) {
+    for (let i = 0; i < 4; i++) bytes.push((seg.addr >>> (8 * i)) & 0xff);
+    for (let i = 0; i < 4; i++) bytes.push((seg.data.length >>> (8 * i)) & 0xff);
+    for (const b of seg.data) {
+      bytes.push(b);
+      checksum ^= b;
+    }
+  }
+  const total = Math.ceil((bytes.length + 1) / 16) * 16;
+  while (bytes.length < total) bytes.push(0);
+  bytes[total - 1] = opts.corruptChecksum ? checksum ^ 0xff : checksum;
+  return Uint8Array.from(bytes);
+}
+
 describe('Esp32s3Core — MOVSP + ESP-IDF app images (slice 5)', () => {
   const SCRATCH = 0x3fc88000 + 0x600;
-
-  /**
-   * Build an esptool-shaped app image: 24-byte header (magic 0xE9,
-   * segment count, entry @4, chip_id @12), the segments, and the XOR
-   * checksum (seed 0xEF) as the last byte of the 16-byte-aligned body.
-   */
-  function buildEspImage(
-    entry: number,
-    segs: { addr: number; data: Uint8Array }[],
-    opts: { chipId?: number; corruptChecksum?: boolean } = {},
-  ): Uint8Array {
-    const bytes: number[] = new Array<number>(24).fill(0);
-    bytes[0] = 0xe9;
-    bytes[1] = segs.length;
-    bytes[2] = 0x02; // spi_mode DIO — the loader ignores flash fields
-    for (let i = 0; i < 4; i++) bytes[4 + i] = (entry >>> (8 * i)) & 0xff;
-    const chipId = opts.chipId ?? 9;
-    bytes[12] = chipId & 0xff;
-    bytes[13] = (chipId >> 8) & 0xff;
-    let checksum = 0xef;
-    for (const seg of segs) {
-      for (let i = 0; i < 4; i++) bytes.push((seg.addr >>> (8 * i)) & 0xff);
-      for (let i = 0; i < 4; i++) bytes.push((seg.data.length >>> (8 * i)) & 0xff);
-      for (const b of seg.data) {
-        bytes.push(b);
-        checksum ^= b;
-      }
-    }
-    const total = Math.ceil((bytes.length + 1) / 16) * 16;
-    while (bytes.length < total) bytes.push(0);
-    bytes[total - 1] = opts.corruptChecksum ? checksum ^ 0xff : checksum;
-    return Uint8Array.from(bytes);
-  }
 
   it('boots a two-segment app image (code → IRAM, data → DRAM) at its entry point', () => {
     // The code segment deliberately does NOT sit at the IRAM base —
@@ -1008,15 +1056,15 @@ describe('Esp32s3Core — MOVSP + ESP-IDF app images (slice 5)', () => {
     expect([...c.drainUart()]).toEqual([0x5a]);
   });
 
-  it('refuses wrong-chip, flash-mapped, and corrupted images with clear messages', () => {
+  it('refuses wrong-chip, unmapped-segment, and corrupted images with clear messages', () => {
     const c = new Esp32s3Core();
     const seg = { addr: ESP32S3_IRAM_BASE, data: Uint8Array.from([0x0d, 0xf0, 0x00, 0x00]) };
     expect(() => {
       c.loadFirmware(buildEspImage(ESP32S3_IRAM_BASE, [seg], { chipId: 0 }));
     }).toThrow('targets ESP32 (chip_id 0)');
     expect(() => {
-      c.loadFirmware(buildEspImage(ESP32S3_IRAM_BASE, [{ addr: 0x42000000, data: Uint8Array.from([1, 2, 3, 4]) }]));
-    }).toThrow('flash-mapped or unmapped');
+      c.loadFirmware(buildEspImage(ESP32S3_IRAM_BASE, [{ addr: 0x50000000, data: Uint8Array.from([1, 2, 3, 4]) }]));
+    }).toThrow('outside the modeled SRAM window and the IROM/DROM cache windows');
     expect(() => {
       c.loadFirmware(buildEspImage(ESP32S3_IRAM_BASE, [seg], { corruptChecksum: true }));
     }).toThrow('checksum mismatch');

@@ -2,6 +2,35 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — ESP32-S3 slice 9: flash-mapped IROM/DROM segments
+
+### Added
+- **XIP through the cache windows** (@protopulse/emu): app-image
+  segments whose load addresses fall in IROM (0x42000000–0x44000000)
+  or DROM (0x3C000000–0x3E000000, both per soc.h and
+  ext_mem_defs.h) are now served read-only at their vaddrs — the net
+  effect of the second-stage bootloader's MMU setup plus a
+  fully-warmed cache. This is what those segments mean: real app
+  images map .flash.text/.flash.rodata, they don't copy them to RAM.
+  Entry points in IROM are accepted.
+- Cache-window writes refuse ("flash is read-only through the
+  cache"); reads inside a window but outside any mapped segment
+  refuse loudly with the address.
+
+### Verified (+2 tests, emu suite at 124 green)
+- An XIP image with NO SRAM segment boots from IROM, pulls a
+  constant from DROM, txes it, and survives reset().
+- The two refusals, plus the slice-5 unmapped-segment refusal
+  updated (flash-mapped segments are no longer refused — truly
+  unmapped ranges still are).
+
+### Honest cuts
+- XIP reads cost 1 cycle like everything else (no cache-miss or
+  line-fill timing); MMU registers are not modeled, so runtime
+  remapping is impossible; no SPI flash writes. The long tail toward
+  unmodified IDF/FreeRTOS firmware remains: ROM functions,
+  RTC/eFuse/SYSTEM registers, the second core.
+
 ## 2026-06-11 — ESP32-S3 slice 8: TIMG0 timer 0
 
 ### Added
