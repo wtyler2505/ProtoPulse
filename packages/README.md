@@ -31,7 +31,7 @@ Screenshots are artifacts of [`tools/screenshots/`](../tools/screenshots/README.
 
 ## Packages
 
-Sixteen workspaces, **1,349 tests**, one CI gate. Status per stage lives
+Sixteen workspaces, **1,377 tests**, one CI gate. Status per stage lives
 in [`ROADMAP.md`](../ROADMAP.md) — never here.
 
 | Package | What it is | Depends on |
@@ -43,7 +43,7 @@ in [`ROADMAP.md`](../ROADMAP.md) — never here.
 | `@protopulse/drc` | Width/clearance/annular/drill/edge/zone checks against versioned fab rule decks (JLC, OSHPark, PCBWay) | graph, parts, content |
 | `@protopulse/route` | Interactive routing engine — walkaround, shove with spring-back and cascade, zone pours (martinez clipping, thermal reliefs) | graph, parts |
 | `@protopulse/sim` | Graph→SPICE with model fidelity tiers; ngspice-WASM engine; op/tran/dc/ac/noise, Monte Carlo, parameter stepping | graph, parts |
-| `@protopulse/emu` | MCU cores under one contract: ATmega328P (avr8js — timers, UART, ADC, SPI, TWI, EEPROM, watchdog), RP2040 (rp2040js), and a from-scratch ESP32-S3 v0 (Xtensa LX7 call0 subset, GPIO + UART0) — each with a hand-assembler test rig | avr8js, rp2040js |
+| `@protopulse/emu` | MCU cores under one contract: ATmega328P (avr8js — timers, UART, ADC, SPI, TWI, EEPROM, watchdog), RP2040 (rp2040js), and a from-scratch ESP32-S3 — a full Xtensa LX7 interpreter (code density, windowed ABI, exceptions + level-1 interrupts, the interrupt matrix with GPIO/UART/TIMG sources, SAR ADC1, TIMG0, esptool `.bin` app images incl. flash-mapped XIP segments) — each with a hand-assembler test rig | avr8js, rp2040js |
 | `@protopulse/cosim` | The firmware↔analog loop: GPIO edges as PWL sources one way, solved voltages back through comparators and the ADC the other — with honest slowdown accounting | emu, sim |
 | `@protopulse/review` | Design review as an artifact: versioned decks, executable fixes, stored reports with opened/closed deltas | graph, parts, erc |
 | `@protopulse/relay` | The sync relay: WebSocket rooms that union op-log envelopes (all branches; optional token auth + JSONL persistence). The relay carries, never owns | graph, ws |
@@ -93,7 +93,7 @@ even while the same run fails your pipeline.
 
 ```bash
 npm run check:packages           # typecheck every package (one program)
-npm run test:packages            # all 1,349 engine tests
+npm run test:packages            # all 1,377 engine tests
 npm run -w @protopulse/app dev   # editor on http://localhost:5174
 npm run -w @protopulse/relay dev # sync relay (optional, for live collaboration)
 npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
