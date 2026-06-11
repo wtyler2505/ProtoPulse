@@ -1,4 +1,4 @@
-import { MAIN_BRANCH, opEnvelopeSchema } from '@protopulse/graph';
+import { opEnvelopeSchema } from '@protopulse/graph';
 import { z } from 'zod';
 import { create } from 'zustand';
 
@@ -15,10 +15,13 @@ import type { OpEnvelope } from '@protopulse/graph';
  * new, ingest what arrives. No conflict resolution exists because none
  * is needed at this layer.
  *
- * v1 scope, stated plainly: the MAIN branch only (other branches stay
- * local), in-memory relay rooms, and one tab per browser profile per
- * design (tabs share the actor id; concurrent same-actor tabs would
- * collide on lamports).
+ * Branch sync: every branch travels as {name, base, OWN ops} — the
+ * inherited prefix is the base pointer, never re-carried. Remote
+ * branches are adopted main-first (snapshots order them so bases
+ * resolve); a same-named branch with a DIFFERENT base is unsyncable
+ * and stays local, surfaced as a note rather than an error. Honest
+ * scope: one tab per browser profile per design (tabs share the actor
+ * id; concurrent same-actor tabs would collide on lamports).
  */
 
 export const DEFAULT_RELAY_URL = 'ws://localhost:8787';
@@ -27,9 +30,24 @@ const PROTOCOL_VERSION = 1;
 // Mirror of the relay's server→client schema (the relay package is a
 // node server — the app validates frames itself rather than importing
 // a ws-flavoured package into the browser bundle).
+const branchSyncSchema = z.object({
+  name: z.string().min(1),
+  base: z.object({ branch: z.string().min(1).nullable(), opCount: z.number().int().nonnegative() }),
+  envelopes: z.array(opEnvelopeSchema),
+});
+
 const serverMessageSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('snapshot'), room: z.string(), envelopes: z.array(opEnvelopeSchema) }),
-  z.object({ kind: z.literal('ops'), envelopes: z.array(opEnvelopeSchema) }),
+  z.object({
+    kind: z.literal('snapshot'),
+    room: z.string(),
+    envelopes: z.array(opEnvelopeSchema),
+    branches: z.array(branchSyncSchema).optional(),
+  }),
+  z.object({
+    kind: z.literal('ops'),
+    branch: z.string().min(1).optional(),
+    envelopes: z.array(opEnvelopeSchema),
+  }),
   z.object({ kind: z.literal('peers'), count: z.number().int().nonnegative() }),
   z.object({ kind: z.literal('error'), message: z.string() }),
 ]);
@@ -44,6 +62,8 @@ export interface SyncInfo {
   sent: number;
   received: number;
   error: string | null;
+  /** Advisory sync notes (e.g. a branch kept local on base mismatch). */
+  note: string | null;
 }
 
 const OFF: SyncInfo = {
@@ -54,6 +74,7 @@ const OFF: SyncInfo = {
   sent: 0,
   received: 0,
   error: null,
+  note: null,
 };
 
 interface SocketLike {
@@ -66,9 +87,11 @@ type SocketFactory = (url: string) => SocketLike;
 
 const defaultSocketFactory: SocketFactory = (url) => new WebSocket(url) as unknown as SocketLike;
 
-function key(env: OpEnvelope): string {
-  return `${env.actor}:${String(env.lamport)}`;
+function key(branch: string, env: OpEnvelope): string {
+  return `${branch}|${env.actor}:${String(env.lamport)}`;
 }
+
+const MAIN = 'main';
 
 /** One live connection. Pure against an injected session store —
  *  node tests run two of these against a real in-process relay.
@@ -127,19 +150,9 @@ export class SyncClient {
     this.seen = new Set();
 
     socket.addEventListener('open', () => {
-      const envelopes = this.localEnvelopes();
-      for (const env of envelopes) this.seen.add(key(env));
-      socket.send(
-        JSON.stringify({
-          kind: 'join',
-          v: PROTOCOL_VERSION,
-          room,
-          ...(this.token !== undefined ? { token: this.token } : {}),
-          envelopes,
-        }),
-      );
+      this.sendJoin(socket, room);
       this.attempts = 0;
-      this.update({ status: 'on', sent: this.info.sent + envelopes.length });
+      this.update({ status: 'on' });
       this.unsubscribe ??= this.session.subscribe(() => {
         this.pushLocal();
       });
@@ -152,15 +165,21 @@ export class SyncClient {
       } catch {
         return; // not ours — ignore
       }
-      if (msg.kind === 'snapshot' || msg.kind === 'ops') {
-        const unseen = msg.envelopes.filter((e) => !this.seen.has(key(e)));
-        for (const e of unseen) this.seen.add(key(e));
-        if (unseen.length > 0) {
-          const fresh = this.session.getState().ingestRemote(unseen);
-          this.update({ received: this.info.received + fresh });
-        }
+      if (msg.kind === 'snapshot') {
+        // Branch-aware rooms list every branch main-first; rooms from a
+        // pre-branch relay carry only the flat main payload.
+        const branches = msg.branches ?? [
+          { name: MAIN, base: { branch: null, opCount: 0 }, envelopes: msg.envelopes },
+        ];
+        for (const incoming of branches) this.absorb(incoming.name, incoming.base, incoming.envelopes);
+      } else if (msg.kind === 'ops') {
+        this.absorb(msg.branch ?? MAIN, null, msg.envelopes);
       } else if (msg.kind === 'peers') {
         this.update({ peers: msg.count });
+      } else if (msg.message.startsWith('branch ')) {
+        // Advisory: one branch is unsyncable (base mismatch) — the rest
+        // of the session keeps syncing.
+        this.update({ note: msg.message });
       } else {
         // Relay-level errors (bad token, malformed frame) mean a retry
         // would just fail the same way — stop instead of loop.
@@ -226,8 +245,67 @@ export class SyncClient {
     }
   }
 
-  private localEnvelopes(): OpEnvelope[] {
-    return this.session.getState().core.log.opsFor(MAIN_BRANCH);
+  /** Branches announced to the relay this connection (join carries
+   *  them; a branch born later triggers a fresh announce). */
+  private announced = new Set<string>();
+
+  /** The full local state in wire shape: every branch's OWN ops. */
+  private localBranches(): { name: string; base: { branch: string | null; opCount: number }; envelopes: OpEnvelope[] }[] {
+    return this.session
+      .getState()
+      .core.log.entries()
+      .map((b) => ({ name: b.name, base: { ...b.base }, envelopes: [...b.ops] }));
+  }
+
+  private sendJoin(socket: SocketLike, room: string): void {
+    const branches = this.localBranches();
+    this.announced = new Set(branches.map((b) => b.name));
+    let sent = 0;
+    for (const b of branches) {
+      for (const env of b.envelopes) this.seen.add(key(b.name, env));
+      sent += b.envelopes.length;
+    }
+    socket.send(
+      JSON.stringify({
+        kind: 'join',
+        v: PROTOCOL_VERSION,
+        room,
+        ...(this.token !== undefined ? { token: this.token } : {}),
+        envelopes: [],
+        branches,
+      }),
+    );
+    this.update({ sent: this.info.sent + sent });
+  }
+
+  /** Ingest one branch's remote envelopes; adopt the branch first when
+   *  a base pointer travels with them (snapshots carry it, ops don't). */
+  private absorb(
+    branch: string,
+    base: { branch: string | null; opCount: number } | null,
+    envelopes: readonly OpEnvelope[],
+  ): void {
+    const session = this.session.getState();
+    if (!session.core.log.has(branch)) {
+      if (base === null) {
+        // Ops raced ahead of the branch's snapshot — re-join to fetch
+        // the pointer (idempotent; `seen` dedupes the echo).
+        if (this.socket) this.sendJoin(this.socket, this.info.room);
+        return;
+      }
+      const adopted = session.adoptRemoteBranch(branch, base);
+      if (!adopted.ok) {
+        this.update({ note: adopted.reason });
+        return;
+      }
+      this.announced.add(branch);
+    }
+    const unseen = envelopes.filter((e) => !this.seen.has(key(branch, e)));
+    for (const e of unseen) this.seen.add(key(branch, e));
+    if (unseen.length > 0) {
+      const fresh = this.session.getState().ingestRemote(unseen, branch);
+      this.update({ received: this.info.received + fresh });
+    }
   }
 
   private pushLocal(): void {
@@ -238,11 +316,22 @@ export class SyncClient {
       this.disconnect();
       return;
     }
-    const fresh = this.localEnvelopes().filter((e) => !this.seen.has(key(e)));
-    if (fresh.length === 0) return;
-    for (const e of fresh) this.seen.add(key(e));
-    socket.send(JSON.stringify({ kind: 'ops', room: this.info.room, envelopes: fresh }));
-    this.update({ sent: this.info.sent + fresh.length });
+    const branches = this.localBranches();
+    // A branch born since the last announce: re-join (idempotent — the
+    // relay unions; the snapshot reply dedupes through `seen`).
+    if (branches.some((b) => !this.announced.has(b.name))) {
+      this.sendJoin(socket, this.info.room);
+      return;
+    }
+    for (const b of branches) {
+      const fresh = b.envelopes.filter((e) => !this.seen.has(key(b.name, e)));
+      if (fresh.length === 0) continue;
+      for (const e of fresh) this.seen.add(key(b.name, e));
+      socket.send(
+        JSON.stringify({ kind: 'ops', room: this.info.room, branch: b.name, envelopes: fresh }),
+      );
+      this.update({ sent: this.info.sent + fresh.length });
+    }
   }
 }
 

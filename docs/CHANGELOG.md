@@ -2,6 +2,35 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — branch sync
+
+### Added
+- **Branches sync** across the relay: every branch travels as
+  {name, base, OWN ops} — the inherited prefix is the base pointer
+  and is never re-carried on the wire. Snapshots list branches
+  main-first so base pointers resolve in adoption order; a branch
+  created mid-session re-announces through an idempotent join; ops
+  that race ahead of their branch's snapshot heal by re-joining.
+  BranchLog gains adoptBranch (sync-shaped refusals, not throws) and
+  ownOpsFor.
+- **Honest conflict rule**: a same-named branch with a DIFFERENT
+  fork point is unsyncable by construction — the relay keeps its
+  first-seen base and replies with an advisory the Sync panel shows
+  as a note; the rest of the session keeps syncing.
+- Room persistence records went branch-aware ({branch, base, env}
+  JSONL); pre-branch files still load — bare envelopes were main.
+  v1 clients (flat envelope payloads) keep working against the new
+  relay.
+
+### Verified
+- 2 relay tests (branch join/snapshot wire shape + tagged broadcast;
+  base-mismatch advisory with first-seen-base retention) and 2
+  end-to-end two-editor tests (a feature branch travels: pointer
+  adopted, feature-only component visible on the branch and ABSENT
+  from main, edits flow both ways; a branch born mid-session reaches
+  the peer). All 8 pre-branch relay/sync tests still pass through
+  the compat paths. Full test:packages green; eslint 0 errors.
+
 ## 2026-06-11 — AVR timers 1/2, SPI, TWI
 
 ### Added

@@ -252,3 +252,63 @@ describe('relay server', () => {
     c.close();
   });
 });
+
+describe('branch sync', () => {
+  it('branches travel as {name, base, own ops}; joiners adopt them main-first', async () => {
+    server = await createRelayServer();
+    const a = new TestClient(server.port);
+    await a.open();
+    a.send({
+      kind: 'join',
+      v: 1,
+      room: 'br',
+      envelopes: [],
+      branches: [
+        { name: 'main', base: { branch: null, opCount: 0 }, envelopes: [env('alice', 1, 'R1')] },
+        { name: 'feature', base: { branch: 'main', opCount: 1 }, envelopes: [env('alice', 2, 'R2')] },
+      ],
+    });
+    await a.waitFor('snapshot');
+
+    const b = await joined(server.port, 'br');
+    const snap = await b.waitFor('snapshot');
+    expect(snap.branches?.map((br) => br.name)).toEqual(['main', 'feature']);
+    expect(snap.branches?.[1]?.base).toEqual({ branch: 'main', opCount: 1 });
+    expect(snap.branches?.[1]?.envelopes.map((e) => e.lamport)).toEqual([2]);
+
+    // Ops on a branch broadcast with the branch tag.
+    b.send({ kind: 'ops', room: 'br', branch: 'feature', envelopes: [env('bob', 3, 'R3')] });
+    const relayed = await a.waitFor('ops', (m) => m.envelopes.some((e) => e.actor === 'bob'));
+    expect(relayed.branch).toBe('feature');
+    a.close();
+    b.close();
+  });
+
+  it('a same-named branch with a different base is refused as an advisory', async () => {
+    server = await createRelayServer();
+    const a = new TestClient(server.port);
+    await a.open();
+    a.send({
+      kind: 'join', v: 1, room: 'clash', envelopes: [],
+      branches: [
+        { name: 'main', base: { branch: null, opCount: 0 }, envelopes: [env('alice', 1, 'R1'), env('alice', 2, 'R2')] },
+        { name: 'feature', base: { branch: 'main', opCount: 2 }, envelopes: [] },
+      ],
+    });
+    await a.waitFor('snapshot');
+
+    const b = new TestClient(server.port);
+    await b.open();
+    b.send({
+      kind: 'join', v: 1, room: 'clash', envelopes: [],
+      branches: [{ name: 'feature', base: { branch: 'main', opCount: 1 }, envelopes: [env('bob', 9, 'R9')] }],
+    });
+    await b.waitFor('error', (m) => m.message.includes('base mismatch'));
+    // The room keeps its first-seen fork; bob's divergent ops never land.
+    const snap = await b.waitFor('snapshot');
+    expect(snap.branches?.find((br) => br.name === 'feature')?.base.opCount).toBe(2);
+    expect(snap.branches?.find((br) => br.name === 'feature')?.envelopes).toEqual([]);
+    a.close();
+    b.close();
+  });
+});

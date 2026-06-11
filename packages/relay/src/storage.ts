@@ -2,6 +2,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { opEnvelopeSchema } from '@protopulse/graph';
+import { z } from 'zod';
 
 import type { OpEnvelope } from '@protopulse/graph';
 
@@ -14,11 +15,23 @@ import type { OpEnvelope } from '@protopulse/graph';
  * restarted relay re-seed a room before any client rejoins.
  */
 
+export interface BranchRecord {
+  branch: string;
+  base: { branch: string | null; opCount: number };
+  env: OpEnvelope;
+}
+
+const recordSchema = z.object({
+  branch: z.string().min(1),
+  base: z.object({ branch: z.string().min(1).nullable(), opCount: z.number().int().nonnegative() }),
+  env: opEnvelopeSchema,
+});
+
 export interface RoomStorage {
-  /** Envelopes persisted for the room; [] when none. */
-  load(room: string): OpEnvelope[];
-  /** Append freshly-unioned envelopes. */
-  append(room: string, envelopes: readonly OpEnvelope[]): void;
+  /** Records persisted for the room; [] when none. */
+  load(room: string): BranchRecord[];
+  /** Append freshly-unioned records. */
+  append(room: string, records: readonly BranchRecord[]): void;
 }
 
 /** Room name → safe filename (room names are user input). */
@@ -32,23 +45,34 @@ export function createFileStorage(dataDir: string): RoomStorage {
     load(room) {
       const file = fileFor(dataDir, room);
       if (!existsSync(file)) return [];
-      const out: OpEnvelope[] = [];
+      const out: BranchRecord[] = [];
       for (const line of readFileSync(file, 'utf8').split('\n')) {
         if (line.trim() === '') continue;
         try {
-          out.push(opEnvelopeSchema.parse(JSON.parse(line)));
+          const raw: unknown = JSON.parse(line);
+          const asRecord = recordSchema.safeParse(raw);
+          if (asRecord.success) {
+            out.push(asRecord.data);
+            continue;
+          }
+          // Pre-branch-sync files carried bare envelopes: that was main.
+          out.push({
+            branch: 'main',
+            base: { branch: null, opCount: 0 },
+            env: opEnvelopeSchema.parse(raw),
+          });
         } catch {
           // Partial/corrupt trailing line (crash mid-append) — skip.
         }
       }
       return out;
     },
-    append(room, envelopes) {
-      if (envelopes.length === 0) return;
+    append(room, records) {
+      if (records.length === 0) return;
       // Leading newline: if the previous append was cut short by a
       // crash, the partial line stays ISOLATED instead of swallowing
       // this record. Blank lines are skipped on load.
-      const lines = envelopes.map((e) => `\n${JSON.stringify(e)}`).join('');
+      const lines = records.map((r) => `\n${JSON.stringify(r)}`).join('');
       appendFileSync(fileFor(dataDir, room), lines);
     },
   };
