@@ -18,7 +18,7 @@ The stored-energy bill is fixed — charging C to V always moves charge Q = C·V
 
 ## See it
 
-In the sim, connect 1000µF through 50mΩ of wiring to a stiff 5V source and watch the ammeter spike to tens of amps for a fraction of a millisecond. Add a 5Ω series resistance standing in for a cold NTC and re-run: the spike collapses to about an amp, the capacitor still charges, nothing notices.
+In the sim, connect 1000µF through 200mΩ of wiring to a stiff 5V source and watch the ammeter spike to tens of amps for a fraction of a millisecond. Add a 5Ω series resistance standing in for a cold NTC and re-run: the spike collapses to about an amp, the capacitor still charges, nothing notices.
 
 ## Go deeper
 

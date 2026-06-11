@@ -14,7 +14,7 @@ The classic failure is skipping the subtraction. A builder computes 5V ÷ 10mA =
 
 ## The numbers
 
-The working recipe for any LED: R = (V_supply − V_forward) ÷ I_target. For 5V, a red LED (~2.0V) and 10mA, that's 300Ω — snap to the nearest standard value (330Ω) and accept ~9mA. Ohm's law is exact for ideal resistors; real resistors hold it well within their tolerance band (commonly 5% or 1%) and their power rating. It does *not* hold for diodes, LEDs, or anything with a junction — for those, treat the part as a fixed voltage drop and let the resistor obey the law.
+The working recipe for any LED: R = (V_supply − V_forward) ÷ I_target. For 5V, a red LED (~2.0V) and 10mA, that's 300Ω — an E24 value you can buy outright; if your kit only stocks the E12 series, snap to 330Ω and accept ~9mA. Ohm's law is exact for ideal resistors; real resistors hold it well within their tolerance band (commonly 5% or 1%) and their power rating. It does *not* hold for diodes, LEDs, or anything with a junction — for those, treat the part as a fixed voltage drop and let the resistor obey the law.
 
 ## See it
 

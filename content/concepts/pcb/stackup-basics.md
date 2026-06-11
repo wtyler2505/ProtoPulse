@@ -6,7 +6,7 @@ ercCodes: []
 
 ## What it is
 
-The stackup is the board's vertical recipe: copper layers separated by core (cured fiberglass) and prepreg (the resin sheets that bond it all). It decides how far every signal sits from its reference plane — which quietly determines most of the board's electrical behavior before you route a single trace.
+The stackup is the board's vertical recipe: copper layers separated by core (fully-cured fiberglass laminate) and prepreg (glass cloth carrying partially-cured resin that bonds the stack when laminated). It decides how far every signal sits from its reference plane — which quietly determines most of the board's electrical behavior before you route a single trace.
 
 ## Why it bites
 
