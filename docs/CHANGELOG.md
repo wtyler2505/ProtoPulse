@@ -2,6 +2,40 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — SDF text + GPU picking (the renderer epic)
+
+### Added
+- **SDF glyph atlas** (@protopulse/renderer): text now renders from a
+  signed distance field — exact Felzenszwalb Euclidean distance
+  transform (`sdf.ts`, DOM-free, tested against brute force) with
+  TinySDF sub-pixel seeding from the antialiased raster, uploaded as
+  an R8 texture, reconstructed by an fwidth smoothstep shader. Crisp
+  at every zoom; browser-verified at ~70× (smooth contours, round
+  counters, no blur). Supersedes the M1 canvas-alpha atlas (ADR-0015
+  supersedes ADR-0013).
+- **GPU pick buffer** (@protopulse/renderer `pickAt`): scene nodes
+  draw into an offscreen RGBA8 ID pass (24-bit index encoding in
+  `pick-encode.ts`, exact-k/255 round-trip tested); readPixels at the
+  cursor answers "what's under here" in O(1) regardless of density.
+  Cached per (scene, camera, size); drill holes punch through the
+  pick buffer just like the visible pass. ADR-0016 supersedes
+  ADR-0012 — the Vol II §B.2 dual picking system is complete.
+- **Hover highlight** (@protopulse/app): both editors light the node
+  under the cursor — GPU pick first (exact on pads/zones/traces/
+  copper), flatbush tolerance pick as fallback for 1px line art.
+  Browser-verified: pad fill → footprint id, empty board → null,
+  highlight clears on leave.
+
+### Honest cut
+- Single-channel SDF, not multi-channel MSDF: sharp corners round by
+  ≤1 source pixel at extreme magnification (needs vector outlines +
+  a bundled font to do better — revisit trigger in ADR-0015).
+
+### Status
+- This was the last tractable engine item. v0.1 now has exactly one
+  open box (pcbnew manual import check — Tyler); everything else on
+  ROADMAP is gated on hardware, product decisions, or migration.
+
 ## 2026-06-11 — ESP32-S3 verified part
 
 ### Added

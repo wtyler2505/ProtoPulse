@@ -1209,7 +1209,7 @@ Then open `http://localhost:5174` (the main app stays on port 5000).
 
 ### What it can do today
 
-- **Place and wire components** — wires route automatically in clean right-angle (Manhattan) segments.
+- **Place and wire components** — wires route automatically in clean right-angle (Manhattan) segments. Whatever is under your cursor lights up softly before you click, and text stays crisp no matter how far you zoom in.
 - **Undo/redo** that is always exact, because every change you make is recorded as an operation in the design's history.
 - **Branches with real merging** — like saving alternate versions of your circuit. Switch between them instantly, a green/amber overlay shows exactly what differs, and the **merge** button combines two branches three-way: compatible changes merge automatically, and anything both branches changed differently is shown as a conflict you decide explicitly (yours or theirs) — nothing is ever merged silently.
 - **History (time-lapse replay)** — every design is its full operation log, and the History tab lets you scrub through it: drag the slider (or press Play) and watch the design rebuild itself op by op on the canvas. Click any operation to jump to that moment. The editor is read-only while you're in the past; **Back to live** returns to the present.
@@ -1247,7 +1247,7 @@ The editor has a full PCB mode (toggle in the toolbar): place footprints from th
 
 ### What's coming
 
-The new editor grows in stages. Still ahead: panelization on the board side, syncing branches other than main, live vendor sourcing for the Buyer, WebSerial flashing of real boards, and community/fab features. The full current status always lives in [ROADMAP.md](../ROADMAP.md).
+The new editor grows in stages. Still ahead: live vendor sourcing for the Buyer, WebSerial flashing of real boards, the hardware probe, and community/fab features. The full current status always lives in [ROADMAP.md](../ROADMAP.md).
 
 ---
 

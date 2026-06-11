@@ -5,10 +5,12 @@ import type { Bounds } from './tessellate.js';
 import type { Vec } from '@protopulse/graph';
 
 /**
- * CPU picking over scene-node AABBs via flatbush (no GPU pick buffer at
- * M1). Symbols pick by bounding box; wires additionally require the
- * point to be within tolerance of an actual segment, so the empty corner
- * of an L-shaped wire's AABB doesn't pick.
+ * CPU picking over scene-node AABBs via flatbush — the tolerance/ranked
+ * half of the dual picking system (the GPU ID buffer in gl/renderer.ts
+ * serves exact-pixel hover; this serves tools, marquee, and snapping).
+ * Symbols pick by bounding box; wires additionally require the point to
+ * be within tolerance of an actual segment, so the empty corner of an
+ * L-shaped wire's AABB doesn't pick.
  */
 
 export interface PickHit {

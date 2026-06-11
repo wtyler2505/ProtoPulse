@@ -19,6 +19,7 @@ import { ensureRoutingClearance, routingClearanceNm } from '../pcb/routing.js';
 import { withSpringBack } from '../pcb/springback.js';
 import {
   PcbPlaceTool,
+  PCB_PICK_TOLERANCE_NM,
   pcbDeleteSelectionOps,
   pcbFlipSelectionOps,
   PcbOutlineTool,
@@ -135,6 +136,7 @@ export function CanvasHost() {
     let tool: Tool | PcbTool = isPcb ? new PcbSelectTool() : new SelectTool();
     let toolKey = 'select';
     let ghost: Float32Array | null = null;
+    let hovered: string | null = null;
     let overlayVersion = 0;
     let lastCameraCommandSeq = useUi.getState().cameraCommandSeq;
     let panning = false;
@@ -272,6 +274,19 @@ export function CanvasHost() {
         return;
       }
       applyResult(toolMove(world));
+      // Hover highlight — dual picking: the GPU ID buffer answers
+      // exact-pixel (fills: pads, zones, traces, copper) in O(1); when
+      // the cursor is over empty pixels, the CPU index supplies the
+      // tolerance hit line art needs (1px symbol strokes, wires).
+      const rect = canvas.getBoundingClientRect();
+      const hit =
+        renderer.pickAt(scene, camera, e.clientX - rect.left, e.clientY - rect.top) ??
+        pickIndex.pick(world, isPcb ? PCB_PICK_TOLERANCE_NM : PICK_TOLERANCE_NM)[0]?.id ??
+        null;
+      if (hit !== hovered) {
+        hovered = hit;
+        overlayVersion++;
+      }
     };
 
     const onPointerUp = (e: PointerEvent): void => {
@@ -285,6 +300,10 @@ export function CanvasHost() {
 
     const onPointerLeave = (): void => {
       useUi.getState().setCursorWorld(null);
+      if (hovered !== null) {
+        hovered = null;
+        overlayVersion++;
+      }
     };
 
     const onWheel = (e: WheelEvent): void => {
@@ -465,6 +484,7 @@ export function CanvasHost() {
         const overlay: OverlayState = {
           selection: new Set(session.selection),
           highlight: new Set(ui.highlight),
+          hover: hovered,
           diff: isPcb ? undefined : diffOverlayMap(getDiffDelta(session)),
           ...(freshGhost ? { tint: tintFor(freshGhost) } : {}),
           ...(ghost ? { ghost: { lines: ghost } } : {}),

@@ -1,7 +1,8 @@
 /**
- * @protopulse/renderer — WebGL2 schematic renderer (M1 cut: retained
- * scene graph, canvas-2D glyph atlas, flatbush CPU picking). Everything
- * except gl/ is DOM-free and unit-tested in node.
+ * @protopulse/renderer — WebGL2 schematic/PCB renderer: retained scene
+ * graph, SDF glyph atlas (crisp text at every zoom), dual picking (GPU
+ * ID buffer for hover + flatbush R-tree for tolerance/marquee/snap).
+ * Everything except gl/ is DOM-free and unit-tested in node.
  */
 export {
   applyPlacement,
@@ -71,3 +72,5 @@ export {
 } from './camera.js';
 export { WebGL2Renderer, type OverlayState } from './gl/renderer.js';
 export { GlyphAtlas, type Glyph } from './gl/text.js';
+export { edt, sdfFromAlpha } from './sdf.js';
+export { MAX_PICK_INDEX, pickColor, pickIndexFromPixel } from './pick-encode.js';

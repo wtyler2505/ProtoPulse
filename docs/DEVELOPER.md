@@ -1639,6 +1639,6 @@ npm run -w @protopulse/cli build # then: node packages/cli/dist/protopulse.js ch
 ### Known M1 gaps
 
 - KiCad pcbnew import of the golden netlists awaits one manual verification (checkbox in `tools/golden/README.md`).
-- Merge conflicts surface as data; no interactive resolver UI yet.
-- MSDF text rendering and GPU picking deferred; ESP32-S3 seed part deferred.
-- Simulation, PCB, and hardware bridge are roadmap (v0.2+), not present.
+- (Updated 2026-06-11 — most original M1 gaps have since closed: interactive merge resolver, SDF text + GPU picking, ESP32-S3 part, simulation (v0.2), crew (v0.3), PCB (v0.4) all landed. `ROADMAP.md` is the canonical status; this list tracks only what is still open.)
+- ESP32-S3 part is schematic-only (no footprint); single-channel SDF, not MSDF.
+- WebSerial flashing and the v0.7 Probe await real hardware.

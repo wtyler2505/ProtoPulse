@@ -1,5 +1,7 @@
 import { MM, SCHEMATIC_GRID } from '@protopulse/graph';
 
+import { pickColor, pickIndexFromPixel } from '../pick-encode.js';
+
 import { GlyphAtlas } from './text.js';
 
 import type { Camera } from '../camera.js';
@@ -26,6 +28,8 @@ import type { RGBA, SceneGraph, SceneNode } from '../scene.js';
 export interface OverlayState {
   selection: Set<string>;
   highlight: Set<string>;
+  /** Node under the cursor (GPU pick buffer) — lit softer than selection. */
+  hover?: string | null;
   diff?: Map<string, 'added' | 'removed' | 'changed'>;
   /** Per-node color override (lowest overlay priority) — e.g. the sim
    *  ghost tinting nets by their solved voltage. */
@@ -44,6 +48,7 @@ const COLORS = {
   grid: [0.16, 0.19, 0.24, 1.0] as RGBA,
   selection: [1.0, 0.85, 0.3, 1.0] as RGBA,
   highlight: [0.4, 0.95, 1.0, 1.0] as RGBA,
+  hover: [0.92, 0.95, 1.0, 1.0] as RGBA,
   diffAdded: [0.35, 0.95, 0.45, 1.0] as RGBA,
   diffRemoved: [1.0, 0.35, 0.35, 1.0] as RGBA,
   diffChanged: [1.0, 0.72, 0.25, 1.0] as RGBA,
@@ -77,6 +82,8 @@ void main() {
   gl_Position = vec4(p.xy, 0.0, 1.0);
 }`;
 
+// SDF reconstruction: 0.5 is the glyph edge; fwidth-sized smoothstep
+// gives ~1px of antialiasing at every zoom level.
 const TEXT_FS = `#version 300 es
 precision highp float;
 in vec2 v_uv;
@@ -84,8 +91,10 @@ uniform sampler2D u_atlas;
 uniform vec4 u_color;
 out vec4 outColor;
 void main() {
-  vec4 s = texture(u_atlas, v_uv);
-  outColor = u_color * s;
+  float d = texture(u_atlas, v_uv).r;
+  float aa = fwidth(d);
+  float alpha = smoothstep(0.5 - aa, 0.5 + aa, d);
+  outColor = u_color * alpha;
 }`;
 
 interface NodeRange {
@@ -162,6 +171,16 @@ export class WebGL2Renderer {
   private cachedSceneVersion = -1;
   private cssWidth = 1;
   private cssHeight = 1;
+
+  // ── GPU pick pass (ADR-0016) ──
+  private pickFbo: WebGLFramebuffer | null = null;
+  private pickTex: WebGLTexture | null = null;
+  private pickW = 0;
+  private pickH = 0;
+  /** Node ids in `ranges` order — pick index i ↔ pickIds[i]. */
+  private pickIds: string[] = [];
+  /** Stamp of the last rendered pick pass; re-render only when stale. */
+  private pickStamp = '';
 
   attach(canvas: HTMLCanvasElement): void {
     const gl = canvas.getContext('webgl2', { antialias: true, alpha: false });
@@ -252,6 +271,7 @@ export class WebGL2Renderer {
     if (!gl || scene.version === this.cachedSceneVersion) return;
     this.cachedSceneVersion = scene.version;
     this.ranges.clear();
+    this.pickIds = [];
 
     // Line-ish geometry first so bodies draw on top (wires under symbols;
     // traces under vias under footprints).
@@ -303,6 +323,7 @@ export class WebGL2Renderer {
         kind: node.kind,
         color: node.color,
       });
+      this.pickIds.push(node.id);
       for (let i = 0; i < node.lines.length; i++) {
         data[offset + i] = (node.lines[i] ?? 0) * NM_TO_MM;
       }
@@ -342,6 +363,7 @@ export class WebGL2Renderer {
   private colorFor(id: string, base: RGBA, overlay: OverlayState): RGBA {
     if (overlay.selection.has(id)) return COLORS.selection;
     if (overlay.highlight.has(id)) return COLORS.highlight;
+    if (overlay.hover === id) return COLORS.hover;
     const d = overlay.diff?.get(id);
     if (d === 'added') return COLORS.diffAdded;
     if (d === 'removed') return COLORS.diffRemoved;
@@ -349,6 +371,105 @@ export class WebGL2Renderer {
     const t = overlay.tint?.get(id);
     if (t) return t;
     return base;
+  }
+
+  /** (Re)create the offscreen ID framebuffer to match the canvas. */
+  private ensurePickTarget(gl: WebGL2RenderingContext, w: number, h: number): void {
+    if (this.pickFbo && this.pickW === w && this.pickH === h) return;
+    if (this.pickTex) gl.deleteTexture(this.pickTex);
+    this.pickFbo ??= gl.createFramebuffer();
+    this.pickTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.pickTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.pickFbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.pickTex, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    this.pickW = w;
+    this.pickH = h;
+    this.pickStamp = '';
+  }
+
+  /**
+   * Render node indices into the ID buffer when (scene, camera, size)
+   * moved since the last pass. Blend off — colors must land exact.
+   * Draw order matches the visible pass, so the topmost node wins.
+   */
+  private ensurePickPass(scene: SceneGraph, camera: Camera): void {
+    const gl = this.gl;
+    const canvas = this.canvas;
+    if (!gl || !canvas || !this.lineProgram) return;
+    this.syncBuffers(scene);
+    this.ensurePickTarget(gl, canvas.width, canvas.height);
+
+    const stamp = `${String(scene.version)}|${String(camera.version)}|${String(canvas.width)}x${String(canvas.height)}`;
+    if (stamp === this.pickStamp) return;
+    this.pickStamp = stamp;
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.pickFbo);
+    gl.viewport(0, 0, this.pickW, this.pickH);
+    gl.disable(gl.BLEND);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.useProgram(this.lineProgram);
+    gl.uniformMatrix3fv(this.lineTransformLoc, false, this.transform(camera));
+
+    const ZERO: RGBA = [0, 0, 0, 0];
+    gl.bindVertexArray(this.triVao);
+    let index = 0;
+    for (const range of this.ranges.values()) {
+      if (range.triCount > 0) {
+        gl.uniform4fv(this.lineColorLoc, pickColor(index));
+        gl.drawArrays(gl.TRIANGLES, range.triFirst, range.triCount);
+      }
+      // Drills punch through their copper in the pick buffer too.
+      if (range.holeCount > 0) {
+        gl.uniform4fv(this.lineColorLoc, ZERO);
+        gl.drawArrays(gl.TRIANGLES, range.holeFirst, range.holeCount);
+      }
+      index++;
+    }
+    gl.bindVertexArray(this.lineVao);
+    index = 0;
+    for (const range of this.ranges.values()) {
+      if (range.count > 0) {
+        gl.uniform4fv(this.lineColorLoc, pickColor(index));
+        gl.drawArrays(gl.LINES, range.first, range.count);
+      }
+      index++;
+    }
+    gl.bindVertexArray(null);
+
+    gl.enable(gl.BLEND);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+
+  /**
+   * The node id under a CSS-pixel canvas position, via the GPU pick
+   * buffer — O(1) in scene density. Null over empty background (or
+   * inside a drill hole). Exact-pixel: tools that want tolerance and
+   * ranked hit lists keep using the CPU PickIndex.
+   */
+  pickAt(scene: SceneGraph, camera: Camera, cssX: number, cssY: number): string | null {
+    const gl = this.gl;
+    const canvas = this.canvas;
+    if (!gl || !canvas) return null;
+    this.ensurePickPass(scene, camera);
+
+    const dpr = canvas.width / this.cssWidth;
+    const px = Math.min(this.pickW - 1, Math.max(0, Math.round(cssX * dpr)));
+    const py = Math.min(this.pickH - 1, Math.max(0, this.pickH - 1 - Math.round(cssY * dpr)));
+    const pixel = new Uint8Array(4);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.pickFbo);
+    gl.readPixels(px, py, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    const index = pickIndexFromPixel(pixel[0] ?? 0, pixel[1] ?? 0, pixel[2] ?? 0);
+    if (index === null) return null;
+    return this.pickIds[index] ?? null;
   }
 
   private drawGrid(camera: Camera): void {
@@ -476,6 +597,8 @@ export class WebGL2Renderer {
     ]) {
       if (buf) gl.deleteBuffer(buf);
     }
+    if (this.pickTex) gl.deleteTexture(this.pickTex);
+    if (this.pickFbo) gl.deleteFramebuffer(this.pickFbo);
     this.gl = null;
     this.canvas = null;
   }
