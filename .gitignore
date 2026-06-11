@@ -36,3 +36,7 @@ packages/*/coverage/
 
 # Playwright MCP browser-verification artifacts (snapshots, console logs)
 .playwright-mcp/
+
+# environment files contain live secrets — never commit (.env.example stays tracked)
+.env
+.env.local
