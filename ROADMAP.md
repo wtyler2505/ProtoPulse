@@ -222,7 +222,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       ATmega328P or RP2040 at load time; the session rebuilds the core
       on a kind switch (serial monitor + logic analyzer work for both;
       co-sim bindings remain AVR-flavored pin names)
-- [ ] ESP32 core; AVR timers 1/2, SPI, TWI peripherals
+- [x] AVR timers 1/2, SPI, TWI (landed 2026-06-11): timers 1/2 drive
+      their OC pins through the existing port listeners (CTC toggles
+      land cycle-exact in the pin-event stream); SPI master against a
+      host byte handler (no handler = bus floats 0xFF, like real
+      disconnected MISO); TWI master against a host bus handler with
+      synchronous acks (no handler = NACK, an empty bus, never a
+      hang). Honest gaps: EEPROM/watchdog unwired, SPI/TWI slave mode
+      not modeled
+- [ ] ESP32 core (no off-the-shelf JS emulator — a build, not a wire-up)
 
 ## v0.6 — The World 🔨 *(first slice landed early)*
 
