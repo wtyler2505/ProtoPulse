@@ -34,7 +34,7 @@ const serverMessageSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('error'), message: z.string() }),
 ]);
 
-export type SyncStatus = 'off' | 'connecting' | 'on' | 'error';
+export type SyncStatus = 'off' | 'connecting' | 'on' | 'reconnecting' | 'error';
 
 export interface SyncInfo {
   status: SyncStatus;
@@ -71,18 +71,29 @@ function key(env: OpEnvelope): string {
 }
 
 /** One live connection. Pure against an injected session store —
- *  node tests run two of these against a real in-process relay. */
+ *  node tests run two of these against a real in-process relay.
+ *
+ *  Resilience: an UNEXPECTED close (relay restart, network blip)
+ *  schedules a rejoin with exponential backoff. Rejoining is safe by
+ *  construction — join carries the full local log and the snapshot
+ *  brings the room's, so anything missed in either direction unions
+ *  back in. Manual disconnect cancels everything. */
 export class SyncClient {
   private socket: SocketLike | null = null;
   private unsubscribe: (() => void) | null = null;
   private seen = new Set<string>();
   private designId: string | null = null;
   private info: SyncInfo = { ...OFF };
+  private attempts = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private wantLive = false;
 
   constructor(
     private readonly session: SessionStore,
     private readonly onChange: (info: SyncInfo) => void,
     private readonly socketFactory: SocketFactory = defaultSocketFactory,
+    /** Backoff base; tests shrink it. Delay = base·2^attempt, cap 30s. */
+    private readonly baseBackoffMs = 1_000,
   ) {}
 
   private update(patch: Partial<SyncInfo>): void {
@@ -92,25 +103,34 @@ export class SyncClient {
 
   connect(url: string, room: string): void {
     this.disconnect();
+    this.wantLive = true;
+    this.attempts = 0;
     this.update({ ...OFF, status: 'connecting', url, room });
     this.designId = this.session.getState().designId;
+    this.start();
+  }
 
+  private start(): void {
+    const { url, room } = this.info;
     let socket: SocketLike;
     try {
       socket = this.socketFactory(url);
     } catch (err) {
       this.update({ status: 'error', error: err instanceof Error ? err.message : String(err) });
+      this.wantLive = false;
       return;
     }
     this.socket = socket;
+    // A reconnect re-learns the world from the join/snapshot exchange.
+    this.seen = new Set();
 
     socket.addEventListener('open', () => {
       const envelopes = this.localEnvelopes();
       for (const env of envelopes) this.seen.add(key(env));
       socket.send(JSON.stringify({ kind: 'join', v: PROTOCOL_VERSION, room, envelopes }));
-      this.update({ status: 'on', sent: envelopes.length });
-      // Push any local op that lands from now on.
-      this.unsubscribe = this.session.subscribe(() => {
+      this.attempts = 0;
+      this.update({ status: 'on', sent: this.info.sent + envelopes.length });
+      this.unsubscribe ??= this.session.subscribe(() => {
         this.pushLocal();
       });
     });
@@ -137,19 +157,42 @@ export class SyncClient {
     });
 
     socket.addEventListener('close', () => {
-      if (this.info.status === 'on' || this.info.status === 'connecting') {
-        this.teardown();
-        this.update({ status: 'off' });
-      }
+      this.socket = null;
+      if (this.wantLive) this.scheduleReconnect();
     });
 
     socket.addEventListener('error', () => {
-      this.teardown();
-      this.update({ status: 'error', error: `could not reach ${url}` });
+      if (this.socket === null) return; // close already handled it
+      this.socket = null;
+      if (this.attempts === 0 && this.info.status === 'connecting') {
+        // The very first dial failed — surface it instead of retrying
+        // into the void (the URL is probably wrong).
+        this.wantLive = false;
+        this.teardown();
+        this.update({ status: 'error', error: `could not reach ${this.info.url}` });
+        return;
+      }
+      if (this.wantLive) this.scheduleReconnect();
     });
   }
 
+  private scheduleReconnect(): void {
+    if (this.reconnectTimer !== null) return;
+    const delay = Math.min(this.baseBackoffMs * 2 ** this.attempts, 30_000);
+    this.attempts += 1;
+    this.update({ status: 'reconnecting' });
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (this.wantLive) this.start();
+    }, delay);
+  }
+
   disconnect(): void {
+    this.wantLive = false;
+    if (this.reconnectTimer !== null) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.socket === null && this.unsubscribe === null) return;
     this.teardown();
     this.update({ ...OFF, url: this.info.url });

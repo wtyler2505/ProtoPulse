@@ -48,8 +48,8 @@ describe('deck seed', () => {
 
 describe('concept seed articles', () => {
   it('loads the full wiki across its category directories', () => {
-    expect(categoryDirs).toEqual(['digital-mcu', 'fundamentals', 'passives', 'power', 'semiconductors']);
-    expect(concepts.length).toBeGreaterThanOrEqual(51);
+    expect(categoryDirs).toEqual(['buses', 'digital-mcu', 'fundamentals', 'passives', 'power', 'semiconductors']);
+    expect(concepts.length).toBeGreaterThanOrEqual(63);
   });
 
   it('contains every specced M1 slug', () => {
@@ -120,6 +120,26 @@ describe('concept seed articles', () => {
       'reset-circuits',
       'crystal-loading-caps',
       'brown-out-detectors',
+    ];
+    for (const slug of expected) {
+      expect(slugs.has(slug), slug).toBe(true);
+    }
+  });
+
+  it('contains every remaining Digital & MCU and Buses block slug', () => {
+    const expected = [
+      'level-shifting',
+      '5v-tolerance-myths',
+      'pwm-resolution-vs-frequency',
+      'watchdogs',
+      'uart-framing-and-baud-error',
+      'i2c-electrical-model',
+      'i2c-addressing-and-conflicts',
+      'spi-modes',
+      'cs-discipline',
+      'bus-capacitance',
+      'termination-at-hobby-scale',
+      'can-basics',
     ];
     for (const slug of expected) {
       expect(slugs.has(slug), slug).toBe(true);

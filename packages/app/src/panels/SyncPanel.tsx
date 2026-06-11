@@ -17,7 +17,8 @@ export function SyncPanel() {
   const [room, setRoom] = useState('');
 
   const effectiveRoom = room.trim() === '' ? designId : room.trim();
-  const live = sync.status === 'on' || sync.status === 'connecting';
+  const live =
+    sync.status === 'on' || sync.status === 'connecting' || sync.status === 'reconnecting';
 
   return (
     <div className="panel-body">
@@ -74,14 +75,17 @@ export function SyncPanel() {
           </span>
         )}
         {sync.status === 'connecting' && <span>connecting to {sync.url}…</span>}
+        {sync.status === 'reconnecting' && (
+          <span>connection lost — reconnecting (your edits keep working; they sync on rejoin)</span>
+        )}
         {sync.status === 'off' && <span>offline</span>}
         {sync.status === 'error' && <span>error: {sync.error ?? 'unknown'}</span>}
       </div>
 
       <p className="muted">
-        Honest v1 notes: the <strong>main</strong> branch syncs (other branches stay local);
-        rooms live in relay memory — every editor keeps its own copy, the relay only carries;
-        one tab per design per browser profile (tabs share an actor identity).
+        Honest notes: the <strong>main</strong> branch syncs (other branches stay local); rooms
+        live in relay memory — every editor keeps its own copy, the relay only carries. Dropped
+        connections rejoin automatically with backoff; edits made offline union back in.
       </p>
     </div>
   );
