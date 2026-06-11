@@ -202,10 +202,23 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       offset copper, optional top/bottom rails, panel outline), so
       every existing exporter and even DRC work on it unchanged.
       V-cut lines ride Edge.Cuts. Honest cuts: rectangular outlines
-      only (a V-cut is a straight full-panel score), V-cut separation
-      only (mouse-bites later), no panel fiducials (graph can't hold
-      bare copper; fabs add their own), engine-level (no panel UI).
+      only (a V-cut is a straight full-panel score), no panel
+      fiducials (graph can't hold bare copper; fabs add their own).
       v0.4 IS COMPLETE.
+- [x] Mouse-bites + fab/panel UI (landed 2026-06-11): mouse-bite
+      separation — copies part by a routed channel (default 2mm)
+      bridged by tabs (default 5mm, two per copy edge at 25%/75%)
+      with 0.5mm perforations at 0.75mm pitch along BOTH channel
+      edges; per-piece outlines ride Edge.Cuts, bites join the drill
+      file (one Excellon file — KiCad would split PTH/NPTH; the
+      default stays byte-identical to the golden contract). The
+      Export tab gains Fab outputs (board fab set: F/B copper,
+      Edge.Cuts, drill, pick-and-place) and Panelize (rows/cols/
+      rail/separation/gap/tab → panel fab set) — browser-verified:
+      a 2×2 mouse-bite panel downloads with exactly the engine's
+      224 perforations. Honest cut: outline-overlay Edge.Cuts
+      (outer rect + piece rects + bites), not a kikit-style routed
+      contour polygon
 
 ## v0.5 — The Bridge 🔨
 
