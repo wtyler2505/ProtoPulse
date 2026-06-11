@@ -355,6 +355,109 @@ const pwrGnd = definePart({
   },
 });
 
+
+/**
+ * ESP32-S3-WROOM-1 module — the Probe's brain (Vol II §F). Pin map
+ * verified 2026-06-11 against the Espressif ESP32-S3-WROOM-1/-1U
+ * datasheet pin-definition table, cross-checked against an
+ * independent community pinout (see inbox note). 41 pins: 40
+ * castellated + the thermal pad. NO footprint yet — the module is
+ * schematic-usable; the land pattern is a later, datasheet-exact
+ * slice (the unplaced tray flags it on the board side).
+ *
+ * Strapping pins (datasheet §2.4): IO0 (boot mode), IO3, IO45, IO46 —
+ * load them carefully; EN must be pulled high to run.
+ */
+const esp32s3Pin = (num: number, name: string, type: 'power_in' | 'input' | 'bidi') =>
+  pin(String(num), name, type, String(num));
+
+const ESP32S3_PINS: [number, string, 'power_in' | 'input' | 'bidi'][] = [
+  [1, 'GND', 'power_in'],
+  [2, '3V3', 'power_in'],
+  [3, 'EN', 'input'],
+  [4, 'IO4', 'bidi'],
+  [5, 'IO5', 'bidi'],
+  [6, 'IO6', 'bidi'],
+  [7, 'IO7', 'bidi'],
+  [8, 'IO15', 'bidi'],
+  [9, 'IO16', 'bidi'],
+  [10, 'IO17', 'bidi'],
+  [11, 'IO18', 'bidi'],
+  [12, 'IO8', 'bidi'],
+  [13, 'IO19', 'bidi'], // USB D-
+  [14, 'IO20', 'bidi'], // USB D+
+  [15, 'IO3', 'bidi'], // strapping
+  [16, 'IO46', 'bidi'], // strapping
+  [17, 'IO9', 'bidi'],
+  [18, 'IO10', 'bidi'],
+  [19, 'IO11', 'bidi'],
+  [20, 'IO12', 'bidi'],
+  [21, 'IO13', 'bidi'],
+  [22, 'IO14', 'bidi'],
+  [23, 'IO21', 'bidi'],
+  [24, 'IO47', 'bidi'],
+  [25, 'IO48', 'bidi'],
+  [26, 'IO45', 'bidi'], // strapping
+  [27, 'IO0', 'bidi'], // strapping (boot)
+  [28, 'IO35', 'bidi'],
+  [29, 'IO36', 'bidi'],
+  [30, 'IO37', 'bidi'],
+  [31, 'IO38', 'bidi'],
+  [32, 'MTCK', 'bidi'], // IO39
+  [33, 'MTDO', 'bidi'], // IO40
+  [34, 'MTDI', 'bidi'], // IO41
+  [35, 'MTMS', 'bidi'], // IO42
+  [36, 'RXD0', 'bidi'], // IO44
+  [37, 'TXD0', 'bidi'], // IO43
+  [38, 'IO2', 'bidi'],
+  [39, 'IO1', 'bidi'],
+  [40, 'GND', 'power_in'],
+  [41, 'EPAD', 'power_in'],
+];
+
+/** Symbol sides: left = EN + IOs in numeric order, right = UART/JTAG/
+ *  USB/high IOs, 3V3 on top, grounds underneath. */
+const ESP32S3_LEFT = [3, 27, 39, 38, 15, 4, 5, 6, 7, 12, 17, 18, 19, 20, 21, 22, 8, 9, 10, 11];
+const ESP32S3_RIGHT = [37, 36, 13, 14, 23, 28, 29, 30, 31, 32, 35, 34, 33, 26, 16, 24, 25];
+
+const esp32s3 = definePart({
+  id: 'core:esp32-s3-wroom-1',
+  name: 'ESP32-S3-WROOM-1 module',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'ESP32-S3-WROOM-1',
+  manufacturer: 'Espressif',
+  datasheetUrl:
+    'https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf',
+  pins: ESP32S3_PINS.map(([num, name, type]) => esp32s3Pin(num, name, type)),
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -6 * G, y: -11 * G, w: 12 * G, h: 22 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'S3', sizeNm: G },
+    ],
+    pins: [
+      ...ESP32S3_LEFT.map((num, i) => ({
+        key: String(num),
+        at: { x: -7 * G, y: (10 - i) * G },
+        dir: 'W' as const,
+      })),
+      ...ESP32S3_RIGHT.map((num, i) => ({
+        key: String(num),
+        at: { x: 7 * G, y: (10 - i) * G },
+        dir: 'E' as const,
+      })),
+      { key: '2', at: { x: 0, y: 12 * G }, dir: 'N' as const },
+      { key: '1', at: { x: -2 * G, y: -12 * G }, dir: 'S' as const },
+      { key: '40', at: { x: 0, y: -12 * G }, dir: 'S' as const },
+      { key: '41', at: { x: 2 * G, y: -12 * G }, dir: 'S' as const },
+    ],
+  },
+  parametrics: { currentDrawA: 0.5, maxVoltage: 3.6 },
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map (all 41) verified 2026-06-11 against the Espressif ESP32-S3-WROOM-1/-1U datasheet pin-definition table, cross-checked against atomic14/esp32-s3-pinouts. See inbox/2026-06-11-esp32-s3-wroom-1-pinout.md. No footprint yet — land pattern is a later datasheet-exact slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -371,6 +474,7 @@ export const SEED_PARTS: Part[] = [
   header2x10,
   usbcPower,
   battery,
+  esp32s3,
   pwrVcc,
   pwrGnd,
 ];
