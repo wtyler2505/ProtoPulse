@@ -38,6 +38,7 @@ import {
   MOVSP,
   NOP,
   NOP_N,
+  OR,
   PAD_TO,
   RET,
   RET_N,
@@ -727,6 +728,173 @@ describe('Esp32s3Core — peripheral interrupt lines through the matrix (slice 6
     c.uartWrite(0x55); // the line must re-assert for a second byte
     c.step(100);
     expect([...c.drainUart()]).toEqual([0x55]);
+  });
+});
+
+describe('Esp32s3Core — TIMG0 timer 0 (slice 8)', () => {
+  const SCRATCH = 0x3fc88000 + 0xa00;
+  const TIMG0 = 0x6001f000;
+  const INTMTX = 0x600c2000;
+  // T0CONFIG: EN (31) | INCREASE (30) | divider 2 in [28:13].
+  const CFG_RUN = (0x80000000 | 0x40000000 | (2 << 13)) >>> 0;
+  const CFG_PERIODIC = (CFG_RUN | (1 << 29) | (1 << 10)) >>> 0; // + AUTORELOAD + ALARM_EN
+  const CFG_ONESHOT = (CFG_RUN | (1 << 10)) >>> 0; // + ALARM_EN only
+
+  it('the counter ticks at APB/divider and latches through UPDATE', () => {
+    // Divider 2 → one tick per 6 CPU cycles (240 MHz CPU, 80 MHz
+    // APB). Exactly 12 cycles separate the two UPDATE writes, so the
+    // latched values differ by exactly 2 regardless of phase.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, TIMG0, CFG_RUN], [
+      L32R(2, 0), // a2 = UART
+      L32R(3, 1), // a3 = TIMG0
+      L32R(4, 2),
+      S32I(4, 3, 0x00), // CONFIG: enabled, up, divider 2
+      S32I(4, 3, 0x0c), // UPDATE — latch
+      L32I(5, 3, 0x04), // a5 = LO
+      NOP(),
+      NOP(),
+      NOP(),
+      NOP(),
+      NOP(),
+      NOP(),
+      NOP(),
+      NOP(),
+      NOP(),
+      NOP(),
+      S32I(4, 3, 0x0c), // UPDATE again, 12 cycles after the first
+      L32I(7, 3, 0x04),
+      SUB(7, 7, 5),
+      S32I(7, 2, 0x00), // tx 2
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    c.step(100);
+    expect([...c.drainUart()]).toEqual([2]);
+  });
+
+  it('a periodic alarm: autoreload + the gptimer ISR re-arm dance counts 3', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [UART, SCRATCH, ESP32S3_IRAM_BASE, TIMG0, INTMTX, CFG_PERIODIC],
+      [
+        L32R(2, 0), // a2 = UART
+        L32R(3, 1), // a3 = SCRATCH
+        MOVI(4, 0),
+        S32I(4, 3, 0), // counter = 0
+        L32R(5, 2),
+        WSR(5, SR.VECBASE),
+        L32R(6, 3), // a6 = TIMG0
+        MOVI(7, 0),
+        S32I(7, 6, 0x18), // LOADLO = 0
+        S32I(7, 6, 0x1c), // LOADHI = 0
+        S32I(7, 6, 0x20), // LOAD — counter ← 0
+        MOVI(7, 30),
+        S32I(7, 6, 0x10), // ALARMLO = 30 ticks
+        MOVI(7, 0),
+        S32I(7, 6, 0x14), // ALARMHI = 0
+        MOVI(7, 1),
+        S32I(7, 6, 0x70), // INT_ENA = T0
+        L32R(8, 4),
+        MOVI(7, 2),
+        S32I(7, 8, 0xc8), // TG_T0 source → CPU line 2
+        MOVI(7, 4),
+        WSR(7, SR.INTENABLE), // 1 << 2
+        L32R(7, 5),
+        S32I(7, 6, 0x00), // CONFIG — armed and running
+        RSIL(9, 0),
+        MOVI(10, 3),
+        L32I(4, 3, 0),
+        BNE(4, 10, BR(-2)),
+        S32I(4, 2, 0x00), // tx 3
+        J(BR(-1)),
+        PAD_TO(0x340),
+        // handler: counter++, INT_CLR, re-arm ALARM_EN — the exact
+        // dance gptimer's ISR performs because hardware auto-cleared
+        // the alarm. (a5 is dead in main after init — no save.)
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 1),
+        S32I(3, 2, 8),
+        S32I(4, 2, 12),
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0),
+        L32R(3, 3), // a3 = TIMG0
+        MOVI(4, 1),
+        S32I(4, 3, 0x7c), // INT_CLR = T0
+        L32I(4, 3, 0x00),
+        MOVI(5, 1 << 10),
+        OR(4, 4, 5),
+        S32I(4, 3, 0x00), // ALARM_EN back on
+        L32I(4, 2, 12),
+        L32I(3, 2, 8),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(3000);
+    expect([...c.drainUart()]).toEqual([3]);
+  });
+
+  it('a one-shot alarm fires exactly once — hardware auto-disables it', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [UART, SCRATCH, ESP32S3_IRAM_BASE, TIMG0, INTMTX, CFG_ONESHOT],
+      [
+        L32R(2, 0),
+        L32R(3, 1),
+        MOVI(4, 0),
+        S32I(4, 3, 0),
+        L32R(5, 2),
+        WSR(5, SR.VECBASE),
+        L32R(6, 3),
+        MOVI(7, 0),
+        S32I(7, 6, 0x18),
+        S32I(7, 6, 0x1c),
+        S32I(7, 6, 0x20),
+        MOVI(7, 30),
+        S32I(7, 6, 0x10),
+        MOVI(7, 0),
+        S32I(7, 6, 0x14),
+        MOVI(7, 1),
+        S32I(7, 6, 0x70),
+        L32R(8, 4),
+        MOVI(7, 2),
+        S32I(7, 8, 0xc8),
+        MOVI(7, 4),
+        WSR(7, SR.INTENABLE),
+        L32R(7, 5),
+        S32I(7, 6, 0x00), // CONFIG — no autoreload this time
+        RSIL(9, 0),
+        // burn far past the alarm (and past where a second or third
+        // firing would land if the auto-disable were missing):
+        MOVI(10, 600),
+        ADDI(10, 10, -1),
+        BNEZ(10, BR(-2)),
+        L32I(4, 3, 0),
+        S32I(4, 2, 0x00), // tx the count — must be exactly 1
+        J(BR(-1)),
+        PAD_TO(0x340),
+        // handler: counter++, INT_CLR — deliberately NO re-arm.
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 1),
+        S32I(3, 2, 8),
+        S32I(4, 2, 12),
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0),
+        L32R(3, 3),
+        MOVI(4, 1),
+        S32I(4, 3, 0x7c),
+        L32I(4, 2, 12),
+        L32I(3, 2, 8),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(2500);
+    expect([...c.drainUart()]).toEqual([1]);
   });
 });
 

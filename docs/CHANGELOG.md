@@ -2,6 +2,39 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — ESP32-S3 slice 8: TIMG0 timer 0
+
+### Added
+- **TIMG0 T0** (@protopulse/emu): the 54-bit general-purpose timer at
+  0x6001F000 — EN/INCREASE/AUTORELOAD/DIVIDER/ALARM_EN in T0CONFIG,
+  UPDATE-latched LO/HI reads, LOAD from LOADLO/LOADHI, INT_RAW/ST/
+  ENA/CLR with T0 at bit 0, all per timer_group_reg.h. Counts APB
+  ticks (80 MHz, soc.h) through the 16-bit prescaler (field 0 =
+  ÷65536, matching how the HAL writes 65536). The counter is virtual
+  — derived from elapsed CPU cycles, zero per-cycle bookkeeping; the
+  alarm comparator runs per instruction only while armed.
+- **Hardware alarm auto-disable**: when the alarm fires, ALARM_EN
+  clears by hardware (the documented behavior gptimer's ISR re-arms
+  around); autoreload reloads the counter from LOAD{LO,HI}. The
+  TG_T0 interrupt source routes through the matrix (map at +0x0C8).
+
+### Verified (+3 tests, emu suite at 122 green)
+- Cycle-exact ticking: two UPDATE captures 12 CPU cycles apart differ
+  by exactly 2 at divider 2 (240/80 = 3 cycles per APB tick).
+- A periodic autoreload alarm counts 3 with the full gptimer ISR
+  dance (INT_CLR + ALARM_EN re-arm).
+- A one-shot alarm fires exactly once — the auto-disable is real.
+
+### Fixed
+- The 54-bit wrap uses float-safe modulo: the classic ((x%M)+M)%M
+  idiom silently rounds small values to 0 at M = 2^54 (the double
+  ulp there is 4) — caught by the first test draft.
+
+### Honest cuts
+- T0 of TIMG0 only (no T1, no TIMG1, no watchdogs); APB clock source
+  only (no XTAL); UPDATE captures instantly. Next: flash-cache
+  mapping.
+
 ## 2026-06-11 — ESP32-S3 slice 7: SAR ADC1 oneshot + co-sim channels
 
 ### Added
