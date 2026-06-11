@@ -2,6 +2,43 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — ESP32-S3 slice 6: peripheral interrupts through the matrix
+
+### Added
+- **Interrupt matrix** (@protopulse/emu): the ESP32-S3's matrix at
+  0x600C2000 — each peripheral source's 5-bit map register selects
+  its CPU interrupt line (GPIO source at +0x040, UART0 at +0x06C),
+  reset value 16 so unmapped sources stay silent. Addresses and reset
+  values from esp-idf's reg_base.h / interrupt_core0_reg.h.
+- **GPIO pin interrupts**: GPIO_PINn registers (INT_TYPE bits [9:7]
+  written verbatim from gpio_int_type_t — posedge/negedge/anyedge/
+  low-level/high-level — and INT_ENA bit 13, the bit gpio_ll.h's
+  GPIO_LL_INTR_ENA writes), STATUS/STATUS1 with W1TS/W1TC. Edge types
+  latch on matching input edges; level types re-assert after W1TC
+  while the level holds — exactly like hardware.
+- **UART0 interrupts**: INT_RAW/ST/ENA/CLR with RXFIFO_FULL (live
+  against the CONF1 RXFIFO_FULL_THRHD, reset 96) and TX_DONE
+  (latched per transmitted byte, cleared via INT_CLR).
+- **CPU**: level-triggered external level-1 lines via `setExtInt`,
+  masked to core-isa.h's level-1 externals (INT0–5, 8–9, 12–13,
+  17–18) and immune to INTCLEAR, per the RM's rule for
+  level-triggered lines.
+
+### Verified (+3 tests, emu suite at 117 green)
+- A rising-edge IO4 interrupt vectors through the matrix and counts
+  exactly 2 of 3 edges (the falling edge is ignored).
+- A high-level interrupt re-fires after every W1TC until the host
+  drops the pin (the starved main loop then reports the count).
+- A fully interrupt-driven UART echo: RXFIFO_FULL wakes the handler
+  per byte while main sits parked on a jump; the line deasserts on
+  FIFO drain and re-asserts on the next byte.
+
+### Honest cuts
+- Only the GPIO and UART0 sources exist — map writes for unmodeled
+  sources are accepted and dropped; RXFIFO_FULL is condition-derived
+  (INT_CLR has no lasting effect unless the FIFO drains); no TIMG,
+  no ADC, no flash cache yet.
+
 ## 2026-06-11 — ESP32-S3 slice 5: MOVSP + the ESP-IDF app-image loader
 
 ### Added

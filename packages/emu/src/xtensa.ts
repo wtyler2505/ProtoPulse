@@ -24,8 +24,10 @@
  * Alloca handler's net effect directly (save-area move — slice 5);
  * the handler-only L32E/S32E/RFWO/RFWU are refused; PS holds INTLEVEL +
  * EXCM (gating interrupts) but UM/WOE/RING are stored, not acted on;
- * only the timer line (INT6) exists — no software/external interrupt
- * lines yet; VECBASE alignment is not enforced; only level-1
+ * the interrupt lines are the latched timer line (INT6) plus the
+ * level-triggered external level-1 lines driven by the SoC through
+ * setExtInt (slice 6) — no software lines, no edge-triggered external
+ * lines; VECBASE alignment is not enforced; only level-1
  * interrupts (no medium/high-priority levels, no XSR). Everything
  * unimplemented throws with its address and bytes. Encodings +
  * semantics verified against the Espressif ISA overview, the full
@@ -43,6 +45,11 @@ const sext = (v: number, bits: number): number => (v << (32 - bits)) >> (32 - bi
 /** Physical AR count — ESP32-S3 configures 64 (XCHAL_NUM_AREGS). */
 const NAREG = 64;
 const NWINDOWS = NAREG / 4; // WindowBase counts in groups of 4
+
+/** The level-1 LEVEL-TRIGGERED external lines per ESP32-S3's
+ *  core-isa.h: INT0-5, INT8-9, INT12-13, INT17-18. (INT6/7/10 are
+ *  timer/software/edge — not drivable through setExtInt.) */
+const LEVEL1_EXT_MASK = 0x3f | 0x300 | 0x3000 | (0x3 << 17);
 
 export class XtensaCpu {
   /** The physical register file. Visible a0..a15 rotate over it. */
@@ -65,8 +72,12 @@ export class XtensaCpu {
   /** Vector base — resets to the ROM region per XCHAL_VECBASE_RESET_VADDR. */
   vecbase = 0x40000000;
   intenable = 0;
-  /** Pending interrupt bits; only the timer line (bit 6) exists. */
+  /** LATCHED interrupt bits (the timer line; clearable via INTCLEAR). */
   interrupt = 0;
+  /** Level-triggered external lines, driven by the SoC each time its
+   *  interrupt sources change — they track the input, so INTCLEAR
+   *  cannot clear them (the RM's rule for level-triggered lines). */
+  private extInt = 0;
   private ccompare0 = 0;
   /** CCOUNT = (cycles + bias) >>> 0 — WSR.CCOUNT adjusts the bias. */
   private ccountBias = 0;
@@ -88,8 +99,15 @@ export class XtensaCpu {
     this.vecbase = 0x40000000;
     this.intenable = 0;
     this.interrupt = 0;
+    this.extInt = 0;
     this.ccompare0 = 0;
     this.ccountBias = 0;
+  }
+
+  /** Drive the level-triggered external level-1 lines (the interrupt
+   *  matrix's output). Bits outside LEVEL1_EXT_MASK are dropped. */
+  setExtInt(mask: number): void {
+    this.extInt = (mask & LEVEL1_EXT_MASK) >>> 0;
   }
 
   get ccount(): number {
@@ -175,7 +193,7 @@ export class XtensaCpu {
    *  EPC1 ← PC, EXCCAUSE ← Level1Interrupt(4), PS.EXCM ← 1,
    *  PC ← VECBASE + 0x340 (XCHAL_USER_VECOFS). */
   private maybeInterrupt(): void {
-    if ((this.interrupt & this.intenable) === 0) return;
+    if (((this.interrupt | this.extInt) & this.intenable) === 0) return;
     if ((this.ps & 0x10) !== 0) return; // EXCM blocks
     if ((this.ps & 0xf) >= 1) return; // INTLEVEL masks level-1
     this.epc1 = this.pc;
@@ -484,7 +502,7 @@ export class XtensaCpu {
       case 73: return this.windowStart;
       case 177: return this.epc1;
       case 209: return this.excsave1;
-      case 226: return this.interrupt;
+      case 226: return (this.interrupt | this.extInt) | 0;
       case 228: return this.intenable;
       case 230: return this.ps;
       case 231: return this.vecbase | 0;

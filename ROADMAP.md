@@ -338,9 +338,23 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       replaying segments from the image's entry point. Wrong-chip,
       flash-mapped-segment, and corrupted-checksum images refuse
       with clear messages
-- [ ] ESP32 core, next slices: peripheral interrupt lines + more
-      peripherals (ADC, TIMG) and flash-cache mapping — toward
-      running real IDF-built firmware (a long road, walked openly)
+- [x] ESP32-S3 core slice 6 — peripheral interrupt lines through the
+      interrupt matrix (landed 2026-06-11): the matrix at 0x600C2000
+      with per-source 5-bit map registers (GPIO at +0x040, UART0 at
+      +0x06C, reset 16 = silent, per the headers), GPIO pin
+      interrupts (GPIO_PINn INT_TYPE posedge/negedge/anyedge/level +
+      INT_ENA bit 13, STATUS/W1TC latching — level types re-assert
+      after W1TC while the level holds, like hardware), and UART0's
+      RXFIFO_FULL (against the CONF1 threshold) + TX_DONE through
+      INT_RAW/ST/ENA/CLR. The CPU grew level-triggered external
+      level-1 lines (driven by the SoC, masked to core-isa.h's
+      level-1 externals, immune to INTCLEAR per the RM). Proven: a
+      rising-edge pin interrupt counts 2 of 3 edges (falling ignored),
+      a high-level interrupt re-fires until the pin drops, and a
+      fully interrupt-driven UART echo with main parked on a jump
+- [ ] ESP32 core, next slices: more peripherals (ADC, TIMG) and
+      flash-cache mapping — toward running real IDF-built firmware
+      (a long road, walked openly)
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 

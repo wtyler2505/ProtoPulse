@@ -32,11 +32,14 @@ import type { DigitalLevel, McuCore, McuState, McuStepResult, PinEvent } from '.
  * level-1 interrupts with the CCOUNT/CCOMPARE core timer (slice 4 —
  * RSR/WSR/RSIL/RFE, timer0 on INT6, vectors at VECBASE+0x340), plus
  * MOVSP with the Alloca handler's net effect and the ESP-IDF app-image
- * loader (slice 5), so compiled windowed code with timer-driven
- * control flow boots from real .bin files — but there is still no
- * flash cache (flash-mapped image segments refuse), no peripheral
- * interrupt lines, and no ADC, so real IDF firmware does NOT run yet.
- * Loading Intel-HEX refuses with a message.
+ * loader (slice 5), plus peripheral interrupt lines through the
+ * interrupt matrix (slice 6 — GPIO edge/level pin interrupts via
+ * GPIO_PINn/STATUS and UART0's RXFIFO_FULL/TX_DONE via INT_RAW/ST/
+ * ENA/CLR, each source's 5-bit map register selecting its CPU line).
+ * Interrupt-driven firmware patterns run end-to-end — but there is
+ * still no flash cache (flash-mapped image segments refuse), no ADC,
+ * and no TIMG, so real IDF firmware does NOT run yet. Loading
+ * Intel-HEX refuses with a message.
  */
 
 const CLOCK_HZ = 240_000_000;
@@ -63,10 +66,41 @@ const GPIO_ENABLE1_W1TS = 0x30;
 const GPIO_ENABLE1_W1TC = 0x34;
 const GPIO_IN = 0x3c;
 const GPIO_IN1 = 0x40;
+const GPIO_STATUS = 0x44; // interrupt status, GPIO0-31
+const GPIO_STATUS_W1TS = 0x48;
+const GPIO_STATUS_W1TC = 0x4c;
+const GPIO_STATUS1 = 0x50; // GPIO32-48
+const GPIO_STATUS1_W1TS = 0x54;
+const GPIO_STATUS1_W1TC = 0x58;
+const GPIO_PIN0 = 0x74; // GPIO_PINn at +4·n: INT_TYPE [9:7], INT_ENA [17:13]
+
+// GPIO_PINn INT_TYPE values (hal/gpio_types.h, written verbatim by
+// gpio_ll_set_intr_type): 0 off, 1 posedge, 2 negedge, 3 anyedge,
+// 4 low level, 5 high level. INT_ENA bit 13 = GPIO_LL_INTR_ENA — on
+// the S3 both CPUs share that one enable bit.
+const GPIO_INT_ENA_BIT = 1 << 13;
 
 // UART register offsets (uart_reg.h):
 const UART_FIFO = 0x00; // RXFIFO_RD_BYTE [7:0]
+const UART_INT_RAW = 0x04;
+const UART_INT_ST = 0x08; // raw & ena
+const UART_INT_ENA = 0x0c;
+const UART_INT_CLR = 0x10;
 const UART_STATUS = 0x1c; // RXFIFO_CNT [9:0], TXFIFO_CNT [25:16]
+const UART_CONF1 = 0x24; // RXFIFO_FULL_THRHD [9:0], resets to 96
+const UART_RXFIFO_FULL_INT = 1 << 0;
+const UART_TX_DONE_INT = 1 << 14;
+
+// The interrupt matrix (reg_base.h DR_REG_INTERRUPT_BASE +
+// interrupt_core0_reg.h): each peripheral source has a 5-bit map
+// register selecting which CPU interrupt line it drives. Only the
+// two modeled sources' maps are wired; both reset to 16 — a line the
+// CPU never dispatches, so unmapped sources stay silent (matching
+// the headers' reset value).
+const INTMTX_BASE = 0x600c2000;
+const INTMTX_GPIO_MAP = 0x040; // INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG
+const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
+const INTMTX_DEFAULT_MAP = 16;
 
 // ESP-IDF app-image format (esp_app_format.h; checksum from esptool):
 const ESP_IMAGE_MAGIC = 0xe9;
@@ -108,6 +142,15 @@ export class Esp32s3Core implements McuCore {
   private out = [0, 0];
   private enable = [0, 0];
   private inLevels = [0, 0];
+  private gpioStatus = [0, 0]; // latched interrupt status per bank
+  private pinCfg = new Int32Array(PIN_COUNT); // GPIO_PINn registers
+
+  // UART0 interrupt state + the interrupt matrix maps.
+  private uartIntEna = 0;
+  private uartTxDone = false; // latched TX_DONE raw bit
+  private uartRxThrhd = 96; // CONF1 RXFIFO_FULL_THRHD reset value
+  private gpioIntMap = INTMTX_DEFAULT_MAP;
+  private uartIntMap = INTMTX_DEFAULT_MAP;
   /** Last driven level per pin; undefined while not output-enabled. */
   private driven: (DigitalLevel | undefined)[] = new Array<DigitalLevel | undefined>(PIN_COUNT).fill(undefined);
   private events: PinEvent[] = [];
@@ -217,7 +260,16 @@ export class Esp32s3Core implements McuCore {
     const bank = gpio >> 5;
     const bit = 1 << (gpio & 31);
     const cur = this.inLevels[bank] ?? 0;
+    const was = (cur & bit) !== 0 ? 1 : 0;
     this.inLevels[bank] = level === 1 ? cur | bit : cur & ~bit;
+    if (was !== level) {
+      // Edge-type pins latch their STATUS bit on a matching edge.
+      const type = ((this.pinCfg[gpio] ?? 0) >> 7) & 7;
+      if ((type === 1 && level === 1) || (type === 2 && level === 0) || type === 3) {
+        this.gpioStatus[bank] = (this.gpioStatus[bank] ?? 0) | bit;
+      }
+    }
+    this.recomputeIrq();
   }
 
   uartWrite(byte: number): void {
@@ -225,6 +277,7 @@ export class Esp32s3Core implements McuCore {
       throw new Error(`uartWrite expects a byte 0..255 (got ${String(byte)})`);
     }
     this.rxQueue.push(byte);
+    this.recomputeIrq();
   }
 
   drainUart(): Uint8Array {
@@ -248,6 +301,13 @@ export class Esp32s3Core implements McuCore {
     this.out = [0, 0];
     this.enable = [0, 0];
     this.inLevels = [0, 0];
+    this.gpioStatus = [0, 0];
+    this.pinCfg.fill(0);
+    this.uartIntEna = 0;
+    this.uartTxDone = false;
+    this.uartRxThrhd = 96;
+    this.gpioIntMap = INTMTX_DEFAULT_MAP;
+    this.uartIntMap = INTMTX_DEFAULT_MAP;
     this.driven.fill(undefined);
     this.events = [];
     this.rxQueue = [];
@@ -264,6 +324,47 @@ export class Esp32s3Core implements McuCore {
       throw new Error(`invalid pin "${pin}": expected 'IO0'..'IO${String(PIN_COUNT - 1)}'`);
     }
     return gpio;
+  }
+
+  /** UART0's raw interrupt bits: RXFIFO_FULL tracks the live FIFO
+   *  state against the CONF1 threshold (level-style — it re-asserts
+   *  while data remains); TX_DONE latches per transmitted byte and
+   *  clears via INT_CLR. */
+  private uartIntRaw(): number {
+    let raw = this.uartTxDone ? UART_TX_DONE_INT : 0;
+    if (this.rxQueue.length > this.uartRxThrhd) raw |= UART_RXFIFO_FULL_INT;
+    return raw;
+  }
+
+  /** Re-derive the interrupt matrix's output and drive the CPU's
+   *  level-triggered external lines. Called whenever any modeled
+   *  interrupt source's inputs change. */
+  private recomputeIrq(): void {
+    // Level-type GPIO pins re-assert their STATUS bit while the level
+    // holds — W1TC alone cannot silence them, exactly like hardware.
+    for (let gpio = 0; gpio < PIN_COUNT; gpio++) {
+      const type = ((this.pinCfg[gpio] ?? 0) >> 7) & 7;
+      if (type !== 4 && type !== 5) continue;
+      const bank = gpio >> 5;
+      const bit = 1 << (gpio & 31);
+      const high = ((this.inLevels[bank] ?? 0) & bit) !== 0;
+      if (type === 4 ? !high : high) {
+        this.gpioStatus[bank] = (this.gpioStatus[bank] ?? 0) | bit;
+      }
+    }
+    let gpioPending = false;
+    for (let gpio = 0; gpio < PIN_COUNT; gpio++) {
+      if (((this.pinCfg[gpio] ?? 0) & GPIO_INT_ENA_BIT) === 0) continue;
+      if (((this.gpioStatus[gpio >> 5] ?? 0) & (1 << (gpio & 31))) !== 0) {
+        gpioPending = true;
+        break;
+      }
+    }
+    const uartPending = (this.uartIntRaw() & this.uartIntEna) !== 0;
+    let mask = 0;
+    if (gpioPending) mask |= 1 << (this.gpioIntMap & 31);
+    if (uartPending) mask |= 1 << (this.uartIntMap & 31);
+    this.cpu.setExtInt(mask);
   }
 
   /** Re-derive driven levels after any OUT/ENABLE change; emit edges. */
@@ -315,16 +416,35 @@ export class Esp32s3Core implements McuCore {
       if (off === GPIO_ENABLE1) return this.enable[1] ?? 0;
       if (off === GPIO_IN) return (this.inLevels[0] ?? 0) >>> 0;
       if (off === GPIO_IN1) return (this.inLevels[1] ?? 0) >>> 0;
+      if (off === GPIO_STATUS) return (this.gpioStatus[0] ?? 0) >>> 0;
+      if (off === GPIO_STATUS1) return (this.gpioStatus[1] ?? 0) >>> 0;
+      if (off >= GPIO_PIN0 && off < GPIO_PIN0 + 4 * PIN_COUNT && (off & 3) === 0) {
+        return (this.pinCfg[(off - GPIO_PIN0) >> 2] ?? 0) >>> 0;
+      }
       return 0;
     }
     if (addr >= UART0_BASE && addr < UART0_BASE + 0x1000) {
       const off = addr - UART0_BASE;
-      if (off === UART_FIFO) return this.rxQueue.shift() ?? 0;
+      if (off === UART_FIFO) {
+        const byte = this.rxQueue.shift() ?? 0;
+        this.recomputeIrq(); // draining may deassert RXFIFO_FULL
+        return byte;
+      }
       if (off === UART_STATUS) {
         const rx = Math.min(this.rxQueue.length, 0x3ff);
         return rx; // TXFIFO_CNT [25:16] stays 0 — the modeled tx FIFO never fills
       }
+      if (off === UART_INT_RAW) return this.uartIntRaw();
+      if (off === UART_INT_ST) return this.uartIntRaw() & this.uartIntEna;
+      if (off === UART_INT_ENA) return this.uartIntEna;
+      if (off === UART_CONF1) return this.uartRxThrhd;
       return 0;
+    }
+    if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
+      const off = addr - INTMTX_BASE;
+      if (off === INTMTX_GPIO_MAP) return this.gpioIntMap;
+      if (off === INTMTX_UART_MAP) return this.uartIntMap;
+      return INTMTX_DEFAULT_MAP; // unmodeled sources sit at their reset map
     }
     throw new Error(`read outside the modeled ESP32-S3 map: 0x${addr.toString(16)}`);
   }
@@ -350,11 +470,43 @@ export class Esp32s3Core implements McuCore {
       else if (off === GPIO_ENABLE1) this.enable[1] = v;
       else if (off === GPIO_ENABLE1_W1TS) this.enable[1] = (this.enable[1] ?? 0) | v;
       else if (off === GPIO_ENABLE1_W1TC) this.enable[1] = (this.enable[1] ?? 0) & ~v;
+      else if (off === GPIO_STATUS) this.gpioStatus[0] = v;
+      else if (off === GPIO_STATUS_W1TS) this.gpioStatus[0] = ((this.gpioStatus[0] ?? 0) | v) >>> 0;
+      else if (off === GPIO_STATUS_W1TC) this.gpioStatus[0] = ((this.gpioStatus[0] ?? 0) & ~v) >>> 0;
+      else if (off === GPIO_STATUS1) this.gpioStatus[1] = v;
+      else if (off === GPIO_STATUS1_W1TS) this.gpioStatus[1] = ((this.gpioStatus[1] ?? 0) | v) >>> 0;
+      else if (off === GPIO_STATUS1_W1TC) this.gpioStatus[1] = ((this.gpioStatus[1] ?? 0) & ~v) >>> 0;
+      else if (off >= GPIO_PIN0 && off < GPIO_PIN0 + 4 * PIN_COUNT && (off & 3) === 0) {
+        this.pinCfg[(off - GPIO_PIN0) >> 2] = v | 0;
+      }
       this.syncPins();
+      this.recomputeIrq();
       return;
     }
     if (addr >= UART0_BASE && addr < UART0_BASE + 0x1000) {
-      if (addr - UART0_BASE === UART_FIFO) this.txBuffer.push(value & 0xff);
+      const off = addr - UART0_BASE;
+      if (off === UART_FIFO) {
+        this.txBuffer.push(value & 0xff);
+        this.uartTxDone = true; // tx is instantaneous in this model
+      } else if (off === UART_INT_ENA) {
+        this.uartIntEna = value >>> 0;
+      } else if (off === UART_INT_CLR) {
+        // Clears latched bits; RXFIFO_FULL tracks the FIFO level, so
+        // it re-asserts unless the FIFO was drained first.
+        if ((value & UART_TX_DONE_INT) !== 0) this.uartTxDone = false;
+      } else if (off === UART_CONF1) {
+        this.uartRxThrhd = value & 0x3ff;
+      }
+      this.recomputeIrq();
+      return;
+    }
+    if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
+      const off = addr - INTMTX_BASE;
+      if (off === INTMTX_GPIO_MAP) this.gpioIntMap = value & 0x1f;
+      else if (off === INTMTX_UART_MAP) this.uartIntMap = value & 0x1f;
+      // Map writes for unmodeled sources are accepted and dropped —
+      // those sources never assert, so the mapping is moot.
+      this.recomputeIrq();
       return;
     }
     throw new Error(`write outside the modeled ESP32-S3 map: 0x${addr.toString(16)}`);

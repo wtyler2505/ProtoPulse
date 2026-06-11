@@ -185,3 +185,41 @@ segments (0x42xxxxxx instruction / 0x3Cxxxxxx data buses) refuse with
 a message because the flash cache is not modeled; the SHA-256 trailer
 is not verified (the XOR checksum is); flash fields (spi_mode/speed/
 size) are ignored.
+
+## Addendum: peripheral interrupt lines through the matrix (slice 6)
+
+Sources: esp-idf v5.2 headers + HAL (the vendor's own code), two
+files per fact:
+
+- Interrupt lines (xtensa/config/core-isa.h for ESP32-S3):
+  XCHAL_INTLEVEL1_MASK = 0x000637FF; the level-1 LEVEL-triggered
+  external lines are INT0–5, INT8–9, INT12–13, INT17–18 (INT6/15/16
+  are timers, INT7/29 software, INT10/22/28/30 edge-triggered
+  external, INT11 profiling, INT14 NMI).
+- Interrupt matrix (soc/reg_base.h + soc/interrupt_core0_reg.h):
+  DR_REG_INTERRUPT_BASE 0x600C2000; each peripheral source has a
+  5-bit map register selecting its CPU line, reset value 16.
+  INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG at +0x040;
+  INTERRUPT_CORE0_UART_INTR_MAP_REG at +0x06C.
+- GPIO interrupts (soc/gpio_reg.h + hal/esp32s3/gpio_ll.h +
+  hal/gpio_types.h): GPIO_STATUS_REG 0x44 (W1TS 0x48, W1TC 0x4C),
+  STATUS1 0x50/0x54/0x58; GPIO_PINn_REG at 0x74 + 4·n with INT_TYPE
+  bits [9:7] and INT_ENA bits [17:13]. gpio_ll_set_intr_type writes
+  gpio_int_type_t verbatim: 0 disable, 1 posedge, 2 negedge,
+  3 anyedge, 4 low level, 5 high level. GPIO_LL_INTR_ENA = BIT(0) of
+  the INT_ENA field (bit 13) — "on ESP32S3, pro cpu and app cpu
+  shares the same interrupt enable bit".
+- UART interrupts (soc/uart_reg.h): UART_INT_RAW_REG 0x04,
+  INT_ST 0x08, INT_ENA 0x0C, INT_CLR 0x10; RXFIFO_FULL_INT bit 0,
+  TX_DONE_INT bit 14; UART_CONF1_REG 0x24 with RXFIFO_FULL_THRHD
+  bits [9:0], reset 96.
+
+Emulator approach: the SoC recomputes its two modeled sources (GPIO,
+UART0) whenever their inputs change and drives the CPU's
+level-triggered external lines via setExtInt (masked to the level-1
+external lines; INTCLEAR cannot clear them, per the RM). Cuts: only
+the GPIO and UART0 sources exist (map writes for other sources are
+accepted and dropped); RXFIFO_FULL is condition-derived, so INT_CLR
+on it has no lasting effect unless the FIFO is drained; level-type
+GPIO STATUS bits re-evaluate on pin/config/W1TC activity rather than
+continuously; TIMG and the other UART instances are not modeled.
