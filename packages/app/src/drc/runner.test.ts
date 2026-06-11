@@ -107,4 +107,44 @@ describe('createDrcRunner', () => {
     const outcome = await runner.run(emptyGraph(), parts, { branch: 'main', opsVersion: 1 });
     expect(outcome).toEqual({ ok: false, error: 'deck missing' });
   });
+
+  it('switching the fab deck re-runs the SAME head and reloads the deck', async () => {
+    const { fabDeckFile, listFabDecks, setFabDeckFile } = await import('./runner.js');
+    const original = fabDeckFile();
+    const decks = listFabDecks();
+    // The three verified fab decks ship in content/decks.
+    expect(decks).toContain('jlcpcb-2layer-standard.json');
+    expect(decks).toContain('oshpark-2layer-standard.json');
+    expect(decks).toContain('pcbway-2layer-standard.json');
+    expect(decks[0]).toBe('jlcpcb-2layer-standard.json'); // default first
+
+    let runs = 0;
+    let deckLoads = 0;
+    const runner = createDrcRunner(
+      () =>
+        Promise.resolve<Partial<DrcModule>>({
+          runDrc: () => {
+            runs++;
+            return [];
+          },
+        }),
+      () => {
+        deckLoads++;
+        return Promise.resolve(DECK);
+      },
+    );
+    try {
+      const key = { branch: 'main', opsVersion: 7 };
+      await runner.run(emptyGraph(), parts, key);
+      await runner.run(emptyGraph(), parts, key);
+      expect(runs).toBe(1); // cached
+      setFabDeckFile('oshpark-2layer-standard.json');
+      await runner.run(emptyGraph(), parts, key);
+      expect(runs).toBe(2); // same head, different fab → different report
+      expect(deckLoads).toBe(2); // and the deck reloaded
+      expect(() => { setFabDeckFile('nope.json'); }).toThrow('unknown fab deck');
+    } finally {
+      setFabDeckFile(original);
+    }
+  });
 });

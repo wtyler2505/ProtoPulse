@@ -69,14 +69,59 @@ const deckFiles = import.meta.glob('../../../../content/decks/*.json', {
 
 export const DEFAULT_DECK_FILE = 'jlcpcb-2layer-standard.json';
 
-const defaultDeckLoader: DeckLoader = async () => {
-  for (const [path, load] of Object.entries(deckFiles)) {
-    if (path.endsWith(`/${DEFAULT_DECK_FILE}`)) return parseDeckJson(await load());
+// ── Fab deck selection ───────────────────────────────────────────────
+// One selected fab per session, app-wide: the DRC panel, the Router's
+// direct runs, walk/shove clearance, and zone pours all answer to the
+// SAME deck — checking against one fab while routing against another
+// would be quiet dishonesty. Persisted so the choice sticks.
+
+const FAB_DECK_KEY = 'pp-fab-deck';
+
+function basename(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1);
+}
+
+/** Every bundled fab deck file, sorted (the default first). */
+export function listFabDecks(): string[] {
+  const names = Object.keys(deckFiles).map(basename).sort();
+  return [DEFAULT_DECK_FILE, ...names.filter((n) => n !== DEFAULT_DECK_FILE)];
+}
+
+let selectedDeckFile: string = (() => {
+  try {
+    const stored = localStorage.getItem(FAB_DECK_KEY);
+    if (stored !== null && Object.keys(deckFiles).some((p) => basename(p) === stored)) return stored;
+  } catch {
+    // node test environment — default
   }
-  throw new Error(`rule deck ${DEFAULT_DECK_FILE} is missing from content/decks`);
+  return DEFAULT_DECK_FILE;
+})();
+
+export function fabDeckFile(): string {
+  return selectedDeckFile;
+}
+
+export function setFabDeckFile(name: string): void {
+  if (!Object.keys(deckFiles).some((p) => basename(p) === name)) {
+    throw new Error(`unknown fab deck ${name} — bundled: ${listFabDecks().join(', ')}`);
+  }
+  selectedDeckFile = name;
+  try {
+    localStorage.setItem(FAB_DECK_KEY, name);
+  } catch {
+    // session-only selection is fine
+  }
+}
+
+const defaultDeckLoader: DeckLoader = async () => {
+  const file = selectedDeckFile;
+  for (const [path, load] of Object.entries(deckFiles)) {
+    if (basename(path) === file) return parseDeckJson(await load());
+  }
+  throw new Error(`rule deck ${file} is missing from content/decks`);
 };
 
-/** The default rule deck, for callers outside the DRC cache (the trace
+/** The SELECTED fab deck, for callers outside the DRC cache (the trace
  *  tool's walk/shove modes need min_clearance_nm). */
 export const loadDefaultDeck: DeckLoader = defaultDeckLoader;
 
@@ -103,14 +148,23 @@ export function createDrcRunner(
   deckLoader: DeckLoader = defaultDeckLoader,
 ): DrcRunner {
   let modulePromise: Promise<Partial<DrcModule>> | null = null;
-  let deckPromise: Promise<Deck> | null = null;
+  let deckPromise: { file: string; promise: Promise<Deck> } | null = null;
   const cache = new Map<string, DrcOutcome>();
 
   const loadModule = (): Promise<Partial<DrcModule>> => (modulePromise ??= loader());
-  const loadDeck = (): Promise<Deck> => (deckPromise ??= deckLoader());
+  // The deck promise is keyed on the selected fab — switching fabs
+  // reloads instead of serving the old deck forever.
+  const loadDeck = (): Promise<Deck> => {
+    const file = selectedDeckFile;
+    if (deckPromise?.file !== file) {
+      deckPromise = { file, promise: deckLoader() };
+    }
+    return deckPromise.promise;
+  };
 
   const run = async (graph: DesignGraph, parts: PartDb, key: DrcRunKey): Promise<DrcOutcome> => {
-    const cacheKey = `drc:${key.branch}@${String(key.opsVersion)}`;
+    // The fab deck is part of the report's identity, like the branch.
+    const cacheKey = `drc:${selectedDeckFile}:${key.branch}@${String(key.opsVersion)}`;
     const hit = cache.get(cacheKey);
     // Errors are remembered but never served from cache — a retry re-runs.
     if (hit?.ok) return hit;
