@@ -85,11 +85,11 @@ function StatPill({
   return (
     <div
       data-testid={testId}
-      className="flex items-center gap-2 px-3 py-2 bg-card/60 border border-border rounded-lg"
+      className="flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2"
     >
-      <Icon className={cn('w-4 h-4', accent ?? 'text-primary')} />
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-semibold text-foreground">{value}</span>
+      <Icon className={cn('h-4 w-4', accent ?? 'text-primary')} />
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <span className="text-[11px] font-semibold text-foreground">{value}</span>
     </div>
   );
 }
@@ -187,16 +187,16 @@ export default function DashboardView() {
   return (
     <div
       data-testid="dashboard-view"
-      className="h-full overflow-auto bg-background/50 p-4 md:p-6"
+      className="h-full overflow-auto bg-background/50 p-3"
     >
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="mx-auto max-w-6xl space-y-3">
         {/* Project header */}
         <div data-testid="dashboard-header">
-          <h2 className="text-xl md:text-2xl font-display font-bold text-foreground">
+          <h2 className="text-base font-display font-bold text-foreground md:text-[17px]">
             {projectName}
           </h2>
           {projectDescription && (
-            <p className="text-sm text-muted-foreground mt-1">{projectDescription}</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">{projectDescription}</p>
           )}
         </div>
 
@@ -239,48 +239,48 @@ export default function DashboardView() {
         </div>
 
         {/* Main cards grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {/* Architecture Summary Card */}
           <InteractiveCard
             data-testid="dashboard-card-architecture"
             aria-label="Open Architecture view"
             onClick={() => handleNavigate('architecture')}
-            className="rounded-xl"
+            className="rounded-md"
           >
           <Card
             className="bg-card/60 backdrop-blur-xl border-border hover:border-primary/30 transition-colors cursor-pointer"
           >
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-1.5 text-[13px] font-semibold">
                 <LayoutGrid className="w-4 h-4 text-primary" />
                 Architecture
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-3 gap-3">
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-3 gap-2">
                 <div data-testid="arch-stat-nodes" className="text-center">
-                  <div className="text-2xl font-bold text-foreground">{archStats.nodeCount}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Nodes</div>
+                  <div className="text-lg font-bold text-foreground">{archStats.nodeCount}</div>
+                  <div className="text-[11px] text-muted-foreground">Nodes</div>
                 </div>
                 <div data-testid="arch-stat-edges" className="text-center">
-                  <div className="text-2xl font-bold text-foreground">{archStats.edgeCount}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Edges</div>
+                  <div className="text-lg font-bold text-foreground">{archStats.edgeCount}</div>
+                  <div className="text-[11px] text-muted-foreground">Edges</div>
                 </div>
                 <div data-testid="arch-stat-density" className="text-center">
-                  <div className="text-2xl font-bold text-foreground">
+                  <div className="text-lg font-bold text-foreground">
                     {(archStats.density * 100).toFixed(0)}%
                   </div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Density</div>
+                  <div className="text-[11px] text-muted-foreground">Density</div>
                 </div>
               </div>
 
               {Object.keys(archStats.typeMap).length > 0 && (
-                <div data-testid="arch-type-distribution" className="space-y-1.5 pt-2 border-t border-border/50">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                <div data-testid="arch-type-distribution" className="space-y-1.5 border-t border-border/50 pt-2">
+                  <div className="text-[11px] font-semibold text-muted-foreground">
                     Node Types
                   </div>
                   {/* TODO(plan-04-wave-3): map arch node types to canonical vault MOC slugs (microcontroller → moc-microcontrollers, sensor → moc-sensors, etc.) instead of relying on primitive's slugifier. Requires a type→slug registry in a shared constants file. */}
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1">
                     {Object.entries(archStats.typeMap)
                       .sort((a, b) => b[1] - a[1])
                       .map(([type, count]) => (
@@ -289,7 +289,7 @@ export default function DashboardView() {
                             data-testid={`arch-type-${type}`}
                             onClick={(e) => e.stopPropagation()}
                             onKeyDown={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono bg-primary/10 text-primary border border-primary/20 rounded cursor-help"
+                            className="inline-flex cursor-help items-center gap-1 rounded border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-mono text-primary"
                           >
                             {type}
                             <span className="text-muted-foreground">{count}</span>
@@ -314,47 +314,47 @@ export default function DashboardView() {
             data-testid="dashboard-card-bom"
             aria-label="Open Bill of Materials view"
             onClick={() => handleNavigate('procurement')}
-            className="rounded-xl"
+            className="rounded-md"
           >
           <Card
             className="bg-card/60 backdrop-blur-xl border-border hover:border-primary/30 transition-colors cursor-pointer"
           >
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-1.5 text-[13px] font-semibold">
                 <Boxes className="w-4 h-4 text-primary" />
                 Bill of Materials
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-3 gap-3">
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-3 gap-2">
                 <div data-testid="bom-stat-total" className="text-center">
-                  <div className="text-2xl font-bold text-foreground">{bomStats.totalParts}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Qty</div>
+                  <div className="text-lg font-bold text-foreground">{bomStats.totalParts}</div>
+                  <div className="text-[11px] text-muted-foreground">Total Qty</div>
                 </div>
                 <div data-testid="bom-stat-unique" className="text-center">
-                  <div className="text-2xl font-bold text-foreground">{bomStats.uniqueParts}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Unique</div>
+                  <div className="text-lg font-bold text-foreground">{bomStats.uniqueParts}</div>
+                  <div className="text-[11px] text-muted-foreground">Unique</div>
                 </div>
                 <div data-testid="bom-stat-cost" className="text-center">
-                  <div className="text-2xl font-bold text-foreground">
+                  <div className="text-lg font-bold text-foreground">
                     {formatCurrency(bomStats.totalCost)}
                   </div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Est. Cost</div>
+                  <div className="text-[11px] text-muted-foreground">Est. Cost</div>
                 </div>
               </div>
 
               {bomStats.uniqueParts > 0 && (
-                <div data-testid="bom-status-breakdown" className="space-y-1.5 pt-2 border-t border-border/50">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                <div data-testid="bom-status-breakdown" className="space-y-1.5 border-t border-border/50 pt-2">
+                  <div className="text-[11px] font-semibold text-muted-foreground">
                     Stock Status
                   </div>
-                  <div className="grid grid-cols-2 gap-1.5">
+                  <div className="grid grid-cols-2 gap-1">
                     {(Object.entries(bomStats.statusBreakdown) as Array<[string, number]>).map(
                       ([status, count]) => (
                         <div
                           key={status}
                           data-testid={`bom-status-${status.toLowerCase().replace(/\s/g, '-')}`}
-                          className="flex items-center justify-between px-2 py-1 text-[10px] font-mono bg-muted/30 rounded"
+                          className="flex items-center justify-between rounded bg-muted/30 px-2 py-1.5 text-[11px] font-mono"
                         >
                           <span
                             className={cn(
@@ -388,52 +388,52 @@ export default function DashboardView() {
             data-testid="dashboard-card-validation"
             aria-label="Open Validation view"
             onClick={() => handleNavigate('validation')}
-            className="rounded-xl"
+            className="rounded-md"
           >
           <Card
             className="bg-card/60 backdrop-blur-xl border-border hover:border-primary/30 transition-colors cursor-pointer"
           >
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-1.5 text-[13px] font-semibold">
                 <TrendingUp className="w-4 h-4 text-primary" />
                 Validation
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2">
               {/* Pass/Fail indicator */}
-              <div data-testid="validation-status-indicator" className="flex items-center gap-3">
+              <div data-testid="validation-status-indicator" className="flex items-center gap-2.5">
                 {validationStats.noDesign ? (
                   <>
-                    <CircuitBoard className="w-8 h-8 text-muted-foreground" />
+                    <CircuitBoard className="w-7 h-7 text-muted-foreground" />
                     <div>
-                      <div className="text-sm font-semibold text-muted-foreground">No design to validate yet</div>
-                      <div className="text-[10px] text-muted-foreground">Add components to begin</div>
+                      <div className="text-xs font-semibold text-muted-foreground">No design to validate yet</div>
+                      <div className="text-[11px] text-muted-foreground">Add components to begin</div>
                     </div>
                   </>
                 ) : validationStats.allPassing ? (
                   <>
-                    <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                    <CheckCircle2 className="w-7 h-7 text-emerald-500" />
                     <div>
-                      <div className="text-sm font-semibold text-emerald-500">All Checks Passing</div>
-                      <div className="text-[10px] text-muted-foreground">No issues detected</div>
+                      <div className="text-xs font-semibold text-emerald-500">All Checks Passing</div>
+                      <div className="text-[11px] text-muted-foreground">No issues detected</div>
                     </div>
                   </>
                 ) : validationStats.hasErrors ? (
                   <>
-                    <XCircle className="w-8 h-8 text-destructive" />
+                    <XCircle className="w-7 h-7 text-destructive" />
                     <div>
-                      <div className="text-sm font-semibold text-destructive">Issues Found</div>
-                      <div className="text-[10px] text-muted-foreground">
+                      <div className="text-xs font-semibold text-destructive">Issues Found</div>
+                      <div className="text-[11px] text-muted-foreground">
                         {validationStats.total} issue{validationStats.total !== 1 ? 's' : ''} require attention
                       </div>
                     </div>
                   </>
                 ) : (
                   <>
-                    <AlertTriangle className="w-8 h-8 text-yellow-500" />
+                    <AlertTriangle className="w-7 h-7 text-yellow-500" />
                     <div>
-                      <div className="text-sm font-semibold text-yellow-500">Warnings Present</div>
-                      <div className="text-[10px] text-muted-foreground">
+                      <div className="text-xs font-semibold text-yellow-500">Warnings Present</div>
+                      <div className="text-[11px] text-muted-foreground">
                         {validationStats.total} issue{validationStats.total !== 1 ? 's' : ''} to review
                       </div>
                     </div>
@@ -443,30 +443,30 @@ export default function DashboardView() {
 
               {/* Severity breakdown */}
               {validationStats.total > 0 && (
-                <div data-testid="validation-severity-breakdown" className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
+                <div data-testid="validation-severity-breakdown" className="grid grid-cols-3 gap-1.5 pt-1.5 border-t border-border/50">
                   <div
                     data-testid="validation-errors"
-                    className="flex items-center gap-1.5 px-2 py-1.5 bg-destructive/10 rounded text-center"
+                    className="flex items-center gap-1 px-1.5 py-1 bg-destructive/10 rounded text-center"
                   >
                     <XCircle className="w-3.5 h-3.5 text-destructive" />
                     <span className="text-xs text-destructive font-semibold">{validationStats.breakdown.error}</span>
-                    <span className="text-[10px] text-muted-foreground">errors</span>
+                    <span className="text-[11px] text-muted-foreground">errors</span>
                   </div>
                   <div
                     data-testid="validation-warnings"
-                    className="flex items-center gap-1.5 px-2 py-1.5 bg-yellow-500/10 rounded text-center"
+                    className="flex items-center gap-1 px-1.5 py-1 bg-yellow-500/10 rounded text-center"
                   >
                     <AlertCircle className="w-3.5 h-3.5 text-yellow-500" />
                     <span className="text-xs text-yellow-500 font-semibold">{validationStats.breakdown.warning}</span>
-                    <span className="text-[10px] text-muted-foreground">warnings</span>
+                    <span className="text-[11px] text-muted-foreground">warnings</span>
                   </div>
                   <div
                     data-testid="validation-infos"
-                    className="flex items-center gap-1.5 px-2 py-1.5 bg-primary/10 rounded text-center"
+                    className="flex items-center gap-1 px-1.5 py-1 bg-primary/10 rounded text-center"
                   >
                     <Info className="w-3.5 h-3.5 text-primary" />
                     <span className="text-xs text-primary font-semibold">{validationStats.breakdown.info}</span>
-                    <span className="text-[10px] text-muted-foreground">info</span>
+                    <span className="text-[11px] text-muted-foreground">info</span>
                   </div>
                 </div>
               )}
@@ -479,20 +479,20 @@ export default function DashboardView() {
             data-testid="dashboard-card-activity"
             className="bg-card/60 backdrop-blur-xl border-border"
           >
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-1.5 text-[13px] font-semibold">
                 <Clock className="w-4 h-4 text-primary" />
                 Recent Activity
               </CardTitle>
             </CardHeader>
             <CardContent>
               {recentHistory.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {recentHistory.map((item) => (
                     <div
                       key={item.id}
                       data-testid={`activity-item-${item.id}`}
-                      className="flex items-start gap-2 py-1.5 border-b border-border/30 last:border-b-0"
+                      className="flex items-start gap-2 py-1 border-b border-border/30 last:border-b-0"
                     >
                       <div className="mt-0.5">
                         {item.user === 'AI' ? (
@@ -503,13 +503,13 @@ export default function DashboardView() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-foreground truncate">{item.action}</p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-[11px] text-muted-foreground">
                           {formatRelativeTime(item.timestamp)}
                         </p>
                       </div>
                       <span
                         className={cn(
-                          'text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0',
+                          'shrink-0 rounded px-2 py-0.5 text-[11px] font-medium',
                           item.user === 'AI'
                             ? 'bg-primary/10 text-primary'
                             : 'bg-muted/50 text-muted-foreground',

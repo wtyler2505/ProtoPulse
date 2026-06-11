@@ -4,6 +4,7 @@ import type { AutoDetectResult, SimulationTypeResult } from '@/lib/simulation/au
 import type { SerialPortInfo, ConnectionState } from '@/lib/web-serial';
 import type { DfmCheckResult, PriceQuote } from '@/lib/pcb-ordering';
 import type { ExportPreflightResult, ProjectExportData } from '@/lib/export-validation';
+import type { ExportPrecheck } from '@/lib/export-precheck';
 import type { TrustReceipt } from '@/lib/feature-maturity';
 import type { ArduinoUploadTargetAssessment } from '@/lib/arduino/device-preflight';
 import type { SerialDevicePreflightAssessment } from '@/lib/arduino/serial-device-preflight';
@@ -35,6 +36,7 @@ interface ExportTrustInput {
 interface OrderingTrustInput {
   compatibleFabCount: number;
   dfmResult: DfmCheckResult | null;
+  fabricationPrecheck?: ExportPrecheck;
   quotes: PriceQuote[];
   selectedFabName?: string | null;
   totalFabCount: number;
@@ -131,6 +133,10 @@ function formatConfidence(confidence: number | undefined): string {
     return 'Unavailable';
   }
   return `${Math.round(confidence * 100)}%`;
+}
+
+function formatCount(count: number, singular: string, pluralLabel = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : pluralLabel}`;
 }
 
 function formatUsbId(id: number | undefined): string {
@@ -299,6 +305,22 @@ export function buildExportTrustReceipt({
     { label: 'Build profiles', value: buildProfileCount > 0 ? String(buildProfileCount) : 'None' },
   ];
 
+  const placedPartCount = exportData.placedPartCount;
+  const verifiedExactPartCount = exportData.verifiedExactPartCount;
+  const verifiedMechanicalModelCount = exportData.verifiedMechanicalModelCount;
+  if (placedPartCount !== undefined && verifiedExactPartCount !== undefined) {
+    facts.push({ label: 'Exact parts', value: `${verifiedExactPartCount} / ${placedPartCount}` });
+  }
+  if (placedPartCount !== undefined && verifiedMechanicalModelCount !== undefined) {
+    facts.push({ label: '3D models', value: `${verifiedMechanicalModelCount} / ${placedPartCount}` });
+  }
+  if (exportData.redBreadboardHealthCount !== undefined) {
+    facts.push({
+      label: 'Breadboard health',
+      value: exportData.redBreadboardHealthCount > 0 ? `${exportData.redBreadboardHealthCount} red` : 'No red findings',
+    });
+  }
+
   const warnings: string[] = [];
   if (!exportData.hasSession) {
     warnings.push('Server-backed export routes require a valid ProtoPulse session.');
@@ -318,6 +340,39 @@ export function buildExportTrustReceipt({
   if (buildProfileCount === 0) {
     warnings.push('Firmware scaffold can export, but it will stay generic until at least one Arduino build profile exists.');
   }
+  const unverifiedAiGenerated = exportData.unverifiedAiGeneratedCircuitInstanceCount ?? 0;
+  if (unverifiedAiGenerated > 0) {
+    warnings.push(
+      `${formatCount(unverifiedAiGenerated, 'AI-generated circuit instance')} still ${unverifiedAiGenerated === 1 ? 'needs' : 'need'} exact-part verification before fabrication export.`,
+    );
+  }
+  if (placedPartCount !== undefined && verifiedExactPartCount !== undefined && verifiedExactPartCount < placedPartCount) {
+    const missingExactParts = placedPartCount - verifiedExactPartCount;
+    warnings.push(
+      `${formatCount(missingExactParts, 'placed part')} ${missingExactParts === 1 ? 'is' : 'are'} not exact-part verified.`,
+    );
+  }
+  if (placedPartCount !== undefined && verifiedMechanicalModelCount !== undefined && verifiedMechanicalModelCount < placedPartCount) {
+    const missingMechanicalModels = placedPartCount - verifiedMechanicalModelCount;
+    warnings.push(
+      `${formatCount(missingMechanicalModels, 'placed part')} ${missingMechanicalModels === 1 ? 'lacks' : 'lack'} verified 3D/mechanical model metadata.`,
+    );
+  }
+  const redBreadboardHealthCount = exportData.redBreadboardHealthCount ?? 0;
+  if (redBreadboardHealthCount > 0) {
+    warnings.push(`${formatCount(redBreadboardHealthCount, 'red breadboard-health finding')} must be resolved before fabrication handoff.`);
+  }
+  const lifecycleBlockers = (exportData.obsoletePartCount ?? 0) + (exportData.lifecycleNoAlternateCount ?? 0);
+  if (lifecycleBlockers > 0) {
+    warnings.push(`${formatCount(lifecycleBlockers, 'lifecycle blocker')} must be replaced or assigned verified alternates before release.`);
+  }
+  if ((exportData.eolPartCount ?? 0) > 0 || (exportData.nrndPartCount ?? 0) > 0) {
+    warnings.push('EOL or NRND parts are visible in the export context and should be reviewed before procurement.');
+  }
+  const estimatedInventoryLineCount = exportData.estimatedInventoryLineCount ?? 0;
+  if (estimatedInventoryLineCount > 0) {
+    warnings.push(`${formatCount(estimatedInventoryLineCount, 'inventory line')} ${estimatedInventoryLineCount === 1 ? 'uses' : 'use'} estimated or unknown confidence.`);
+  }
 
   if (!exportData.hasSession) {
     return {
@@ -331,7 +386,7 @@ export function buildExportTrustReceipt({
     };
   }
 
-  if (blockedFormats === 0) {
+  if (blockedFormats === 0 && warnings.length === 0) {
     return {
       title: 'Export preflight receipt',
       status: 'ready',
@@ -340,6 +395,18 @@ export function buildExportTrustReceipt({
       facts,
       warnings,
       nextStep: 'Run the per-format precheck before sharing files with a fab, teammate, or firmware workflow.',
+    };
+  }
+
+  if (blockedFormats === 0) {
+    return {
+      title: 'Export preflight receipt',
+      status: 'caution',
+      label: 'Trust warnings',
+      summary: `All ${totalFormats} tracked export formats pass local preflight for ${selectedCircuitLabel}, but upstream trust signals still need review before money or fabrication handoff.`,
+      facts,
+      warnings,
+      nextStep: 'Resolve exact-part, 3D model, breadboard-health, lifecycle, or inventory-confidence warnings before treating the export package as release-ready.',
     };
   }
 
@@ -357,12 +424,15 @@ export function buildExportTrustReceipt({
 export function buildOrderingTrustReceipt({
   compatibleFabCount,
   dfmResult,
+  fabricationPrecheck,
   quotes,
   selectedFabName,
   totalFabCount,
 }: OrderingTrustInput): TrustReceipt {
   const errorCount = dfmResult?.issues.filter((issue) => issue.severity === 'error').length ?? 0;
   const warningCount = dfmResult?.issues.filter((issue) => issue.severity === 'warning').length ?? 0;
+  const fabricationBlockers = fabricationPrecheck?.checks.filter((check) => check.status === 'fail') ?? [];
+  const fabricationWarnings = fabricationPrecheck?.checks.filter((check) => check.status === 'warn') ?? [];
 
   const facts = [
     { label: 'Spec source', value: 'Manual form' },
@@ -378,6 +448,17 @@ export function buildOrderingTrustReceipt({
     { label: 'Quotes', value: quotes.length > 0 ? String(quotes.length) : 'None' },
   ];
 
+  if (fabricationPrecheck) {
+    facts.push({
+      label: 'Fab safety',
+      value: fabricationBlockers.length > 0
+        ? `${fabricationBlockers.length} blocker${fabricationBlockers.length === 1 ? '' : 's'}`
+        : fabricationWarnings.length > 0
+          ? `${fabricationWarnings.length} warning${fabricationWarnings.length === 1 ? '' : 's'}`
+          : 'Ready',
+    });
+  }
+
   const warnings = [
     'Board specs here are still manual planning inputs, not a guaranteed extract from the live PCB editor.',
     'DFM and quote results are guidance only until they are cross-checked against generated manufacturing files.',
@@ -389,6 +470,12 @@ export function buildOrderingTrustReceipt({
   if (compatibleFabCount < totalFabCount) {
     warnings.push('Not every listed fab supports the current stackup and special-feature mix.');
   }
+  for (const blocker of fabricationBlockers) {
+    warnings.push(`Fab safety blocker - ${blocker.name}: ${blocker.message}`);
+  }
+  for (const warning of fabricationWarnings) {
+    warnings.push(`Fab safety warning - ${warning.name}: ${warning.message}`);
+  }
 
   if (!selectedFabName) {
     return {
@@ -399,6 +486,18 @@ export function buildOrderingTrustReceipt({
       facts,
       warnings,
       nextStep: 'Review the board spec, then choose a compatible fab to unlock DFM preflight.',
+    };
+  }
+
+  if (fabricationBlockers.length > 0) {
+    return {
+      title: 'Manufacturing preflight receipt',
+      status: 'caution',
+      label: 'Safety blocked',
+      summary: 'The selected fab cannot be treated as order-ready while upstream fabrication safety checks have blockers.',
+      facts,
+      warnings,
+      nextStep: 'Resolve the fabrication safety blockers in the source views, then rerun DFM and quotes before placing an order.',
     };
   }
 

@@ -1,7 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
 import { DollarSign, AlertTriangle, CheckCircle, TrendingDown, ArrowDownRight, RefreshCw, Trash2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/number-input';
 import { Badge } from '@/components/ui/badge';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 import { cn } from '@/lib/utils';
 import { useCostOptimizer } from '@/lib/cost-optimizer';
 
@@ -70,14 +72,14 @@ export function CostOptimizerPanel({ bom }: CostOptimizerPanelProps) {
             <label htmlFor="cost-opt-budget" className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
               Target Budget ($)
             </label>
-            <input
+            <NumberInput
               id="cost-opt-budget"
-              type="number"
               min={0}
+              max={1_000_000_000}
               step={1}
               value={budget}
               onChange={(e) => setBudget(Math.max(0, Number(e.target.value)))}
-              className="w-full border border-border bg-card/80 px-3 py-2 text-sm text-foreground font-mono"
+              className="!w-full !h-auto !rounded-none !border !border-border !bg-card/80 !px-3 !py-2 !text-sm !text-foreground !font-mono !shadow-none"
               data-testid="input-budget"
             />
           </div>
@@ -85,14 +87,14 @@ export function CostOptimizerPanel({ bom }: CostOptimizerPanelProps) {
             <label htmlFor="cost-opt-pcb" className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
               PCB Fabrication ($)
             </label>
-            <input
+            <NumberInput
               id="cost-opt-pcb"
-              type="number"
               min={0}
+              max={1_000_000}
               step={0.5}
               value={pcbCost}
               onChange={(e) => setPcbCost(Math.max(0, Number(e.target.value)))}
-              className="w-full border border-border bg-card/80 px-3 py-2 text-sm text-foreground font-mono"
+              className="!w-full !h-auto !rounded-none !border !border-border !bg-card/80 !px-3 !py-2 !text-sm !text-foreground !font-mono !shadow-none"
               data-testid="input-pcb-cost"
             />
           </div>
@@ -100,14 +102,14 @@ export function CostOptimizerPanel({ bom }: CostOptimizerPanelProps) {
             <label htmlFor="cost-opt-assembly" className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
               Assembly Cost ($)
             </label>
-            <input
+            <NumberInput
               id="cost-opt-assembly"
-              type="number"
               min={0}
+              max={1_000_000}
               step={0.5}
               value={assemblyCost}
               onChange={(e) => setAssemblyCost(Math.max(0, Number(e.target.value)))}
-              className="w-full border border-border bg-card/80 px-3 py-2 text-sm text-foreground font-mono"
+              className="!w-full !h-auto !rounded-none !border !border-border !bg-card/80 !px-3 !py-2 !text-sm !text-foreground !font-mono !shadow-none"
               data-testid="input-assembly-cost"
             />
           </div>
@@ -212,6 +214,7 @@ function CostAnalysisResults({ analysis }: { analysis: CostAnalysis }) {
             <Badge variant="outline" className="ml-1 text-[10px]" data-testid="suggestion-count">
               {analysis.suggestions.length}
             </Badge>
+            <TrustBadge kind="estimated" className="ml-1" />
           </h4>
           <div className="space-y-2">
             {analysis.suggestions.map((sug) => {

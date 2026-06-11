@@ -1,0 +1,24 @@
+{
+  "createdAt": "2026-05-17T11:18:19.233Z",
+  "dryRun": false,
+  "allowPanelErrors": false,
+  "scope": "sidebar",
+  "status": "ok",
+  "delegatedScript": "internal-playwright-capture",
+  "captures": [
+    "full-desktop.png",
+    "sidebar-collapsed-desktop.png",
+    "sidebar-reexpanded-desktop.png",
+    "full-tablet.png",
+    "sidebar-overlay-open-tablet.png",
+    "sidebar-overlay-closed-tablet.png",
+    "full-mobile.png",
+    "sidebar-overlay-open-mobile.png",
+    "sidebar-overlay-closed-mobile.png"
+  ],
+  "notes": [
+    "Research-backed wrapper initialized.",
+    "Running internal Playwright sidebar capture.",
+    "Captured files: 9"
+  ]
+}

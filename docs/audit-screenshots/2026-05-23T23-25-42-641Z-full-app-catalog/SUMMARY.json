@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-05-24T02:20:15.885Z",
+  "dryRun": false,
+  "allowPanelErrors": false,
+  "scope": "full-app",
+  "status": "failed",
+  "delegatedScript": "internal-playwright-capture",
+  "captures": [],
+  "notes": [
+    "Research-backed wrapper initialized.",
+    "Running internal Playwright full-app capture.",
+    "Mode: full; max-elements=120; max-interactions=45",
+    "Internal full-app capture failed: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5000/projects/66/dashboard\nCall log:\n  - navigating to \"http://localhost:5000/projects/66/dashboard\", waiting until \"domcontentloaded\"\n"
+  ]
+}

@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +34,12 @@ function getConfidenceLabel(score: number): string {
   if (score >= 50) { return 'Medium'; }
   if (score >= 25) { return 'Low'; }
   return 'Very Low';
+}
+
+function getConfidenceTrustKind(score: number): 'verified' | 'estimated' | 'unverified' {
+  if (score >= 80) { return 'verified'; }
+  if (score >= 50) { return 'estimated'; }
+  return 'unverified';
 }
 
 interface ConfidenceBadgeProps {
@@ -76,18 +83,23 @@ const ConfidenceBadge = memo(function ConfidenceBadge({ confidence, className }:
   return (
     <StyledTooltip content={tooltipContent} side="top">
       <div data-testid="confidence-badge">
-        <Badge
-          variant="outline"
-          className={cn(
-            'text-[10px] px-1.5 py-0 font-medium cursor-default',
-            colors.bg,
-            colors.text,
-            colors.border,
-            className,
-          )}
-        >
-          {clampedScore}%
-        </Badge>
+        <div className="inline-flex items-center gap-1">
+          <Badge
+            variant="outline"
+            className={cn(
+              'text-[10px] px-1.5 py-0 font-medium cursor-default',
+              colors.bg,
+              colors.text,
+              colors.border,
+              className,
+            )}
+          >
+            {clampedScore}%
+          </Badge>
+          <span data-testid="confidence-trust">
+            <TrustBadge kind={getConfidenceTrustKind(clampedScore)} />
+          </span>
+        </div>
       </div>
     </StyledTooltip>
   );

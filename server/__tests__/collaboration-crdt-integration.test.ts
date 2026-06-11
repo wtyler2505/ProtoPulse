@@ -589,10 +589,11 @@ describe('Collaboration — BL-0524: Conflict UI wire (detection + convergence)'
       operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'theirs' } }],
     }, 2));
 
-    // User 1 sends a conflicting update for the same key — server has a newer
-    // Lamport for user 2's op, so user 1 loses LWW and is dropped.
+    // User 1 sends a conflicting update for the same key. BL-0879: ws1 had not
+    // yet observed ws2's op (baseTimestamp:0 < ws2's serverTs of 1), so the two
+    // edits are concurrent → ws1 loses LWW and is dropped.
     sendMessage(ws1, makeMsg('state-update', {
-      operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' } }],
+      operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' }, baseTimestamp: 0 }],
     }, 1));
 
     // User 1 should receive a conflict-detected message
@@ -617,17 +618,19 @@ describe('Collaboration — BL-0524: Conflict UI wire (detection + convergence)'
       operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'theirs' } }],
     }, 2));
 
-    // User 1 loses LWW → dropped, receives conflict-detected.
+    // User 1 loses LWW → dropped, receives conflict-detected. BL-0879: ws1's
+    // baseline (0) is behind ws2's op serverTs (1), so the edits are concurrent.
     sendMessage(ws1, makeMsg('state-update', {
-      operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' } }],
+      operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' }, baseTimestamp: 0 }],
     }, 1));
 
-    // Simulate the client "accept mine" path: re-send the losing op WITHOUT
-    // server-assigned timestamp/clientId so the server re-tags with a fresh
-    // Lamport clock (which will now beat user 2's stale timestamp).
+    // Simulate the client "accept mine" path after ws1 has now observed ws2's
+    // op via broadcast: maxSeenLamport advanced to 1, so the re-sent op carries
+    // baseTimestamp:1. BL-0879: 1 > 1 is false → no longer concurrent → the
+    // re-applied edit wins LWW cleanly and is broadcast to ws2.
     const sentBefore2 = ws2.sent.length;
     sendMessage(ws1, makeMsg('state-update', {
-      operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' } }],
+      operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' }, baseTimestamp: 1 }],
     }, 1));
 
     // User 2 must now see a state-update flipping the value to "mine".

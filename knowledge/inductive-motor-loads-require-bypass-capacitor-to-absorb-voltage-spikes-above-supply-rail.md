@@ -1,7 +1,9 @@
 ---
 description: "BLDC motors are inductive loads that generate flyback voltage spikes exceeding the supply voltage during commutation transitions -- a 470uF 63V electrolytic cap across V+/V- at the controller absorbs these spikes and prevents damage"
 type: claim
-source: "docs/parts/riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md"
+source:
+  - "docs/parts/riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md"
+  - "inbox/wiring-zs-x11h-to-arduino-mega-for-single-motor-control.md"
 confidence: proven
 topics:
   - "[[actuators]]"
@@ -12,6 +14,8 @@ topics:
 # inductive motor loads require bypass capacitor to absorb voltage spikes above supply rail
 
 Every motor is an inductive load. When the controller switches phase currents during commutation, the motor's inductance resists the change in current (V = L * di/dt). This generates voltage spikes on the supply rail that can significantly exceed the nominal supply voltage. On a 36V system with a BLDC motor drawing 15A, these transient spikes can reach 60V or more -- right at the ZS-X11H's absolute maximum input voltage.
+
+**Field-Observed Failure Mode:** Missing this flyback capacitor is one of the most frequent wiring mistakes in field applications. Without it, the unmitigated inductive spikes routinely cause permanent damage to the controller's power stage. The theoretical `V = L * di/dt` derivation manifests practically as destroyed MOSFETs when the 470uF 63V electrolytic capacitor across V+/V- is omitted.
 
 The mitigation is a large electrolytic capacitor (470uF, rated at least 63V for a 60V-max system) placed physically as close as possible to the controller's V+/V- power terminals. The capacitor acts as a local energy reservoir that absorbs the voltage spikes, clamping them to a safe level. The ESR (equivalent series resistance) of the capacitor matters -- aluminum electrolytics have low enough ESR for this application, but ceramic bypass caps (0.1uF-1uF) in parallel further suppress high-frequency components.
 

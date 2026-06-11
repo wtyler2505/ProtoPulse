@@ -49,13 +49,13 @@ function FeatureCard({ icon: Icon, title, description, accent, testId }: Feature
       data-testid={testId}
       className="bg-card/40 backdrop-blur border-border/50 hover:border-primary/30 transition-colors"
     >
-      <CardContent className="p-4 flex items-start gap-3">
-        <div className={cn('p-2 rounded-lg shrink-0', accent)}>
+      <CardContent className="flex items-start gap-3.5 p-4.5">
+        <div className={cn('rounded-lg p-2.5 shrink-0', accent)}>
           <Icon className="w-5 h-5" />
         </div>
         <div>
           <h4 className="text-sm font-semibold text-foreground">{title}</h4>
-          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{description}</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
         </div>
       </CardContent>
     </Card>
@@ -168,7 +168,7 @@ export default function WelcomeOverlay({ onNavigate, onDismiss }: WelcomeOverlay
                 Welcome to ProtoPulse
               </h1>
             </div>
-            <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
+            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
               AI-assisted electronic design automation. Build architecture diagrams, capture schematics,
               manage your BOM, validate designs, and export to industry formats — all in one workspace.
             </p>
@@ -206,7 +206,7 @@ export default function WelcomeOverlay({ onNavigate, onDismiss }: WelcomeOverlay
               type="button"
               onClick={togglePlainLabels}
               className={cn(
-                'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                'rounded-full border px-3.5 py-2 text-xs font-medium transition-colors',
                 plainLabelsEnabled
                   ? 'border-primary/30 bg-primary/10 text-primary'
                   : 'border-border bg-background/60 text-muted-foreground hover:text-foreground',
@@ -238,14 +238,14 @@ export default function WelcomeOverlay({ onNavigate, onDismiss }: WelcomeOverlay
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Get started in 3 steps
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
             {QUICK_START_STEPS.map((step) => (
               <Card
                 key={step.testId}
                 data-testid={step.testId}
                 className="bg-card/40 backdrop-blur border-border/50 hover:border-primary/30 transition-colors"
               >
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="space-y-3 p-4.5">
                   <div className="flex items-center gap-2">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-bold">
                       {step.number}
@@ -256,7 +256,7 @@ export default function WelcomeOverlay({ onNavigate, onDismiss }: WelcomeOverlay
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full text-xs gap-1.5"
+                    className="h-8.5 w-full gap-1.5 px-3 text-xs"
                     onClick={() => handleQuickStart(step)}
                     data-testid={`${step.testId}-action`}
                   >

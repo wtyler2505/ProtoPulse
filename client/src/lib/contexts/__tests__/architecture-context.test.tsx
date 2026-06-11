@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 
 // Mock use-toast (imported by queryClient.ts)
 vi.mock('@/hooks/use-toast', () => ({
@@ -65,7 +65,7 @@ function createWrapper(seeded = true) {
 }
 
 /** Builds a minimal React Flow Node for testing. */
-function makeNode(id: string, label = `Node ${id}`): Node {
+function makeNode(id: string, label = `Node ${id}`): GraphNode {
   return {
     id,
     type: 'custom',
@@ -75,7 +75,7 @@ function makeNode(id: string, label = `Node ${id}`): Node {
 }
 
 /** Builds a minimal React Flow Edge for testing. */
-function makeEdge(id: string, source: string, target: string): Edge {
+function makeEdge(id: string, source: string, target: string): GraphEdge {
   return { id, source, target };
 }
 
@@ -117,7 +117,7 @@ describe('ArchitectureContext', () => {
       wrapper: Wrapper,
     });
 
-    const testNodes: Node[] = [makeNode('n1', 'MCU'), makeNode('n2', 'Sensor')];
+    const testNodes: GraphNode[] = [makeNode('n1', 'MCU'), makeNode('n2', 'Sensor')];
 
     act(() => {
       result.current.setNodes(testNodes);
@@ -142,7 +142,7 @@ describe('ArchitectureContext', () => {
       wrapper: Wrapper,
     });
 
-    const testEdges: Edge[] = [makeEdge('e1', 'n1', 'n2')];
+    const testEdges: GraphEdge[] = [makeEdge('e1', 'n1', 'n2')];
 
     act(() => {
       result.current.setEdges(testEdges);
@@ -250,7 +250,7 @@ describe('ArchitectureContext', () => {
     const { Wrapper, queryClient } = createWrapper();
     const { result } = renderHook(() => useArchitecture(), { wrapper: Wrapper });
 
-    const testNodes: Node[] = [makeNode('n1', 'MCU')];
+    const testNodes: GraphNode[] = [makeNode('n1', 'MCU')];
 
     act(() => {
       result.current.setNodes(testNodes);

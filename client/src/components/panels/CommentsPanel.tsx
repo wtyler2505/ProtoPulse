@@ -26,7 +26,7 @@ import type { DesignComment } from '@shared/schema';
 // ---------------------------------------------------------------------------
 
 type ResolvedFilter = 'all' | 'open' | 'resolved' | 'blocked' | 'wontfix';
-type TargetFilter = 'all' | 'general' | 'node' | 'edge' | 'bom_item';
+type TargetFilter = 'all' | 'general' | 'node' | 'edge' | 'bom_item' | 'spatial';
 
 interface CommentsPanelProps {
   projectId: number;
@@ -57,9 +57,44 @@ function targetLabel(type: string): string {
     case 'node': return 'Node';
     case 'edge': return 'Edge';
     case 'bom_item': return 'BOM';
+    case 'spatial': return 'Anchor';
     case 'general': return 'General';
     default: return type;
   }
+}
+
+function spatialViewLabel(view: string | null): string {
+  switch (view) {
+    case 'architecture': return 'Architecture';
+    case 'schematic': return 'Schematic';
+    case 'pcb': return 'PCB';
+    case 'breadboard': return 'Breadboard';
+    default: return 'Design';
+  }
+}
+
+function formatSpatialCoord(value: number | string | null): string | null {
+  if (value == null) {
+    return null;
+  }
+  const numeric = typeof value === 'string' ? Number(value) : value;
+  if (!Number.isFinite(numeric)) {
+    return null;
+  }
+  return numeric.toFixed(1);
+}
+
+function spatialAnchorLabel(comment: DesignComment): string | null {
+  if (comment.targetType !== 'spatial') {
+    return null;
+  }
+  const x = formatSpatialCoord(comment.spatialX);
+  const y = formatSpatialCoord(comment.spatialY);
+  const view = spatialViewLabel(comment.spatialView);
+  if (x && y) {
+    return `${view} canvas (${x}, ${y})`;
+  }
+  return `${view} canvas`;
 }
 
 // ---------------------------------------------------------------------------
@@ -90,23 +125,24 @@ function CommentItem({
   const isBlocked = status === 'blocked';
   const isWontFix = status === 'wontfix';
   const isClosed = isResolved || isWontFix;
+  const anchorLabel = spatialAnchorLabel(comment);
 
   return (
     <div
-      className={cn('group', depth > 0 && 'ml-4 border-l border-zinc-700 pl-3')}
+      className={cn('group', depth > 0 && 'ml-2.5 border-l border-zinc-700 pl-2')}
       data-testid={`comment-item-${comment.id}`}
     >
       <div className={cn(
-        'rounded-md px-3 py-2 transition-colors',
+        'rounded-md px-2 py-1.5 transition-colors',
         isClosed ? 'bg-zinc-900/50' : 'bg-zinc-800/60',
       )}>
         {/* Header */}
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center justify-between gap-1 mb-0.5">
+          <div className="flex items-center gap-1.5 min-w-0">
             <Badge
               variant="outline"
               className={cn(
-                'text-[10px] px-1.5 py-0 shrink-0',
+                'text-[10px] px-1 py-0 shrink-0',
                 isResolved ? 'border-green-700 text-green-400' :
                 isBlocked ? 'border-amber-700 text-amber-400' :
                 isWontFix ? 'border-rose-700 text-rose-400' :
@@ -130,10 +166,20 @@ function CommentItem({
           </span>
         </div>
 
+        {anchorLabel && (
+          <div
+            className="mb-1 inline-flex max-w-full items-center rounded border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-medium text-cyan-200"
+            data-testid={`comment-spatial-anchor-${comment.id}`}
+            title={anchorLabel}
+          >
+            <span className="truncate">{anchorLabel}</span>
+          </div>
+        )}
+
         {/* Content */}
         <p
           className={cn(
-            'text-sm whitespace-pre-wrap break-words',
+            'text-xs whitespace-pre-wrap break-words',
             isClosed ? 'text-zinc-500' : 'text-zinc-200',
           )}
           data-testid={`comment-content-${comment.id}`}
@@ -142,15 +188,15 @@ function CommentItem({
         </p>
 
         {/* Actions */}
-        <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-xs text-zinc-400 hover:text-[var(--color-editor-accent)]"
+            className="h-5 px-1 text-[10px] text-zinc-400 hover:text-[var(--color-editor-accent)]"
             onClick={() => { onReply(comment.id); }}
             data-testid={`comment-reply-btn-${comment.id}`}
           >
-            <Reply className="h-3 w-3 mr-1" />
+            <Reply className="h-2.5 w-2.5 mr-1" />
             Reply
           </Button>
 
@@ -158,11 +204,11 @@ function CommentItem({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-xs text-zinc-400 hover:text-green-400"
+              className="h-5 px-1 text-[10px] text-zinc-400 hover:text-green-400"
               onClick={() => { onStatusChange(comment.id, 'open'); }}
               data-testid={`comment-reopen-btn-${comment.id}`}
             >
-              <RotateCcw className="h-3 w-3 mr-1" />
+              <RotateCcw className="h-2.5 w-2.5 mr-1" />
               Reopen
             </Button>
           )}
@@ -171,11 +217,11 @@ function CommentItem({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-xs text-zinc-400 hover:text-green-400"
+              className="h-5 px-1 text-[10px] text-zinc-400 hover:text-green-400"
               onClick={() => { onStatusChange(comment.id, 'resolved'); }}
               data-testid={`comment-resolve-btn-${comment.id}`}
             >
-              <Check className="h-3 w-3 mr-1" />
+              <Check className="h-2.5 w-2.5 mr-1" />
               Resolve
             </Button>
           )}
@@ -184,7 +230,7 @@ function CommentItem({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-xs text-zinc-400 hover:text-amber-400"
+              className="h-5 px-1 text-[10px] text-zinc-400 hover:text-amber-400"
               onClick={() => { onStatusChange(comment.id, 'blocked'); }}
               data-testid={`comment-block-btn-${comment.id}`}
             >
@@ -197,11 +243,11 @@ function CommentItem({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-xs text-zinc-400 hover:text-red-400"
+                className="h-5 px-1 text-[10px] text-zinc-400 hover:text-red-400"
                 data-testid={`comment-delete-btn-${comment.id}`}
                 aria-label="Delete comment"
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash2 className="h-2.5 w-2.5" />
               </Button>
             }
             title="Delete Comment"
@@ -215,7 +261,7 @@ function CommentItem({
 
       {/* Nested replies */}
       {replies.length > 0 && (
-        <div className="mt-1 space-y-1">
+        <div className="mt-0.5 space-y-0.5">
           {replies.map((reply) => {
             const childReplies = allComments.filter((c) => c.parentId === reply.id);
             return (
@@ -341,13 +387,13 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
   return (
     <div className="flex flex-col h-full bg-zinc-950" data-testid="comments-panel">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="h-4 w-4 text-[var(--color-editor-accent)]" />
+      <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-zinc-800">
+        <div className="flex items-center gap-1.5">
+          <MessageSquare className="h-3.5 w-3.5 text-[var(--color-editor-accent)]" />
           <h2 className="text-sm font-semibold text-zinc-100" data-testid="comments-panel-title">
             Design Review
           </h2>
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0" data-testid="comments-total-badge">
+          <Badge variant="secondary" className="text-[9px] px-1 py-0" data-testid="comments-total-badge">
             {comments.length}
           </Badge>
         </div>
@@ -355,22 +401,22 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
           variant="ghost"
           size="sm"
           className={cn(
-            'h-7 px-2 text-xs',
+            'h-6 px-1.5 text-[11px]',
             showFilters ? 'text-[var(--color-editor-accent)]' : 'text-zinc-400',
           )}
           onClick={() => { setShowFilters((prev) => !prev); }}
           data-testid="comments-filter-toggle"
         >
-          <Filter className="h-3 w-3 mr-1" />
+          <Filter className="h-2.5 w-2.5 mr-1" />
           Filter
-          <ChevronDown className={cn('h-3 w-3 ml-1 transition-transform', showFilters && 'rotate-180')} />
+          <ChevronDown className={cn('h-2.5 w-2.5 ml-1 transition-transform', showFilters && 'rotate-180')} />
         </Button>
       </div>
 
       {/* Filter bar */}
       {showFilters && (
-        <div className="px-4 py-2 border-b border-zinc-800 space-y-2" data-testid="comments-filter-bar">
-          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+        <div className="px-3 py-1 border-b border-zinc-800 space-y-1" data-testid="comments-filter-bar">
+          <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
             <span className="text-[10px] text-zinc-400 w-14 shrink-0">Status:</span>
             {(['all', 'open', 'resolved', 'blocked', 'wontfix'] as ResolvedFilter[]).map((f) => (
               <Button
@@ -378,7 +424,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'h-6 px-2 text-[10px] capitalize shrink-0',
+                  'h-5 px-1.5 text-[10px] capitalize shrink-0',
                   resolvedFilter === f ? 'text-[var(--color-editor-accent)] bg-zinc-800' : 'text-zinc-400',
                 )}
                 onClick={() => { setResolvedFilter(f); }}
@@ -394,19 +440,19 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
           </div>
           <div className="flex items-center gap-1">
             <span className="text-[10px] text-zinc-400 w-14 shrink-0">Target:</span>
-            {(['all', 'general', 'node', 'edge', 'bom_item'] as TargetFilter[]).map((f) => (
+            {(['all', 'general', 'node', 'edge', 'bom_item', 'spatial'] as TargetFilter[]).map((f) => (
               <Button
                 key={f}
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'h-6 px-2 text-[10px] capitalize',
+                  'h-5 px-1.5 text-[10px] capitalize',
                   targetFilter === f ? 'text-[var(--color-editor-accent)] bg-zinc-800' : 'text-zinc-400',
                 )}
                 onClick={() => { setTargetFilter(f); }}
                 data-testid={`comments-filter-target-${f}`}
               >
-                {f === 'bom_item' ? 'BOM' : f}
+                {f === 'bom_item' ? 'BOM' : f === 'spatial' ? 'Anchors' : f}
               </Button>
             ))}
           </div>
@@ -415,7 +461,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
 
       {/* Comment list */}
       <ScrollArea className="flex-1 min-h-0">
-        <div className="px-3 py-2 space-y-2" data-testid="comments-list">
+        <div className="px-2.5 py-1.5 space-y-1.5" data-testid="comments-list">
           {commentsQuery.isLoading && (
             <p className="text-xs text-zinc-400 text-center py-8" data-testid="comments-loading">Loading comments...</p>
           )}
@@ -450,16 +496,16 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
       <Separator className="bg-zinc-800" />
 
       {/* Compose area */}
-      <div className="px-3 py-3 space-y-2" data-testid="comments-compose">
+      <div className="px-2.5 py-1.5 space-y-1.5" data-testid="comments-compose">
         {replyTarget && (
-          <div className="flex items-center justify-between rounded bg-zinc-800/50 px-2 py-1" data-testid="comments-reply-indicator">
+          <div className="flex items-center justify-between rounded bg-zinc-800/50 px-1.5 py-0.5" data-testid="comments-reply-indicator">
             <span className="text-[10px] text-zinc-400 truncate">
               Replying to: <span className="text-zinc-300">{replyTarget.content.slice(0, 60)}{replyTarget.content.length > 60 ? '...' : ''}</span>
             </span>
             <Button
               variant="ghost"
               size="sm"
-              className="h-5 px-1 text-[10px] text-zinc-400 hover:text-zinc-300"
+              className="h-4.5 px-1 text-[10px] text-zinc-400 hover:text-zinc-300"
               onClick={handleCancelReply}
               data-testid="comments-cancel-reply"
             >
@@ -471,7 +517,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
           <Textarea
             placeholder={replyToId ? 'Write a reply...' : 'Add a comment...'}
             aria-label={replyToId ? 'Write a reply' : 'Add a comment'}
-            className="min-h-[60px] max-h-[120px] resize-none bg-zinc-900 border-zinc-700 text-sm text-zinc-200 placeholder:text-zinc-400 focus-visible:ring-[var(--color-editor-accent)]/30"
+            className="min-h-[52px] max-h-[104px] resize-none bg-zinc-900 border-zinc-700 text-xs text-zinc-200 placeholder:text-zinc-400 focus-visible:ring-[var(--color-editor-accent)]/30"
             value={newContent}
             onChange={(e) => { setNewContent(e.target.value); }}
             onKeyDown={(e) => {
@@ -483,15 +529,17 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
           />
           <Button
             size="sm"
-            className="h-auto self-end bg-[var(--color-editor-accent)]/10 text-[var(--color-editor-accent)] hover:bg-[var(--color-editor-accent)]/20 border border-[var(--color-editor-accent)]/30"
+            className="h-auto self-end bg-[var(--color-editor-accent)]/10 text-[var(--color-editor-accent)] hover:bg-[var(--color-editor-accent)]/20 border border-[var(--color-editor-accent)]/30 px-2 py-1"
             disabled={!newContent.trim() || createMutation.isPending}
             onClick={handleSubmit}
             data-testid="comments-submit-btn"
+            aria-label={replyToId ? 'Submit reply' : 'Submit comment'}
+            title={replyToId ? 'Submit reply' : 'Submit comment'}
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-3.5 w-3.5" />
           </Button>
         </div>
-        <p className="text-[10px] text-zinc-600" data-testid="comments-shortcut-hint">
+        <p className="text-[10px] text-zinc-400" data-testid="comments-shortcut-hint">
           Ctrl+Enter to submit
         </p>
       </div>

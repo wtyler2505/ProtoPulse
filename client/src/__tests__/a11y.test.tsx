@@ -9,7 +9,7 @@
  * --------
  * - Mock every context/provider hook with safe defaults so each view renders
  *   in isolation without needing the full provider tree.
- * - Mock heavy third-party canvas libs (@xyflow/react, @dnd-kit, Three.js,
+ * - Mock heavy third-party canvas libs (xyflow compat layer, @dnd-kit, Three.js,
  *   Monaco, xterm, ReactFlow CSS) with simple stubs — axe cannot meaningfully
  *   audit WebGL canvases and these libs pull layout APIs happy-dom does not
  *   implement.
@@ -29,6 +29,7 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import type { AxeResults, Result } from 'axe-core';
 import React from 'react';
@@ -70,7 +71,27 @@ vi.mock('@/lib/contexts/project-meta-context', () => ({
 }));
 
 vi.mock('@/lib/project-context', () => ({
-  useProjectMeta: () => ({ activeView: 'dashboard', setActiveView: vi.fn() }),
+  useProjectId: () => 1,
+  useProjectMeta: () => ({
+    activeView: 'dashboard',
+    setActiveView: vi.fn(),
+    projectName: 'Test',
+    projectDescription: '',
+    seeded: true,
+  }),
+  useArchitecture: () => ({
+    nodes: [], edges: [], setNodes: vi.fn(), setEdges: vi.fn(),
+    focusNodeId: null, selectedNodeId: null, setSelectedNodeId: vi.fn(),
+    pushUndoState: vi.fn(), undo: vi.fn(), redo: vi.fn(),
+    setPendingComponentPartId: vi.fn(),
+  }),
+  useBom: () => ({
+    bom: [], bomSettings: { maxCost: 50, batchSize: 1000, inStockOnly: true, manufacturingDate: new Date() },
+    setBomSettings: vi.fn(), addBomItem: vi.fn(), deleteBomItem: vi.fn(), updateBomItem: vi.fn(),
+  }),
+  useOutput: () => ({ outputLogs: [], addOutputLog: vi.fn(), clearOutputLogs: vi.fn() }),
+  useValidation: () => ({ issues: [], addIssue: vi.fn(), clearIssues: vi.fn(), runValidation: vi.fn() }),
+  useArduino: () => ({ connected: false, port: null, baudRate: 9600, logs: [] }),
   ProjectMetaProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
@@ -88,7 +109,11 @@ vi.mock('@/lib/contexts/validation-context', () => ({
 }));
 
 vi.mock('@/lib/contexts/history-context', () => ({
-  useHistory: () => ({ entries: [], addEntry: vi.fn(), clearHistory: vi.fn() }),
+  // Mirror the real HistoryState shape ({ history, addToHistory }). The real
+  // provider already guards with `historyQuery.data ?? []`, so production hands
+  // DashboardView an array; the mock must do the same or `[...history]` throws
+  // "history is not iterable".
+  useHistory: () => ({ history: [], addToHistory: vi.fn() }),
   HistoryProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
@@ -164,8 +189,8 @@ vi.mock('@/lib/tutorial-context', () => ({
 
 // ───────────────────────── Third-party canvas mocks ─────────────────────────
 
-vi.mock('@xyflow/react/dist/style.css', () => ({}));
-vi.mock('@xyflow/react', () => ({
+vi.mock('@/lib/xyflow-style', () => ({}));
+vi.mock('@/lib/xyflow-compat', () => ({
   ReactFlow: ({ children }: { children?: React.ReactNode }) => <div data-testid="react-flow">{children}</div>,
   ReactFlowProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useReactFlow: () => ({ fitView: vi.fn(), screenToFlowPosition: () => ({ x: 0, y: 0 }), setCenter: vi.fn() }),
@@ -312,6 +337,24 @@ beforeAll(() => {
   }
   class RO { observe() {} unobserve() {} disconnect() {} }
   globalThis.ResizeObserver ??= RO as unknown as typeof ResizeObserver;
+
+  // happy-dom has no Worker global. CircuitCodeView's useCircuitEvaluator
+  // instantiates a sandboxed Web Worker (via createCircuitWorker → new Worker)
+  // inside a mount effect, which RTL flushes during render(). Without a stub
+  // that throws "ReferenceError: Worker is not defined" and the view fails to
+  // render. This minimal stub satisfies the surface the evaluator uses
+  // (constructor + postMessage + terminate + settable onmessage). It never
+  // posts back a message, so the eval promise simply stays pending — harmless
+  // for a render-only a11y pass, and the hook's mountedRef guard prevents any
+  // post-unmount state updates. Scoped to this file (NOT the shared test-setup).
+  globalThis.Worker ??= class {
+    onmessage: ((e: MessageEvent) => void) | null = null;
+    onerror: ((e: ErrorEvent) => void) | null = null;
+    postMessage() {}
+    terminate() {}
+    addEventListener() {}
+    removeEventListener() {}
+  } as unknown as typeof Worker;
   globalThis.IntersectionObserver ??= class {
     observe() {} unobserve() {} disconnect() {} takeRecords() { return []; }
     root = null; rootMargin = ''; thresholds = [];
@@ -337,7 +380,9 @@ describe('a11y — workspace views (finding #343)', () => {
       try {
         const renderResult = render(
           <QueryClientProvider client={qc}>
-            <Component {...(entry.props ?? {})} />
+            <TooltipProvider>
+              <Component {...(entry.props ?? {})} />
+            </TooltipProvider>
           </QueryClientProvider>,
         );
         container = renderResult.container;
@@ -369,7 +414,11 @@ describe('a11y — workspace views (finding #343)', () => {
         );
       }
       expect(bad).toEqual([]);
-    });
+      // Heavy views (SchematicView ≈ 10s render + axe in isolation) need more
+      // than 30s once the full suite contends for the same worker. 60s is a
+      // safe margin; these are genuinely slow, not hung (verified: SchematicView
+      // passes at ~10s under light load).
+    }, 60000);
   }
 
   it('prints a per-view a11y summary', () => {

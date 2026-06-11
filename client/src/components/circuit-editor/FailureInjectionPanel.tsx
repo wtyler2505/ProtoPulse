@@ -8,6 +8,7 @@
 import { useState, useMemo, useSyncExternalStore, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
@@ -177,33 +178,34 @@ function AddFaultForm({ components, onSubmit, onCancel }: AddFaultFormProps) {
 
       {/* Type-specific fields */}
       {faultType === 'noise' && (
-        <Input
+        <NumberInput
           value={noiseAmplitude}
           onChange={(e) => { setNoiseAmplitude(e.target.value); }}
           placeholder="Noise amplitude (optional)"
-          type="number"
+          min={0}
+          max={10_000}
           className="h-7 text-xs"
           data-testid="fault-form-noise-amplitude"
         />
       )}
 
       {faultType === 'drift' && (
-        <Input
+        <NumberInput
           value={driftPercent}
           onChange={(e) => { setDriftPercent(e.target.value); }}
           placeholder="Drift % (optional, e.g. 20)"
-          type="number"
+          min={-100}
+          max={100}
           className="h-7 text-xs"
           data-testid="fault-form-drift-percent"
         />
       )}
 
       {(faultType === 'noise' || faultType === 'intermittent') && (
-        <Input
+        <NumberInput
           value={seed}
           onChange={(e) => { setSeed(e.target.value); }}
           placeholder="PRNG seed (optional)"
-          type="number"
           className="h-7 text-xs"
           data-testid="fault-form-seed"
         />

@@ -39,6 +39,7 @@ echo "[tauri-packaged-smoke] running tauri build --debug --bundles deb"
 npm run tauri:build -- --debug --bundles deb
 
 ARTIFACT_DIR="src-tauri/target/debug/bundle"
+DEB_DIR="$ARTIFACT_DIR/deb"
 if [[ ! -d "$ARTIFACT_DIR" ]]; then
     echo "[tauri-packaged-smoke] FAIL: $ARTIFACT_DIR not created" >&2
     exit 2
@@ -60,6 +61,35 @@ if [[ "$COUNT" -eq 0 ]]; then
 fi
 
 echo "[tauri-packaged-smoke] PASS: $COUNT artifact(s) produced"
+
+# Linux gate: require the exact .deb output path so CI catches naming/location
+# regressions instead of only proving "some artifact exists".
+if [[ ! -d "$DEB_DIR" ]]; then
+    echo "[tauri-packaged-smoke] FAIL: expected deb directory missing: $DEB_DIR" >&2
+    exit 2
+fi
+
+APP_VERSION=$(sed -nE 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*$/\1/p' src-tauri/tauri.conf.json | head -n1)
+if [[ -z "$APP_VERSION" ]]; then
+    echo "[tauri-packaged-smoke] FAIL: could not parse version from src-tauri/tauri.conf.json" >&2
+    exit 2
+fi
+
+case "$(uname -m)" in
+    x86_64) DEB_ARCH="amd64" ;;
+    aarch64|arm64) DEB_ARCH="arm64" ;;
+    *) DEB_ARCH="$(uname -m)" ;;
+esac
+
+EXPECTED_DEB_PATH="$DEB_DIR/protopulse_${APP_VERSION}_${DEB_ARCH}.deb"
+if [[ ! -f "$EXPECTED_DEB_PATH" ]]; then
+    echo "[tauri-packaged-smoke] FAIL: expected .deb not found at exact path:" >&2
+    echo "  $EXPECTED_DEB_PATH" >&2
+    echo "[tauri-packaged-smoke] observed .deb files under $DEB_DIR:" >&2
+    find "$DEB_DIR" -maxdepth 2 -type f -name "*.deb" -printf '  %p\n' 2>/dev/null >&2 || true
+    exit 2
+fi
+echo "[tauri-packaged-smoke] PASS: expected .deb path exists: $EXPECTED_DEB_PATH"
 
 # ── Phase 6.2: debug artifact policy ────────────────────────────────────────
 # Source maps are generated as `hidden` per vite.config.ts — they exist on

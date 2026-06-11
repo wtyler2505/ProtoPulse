@@ -7,6 +7,11 @@ test.describe('Accessibility — Project Picker', () => {
     await page.goto('/');
     await page.evaluate(() => {
       localStorage.removeItem('protopulse-last-project');
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('protopulse-last-project:')) {
+          localStorage.removeItem(key);
+        }
+      }
     });
     await page.goto('/');
   });
@@ -34,13 +39,11 @@ test.describe('Accessibility — Project Picker', () => {
   });
 
   test('project cards are keyboard accessible', async ({ page }) => {
-    const firstCard = page.locator('[data-testid^="project-card-"]').first();
-    if (await firstCard.isVisible().catch(() => false)) {
-      // Cards have role="button" and tabIndex=0
-      const role = await firstCard.getAttribute('role');
-      expect(role).toBe('button');
-      const tabIndex = await firstCard.getAttribute('tabindex');
-      expect(tabIndex).toBe('0');
+    const firstOpenButton = page.locator('[data-testid^="project-card-open-"]').first();
+    if (await firstOpenButton.isVisible().catch(() => false)) {
+      await expect(firstOpenButton).toHaveAttribute('type', 'button');
+      const ariaLabel = await firstOpenButton.getAttribute('aria-label');
+      expect(ariaLabel?.startsWith('Open project:')).toBe(true);
     }
   });
 });

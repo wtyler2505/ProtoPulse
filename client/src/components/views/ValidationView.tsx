@@ -4,7 +4,7 @@ import { useOutput } from '@/lib/contexts/output-context';
 import { useProjectMeta } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, AlertCircle, XCircle, ShieldOff, Code2 } from 'lucide-react';
+import { AlertTriangle, AlertCircle, CheckCircle2, XCircle, ShieldOff, Code2 } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import {
   AlertDialog,
@@ -29,6 +29,9 @@ import { DEFAULT_ERC_RULES, DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-typ
 import type { CircuitSettings } from '@shared/circuit-types';
 import type { ComponentPart } from '@shared/schema';
 import { DrcPresetSelector } from '@/components/views/DrcPresetSelector';
+import DesignDecayCard from '@/components/circuit-editor/DesignDecayCard';
+import JustInTimeSkillCard from '@/components/circuit-editor/JustInTimeSkillCard';
+import JitRunHistoryPanel from '@/components/circuit-editor/JitRunHistoryPanel';
 import { applyPreset, DRC_PRESETS } from '@/lib/drc-presets';
 import type { DrcPresetId } from '@/lib/drc-presets';
 import { useDesignGateway } from '@/lib/design-gateway';
@@ -48,6 +51,14 @@ import { RemediationWizardDialog } from '@/components/views/RemediationWizardDia
 import { getRecipe } from '@/lib/remediation-wizard';
 import type { RemediationRecipe } from '@/lib/remediation-wizard';
 import { ManufacturerRuleCompare } from '@/components/views/ManufacturerRuleCompare';
+import SchemaViewerPanel from '@/components/views/SchemaViewerPanel';
+import { getTopDesignDecayRecommendation } from '@/lib/design-decay';
+import { getTopJustInTimeSkill } from '@/lib/just-in-time-skills';
+import { runExportPrecheck } from '@/lib/export-precheck';
+import type { PrecheckResult, PrecheckStatus } from '@/lib/export-precheck';
+import type { ProjectExportData } from '@/lib/export-validation';
+import { buildValidationSafetyGateData } from '@/lib/validation-safety-gates';
+import { TrustBadge, type TrustBadgeKind } from '@/components/ui/TrustBadge';
 
 import { toPartState } from './validation/validation-helpers';
 import { ValidationErrorBoundary } from './validation/ValidationErrorBoundary';
@@ -62,6 +73,101 @@ export default function ValidationView() {
     <ValidationErrorBoundary>
       <ValidationViewContent />
     </ValidationErrorBoundary>
+  );
+}
+
+const VALIDATION_SAFETY_GATE_NAMES = [
+  'AI-Generated Circuit Provenance',
+  'Exact-Part Verification',
+  'Verified Mechanical Models',
+  'Breadboard Health',
+  'Lifecycle Risk',
+  'Inventory Confidence',
+] as const;
+
+function safetyGateId(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function safetyGateKind(status: PrecheckStatus): TrustBadgeKind {
+  if (status === 'pass') {
+    return 'verified';
+  }
+  if (status === 'fail') {
+    return 'unverified';
+  }
+  return 'estimated';
+}
+
+function safetyGateLabel(status: PrecheckStatus): string {
+  if (status === 'pass') {
+    return 'PASS';
+  }
+  if (status === 'fail') {
+    return 'BLOCKED';
+  }
+  return 'WARN';
+}
+
+function SafetyGateIcon({ status }: { status: PrecheckStatus }) {
+  if (status === 'pass') {
+    return <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />;
+  }
+  if (status === 'fail') {
+    return <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />;
+  }
+  return <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow-500" />;
+}
+
+function ValidationSafetyGateSection({ checks }: { checks: readonly PrecheckResult[] }) {
+  const blockerCount = checks.filter((check) => check.status === 'fail').length;
+  const warningCount = checks.filter((check) => check.status === 'warn').length;
+  const summaryKind: TrustBadgeKind = blockerCount > 0 ? 'unverified' : warningCount > 0 ? 'estimated' : 'verified';
+  const summaryLabel = blockerCount > 0 ? 'BLOCKED' : warningCount > 0 ? 'REVIEW' : 'CLEAR';
+  const summaryText = blockerCount > 0
+    ? `${blockerCount} blocked safety gate${blockerCount === 1 ? '' : 's'} must be resolved before release.`
+    : warningCount > 0
+      ? `${warningCount} safety gate${warningCount === 1 ? '' : 's'} need review before release.`
+      : 'All visible release safety gates are clear.';
+
+  return (
+    <section
+      data-testid="validation-safety-gates"
+      className="mb-2.5 w-full max-w-5xl border border-border bg-card/40 px-3 py-2.5 shadow-sm backdrop-blur-sm"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold text-foreground">Safety Gates</h3>
+            <TrustBadge kind={summaryKind} label={summaryLabel} />
+          </div>
+          <p data-testid="validation-safety-gate-summary" className="mt-1 text-xs text-muted-foreground">
+            {summaryText}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-2 grid gap-2 md:grid-cols-2">
+        {checks.map((check) => (
+          <div
+            key={check.name}
+            data-testid={`validation-safety-gate-${safetyGateId(check.name)}`}
+            className="min-w-0 border border-border/70 bg-background/40 px-2.5 py-2"
+          >
+            <div className="flex min-w-0 items-start gap-2">
+              <SafetyGateIcon status={check.status} />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs font-semibold text-foreground">{check.name}</span>
+                  <TrustBadge kind={safetyGateKind(check.status)} label={safetyGateLabel(check.status)} />
+                </div>
+                <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{check.message}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -171,8 +277,12 @@ function ValidationViewContent() {
       type: n.type ?? 'default',
       x: n.position?.x ?? 0,
       y: n.position?.y ?? 0,
-      width: typeof n.measured?.width === 'number' ? n.measured.width : (typeof n.width === 'number' ? n.width : 150),
-      height: typeof n.measured?.height === 'number' ? n.measured.height : (typeof n.height === 'number' ? n.height : 50),
+      width: typeof (n as { measured?: { width?: unknown } }).measured?.width === 'number'
+        ? (n as { measured?: { width?: number } }).measured!.width!
+        : (typeof (n as { width?: unknown }).width === 'number' ? (n as { width?: number }).width! : 150),
+      height: typeof (n as { measured?: { height?: unknown } }).measured?.height === 'number'
+        ? (n as { measured?: { height?: number } }).measured!.height!
+        : (typeof (n as { height?: unknown }).height === 'number' ? (n as { height?: number }).height! : 50),
       properties: (n.data && typeof n.data === 'object' ? Object.fromEntries(
         Object.entries(n.data as Record<string, unknown>).filter(([, v]) => typeof v === 'string').map(([k, v]) => [k, v as string])
       ) : {}) as Record<string, string>,
@@ -352,6 +462,44 @@ function ValidationViewContent() {
     return runERC(input);
   }, [circuitInstances, circuitNets, componentParts, circuits]);
 
+  const validationSafetyGateData = useMemo(
+    () =>
+      buildValidationSafetyGateData({
+        circuitInstances: circuitInstances ?? [],
+        componentParts: componentParts ?? [],
+        bomItems: bom,
+      }),
+    [circuitInstances, componentParts, bom],
+  );
+
+  const validationSafetyProjectData = useMemo((): ProjectExportData => ({
+    projectName: 'Current project',
+    hasSession: true,
+    architectureNodeCount: nodes.length,
+    hasCircuitInstances: (circuitInstances?.length ?? 0) > 0,
+    hasPcbLayout: (circuitInstances ?? []).some((instance) => instance.pcbX != null && instance.pcbY != null),
+    bomItemCount: bom.length,
+    bomItemsWithPartNumber: bom.filter((item) => item.partNumber.trim().length > 0).length,
+    hasCircuitSource: (circuitInstances ?? []).some((instance) => /^[VI]/i.test(instance.referenceDesignator)),
+    hasCircuitComponent: (circuitInstances?.length ?? 0) > 0,
+    hasBoardProfile: true,
+    bomItemsWithFailureData: 0,
+    ...validationSafetyGateData,
+  }), [nodes.length, circuitInstances, bom, validationSafetyGateData]);
+
+  const safetyGateChecks = useMemo(() => {
+    const names = new Set<string>(VALIDATION_SAFETY_GATE_NAMES);
+    const checksByName = new Map<string, PrecheckResult>();
+    for (const format of ['fab-package', 'step']) {
+      for (const check of runExportPrecheck(format, validationSafetyProjectData).checks) {
+        if (names.has(check.name) && !checksByName.has(check.name)) {
+          checksByName.set(check.name, check);
+        }
+      }
+    }
+    return VALIDATION_SAFETY_GATE_NAMES.map((name) => checksByName.get(name)).filter((check): check is PrecheckResult => Boolean(check));
+  }, [validationSafetyProjectData]);
+
   // Severity filter state (BL-0058)
   const [severityFilter, setSeverityFilter] = useState<Record<string, boolean>>({ error: true, warning: true, info: true });
 
@@ -364,9 +512,19 @@ function ValidationViewContent() {
   const filteredComponentIssues = useMemo(() => componentIssues.filter((i) => severityFilter[i.severity] !== false && !isSuppressed('comp', i.id)), [componentIssues, severityFilter, isSuppressed, suppressions]);
   const filteredDrcIssues = useMemo(() => drcIssues.filter((i) => severityFilter[i.severity] !== false && !isSuppressed(i.ruleType, i.id)), [drcIssues, severityFilter, isSuppressed, suppressions]);
   const filteredErcViolations = useMemo(() => ercViolations.filter((v) => severityFilter[v.severity] !== false && !isSuppressed(v.ruleType, v.id)), [ercViolations, severityFilter, isSuppressed, suppressions]);
+  const safetyGateIssues = useMemo(
+    () => safetyGateChecks.filter((check) => check.status !== 'pass'),
+    [safetyGateChecks],
+  );
+  const filteredSafetyGateIssues = useMemo(
+    () => safetyGateIssues.filter((check) => severityFilter[check.status === 'fail' ? 'error' : 'warning'] !== false),
+    [safetyGateIssues, severityFilter],
+  );
+  const topDecayRecommendation = useMemo(() => getTopDesignDecayRecommendation(filteredErcViolations), [filteredErcViolations]);
+  const topSkillRecommendation = useMemo(() => getTopJustInTimeSkill(filteredErcViolations), [filteredErcViolations]);
 
-  const totalIssues = issues.length + componentIssues.length + drcIssues.length + ercViolations.length;
-  const filteredTotal = filteredIssues.length + filteredComponentIssues.length + filteredDrcIssues.length + filteredErcViolations.length;
+  const totalIssues = issues.length + componentIssues.length + drcIssues.length + ercViolations.length + safetyGateIssues.length;
+  const filteredTotal = filteredIssues.length + filteredComponentIssues.length + filteredDrcIssues.length + filteredErcViolations.length + filteredSafetyGateIssues.length;
 
   // Count by severity across all issue types
   const severityCounts = useMemo(() => {
@@ -375,9 +533,10 @@ function ValidationViewContent() {
       ...componentIssues.map((i) => i.severity),
       ...drcIssues.map((i) => i.severity),
       ...ercViolations.map((v) => v.severity),
+      ...safetyGateIssues.map((check) => check.status === 'fail' ? 'error' : 'warning'),
     ];
     return { error: all.filter((s) => s === 'error').length, warning: all.filter((s) => s === 'warning').length, info: all.filter((s) => s === 'info').length };
-  }, [issues, componentIssues, drcIssues, ercViolations]);
+  }, [issues, componentIssues, drcIssues, ercViolations, safetyGateIssues]);
 
   const getIcon = (severity: string) => {
     switch (severity) {
@@ -411,29 +570,29 @@ function ValidationViewContent() {
   }, [archNodes, focusNode, setActiveView]);
 
   return (
-    <div className="h-full p-3 md:p-6 bg-background/50 flex flex-col items-center">
-      <div className="w-full max-w-5xl flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-8 gap-4">
+    <div className="flex h-full flex-col items-center bg-background/50 p-3 md:p-4">
+      <div className="mb-2.5 flex w-full max-w-5xl flex-col justify-between gap-2.5 md:mb-3 md:flex-row md:items-center">
         <div>
-          <h2 className="text-xl md:text-2xl font-display font-bold flex items-center gap-3">
+          <h2 className="flex items-center gap-1.5 text-base font-display font-bold md:text-lg">
              <ActivityIcon />
              System Validation
           </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {filteredTotal === totalIssues
               ? `Found ${totalIssues} potential issues in your design.`
               : `Showing ${filteredTotal} of ${totalIssues} issues.`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button data-testid="open-custom-rules" variant="outline" size="sm" onClick={() => { setCustomRulesOpen(true); }}>
-            <Code2 className="w-4 h-4 mr-1" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button data-testid="open-custom-rules" variant="outline" size="sm" className="h-8.5 px-3 text-xs" onClick={() => { setCustomRulesOpen(true); }}>
+            <Code2 className="w-3 h-3 mr-1" />
             Custom Rules
           </Button>
           <StyledTooltip content="Run design rule validation checks" side="bottom">
               <button
                 data-testid="run-drc-checks"
                 onClick={handleRunValidation}
-                className="px-6 py-2 bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] focus-ring"
+                className="h-8.5 rounded-sm px-3.5 text-xs bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-all shadow-[0_0_12px_rgba(6,182,212,0.3)] hover:shadow-[0_0_18px_rgba(6,182,212,0.45)] focus-ring"
               >
                 Run DRC Checks
               </button>
@@ -442,56 +601,70 @@ function ValidationViewContent() {
       </div>
 
       {/* DRC Preset Selector (BL-0250) */}
-      <div className="w-full max-w-5xl mb-2 px-4 py-2 bg-card/30 border border-border backdrop-blur-sm" data-testid="drc-preset-bar">
+      <div className="mb-2.5 w-full max-w-5xl border border-border bg-card/30 px-3 py-1.5 backdrop-blur-sm" data-testid="drc-preset-bar">
         <DrcPresetSelector activePreset={activePreset} onApply={handlePresetApply} />
       </div>
+      {topDecayRecommendation ? (
+        <div className="mb-2 w-full max-w-5xl">
+          <DesignDecayCard recommendation={topDecayRecommendation} />
+        </div>
+      ) : null}
+      {topSkillRecommendation ? (
+        <div className="mb-2 w-full max-w-5xl">
+          <JustInTimeSkillCard recommendation={topSkillRecommendation} />
+        </div>
+      ) : null}
+      <div className="mb-2.5 w-full max-w-5xl">
+        <JitRunHistoryPanel />
+      </div>
+      <ValidationSafetyGateSection checks={safetyGateChecks} />
 
-      <div className="w-full max-w-5xl flex-1 overflow-hidden bg-card/40 border border-border backdrop-blur-xl shadow-xl flex flex-col">
+      <div className="flex min-h-[18rem] w-full max-w-5xl flex-1 flex-col overflow-hidden border border-border bg-card/40 shadow-lg backdrop-blur-xl md:min-h-[20rem]">
         {/* Severity filter bar (BL-0058) */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/5" data-testid="severity-filter-bar">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mr-1">Filter:</span>
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-border bg-muted/5 px-2.5 py-1.5" data-testid="severity-filter-bar">
+          <span className="mr-1 text-[11px] font-semibold text-muted-foreground">Filter:</span>
           <button
             data-testid="filter-error"
             onClick={() => { toggleSeverity('error'); }}
             className={cn(
-              'flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border transition-colors',
+              'flex h-7 items-center gap-1.5 border px-2.5 text-xs font-medium transition-colors',
               severityFilter.error
                 ? 'border-destructive/50 bg-destructive/10 text-destructive'
                 : 'border-border bg-transparent text-muted-foreground/50',
             )}
           >
-            <XCircle className="w-3 h-3" />
+            <XCircle className="w-3.5 h-3.5" />
             Errors ({severityCounts.error})
           </button>
           <button
             data-testid="filter-warning"
             onClick={() => { toggleSeverity('warning'); }}
             className={cn(
-              'flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border transition-colors',
+              'flex h-7 items-center gap-1.5 border px-2.5 text-xs font-medium transition-colors',
               severityFilter.warning
                 ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500'
                 : 'border-border bg-transparent text-muted-foreground/50',
             )}
           >
-            <AlertTriangle className="w-3 h-3" />
+            <AlertTriangle className="w-3.5 h-3.5" />
             Warnings ({severityCounts.warning})
           </button>
           <button
             data-testid="filter-info"
             onClick={() => { toggleSeverity('info'); }}
             className={cn(
-              'flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border transition-colors',
+              'flex h-7 items-center gap-1.5 border px-2.5 text-xs font-medium transition-colors',
               severityFilter.info
                 ? 'border-primary/50 bg-primary/10 text-primary'
                 : 'border-border bg-transparent text-muted-foreground/50',
             )}
           >
-            <AlertCircle className="w-3 h-3" />
+            <AlertCircle className="w-3.5 h-3.5" />
             Info ({severityCounts.info})
           </button>
         </div>
 
-        <div className="hidden md:flex items-center gap-6 p-4 border-b border-border bg-muted/10 backdrop-blur text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="hidden items-center gap-4 border-b border-border bg-muted/10 px-3 py-2.5 text-[11px] font-semibold text-muted-foreground backdrop-blur md:flex">
            <div className="w-8 text-center">Sev</div>
            <div className="flex-1">Description</div>
            <div className="w-32">Component</div>
@@ -503,6 +676,7 @@ function ValidationViewContent() {
           componentIssues={filteredComponentIssues}
           drcIssues={filteredDrcIssues}
           ercIssues={filteredErcViolations.map((v) => ({ id: v.id, severity: v.severity, message: v.message, ruleType: v.ruleType }))}
+          safetyGateIssues={filteredSafetyGateIssues}
           complianceResult={complianceResult}
           hasComponentParts={!!componentParts && componentParts.length > 0}
           getIcon={getIcon}
@@ -528,7 +702,7 @@ function ValidationViewContent() {
       />
 
       {/* Design Gateway + DFM sections side by side */}
-      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+      <div className="mt-2.5 grid w-full max-w-5xl grid-cols-1 gap-2.5 md:grid-cols-2">
         <DesignGatewaySection
           gatewayRules={gatewayRules}
           gatewayViolations={gatewayViolations}
@@ -548,9 +722,12 @@ function ValidationViewContent() {
           setActiveView={setActiveView}
         />
       </div>
+      <div className="mt-2.5 w-full max-w-5xl">
+        <SchemaViewerPanel />
+      </div>
 
       {/* Manufacturer Rule Compare (BL-0251) */}
-      <div className="w-full max-w-5xl mt-4">
+      <div className="mt-2.5 w-full max-w-5xl">
         <ManufacturerRuleCompare currentRules={drcRules} onApplyRules={handleApplyManufacturerRules} />
       </div>
 

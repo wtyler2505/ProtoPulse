@@ -235,6 +235,19 @@
         { "path": "$DOWNLOAD/**/*password*" }
       ]
     },
+    "allow-frontend-ready-for-project-open-requests",
+    "allow-read-user-setting",
+    "allow-write-user-setting",
+    "allow-read-kanban-state",
+    "allow-write-kanban-state",
+    "allow-read-project-design-variables",
+    "allow-write-project-design-variables",
+    "allow-show-save-dialog",
+    "allow-show-open-dialog",
+    "allow-read-file",
+    "allow-write-file",
+    "allow-get-version",
+    "allow-get-platform",
     "opener:default"
   ]
 }

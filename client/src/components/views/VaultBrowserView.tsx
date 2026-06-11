@@ -88,7 +88,7 @@ const NoteTypeBadge = memo(function NoteTypeBadge({ type }: { type: string }) {
     <Badge
       data-testid={`vault-note-type-${type}`}
       variant="outline"
-      className={cn('text-[10px] px-1.5 py-0 h-4 font-mono uppercase tracking-wider', style)}
+      className={cn('h-4 px-1.5 py-0 text-[11px] font-mono uppercase tracking-wider', style)}
     >
       {type}
     </Badge>
@@ -112,7 +112,7 @@ const MocItem = memo(function MocItem({ moc, isSelected, onSelect }: MocItemProp
       data-testid={`vault-moc-${moc.slug}`}
       onClick={() => { onSelect(moc.slug); }}
       className={cn(
-        'w-full text-left px-3 py-2 border-l-2 transition-colors group',
+        'w-full border-l-2 px-2.5 py-1.5 text-left transition-colors group',
         isSelected
           ? 'bg-primary/10 border-l-primary'
           : 'border-l-transparent hover:bg-muted/40 hover:border-l-primary/40',
@@ -129,13 +129,13 @@ const MocItem = memo(function MocItem({ moc, isSelected, onSelect }: MocItemProp
         </span>
         <Badge
           variant="secondary"
-          className="text-[9px] px-1 py-0 h-4 shrink-0 font-mono"
+          className="h-4 shrink-0 px-1 py-0 text-[11px] font-mono"
         >
           {moc.linkCount}
         </Badge>
       </div>
       {moc.description && (
-        <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2 leading-snug">
+        <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-muted-foreground">
           {moc.description}
         </p>
       )}
@@ -170,7 +170,7 @@ const NoteListItem = memo(function NoteListItem({
       data-testid={`vault-note-item-${slug}`}
       onClick={() => { onSelect(slug); }}
       className={cn(
-        'w-full text-left px-3 py-2 border-l-2 transition-colors',
+        'w-full border-l-2 px-2.5 py-1.5 text-left transition-colors',
         isSelected
           ? 'bg-primary/10 border-l-primary'
           : 'border-l-transparent hover:bg-muted/40 hover:border-l-primary/40',
@@ -188,7 +188,7 @@ const NoteListItem = memo(function NoteListItem({
         <NoteTypeBadge type={type} />
       </div>
       {description && (
-        <p className="text-[10px] text-muted-foreground line-clamp-2 leading-snug">
+        <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">
           {description}
         </p>
       )}
@@ -209,8 +209,8 @@ const MocPane = memo(function MocPane({ selectedMocSlug, onSelectMoc }: MocPaneP
   const { data, isLoading, error } = useVaultMocs();
 
   return (
-    <Card data-testid="vault-moc-pane" className="flex flex-col h-full bg-card/40 border-border/50">
-      <CardHeader className="pb-2 px-3 pt-3">
+    <Card data-testid="vault-moc-pane" className="flex h-full flex-col border-border/50 bg-card/40">
+      <CardHeader className="px-2.5 pb-1.5 pt-2">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           <Network className="w-3.5 h-3.5" />
           Topic Maps
@@ -247,7 +247,7 @@ const MocPane = memo(function MocPane({ selectedMocSlug, onSelectMoc }: MocPaneP
                 data-testid="vault-moc-clear"
                 variant="ghost"
                 size="sm"
-                className="h-7 text-[10px] px-2 w-full justify-start"
+                className="h-7 w-full justify-start px-2 text-[11px]"
                 onClick={() => { onSelectMoc(null); }}
               >
                 Clear topic filter
@@ -408,13 +408,13 @@ const NoteListPane = memo(function NoteListPane({
   })();
 
   return (
-    <Card data-testid="vault-note-list-pane" className="flex flex-col h-full bg-card/40 border-border/50">
-      <CardHeader className="pb-2 px-3 pt-3">
+    <Card data-testid="vault-note-list-pane" className="flex h-full flex-col border-border/50 bg-card/40">
+      <CardHeader className="px-2.5 pb-1.5 pt-2">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           <FileText className="w-3.5 h-3.5" />
           <span className="truncate">{headerLabel}</span>
           {headerCount !== null && (
-            <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 font-mono ml-auto shrink-0">
+            <Badge variant="secondary" className="ml-auto h-4 shrink-0 px-1 py-0 text-[11px] font-mono">
               {headerCount}
             </Badge>
           )}
@@ -441,8 +441,8 @@ const NoteDetailPane = memo(function NoteDetailPane({ slug, onSelectNote }: Note
   const { data, isLoading, error } = useVaultNote(slug);
 
   return (
-    <Card data-testid="vault-note-detail-pane" className="flex flex-col h-full bg-card/40 border-border/50">
-      <CardHeader className="pb-2 px-3 pt-3">
+    <Card data-testid="vault-note-detail-pane" className="flex h-full flex-col border-border/50 bg-card/40">
+      <CardHeader className="px-2.5 pb-1.5 pt-2">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           <BookOpen className="w-3.5 h-3.5" />
           Note Detail
@@ -450,7 +450,7 @@ const NoteDetailPane = memo(function NoteDetailPane({ slug, onSelectNote }: Note
       </CardHeader>
       <Separator className="bg-border/40" />
       <ScrollArea className="flex-1">
-        <div className="p-4">
+        <div className="p-3">
           {!slug && (
             <div
               data-testid="vault-note-detail-empty"
@@ -486,14 +486,14 @@ const NoteDetailPane = memo(function NoteDetailPane({ slug, onSelectNote }: Note
                     {data.description}
                   </p>
                 )}
-                <div className="text-[10px] font-mono text-muted-foreground/60">
+                <div className="text-[11px] font-mono text-muted-foreground/60">
                   {data.slug}
                 </div>
               </div>
 
               {data.topics.length > 0 && (
                 <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1 mb-1">
+                  <div className="mb-1 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                     <Tag className="w-3 h-3" />
                     Topics ({data.topics.length})
                   </div>
@@ -502,7 +502,7 @@ const NoteDetailPane = memo(function NoteDetailPane({ slug, onSelectNote }: Note
                       <Badge
                         key={t}
                         variant="outline"
-                        className="text-[10px] px-1.5 py-0 h-4 bg-muted/30 text-muted-foreground border-border/50"
+                        className="h-4 border-border/50 bg-muted/30 px-1.5 py-0 text-[11px] text-muted-foreground"
                       >
                         #{t}
                       </Badge>
@@ -521,7 +521,7 @@ const NoteDetailPane = memo(function NoteDetailPane({ slug, onSelectNote }: Note
                 <>
                   <Separator className="bg-border/40" />
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1 mb-1.5">
+                    <div className="mb-1.5 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                       <Link2 className="w-3 h-3" />
                       Linked Notes ({data.links.length})
                     </div>
@@ -532,7 +532,7 @@ const NoteDetailPane = memo(function NoteDetailPane({ slug, onSelectNote }: Note
                           key={linkSlug}
                           data-testid={`vault-note-link-${linkSlug}`}
                           onClick={() => { onSelectNote(linkSlug); }}
-                          className="text-[10px] px-1.5 py-0.5 rounded-sm bg-primary/10 text-primary/80 hover:bg-primary/20 hover:text-primary transition-colors border border-primary/20"
+                          className="rounded-sm border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[11px] text-primary/80 transition-colors hover:bg-primary/20 hover:text-primary"
                           title={linkSlug}
                         >
                           {slugToTitle(linkSlug)}
@@ -582,39 +582,39 @@ export default function VaultBrowserView() {
   return (
     <div
       data-testid="vault-browser-view"
-      className="flex flex-col h-full gap-3 p-4"
+      className="flex h-full flex-col gap-2 p-2.5"
     >
       {/* Header */}
-      <div className="flex items-center gap-2 shrink-0">
-        <BookOpenText className="w-5 h-5 text-primary" />
+      <div className="flex shrink-0 items-center gap-1.5">
+        <BookOpenText className="h-3.5 w-3.5 text-primary" />
         <h2
           data-testid="vault-browser-title"
-          className="text-lg font-semibold"
+          className="text-[13px] font-semibold"
         >
           Knowledge Vault
         </h2>
-        <Badge variant="secondary" className="text-[10px] font-mono">
+        <Badge variant="secondary" className="h-4 text-[11px] font-mono">
           Ars Contexta
         </Badge>
       </div>
 
       {/* Search bar */}
       <div data-testid="vault-browser-search-wrapper" className="relative shrink-0">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           ref={searchInputRef}
           data-testid="vault-browser-search"
           placeholder="Search the vault (min 3 chars)…"
           value={query}
           onChange={(e) => { handleQueryChange(e.target.value); }}
-          className="pl-8 h-9"
+          className="h-8 pl-8 text-[11px]"
         />
       </div>
 
       {/* Three-pane grid */}
       <div
         data-testid="vault-browser-panes"
-        className="grid grid-cols-1 md:grid-cols-[minmax(220px,18%)_minmax(260px,28%)_1fr] gap-3 flex-1 min-h-0"
+        className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[minmax(220px,18%)_minmax(260px,28%)_1fr]"
       >
         <MocPane
           selectedMocSlug={selectedMocSlug}

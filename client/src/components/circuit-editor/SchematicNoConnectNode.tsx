@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { Handle, Position, type Node, type NodeProps } from '@/lib/xyflow-compat';
 import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------

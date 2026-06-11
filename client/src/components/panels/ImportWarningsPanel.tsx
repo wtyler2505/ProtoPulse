@@ -106,10 +106,10 @@ function ImportWarningsPanelInner({
       data-testid="import-warnings-panel"
     >
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border/30">
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-border/30">
         <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
         <div className="flex-1 min-w-0">
-          <span className="text-xs font-medium text-foreground">
+          <span className="text-[11px] font-medium text-foreground">
             Import Warnings
           </span>
           {fileName && (
@@ -120,13 +120,13 @@ function ImportWarningsPanelInner({
         </div>
         <Badge
           variant="outline"
-          className="text-[10px] font-mono text-muted-foreground border-border pointer-events-none select-none"
+          className="text-[9px] font-mono text-muted-foreground border-border pointer-events-none select-none px-1 py-0"
           data-testid="import-warnings-summary"
         >
           {summary}
         </Badge>
         <button
-          className="p-1 text-muted-foreground hover:text-foreground transition-colors focus-ring"
+          className="p-0.5 text-muted-foreground hover:text-foreground transition-colors focus-ring"
           onClick={onDismiss}
           aria-label="Dismiss import warnings"
           data-testid="import-warnings-dismiss"
@@ -151,7 +151,7 @@ function ImportWarningsPanelInner({
             <div key={severity} data-testid={`import-warnings-group-${severity}`}>
               <button
                 className={cn(
-                  'w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors',
+                  'w-full flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] transition-colors',
                   'hover:bg-muted/20 focus-ring',
                 )}
                 onClick={() => toggleSeverity(severity)}
@@ -169,7 +169,7 @@ function ImportWarningsPanelInner({
                 </span>
                 <Badge
                   variant={config.badgeVariant}
-                  className="text-[10px] font-mono ml-auto"
+                  className="text-[9px] font-mono ml-auto px-1 py-0"
                   data-testid={`import-warnings-count-${severity}`}
                 >
                   {items.length}
@@ -177,12 +177,12 @@ function ImportWarningsPanelInner({
               </button>
 
               {isExpanded && (
-                <div className="px-3 pb-2 space-y-1">
+                <div className="px-2.5 pb-1.5 space-y-0.5">
                   {items.map((warning, index) => (
                     <div
                       key={`${warning.entity}-${String(index)}`}
                       className={cn(
-                        'flex items-start gap-2 px-2 py-1.5 rounded-sm text-[11px]',
+                        'flex items-start gap-1.5 px-1.5 py-1 rounded-sm text-[10px]',
                         config.bgClass,
                         'border',
                         config.borderClass,
@@ -191,7 +191,7 @@ function ImportWarningsPanelInner({
                     >
                       <Badge
                         variant="outline"
-                        className="text-[9px] font-mono shrink-0 mt-0.5"
+                        className="text-[9px] font-mono shrink-0 mt-0.5 px-1 py-0"
                         data-testid={`import-warning-type-${severity}-${String(index)}`}
                       >
                         {getWarningTypeLabel(warning.type)}

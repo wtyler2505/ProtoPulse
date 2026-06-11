@@ -1,0 +1,162 @@
+{
+  "createdAt": "2026-05-23T20:26:04.403Z",
+  "dryRun": false,
+  "allowPanelErrors": false,
+  "scope": "full-app",
+  "pilot": false,
+  "status": "ok",
+  "delegatedScript": "internal-playwright-capture",
+  "notes": [
+    "Research-backed wrapper initialized.",
+    "Running internal Playwright full-app capture.",
+    "Mode: full; max-elements=3; max-interactions=0",
+    "Inventory entries: 1",
+    "Captured rows: 6; skipped: 2; failed: 0"
+  ],
+  "inventory": [
+    {
+      "skill": "pp-view-validation",
+      "viewKey": "validation",
+      "kind": "route",
+      "label": "Validation",
+      "folder": "pp-view-validation__validation",
+      "sectionKey": "pp-view-validation",
+      "reportTitle": "Validation",
+      "reportLine": 3022,
+      "reportSectionNumber": 40,
+      "required": true
+    }
+  ],
+  "targets": [
+    {
+      "id": "synthetic-rich",
+      "label": "Synthetic rich project",
+      "projectId": 65,
+      "required": true,
+      "enrich": true
+    }
+  ],
+  "seedMode": "synthetic",
+  "viewports": [
+    "desktop"
+  ],
+  "manifestRows": [
+    {
+      "id": 1,
+      "status": "captured",
+      "file": "synthetic-rich/pp-view-validation__validation/desktop/001-default-viewport.png",
+      "reason": "",
+      "sectionKey": "pp-view-validation",
+      "viewKey": "validation",
+      "viewport": "desktop",
+      "kind": "viewport",
+      "name": "default-viewport",
+      "description": "Validation default loaded viewport",
+      "targetId": "synthetic-rich"
+    },
+    {
+      "id": 2,
+      "status": "captured",
+      "file": "synthetic-rich/pp-view-validation__validation/desktop/002-full-page.png",
+      "reason": "",
+      "sectionKey": "pp-view-validation",
+      "viewKey": "validation",
+      "viewport": "desktop",
+      "kind": "viewport",
+      "name": "full-page",
+      "description": "Validation full-page capture",
+      "targetId": "synthetic-rich"
+    },
+    {
+      "id": 3,
+      "status": "captured",
+      "file": "synthetic-rich/pp-view-validation__validation/desktop/003-workspace-main.png",
+      "reason": "",
+      "sectionKey": "pp-view-validation",
+      "viewKey": "validation",
+      "viewport": "desktop",
+      "kind": "panel",
+      "name": "workspace-main",
+      "description": "Validation main workspace panel",
+      "targetId": "synthetic-rich"
+    },
+    {
+      "id": 4,
+      "status": "captured",
+      "file": "synthetic-rich/pp-view-validation__validation/desktop/004-testid-workspace-header-0.png",
+      "reason": "",
+      "sectionKey": "pp-view-validation",
+      "viewKey": "validation",
+      "viewport": "desktop",
+      "kind": "element",
+      "name": "testid-workspace-header-0",
+      "description": "Screenshot Skill Project 1779566163401-672691DashboardArchitectureSchematicBread",
+      "targetId": "synthetic-rich"
+    },
+    {
+      "id": 5,
+      "status": "captured",
+      "file": "synthetic-rich/pp-view-validation__validation/desktop/005-testid-header-row-main-0.png",
+      "reason": "",
+      "sectionKey": "pp-view-validation",
+      "viewKey": "validation",
+      "viewport": "desktop",
+      "kind": "element",
+      "name": "testid-header-row-main-0",
+      "description": "Screenshot Skill Project 1779566163401-672691DashboardArchitectureSchematicBread",
+      "targetId": "synthetic-rich"
+    },
+    {
+      "id": 6,
+      "status": "captured",
+      "file": "synthetic-rich/pp-view-validation__validation/desktop/006-testid-tab-dashboard-0.png",
+      "reason": "",
+      "sectionKey": "pp-view-validation",
+      "viewKey": "validation",
+      "viewport": "desktop",
+      "kind": "element",
+      "name": "testid-tab-dashboard-0",
+      "description": "Dashboard",
+      "targetId": "synthetic-rich"
+    },
+    {
+      "id": 7,
+      "status": "skipped",
+      "file": "",
+      "reason": "max-elements=3",
+      "sectionKey": "pp-view-validation",
+      "viewKey": "validation",
+      "viewport": "desktop",
+      "targetId": "synthetic-rich",
+      "kind": "element",
+      "name": "visible-testid-overflow",
+      "description": "79 visible data-testid elements beyond configured cap"
+    },
+    {
+      "id": 8,
+      "status": "skipped",
+      "file": "",
+      "reason": "max-interactions=0; destructive/network actions denied",
+      "sectionKey": "pp-view-validation",
+      "viewKey": "validation",
+      "viewport": "desktop",
+      "targetId": "synthetic-rich",
+      "kind": "interaction",
+      "name": "interaction-overflow-or-denylist",
+      "description": "51 candidate interactions skipped by cap or denylist"
+    }
+  ],
+  "consoleEvents": [],
+  "totals": {
+    "captured": 6,
+    "skipped": 2,
+    "failed": 0,
+    "attempted": 8
+  },
+  "requiredCoverage": {
+    "coveredRequiredViews": [
+      "validation"
+    ],
+    "missingRequiredViews": []
+  }
+}

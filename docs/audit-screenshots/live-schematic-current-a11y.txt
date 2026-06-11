@@ -1,0 +1,105 @@
+uid=9_0 RootWebArea "Schematic — Blink LED (Sample) — ProtoPulse" url="http://localhost:5000/projects/67/schematic"
+  uid=9_1 ignored
+    uid=9_2 generic
+      uid=9_3 generic
+        uid=9_4 ignored
+          uid=9_5 link "Skip to main content" url="http://localhost:5000/projects/67/schematic#main-content"
+            uid=9_6 StaticText "Skip to main content"
+              uid=9_7 InlineTextBox "Skip to main content"
+          uid=9_8 link "Skip to AI assistant" url="http://localhost:5000/projects/67/schematic#chat-panel"
+            uid=9_9 StaticText "Skip to AI assistant"
+              uid=9_10 InlineTextBox "Skip to AI assistant"
+          uid=9_11 heading "ProtoPulse" level="1"
+            uid=9_12 StaticText "ProtoPulse"
+              uid=9_13 InlineTextBox "ProtoPulse"
+          uid=9_14 ignored
+            uid=9_15 generic
+              uid=9_16 generic
+                uid=9_17 button "Expand sidebar"
+                  uid=9_18 link url="http://localhost:5000/projects"
+                  uid=9_19 ignored
+                    uid=9_20 ignored
+                  uid=9_21 ignored
+                    uid=9_22 ignored
+                      uid=9_23 button
+                      uid=9_24 button
+                      uid=9_25 button
+                      uid=9_26 button
+                      uid=9_27 button
+                    uid=9_28 ignored
+                      uid=9_29 button
+                      uid=9_30 button
+                      uid=9_31 button
+                    uid=9_32 ignored
+                      uid=9_33 button
+                      uid=9_34 button
+                    uid=9_35 ignored
+                      uid=9_36 button
+                      uid=9_37 button
+                    uid=9_38 ignored
+                      uid=9_39 button
+                      uid=9_40 button
+                    uid=9_41 ignored
+                      uid=9_42 button
+                      uid=9_43 button
+                  uid=9_44 ignored
+                    uid=9_45 button "Settings"
+            uid=9_46 main focusable focused
+              uid=9_47 heading "Design workspace" level="2"
+                uid=9_48 StaticText "Design workspace"
+                  uid=9_49 InlineTextBox "Design workspace"
+              uid=9_50 sectionheader
+                uid=9_51 ignored
+                  uid=9_52 button "Show sidebar" description="Show sidebar"
+                  uid=9_53 ignored
+                  uid=9_54 generic
+                    uid=9_55 tablist "Main views" orientation="horizontal"
+                      uid=9_56 tab "Dashboard"
+                        uid=9_57 StaticText "Dashboard"
+                          uid=9_58 InlineTextBox "Dashboard"
+                      uid=9_59 tab "Architecture"
+                        uid=9_60 StaticText "Architecture"
+                          uid=9_61 InlineTextBox "Architecture"
+                      uid=9_62 tab "Schematic" selectable selected
+                        uid=9_63 StaticText "Schematic"
+                          uid=9_64 InlineTextBox "Schematic"
+                      uid=9_65 tab "Breadboard"
+                        uid=9_66 StaticText "Breadboard"
+                          uid=9_67 InlineTextBox "Breadboard"
+                uid=9_68 ignored
+                  uid=9_69 button "Inspect"
+                    uid=9_70 StaticText "Inspect"
+                      uid=9_71 InlineTextBox "Inspect"
+                  uid=9_72 button "More workspace actions" haspopup="dialog"
+              uid=9_73 tabpanel "Schematic"
+                uid=9_74 generic
+                  uid=9_75 ignored
+                    uid=9_76 ignored
+                      uid=9_77 heading "No Circuit Designs" level="3"
+                        uid=9_78 StaticText "No Circuit Designs"
+                          uid=9_79 InlineTextBox "No Circuit Designs"
+                      uid=9_80 paragraph
+                        uid=9_81 StaticText "Create a circuit to start placing components and drawing nets."
+                          uid=9_82 InlineTextBox "Create a circuit to start placing components and drawing nets."
+                    uid=9_83 ignored
+                      uid=9_84 button "Create Circuit"
+                        uid=9_85 StaticText "Create Circuit"
+                          uid=9_86 InlineTextBox "Create Circuit"
+                      uid=9_87 button "Expand from Architecture"
+                        uid=9_88 StaticText "Expand from Architecture"
+                          uid=9_89 InlineTextBox "Expand from Architecture"
+            uid=9_90 generic
+              uid=9_91 heading "AI Assistant" level="2"
+                uid=9_92 StaticText "AI Assistant"
+                  uid=9_93 InlineTextBox "AI Assistant"
+              uid=9_94 generic
+                uid=9_95 generic
+                  uid=9_96 generic
+                    uid=9_97 ignored
+                    uid=9_98 ignored
+                      uid=9_99 ignored
+                        uid=9_100 StaticText "AI ASSISTANT"
+                          uid=9_101 InlineTextBox "AI ASSISTANT"
+          uid=9_102 status
+        uid=9_103 region "Notifications (F8)"
+          uid=9_104 list

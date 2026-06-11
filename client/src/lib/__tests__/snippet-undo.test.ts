@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import type { PlacementResult } from '@/lib/design-reuse';
 import type { SnippetPlacementCallbacks, SnippetPlacementAction } from '@/lib/snippet-undo';
 import {
@@ -13,8 +13,8 @@ import {
 // ---------------------------------------------------------------------------
 
 interface MockCallbacks extends SnippetPlacementCallbacks {
-  nodeState: Node[];
-  edgeState: Edge[];
+  nodeState: GraphNode[];
+  edgeState: GraphEdge[];
 }
 
 function makeCallbacks(): MockCallbacks {
@@ -31,12 +31,12 @@ function makeCallbacks(): MockCallbacks {
   // Wire up setNodes/setEdges to actually mutate the state arrays so tests
   // can assert on `callbacks.nodeState` / `callbacks.edgeState`.
   (obj.setNodes as ReturnType<typeof vi.fn>).mockImplementation(
-    (updater: (nodes: Node[]) => Node[]) => {
+    (updater: (nodes: GraphNode[]) => GraphNode[]) => {
       obj.nodeState = updater(obj.nodeState);
     },
   );
   (obj.setEdges as ReturnType<typeof vi.fn>).mockImplementation(
-    (updater: (edges: Edge[]) => Edge[]) => {
+    (updater: (edges: GraphEdge[]) => GraphEdge[]) => {
       obj.edgeState = updater(obj.edgeState);
     },
   );
@@ -114,7 +114,7 @@ describe('placeSnippetAtomic', () => {
     (cb.pushUndoState as ReturnType<typeof vi.fn>).mockImplementation(() => {
       callOrder.push('pushUndoState');
     });
-    (cb.setNodes as ReturnType<typeof vi.fn>).mockImplementation((updater: (n: Node[]) => Node[]) => {
+    (cb.setNodes as ReturnType<typeof vi.fn>).mockImplementation((updater: (n: GraphNode[]) => GraphNode[]) => {
       callOrder.push('setNodes');
       cb.nodeState = updater(cb.nodeState);
     });

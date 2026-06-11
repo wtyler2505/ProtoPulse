@@ -82,7 +82,7 @@ const PriorityBadge = memo(function PriorityBadge({ priority }: { priority: Task
     <Badge
       data-testid={`priority-badge-${priority}`}
       variant="outline"
-      className={cn('text-xs', config.color)}
+      className={cn('text-[10px]', config.color)}
     >
       {config.label}
     </Badge>
@@ -121,11 +121,11 @@ const TaskCard = memo(function TaskCard({ task, columns, onEdit, onMove, onDelet
       data-testid={`task-card-${task.id}`}
       className="bg-card/60 border-border/50 hover:border-primary/30 transition-colors cursor-pointer group"
     >
-      <CardContent className="p-3 space-y-2">
+      <CardContent className="space-y-1.5 p-2.5">
         <div className="flex items-start justify-between gap-2">
           <span
             data-testid={`task-title-${task.id}`}
-            className="text-sm font-medium leading-tight flex-1"
+            className="flex-1 text-xs font-medium leading-tight"
             onClick={() => { onEdit(task); }}
           >
             {task.title}
@@ -136,7 +136,7 @@ const TaskCard = memo(function TaskCard({ task, columns, onEdit, onMove, onDelet
         {task.tags.length > 0 && (
           <div data-testid={`task-tags-${task.id}`} className="flex flex-wrap gap-1">
             {task.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+              <Badge key={tag} variant="secondary" className="px-1 py-0 text-[10px]">
                 {tag}
               </Badge>
             ))}
@@ -157,13 +157,13 @@ const TaskCard = memo(function TaskCard({ task, columns, onEdit, onMove, onDelet
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center justify-between pt-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           <div className="flex items-center gap-1">
             <Button
               data-testid={`task-move-left-${task.id}`}
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-5 w-5"
               disabled={currentColIdx <= 0}
               onClick={handleMoveLeft}
               aria-label="Move task left"
@@ -174,7 +174,7 @@ const TaskCard = memo(function TaskCard({ task, columns, onEdit, onMove, onDelet
               data-testid={`task-move-right-${task.id}`}
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-5 w-5"
               disabled={currentColIdx >= columns.length - 1}
               onClick={handleMoveRight}
               aria-label="Move task right"
@@ -187,7 +187,7 @@ const TaskCard = memo(function TaskCard({ task, columns, onEdit, onMove, onDelet
               data-testid={`task-edit-${task.id}`}
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-5 w-5"
               onClick={() => { onEdit(task); }}
               aria-label="Edit task"
             >
@@ -199,7 +199,7 @@ const TaskCard = memo(function TaskCard({ task, columns, onEdit, onMove, onDelet
                   data-testid={`task-delete-${task.id}`}
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 text-destructive"
+                  className="h-5 w-5 text-destructive"
                   aria-label="Delete task"
                 >
                   <Trash2 className="w-3 h-3" />
@@ -246,18 +246,18 @@ const ColumnView = memo(function ColumnView({
   return (
     <div
       data-testid={`column-${column.id}`}
-      className="flex-shrink-0 w-72 flex flex-col bg-muted/30 rounded-lg border border-border/50"
+      className="flex w-68 shrink-0 flex-col rounded-md border border-border/50 bg-muted/30"
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
+      <div className="flex items-center justify-between border-b border-border/50 px-2.5 py-1.5">
         <div className="flex items-center gap-2">
           <div
             className="w-2 h-2 rounded-full"
             style={{ backgroundColor: column.color ?? '#6b7280' }}
           />
-          <span data-testid={`column-name-${column.id}`} className="text-sm font-semibold">
+          <span data-testid={`column-name-${column.id}`} className="text-xs font-semibold">
             {column.name}
           </span>
-          <Badge data-testid={`column-count-${column.id}`} variant="secondary" className="text-xs px-1.5">
+          <Badge data-testid={`column-count-${column.id}`} variant="secondary" className="px-1 text-[10px]">
             {tasks.length}
           </Badge>
         </div>
@@ -268,7 +268,7 @@ const ColumnView = memo(function ColumnView({
                 data-testid={`column-remove-${column.id}`}
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                className="h-5 w-5 text-muted-foreground hover:text-destructive"
                 aria-label="Remove column"
               >
                 <X className="w-3 h-3" />
@@ -283,8 +283,8 @@ const ColumnView = memo(function ColumnView({
         )}
       </div>
 
-      <ScrollArea className="flex-1 p-2">
-        <div className="space-y-2">
+      <ScrollArea className="flex-1 p-1.5">
+        <div className="space-y-1.5">
           {tasks.map((task) => (
             <TaskCard
               key={task.id}
@@ -298,14 +298,14 @@ const ColumnView = memo(function ColumnView({
         </div>
       </ScrollArea>
 
-      <div className="p-2 border-t border-border/50">
+      <div className="border-t border-border/50 p-1.5">
         <Button
           data-testid={`column-add-task-${column.id}`}
           variant="ghost"
-          className="w-full justify-start text-sm text-muted-foreground h-8"
+          className="h-7 w-full justify-start text-xs text-muted-foreground"
           onClick={() => { onCreateTask(column.id); }}
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
           Add task
         </Button>
       </div>
@@ -328,8 +328,8 @@ const FilterBar = memo(function FilterBar({ filter, onFilterChange, allTags, all
   const hasFilters = filter.priority !== undefined || filter.tag !== undefined || filter.assignee !== undefined;
 
   return (
-    <div data-testid="kanban-filter-bar" className="flex items-center gap-2 flex-wrap">
-      <Filter className="w-4 h-4 text-muted-foreground" />
+    <div data-testid="kanban-filter-bar" className="flex flex-wrap items-center gap-2">
+      <Filter className="h-3.5 w-3.5 text-muted-foreground" />
 
       <Select
         value={filter.priority ?? '__all__'}
@@ -337,7 +337,7 @@ const FilterBar = memo(function FilterBar({ filter, onFilterChange, allTags, all
           onFilterChange({ ...filter, priority: v === '__all__' ? undefined : v as TaskPriority });
         }}
       >
-        <SelectTrigger data-testid="filter-priority" className="w-32 h-8 text-xs" aria-label="Filter tasks by priority">
+        <SelectTrigger data-testid="filter-priority" className="h-8.5 w-36 text-xs" aria-label="Filter tasks by priority">
           <SelectValue placeholder="Priority" />
         </SelectTrigger>
         <SelectContent>
@@ -355,7 +355,7 @@ const FilterBar = memo(function FilterBar({ filter, onFilterChange, allTags, all
             onFilterChange({ ...filter, tag: v === '__all__' ? undefined : v });
           }}
         >
-          <SelectTrigger data-testid="filter-tag" className="w-32 h-8 text-xs" aria-label="Filter tasks by tag">
+          <SelectTrigger data-testid="filter-tag" className="h-8.5 w-36 text-xs" aria-label="Filter tasks by tag">
             <SelectValue placeholder="Tag" />
           </SelectTrigger>
           <SelectContent>
@@ -374,7 +374,7 @@ const FilterBar = memo(function FilterBar({ filter, onFilterChange, allTags, all
             onFilterChange({ ...filter, assignee: v === '__all__' ? undefined : v });
           }}
         >
-          <SelectTrigger data-testid="filter-assignee" className="w-32 h-8 text-xs" aria-label="Filter tasks by assignee">
+          <SelectTrigger data-testid="filter-assignee" className="h-8.5 w-36 text-xs" aria-label="Filter tasks by assignee">
             <SelectValue placeholder="Assignee" />
           </SelectTrigger>
           <SelectContent>
@@ -387,13 +387,13 @@ const FilterBar = memo(function FilterBar({ filter, onFilterChange, allTags, all
       )}
 
       {hasFilters && (
-        <Button
-          data-testid="filter-clear"
-          variant="ghost"
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() => { onFilterChange({}); }}
-        >
+          <Button
+            data-testid="filter-clear"
+            variant="ghost"
+            size="sm"
+            className="h-8.5 px-2.5 text-xs"
+            onClick={() => { onFilterChange({}); }}
+          >
           <X className="w-3 h-3 mr-1" />
           Clear
         </Button>
@@ -464,7 +464,7 @@ function TaskDialog({ open, onOpenChange, onSubmit, columns, defaultColumnId, ed
           <DialogTitle>{isEditing ? 'Edit Task' : 'Create Task'}</DialogTitle>
           <DialogDescription className="sr-only">{isEditing ? 'Edit task details and status' : 'Create a new task for the board'}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
             <Label htmlFor="task-title">Title</Label>
             <Input
@@ -473,6 +473,7 @@ function TaskDialog({ open, onOpenChange, onSubmit, columns, defaultColumnId, ed
               value={title}
               onChange={(e) => { setTitle(e.target.value); }}
               placeholder="Task title"
+              className="h-8 text-xs"
             />
           </div>
           <div>
@@ -484,13 +485,14 @@ function TaskDialog({ open, onOpenChange, onSubmit, columns, defaultColumnId, ed
               onChange={(e) => { setDescription(e.target.value); }}
               placeholder="Optional description"
               rows={3}
+              className="text-xs"
             />
           </div>
           {!isEditing && (
             <div>
               <Label>Column</Label>
               <Select value={columnId} onValueChange={setColumnId}>
-                <SelectTrigger data-testid="task-dialog-column">
+                <SelectTrigger data-testid="task-dialog-column" className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -504,7 +506,7 @@ function TaskDialog({ open, onOpenChange, onSubmit, columns, defaultColumnId, ed
           <div>
             <Label>Priority</Label>
             <Select value={priority} onValueChange={(v) => { setPriority(v as TaskPriority); }}>
-              <SelectTrigger data-testid="task-dialog-priority">
+              <SelectTrigger data-testid="task-dialog-priority" className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -522,6 +524,7 @@ function TaskDialog({ open, onOpenChange, onSubmit, columns, defaultColumnId, ed
               value={tagsStr}
               onChange={(e) => { setTagsStr(e.target.value); }}
               placeholder="e.g. power, routing"
+              className="h-8 text-xs"
             />
           </div>
           <div>
@@ -532,6 +535,7 @@ function TaskDialog({ open, onOpenChange, onSubmit, columns, defaultColumnId, ed
               value={assignee}
               onChange={(e) => { setAssignee(e.target.value); }}
               placeholder="Optional"
+              className="h-8 text-xs"
             />
           </div>
           <div>
@@ -542,6 +546,7 @@ function TaskDialog({ open, onOpenChange, onSubmit, columns, defaultColumnId, ed
               type="date"
               value={dueDate}
               onChange={(e) => { setDueDate(e.target.value); }}
+              className="h-8 text-xs"
             />
           </div>
         </div>
@@ -583,7 +588,7 @@ function AddColumnDialog({ open, onOpenChange, onAdd }: { open: boolean; onOpenC
           <DialogTitle>Add Column</DialogTitle>
           <DialogDescription className="sr-only">Add a new column to the board</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
             <Label htmlFor="col-name">Name</Label>
             <Input
@@ -592,6 +597,7 @@ function AddColumnDialog({ open, onOpenChange, onAdd }: { open: boolean; onOpenC
               value={name}
               onChange={(e) => { setName(e.target.value); }}
               placeholder="Column name"
+              className="h-8 text-xs"
             />
           </div>
           <div>
@@ -602,7 +608,7 @@ function AddColumnDialog({ open, onOpenChange, onAdd }: { open: boolean; onOpenC
               type="color"
               value={color}
               onChange={(e) => { setColor(e.target.value); }}
-              className="h-10 w-20"
+              className="h-8 w-16"
             />
           </div>
         </div>
@@ -695,13 +701,13 @@ export default function KanbanView() {
   }, [addColumn]);
 
   return (
-    <div data-testid="kanban-view" className="flex flex-col h-full gap-4 p-4">
+    <div data-testid="kanban-view" className="flex h-full flex-col gap-2.5 p-3">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-1.5">
         <div className="flex items-center gap-2">
-          <KanbanSquare className="w-5 h-5 text-primary" />
-          <h2 data-testid="kanban-title" className="text-lg font-semibold">Task Board</h2>
-          <Badge data-testid="kanban-task-count" variant="secondary">{tasks.length} tasks</Badge>
+          <KanbanSquare className="h-4.5 w-4.5 text-primary" />
+          <h2 data-testid="kanban-title" className="text-base font-semibold">Task Board</h2>
+          <Badge data-testid="kanban-task-count" variant="secondary" className="text-[11px]">{tasks.length} tasks</Badge>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -710,7 +716,7 @@ export default function KanbanView() {
             size="sm"
             onClick={() => { setAddColumnOpen(true); }}
           >
-            <Plus className="w-4 h-4 mr-1" />
+            <Plus className="mr-1 h-3.5 w-3.5" />
             Column
           </Button>
         </div>
@@ -726,7 +732,7 @@ export default function KanbanView() {
 
       {/* Board */}
       <div data-testid="kanban-board" className="flex-1 overflow-x-auto">
-        <div className="flex gap-4 h-full min-w-min pb-4">
+        <div className="flex h-full min-w-min gap-2.5 pb-2.5">
           {columns.map((column) => {
             const colTasks = getTasksByColumn(column.id);
             const visibleTasks = filteredTaskIds

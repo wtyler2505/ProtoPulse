@@ -1,0 +1,13 @@
+# Pin the Tauri/specta workspace to a Rust release that has stabilized
+# `core::fmt::from_fn` (used by specta 2.0.0-rc.25 internally).
+#
+# specta 2.0.0-rc.25 -> src/datatype/attributes.rs:178 calls `fmt::from_fn`,
+# which still emitted E0658 "unstable library feature debug_closure_helpers"
+# on stable Rust 1.90.0 (verified 2026-05-10). Rust 1.93.0 compiles it cleanly.
+#
+# Bump this when newer specta RCs lift the requirement or when the Rust
+# stabilization window catches up.
+
+[toolchain]
+channel = "1.93.0"
+components = ["rustfmt", "clippy"]

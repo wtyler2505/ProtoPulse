@@ -1,0 +1,35 @@
+<bm_helpme_router_payload>
+User Query: Looking for ideas for updating ProtoPulse UI UX Theme Layout
+
+[LOCAL PROJECT CONTEXT]
+The user summoned you from: /home/wtyler/Projects/ProtoPulse
+Detected Project Root: /home/wtyler/Projects/ProtoPulse
+Project Name: ProtoPulse
+Detected Tech Stack: React, Vite, Testing Framework, Next.js, TailwindCSS, Node.js/NPM, TypeScript
+CRITICAL DIRECTIVE: You are an all-knowing guide. Tailor your recommendations to THIS specific tech stack and project context. If they are in a React project, don't suggest Python frameworks.
+
+[LIVE CORPUS INTELLIGENCE]
+Extracted Insights Available: 707
+High/Medium Value Bookmarks: 639
+Top Heavy Domains: shell-systems (135), ai-coding-stack (130), _reject (119)
+
+[SYSTEM STATE: GENERATIVE ENGINE]
+All 13 Generative Commands are tracked. Active commands have native slash implementations.
+- /bm-ideate [READY]: Collision Zone Project Ideation
+- /bm-architect [READY]: Just-in-Time Tech Stack Architect
+- /bm-audit-deps [READY]: The Meta Dependency Auditor
+- /bm-radar [READY]: The Automated State of the Tyler Radar
+- /bm-stuck [READY]: The Stuck Resolver (Anti-Yak-Shaving)
+- /bm-skill-bootstrap [READY]: The Skill-Builder Bootstrapper
+- /bm-publish-awesome [READY]: The Automated Awesome List Publisher
+- /bm-blindspots [READY]: Blind Spot Analysis
+- /bm-matchmaker [READY]: Hardware/Software Integration Matchmaker
+- /bm-devil [READY]: The Devil Reviewer
+- /bm-deathmatch [READY]: Component/Library Deathmatch Matrix
+- /bm-tutorial [READY]: The Auto-Tutorial Synthesizer
+- /bm-flashcards [READY]: The Biological Install (Flashcard Engine)
+
+[INTENT ANALYSIS & RECOMMENDATIONS]
+Based on the query, the following commands are highly recommended:
+-> /bm-ideate (Collision Zone Project Ideation) - Status: READY
+</bm_helpme_router_payload>

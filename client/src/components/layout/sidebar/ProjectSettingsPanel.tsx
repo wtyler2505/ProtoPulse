@@ -7,12 +7,13 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { Check, Settings, Download, Upload } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { copyToClipboard } from '@/lib/clipboard';
 import { SETTINGS_SAVE_FEEDBACK_DURATION } from '@/components/panels/chat/constants';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import type { BomItem, ValidationIssue } from '@/lib/project-context';
 
 interface ProjectSettingsPanelProps {
@@ -20,8 +21,8 @@ interface ProjectSettingsPanelProps {
   setProjectName: (name: string) => void;
   projectDescription: string;
   setProjectDescription: (desc: string) => void;
-  nodes: Node[];
-  edges: Edge[];
+  nodes: GraphNode[];
+  edges: GraphEdge[];
   bom: BomItem[];
   issues: ValidationIssue[];
   addOutputLog: (log: string) => void;
@@ -136,117 +137,137 @@ const ProjectSettingsPanel = memo(function ProjectSettingsPanel({
   }, [handleImport]);
 
   return (
-    <div className="p-3 border-t border-border bg-sidebar/20">
-      <StyledTooltip content="Open project settings" side="right">
+    <div className="border-t border-border/60 bg-sidebar/10">
+      <StyledTooltip content="Open project settings" side="top">
         <button
           data-testid="button-project-settings"
-          className="w-full flex items-center gap-2 p-2 bg-muted/30 border border-border/50 hover:bg-muted/50 text-foreground hover:text-primary transition-colors"
-          onClick={() => setShowSettings(!showSettings)}
+          className="flex h-6 w-full items-center gap-1.5 px-2.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/35 hover:text-foreground"
+          onClick={() => setShowSettings(true)}
         >
-          <div className="w-6 h-6 flex items-center justify-center bg-primary/10 border border-primary/20">
-            <Settings className="w-3.5 h-3.5 text-primary" />
-          </div>
-          <span className="text-xs font-medium">Project Settings</span>
+          <Settings className="w-3.5 h-3.5 shrink-0 text-primary" />
+          <span className="truncate font-medium">Project Settings</span>
         </button>
       </StyledTooltip>
-      {showSettings && (
-        <div className="px-3 pb-3 space-y-2 border-t border-border pt-2 mt-1 bg-muted/10 backdrop-blur">
-          <label htmlFor="project-settings-name" className="text-[10px] text-muted-foreground uppercase tracking-wider block">Project Name</label>
-          <input
-            id="project-settings-name"
-            data-testid="settings-name-input"
-            type="text"
-            value={settingsName}
-            onChange={(e) => setSettingsName(e.target.value)}
-            onBlur={saveSettings}
-            onKeyDown={(e) => { if (e.key === 'Enter') { saveSettings(); } }}
-            className="w-full text-xs bg-muted/30 border border-border/50 px-2 py-1.5 text-foreground focus-visible:outline-none focus-visible:border-primary/50 transition-colors focus-ring"
-          />
-          <label htmlFor="project-settings-description" className="text-[10px] text-muted-foreground uppercase tracking-wider mt-2 block">Description</label>
-          <textarea
-            id="project-settings-description"
-            data-testid="settings-desc-input"
-            value={settingsDesc}
-            onChange={(e) => setSettingsDesc(e.target.value)}
-            onBlur={saveSettings}
-            rows={2}
-            className="w-full text-xs bg-muted/30 border border-border/50 px-2 py-1.5 text-foreground focus-visible:outline-none focus-visible:border-primary/50 transition-colors resize-none focus-ring"
-          />
-          {settingsDirty && (
-            <button
-              data-testid="settings-save-button"
-              className="w-full text-xs bg-primary text-primary-foreground py-1.5 px-3 hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5"
-              onClick={saveSettings}
-            >
-              <Check className="w-3 h-3" />
-              Save Changes
-            </button>
-          )}
-          {settingsSaved && (
-            <div className="text-xs text-green-400 flex items-center gap-1">
-              <Check className="w-3 h-3" />
-              Saved successfully
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogContent
+          data-testid="project-settings-dialog"
+          className="w-[min(640px,calc(100vw-2rem))] max-w-[640px] border border-border bg-background/95 p-0"
+        >
+          <DialogHeader className="border-b border-border/60 px-3 py-1.5">
+            <DialogTitle className="text-sm">Project Settings</DialogTitle>
+            <DialogDescription className="sr-only">
+              Edit project metadata, review project stats, and import or export the project file.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[min(68dvh,24rem)] space-y-2 overflow-y-auto px-3 pb-3 pt-2">
+            <div className="space-y-1.5 rounded-sm border border-border/50 bg-muted/15 p-2">
+              <label htmlFor="project-settings-name" className="block text-[11px] font-medium text-muted-foreground">Project Name</label>
+              <input
+                id="project-settings-name"
+                data-testid="settings-name-input"
+                type="text"
+                value={settingsName}
+                onChange={(e) => setSettingsName(e.target.value)}
+                onBlur={saveSettings}
+                onKeyDown={(e) => { if (e.key === 'Enter') { saveSettings(); } }}
+                className="w-full border border-border/50 bg-background/70 px-2 py-1.5 text-xs text-foreground transition-colors focus-ring focus-visible:border-primary/50 focus-visible:outline-none"
+              />
+              <label htmlFor="project-settings-description" className="block pt-0.5 text-[11px] font-medium text-muted-foreground">Description</label>
+              <textarea
+                id="project-settings-description"
+                data-testid="settings-desc-input"
+                value={settingsDesc}
+                onChange={(e) => setSettingsDesc(e.target.value)}
+                onBlur={saveSettings}
+                rows={2}
+                className="w-full resize-none border border-border/50 bg-background/70 px-2 py-1.5 text-xs text-foreground transition-colors focus-ring focus-visible:border-primary/50 focus-visible:outline-none"
+              />
+              {settingsDirty && (
+                <button
+                  data-testid="settings-save-button"
+                  className="flex h-7 w-full items-center justify-center gap-1 bg-primary px-3 text-[11px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                  onClick={saveSettings}
+                >
+                  <Check className="h-3 w-3" />
+                  Save Changes
+                </button>
+              )}
+              {settingsSaved && (
+                <div className="flex items-center gap-1 text-[11px] text-green-400">
+                  <Check className="h-3 w-3" />
+                  Saved successfully
+                </div>
+              )}
             </div>
-          )}
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-3">Stats</div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="text-xs text-muted-foreground">
-              <span className="text-foreground font-medium">{(nodes || []).length}</span> nodes
+
+            <div className="space-y-1.5 rounded-sm border border-border/50 bg-muted/15 p-2">
+              <div className="text-[11px] font-medium text-muted-foreground">Project Stats</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div className="rounded-sm border border-border/50 bg-muted/20 px-2 py-1 text-[11px] text-muted-foreground">
+                  <span className="font-medium text-foreground">{(nodes || []).length}</span> nodes
+                </div>
+                <div className="rounded-sm border border-border/50 bg-muted/20 px-2 py-1 text-[11px] text-muted-foreground">
+                  <span className="font-medium text-foreground">{(edges || []).length}</span> edges
+                </div>
+                <div className="rounded-sm border border-border/50 bg-muted/20 px-2 py-1 text-[11px] text-muted-foreground">
+                  <span className="font-medium text-foreground">{(bom || []).length}</span> BOM items
+                </div>
+                <div className="rounded-sm border border-border/50 bg-muted/20 px-2 py-1 text-[11px] text-muted-foreground">
+                  <span className="font-medium text-foreground">{(issues || []).length}</span> issues
+                </div>
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground">
-              <span className="text-foreground font-medium">{(edges || []).length}</span> edges
+
+            <div className="space-y-1.5 rounded-sm border border-border/50 bg-muted/15 p-2">
+              <div className="text-[11px] font-medium text-muted-foreground">Import / Export</div>
+              <div className="grid grid-cols-2 gap-1">
+                <button
+                  data-testid="button-export-project"
+                  disabled={exporting}
+                  className="flex h-7 items-center justify-center gap-1 border border-border/50 bg-muted/30 px-2.5 text-[11px] transition-colors hover:bg-muted/50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={handleExport}
+                >
+                  <Download className="h-3 w-3" />
+                  {exporting ? 'Exporting...' : 'Export'}
+                </button>
+                <button
+                  data-testid="button-import-project"
+                  disabled={importing}
+                  className="flex h-7 items-center justify-center gap-1 border border-border/50 bg-muted/30 px-2.5 text-[11px] transition-colors hover:bg-muted/50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-3 w-3" />
+                  {importing ? 'Importing...' : 'Import'}
+                </button>
+                <label htmlFor="project-import-file" className="sr-only">Import project file</label>
+                <input
+                  id="project-import-file"
+                  ref={fileInputRef}
+                  data-testid="input-import-file"
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground">
-              <span className="text-foreground font-medium">{(bom || []).length}</span> BOM items
-            </div>
-            <div className="text-xs text-muted-foreground">
-              <span className="text-foreground font-medium">{(issues || []).length}</span> issues
+
+            <div className="space-y-1 rounded-sm border border-border/50 bg-muted/15 p-2">
+              <div className="text-[11px] font-medium text-muted-foreground">Version</div>
+              <div
+                className="cursor-pointer text-xs font-mono text-primary hover:underline"
+                data-testid="text-version"
+                onClick={() => {
+                  copyToClipboard('ProtoPulse v1.0.0-alpha');
+                  addOutputLog('[SYSTEM] Version info copied: ProtoPulse v1.0.0-alpha');
+                }}
+              >
+                v1.0.0-alpha
+              </div>
             </div>
           </div>
-
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-3">Import / Export</div>
-          <div className="flex gap-2">
-            <button
-              data-testid="button-export-project"
-              disabled={exporting}
-              className="flex-1 text-xs bg-muted/30 border border-border/50 py-1.5 px-3 hover:bg-muted/50 hover:text-primary transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleExport}
-            >
-              <Download className="w-3 h-3" />
-              {exporting ? 'Exporting...' : 'Export'}
-            </button>
-            <button
-              data-testid="button-import-project"
-              disabled={importing}
-              className="flex-1 text-xs bg-muted/30 border border-border/50 py-1.5 px-3 hover:bg-muted/50 hover:text-primary transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="w-3 h-3" />
-              {importing ? 'Importing...' : 'Import'}
-            </button>
-            <label htmlFor="project-import-file" className="sr-only">Import project file</label>
-            <input
-              id="project-import-file"
-              ref={fileInputRef}
-              data-testid="input-import-file"
-              type="file"
-              accept=".json"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </div>
-
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-2">Version</div>
-          <div
-            className="text-xs font-mono text-primary cursor-pointer hover:underline"
-            data-testid="text-version"
-            onClick={() => {
-              copyToClipboard('ProtoPulse v1.0.0-alpha');
-              addOutputLog('[SYSTEM] Version info copied: ProtoPulse v1.0.0-alpha');
-            }}
-          >v1.0.0-alpha</div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

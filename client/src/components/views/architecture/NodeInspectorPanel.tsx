@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import { X, Trash2, Link2, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,8 +29,8 @@ const NODE_TYPES = [
 ] as const;
 
 interface NodeInspectorPanelProps {
-  node: Node;
-  edges: Edge[];
+  node: GraphNode;
+  edges: GraphEdge[];
   onUpdateNode: (nodeId: string, updates: Record<string, unknown>) => void;
   onDeleteNode: (nodeId: string) => void;
   onClose: () => void;
@@ -53,9 +53,7 @@ export function NodeInspectorPanel({ node, edges, onUpdateNode, onDeleteNode, on
     setLocalDescription(description);
   }, [node.id, label, description]);
 
-  const connectedEdgeCount = edges.filter(
-    (e) => e.source === node.id || e.target === node.id,
-  ).length;
+  const connectedEdgeCount = edges.filter((e) => e.source === node.id || e.target === node.id).length;
 
   const handleLabelBlur = useCallback(() => {
     const trimmed = localLabel.trim();
@@ -102,26 +100,29 @@ export function NodeInspectorPanel({ node, edges, onUpdateNode, onDeleteNode, on
   return (
     <>
       <div
-        className="absolute top-0 right-0 bottom-0 z-20 w-[280px] max-w-[90%] bg-card/95 backdrop-blur-xl border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200"
+        className="absolute top-0 right-0 bottom-0 z-20 w-[268px] max-w-[88%] bg-card/95 backdrop-blur-xl border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200"
         data-testid="node-inspector-panel"
+        data-nodeid={node.id}
+        data-node-label={label}
+        data-radial-target="architecture-node-inspector"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-          <h3 className="text-sm font-bold text-foreground" data-testid="node-inspector-title">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
+          <h3 className="text-xs font-semibold text-foreground" data-testid="node-inspector-title">
             Node Properties
           </h3>
           <button
             data-testid="node-inspector-close"
             aria-label="Close inspector panel"
-            className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            className="p-0.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors rounded-sm"
             onClick={onClose}
           >
-            <X className="w-4 h-4" />
+            <X className="w-3 h-3" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {/* Label */}
           <div className="space-y-1.5">
             <Label htmlFor="inspector-label" className="text-xs text-muted-foreground">
@@ -135,7 +136,7 @@ export function NodeInspectorPanel({ node, edges, onUpdateNode, onDeleteNode, on
               onChange={(e) => setLocalLabel(e.target.value)}
               onBlur={handleLabelBlur}
               onKeyDown={handleLabelKeyDown}
-              className="h-8 text-sm bg-muted/30 border-border focus:border-primary focus:ring-1 focus:ring-primary"
+              className="h-7 text-xs bg-muted/30 border-border focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -148,7 +149,7 @@ export function NodeInspectorPanel({ node, edges, onUpdateNode, onDeleteNode, on
               <SelectTrigger
                 id="inspector-type"
                 data-testid="node-inspector-type"
-                className="h-8 text-sm bg-muted/30 border-border focus:border-primary focus:ring-1 focus:ring-primary"
+                className="h-7 text-xs bg-muted/30 border-border focus:border-primary focus:ring-1 focus:ring-primary"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -175,7 +176,7 @@ export function NodeInspectorPanel({ node, edges, onUpdateNode, onDeleteNode, on
               onBlur={handleDescriptionBlur}
               placeholder="Add a description..."
               rows={3}
-              className="text-sm bg-muted/30 border-border resize-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="text-xs bg-muted/30 border-border resize-none focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -195,7 +196,7 @@ export function NodeInspectorPanel({ node, edges, onUpdateNode, onDeleteNode, on
                   data-testid="node-inspector-pos-x"
                   value={Math.round(node.position.x)}
                   readOnly
-                  className="h-7 text-xs bg-muted/20 border-border text-muted-foreground cursor-default"
+                  className="h-6 text-xs bg-muted/20 border-border text-muted-foreground cursor-default"
                 />
               </div>
               <div className="flex-1">
@@ -207,7 +208,7 @@ export function NodeInspectorPanel({ node, edges, onUpdateNode, onDeleteNode, on
                   data-testid="node-inspector-pos-y"
                   value={Math.round(node.position.y)}
                   readOnly
-                  className="h-7 text-xs bg-muted/20 border-border text-muted-foreground cursor-default"
+                  className="h-6 text-xs bg-muted/20 border-border text-muted-foreground cursor-default"
                 />
               </div>
             </div>
@@ -219,7 +220,7 @@ export function NodeInspectorPanel({ node, edges, onUpdateNode, onDeleteNode, on
               <Link2 className="w-3 h-3" />
               <span>Connections</span>
             </div>
-            <p className="text-sm text-foreground" data-testid="node-inspector-edge-count">
+            <p className="text-xs text-foreground" data-testid="node-inspector-edge-count">
               {connectedEdgeCount} {connectedEdgeCount === 1 ? 'edge' : 'edges'}
             </p>
           </div>
@@ -237,21 +238,28 @@ export function NodeInspectorPanel({ node, edges, onUpdateNode, onDeleteNode, on
         </div>
 
         {/* Footer — Delete */}
-        <div className="px-4 py-3 border-t border-border shrink-0">
+        <div className="px-3 py-2 border-t border-border shrink-0">
           <Button
             variant="destructive"
             size="sm"
-            className="w-full"
+            className="w-full h-7 text-xs"
             data-testid="node-inspector-delete"
             onClick={() => setPendingDelete(true)}
           >
-            <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+            <Trash2 className="w-3 h-3 mr-1.5" />
             Delete Node
           </Button>
         </div>
       </div>
 
-      <AlertDialog open={pendingDelete} onOpenChange={(open) => { if (!open) { setPendingDelete(false); } }}>
+      <AlertDialog
+        open={pendingDelete}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDelete(false);
+          }
+        }}
+      >
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Node</AlertDialogTitle>

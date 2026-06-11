@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/nicoptere/tauri/dev/crates/tauri-config-schema/schema.json",
   "productName": "ProtoPulse",
   "version": "1.0.0",
-  "identifier": "com.protopulse.app",
+  "identifier": "io.github.wtyler2505.protopulse",
   "build": {
     "devUrl": "http://localhost:5000",
     "frontendDist": "../dist/public"

@@ -47,6 +47,29 @@ export interface ProjectExportData {
   /** Whether BOM items have failure-mode data for FMEA. */
   readonly bomItemsWithFailureData: number;
 
+  /** Number of active circuit instances created by an AI/generative flow. */
+  readonly aiGeneratedCircuitInstanceCount?: number;
+  /** Number of AI-generated instances still lacking exact-part trust. */
+  readonly unverifiedAiGeneratedCircuitInstanceCount?: number;
+  /** Number of active PCB-placed instances with linked component parts. */
+  readonly placedPartCount?: number;
+  /** Number of placed parts whose component metadata is exact-part verified. */
+  readonly verifiedExactPartCount?: number;
+  /** Number of placed parts with verified mechanical/breadboard model metadata. */
+  readonly verifiedMechanicalModelCount?: number;
+  /** Number of red breadboard-health findings from the current workspace. */
+  readonly redBreadboardHealthCount?: number;
+  /** Number of placed/BOM parts marked end-of-life. */
+  readonly eolPartCount?: number;
+  /** Number of placed/BOM parts marked obsolete. */
+  readonly obsoletePartCount?: number;
+  /** Number of placed/BOM parts marked not recommended for new designs. */
+  readonly nrndPartCount?: number;
+  /** Number of EOL or obsolete parts without a known alternate. */
+  readonly lifecycleNoAlternateCount?: number;
+  /** Number of inventory/BOM lines backed by estimated or unknown inventory confidence. */
+  readonly estimatedInventoryLineCount?: number;
+
   /**
    * BL-0150 — total units short across all BOM lines for this project.
    * Sum of `max(0, quantityNeeded - quantityOnHand)` across `part_stock`.
@@ -76,6 +99,106 @@ function commonChecks(result: ExportPreflightResult, data: ProjectExportData): v
   if (!data.hasSession) {
     result.errors.push('Not authenticated — export requires an active session.');
   }
+}
+
+function plural(count: number, singular: string, pluralLabel = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : pluralLabel}`;
+}
+
+function addAiGeneratedCircuitChecks(result: ExportPreflightResult, data: ProjectExportData): void {
+  const unverified = data.unverifiedAiGeneratedCircuitInstanceCount ?? 0;
+  if (unverified <= 0) {
+    return;
+  }
+
+  result.errors.push(
+    `${plural(unverified, 'AI-generated circuit instance')} ${unverified === 1 ? 'still needs' : 'still need'} exact-part verification before fabrication export.`,
+  );
+  result.suggestions.push('Complete exact-part verification in Component Editor before using this export for fabrication or ordering.');
+}
+
+function addExactPartWarnings(result: ExportPreflightResult, data: ProjectExportData): void {
+  const placed = data.placedPartCount;
+  const verified = data.verifiedExactPartCount;
+  if (placed === undefined || verified === undefined || placed <= 0 || verified >= placed) {
+    return;
+  }
+
+  const missing = placed - verified;
+  result.warnings.push(
+    `${plural(missing, 'placed part')} ${missing === 1 ? 'is' : 'are'} not exact-part verified, so manufacturing handoff still carries part-identity risk.`,
+  );
+  result.suggestions.push('Verify placed component parts in Component Editor before release.');
+}
+
+function addMechanicalModelWarnings(result: ExportPreflightResult, data: ProjectExportData): void {
+  const placed = data.placedPartCount;
+  const verifiedModels = data.verifiedMechanicalModelCount;
+  if (placed === undefined || verifiedModels === undefined || placed <= 0 || verifiedModels >= placed) {
+    return;
+  }
+
+  const missing = placed - verifiedModels;
+  result.warnings.push(
+    `${plural(missing, 'placed part')} ${missing === 1 ? 'is' : 'are'} missing verified mechanical model data, so STEP fit checks are incomplete.`,
+  );
+  result.suggestions.push('Add or verify mechanical/breadboard model metadata before relying on the STEP export.');
+}
+
+function addBreadboardHealthChecks(result: ExportPreflightResult, data: ProjectExportData): void {
+  const redCount = data.redBreadboardHealthCount ?? 0;
+  if (redCount <= 0) {
+    return;
+  }
+
+  result.errors.push(
+    `${plural(redCount, 'red breadboard-health finding')} ${redCount === 1 ? 'is' : 'are'} unresolved, so this design is not ready for fabrication handoff.`,
+  );
+  result.suggestions.push('Resolve red breadboard health findings before releasing fabrication or assembly files.');
+}
+
+function addLifecycleRiskChecks(result: ExportPreflightResult, data: ProjectExportData): void {
+  const obsolete = data.obsoletePartCount ?? 0;
+  const eol = data.eolPartCount ?? 0;
+  const nrnd = data.nrndPartCount ?? 0;
+  const noAlternate = data.lifecycleNoAlternateCount ?? 0;
+
+  if (obsolete > 0 || noAlternate > 0) {
+    const blockers = [
+      obsolete > 0 ? plural(obsolete, 'obsolete part') : null,
+      noAlternate > 0 ? `${plural(noAlternate, 'lifecycle-risk part')} without a known alternate` : null,
+    ].filter(Boolean).join(' and ');
+    result.errors.push(`${blockers} ${obsolete + noAlternate === 1 ? 'blocks' : 'block'} fabrication release.`);
+    result.suggestions.push('Replace obsolete/EOL parts or assign verified alternates before fabrication or ordering.');
+  }
+
+  if (eol > 0) {
+    result.warnings.push(`${plural(eol, 'end-of-life part')} should be replaced or explicitly accepted before procurement.`);
+  }
+
+  if (nrnd > 0) {
+    result.warnings.push(`${plural(nrnd, 'NRND part')} may create supply risk for future builds.`);
+  }
+}
+
+function addInventoryConfidenceWarnings(result: ExportPreflightResult, data: ProjectExportData): void {
+  const estimated = data.estimatedInventoryLineCount ?? 0;
+  if (estimated <= 0) {
+    return;
+  }
+
+  result.warnings.push(
+    `${plural(estimated, 'inventory line')} ${estimated === 1 ? 'uses' : 'use'} estimated or unknown confidence, so purchasing quantities may need review.`,
+  );
+  result.suggestions.push('Refresh inventory confidence before ordering, kitting, or exporting procurement files.');
+}
+
+function addFabricationTrustChecks(result: ExportPreflightResult, data: ProjectExportData): void {
+  addAiGeneratedCircuitChecks(result, data);
+  addExactPartWarnings(result, data);
+  addBreadboardHealthChecks(result, data);
+  addLifecycleRiskChecks(result, data);
+  addInventoryConfidenceWarnings(result, data);
 }
 
 function validateKiCad(data: ProjectExportData): ExportPreflightResult {
@@ -129,6 +252,7 @@ function validateSpice(data: ProjectExportData): ExportPreflightResult {
 function validateGerber(data: ProjectExportData): ExportPreflightResult {
   const result = makeResult('gerber');
   commonChecks(result, data);
+  addFabricationTrustChecks(result, data);
 
   if (!data.hasPcbLayout) {
     result.errors.push('No PCB layout data found.');
@@ -144,9 +268,34 @@ function validateGerber(data: ProjectExportData): ExportPreflightResult {
   return result;
 }
 
+function validateTscircuitGerber(data: ProjectExportData): ExportPreflightResult {
+  const result = makeResult('tscircuit-gerber');
+  commonChecks(result, data);
+  addFabricationTrustChecks(result, data);
+
+  if (!data.hasPcbLayout) {
+    result.errors.push('No PCB layout data — tscircuit Gerber requires board placement data.');
+    result.suggestions.push('Place components on the PCB before using the tscircuit Gerber export.');
+  }
+
+  if (!data.hasCircuitInstances) {
+    result.errors.push('No circuit instances — tscircuit Gerber needs placed components and nets.');
+    result.suggestions.push('Create or select a circuit design with components before exporting Gerbers.');
+  }
+
+  result.warnings.push(
+    'This v3 export maps supported project components and net segments through tscircuit; unsupported component families or endpoints are skipped with warnings.',
+  );
+  result.suggestions.push('Use the standard Gerber export for full manufacturing handoff until all footprints and component families are mapped.');
+
+  result.canExport = result.errors.length === 0;
+  return result;
+}
+
 function validateFabPackage(data: ProjectExportData): ExportPreflightResult {
   const result = makeResult('fab-package');
   commonChecks(result, data);
+  addFabricationTrustChecks(result, data);
 
   if (!data.hasPcbLayout) {
     result.errors.push('No PCB layout data — a fabrication bundle needs placed board data.');
@@ -173,6 +322,7 @@ function validateFabPackage(data: ProjectExportData): ExportPreflightResult {
 function validateDrill(data: ProjectExportData): ExportPreflightResult {
   const result = makeResult('drill');
   commonChecks(result, data);
+  addFabricationTrustChecks(result, data);
 
   if (!data.hasPcbLayout) {
     result.errors.push('No PCB layout data found.');
@@ -186,6 +336,7 @@ function validateDrill(data: ProjectExportData): ExportPreflightResult {
 function validatePickPlace(data: ProjectExportData): ExportPreflightResult {
   const result = makeResult('pick-place');
   commonChecks(result, data);
+  addFabricationTrustChecks(result, data);
 
   if (!data.hasPcbLayout) {
     result.errors.push('No PCB layout data — pick-and-place requires placed components.');
@@ -199,6 +350,8 @@ function validatePickPlace(data: ProjectExportData): ExportPreflightResult {
 function validateBomCsv(data: ProjectExportData): ExportPreflightResult {
   const result = makeResult('bom-csv');
   commonChecks(result, data);
+  addLifecycleRiskChecks(result, data);
+  addInventoryConfidenceWarnings(result, data);
 
   if (data.bomItemCount === 0) {
     result.errors.push('No BOM items found.');
@@ -305,6 +458,7 @@ function validateNetlist(data: ProjectExportData): ExportPreflightResult {
 function validateOdbPlusPlus(data: ProjectExportData): ExportPreflightResult {
   const result = makeResult('odb-plus-plus');
   commonChecks(result, data);
+  addFabricationTrustChecks(result, data);
 
   if (!data.hasPcbLayout) {
     result.errors.push('No PCB layout data — ODB++ requires board design.');
@@ -318,6 +472,7 @@ function validateOdbPlusPlus(data: ProjectExportData): ExportPreflightResult {
 function validateIpc2581(data: ProjectExportData): ExportPreflightResult {
   const result = makeResult('ipc2581');
   commonChecks(result, data);
+  addFabricationTrustChecks(result, data);
 
   if (!data.hasPcbLayout) {
     result.errors.push('No PCB layout data — IPC-2581 requires board design.');
@@ -331,10 +486,27 @@ function validateIpc2581(data: ProjectExportData): ExportPreflightResult {
 function validateStep(data: ProjectExportData): ExportPreflightResult {
   const result = makeResult('step');
   commonChecks(result, data);
+  addAiGeneratedCircuitChecks(result, data);
+  addExactPartWarnings(result, data);
+  addMechanicalModelWarnings(result, data);
 
   if (!data.hasPcbLayout) {
     result.errors.push('No PCB layout data — STEP 3D model requires board design.');
     result.suggestions.push('Place components on the PCB in the PCB Layout view.');
+  }
+
+  result.canExport = result.errors.length === 0;
+  return result;
+}
+
+function validateEtchablePcb(data: ProjectExportData): ExportPreflightResult {
+  const result = makeResult('etchable-pcb');
+  commonChecks(result, data);
+  addFabricationTrustChecks(result, data);
+
+  if (!data.hasPcbLayout) {
+    result.errors.push('No PCB layout data — etchable PCB export requires board design.');
+    result.suggestions.push('Place and route the PCB before exporting a DIY etching mask.');
   }
 
   result.canExport = result.errors.length === 0;
@@ -364,6 +536,7 @@ const FORMAT_VALIDATORS: Record<string, FormatValidator> = {
   spice: validateSpice,
   'fab-package': validateFabPackage,
   gerber: validateGerber,
+  'tscircuit-gerber': validateTscircuitGerber,
   drill: validateDrill,
   'pick-place': validatePickPlace,
   'bom-csv': validateBomCsv,
@@ -376,6 +549,7 @@ const FORMAT_VALIDATORS: Record<string, FormatValidator> = {
   'odb-plus-plus': validateOdbPlusPlus,
   ipc2581: validateIpc2581,
   step: validateStep,
+  'etchable-pcb': validateEtchablePcb,
   fzz: validateFzz,
 };
 

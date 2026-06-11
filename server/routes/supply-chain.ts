@@ -8,7 +8,7 @@
  * POST /api/supply-chain/check           — trigger a supply chain check job
  */
 
-import type { Express, Request, Response } from 'express';
+import type { Express, NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import { validateSession } from '../auth';
 import { supplyChainStorage, StorageError } from '../storage';
@@ -17,9 +17,41 @@ import { logger } from '../logger';
 import { assertProjectOwnership } from './auth-middleware';
 import { HttpError } from './utils';
 
+type SupplyChainSession = { userId: number };
+type AuthedSupplyChainRequest = Request & { session?: SupplyChainSession };
+
+async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const sessionId = req.headers['x-session-id'];
+  if (typeof sessionId !== 'string' || sessionId.length === 0) {
+    res.status(401).json({ message: 'Unauthorized: missing X-Session-Id header' });
+    return;
+  }
+
+  try {
+    const session = await validateSession(sessionId);
+    if (!session) {
+      res.status(401).json({ message: 'Unauthorized: invalid session' });
+      return;
+    }
+
+    (req as AuthedSupplyChainRequest).session = session;
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+function getSession(req: Request): SupplyChainSession {
+  const session = (req as AuthedSupplyChainRequest).session;
+  if (!session) {
+    throw new HttpError('Authentication required', 401);
+  }
+  return session;
+}
+
 export function registerSupplyChainRoutes(app: Express): void {
   // GET /api/supply-chain/alerts
-  app.get('/api/supply-chain/alerts', validateSession, async (req: Request, res: Response) => {
+  app.get('/api/supply-chain/alerts', requireAuth, async (req: Request, res: Response) => {
     try {
       const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
       const partId = req.query.partId ? String(req.query.partId) : undefined;
@@ -29,7 +61,7 @@ export function registerSupplyChainRoutes(app: Express): void {
 
       // SECURITY (WS-01): when filtering by projectId, enforce ownership.
       if (projectId !== undefined) {
-        const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+        const session = getSession(req);
         try {
           await assertProjectOwnership(projectId, session.userId);
         } catch (e) {
@@ -60,11 +92,11 @@ export function registerSupplyChainRoutes(app: Express): void {
   });
 
   // GET /api/supply-chain/alerts/count
-  app.get('/api/supply-chain/alerts/count', validateSession, async (req: Request, res: Response) => {
+  app.get('/api/supply-chain/alerts/count', requireAuth, async (req: Request, res: Response) => {
     try {
       const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
       if (projectId !== undefined) {
-        const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+        const session = getSession(req);
         try {
           await assertProjectOwnership(projectId, session.userId);
         } catch (e) {
@@ -88,7 +120,7 @@ export function registerSupplyChainRoutes(app: Express): void {
   });
 
   // POST /api/supply-chain/alerts/:id/ack
-  app.post('/api/supply-chain/alerts/:id/ack', validateSession, async (req: Request, res: Response) => {
+  app.post('/api/supply-chain/alerts/:id/ack', requireAuth, async (req: Request, res: Response) => {
     const alertId = String(req.params.id);
     try {
       const acknowledged = await supplyChainStorage.acknowledgeAlert(alertId);
@@ -108,11 +140,11 @@ export function registerSupplyChainRoutes(app: Express): void {
   });
 
   // POST /api/supply-chain/alerts/ack-all
-  app.post('/api/supply-chain/alerts/ack-all', validateSession, async (req: Request, res: Response) => {
+  app.post('/api/supply-chain/alerts/ack-all', requireAuth, async (req: Request, res: Response) => {
     try {
       const projectId = req.body?.projectId ? Number(req.body.projectId) : undefined;
       if (projectId !== undefined) {
-        const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+        const session = getSession(req);
         try {
           await assertProjectOwnership(projectId, session.userId);
         } catch (e) {
@@ -136,7 +168,7 @@ export function registerSupplyChainRoutes(app: Express): void {
   });
 
   // POST /api/supply-chain/check — trigger a supply chain check
-  app.post('/api/supply-chain/check', validateSession, async (req: Request, res: Response) => {
+  app.post('/api/supply-chain/check', requireAuth, async (req: Request, res: Response) => {
     const parsed = z.object({
       projectId: z.number().int().positive(),
     }).safeParse(req.body);
@@ -147,7 +179,7 @@ export function registerSupplyChainRoutes(app: Express): void {
     }
 
     try {
-      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+      const session = getSession(req);
       // SECURITY (WS-01): ensure user owns the project before queueing a job.
       try {
         await assertProjectOwnership(parsed.data.projectId, session.userId);

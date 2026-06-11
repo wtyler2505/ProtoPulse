@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react';
-import { useViewport } from '@xyflow/react';
+import { useViewport } from '@/lib/xyflow-compat';
 import type { ERCViolation } from '@shared/circuit-types';
 
 // ---------------------------------------------------------------------------

@@ -8,6 +8,15 @@ const mockCreateCircuit = vi.fn();
 const mockExpandArchitecture = vi.fn();
 const mockPushToPcb = vi.fn();
 const mockToast = vi.fn();
+const mockCircuitInstances = vi.hoisted(() => ({
+  current: [] as Array<{
+    id: number;
+    referenceDesignator: string;
+    pcbX: number | null;
+    pcbY: number | null;
+    properties?: Record<string, string> | null;
+  }>,
+}));
 
 vi.mock('@/lib/contexts/project-id-context', () => ({
   useProjectId: () => 1,
@@ -20,6 +29,14 @@ vi.mock('@/lib/project-context', () => ({
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
     toast: mockToast,
+  }),
+}));
+
+vi.mock('@/lib/use-jit-run-history', () => ({
+  useJitRunHistory: () => ({
+    items: [],
+    loading: false,
+    refresh: vi.fn().mockResolvedValue([]),
   }),
 }));
 
@@ -37,7 +54,7 @@ vi.mock('@/lib/circuit-editor/hooks', () => ({
     refetch: vi.fn(),
   }),
   useCircuitInstances: () => ({
-    data: [],
+    data: mockCircuitInstances.current,
   }),
   useCreateCircuitDesign: () => ({
     mutateAsync: mockCreateCircuit,
@@ -57,10 +74,14 @@ vi.mock('@/lib/circuit-editor/hooks', () => ({
   }),
 }));
 
-vi.mock('@/components/circuit-editor/SchematicCanvas', () => ({
-  SchematicCanvasInner: ({ circuitId }: { circuitId: number }) => (
-    <div data-testid="schematic-canvas">Canvas {String(circuitId)}</div>
+vi.mock('@/components/circuit-editor/TSCircuitCanvasAdapter', () => ({
+  default: ({ circuitId }: { circuitId: number }) => (
+    <div data-testid="tscircuit-canvas-adapter">Adapter {String(circuitId)}</div>
   ),
+}));
+
+vi.mock('@/lib/schematic-canvas-mode', () => ({
+  getSchematicCanvasMode: () => 'tscircuit',
 }));
 
 vi.mock('@/components/circuit-editor/ComponentPlacer', () => ({
@@ -81,10 +102,6 @@ vi.mock('@/components/circuit-editor/HierarchicalSheetPanel', () => ({
 
 vi.mock('@/components/circuit-editor/SimulationScenarioPanel', () => ({
   default: () => <div data-testid="simulation-scenario-panel">Simulation</div>,
-}));
-
-vi.mock('@xyflow/react', () => ({
-  ReactFlowProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('@/components/ui/select', () => ({
@@ -138,6 +155,7 @@ function renderSchematicView() {
 describe('SchematicView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCircuitInstances.current = [];
     mockCreateCircuit.mockResolvedValue({ id: 99, name: 'New Circuit' });
     mockExpandArchitecture.mockResolvedValue({ circuit: { id: 88, name: 'Expanded Circuit' } });
     mockPushToPcb.mockResolvedValue({ pushed: 0, alreadyPlaced: 0 });
@@ -147,6 +165,50 @@ describe('SchematicView', () => {
     renderSchematicView();
 
     expect(screen.getByTestId('button-open-ai-generate')).toBeInTheDocument();
+    expect(screen.getByTestId('tscircuit-canvas-adapter')).toBeInTheDocument();
+    expect(screen.getByTestId('schematic-canvas-mode-badge').textContent).toContain('TSCircuit');
+  });
+
+  it('always renders tscircuit adapter mode', () => {
+    renderSchematicView();
+
+    expect(screen.getByTestId('tscircuit-canvas-adapter')).toBeInTheDocument();
+    expect(screen.getByTestId('schematic-canvas-mode-badge').textContent).toContain('TSCircuit');
+  });
+
+  it('keeps key schematic layout containers min-height constrained for scrolling', () => {
+    renderSchematicView();
+
+    expect(screen.getByTestId('schematic-view').className).toContain('min-h-0');
+    expect(screen.getByTestId('parts-panel-container').className).toContain('min-h-0');
+    fireEvent.click(screen.getByTestId('button-toggle-erc-panel'));
+    expect(screen.getByTestId('erc-panel-container').className).toContain('min-h-0');
+  });
+
+  it('surfaces canvas provenance status directly over the schematic work surface', () => {
+    mockCircuitInstances.current = [
+      {
+        id: 501,
+        referenceDesignator: 'U1',
+        pcbX: null,
+        pcbY: null,
+        properties: null,
+      },
+    ];
+
+    renderSchematicView();
+
+    const statusDock = screen.getByTestId('schematic-surface-status');
+    expect(statusDock.textContent).toContain('LOCAL_MODEL');
+    expect(screen.getByTestId('schematic-surface-circuit-name').textContent).toContain('Main Circuit');
+    expect(screen.getByTestId('schematic-surface-part-count').textContent).toContain('1');
+    expect(screen.getByTestId('schematic-surface-canvas-mode').textContent).toContain('TSCircuit');
+    expect(screen.getByTestId('schematic-surface-trust-summary').textContent).toContain('No active AI exact-part run');
+
+    fireEvent.click(screen.getByTestId('button-toggle-schematic-surface-status'));
+
+    expect(screen.getByTestId('schematic-surface-status').textContent).toContain('LOCAL_MODEL');
+    expect(screen.queryByTestId('schematic-surface-detail')).not.toBeInTheDocument();
   });
 
   it('surfaces a provisional exact-part workflow banner after AI generation', async () => {
@@ -213,6 +275,9 @@ describe('SchematicView', () => {
     expect(screen.getByTestId('schematic-ai-requested-exact-parts').textContent).toContain('RioRand Motor Controller');
     expect(screen.getByTestId('schematic-ai-used-parts').textContent).toContain('U2: RioRand Motor Controller');
     expect(screen.getByTestId('schematic-ai-workflow-warnings').textContent).toContain('candidate exact part');
+    expect(screen.getByTestId('schematic-surface-status').textContent).toContain('AI_PROVISIONAL');
+    expect(screen.getByTestId('schematic-surface-exact-parts').textContent).toContain('1 exact part tracked');
+    expect(screen.getByTestId('schematic-surface-exact-parts').textContent).toContain('1 needs verification');
     expect(mockToast).toHaveBeenCalled();
   });
 });

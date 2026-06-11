@@ -1,7 +1,8 @@
 import { memo } from 'react';
-import { Layers, X, LogOut, Contrast, Palette } from 'lucide-react';
+import { Layers, X, LogOut, Contrast, Palette, MoreHorizontal } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/auth-context';
 import { useHighContrast } from '@/hooks/useHighContrast';
 import ThemePickerPanel from '@/components/panels/ThemePickerPanel';
@@ -15,13 +16,13 @@ const SidebarHeader = memo(function SidebarHeader({ onClose }: SidebarHeaderProp
   const { enabled: highContrast, toggle: toggleHighContrast } = useHighContrast();
 
   return (
-    <div data-testid="header-branding" className="h-14 border-b border-sidebar-border flex items-center px-4 gap-3 bg-sidebar/20">
-      <div className="w-8 h-8 bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)] shrink-0">
-        <Layers className="w-5 h-5 text-primary" />
+    <div data-testid="header-branding" className="flex h-10 items-center gap-1.5 border-b border-sidebar-border/80 bg-sidebar/15 px-2">
+      <div className="w-5 h-5 bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_6px_rgba(6,182,212,0.1)] shrink-0">
+        <Layers className="w-3.5 h-3.5 text-primary" />
       </div>
       <div className="flex flex-col justify-center flex-1 min-w-0">
-        <span className="font-display font-bold text-lg leading-none tracking-tight truncate">ProtoPulse</span>
-        <span className="text-[10px] text-muted-foreground/80 uppercase tracking-[0.2em] mt-1">
+        <span className="truncate font-display text-[11px] font-bold leading-none">ProtoPulse</span>
+        <span className="text-[10px] text-muted-foreground/75 uppercase tracking-[0.08em] mt-0.5 truncate" title={user ? user.username : 'System Architect'}>
           {user ? user.username : 'System Architect'}
         </span>
       </div>
@@ -31,9 +32,9 @@ const SidebarHeader = memo(function SidebarHeader({ onClose }: SidebarHeaderProp
             <button
               data-testid="button-theme-picker"
               aria-label="Open color theme picker"
-              className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex h-6.5 w-6.5 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
             >
-              <Palette className="w-4 h-4" />
+              <Palette className="w-3.5 h-3.5" />
             </button>
           </PopoverTrigger>
         </StyledTooltip>
@@ -46,37 +47,53 @@ const SidebarHeader = memo(function SidebarHeader({ onClose }: SidebarHeaderProp
           <ThemePickerPanel />
         </PopoverContent>
       </Popover>
-      <StyledTooltip content={highContrast ? 'Disable high contrast' : 'Enable high contrast'} side="bottom">
-        <button
-          data-testid="toggle-high-contrast"
-          aria-label={highContrast ? 'Disable high-contrast mode' : 'Enable high-contrast mode'}
-          aria-pressed={highContrast}
-          className={`p-1.5 hover:bg-muted transition-colors ${highContrast ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-          onClick={toggleHighContrast}
-        >
-          <Contrast className="w-4 h-4" />
-        </button>
-      </StyledTooltip>
-      {user && (
-        <StyledTooltip content="Sign out" side="bottom">
-          <button
-            data-testid="button-logout"
-            aria-label="Sign out"
-            className="p-1.5 hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
-            onClick={() => void logout()}
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+      <DropdownMenu>
+        <StyledTooltip content="More sidebar actions" side="bottom">
+          <DropdownMenuTrigger asChild>
+            <button
+              data-testid="button-sidebar-more"
+              aria-label="More sidebar actions"
+              className="inline-flex h-6.5 w-6.5 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+            >
+              <MoreHorizontal className="w-3.5 h-3.5" />
+            </button>
+          </DropdownMenuTrigger>
         </StyledTooltip>
-      )}
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem
+            data-testid="toggle-high-contrast"
+            className="flex items-center gap-2"
+            onSelect={(e) => {
+              e.preventDefault();
+              toggleHighContrast();
+            }}
+          >
+            <Contrast className={highContrast ? 'w-4 h-4 text-primary' : 'w-4 h-4'} />
+            <span>{highContrast ? 'Disable High Contrast' : 'Enable High Contrast'}</span>
+          </DropdownMenuItem>
+          {user && (
+            <DropdownMenuItem
+              data-testid="button-logout"
+              className="flex items-center gap-2 text-destructive focus:text-destructive"
+              onSelect={(e) => {
+                e.preventDefault();
+                void logout();
+              }}
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <StyledTooltip content="Close sidebar" side="bottom">
         <button
           data-testid="sidebar-close"
           aria-label="Close sidebar"
-          className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors md:hidden"
+          className="inline-flex h-6.5 w-6.5 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground md:hidden"
           onClick={onClose}
         >
-          <X className="w-4 h-4" />
+          <X className="w-3.5 h-3.5" />
         </button>
       </StyledTooltip>
     </div>

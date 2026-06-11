@@ -193,7 +193,9 @@ describe('POST /api/settings/api-keys', () => {
     const res = await fetch(`${baseUrlAuth}/api/settings/api-keys`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider: 'openai', apiKey: 'test' }),
+      // 'openai' is a VALID provider (gemini/openai/jlcpcb/pcbway/oshpark/
+      // google_workspace) — use a genuinely-unknown value to exercise rejection.
+      body: JSON.stringify({ provider: 'not-a-real-provider', apiKey: 'test' }),
     });
     expect(res.status).toBe(400);
   });
@@ -228,7 +230,10 @@ describe('DELETE /api/settings/api-keys/:provider', () => {
   });
 
   it('returns 400 for invalid provider', async () => {
-    const res = await fetch(`${baseUrlAuth}/api/settings/api-keys/openai`, { method: 'DELETE' });
+    // 'openai' is a valid provider — use an unknown value to exercise the 400 path.
+    const res = await fetch(`${baseUrlAuth}/api/settings/api-keys/not-a-real-provider`, {
+      method: 'DELETE',
+    });
     expect(res.status).toBe(400);
   });
 });
@@ -309,7 +314,8 @@ describe('PATCH /api/settings/chat', () => {
     const res = await fetch(`${baseUrlAuth}/api/settings/chat`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ aiProvider: 'openai' }),
+      // aiProvider accepts 'gemini' | 'openai' — use an unknown value for the 400 path.
+      body: JSON.stringify({ aiProvider: 'not-a-real-provider' }),
     });
     expect(res.status).toBe(400);
   });

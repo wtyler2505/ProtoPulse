@@ -5,9 +5,11 @@
  * Phase 3. Tracked as part of E2E-552 / Plan 03 Phase 4.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
+import { RADIAL_COMMAND_EVENT, type RadialCommandEventDetail } from '@/lib/radial-menu-actions';
+import { RADIAL_AI_CHAT_DRAFT_EVENT } from '@/lib/radial-ai-commands';
 
 // -------------------------------------------------------------------
 // Mocks
@@ -32,6 +34,12 @@ let mockBom: Array<{
   stock: number;
   status: string;
 }> = [];
+let mockComponentParts: Array<Record<string, unknown>> = [];
+let mockCircuitDesigns: Array<Record<string, unknown>> = [];
+let mockCircuitInstances: Array<Record<string, unknown>> = [];
+let mockShortfallsResp:
+  | { data: Array<Record<string, unknown>>; total: number; totalShortfallUnits: number }
+  | undefined;
 
 vi.mock('@/lib/contexts/bom-context', () => ({
   useBom: () => ({
@@ -52,6 +60,14 @@ vi.mock('@/lib/contexts/project-id-context', () => ({
   useProjectId: () => 1,
 }));
 
+vi.mock('@/lib/contexts/project-meta-context', () => ({
+  useProjectMeta: () => ({ projectName: 'Procurement Test Project' }),
+}));
+
+vi.mock('@/lib/contexts/architecture-context', () => ({
+  useArchitecture: () => ({ nodes: [], edges: [] }),
+}));
+
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: mockToast }),
 }));
@@ -66,7 +82,17 @@ vi.mock('@/lib/csv', () => ({
 }));
 
 vi.mock('@/lib/component-editor/hooks', () => ({
-  useComponentParts: () => ({ data: [], isLoading: false }),
+  useComponentParts: () => ({ data: mockComponentParts, isLoading: false }),
+}));
+
+vi.mock('@/lib/circuit-editor/hooks', () => ({
+  useCircuitDesigns: () => ({ data: mockCircuitDesigns }),
+  useCircuitInstances: () => ({ data: mockCircuitInstances }),
+}));
+
+vi.mock('@/lib/parts/use-bom-shortfalls', () => ({
+  useBomShortfalls: () => ({ data: mockShortfallsResp }),
+  indexShortfallsByPartNumber: () => new Map(),
 }));
 
 vi.mock('@/lib/constants', () => ({
@@ -81,7 +107,12 @@ vi.mock('@/lib/constants', () => ({
     ROUTING_STRATEGY: 'routing-strategy',
   },
   DEFAULT_PREFERRED_SUPPLIERS: { 'Digi-Key': true, Mouser: true, LCSC: true },
-  OPTIMIZATION_GOALS: { Cost: 'Minimize cost', Power: 'Minimize power', Size: 'Minimize size', Avail: 'Maximize availability' } as Record<string, string>,
+  OPTIMIZATION_GOALS: {
+    Cost: 'Minimize cost',
+    Power: 'Minimize power',
+    Size: 'Minimize size',
+    Avail: 'Maximize availability',
+  } as Record<string, string>,
   getSupplierSearchUrl: (s: string) => (s === 'Digi-Key' ? 'https://digikey.com/search?q=' : ''),
 }));
 
@@ -92,9 +123,11 @@ vi.mock('@/components/ui/styled-tooltip', () => ({
 vi.mock('@/components/ui/context-menu', () => ({
   ContextMenu: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   ContextMenuTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  ContextMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  ContextMenuContent: () => null,
   ContextMenuItem: ({ children, onSelect }: { children: React.ReactNode; onSelect?: () => void }) => (
-    <button type="button" onClick={onSelect}>{children}</button>
+    <button type="button" onClick={onSelect}>
+      {children}
+    </button>
   ),
   ContextMenuSeparator: () => <hr />,
 }));
@@ -107,7 +140,11 @@ vi.mock('@/components/ui/confirm-dialog', () => ({
 
 // Mock all shadcn UI primitives to simple HTML
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button type="button" {...props}>{children}</button>,
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button type="button" {...props}>
+      {children}
+    </button>
+  ),
 }));
 
 vi.mock('@/components/ui/slider', () => ({
@@ -177,15 +214,45 @@ vi.mock('@dnd-kit/modifiers', () => ({
   restrictToVerticalAxis: vi.fn(),
 }));
 
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: ({ count }: { count: number }) => ({
+    getTotalSize: () => count * 52,
+    getVirtualItems: () =>
+      Array.from({ length: count }, (_, i) => ({
+        index: i,
+        start: i * 52,
+        size: 52,
+        key: i,
+      })),
+  }),
+}));
+
 // Tabs — Radix primitives are too heavy for happy-dom; use lightweight mocks.
 // Only render the "management" TabsContent (the default tab) to avoid loading
 // lazy-imported panels (BomDiffPanel, AssemblyGroupPanel, AvlCompliancePanel).
 vi.mock('@/components/ui/tabs', () => ({
-  Tabs: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
+  Tabs: ({
+    children,
+    value,
+    onValueChange: _onValueChange,
+    ...props
+  }: React.HTMLAttributes<HTMLDivElement> & { value?: string; onValueChange?: (value: string) => void }) => (
+    <div {...props} data-tabs-value={value}>
+      {children}
+    </div>
+  ),
   TabsList: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
-  TabsTrigger: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button type="button" {...props}>{children}</button>,
+  TabsTrigger: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button type="button" {...props}>
+      {children}
+    </button>
+  ),
   TabsContent: ({ children, value, ...props }: React.HTMLAttributes<HTMLDivElement> & { value?: string }) =>
-    value === 'management' ? <div data-value={value} {...props}>{children}</div> : null,
+    value === 'management' ? (
+      <div data-value={value} {...props}>
+        {children}
+      </div>
+    ) : null,
 }));
 
 // LifecycleBadge — lightweight mock to avoid pulling lifecycle-badges module weight
@@ -205,6 +272,7 @@ vi.mock('@/lib/lifecycle-badges', () => ({
 // -------------------------------------------------------------------
 
 import ProcurementView from '@/components/views/ProcurementView';
+import { copyToClipboard } from '@/lib/clipboard';
 import { buildCSV, downloadBlob } from '@/lib/csv';
 
 function createTestQueryClient() {
@@ -225,6 +293,55 @@ function renderProcurement() {
   );
 }
 
+function makeBomItem(overrides: Partial<(typeof mockBom)[number]> = {}): (typeof mockBom)[number] {
+  return {
+    id: '1',
+    partNumber: 'ESP32-S3',
+    manufacturer: 'Espressif',
+    description: 'MCU module',
+    quantity: 2,
+    unitPrice: 3.5,
+    totalPrice: 7.0,
+    supplier: 'Digi-Key',
+    stock: 500,
+    status: 'In Stock',
+    ...overrides,
+  };
+}
+
+function dispatchBomRadial(commandId: string, targetId = '1'): RadialCommandEventDetail {
+  const detail: RadialCommandEventDetail = {
+    commandId,
+    context: {
+      view: 'bom',
+      target: 'bom_row',
+      targetId,
+      targetLabel: 'ESP32-S3',
+    },
+    source: 'radial-menu',
+  };
+  act(() => {
+    window.dispatchEvent(new CustomEvent<RadialCommandEventDetail>(RADIAL_COMMAND_EVENT, { detail }));
+  });
+  return detail;
+}
+
+function dispatchBomCanvasRadial(commandId: string): RadialCommandEventDetail {
+  const detail: RadialCommandEventDetail = {
+    commandId,
+    context: {
+      view: 'bom',
+      target: 'canvas',
+      targetLabel: 'BOM canvas',
+    },
+    source: 'radial-menu',
+  };
+  act(() => {
+    window.dispatchEvent(new CustomEvent<RadialCommandEventDetail>(RADIAL_COMMAND_EVENT, { detail }));
+  });
+  return detail;
+}
+
 // -------------------------------------------------------------------
 // Tests
 // -------------------------------------------------------------------
@@ -233,6 +350,12 @@ describe('ProcurementView', { timeout: 15000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockBom = [];
+    mockComponentParts = [];
+    mockCircuitDesigns = [];
+    mockCircuitInstances = [];
+    mockShortfallsResp = undefined;
+    window.localStorage.clear();
+    window.localStorage.setItem('protopulse-session-id', 'test-session');
   });
 
   it('renders empty state when BOM is empty', () => {
@@ -243,20 +366,7 @@ describe('ProcurementView', { timeout: 15000 }, () => {
   });
 
   it('renders BOM items in mobile card layout', () => {
-    mockBom = [
-      {
-        id: '1',
-        partNumber: 'ESP32-S3',
-        manufacturer: 'Espressif',
-        description: 'MCU module',
-        quantity: 2,
-        unitPrice: 3.5,
-        totalPrice: 7.0,
-        supplier: 'Digi-Key',
-        stock: 500,
-        status: 'In Stock',
-      },
-    ];
+    mockBom = [makeBomItem()];
     renderProcurement();
     // Both mobile card and desktop table render in happy-dom (no media queries),
     // so text appears twice. Scope assertions to the mobile card element.
@@ -266,15 +376,190 @@ describe('ProcurementView', { timeout: 15000 }, () => {
     expect(within(card).getByText('Espressif')).toBeDefined();
   });
 
+  it('adds radial target metadata to BOM rows and cards', () => {
+    mockBom = [makeBomItem()];
+    renderProcurement();
+
+    expect(screen.getByTestId('card-bom-1').getAttribute('data-bom-id')).toBe('1');
+    expect(screen.getByTestId('card-bom-1').getAttribute('data-bom-label')).toBe('ESP32-S3 · Espressif');
+    expect(screen.getByTestId('row-bom-1').getAttribute('data-bom-id')).toBe('1');
+    expect(screen.getByTestId('row-bom-1').getAttribute('data-bom-label')).toBe('ESP32-S3 · Espressif');
+  });
+
+  it('opens quantity editing from a BOM radial command', () => {
+    mockBom = [makeBomItem()];
+    renderProcurement();
+
+    const detail = dispatchBomRadial('edit_quantity');
+
+    expect(detail.handled).toBe(true);
+    expect(screen.getByTestId('procurement-view').getAttribute('data-active-tab')).toBe('management');
+    expect(screen.getByTestId('edit-quantity-1')).toBeDefined();
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Quantity Editor Opened' }));
+  });
+
+  it('opens alternates from a BOM radial command', () => {
+    mockBom = [makeBomItem()];
+    renderProcurement();
+
+    const detail = dispatchBomRadial('find_alternates');
+
+    expect(detail.handled).toBe(true);
+    expect(screen.getByTestId('procurement-view').getAttribute('data-active-tab')).toBe('alternates');
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Alternates Opened' }));
+  });
+
+  it('opens add-item and settings surfaces from BOM canvas radial commands', () => {
+    mockBom = [makeBomItem()];
+    renderProcurement();
+
+    const addDetail = dispatchBomCanvasRadial('add_bom_item');
+
+    expect(addDetail.handled).toBe(true);
+    expect(screen.getByTestId('procurement-view').getAttribute('data-active-tab')).toBe('management');
+    expect(screen.getByTestId('dialog')).toBeDefined();
+    expect(mockAddOutputLog).toHaveBeenCalledWith('[BOM] Opened add-item dialog from the radial canvas menu.');
+
+    const settingsDetail = dispatchBomCanvasRadial('open_bom_settings');
+
+    expect(settingsDetail.handled).toBe(true);
+    expect(screen.getByTestId('panel-settings')).toBeDefined();
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'BOM Settings' }));
+  });
+
+  it('drafts a whole-BOM procurement plan from the BOM canvas radial command', () => {
+    mockBom = [makeBomItem()];
+    const eventSpy = vi.fn();
+    const openSpy = vi.fn();
+    window.addEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, eventSpy);
+    window.addEventListener('protopulse:open-chat-panel', openSpy);
+    renderProcurement();
+
+    const detail = dispatchBomCanvasRadial('ai_bom_plan');
+
+    expect(detail.handled).toBe(true);
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(eventSpy).toHaveBeenCalledTimes(1);
+    const message = (eventSpy.mock.calls[0]?.[0] as CustomEvent<{ message: string }>).detail.message;
+    expect(message).toContain('AI intent: supply_risk.');
+    expect(message).toContain('BOM canvas review: 1 items');
+    expect(message).toContain('Target: canvas "BOM canvas"');
+    expect(message).toContain('Representative parts:');
+    expect(message).toContain('ESP32-S3 (Espressif) x2');
+    expect(message).toContain('Give Tyler a tight procurement action plan');
+    expect(mockAddOutputLog).toHaveBeenCalledWith('[BOM] Drafted AI canvas procurement plan.');
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'AI BOM Plan Drafted' }));
+
+    window.removeEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, eventSpy);
+    window.removeEventListener('protopulse:open-chat-panel', openSpy);
+  });
+
+  it('opens canvas procurement tabs and exports from BOM canvas radial commands', () => {
+    mockBom = [makeBomItem()];
+    renderProcurement();
+
+    expect(dispatchBomCanvasRadial('open_bom_alternates').handled).toBe(true);
+    expect(screen.getByTestId('procurement-view').getAttribute('data-active-tab')).toBe('alternates');
+
+    expect(dispatchBomCanvasRadial('open_bom_templates').handled).toBe(true);
+    expect(screen.getByTestId('procurement-view').getAttribute('data-active-tab')).toBe('templates');
+
+    expect(dispatchBomCanvasRadial('open_supply_chain').handled).toBe(true);
+    expect(screen.getByTestId('procurement-view').getAttribute('data-active-tab')).toBe('supply-chain');
+
+    const exportDetail = dispatchBomCanvasRadial('export_bom_csv');
+    expect(exportDetail.handled).toBe(true);
+    expect(vi.mocked(buildCSV)).toHaveBeenCalled();
+    expect(vi.mocked(downloadBlob)).toHaveBeenCalled();
+  });
+
+  it('opens part pricing from a BOM radial supply-risk command', () => {
+    mockBom = [makeBomItem()];
+    renderProcurement();
+
+    const detail = dispatchBomRadial('check_supply_risk');
+
+    expect(detail.handled).toBe(true);
+    expect(screen.getByTestId('procurement-view').getAttribute('data-active-tab')).toBe('pricing');
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Pricing Search Opened' }));
+  });
+
+  it('copies a BOM row summary from a radial command', () => {
+    mockBom = [makeBomItem()];
+    renderProcurement();
+
+    const detail = dispatchBomRadial('copy_bom_row');
+
+    expect(detail.handled).toBe(true);
+    expect(vi.mocked(copyToClipboard)).toHaveBeenCalledWith(expect.stringContaining('Part number: ESP32-S3'));
+    expect(vi.mocked(copyToClipboard)).toHaveBeenCalledWith(expect.stringContaining('Manufacturer: Espressif'));
+    expect(vi.mocked(copyToClipboard)).toHaveBeenCalledWith(expect.stringContaining('Quantity: 2'));
+    expect(mockAddOutputLog).toHaveBeenCalledWith('[BOM] Copied row summary for ESP32-S3.');
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'BOM Row Copied' }));
+  });
+
+  it('drafts BOM tradeoff context to AI chat from a radial command', () => {
+    mockBom = [makeBomItem()];
+    const eventSpy = vi.fn();
+    const openSpy = vi.fn();
+    window.addEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, eventSpy);
+    window.addEventListener('protopulse:open-chat-panel', openSpy);
+    renderProcurement();
+
+    const detail = dispatchBomRadial('ai_part_tradeoffs');
+
+    expect(detail.handled).toBe(true);
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(eventSpy).toHaveBeenCalledTimes(1);
+    const message = (eventSpy.mock.calls[0]?.[0] as CustomEvent<{ message: string }>).detail.message;
+    expect(message).toContain('AI intent: summarize_tradeoffs.');
+    expect(message).toContain('BOM item: ESP32-S3');
+    expect(message).toContain('Target: bom_row "ESP32-S3"');
+    expect(message).toContain('Manufacturer: Espressif');
+    expect(message).toContain('Quantity: 2');
+    expect(message).toContain('Give Tyler practical procurement guidance');
+    expect(mockAddOutputLog).toHaveBeenCalledWith('[BOM] Drafted AI tradeoff review for ESP32-S3.');
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'AI Tradeoffs Drafted' }));
+    window.removeEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, eventSpy);
+    window.removeEventListener('protopulse:open-chat-panel', openSpy);
+  });
+
+  it('removes a BOM row from a radial command', () => {
+    mockBom = [makeBomItem()];
+    renderProcurement();
+
+    const detail = dispatchBomRadial('remove');
+
+    expect(detail.handled).toBe(true);
+    expect(mockDeleteBomItem).toHaveBeenCalledWith('1');
+    expect(mockAddOutputLog).toHaveBeenCalledWith(expect.stringContaining('Removed via radial menu'));
+  });
+
   it('displays total cost in the header', () => {
     mockBom = [
       {
-        id: '1', partNumber: 'R1', manufacturer: 'Yageo', description: 'Resistor',
-        quantity: 10, unitPrice: 0.01, totalPrice: 0.1, supplier: 'Mouser', stock: 10000, status: 'In Stock',
+        id: '1',
+        partNumber: 'R1',
+        manufacturer: 'Yageo',
+        description: 'Resistor',
+        quantity: 10,
+        unitPrice: 0.01,
+        totalPrice: 0.1,
+        supplier: 'Mouser',
+        stock: 10000,
+        status: 'In Stock',
       },
       {
-        id: '2', partNumber: 'C1', manufacturer: 'Murata', description: 'Cap',
-        quantity: 5, unitPrice: 0.05, totalPrice: 0.25, supplier: 'Digi-Key', stock: 5000, status: 'In Stock',
+        id: '2',
+        partNumber: 'C1',
+        manufacturer: 'Murata',
+        description: 'Cap',
+        quantity: 5,
+        unitPrice: 0.05,
+        totalPrice: 0.25,
+        supplier: 'Digi-Key',
+        stock: 5000,
+        status: 'In Stock',
       },
     ];
     renderProcurement();
@@ -285,12 +570,28 @@ describe('ProcurementView', { timeout: 15000 }, () => {
   it('search input filters BOM items', () => {
     mockBom = [
       {
-        id: '1', partNumber: 'ESP32', manufacturer: 'Espressif', description: 'MCU',
-        quantity: 1, unitPrice: 3, totalPrice: 3, supplier: 'Digi-Key', stock: 100, status: 'In Stock',
+        id: '1',
+        partNumber: 'ESP32',
+        manufacturer: 'Espressif',
+        description: 'MCU',
+        quantity: 1,
+        unitPrice: 3,
+        totalPrice: 3,
+        supplier: 'Digi-Key',
+        stock: 100,
+        status: 'In Stock',
       },
       {
-        id: '2', partNumber: 'SHT40', manufacturer: 'Sensirion', description: 'Sensor',
-        quantity: 1, unitPrice: 2, totalPrice: 2, supplier: 'Mouser', stock: 50, status: 'Low Stock',
+        id: '2',
+        partNumber: 'SHT40',
+        manufacturer: 'Sensirion',
+        description: 'Sensor',
+        quantity: 1,
+        unitPrice: 2,
+        totalPrice: 2,
+        supplier: 'Mouser',
+        stock: 50,
+        status: 'Low Stock',
       },
     ];
     renderProcurement();
@@ -305,8 +606,16 @@ describe('ProcurementView', { timeout: 15000 }, () => {
   it('shows search-no-results empty state when no items match', () => {
     mockBom = [
       {
-        id: '1', partNumber: 'ESP32', manufacturer: 'Espressif', description: 'MCU',
-        quantity: 1, unitPrice: 3, totalPrice: 3, supplier: 'Digi-Key', stock: 100, status: 'In Stock',
+        id: '1',
+        partNumber: 'ESP32',
+        manufacturer: 'Espressif',
+        description: 'MCU',
+        quantity: 1,
+        unitPrice: 3,
+        totalPrice: 3,
+        supplier: 'Digi-Key',
+        stock: 100,
+        status: 'In Stock',
       },
     ];
     renderProcurement();
@@ -320,8 +629,16 @@ describe('ProcurementView', { timeout: 15000 }, () => {
   it('"Clear Search" button resets the search', () => {
     mockBom = [
       {
-        id: '1', partNumber: 'ESP32', manufacturer: 'Espressif', description: 'MCU',
-        quantity: 1, unitPrice: 3, totalPrice: 3, supplier: 'Digi-Key', stock: 100, status: 'In Stock',
+        id: '1',
+        partNumber: 'ESP32',
+        manufacturer: 'Espressif',
+        description: 'MCU',
+        quantity: 1,
+        unitPrice: 3,
+        totalPrice: 3,
+        supplier: 'Digi-Key',
+        stock: 100,
+        status: 'In Stock',
       },
     ];
     renderProcurement();
@@ -348,8 +665,16 @@ describe('ProcurementView', { timeout: 15000 }, () => {
   it('clicking Export CSV calls buildCSV/downloadBlob and shows toast', () => {
     mockBom = [
       {
-        id: '1', partNumber: 'R1', manufacturer: 'Yageo', description: 'Res',
-        quantity: 10, unitPrice: 0.01, totalPrice: 0.1, supplier: 'Mouser', stock: 10000, status: 'In Stock',
+        id: '1',
+        partNumber: 'R1',
+        manufacturer: 'Yageo',
+        description: 'Res',
+        quantity: 10,
+        unitPrice: 0.01,
+        totalPrice: 0.1,
+        supplier: 'Mouser',
+        stock: 10000,
+        status: 'In Stock',
       },
     ];
     renderProcurement();
@@ -358,6 +683,46 @@ describe('ProcurementView', { timeout: 15000 }, () => {
     expect(vi.mocked(buildCSV)).toHaveBeenCalled();
     expect(vi.mocked(downloadBlob)).toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Export Complete' }));
+  });
+
+  it('blocks CSV export when the procurement safety gate has hard blockers', () => {
+    mockBom = [
+      {
+        id: '1',
+        partNumber: 'AI-U1',
+        manufacturer: 'Generated',
+        description: 'AI selected MCU',
+        quantity: 1,
+        unitPrice: 5,
+        totalPrice: 5,
+        supplier: 'Digi-Key',
+        stock: 10,
+        status: 'In Stock',
+      },
+    ];
+    mockComponentParts = [{ id: 101, meta: {} }];
+    mockCircuitDesigns = [{ id: 22 }];
+    mockCircuitInstances = [
+      {
+        id: 1,
+        circuitId: 22,
+        partId: 101,
+        referenceDesignator: 'U1',
+        pcbX: 10,
+        pcbY: 12,
+        properties: { generatedFrom: 'ai' },
+      },
+    ];
+
+    renderProcurement();
+
+    expect(screen.getByTestId('procurement-safety-status').textContent).toContain('Blocked');
+    expect(screen.getByTestId('procurement-safety-blockers').textContent).toContain('AI-generated');
+    expect((screen.getByTestId('button-export-csv') as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByTestId('button-export-csv'));
+    expect(vi.mocked(buildCSV)).not.toHaveBeenCalled();
+    expect(vi.mocked(downloadBlob)).not.toHaveBeenCalled();
   });
 
   it('component parts reference section toggle works', () => {

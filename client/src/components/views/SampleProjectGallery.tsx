@@ -139,13 +139,13 @@ function SampleCard({ sample, onOpen }: SampleCardProps) {
           {sample.workflows.slice(0, 3).map((w) => (
             <span
               key={w.name}
-              className="text-[10px] text-muted-foreground/70 bg-muted/20 rounded px-1.5 py-0.5"
+              className="text-[10px] text-muted-foreground bg-muted/30 rounded px-1.5 py-0.5"
             >
               {w.name}
             </span>
           ))}
           {sample.workflows.length > 3 ? (
-            <span className="text-[10px] text-muted-foreground/50">
+            <span className="text-[10px] text-muted-foreground">
               +{sample.workflows.length - 3} more
             </span>
           ) : null}

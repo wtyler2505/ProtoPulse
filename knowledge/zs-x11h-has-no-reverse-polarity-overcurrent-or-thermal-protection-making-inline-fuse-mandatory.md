@@ -44,6 +44,8 @@ Reading this table, the 470uF on ZS-X11H is not an isolated rule — it is the s
 Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
 
 Relevant Notes:
+- [[per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main]] -- provides the architectural reason why the ZS-X11H inline fuse should be sized for a single motor and placed per-branch
+- [[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]] -- dictates exactly how to size the mandatory 20A fuse relative to the ZS-X11H ratings and wire gauge
 - [[actuator-voltage-tiers-map-to-distinct-power-supply-strategies]] -- the high-power tier (6-60V) where fusing and protection become critical
 - [[four-motor-bldc-systems-exceed-standard-hoverboard-bms-ratings-requiring-firmware-current-limiting]] -- without overcurrent protection, the controller passes the full current draw to the BMS
 - [[motor-shield-current-ratings-form-a-graduated-selection-ladder]] -- the 16A ZS-X11H sits at the top of the ladder where protection gaps are most dangerous

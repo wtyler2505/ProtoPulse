@@ -16,6 +16,7 @@ import { ArchitectureProvider, useArchitecture } from '@/lib/contexts/architectu
 import { ArduinoProvider, useArduino } from '@/lib/contexts/arduino-context';
 import { SimulationProvider, useSimulation } from '@/lib/contexts/simulation-context';
 import { PartsCatalogProvider } from '@/lib/parts';
+import type { TrustBoundary } from '@/types/TrustBoundaries';
 
 // Re-export domain hooks for direct use by consumers
 export { useProjectId } from '@/lib/contexts/project-id-context';
@@ -64,6 +65,7 @@ export interface BomItem {
   storageLocation?: string | null;
   quantityOnHand?: number | null;
   minimumStock?: number | null;
+  pricingTrust?: TrustBoundary<number>;
 }
 
 export interface ValidationIssue {

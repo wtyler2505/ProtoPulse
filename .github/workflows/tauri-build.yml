@@ -167,6 +167,10 @@ jobs:
           sbom-path: artifacts/sbom/protopulse-rust.cdx.json
         continue-on-error: true   # SBOM attestation is a hardening enhancement; fail-open until first tagged release validates the wiring
 
+      - name: Bounded Tauri preflight (linux-x64)
+        if: matrix.label == 'linux-x64'
+        run: bash scripts/ci/tauri-preflight-local.sh
+
       - name: Packaged smoke (Phase 5 closeout)
         if: matrix.label == 'linux-x64'
         run: bash scripts/ci/tauri-packaged-smoke.sh

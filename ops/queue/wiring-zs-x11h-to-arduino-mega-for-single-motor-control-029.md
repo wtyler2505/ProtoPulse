@@ -19,13 +19,13 @@ Rationale: The existing note already mentions "swap any two motor phase wires" a
 ---
 
 ## Enrich
-(to be filled by enrich phase)
+Completed: Added concrete Arduino `setDirectionSafe` wrapper with ramp pattern and timeout, and framed the hardware alternative (wire swap/logic inversion) as troubleshooting step for "motor runs backwards".
 
 ## Connect
-(to be filled by connect phase)
+Completed: Connected the ramp down logic explicitly to the active-low EL pin characteristics and the MOSFET protection requirement.
 
 ## Revisit
-(to be filled by revisit phase)
+Completed: Existing relevant notes already linked and contextualized perfectly.
 
 ## Verify
-(to be filled by verify phase)
+Completed: The code snippet and reframing match the task's instructions and maintain the integrity of the claim.

@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/number-input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useProjectId } from '@/lib/project-context';
@@ -445,13 +446,13 @@ export function OrderHistoryPanel() {
               <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="order-quantity">
                 Quantity
               </label>
-              <input
+              <NumberInput
                 id="order-quantity"
-                type="number"
                 min={1}
+                max={999_999}
                 value={newOrder.quantity}
                 onChange={(e) => { setNewOrder((v) => ({ ...v, quantity: Math.max(1, Number(e.target.value)) })); }}
-                className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
+                className="!w-full !h-auto !rounded-none !border !border-border !bg-card/80 !px-2 !py-1.5 !text-sm !text-foreground !shadow-none"
                 data-testid="input-quantity"
               />
             </div>
@@ -459,14 +460,14 @@ export function OrderHistoryPanel() {
               <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="order-unit-cost">
                 Unit Cost ($)
               </label>
-              <input
+              <NumberInput
                 id="order-unit-cost"
-                type="number"
                 min={0}
+                max={1_000_000}
                 step={0.01}
                 value={newOrder.unitCost}
                 onChange={(e) => { setNewOrder((v) => ({ ...v, unitCost: Math.max(0, Number(e.target.value)) })); }}
-                className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
+                className="!w-full !h-auto !rounded-none !border !border-border !bg-card/80 !px-2 !py-1.5 !text-sm !text-foreground !shadow-none"
                 data-testid="input-unit-cost"
               />
             </div>
@@ -474,14 +475,14 @@ export function OrderHistoryPanel() {
               <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="order-total-cost">
                 Total Cost ($)
               </label>
-              <input
+              <NumberInput
                 id="order-total-cost"
-                type="number"
                 min={0}
+                max={1_000_000_000}
                 step={0.01}
                 value={newOrder.totalCost}
                 onChange={(e) => { setNewOrder((v) => ({ ...v, totalCost: Math.max(0, Number(e.target.value)) })); }}
-                className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
+                className="!w-full !h-auto !rounded-none !border !border-border !bg-card/80 !px-2 !py-1.5 !text-sm !text-foreground !shadow-none"
                 data-testid="input-total-cost"
               />
             </div>

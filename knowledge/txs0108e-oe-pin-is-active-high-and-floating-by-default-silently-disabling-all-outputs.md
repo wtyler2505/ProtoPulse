@@ -22,6 +22,8 @@ The TXS0108E has an OE (Output Enable) pin that gates all eight channels. Its de
 
 **The always-on connection:** tie OE directly to VCCA. This gives a correct enable signal whenever VCCA is present, which is exactly when the A-side is powered and translating. No separate logic is needed for "enable" in a continuous-operation design. For dynamic enable (power gating, hot-swap detection, bus arbitration), OE can be driven by a GPIO from the MCU on the A-side, but the default is hard-tied to VCCA.
 
+**Worked example: BLDC Hall readback to ESP32:** When wiring 5V Hall sensors to a 3.3V ESP32, the TXS0108E provides the necessary 5V to 3.3V down-translation. In this topology, VCCA (pin 11) is connected to the ESP32's 3.3V rail. The OE pin (pin 19) must be tied directly to VCCA (the 3.3V rail). Beginners often wire the Hall signals correctly but forget pin 19, leaving OE floating. Tying pin 19 to pin 11 guarantees the level shifter is enabled whenever the ESP32 is powered, ensuring reliable Hall sensor readback.
+
 **The DRC-level consequence:** a net connected to OE should either (a) reach VCCA directly, or (b) reach an MCU GPIO on the A-side rail. A floating OE net or an OE net tied to GND on a "standard" level-shifter deployment is almost always a wiring error. Detecting this requires a part-specific rule because the correct tie depends on polarity — the 74HC595 expects OE to GND, the TXS0108E expects OE to VCCA, and a generic "tie OE somewhere" rule misses both.
 
 ---

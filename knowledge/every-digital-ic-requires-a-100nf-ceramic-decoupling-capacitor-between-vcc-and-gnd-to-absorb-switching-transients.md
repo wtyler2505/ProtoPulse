@@ -26,6 +26,9 @@ When a digital IC transitions output states, it draws a brief spike of current f
 
 **The universal rule:** If you are looking at a schematic and an IC has no 100nF capacitor between its VCC and GND pins, that is a design error. No exceptions. Even if "it works on the bench," it will fail intermittently in production or when the environment changes.
 
+**Concrete Failure Mode: Phantom Hall Transitions**
+While [[missing-decoupling-capacitors-produce-three-distinct-failure-modes]] catalogs generic issues, missing decoupling caps on high-speed level shifters (like the TXS0108E) produce a specific, diagnosable symptom in motor control: **phantom Hall transitions**. Without VCCA and VCCB decoupling caps placed as close as physically possible to the pins, degraded signal integrity allows noise to pass through as false edges on the A-side. Commutation logic interprets this noise as genuine motion, resulting in erratic, massively inflated speed readings (e.g., 50,000 RPM) or false position counts.
+
 ---
 
 Relevant Notes:

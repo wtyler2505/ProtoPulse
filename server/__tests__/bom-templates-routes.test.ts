@@ -47,10 +47,7 @@ vi.mock('../storage', () => ({
 }));
 
 vi.mock('../auth', () => ({
-  validateSession: vi.fn().mockImplementation((req: Record<string, unknown>, _res: Record<string, unknown>, next: () => void) => {
-    req.session = { userId: 1, sessionId: 'test-session' };
-    next();
-  }),
+  validateSession: vi.fn().mockResolvedValue({ userId: 1, sessionId: 'test-session' }),
 }));
 
 vi.mock('../db', () => ({ db: {} }));
@@ -76,6 +73,12 @@ async function listen(app: ReturnType<typeof express>) {
       resolve({ url: `http://127.0.0.1:${port}`, close: () => server.close() });
     });
   });
+}
+
+function apiFetch(url: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
+  headers.set('X-Session-Id', 'test-session');
+  return fetch(url, { ...init, headers });
 }
 
 const SAMPLE_TEMPLATE = {
@@ -111,7 +114,7 @@ describe('BOM Template Routes', () => {
   it('GET /api/bom-templates returns user templates', async () => {
     const { url, close } = await listen(makeApp());
     try {
-      const res = await fetch(`${url}/api/bom-templates`);
+      const res = await apiFetch(`${url}/api/bom-templates`);
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.data).toHaveLength(1);
@@ -124,7 +127,7 @@ describe('BOM Template Routes', () => {
   it('POST /api/bom-templates creates a template with items', async () => {
     const { url, close } = await listen(makeApp());
     try {
-      const res = await fetch(`${url}/api/bom-templates`, {
+      const res = await apiFetch(`${url}/api/bom-templates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -145,7 +148,7 @@ describe('BOM Template Routes', () => {
   it('POST /api/bom-templates returns 400 for empty items', async () => {
     const { url, close } = await listen(makeApp());
     try {
-      const res = await fetch(`${url}/api/bom-templates`, {
+      const res = await apiFetch(`${url}/api/bom-templates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'Empty', items: [] }),
@@ -159,7 +162,7 @@ describe('BOM Template Routes', () => {
   it('GET /api/bom-templates/:id returns template with items', async () => {
     const { url, close } = await listen(makeApp());
     try {
-      const res = await fetch(`${url}/api/bom-templates/tmpl-1`);
+      const res = await apiFetch(`${url}/api/bom-templates/tmpl-1`);
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.items).toHaveLength(1);
@@ -172,7 +175,7 @@ describe('BOM Template Routes', () => {
   it('DELETE /api/bom-templates/:id soft-deletes template', async () => {
     const { url, close } = await listen(makeApp());
     try {
-      const res = await fetch(`${url}/api/bom-templates/tmpl-1`, { method: 'DELETE' });
+      const res = await apiFetch(`${url}/api/bom-templates/tmpl-1`, { method: 'DELETE' });
       expect(res.status).toBe(204);
       expect(mockDeleteTemplate).toHaveBeenCalledWith('tmpl-1', 1);
     } finally {
@@ -183,7 +186,7 @@ describe('BOM Template Routes', () => {
   it('POST /api/bom-templates/:id/apply creates stock rows', async () => {
     const { url, close } = await listen(makeApp());
     try {
-      const res = await fetch(`${url}/api/bom-templates/tmpl-1/apply`, {
+      const res = await apiFetch(`${url}/api/bom-templates/tmpl-1/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: 1 }),
@@ -201,7 +204,7 @@ describe('BOM Template Routes', () => {
     mockIsProjectOwner.mockResolvedValue(false);
     const { url, close } = await listen(makeApp());
     try {
-      const res = await fetch(`${url}/api/bom-templates/tmpl-1/apply`, {
+      const res = await apiFetch(`${url}/api/bom-templates/tmpl-1/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: 1 }),
@@ -216,7 +219,7 @@ describe('BOM Template Routes', () => {
     mockGetStock.mockResolvedValue({ id: 'existing' });
     const { url, close } = await listen(makeApp());
     try {
-      const res = await fetch(`${url}/api/bom-templates/tmpl-1/apply`, {
+      const res = await apiFetch(`${url}/api/bom-templates/tmpl-1/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: 1 }),

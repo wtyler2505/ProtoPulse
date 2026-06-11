@@ -97,9 +97,19 @@ export default function MentionBadge() {
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <StyledTooltip content="Mentions" side="bottom">
+      {/*
+       * BL-0867: StyledTooltip must wrap the PopoverTrigger, NOT the reverse.
+       * Radix `PopoverTrigger asChild` forwards its ref/click handler into its
+       * single child; if that child is `StyledTooltip` (a function component
+       * whose own `TooltipTrigger asChild` Slots the button), the popover's
+       * handler never reaches the <button> and clicking the bell does nothing
+       * (same failure mode as the E2E-074 coach button). Idiomatic order used
+       * across the codebase: <Popover><StyledTooltip><PopoverTrigger asChild>.
+       */}
+      <StyledTooltip content="Mentions" side="bottom">
+        <PopoverTrigger asChild>
           <button
+            type="button"
             data-testid="mention-badge-button"
             className="p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors rounded-sm relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={unreadCount > 0 ? `${String(unreadCount)} unread mentions` : 'Mentions'}
@@ -114,8 +124,8 @@ export default function MentionBadge() {
               </span>
             )}
           </button>
-        </StyledTooltip>
-      </PopoverTrigger>
+        </PopoverTrigger>
+      </StyledTooltip>
       <PopoverContent
         data-testid="mention-dropdown"
         className="w-80 p-0 max-h-96 overflow-hidden flex flex-col"

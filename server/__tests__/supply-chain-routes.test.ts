@@ -44,10 +44,7 @@ vi.mock('../storage', () => ({
 }));
 
 vi.mock('../auth', () => ({
-  validateSession: vi.fn().mockImplementation((req: Record<string, unknown>, _res: Record<string, unknown>, next: () => void) => {
-    req.session = { userId: 1, sessionId: 'test-session' };
-    next();
-  }),
+  validateSession: vi.fn().mockResolvedValue({ userId: 1 }),
 }));
 
 vi.mock('../job-queue', () => ({
@@ -96,6 +93,8 @@ const SAMPLE_ALERT = {
   createdAt: new Date().toISOString(),
 };
 
+const authHeaders = { 'X-Session-Id': 'test-session' };
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -112,7 +111,7 @@ describe('Supply Chain Routes', () => {
   it('GET /api/supply-chain/alerts returns alerts', async () => {
     const { url, close } = await listen(makeApp());
     try {
-      const res = await fetch(`${url}/api/supply-chain/alerts`);
+      const res = await fetch(`${url}/api/supply-chain/alerts`, { headers: authHeaders });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.data).toHaveLength(1);
@@ -125,7 +124,7 @@ describe('Supply Chain Routes', () => {
   it('GET /api/supply-chain/alerts/count returns count', async () => {
     const { url, close } = await listen(makeApp());
     try {
-      const res = await fetch(`${url}/api/supply-chain/alerts/count`);
+      const res = await fetch(`${url}/api/supply-chain/alerts/count`, { headers: authHeaders });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.count).toBe(1);
@@ -137,7 +136,10 @@ describe('Supply Chain Routes', () => {
   it('POST /api/supply-chain/alerts/:id/ack acknowledges alert', async () => {
     const { url, close } = await listen(makeApp());
     try {
-      const res = await fetch(`${url}/api/supply-chain/alerts/alert-1/ack`, { method: 'POST' });
+      const res = await fetch(`${url}/api/supply-chain/alerts/alert-1/ack`, {
+        method: 'POST',
+        headers: authHeaders,
+      });
       expect(res.status).toBe(200);
       expect(mockAcknowledgeAlert).toHaveBeenCalledWith('alert-1');
     } finally {
@@ -149,7 +151,10 @@ describe('Supply Chain Routes', () => {
     mockAcknowledgeAlert.mockResolvedValue(false);
     const { url, close } = await listen(makeApp());
     try {
-      const res = await fetch(`${url}/api/supply-chain/alerts/unknown/ack`, { method: 'POST' });
+      const res = await fetch(`${url}/api/supply-chain/alerts/unknown/ack`, {
+        method: 'POST',
+        headers: authHeaders,
+      });
       expect(res.status).toBe(404);
     } finally {
       close();
@@ -161,7 +166,7 @@ describe('Supply Chain Routes', () => {
     try {
       const res = await fetch(`${url}/api/supply-chain/alerts/ack-all`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: 1 }),
       });
       expect(res.status).toBe(200);
@@ -177,7 +182,7 @@ describe('Supply Chain Routes', () => {
     try {
       const res = await fetch(`${url}/api/supply-chain/check`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: 1 }),
       });
       expect(res.status).toBe(200);
@@ -198,7 +203,7 @@ describe('Supply Chain Routes', () => {
     try {
       const res = await fetch(`${url}/api/supply-chain/check`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
       expect(res.status).toBe(400);

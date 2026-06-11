@@ -40,6 +40,10 @@
       {
         "file": "client/src/lib/constants/storage-keys.ts",
         "line": 8
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 62
       }
     ]
   },
@@ -51,6 +55,10 @@
       {
         "file": "client/src/lib/constants/storage-keys.ts",
         "line": 12
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 65
       }
     ]
   },
@@ -60,8 +68,16 @@
     "sensitive": false,
     "callSites": [
       {
+        "file": "client/src/hooks/useApiKeys.ts",
+        "line": 113
+      },
+      {
         "file": "client/src/lib/constants/storage-keys.ts",
         "line": 7
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 61
       }
     ]
   },
@@ -73,6 +89,10 @@
       {
         "file": "client/src/lib/constants/storage-keys.ts",
         "line": 10
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 64
       }
     ]
   },
@@ -84,6 +104,10 @@
       {
         "file": "client/src/lib/constants/storage-keys.ts",
         "line": 9
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 63
       }
     ]
   },
@@ -95,6 +119,10 @@
       {
         "file": "client/src/lib/constants/storage-keys.ts",
         "line": 17
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 69
       }
     ]
   },
@@ -106,6 +134,10 @@
       {
         "file": "client/src/lib/constants/storage-keys.ts",
         "line": 15
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 67
       }
     ]
   },
@@ -117,6 +149,10 @@
       {
         "file": "client/src/lib/constants/storage-keys.ts",
         "line": 16
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 68
       }
     ]
   },
@@ -128,6 +164,10 @@
       {
         "file": "client/src/lib/constants/storage-keys.ts",
         "line": 11
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 66
       }
     ]
   },
@@ -160,7 +200,7 @@
     "callSites": [
       {
         "file": "client/src/hooks/useApiKeys.ts",
-        "line": 35
+        "line": 36
       }
     ]
   },
@@ -171,7 +211,7 @@
     "callSites": [
       {
         "file": "client/src/hooks/useApiKeys.ts",
-        "line": 35
+        "line": 36
       }
     ]
   },
@@ -183,6 +223,28 @@
       {
         "file": "client/src/hooks/useApiKeys.ts",
         "line": 25
+      }
+    ]
+  },
+  {
+    "key": "protopulse-ai-api-key-openai",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/hooks/useApiKeys.ts",
+        "line": 37
+      }
+    ]
+  },
+  {
+    "key": "protopulse-ai-api-key-openai-scratch",
+    "classifiedAs": "session-auth",
+    "sensitive": true,
+    "callSites": [
+      {
+        "file": "client/src/hooks/useApiKeys.ts",
+        "line": 26
       }
     ]
   },
@@ -216,6 +278,10 @@
       {
         "file": "client/src/lib/ai-safety-mode.ts",
         "line": 44
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 49
       }
     ]
   },
@@ -231,6 +297,10 @@
       {
         "file": "client/src/lib/ai-tutor.ts",
         "line": 677
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 54
       }
     ]
   },
@@ -264,6 +334,10 @@
       {
         "file": "client/src/lib/beginner-mode.ts",
         "line": 24
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 47
       }
     ]
   },
@@ -329,7 +403,7 @@
     "callSites": [
       {
         "file": "client/src/lib/board-viewer-3d.ts",
-        "line": 218
+        "line": 220
       }
     ]
   },
@@ -409,6 +483,10 @@
     "sensitive": false,
     "callSites": [
       {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 48
+      },
+      {
         "file": "client/src/lib/touch-safe-controls.ts",
         "line": 35
       }
@@ -476,7 +554,7 @@
     "callSites": [
       {
         "file": "client/src/components/views/ArchitectureView.tsx",
-        "line": 606
+        "line": 1029
       }
     ]
   },
@@ -629,6 +707,10 @@
     "sensitive": false,
     "callSites": [
       {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 53
+      },
+      {
         "file": "client/src/lib/font-scaling.ts",
         "line": 43
       }
@@ -652,7 +734,7 @@
     "callSites": [
       {
         "file": "client/src/hooks/useChatSettings.ts",
-        "line": 26
+        "line": 27
       },
       {
         "file": "client/src/hooks/useGoogleWorkspaceToken.ts",
@@ -678,7 +760,11 @@
     "callSites": [
       {
         "file": "client/src/App.tsx",
-        "line": 34
+        "line": 35
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 84
       },
       {
         "file": "client/src/lib/gpu-performance.tsx",
@@ -714,6 +800,10 @@
     "sensitive": false,
     "callSites": [
       {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 60
+      },
+      {
         "file": "client/src/lib/project-picker-visibility.ts",
         "line": 3
       }
@@ -726,11 +816,15 @@
     "callSites": [
       {
         "file": "client/src/App.tsx",
-        "line": 24
+        "line": 25
       },
       {
         "file": "client/src/hooks/useHighContrast.ts",
         "line": 3
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 83
       }
     ]
   },
@@ -773,6 +867,18 @@
     "sensitive": false,
     "callSites": [
       {
+        "file": "client/src/lib/desktop/desktop-store-adapter.ts",
+        "line": 85
+      },
+      {
+        "file": "client/src/lib/desktop/runtime-topology.ts",
+        "line": 178
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 172
+      },
+      {
         "file": "client/src/lib/kanban-board.ts",
         "line": 84
       }
@@ -783,6 +889,10 @@
     "classifiedAs": "user-prefs",
     "sensitive": false,
     "callSites": [
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 50
+      },
       {
         "file": "client/src/lib/keybinding-editor.ts",
         "line": 11
@@ -847,6 +957,10 @@
     "sensitive": false,
     "callSites": [
       {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 51
+      },
+      {
         "file": "client/src/lib/i18n.ts",
         "line": 65
       }
@@ -882,6 +996,39 @@
       {
         "file": "client/src/lib/arduino/memory-usage-parser.ts",
         "line": 41
+      }
+    ]
+  },
+  {
+    "key": "protopulse-migration:design-variables-store-v1",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 31
+      }
+    ]
+  },
+  {
+    "key": "protopulse-migration:kanban-state-store-v1",
+    "classifiedAs": "project-data",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 29
+      }
+    ]
+  },
+  {
+    "key": "protopulse-migration:user-settings-store-v1",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 28
       }
     ]
   },
@@ -924,6 +1071,10 @@
     "sensitive": false,
     "callSites": [
       {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 58
+      },
+      {
         "file": "client/src/lib/mobile-review-mode.ts",
         "line": 106
       }
@@ -935,6 +1086,10 @@
     "sensitive": false,
     "callSites": [
       {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 55
+      },
+      {
         "file": "client/src/lib/multimodal-input.ts",
         "line": 108
       }
@@ -945,6 +1100,10 @@
     "classifiedAs": "user-prefs",
     "sensitive": false,
     "callSites": [
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 56
+      },
       {
         "file": "client/src/lib/indexed-db-manager.ts",
         "line": 54
@@ -1002,19 +1161,19 @@
     "callSites": [
       {
         "file": "client/src/components/circuit-editor/PCBLayoutView.tsx",
-        "line": 212
+        "line": 342
       },
       {
         "file": "client/src/components/circuit-editor/PCBLayoutView.tsx",
-        "line": 624
+        "line": 787
       },
       {
         "file": "client/src/components/circuit-editor/PCBLayoutView.tsx",
-        "line": 649
+        "line": 812
       },
       {
         "file": "client/src/components/circuit-editor/PCBLayoutView.tsx",
-        "line": 720
+        "line": 883
       }
     ]
   },
@@ -1096,6 +1255,17 @@
     ]
   },
   {
+    "key": "protopulse-radial-preferences-v1",
+    "classifiedAs": "user-prefs",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/radial-menu-preferences.ts",
+        "line": 10
+      }
+    ]
+  },
+  {
     "key": "protopulse-rag-documents",
     "classifiedAs": "catalog-shared",
     "sensitive": false,
@@ -1111,6 +1281,10 @@
     "classifiedAs": "user-prefs",
     "sensitive": false,
     "callSites": [
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 59
+      },
       {
         "file": "client/src/lib/pcb/ratsnest-filter.ts",
         "line": 21
@@ -1133,6 +1307,10 @@
     "classifiedAs": "user-prefs",
     "sensitive": false,
     "callSites": [
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 52
+      },
       {
         "file": "client/src/lib/reduced-motion.ts",
         "line": 30
@@ -1199,11 +1377,11 @@
     "callSites": [
       {
         "file": "client/src/components/panels/SerialMonitorPanel.tsx",
-        "line": 136
+        "line": 138
       },
       {
         "file": "client/src/components/panels/SerialMonitorPanel.tsx",
-        "line": 144
+        "line": 146
       }
     ]
   },
@@ -1214,7 +1392,7 @@
     "callSites": [
       {
         "file": "client/src/components/panels/SerialMonitorPanel.tsx",
-        "line": 80
+        "line": 82
       }
     ]
   },
@@ -1225,23 +1403,47 @@
     "callSites": [
       {
         "file": "client/src/components/panels/ChatPanel.tsx",
-        "line": 644
+        "line": 646
       },
       {
         "file": "client/src/components/panels/ChatPanel.tsx",
-        "line": 671
+        "line": 677
       },
       {
         "file": "client/src/components/panels/ExportPanel.tsx",
-        "line": 71
+        "line": 74
       },
       {
         "file": "client/src/components/simulation/SpiceImportButton.tsx",
         "line": 8
       },
       {
+        "file": "client/src/components/views/BomTemplatesPanel.tsx",
+        "line": 125
+      },
+      {
+        "file": "client/src/components/views/LifecycleDashboard.tsx",
+        "line": 66
+      },
+      {
+        "file": "client/src/components/views/PcbOrderingView.tsx",
+        "line": 81
+      },
+      {
+        "file": "client/src/components/views/ProcurementView.tsx",
+        "line": 69
+      },
+      {
+        "file": "client/src/components/views/StorageManagerPanel.tsx",
+        "line": 99
+      },
+      {
+        "file": "client/src/components/views/SupplyChainAlertsPanel.tsx",
+        "line": 36
+      },
+      {
         "file": "client/src/hooks/useChatSettings.ts",
-        "line": 87
+        "line": 117
       },
       {
         "file": "client/src/lib/auth-context.tsx",
@@ -1340,6 +1542,10 @@
     "sensitive": false,
     "callSites": [
       {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 57
+      },
+      {
         "file": "client/src/lib/digital-twin/telemetry-logger.ts",
         "line": 37
       }
@@ -1352,7 +1558,11 @@
     "callSites": [
       {
         "file": "client/src/App.tsx",
-        "line": 48
+        "line": 49
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 85
       },
       {
         "file": "client/src/lib/theme-context.tsx",
@@ -1378,7 +1588,7 @@
     "callSites": [
       {
         "file": "client/src/lib/digital-twin/telemetry-protocol.ts",
-        "line": 144
+        "line": 147
       }
     ]
   },
@@ -1427,6 +1637,17 @@
     ]
   },
   {
+    "key": "protopulse:breadboard-view-in-3d",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/breadboard-3d-bridge.ts",
+        "line": 9
+      }
+    ]
+  },
+  {
     "key": "protopulse:build-journal",
     "classifiedAs": "project-data",
     "sensitive": false,
@@ -1460,25 +1681,32 @@
     ]
   },
   {
+    "key": "protopulse:chat-draft",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/radial-ai-commands.ts",
+        "line": 46
+      }
+    ]
+  },
+  {
     "key": "protopulse:chat-send",
     "classifiedAs": "event-name-not-storage",
     "sensitive": false,
     "callSites": [
       {
         "file": "client/src/components/circuit-editor/BreadboardView.tsx",
-        "line": 341
+        "line": 419
       },
       {
         "file": "client/src/components/panels/ChatPanel.tsx",
-        "line": 850
+        "line": 856
       },
       {
         "file": "client/src/components/panels/ChatPanel.tsx",
-        "line": 851
-      },
-      {
-        "file": "client/src/components/views/ArchitectureView.tsx",
-        "line": 560
+        "line": 857
       }
     ]
   },
@@ -1509,6 +1737,10 @@
     "classifiedAs": "user-prefs",
     "sensitive": false,
     "callSites": [
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 71
+      },
       {
         "file": "client/src/lib/keybinding-editor.ts",
         "line": 10
@@ -1568,6 +1800,25 @@
       {
         "file": "client/src/lib/design-vars-persistence.ts",
         "line": 34
+      },
+      {
+        "file": "client/src/lib/desktop/desktop-store-adapter.ts",
+        "line": 126
+      },
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 204
+      }
+    ]
+  },
+  {
+    "key": "protopulse:digital-twin-repair",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/viewer-3d-bridge.ts",
+        "line": 5
       }
     ]
   },
@@ -1658,6 +1909,48 @@
     ]
   },
   {
+    "key": "protopulse:jit-skill-run",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/circuit-editor/JustInTimeSkillCard.tsx",
+        "line": 43
+      },
+      {
+        "file": "client/src/components/panels/ChatPanel.tsx",
+        "line": 896
+      },
+      {
+        "file": "client/src/components/panels/ChatPanel.tsx",
+        "line": 897
+      }
+    ]
+  },
+  {
+    "key": "protopulse:jit-skill-updated",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/components/panels/chat/hooks/action-handlers/misc.ts",
+        "line": 213
+      },
+      {
+        "file": "client/src/components/panels/chat/hooks/action-handlers/misc.ts",
+        "line": 226
+      },
+      {
+        "file": "client/src/lib/use-jit-run-history.ts",
+        "line": 43
+      },
+      {
+        "file": "client/src/lib/use-jit-run-history.ts",
+        "line": 44
+      }
+    ]
+  },
+  {
     "key": "protopulse:keyboard-engine-history",
     "classifiedAs": "history-cache",
     "sensitive": false,
@@ -1688,6 +1981,10 @@
     "classifiedAs": "user-prefs",
     "sensitive": false,
     "callSites": [
+      {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 74
+      },
       {
         "file": "client/src/lib/mentions.ts",
         "line": 112
@@ -1734,27 +2031,31 @@
     "callSites": [
       {
         "file": "client/src/components/circuit-editor/breadboard-canvas/index.tsx",
-        "line": 603
+        "line": 813
       },
       {
         "file": "client/src/components/circuit-editor/BreadboardView.tsx",
-        "line": 331
+        "line": 409
       },
       {
         "file": "client/src/components/panels/ChatPanel.tsx",
-        "line": 867
+        "line": 913
       },
       {
         "file": "client/src/components/panels/ChatPanel.tsx",
-        "line": 868
+        "line": 914
+      },
+      {
+        "file": "client/src/lib/radial-ai-commands.ts",
+        "line": 175
       },
       {
         "file": "client/src/pages/ProjectWorkspace.tsx",
-        "line": 506
+        "line": 1336
       },
       {
         "file": "client/src/pages/ProjectWorkspace.tsx",
-        "line": 507
+        "line": 1337
       }
     ]
   },
@@ -1766,6 +2067,28 @@
       {
         "file": "client/src/lib/desktop/handle-project-open-outcome.ts",
         "line": 44
+      }
+    ]
+  },
+  {
+    "key": "protopulse:pending-digital-twin-repair",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/viewer-3d-bridge.ts",
+        "line": 6
+      }
+    ]
+  },
+  {
+    "key": "protopulse:pending-view-in-3d",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/viewer-3d-bridge.ts",
+        "line": 4
       }
     ]
   },
@@ -1864,12 +2187,60 @@
     "sensitive": false,
     "callSites": [
       {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 72
+      },
+      {
         "file": "client/src/lib/quick-jump.ts",
         "line": 10
       },
       {
         "file": "client/src/lib/quick-jump.ts",
         "line": 50
+      }
+    ]
+  },
+  {
+    "key": "protopulse:radial-ai-last-command-changed",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/radial-ai-commands.ts",
+        "line": 45
+      }
+    ]
+  },
+  {
+    "key": "protopulse:radial-command",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/radial-menu-actions.ts",
+        "line": 138
+      }
+    ]
+  },
+  {
+    "key": "protopulse:radial-command-preview",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/radial-menu-actions.ts",
+        "line": 147
+      }
+    ]
+  },
+  {
+    "key": "protopulse:radial-telemetry",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/radial-menu-telemetry.ts",
+        "line": 41
       }
     ]
   },
@@ -1890,6 +2261,10 @@
     "sensitive": false,
     "callSites": [
       {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 70
+      },
+      {
         "file": "client/src/lib/role-presets.ts",
         "line": 223
       }
@@ -1901,8 +2276,8 @@
     "sensitive": false,
     "callSites": [
       {
-        "file": "client/src/components/circuit-editor/PCBLayoutView.tsx",
-        "line": 924
+        "file": "client/src/lib/pcb/pcb-surface-status.ts",
+        "line": 5
       }
     ]
   },
@@ -1924,15 +2299,15 @@
     "callSites": [
       {
         "file": "client/src/components/circuit-editor/SchematicToolbar.tsx",
-        "line": 107
+        "line": 110
       },
       {
         "file": "client/src/components/views/SchematicView.tsx",
-        "line": 85
+        "line": 122
       },
       {
         "file": "client/src/components/views/SchematicView.tsx",
-        "line": 88
+        "line": 125
       }
     ]
   },
@@ -1943,15 +2318,15 @@
     "callSites": [
       {
         "file": "client/src/components/circuit-editor/SchematicToolbar.tsx",
-        "line": 109
+        "line": 112
       },
       {
         "file": "client/src/components/views/SchematicView.tsx",
-        "line": 86
+        "line": 123
       },
       {
         "file": "client/src/components/views/SchematicView.tsx",
-        "line": 89
+        "line": 126
       }
     ]
   },
@@ -1983,8 +2358,23 @@
     "sensitive": false,
     "callSites": [
       {
+        "file": "client/src/lib/desktop/storage-migration-runner.ts",
+        "line": 73
+      },
+      {
         "file": "client/src/lib/sidebar-groups.ts",
         "line": 188
+      }
+    ]
+  },
+  {
+    "key": "protopulse:view-in-3d",
+    "classifiedAs": "event-name-not-storage",
+    "sensitive": false,
+    "callSites": [
+      {
+        "file": "client/src/lib/viewer-3d-bridge.ts",
+        "line": 3
       }
     ]
   },

@@ -21,6 +21,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { InteractiveCard } from '@/components/ui/interactive-card';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -228,83 +229,81 @@ interface ProjectCardProps {
 
 function ProjectCard({ project, onSelect, onToggleArchived, isArchived = false, statusBadges = [] }: ProjectCardProps) {
   return (
-    <Card
-      className={cn(
-        'border-border bg-card cursor-pointer transition-all duration-200',
-        'hover:border-[var(--color-editor-accent)]/50 hover:shadow-[0_0_12px_rgba(0,240,255,0.1)]',
-        'group',
-      )}
+    <div
+      className="relative group"
       data-testid={`project-card-${String(project.id)}`}
-      onClick={() => { onSelect(project); }}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSelect(project);
-        }
-      }}
     >
-
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold text-foreground group-hover:text-[var(--color-editor-accent)] transition-colors">
-            {project.name}
-          </CardTitle>
-          <div className="flex items-center gap-1">
-            {onToggleArchived ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-xs opacity-0 group-hover:opacity-100"
-                data-testid={isArchived ? `restore-project-${String(project.id)}` : `archive-project-${String(project.id)}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleArchived(project);
-                }}
-              >
-                {isArchived ? <ArchiveRestore className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                {isArchived ? 'Restore' : 'Hide'}
-              </Button>
-            ) : null}
-            <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-        {project.description ? (
-          <CardDescription className="text-sm text-muted-foreground line-clamp-2 mt-1">
-            {project.description}
-          </CardDescription>
-        ) : null}
-      </CardHeader>
-      <CardContent>
-        {statusBadges.length > 0 ? (
-          <div className="mb-3 flex flex-wrap gap-1.5" data-testid={`project-status-badges-${String(project.id)}`}>
-            {statusBadges.map((badge) => (
-              <Badge
-                key={badge.key}
-                variant="outline"
-                className={cn('px-1.5 py-0 text-[10px]', badge.className)}
-              >
-                {badge.label}
-              </Badge>
-            ))}
-          </div>
-        ) : null}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1" data-testid={`project-updated-${String(project.id)}`}>
-            <Clock className="w-3 h-3" />
-            {formatRelativeTime(project.updatedAt)}
-          </span>
-          {project.version > 1 && (
-            <span className="flex items-center gap-1" data-testid={`project-version-${String(project.id)}`}>
-              <Layers className="w-3 h-3" />
-              v{project.version}
-            </span>
+      <InteractiveCard
+        className="rounded-xl"
+        data-testid={`project-card-open-${String(project.id)}`}
+        aria-label={`Open project: ${project.name}`}
+        onAction={() => { onSelect(project); }}
+      >
+        <Card
+          className={cn(
+            'border-border bg-card transition-all duration-200',
+            'hover:border-[var(--color-editor-accent)]/50 hover:shadow-[0_0_12px_rgba(0,240,255,0.1)]',
           )}
-        </div>
-      </CardContent>
-    </Card>
+        >
+          <CardHeader className="pb-3 pr-24">
+            <div className="flex items-start justify-between gap-3">
+              <CardTitle className="text-base font-semibold text-foreground group-hover:text-[var(--color-editor-accent)] transition-colors">
+                {project.name}
+              </CardTitle>
+              <ArrowRight className="w-4 h-4 mt-0.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </div>
+            {project.description ? (
+              <CardDescription className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                {project.description}
+              </CardDescription>
+            ) : null}
+          </CardHeader>
+          <CardContent>
+            {statusBadges.length > 0 ? (
+              <div className="mb-3 flex flex-wrap gap-1.5" data-testid={`project-status-badges-${String(project.id)}`}>
+                {statusBadges.map((badge) => (
+                  <Badge
+                    key={badge.key}
+                    variant="outline"
+                    className={cn('px-1.5 py-0 text-[10px]', badge.className)}
+                  >
+                    {badge.label}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1" data-testid={`project-updated-${String(project.id)}`}>
+                <Clock className="w-3 h-3" />
+                {formatRelativeTime(project.updatedAt)}
+              </span>
+              {project.version > 1 && (
+                <span className="flex items-center gap-1" data-testid={`project-version-${String(project.id)}`}>
+                  <Layers className="w-3 h-3" />
+                  v{project.version}
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </InteractiveCard>
+      {onToggleArchived ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="absolute right-4 top-4 z-10 h-7 px-2 text-xs opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 focus-visible:opacity-100"
+          data-testid={isArchived ? `restore-project-${String(project.id)}` : `archive-project-${String(project.id)}`}
+          aria-label={isArchived ? `Restore ${project.name}` : `Hide ${project.name}`}
+          onClick={() => {
+            onToggleArchived(project);
+          }}
+        >
+          {isArchived ? <ArchiveRestore className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+          {isArchived ? 'Restore' : 'Hide'}
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
@@ -783,7 +782,13 @@ export default function ProjectPickerPage() {
                   data-testid={`facet-filter-${facet}`}
                 >
                   {FACET_META[facet].label}
-                  <Badge variant="outline" className="ml-2 px-1.5 py-0 text-[10px]">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'ml-2 px-1.5 py-0 text-[10px]',
+                      activeFacet === facet && 'bg-background text-foreground border-border',
+                    )}
+                  >
                     {facetCounts[facet]}
                   </Badge>
                 </Button>

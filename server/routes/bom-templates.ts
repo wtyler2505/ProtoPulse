@@ -9,7 +9,7 @@
  * POST   /api/bom-templates/:id/apply  — apply template to a project (creates part_stock rows)
  */
 
-import type { Express, Request, Response } from 'express';
+import type { Express, NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error/v3';
 import { validateSession } from '../auth';
@@ -17,6 +17,39 @@ import { bomTemplateStorage, partsStorage, storage, StorageError } from '../stor
 import { ingressPart, type IngressRequest } from '../parts-ingress';
 import { db } from '../db';
 import { logger } from '../logger';
+
+type BomTemplateRequest = Request & {
+  session?: { userId: number };
+};
+
+async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const sessionId = req.headers['x-session-id'];
+    if (typeof sessionId !== 'string' || sessionId.trim().length === 0) {
+      res.status(401).json({ message: 'Unauthorized: missing X-Session-Id header' });
+      return;
+    }
+
+    const session = await validateSession(sessionId);
+    if (!session) {
+      res.status(401).json({ message: 'Unauthorized: invalid session' });
+      return;
+    }
+
+    (req as BomTemplateRequest).session = session;
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+function readSession(req: Request): { userId: number } {
+  const session = (req as BomTemplateRequest).session;
+  if (!session) {
+    throw new Error('BOM template route missing authenticated session');
+  }
+  return session;
+}
 
 const createTemplateSchema = z.object({
   name: z.string().min(1).max(200),
@@ -43,9 +76,9 @@ const applyTemplateSchema = z.object({
 
 export function registerBomTemplateRoutes(app: Express): void {
   // GET /api/bom-templates
-  app.get('/api/bom-templates', validateSession, async (req: Request, res: Response) => {
+  app.get('/api/bom-templates', requireAuth, async (req: Request, res: Response) => {
     try {
-      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+      const session = readSession(req);
       const templates = await bomTemplateStorage.getTemplates(session.userId);
       res.json({ data: templates, total: templates.length });
     } catch (err) {
@@ -59,7 +92,7 @@ export function registerBomTemplateRoutes(app: Express): void {
   });
 
   // POST /api/bom-templates
-  app.post('/api/bom-templates', validateSession, async (req: Request, res: Response) => {
+  app.post('/api/bom-templates', requireAuth, async (req: Request, res: Response) => {
     const parsed = createTemplateSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ message: fromZodError(parsed.error).toString() });
@@ -67,7 +100,7 @@ export function registerBomTemplateRoutes(app: Express): void {
     }
 
     try {
-      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+      const session = readSession(req);
       const { items, ...templateData } = parsed.data;
 
       const template = await bomTemplateStorage.createTemplate({
@@ -98,10 +131,10 @@ export function registerBomTemplateRoutes(app: Express): void {
   });
 
   // GET /api/bom-templates/:id
-  app.get('/api/bom-templates/:id', validateSession, async (req: Request, res: Response) => {
+  app.get('/api/bom-templates/:id', requireAuth, async (req: Request, res: Response) => {
     const templateId = String(req.params.id);
     try {
-      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+      const session = readSession(req);
       const template = await bomTemplateStorage.getTemplateWithItems(templateId);
       if (!template) {
         res.status(404).json({ message: 'Template not found' });
@@ -126,7 +159,7 @@ export function registerBomTemplateRoutes(app: Express): void {
   });
 
   // PATCH /api/bom-templates/:id
-  app.patch('/api/bom-templates/:id', validateSession, async (req: Request, res: Response) => {
+  app.patch('/api/bom-templates/:id', requireAuth, async (req: Request, res: Response) => {
     const templateId = String(req.params.id);
     const parsed = updateTemplateSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -135,7 +168,7 @@ export function registerBomTemplateRoutes(app: Express): void {
     }
 
     try {
-      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+      const session = readSession(req);
       const { description, ...rest } = parsed.data;
       const updates = { ...rest, ...(description !== undefined ? { description: description ?? undefined } : {}) };
       const updated = await bomTemplateStorage.updateTemplate(templateId, session.userId, updates);
@@ -155,10 +188,10 @@ export function registerBomTemplateRoutes(app: Express): void {
   });
 
   // DELETE /api/bom-templates/:id
-  app.delete('/api/bom-templates/:id', validateSession, async (req: Request, res: Response) => {
+  app.delete('/api/bom-templates/:id', requireAuth, async (req: Request, res: Response) => {
     const templateId = String(req.params.id);
     try {
-      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+      const session = readSession(req);
       const deleted = await bomTemplateStorage.deleteTemplate(templateId, session.userId);
       if (!deleted) {
         res.status(404).json({ message: 'Template not found' });
@@ -176,7 +209,7 @@ export function registerBomTemplateRoutes(app: Express): void {
   });
 
   // POST /api/bom-templates/:id/apply — load template into a project
-  app.post('/api/bom-templates/:id/apply', validateSession, async (req: Request, res: Response) => {
+  app.post('/api/bom-templates/:id/apply', requireAuth, async (req: Request, res: Response) => {
     const templateId = String(req.params.id);
     const parsed = applyTemplateSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -185,7 +218,7 @@ export function registerBomTemplateRoutes(app: Express): void {
     }
 
     try {
-      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+      const session = readSession(req);
       const isOwner = await storage.isProjectOwner(parsed.data.projectId, session.userId);
       if (!isOwner) {
         res.status(403).json({ message: 'Not authorized to modify this project' });

@@ -46,12 +46,12 @@ export default function PredictionPanel({
   return (
     <div
       data-testid="prediction-panel"
-      className="rounded-lg border border-zinc-700/50 bg-zinc-900/40"
+      className="rounded-md border border-zinc-700/50 bg-zinc-900/45"
     >
       {/* Header */}
       <div
         className={cn(
-          'flex w-full items-center gap-2 px-3 py-2',
+          'flex w-full items-center gap-1.5 px-2 py-1.5',
           !collapsed && 'border-b border-zinc-700/30',
         )}
       >
@@ -60,16 +60,17 @@ export default function PredictionPanel({
           onClick={() => { setCollapsed(!collapsed); }}
           className={cn(
             'flex flex-1 items-center gap-2 text-left',
+            'min-w-0',
             'transition-colors hover:opacity-80',
           )}
         >
-          <Brain className="h-4 w-4 text-[var(--color-editor-accent)]" />
-          <span className="text-sm font-medium text-zinc-200">Design Suggestions</span>
+          <Brain className="h-3.5 w-3.5 text-[var(--color-editor-accent)]" />
+          <span className="truncate text-xs font-medium text-zinc-200">Design Suggestions</span>
 
           {count > 0 && (
             <span
               data-testid="prediction-panel-count"
-              className="rounded-full bg-[var(--color-editor-accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--color-editor-accent)]"
+              className="rounded-full bg-[var(--color-editor-accent)]/15 px-1.5 py-0 text-[10px] font-medium leading-4 text-[var(--color-editor-accent)]"
             >
               {count}
             </span>
@@ -78,16 +79,16 @@ export default function PredictionPanel({
           {isAnalyzing && (
             <Loader2
               data-testid="prediction-panel-loading"
-              className="h-3.5 w-3.5 animate-spin text-zinc-400"
+              className="h-3 w-3 animate-spin text-zinc-400"
             />
           )}
 
           <div className="flex-1" />
 
           {collapsed ? (
-            <ChevronDown className="h-4 w-4 text-zinc-400" />
+            <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
           ) : (
-            <ChevronUp className="h-4 w-4 text-zinc-400" />
+            <ChevronUp className="h-3.5 w-3.5 text-zinc-400" />
           )}
         </button>
 
@@ -95,26 +96,26 @@ export default function PredictionPanel({
           <button
             data-testid="prediction-panel-clear-all"
             onClick={onClearAll}
-            className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-700/50 hover:text-zinc-300"
+            className="rounded-sm p-1 text-zinc-400 transition-colors hover:bg-zinc-700/50 hover:text-zinc-300"
             aria-label="Clear all suggestions"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-3 w-3" />
           </button>
         )}
       </div>
 
       {/* Body */}
       {!collapsed && (
-        <div data-testid="prediction-panel-body" className="p-2">
+        <div data-testid="prediction-panel-body" className="p-1.5">
           {count === 0 ? (
             <p
               data-testid="prediction-panel-analyzing"
-              className="py-4 text-center text-xs text-zinc-400"
+              className="py-3 text-center text-[11px] text-zinc-400"
             >
               Analyzing your design for next-step suggestions...
             </p>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               {predictions.map((pred) => (
                 <PredictionCard
                   key={pred.id}

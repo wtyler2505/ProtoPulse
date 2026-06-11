@@ -7,11 +7,20 @@ export { useSupplyChainAlerts, useSupplyChainAlertCount, useAcknowledgeAlert, us
 export { useBomTemplates, useBomTemplateDetail, useCreateBomTemplate, useApplyBomTemplate, useDeleteBomTemplate } from './use-bom-templates';
 export { usePersonalInventory, useAddPersonalStock } from './use-personal-inventory';
 export { partsQueryKeys, partsMutationKeys } from './query-keys';
+export {
+  alternateTrustKind,
+  describeAlternateMatchReason,
+  describeAlternateTradeoff,
+  formatAlternateMatchScore,
+  formatAlternateTrustLabel,
+} from './alternate-trust';
 
 export type { UseCatalogOptions } from './use-parts-catalog';
 export type { StockUpdatePayload } from './use-part-stock';
 export type { IngressPayload, IngressResult, IngressSource } from './use-part-ingress';
 export type { PartUsageRow } from './use-part-usage';
+export type { PartAlternateCandidate } from './use-part-alternates';
+export type { AlternateTrustCandidate, AlternateTrustKind } from './alternate-trust';
 export type { SupplyChainAlert } from './use-supply-chain';
 export type { BomTemplate, BomTemplateItem, BomTemplateWithItems } from './use-bom-templates';
 export type { PartsCatalogState } from './parts-catalog-context';

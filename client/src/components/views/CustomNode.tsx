@@ -5,7 +5,7 @@
  * Phase 3. Tracked as part of E2E-552 / Plan 03 Phase 4.
  */
 import { useState, useRef, useEffect } from 'react';
-import { Handle, Position, NodeProps, Node, Edge } from '@xyflow/react';
+import { Handle, Position, NodeProps, Node, Edge } from '@/lib/xyflow-compat';
 import { CircuitBoard, Cpu, Radio, Battery, Zap, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useArchitecture } from '@/lib/contexts/architecture-context';

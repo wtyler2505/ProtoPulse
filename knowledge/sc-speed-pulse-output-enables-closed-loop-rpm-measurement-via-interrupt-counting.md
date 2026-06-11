@@ -28,7 +28,45 @@ Or from period measurement between pulses:
 RPM = 60 / (pulse_period_seconds * 90)
 ```
 
-**Implementation pattern:** Connect SC to an interrupt-capable pin on the Arduino and count rising edges. Sample the count at a fixed interval (e.g., every 500ms or 1 second), compute frequency, then calculate RPM. The interrupt-based approach is essential because at full speed a 15-pole-pair motor spinning at 200 RPM produces 300 pulses per second (3.3ms period) -- polling would miss pulses.
+**Implementation pattern (Arduino):** Connect SC to an interrupt-capable pin (e.g., D2 on an Arduino Mega) and count rising edges. Sample the count at a fixed interval, compute frequency, then calculate RPM. The interrupt-based approach is essential because at full speed a 15-pole-pair motor spinning at 200 RPM produces 300 pulses per second (3.3ms period) -- polling would miss pulses.
+
+A robust implementation requires a `volatile` counter and disabling interrupts (`noInterrupts()`) briefly when reading and resetting the counter in the main loop to prevent race conditions:
+
+```cpp
+const int PIN_SC = 2; // Must be interrupt-capable
+volatile unsigned long pulseCount = 0;
+unsigned long lastRPMCheck = 0;
+
+void countPulse() {
+  pulseCount++;
+}
+
+void setup() {
+  pinMode(PIN_SC, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(PIN_SC), countPulse, RISING);
+}
+
+float getRPM() {
+  unsigned long now = millis();
+  unsigned long elapsed = now - lastRPMCheck;
+  if (elapsed < 100) return -1; // Wait for enough samples
+
+  // Atomic read and reset
+  noInterrupts();
+  unsigned long count = pulseCount;
+  pulseCount = 0;
+  interrupts();
+
+  lastRPMCheck = now;
+
+  // Assuming 90 pulses per mechanical revolution (see discrepancy note below)
+  // RPM = (count / 90) / (elapsed / 60000)
+  float rpm = (count * 60000.0) / (90.0 * elapsed);
+  return rpm;
+}
+```
+
+> **Pulse Count Discrepancy Note:** The formula above uses `90.0` as the divisor based on the rigorous derivation (6 Hall states × 15 pole pairs). However, some reference implementations for the ZS-X11H use `15.0` as the divisor, implying 15 pulses per mechanical revolution. This suggests the controller might internally divide the Hall states and output only one pulse per electrical revolution on the SC pin, rather than pulsing on every state change. When integrating a new motor/controller, always verify the empirical pulse-per-revolution count by manually rotating the wheel exactly once and reading the total `pulseCount` before relying on either 15 or 90.
 
 **3.3V MCU caution:** The SC output is 5V (pulled up to the controller's internal 5V rail from the 78L05 regulator). For 3.3V MCUs like the ESP32, a voltage divider (10K + 20K) or a level shifter is required. Feeding 5V directly into an ESP32 GPIO technically exceeds its absolute maximum rating and may cause damage or unreliable readings.
 

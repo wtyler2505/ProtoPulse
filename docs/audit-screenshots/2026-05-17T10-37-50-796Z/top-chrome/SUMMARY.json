@@ -1,0 +1,22 @@
+{
+  "out": "docs/audit-screenshots/2026-05-17T10-37-50-796Z/top-chrome",
+  "metrics": {
+    "headerHeight": 48,
+    "moreButtonVisible": true,
+    "moreMenuHeight": 560,
+    "moreMenuHasVerticalOverflow": true,
+    "visibleTopLevelButtons": [
+      "toggle-sidebar",
+      "tab-dashboard",
+      "tab-architecture",
+      "tab-breadboard",
+      "tab-procurement",
+      "tab-output",
+      "workspace-hardware-badge",
+      "workspace-health-badge",
+      "workspace-mode-button",
+      "toggle-chat",
+      "workspace-more-button"
+    ]
+  }
+}

@@ -1,0 +1,148 @@
+{
+  "createdAt": "2026-06-04T20:44:21.403Z",
+  "status": "ok",
+  "captureCount": 15,
+  "bytes": 1083301,
+  "rows": [
+    {
+      "name": "01-desktop-v3-gate-collapsed",
+      "file": "01-desktop-v3-gate-collapsed.png",
+      "kind": "element",
+      "viewport": "desktop",
+      "bytes": 6873,
+      "width": 283,
+      "height": 80,
+      "note": "Collapsed v3 gate leaves the canvas reachable."
+    },
+    {
+      "name": "02-desktop-architecture-canvas",
+      "file": "02-desktop-architecture-canvas.png",
+      "kind": "page",
+      "viewport": "desktop",
+      "bytes": 104709,
+      "note": "Architecture canvas before radial open."
+    },
+    {
+      "name": "03-desktop-keyboard-radial-menu",
+      "file": "03-desktop-keyboard-radial-menu.png",
+      "kind": "element",
+      "viewport": "desktop",
+      "bytes": 53263,
+      "width": 404,
+      "height": 404,
+      "note": "Canvas wheel opened from Shift+F10."
+    },
+    {
+      "name": "04-desktop-canvas-radial-menu",
+      "file": "04-desktop-canvas-radial-menu.png",
+      "kind": "element",
+      "viewport": "desktop",
+      "bytes": 61082,
+      "width": 404,
+      "height": 404,
+      "note": "Canvas wheel with hover preview."
+    },
+    {
+      "name": "05-desktop-canvas-radial-context",
+      "file": "05-desktop-canvas-radial-context.png",
+      "kind": "page",
+      "viewport": "desktop",
+      "bytes": 160113,
+      "note": "Full workspace with radial wheel open."
+    },
+    {
+      "name": "06-desktop-customizer-expanded",
+      "file": "06-desktop-customizer-expanded.png",
+      "kind": "element",
+      "viewport": "desktop",
+      "bytes": 44778,
+      "width": 368,
+      "height": 512,
+      "note": "Desktop customizer expanded."
+    },
+    {
+      "name": "07-desktop-customizer-keyboard-filtered",
+      "file": "07-desktop-customizer-keyboard-filtered.png",
+      "kind": "element",
+      "viewport": "desktop",
+      "bytes": 42115,
+      "width": 368,
+      "height": 512,
+      "note": "Desktop customizer filtered and slot-assigned from keyboard."
+    },
+    {
+      "name": "08-desktop-focused-node-keyboard-radial-menu",
+      "file": "08-desktop-focused-node-keyboard-radial-menu.png",
+      "kind": "element",
+      "viewport": "desktop",
+      "bytes": 51782,
+      "width": 404,
+      "height": 404,
+      "note": "Focused node wheel opened from Shift+F10."
+    },
+    {
+      "name": "09-desktop-delete-confirm",
+      "file": "09-desktop-delete-confirm.png",
+      "kind": "element",
+      "viewport": "desktop",
+      "bytes": 68338,
+      "width": 404,
+      "height": 404,
+      "note": "Destructive command confirm state."
+    },
+    {
+      "name": "10-desktop-inspector-radial-launch",
+      "file": "10-desktop-inspector-radial-launch.png",
+      "kind": "page",
+      "viewport": "desktop",
+      "bytes": 156251,
+      "note": "Inspector-targeted radial wheel while inspector remains open."
+    },
+    {
+      "name": "11-desktop-undo-toast",
+      "file": "11-desktop-undo-toast.png",
+      "kind": "page",
+      "viewport": "desktop",
+      "bytes": 100766,
+      "note": "Undo toast after destructive radial delete."
+    },
+    {
+      "name": "12-desktop-node-restored-after-undo",
+      "file": "12-desktop-node-restored-after-undo.png",
+      "kind": "page",
+      "viewport": "desktop",
+      "bytes": 114279,
+      "note": "Deleted node restored from Undo."
+    },
+    {
+      "name": "13-compact-scaled-radial-menu",
+      "file": "13-compact-scaled-radial-menu.png",
+      "kind": "element",
+      "viewport": "compact",
+      "bytes": 63984,
+      "width": 336,
+      "height": 336,
+      "note": "Scaled wheel on compact viewport."
+    },
+    {
+      "name": "14-compact-customizer-expanded",
+      "file": "14-compact-customizer-expanded.png",
+      "kind": "element",
+      "viewport": "compact",
+      "bytes": 46609,
+      "width": 344,
+      "height": 504,
+      "note": "Compact customizer sheet expanded."
+    },
+    {
+      "name": "15-compact-customizer-collapsed",
+      "file": "15-compact-customizer-collapsed.png",
+      "kind": "element",
+      "viewport": "compact",
+      "bytes": 8359,
+      "width": 344,
+      "height": 71,
+      "note": "Compact customizer collapsed strip."
+    }
+  ]
+}

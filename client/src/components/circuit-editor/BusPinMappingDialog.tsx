@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -269,10 +270,9 @@ export default function BusPinMappingDialog({
               </div>
               <div className="space-y-1">
                 <Label htmlFor="bus-width-input" className="text-[10px]">Width</Label>
-                <Input
+                <NumberInput
                   id="bus-width-input"
                   data-testid="bus-width-input"
-                  type="number"
                   min={1}
                   max={64}
                   value={newBusWidth}

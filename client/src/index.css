@@ -25,34 +25,34 @@
   --font-mono: 'JetBrains Mono', monospace;
   --font-sans: 'Inter', sans-serif;
 
-  --color-background: hsl(225 20% 3%);
-  --color-foreground: hsl(210 20% 90%);
+  --color-background: #030405;
+  --color-foreground: #FFFFFF;
 
-  --color-card: hsl(225 18% 5%);
-  --color-card-foreground: hsl(210 20% 90%);
+  --color-card: #0A0C0F;
+  --color-card-foreground: #FFFFFF;
 
-  --color-popover: hsl(225 18% 5%);
-  --color-popover-foreground: hsl(210 20% 90%);
+  --color-popover: #0A0C0F;
+  --color-popover-foreground: #FFFFFF;
 
-  --color-primary: hsl(190 100% 43%);
-  --color-primary-foreground: hsl(225 20% 3%);
+  --color-primary: #00B7DB;
+  --color-primary-foreground: #000000;
 
-  --color-secondary: hsl(260 100% 65%);
-  --color-secondary-foreground: hsl(210 20% 98%);
+  --color-secondary: #884DFF;
+  --color-secondary-foreground: #FFFFFF;
 
-  --color-muted: hsl(225 12% 10%);
-  --color-muted-foreground: hsl(215 15% 63%);
+  --color-muted: #16181D;
+  --color-muted-foreground: #929EAF;
 
-  --color-accent: hsl(190 100% 43%);
-  --color-accent-foreground: hsl(225 20% 3%);
+  --color-accent: #00B7DB;
+  --color-accent-foreground: #000000;
   --color-editor-accent: #00F0FF;
 
-  --color-destructive: hsl(0 85% 55%);
-  --color-destructive-foreground: hsl(210 40% 98%);
+  --color-destructive: #EE2B2B;
+  --color-destructive-foreground: #FFFFFF;
 
-  --color-border: hsl(225 12% 20%);
-  --color-input: hsl(225 12% 20%);
-  --color-ring: hsl(190 100% 43%);
+  --color-border: #2D3039;
+  --color-input: #2D3039;
+  --color-ring: #00B7DB;
   /*
    * E2E-1013 / Plan 03 Phase 9 — dedicated focus-ring token.
    *
@@ -69,10 +69,10 @@
    * ring reads correctly across all 8 theme presets because it no longer
    * depends on the brand color.
    */
-  --color-focus-ring: hsl(0 0% 100%);
+  --color-focus-ring: #FFFFFF;
 
-  --color-sidebar: hsl(225 20% 4%);
-  --color-sidebar-border: hsl(225 12% 18%);
+  --color-sidebar: #050507;
+  --color-sidebar-border: #2D3039;
 
   /*
    * ─────────────────────────────────────────────────────────────
@@ -113,8 +113,8 @@
    * Contrast vs --color-background (hsl 225 20% 3%, ~#06080C):
    *   hsl(190 100% 43%) ≈ #00C4DB → ~8.9:1 (AAA pass).
    */
-  --color-brand: hsl(190 100% 43%);
-  --color-brand-foreground: hsl(225 20% 3%);
+  --color-brand: #00B7DB;
+  --color-brand-foreground: #000000;
 
   /*
    * `--color-power` — electrical POWER semantic (VCC rails, power
@@ -133,8 +133,8 @@
    * .led-warning literal (hsl 40 100% 50%) so Phase 2 consumer
    * migration is a find-replace, not a redesign.
    */
-  --color-power: hsl(40 95% 55%);
-  --color-power-foreground: hsl(225 20% 3%);
+  --color-power: #F9B11F;
+  --color-power-foreground: #060709;
 
   /*
    * `--color-signal` — data/logic SIGNAL semantic (GPIO lines,
@@ -148,8 +148,8 @@
    *
    * Contrast vs --color-background: ~11:1 (AAA pass).
    */
-  --color-signal: hsl(190 100% 60%);
-  --color-signal-foreground: hsl(225 20% 3%);
+  --color-signal: #33DDFF;
+  --color-signal-foreground: #060709;
 
   /*
    * `--color-data` — data-value semantic (measurements, KPI
@@ -164,8 +164,8 @@
    * KPI text usage under the WCAG 2.1 AA 4.5:1 text threshold
    * plus our self-imposed AAA target.
    */
-  --color-data: hsl(270 85% 72%);
-  --color-data-foreground: hsl(225 20% 3%);
+  --color-data: #B87BF4;
+  --color-data-foreground: #060709;
 
   /*
    * `--color-warning` — validation/advisory WARNING semantic
@@ -186,8 +186,8 @@
    * is darker (~#06080C) AND we use L=60% for warning; both
    * shifts push us well past AAA.
    */
-  --color-warning: hsl(45 100% 60%);
-  --color-warning-foreground: hsl(225 20% 3%);
+  --color-warning: #FFCC33;
+  --color-warning-foreground: #060709;
 
   /*
    * `--color-success` — positive-outcome semantic (test-pass
@@ -198,8 +198,8 @@
    * unambiguously positive without looking like a brand accent.
    * Contrast ~9.7:1 (AAA pass).
    */
-  --color-success: hsl(145 75% 55%);
-  --color-success-foreground: hsl(225 20% 3%);
+  --color-success: #36E27E;
+  --color-success-foreground: #060709;
 
   /*
    * `--color-info` — informational semantic (tips, "did you
@@ -209,8 +209,8 @@
    * Uses a cooler blue so info callouts read as neutral-helpful
    * rather than brand-endorsed. Contrast ~8.1:1 (AAA pass).
    */
-  --color-info: hsl(215 90% 70%);
-  --color-info-foreground: hsl(225 20% 3%);
+  --color-info: #6EA7F7;
+  --color-info-foreground: #060709;
 
   /*
    * Aliases — existing `--color-destructive` above remains the
@@ -324,6 +324,54 @@
  * clears 4.5:1 text / 3:1 UI (WCAG 2.1 AA).
  */
 .light {
+  /*
+   * BL-0732 / E2E-1037 — core surface palette for light mode.
+   *
+   * The base `@theme` block ships a DARK palette globally
+   * (`--color-background: #030405` etc.). Before this block existed, toggling
+   * `.light` on <html> only re-pitched the 8 chroma-signal tokens further
+   * below — the background, text, cards, borders, etc. all stayed dark, so
+   * "light mode" was visually a no-op ("classList changes to light but
+   * NOTHING changes"). These overrides supply the missing light values.
+   *
+   * `.light` (specificity 0,1,0) appears later in source than the `@theme`
+   * `:root` emission, so it wins the cascade. Values target WCAG 2.1 AA
+   * (>=4.5:1 text, >=3:1 UI) against the near-white background documented at
+   * the top of this file. Final visual QA in the running app still recommended.
+   */
+  --color-background: hsl(210 20% 98%);        /* ~#F7F9FB near-white surface */
+  --color-foreground: hsl(222 24% 12%);        /* ~#171C24 — ~16:1 on background */
+
+  --color-card: hsl(0 0% 100%);                /* pure white, raised above bg */
+  --color-card-foreground: hsl(222 24% 12%);
+
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(222 24% 12%);
+
+  /* Interactive emphasis — darker cyan so white foreground clears 4.5:1 */
+  --color-primary: hsl(192 100% 30%);          /* white text ~4.6:1 */
+  --color-primary-foreground: hsl(0 0% 100%);
+
+  --color-secondary: hsl(260 85% 55%);         /* violet, white text ~5:1 */
+  --color-secondary-foreground: hsl(0 0% 100%);
+
+  --color-muted: hsl(210 20% 94%);             /* light gray surface */
+  --color-muted-foreground: hsl(218 12% 38%);  /* ~6:1 on muted */
+
+  --color-accent: hsl(192 100% 30%);
+  --color-accent-foreground: hsl(0 0% 100%);
+  --color-editor-accent: hsl(192 100% 28%);
+
+  --color-destructive: hsl(0 75% 45%);         /* white text ~5:1 */
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  --color-border: hsl(214 18% 84%);            /* ~#CBD3DD visible on white */
+  --color-input: hsl(214 18% 84%);
+  --color-ring: hsl(192 100% 30%);
+
+  --color-sidebar: hsl(210 20% 96%);
+  --color-sidebar-border: hsl(214 18% 84%);
+
   --color-focus-ring: hsl(0 0% 10%);
 
   /* Brand cyan shifts darker: L=35% gives ~4.8:1 on light bg */

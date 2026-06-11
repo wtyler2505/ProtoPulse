@@ -119,7 +119,7 @@ function DifficultyBadge({ difficulty }: { difficulty: PatternDifficulty }) {
     <Badge
       data-testid={`badge-${difficulty}`}
       variant="outline"
-      className={cn('text-[10px] capitalize', DIFFICULTY_COLORS[difficulty])}
+      className={cn('text-[11px] capitalize', DIFFICULTY_COLORS[difficulty])}
     >
       {difficulty}
     </Badge>
@@ -192,12 +192,12 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-foreground">{c.name}</span>
                     {c.value && (
-                      <span className="text-[10px] font-mono text-[var(--color-editor-accent)]">{c.value}</span>
+                      <span className="text-[11px] font-mono text-[var(--color-editor-accent)]">{c.value}</span>
                     )}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">{c.type}</div>
+                  <div className="text-[11px] text-muted-foreground">{c.type}</div>
                   {c.notes && (
-                    <div className="text-[10px] text-muted-foreground/70 mt-0.5 italic">{c.notes}</div>
+                    <div className="text-[11px] text-muted-foreground/70 mt-0.5 italic">{c.notes}</div>
                   )}
                 </div>
               ))}
@@ -217,12 +217,12 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
                   data-testid={`pattern-connection-${pattern.id}`}
                   className="rounded bg-muted/30 px-2.5 py-1.5"
                 >
-                  <div className="flex items-center gap-1.5 text-[10px] font-mono">
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono">
                     <span className="text-foreground">{conn.from}</span>
                     <span className="text-muted-foreground">&rarr;</span>
                     <span className="text-foreground">{conn.to}</span>
                   </div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">{conn.description}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">{conn.description}</div>
                 </div>
               ))}
             </div>
@@ -239,7 +239,7 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
                 <li
                   key={tip.slice(0, 40)}
                   data-testid={`pattern-tip-${pattern.id}`}
-                  className="text-[10px] text-muted-foreground leading-relaxed pl-3 relative before:content-[''] before:absolute before:left-0 before:top-1.5 before:w-1 before:h-1 before:rounded-full before:bg-[var(--color-editor-accent)]/50"
+                  className="text-[11px] text-muted-foreground leading-relaxed pl-3 relative before:content-[''] before:absolute before:left-0 before:top-1.5 before:w-1 before:h-1 before:rounded-full before:bg-[var(--color-editor-accent)]/50"
                 >
                   {tip}
                 </li>
@@ -258,7 +258,7 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
                 <li
                   key={mistake.slice(0, 40)}
                   data-testid={`pattern-mistake-${pattern.id}`}
-                  className="text-[10px] text-muted-foreground leading-relaxed pl-3 relative before:content-[''] before:absolute before:left-0 before:top-1.5 before:w-1 before:h-1 before:rounded-full before:bg-destructive/50"
+                  className="text-[11px] text-muted-foreground leading-relaxed pl-3 relative before:content-[''] before:absolute before:left-0 before:top-1.5 before:w-1 before:h-1 before:rounded-full before:bg-destructive/50"
                 >
                   {mistake}
                 </li>
@@ -278,7 +278,7 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
                     key={refId}
                     data-testid={`pattern-related-${pattern.id}-${refId}`}
                     variant="secondary"
-                    className="text-[10px]"
+                    className="text-[11px]"
                   >
                     {refId}
                   </Badge>
@@ -293,7 +293,7 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
               <Badge
                 key={tag}
                 variant="outline"
-                className="text-[9px] px-1.5 py-0 border-border/50 text-muted-foreground"
+                className="h-5 border-border/50 px-2 py-0.5 text-[11px] text-muted-foreground"
               >
                 {tag}
               </Badge>
@@ -348,24 +348,24 @@ function PatternsTabContent() {
   }, [filteredPatterns]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Filters */}
-      <div data-testid="design-patterns-filters" className="flex flex-col sm:flex-row gap-3">
+      <div data-testid="design-patterns-filters" className="flex flex-col sm:flex-row gap-2.5">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             data-testid="design-patterns-search"
             placeholder="Search patterns..."
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); }}
-            className="pl-8"
+            className="pl-9 h-8.5 text-xs"
           />
         </div>
         <Select
           value={categoryFilter}
           onValueChange={(v) => { setCategoryFilter(v as PatternCategory | 'all'); }}
         >
-          <SelectTrigger data-testid="design-patterns-category-filter" className="w-full sm:w-[160px]" aria-label="Filter design patterns by category">
+          <SelectTrigger data-testid="design-patterns-category-filter" className="w-full sm:w-[168px] h-8.5 text-xs" aria-label="Filter design patterns by category">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
@@ -381,7 +381,7 @@ function PatternsTabContent() {
           value={difficultyFilter}
           onValueChange={(v) => { setDifficultyFilter(v as PatternDifficulty | 'all'); }}
         >
-          <SelectTrigger data-testid="design-patterns-difficulty-filter" className="w-full sm:w-[160px]" aria-label="Filter design patterns by difficulty">
+          <SelectTrigger data-testid="design-patterns-difficulty-filter" className="w-full sm:w-[168px] h-8.5 text-xs" aria-label="Filter design patterns by difficulty">
             <SelectValue placeholder="Difficulty" />
           </SelectTrigger>
           <SelectContent>
@@ -408,7 +408,7 @@ function PatternsTabContent() {
           />
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {Array.from(groupedPatterns.entries()).map(([category, patterns]) => {
             const CategoryIcon = CATEGORY_ICONS[category];
             return (
@@ -420,7 +420,7 @@ function PatternsTabContent() {
                     ({patterns.length})
                   </span>
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                   {patterns.map((pattern) => (
                     <PatternCard key={pattern.id} pattern={pattern} />
                   ))}
@@ -467,7 +467,7 @@ function SnippetCard({
           <div className="flex items-center gap-1.5 shrink-0">
             <Badge
               variant="outline"
-              className={cn('text-[10px] capitalize', SNIPPET_CATEGORY_COLORS[snippet.category])}
+              className={cn('text-[11px] capitalize', SNIPPET_CATEGORY_COLORS[snippet.category])}
             >
               {SNIPPET_CATEGORY_LABELS[snippet.category]}
             </Badge>
@@ -490,7 +490,7 @@ function SnippetCard({
           onClick={(e) => { e.stopPropagation(); }}
         >
           {/* Stats */}
-          <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+          <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
             <span data-testid={`snippet-nodes-${snippet.id}`}>
               {snippet.nodes.length} node{snippet.nodes.length !== 1 ? 's' : ''}
             </span>
@@ -508,14 +508,14 @@ function SnippetCard({
           {/* Nodes list */}
           {snippet.nodes.length > 0 && (
             <div>
-              <h4 className="text-[10px] font-semibold text-[var(--color-editor-accent)] uppercase tracking-wider mb-1">
+              <h4 className="text-[11px] font-semibold text-[var(--color-editor-accent)] uppercase tracking-wider mb-1">
                 Nodes
               </h4>
               <div className="space-y-1">
                 {snippet.nodes.map((node) => (
                   <div
                     key={node.id}
-                    className="rounded bg-muted/30 px-2 py-1 text-[10px]"
+                    className="rounded bg-muted/30 px-2 py-1 text-[11px]"
                     data-testid={`snippet-node-${snippet.id}-${node.id}`}
                   >
                     <span className="font-medium text-foreground">{node.label}</span>
@@ -545,7 +545,7 @@ function SnippetCard({
                 <Badge
                   key={tag}
                   variant="outline"
-                  className="text-[9px] px-1.5 py-0 border-border/50 text-muted-foreground"
+                  className="h-5 border-border/50 px-2 py-0.5 text-[11px] text-muted-foreground"
                 >
                   {tag}
                 </Badge>
@@ -560,7 +560,7 @@ function SnippetCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 text-[10px] px-2"
+                  className="h-7 px-2.5 text-[11px]"
                   onClick={() => { onEdit(snippet); }}
                   data-testid={`snippet-edit-${snippet.id}`}
                 >
@@ -572,7 +572,7 @@ function SnippetCard({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 text-[10px] px-2 text-destructive hover:text-destructive"
+                      className="h-7 px-2.5 text-[11px] text-destructive hover:text-destructive"
                       data-testid={`snippet-delete-${snippet.id}`}
                     >
                       <Trash2 className="h-3 w-3 mr-1" />
@@ -590,7 +590,7 @@ function SnippetCard({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 text-[10px] px-2"
+              className="h-7 px-2.5 text-[11px]"
               onClick={() => { onDuplicate(snippet); }}
               data-testid={`snippet-duplicate-${snippet.id}`}
             >
@@ -719,7 +719,7 @@ function SnippetFormDialog({
           <div>
             <Label className="text-xs">Category</Label>
             <Select value={category} onValueChange={(v) => { setCategory(v as SnippetCategory); }}>
-              <SelectTrigger className="mt-1" data-testid="snippet-form-category">
+              <SelectTrigger className="mt-1 h-8.5 text-xs" data-testid="snippet-form-category" aria-label="Select snippet category">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -838,24 +838,24 @@ function MySnippetsTabContent() {
   }, [addSnippet, updateSnippet]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Filters and Create button */}
-      <div className="flex flex-col sm:flex-row gap-3" data-testid="snippets-filters">
+      <div className="flex flex-col sm:flex-row gap-2.5" data-testid="snippets-filters">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             data-testid="snippets-search"
             placeholder="Search snippets..."
             value={snippetSearch}
             onChange={(e) => { setSnippetSearch(e.target.value); }}
-            className="pl-8"
+            className="pl-9 h-8.5 text-xs"
           />
         </div>
         <Select
           value={snippetCategoryFilter}
           onValueChange={(v) => { setSnippetCategoryFilter(v as SnippetCategory | 'all'); }}
         >
-          <SelectTrigger data-testid="snippets-category-filter" className="w-full sm:w-[160px]" aria-label="Filter snippets by category">
+          <SelectTrigger data-testid="snippets-category-filter" className="w-full sm:w-[168px] h-8.5 text-xs" aria-label="Filter snippets by category">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
@@ -871,6 +871,7 @@ function MySnippetsTabContent() {
           size="sm"
           onClick={handleCreateNew}
           data-testid="snippets-create-btn"
+          className="h-8.5 px-2.5 text-xs"
         >
           <Plus className="h-4 w-4 mr-1.5" />
           Create
@@ -892,7 +893,7 @@ function MySnippetsTabContent() {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="snippets-grid">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5" data-testid="snippets-grid">
           {filteredSnippets.map((snippet) => (
             <SnippetCard
               key={snippet.id}
@@ -924,26 +925,26 @@ export default function DesignPatternsView() {
   return (
     <div
       data-testid="design-patterns-view"
-      className="h-full overflow-auto bg-background/50 p-4 md:p-6"
+      className="h-full overflow-auto bg-background/50 p-3"
     >
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="mx-auto max-w-6xl space-y-3">
         {/* Header */}
         <div data-testid="design-patterns-header">
-          <h2 className="text-xl md:text-2xl font-display font-bold text-foreground">
+          <h2 className="text-base font-display font-bold text-foreground md:text-[17px]">
             Design Patterns
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Curated circuit building blocks — learn the &ldquo;why,&rdquo; not just the &ldquo;what&rdquo;
           </p>
         </div>
 
         {/* Tabs: Patterns | My Snippets */}
         <Tabs defaultValue="patterns" data-testid="design-patterns-tabs">
-          <TabsList data-testid="design-patterns-tabslist">
-            <TabsTrigger value="patterns" data-testid="tab-patterns">
+          <TabsList data-testid="design-patterns-tabslist" className="h-7">
+            <TabsTrigger value="patterns" data-testid="tab-patterns" className="h-6 px-2 text-[11px]">
               Patterns
             </TabsTrigger>
-            <TabsTrigger value="snippets" data-testid="tab-snippets">
+            <TabsTrigger value="snippets" data-testid="tab-snippets" className="h-6 px-2 text-[11px]">
               My Snippets
             </TabsTrigger>
           </TabsList>

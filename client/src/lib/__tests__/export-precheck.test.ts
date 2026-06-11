@@ -43,15 +43,20 @@ describe('getSupportedPrecheckFormats', () => {
     expect(formats.length).toBeGreaterThan(0);
     expect(formats).toContain('kicad');
     expect(formats).toContain('gerber');
+    expect(formats).toContain('tscircuit-gerber');
     expect(formats).toContain('bom-csv');
+    expect(formats).toContain('inventory-review');
+    expect(formats).toContain('lifecycle-review');
     expect(formats).toContain('pdf');
     expect(formats).toContain('firmware');
   });
 
-  it('includes all 18 registered formats', () => {
+  it('includes all 23 registered formats', () => {
     const formats = getSupportedPrecheckFormats();
-    expect(formats).toHaveLength(18);
+    expect(formats).toHaveLength(23);
     expect(formats).toContain('fab-package');
+    expect(formats).toContain('procurement-package');
+    expect(formats).toContain('bom-template-apply');
   });
 });
 
@@ -155,9 +160,42 @@ describe('gerber precheck', () => {
     expect(hasCheckWithStatus(result, 'Circuit Instances', 'fail')).toBe(true);
   });
 
-  it('includes 4 checks', () => {
+  it('includes PCB and upstream fabrication trust checks', () => {
     const result = runExportPrecheck('gerber', makeData());
-    expect(result.checks).toHaveLength(4);
+    expect(result.checks).toHaveLength(9);
+    expect(findCheck(result, 'AI-Generated Circuit Provenance')).toBeDefined();
+    expect(findCheck(result, 'Exact-Part Verification')).toBeDefined();
+    expect(findCheck(result, 'Breadboard Health')).toBeDefined();
+    expect(findCheck(result, 'Lifecycle Risk')).toBeDefined();
+    expect(findCheck(result, 'Inventory Confidence')).toBeDefined();
+  });
+});
+
+describe('tscircuit-gerber precheck', () => {
+  it('passes with an explicit partial-mapping warning', () => {
+    const result = runExportPrecheck('tscircuit-gerber', makeData());
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'TSCircuit Export Path', 'warn')).toBe(true);
+    expect(result.checks.some((check) => check.message.includes('supported project components and net segments'))).toBe(true);
+  });
+
+  it('fails without PCB layout and circuit instances', () => {
+    const result = runExportPrecheck('tscircuit-gerber', makeData({
+      hasPcbLayout: false,
+      hasCircuitInstances: false,
+    }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'PCB Layout', 'fail')).toBe(true);
+    expect(hasCheckWithStatus(result, 'Circuit Instances', 'fail')).toBe(true);
+  });
+
+  it('fails when unresolved generative provenance would reach Gerber output', () => {
+    const result = runExportPrecheck('tscircuit-gerber', makeData({
+      aiGeneratedCircuitInstanceCount: 1,
+      unverifiedAiGeneratedCircuitInstanceCount: 1,
+    }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'AI-Generated Circuit Provenance', 'fail')).toBe(true);
   });
 });
 
@@ -183,6 +221,42 @@ describe('fab-package precheck', () => {
     const result = runExportPrecheck('fab-package', makeData({ bomItemsWithPartNumber: 2 }));
     expect(result.passed).toBe(true);
     expect(hasCheckWithStatus(result, 'Part Numbers', 'warn')).toBe(true);
+  });
+
+  it('fails when AI-generated circuit instances still need exact-part verification', () => {
+    const result = runExportPrecheck('fab-package', makeData({
+      aiGeneratedCircuitInstanceCount: 2,
+      unverifiedAiGeneratedCircuitInstanceCount: 1,
+    }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'AI-Generated Circuit Provenance', 'fail')).toBe(true);
+    expect(result.blockers.some((message) => message.includes('AI-generated'))).toBe(true);
+  });
+
+  it('warns when placed parts are not all exact-part verified', () => {
+    const result = runExportPrecheck('fab-package', makeData({
+      placedPartCount: 5,
+      verifiedExactPartCount: 3,
+    }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'Exact-Part Verification', 'warn')).toBe(true);
+  });
+
+  it('fails when red breadboard health is unresolved', () => {
+    const result = runExportPrecheck('fab-package', makeData({
+      redBreadboardHealthCount: 2,
+    }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'Breadboard Health', 'fail')).toBe(true);
+  });
+
+  it('fails when lifecycle-risk parts have no known alternate', () => {
+    const result = runExportPrecheck('fab-package', makeData({
+      eolPartCount: 1,
+      lifecycleNoAlternateCount: 1,
+    }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'Lifecycle Risk', 'fail')).toBe(true);
   });
 });
 
@@ -276,6 +350,220 @@ describe('bom-csv precheck', () => {
     const result = runExportPrecheck('bom-csv', makeData({ bomItemsWithPartNumber: 0 }));
     expect(result.passed).toBe(true);
     expect(hasCheckWithStatus(result, 'Part Numbers', 'warn')).toBe(true);
+  });
+
+  it('warns when inventory confidence is estimated', () => {
+    const result = runExportPrecheck('bom-csv', makeData({ estimatedInventoryLineCount: 3 }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'Inventory Confidence', 'warn')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Inventory review action
+// ---------------------------------------------------------------------------
+
+describe('inventory-review precheck', () => {
+  it('passes when inventory lines are tracked, named, and covered', () => {
+    const result = runExportPrecheck('inventory-review', makeData({
+      bomItemCount: 3,
+      bomItemsWithPartNumber: 3,
+      estimatedInventoryLineCount: 0,
+      bomShortfallUnits: 0,
+      bomShortfallLineCount: 0,
+    }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'Inventory Lines', 'pass')).toBe(true);
+    expect(hasCheckWithStatus(result, 'Inventory Confidence', 'pass')).toBe(true);
+    expect(hasCheckWithStatus(result, 'Inventory Coverage', 'pass')).toBe(true);
+  });
+
+  it('fails when no inventory lines are available for label or stock actions', () => {
+    const result = runExportPrecheck('inventory-review', makeData({
+      bomItemCount: 0,
+      bomItemsWithPartNumber: 0,
+      bomShortfallUnits: 0,
+      bomShortfallLineCount: 0,
+    }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'Inventory Lines', 'fail')).toBe(true);
+  });
+
+  it('warns when inventory quantities use estimated or unknown confidence', () => {
+    const result = runExportPrecheck('inventory-review', makeData({
+      estimatedInventoryLineCount: 2,
+      bomShortfallUnits: 0,
+      bomShortfallLineCount: 0,
+    }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'Inventory Confidence', 'warn')).toBe(true);
+  });
+
+  it('warns when BOM demand exceeds tracked on-hand stock', () => {
+    const result = runExportPrecheck('inventory-review', makeData({
+      bomShortfallUnits: 7,
+      bomShortfallLineCount: 2,
+    }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'Inventory Coverage', 'warn')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Lifecycle review action
+// ---------------------------------------------------------------------------
+
+describe('lifecycle-review precheck', () => {
+  it('passes when tracked parts are active and named', () => {
+    const result = runExportPrecheck('lifecycle-review', makeData({
+      bomItemCount: 3,
+      bomItemsWithPartNumber: 3,
+      eolPartCount: 0,
+      obsoletePartCount: 0,
+      nrndPartCount: 0,
+      lifecycleNoAlternateCount: 0,
+    }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'Lifecycle Risk', 'pass')).toBe(true);
+  });
+
+  it('does not hard-block when no lifecycle entries are tracked yet', () => {
+    const result = runExportPrecheck('lifecycle-review', makeData({
+      bomItemCount: 0,
+      bomItemsWithPartNumber: 0,
+    }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'Lifecycle Entries', 'warn')).toBe(true);
+    expect(findCheck(result, 'BOM Items')).toBeUndefined();
+    expect(findCheck(result, 'Part Numbers')).toBeUndefined();
+  });
+
+  it('fails when lifecycle-risk tracked parts have no known alternate', () => {
+    const result = runExportPrecheck('lifecycle-review', makeData({
+      eolPartCount: 1,
+      lifecycleNoAlternateCount: 1,
+    }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'Lifecycle Risk', 'fail')).toBe(true);
+  });
+
+  it('fails when obsolete tracked parts are present', () => {
+    const result = runExportPrecheck('lifecycle-review', makeData({
+      obsoletePartCount: 1,
+    }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'Lifecycle Risk', 'fail')).toBe(true);
+  });
+
+  it('warns but allows review when EOL or NRND parts have alternates', () => {
+    const result = runExportPrecheck('lifecycle-review', makeData({
+      eolPartCount: 1,
+      nrndPartCount: 1,
+      lifecycleNoAlternateCount: 0,
+    }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'Lifecycle Risk', 'warn')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Procurement package format
+// ---------------------------------------------------------------------------
+
+describe('procurement-package precheck', () => {
+  it('passes with BOM trust data without requiring PCB layout', () => {
+    const result = runExportPrecheck('procurement-package', makeData({
+      hasCircuitInstances: false,
+      hasPcbLayout: false,
+    }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'BOM Items', 'pass')).toBe(true);
+    expect(findCheck(result, 'PCB Layout')).toBeUndefined();
+    expect(findCheck(result, 'Circuit Instances')).toBeUndefined();
+  });
+
+  it('fails when AI-generated circuit instances still need exact-part verification', () => {
+    const result = runExportPrecheck('procurement-package', makeData({
+      aiGeneratedCircuitInstanceCount: 2,
+      unverifiedAiGeneratedCircuitInstanceCount: 1,
+    }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'AI-Generated Circuit Provenance', 'fail')).toBe(true);
+  });
+
+  it('fails when lifecycle-risk parts have no known alternate', () => {
+    const result = runExportPrecheck('procurement-package', makeData({
+      eolPartCount: 1,
+      lifecycleNoAlternateCount: 1,
+    }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'Lifecycle Risk', 'fail')).toBe(true);
+  });
+
+  it('warns on incomplete procurement confidence signals', () => {
+    const result = runExportPrecheck('procurement-package', makeData({
+      placedPartCount: 4,
+      verifiedExactPartCount: 3,
+      verifiedMechanicalModelCount: 2,
+      estimatedInventoryLineCount: 1,
+      bomShortfallUnits: 5,
+      bomShortfallLineCount: 2,
+    }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'Exact-Part Verification', 'warn')).toBe(true);
+    expect(hasCheckWithStatus(result, 'Verified Mechanical Models', 'warn')).toBe(true);
+    expect(hasCheckWithStatus(result, 'Inventory Confidence', 'warn')).toBe(true);
+    expect(hasCheckWithStatus(result, 'Inventory Coverage', 'warn')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BOM template apply action
+// ---------------------------------------------------------------------------
+
+describe('bom-template-apply precheck', () => {
+  it('passes without requiring an existing BOM, PCB layout, or circuit instances', () => {
+    const result = runExportPrecheck('bom-template-apply', makeData({
+      bomItemCount: 0,
+      bomItemsWithPartNumber: 0,
+      hasCircuitInstances: false,
+      hasPcbLayout: false,
+    }));
+    expect(result.passed).toBe(true);
+    expect(findCheck(result, 'BOM Items')).toBeUndefined();
+    expect(findCheck(result, 'PCB Layout')).toBeUndefined();
+    expect(findCheck(result, 'Circuit Instances')).toBeUndefined();
+  });
+
+  it('fails when applying would carry unresolved generative trust blockers', () => {
+    const result = runExportPrecheck('bom-template-apply', makeData({
+      aiGeneratedCircuitInstanceCount: 1,
+      unverifiedAiGeneratedCircuitInstanceCount: 1,
+    }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'AI-Generated Circuit Provenance', 'fail')).toBe(true);
+  });
+
+  it('fails when lifecycle-risk parts have no known alternate', () => {
+    const result = runExportPrecheck('bom-template-apply', makeData({
+      obsoletePartCount: 1,
+      lifecycleNoAlternateCount: 1,
+    }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'Lifecycle Risk', 'fail')).toBe(true);
+  });
+
+  it('warns but allows apply when confidence signals are incomplete', () => {
+    const result = runExportPrecheck('bom-template-apply', makeData({
+      placedPartCount: 4,
+      verifiedExactPartCount: 2,
+      verifiedMechanicalModelCount: 1,
+      estimatedInventoryLineCount: 2,
+    }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'Exact-Part Verification', 'warn')).toBe(true);
+    expect(hasCheckWithStatus(result, 'Verified Mechanical Models', 'warn')).toBe(true);
+    expect(hasCheckWithStatus(result, 'Inventory Confidence', 'warn')).toBe(true);
   });
 });
 
@@ -414,6 +702,25 @@ describe('pcb fabrication formats', () => {
       expect(hasCheckWithStatus(result, 'PCB Layout', 'fail')).toBe(true);
     });
   }
+
+  it('blocks fabrication exchange exports on red breadboard health', () => {
+    for (const fmt of formats) {
+      const result = runExportPrecheck(fmt, makeData({ redBreadboardHealthCount: 1 }));
+      expect(result.passed).toBe(false);
+      expect(hasCheckWithStatus(result, 'Breadboard Health', 'fail')).toBe(true);
+    }
+  });
+
+  it('warns fabrication exchange exports when exact-part trust is incomplete', () => {
+    for (const fmt of formats) {
+      const result = runExportPrecheck(fmt, makeData({
+        placedPartCount: 3,
+        verifiedExactPartCount: 1,
+      }));
+      expect(result.passed).toBe(true);
+      expect(hasCheckWithStatus(result, 'Exact-Part Verification', 'warn')).toBe(true);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -429,6 +736,16 @@ describe('step precheck', () => {
   it('fails without PCB layout', () => {
     const result = runExportPrecheck('step', makeData({ hasPcbLayout: false }));
     expect(result.passed).toBe(false);
+  });
+
+  it('warns when verified mechanical models are missing', () => {
+    const result = runExportPrecheck('step', makeData({
+      placedPartCount: 4,
+      verifiedExactPartCount: 4,
+      verifiedMechanicalModelCount: 2,
+    }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'Verified Mechanical Models', 'warn')).toBe(true);
   });
 });
 

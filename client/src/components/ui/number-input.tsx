@@ -41,17 +41,45 @@ export interface NumberInputProps
 }
 
 /**
- * Coerce the Input `value` prop into an ARIA-compatible numeric value.
- * Returns `undefined` when the value cannot be parsed, which signals callers
- * to OMIT the `aria-valuenow` attribute rather than emit `NaN` or `0`.
+ * Render a finite number as a plain (non-exponential) decimal string with NO
+ * precision loss.
+ *
+ * BL-0881: the previous implementation used
+ * `value.toLocaleString('en-US', { maximumFractionDigits: 20 })` to strip
+ * exponential notation. That has a hard floor — any magnitude below `1e-20`
+ * (e.g. `1e-21`, a zeptofarad reactance) rounds to the string `"0"`, silently
+ * lying about the value while still passing axe's `aria-valid-attr-value`
+ * check. Intl's `maximumFractionDigits` cap (20 in ES2020 engines) makes
+ * "bump the digit count" a fragile non-fix.
+ *
+ * Instead we expand JS exponential notation (`String(value)` emits it for
+ * |value| < 1e-6 or >= 1e21) into a full decimal string by repositioning the
+ * decimal point. This is lossless for every finite double — the shortest
+ * round-trippable representation is preserved, just written out in full.
  */
 function formatAriaNumber(value: number): string {
-  const raw = String(value);
-  if (!raw.includes('e') && !raw.includes('E')) return raw;
-  return value.toLocaleString('en-US', {
-    useGrouping: false,
-    maximumFractionDigits: 20,
-  });
+  const str = String(value);
+  const match = /^(-?)(\d+)(?:\.(\d+))?[eE]([+-]?\d+)$/.exec(str);
+  // Not in exponential form (ordinary integers/decimals) → already plain.
+  if (!match) return str;
+
+  const [, sign, intPart, fracPart = '', expStr] = match;
+  const exp = parseInt(expStr, 10);
+  const digits = intPart + fracPart;
+  // Index (within `digits`) where the decimal point lands after applying exp.
+  const pointPos = intPart.length + exp;
+
+  let body: string;
+  if (pointPos <= 0) {
+    // Pure fraction: 0.000…<digits>
+    body = `0.${'0'.repeat(-pointPos)}${digits}`;
+  } else if (pointPos >= digits.length) {
+    // Whole number padded with trailing zeros.
+    body = digits + '0'.repeat(pointPos - digits.length);
+  } else {
+    body = `${digits.slice(0, pointPos)}.${digits.slice(pointPos)}`;
+  }
+  return sign + body;
 }
 
 function ariaValueNow(value: unknown): string | undefined {
@@ -66,13 +94,17 @@ function ariaValueNow(value: unknown): string | undefined {
 
 const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
   function NumberInput({ min, max, step, value, ...props }, ref) {
-    const ariaAttrs: Record<string, number | string> = {};
+    const ariaAttrs: Record<string, string> = {};
     const safeMin =
       typeof min === 'number' && Number.isFinite(min) ? min : undefined;
     const safeMax =
       typeof max === 'number' && Number.isFinite(max) ? max : undefined;
-    if (typeof safeMin === 'number') ariaAttrs['aria-valuemin'] = safeMin;
-    if (typeof safeMax === 'number') ariaAttrs['aria-valuemax'] = safeMax;
+    if (typeof safeMin === 'number') {
+      ariaAttrs['aria-valuemin'] = formatAriaNumber(safeMin);
+    }
+    if (typeof safeMax === 'number') {
+      ariaAttrs['aria-valuemax'] = formatAriaNumber(safeMax);
+    }
     const now = ariaValueNow(value);
     if (typeof now === 'string') ariaAttrs['aria-valuenow'] = now;
 

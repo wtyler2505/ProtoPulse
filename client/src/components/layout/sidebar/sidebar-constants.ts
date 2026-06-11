@@ -125,6 +125,10 @@ export const tabDescriptions: Record<string, string> = {
 export const alwaysVisibleIds = new Set<ViewMode>([
   'dashboard',
   'architecture',
+  // Keep schematic directly reachable so URL/view sync doesn't bounce
+  // when users navigate between Architecture and Schematic early.
+  'schematic',
+  'viewer_3d',
   'breadboard',
   'component_editor',
   'procurement',

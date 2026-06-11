@@ -84,7 +84,7 @@ function RepairActionRow({ action }: RepairActionRowProps) {
 
   return (
     <div
-      className={cn('flex items-start gap-2 px-2 py-1.5 text-[11px]', style.bgClass)}
+      className={cn('flex items-start gap-1.5 px-1.5 py-1 text-[10px]', style.bgClass)}
       data-testid={`repair-action-${action.category}`}
     >
       <Icon className={cn('w-3 h-3 mt-0.5 shrink-0', style.textClass)} />
@@ -105,16 +105,16 @@ interface CategoryGroupProps {
 function CategoryGroup({ category, actions }: CategoryGroupProps) {
   return (
     <div className="border border-border/30 rounded-sm overflow-hidden" data-testid={`repair-category-${category}`}>
-      <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-b border-border/20">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-2.5 py-1.5 bg-muted/20 border-b border-border/20">
+        <div className="flex items-center gap-1.5">
           <Wrench className="w-3.5 h-3.5 text-primary/70" />
-          <span className="text-xs font-medium text-foreground">{getCategoryLabel(category)}</span>
+          <span className="text-[11px] font-medium text-foreground">{getCategoryLabel(category)}</span>
         </div>
-        <Badge variant="outline" className="text-[10px] font-mono">
+        <Badge variant="outline" className="text-[9px] font-mono px-1 py-0">
           {actions.length}
         </Badge>
       </div>
-      <p className="text-[10px] text-muted-foreground/70 px-3 py-1.5 border-b border-border/10">
+      <p className="text-[10px] text-muted-foreground/70 px-2.5 py-1 border-b border-border/10">
         {getCategoryDescription(category)}
       </p>
       <div className="divide-y divide-border/10 max-h-40 overflow-auto">
@@ -176,7 +176,7 @@ function ImportRepairDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[80vh] overflow-auto" data-testid="import-repair-dialog">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-sm">
+          <DialogTitle className="flex items-center gap-1.5 text-sm">
             <Wrench className="w-4 h-4 text-primary" />
             Import Repair Assistant
           </DialogTitle>
@@ -189,7 +189,7 @@ function ImportRepairDialog({
         {/* Summary bar */}
         <div
           className={cn(
-            'flex items-center gap-2 px-3 py-2 rounded-sm border text-xs',
+            'flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm border text-[11px]',
             repairResult.success
               ? 'bg-green-400/10 border-green-400/30 text-green-400'
               : 'bg-destructive/10 border-destructive/30 text-destructive',
@@ -205,7 +205,7 @@ function ImportRepairDialog({
         </div>
 
         {/* Grouped actions */}
-        <div className="flex flex-col gap-2 mt-1" data-testid="repair-actions-list">
+        <div className="flex flex-col gap-1.5 mt-0.5" data-testid="repair-actions-list">
           {categories.map(([category, actions]) => (
             <CategoryGroup key={category} category={category} actions={actions} />
           ))}

@@ -27,6 +27,9 @@ const telemetryChannelSchema = z.object({
   min: z.number().optional(),
   max: z.number().optional(),
   pin: z.number().optional(),
+  refDes: z.string().optional(),
+  pinLabel: z.string().optional(),
+  netName: z.string().optional(),
 });
 
 // ---------------------------------------------------------------------------

@@ -127,7 +127,7 @@ describe('WorkspaceHeader', () => {
     });
   });
 
-  it('shows the new workspace mode control and coach/help entry point', () => {
+  it('keeps status and workspace mode inside More while preserving navigation actions', () => {
     const setActiveView = vi.fn();
     const queryClient = new QueryClient({
       defaultOptions: {
@@ -147,17 +147,21 @@ describe('WorkspaceHeader', () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByTestId('workspace-health-badge')).toHaveTextContent('Saved + restore');
-    expect(screen.getByTestId('workspace-health-badge')).toHaveAccessibleName('Open Design History');
-    expect(screen.getByTestId('workspace-hardware-badge')).toHaveTextContent('Hardware ready');
-    expect(screen.getByTestId('workspace-hardware-badge')).toHaveAccessibleName('Open Arduino workspace');
-    expect(screen.getByTestId('workspace-mode-button')).toHaveTextContent('Hobbyist Mode');
+    expect(screen.queryByTestId('workspace-health-badge')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('workspace-hardware-badge')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('workspace-mode-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('coach-help-button')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('workspace-more-button'));
+    expect(screen.getByTestId('more-status-hardware')).toHaveTextContent('Hardware');
+    expect(screen.getByTestId('more-status-health')).toHaveTextContent('Project health');
+    expect(screen.getByTestId('workspace-mode-button')).toHaveTextContent('Hobbyist');
     expect(screen.getByTestId('coach-help-button')).toHaveTextContent('Coach & Help');
 
-    fireEvent.click(screen.getByTestId('workspace-hardware-badge'));
+    fireEvent.click(screen.getByTestId('more-status-hardware'));
     expect(setActiveView).toHaveBeenCalledWith('arduino');
 
-    fireEvent.click(screen.getByTestId('workspace-health-badge'));
+    fireEvent.click(screen.getByTestId('more-status-health'));
     expect(setActiveView).toHaveBeenCalledWith('design_history');
   });
 
@@ -183,9 +187,7 @@ describe('WorkspaceHeader', () => {
       </QueryClientProvider>,
     );
 
-    const importBtn = screen.getByTestId('import-design-button');
-    expect(importBtn.getAttribute('aria-label')).toBeTruthy();
-    expect(importBtn).toHaveAccessibleName('Import design file');
+    fireEvent.click(screen.getByTestId('workspace-more-button'));
 
     const pcbTutorialBtn = screen.getByTestId('pcb-tutorial-button');
     expect(pcbTutorialBtn.getAttribute('aria-label')).toBeTruthy();
@@ -196,17 +198,9 @@ describe('WorkspaceHeader', () => {
     expect(activityFeedBtn).toHaveAccessibleName('Activity feed');
   });
 
-  // E2E-074 / Plan 02 Phase 1: clicking coach-help-button must open the popover and
-  // reveal TutorialMenu content. NOTE: this test runs with StyledTooltip mocked as
-  // a pass-through (see top of file), so it cannot detect the specific
-  // `<PopoverTrigger asChild><StyledTooltip>` prop-forwarding regression. The real
-  // click-truth assertion lives in e2e/p1-coach-popover.spec.ts. This unit test
-  // documents the behavioral contract and guards against accidental removal of
-  // the trigger or lazy-loaded content.
-  // Plan 17 Phase 1 (E2E-483, E2E-990, E2E-1022, E2E-1025): the header collapses the
-  // former 40px single-row bar into a 2-row 80px layout with named row testids so
-  // downstream Playwright / visual audits can target each cluster.
-  it('renders a 2-row 80px header with identity and tools rows (Plan 17 Phase 1)', () => {
+  // Frontend pivot: collapse the former stacked 80px header into one calmer
+  // 48px command bar. Secondary actions and secondary views live behind More.
+  it('renders a single-row 48px quiet header with secondary actions behind More', () => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false, gcTime: 0 },
@@ -226,17 +220,16 @@ describe('WorkspaceHeader', () => {
     );
 
     const header = screen.getByTestId('workspace-header');
-    // h-20 (Tailwind) = 80px per design-system token. We assert on the class
+    // h-12 (Tailwind) = 48px per design-system token. We assert on the class
     // rather than computed style because jsdom does not apply Tailwind utilities.
-    expect(header.className).toContain('h-20');
-    expect(screen.getByTestId('header-row-identity')).toBeInTheDocument();
-    expect(screen.getByTestId('header-row-tools')).toBeInTheDocument();
+    expect(header.className).toContain('h-12');
+    expect(screen.getByTestId('header-row-main')).toBeInTheDocument();
+    expect(screen.getByTestId('header-actions')).toBeInTheDocument();
+    expect(screen.getByTestId('workspace-more-button')).toHaveAccessibleName('More workspace actions');
+    expect(screen.queryByTestId('header-row-tools')).not.toBeInTheDocument();
   });
 
-  // Plan 17 Phase 1 (E2E-993, E2E-483): icon-only header buttons gain visible text
-  // labels by default at xl breakpoints — the markup must include both the icon and
-  // the label span so downstream responsive tests see the label in the DOM.
-  it('icon-only header buttons render visible text labels (Plan 17 Phase 1)', () => {
+  it('secondary actions render visible text labels inside the More menu', () => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false, gcTime: 0 },
@@ -255,22 +248,30 @@ describe('WorkspaceHeader', () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByTestId('import-design-button')).toHaveTextContent('Import design file');
+    fireEvent.click(screen.getByTestId('workspace-more-button'));
+
+    expect(screen.getByText('Quick actions')).toBeInTheDocument();
+    expect(screen.getByText('More views')).toBeInTheDocument();
+    expect(screen.getByText('Workspace actions')).toBeInTheDocument();
+    expect(screen.getByText('Collaboration & updates')).toBeInTheDocument();
+    expect(screen.getByText('Display')).toBeInTheDocument();
+
+    expect(screen.getByTestId('quick-action-import')).toHaveTextContent('Import');
+    expect(screen.getByTestId('quick-action-chat')).toHaveTextContent('chat');
+    expect(screen.getByTestId('quick-action-hardware-inspection')).toHaveTextContent('Inspect hardware');
+
     expect(screen.getByTestId('pcb-tutorial-button')).toHaveTextContent('PCB Tutorial');
     expect(screen.getByTestId('toggle-activity-feed')).toHaveTextContent('Activity feed');
   });
 
-  // Plan 17 Phase 1 (E2E-069): the workspace-hardware-badge must be wrapped in a
-  // tooltip chain. Source-of-truth tooltip copy lives in hardware-workspace-status.ts
-  // (`detail` field) — this test verifies the badge renders via the tooltip chain
-  // and retains its accessible name.
-  it('hardware badge is tooltip-wrapped and retains accessible name (E2E-069)', () => {
+  it('opens hardware inspection from the main header button and More menu', () => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false, gcTime: 0 },
         mutations: { retry: false },
       },
     });
+    const onOpenHardwareInspection = vi.fn();
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -279,16 +280,20 @@ describe('WorkspaceHeader', () => {
           dispatch={vi.fn()}
           activeView={'architecture' as ViewMode}
           setActiveView={vi.fn()}
+          onOpenHardwareInspection={onOpenHardwareInspection}
         />
       </QueryClientProvider>,
     );
 
-    const badge = screen.getByTestId('workspace-hardware-badge');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveAccessibleName('Open Arduino workspace');
+    fireEvent.click(screen.getByTestId('workspace-open-hardware-inspection'));
+    expect(onOpenHardwareInspection).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId('workspace-more-button'));
+    fireEvent.click(screen.getByTestId('quick-action-hardware-inspection'));
+    expect(onOpenHardwareInspection).toHaveBeenCalledTimes(2);
   });
 
-  it('opens the Coach & Help popover and renders TutorialMenu content on click (E2E-074)', async () => {
+  it('status controls are available in More and keep routing actions', () => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false, gcTime: 0 },
@@ -306,6 +311,32 @@ describe('WorkspaceHeader', () => {
         />
       </QueryClientProvider>,
     );
+
+    fireEvent.click(screen.getByTestId('workspace-more-button'));
+    expect(screen.getByTestId('more-status-hardware')).toBeInTheDocument();
+    expect(screen.getByTestId('more-status-health')).toBeInTheDocument();
+  });
+
+  it('opens the More menu, then opens Coach & Help and renders TutorialMenu content (E2E-074)', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0 },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <WorkspaceHeader
+          ws={buildWorkspaceState()}
+          dispatch={vi.fn()}
+          activeView={'architecture' as ViewMode}
+          setActiveView={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByTestId('workspace-more-button'));
 
     const trigger = screen.getByTestId('coach-help-button');
     // Radix PopoverTrigger sets aria-expanded on the underlying button.

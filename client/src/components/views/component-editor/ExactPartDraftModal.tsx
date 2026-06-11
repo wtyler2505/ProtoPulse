@@ -164,8 +164,8 @@ export default function ExactPartDraftModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-2xl bg-card border-border" data-testid="exact-part-draft-modal">
-        <form className="space-y-4" onSubmit={handleSubmit}>
+      <DialogContent className="flex max-h-[92vh] flex-col overflow-hidden bg-card border-border sm:max-w-2xl" data-testid="exact-part-draft-modal">
+        <form className="flex min-h-0 flex-1 flex-col gap-4" onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Create Exact Part Draft</DialogTitle>
             <DialogDescription className="sr-only">
@@ -173,7 +173,7 @@ export default function ExactPartDraftModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
             <div className="rounded-xl border border-amber-400/25 bg-amber-400/8 p-3 text-sm text-amber-100" data-testid="exact-part-draft-intro">
               New exact parts start as candidates. ProtoPulse can place them visually, but authoritative wiring stays blocked until review.
             </div>
@@ -303,7 +303,7 @@ export default function ExactPartDraftModal({
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t border-border/60 pt-3">
             <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} data-testid="button-cancel-exact-part">
               Cancel
             </Button>

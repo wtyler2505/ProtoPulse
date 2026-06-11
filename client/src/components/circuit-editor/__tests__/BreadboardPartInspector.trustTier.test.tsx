@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 
@@ -214,5 +214,33 @@ describe('BreadboardPartInspector — 4-canonical-tier trust badge (audit #173)'
     // All 4 tiers must have distinct color class combinations
     const uniqueClasses = new Set(colorClasses);
     expect(uniqueClasses.size).toBe(4);
+  });
+
+  it('uses a bounded resizable shell so laptop-height content stays reachable', () => {
+    renderWithQuery(<BreadboardPartInspector {...baseProps(buildModel('verified-exact'))} />);
+
+    const inspector = screen.getByTestId('breadboard-part-inspector');
+    expect(inspector.dataset.resizable).toBe('true');
+    expect(inspector.dataset.resizeAxis).toBe('both');
+    expect(inspector.className).toContain('max-h-[min(34rem,calc(100dvh-21rem))]');
+    expect(inspector.className).toContain('resize');
+    expect(screen.getByTestId('breadboard-part-inspector-body').className).toContain('flex-1');
+  });
+
+  it('can collapse without losing the selected part context or 3D action', () => {
+    const onViewIn3D = vi.fn();
+    renderWithQuery(<BreadboardPartInspector {...baseProps(buildModel('connector-defined'))} onViewIn3D={onViewIn3D} />);
+
+    expect(screen.getByTestId('breadboard-part-inspector-body')).toBeTruthy();
+    expect(screen.getByTestId('bench-inspector-title-vault-trigger').textContent).toContain('Test Part');
+    expect(screen.getByRole('button', { name: /view in 3d/i })).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('breadboard-part-inspector-toggle'));
+
+    expect(screen.getByTestId('breadboard-part-inspector').dataset.collapsed).toBe('true');
+    expect(screen.queryByTestId('breadboard-part-inspector-body')).toBeNull();
+    expect(screen.getByTestId('bench-inspector-title-vault-trigger').textContent).toContain('Test Part');
+    fireEvent.click(screen.getByRole('button', { name: /view in 3d/i }));
+    expect(onViewIn3D).toHaveBeenCalledTimes(1);
   });
 });

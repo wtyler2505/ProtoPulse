@@ -65,10 +65,17 @@ export interface SearchOptions {
 export interface BomPricingResult {
   mpn: string;
   quantity: number;
-  bestPrice: { distributor: DistributorId; unitPrice: number; totalPrice: number; sku: string } | null;
+  bestPrice: {
+    distributor: DistributorId;
+    unitPrice: number;
+    totalPrice: number;
+    sku: string;
+    isMock?: boolean;
+  } | null;
   allOffers: DistributorOffer[];
   inStock: boolean;
   warnings: string[];
+  isMock?: boolean;
 }
 
 export interface BomQuote {
@@ -78,6 +85,7 @@ export interface BomQuote {
   itemsFound: number;
   itemsMissing: number;
   timestamp: number;
+  containsMockData?: boolean;
 }
 
 // ---------------------------------------------------------------------------

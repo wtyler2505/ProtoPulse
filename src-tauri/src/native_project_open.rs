@@ -38,6 +38,18 @@ pub struct PendingProjectOpenState {
     pub frontend_ready: Mutex<bool>,
 }
 
+fn enqueue_pending(state: &PendingProjectOpenState, request: PendingProjectOpenRequest) {
+    state.queue.lock().unwrap().push(request);
+}
+
+fn mark_frontend_ready_and_drain(
+    state: &PendingProjectOpenState,
+) -> Vec<PendingProjectOpenRequest> {
+    *state.frontend_ready.lock().unwrap() = true;
+    let mut queue = state.queue.lock().unwrap();
+    queue.drain(..).collect()
+}
+
 /// Frontend signals readiness + drains pending queue. Called once on mount
 /// AFTER the listener is installed. Subsequent events emit live (and the
 /// listener will pick them up).
@@ -46,9 +58,7 @@ pub struct PendingProjectOpenState {
 pub fn frontend_ready_for_project_open_requests(
     state: State<'_, PendingProjectOpenState>,
 ) -> Vec<PendingProjectOpenRequest> {
-    *state.frontend_ready.lock().unwrap() = true;
-    let mut queue = state.queue.lock().unwrap();
-    queue.drain(..).collect()
+    mark_frontend_ready_and_drain(state.inner())
 }
 
 /// Push a request OR emit directly. Emit ONLY if frontend has signaled
@@ -64,10 +74,10 @@ pub fn enqueue_or_emit(app: &tauri::AppHandle, request: PendingProjectOpenReques
                 "[tauri::native_project_open] emit failed, re-queueing: {}",
                 e
             );
-            state.queue.lock().unwrap().push(request);
+            enqueue_pending(state.inner(), request);
         }
     } else {
-        state.queue.lock().unwrap().push(request);
+        enqueue_pending(state.inner(), request);
     }
 }
 
@@ -138,5 +148,33 @@ mod tests {
         let argv = vec!["irrelevant".to_string(), "/tmp/bar.protopulse".to_string()];
         let reqs = requests_from_argv(&argv, "warm-start");
         assert_eq!(reqs[0].source, "warm-start");
+    }
+
+    #[test]
+    fn cold_start_requests_queue_then_drain_once_frontend_is_ready() {
+        let argv = vec![
+            "/usr/bin/protopulse".to_string(),
+            "/tmp/a.protopulse".to_string(),
+            "protopulse://open?project=/tmp/b.protopulse".to_string(),
+        ];
+        let state = PendingProjectOpenState::default();
+
+        for req in requests_from_argv(&argv, "cold-start") {
+            enqueue_pending(&state, req);
+        }
+
+        let drained = mark_frontend_ready_and_drain(&state);
+        assert_eq!(drained.len(), 2);
+        assert_eq!(drained[0].source, "cold-start");
+        assert_eq!(drained[0].path, "/tmp/a.protopulse");
+        assert_eq!(drained[1].source, "deep-link");
+        assert_eq!(
+            drained[1].path,
+            "protopulse://open?project=/tmp/b.protopulse"
+        );
+
+        // Queue should be empty after first drain.
+        let drained_again = mark_frontend_ready_and_drain(&state);
+        assert!(drained_again.is_empty());
     }
 }

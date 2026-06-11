@@ -2,12 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SchematicAnnotationNode from '../SchematicAnnotationNode';
-import type { Node, NodeProps } from '@xyflow/react';
+import type { Node, NodeProps } from '@/lib/xyflow-compat';
 import type { AnnotationNodeData } from '../SchematicAnnotationNode';
 
-// Mock @xyflow/react internals that NodeProps may depend on
-vi.mock('@xyflow/react', async () => {
-  const actual = await vi.importActual('@xyflow/react');
+// Mock xyflow compat internals that NodeProps may depend on
+vi.mock('@/lib/xyflow-compat', async () => {
+  const actual = await vi.importActual('@/lib/xyflow-compat');
   return {
     ...actual,
   };

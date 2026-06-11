@@ -3,7 +3,6 @@
  * instances and power symbols from the sidebar palettes.
  */
 import { useCallback } from 'react';
-import type { ReactFlowInstance } from '@xyflow/react';
 import { generateRefDes } from '@/lib/circuit-editor/ref-des';
 import { COMPONENT_DRAG_TYPE } from '../ComponentPlacer';
 import type { ComponentDragData } from '../ComponentPlacer';
@@ -14,6 +13,7 @@ import type { CircuitSettings, PowerSymbol } from '@shared/circuit-types';
 import type { Connector, PartMeta } from '@shared/component-types';
 import { ToastAction } from '@/components/ui/toast';
 import type { CreateInstanceMutation, UpdateDesignMutation, CreateNetMutation, ToastFn, BomState } from './types';
+import type { SchematicFlowLike } from './flow-types';
 
 // ---------------------------------------------------------------------------
 // Mutation ref types
@@ -32,7 +32,7 @@ interface UseDragDropParams {
   instances: CircuitInstanceRow[] | undefined;
   partsMap: Map<number, ComponentPart>;
   settings: CircuitSettings;
-  reactFlowInstance: ReactFlowInstance;
+  reactFlowInstance: SchematicFlowLike;
   snapEnabled: boolean;
   gridSize: number;
   bom: BomState['bom'];

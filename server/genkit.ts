@@ -1,5 +1,6 @@
 import { genkit, z } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
+import { openAI } from '@genkit-ai/compat-oai/openai';
 import { storage } from './storage';
 import { toolRegistry, type ToolContext } from './ai-tools/index';
 
@@ -69,7 +70,7 @@ const architectureEdgeOutputSchema = z.object({
 
 // Initialize the Genkit instance
 export const ai = genkit({
-  plugins: [googleAI()],
+  plugins: [googleAI(), openAI()],
 });
 
 // Dynamically convert all 125 tools to Genkit tools
@@ -195,26 +196,90 @@ export const embodiedLayoutAnalysisFlow = ai.defineFlow({
   inputSchema: z.object({
     projectId: z.number().optional().default(1),
     chassisDescription: z.string().describe("Description of the physical robot/device chassis"),
-    query: z.string().describe("What layout or spatial analysis do you need?")
+    query: z.string().describe("What layout or spatial analysis do you need?"),
+    imageUrl: z.string().optional().describe("Optional URL or base64 data URI of the physical hardware/chassis for visual reasoning")
   }),
   outputSchema: z.string().describe("Spatial analysis and layout recommendations"),
 }, async (input) => {
-  const response = await ai.generate({
-    // Using the raw string identifier since this is a highly experimental/preview model
-    model: 'googleai/gemini-robotics-er-1.5-preview',
-    prompt: `You are an Embodied Reasoning agent for ProtoPulse.
+  const promptParts: any[] = [
+    { text: `You are an Embodied Reasoning agent for ProtoPulse.
 Analyze the electronic architecture for project ${input.projectId} using your tools.
 
 Physical Chassis Constraints: ${input.chassisDescription}
 
 User Query: ${input.query}
 
-Provide concrete spatial reasoning: center of gravity impacts, optimal physical placement (X,Y,Z), wire harness routing paths to avoid kinematic pinch points, and thermal considerations. Do not write code, just provide expert spatial analysis.`,
-    config: { temperature: 0.4 },
-    context: { projectId: input.projectId, storage } as ToolContext,
-    tools: [queryNodesTool, queryEdgesTool, queryBomItemsTool],
-  });
-  return response.text;
+Provide concrete spatial reasoning: center of gravity impacts, optimal physical placement (X,Y,Z), wire harness routing paths to avoid kinematic pinch points, and thermal considerations. Do not write code, just provide expert spatial analysis.` }
+  ];
+
+  if (input.imageUrl) {
+    promptParts.push({ media: { url: input.imageUrl } });
+  }
+
+  try {
+    const response = await ai.generate({
+      // Upgraded to Gemini Robotics ER 1.6 Preview for advanced VLM spatial reasoning
+      model: googleAI.model('gemini-robotics-er-1.6-preview'),
+      prompt: promptParts,
+      config: { temperature: 0.4 },
+      context: { projectId: input.projectId, storage } as ToolContext,
+      tools: [queryNodesTool, queryEdgesTool, queryBomItemsTool],
+    });
+    return response.text;
+  } catch (error) {
+    console.warn("Robotics ER 1.6 Preview failed or quota exceeded. Falling back to OpenAI gpt-4o...");
+    const fallbackResponse = await ai.generate({
+      model: openAI.model('gpt-4o'),
+      prompt: promptParts,
+      config: { temperature: 0.4 },
+      context: { projectId: input.projectId, storage } as ToolContext,
+      tools: [queryNodesTool, queryEdgesTool, queryBomItemsTool],
+    });
+    return fallbackResponse.text;
+  }
+});
+
+// A new flow specifically for visual hardware inspection using Robotics ER 1.6
+export const visualHardwareInspectionFlow = ai.defineFlow({
+  name: 'visualHardwareInspectionFlow',
+  inputSchema: z.object({
+    projectId: z.number().optional().default(1),
+    imageUrl: z.string().describe("URL or base64 data URI of the physical hardware/breadboard for inspection"),
+    query: z.string().describe("What do you want to inspect or verify?")
+  }),
+  outputSchema: z.string().describe("Visual inspection report and discrepancy analysis"),
+}, async (input) => {
+  const promptParts: any[] = [
+      { text: `You are an elite Hardware Visual Inspector for ProtoPulse using Embodied Reasoning capabilities.
+I am providing you with an image of my physical hardware/breadboard.
+Please compare the visible wiring and component placement in this image with the project's digital schematic.
+
+User Query: ${input.query}
+
+Identify any discrepancies, incorrect wiring, missing components, or potential short circuits based on the visual evidence.` },
+      { media: { url: input.imageUrl } }
+    ];
+
+  try {
+    const response = await ai.generate({
+      model: googleAI.model('gemini-robotics-er-1.6-preview'),
+      prompt: promptParts,
+      config: { temperature: 0.2 },
+      context: { projectId: input.projectId, storage } as ToolContext,
+      tools: [queryNodesTool, queryEdgesTool, queryBomItemsTool],
+    });
+    return response.text;
+  } catch (error) {
+    console.warn("Robotics ER 1.6 Preview failed or quota exceeded. Falling back to OpenAI gpt-4o...");
+    const fallbackResponse = await ai.generate({
+      model: openAI.model('gpt-4o'),
+      prompt: promptParts,
+      config: { temperature: 0.2 },
+      context: { projectId: input.projectId, storage } as ToolContext,
+      tools: [queryNodesTool, queryEdgesTool, queryBomItemsTool],
+    });
+    return fallbackResponse.text;
+  }
 });
 
 // A powerful flow for BL-0466: AI copilot co-debugs wiring + firmware together
@@ -251,4 +316,3 @@ Give the user a clear, direct, and brilliant root-cause analysis. If they have a
   });
   return response.text;
 });
-

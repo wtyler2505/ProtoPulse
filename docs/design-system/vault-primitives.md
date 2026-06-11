@@ -86,6 +86,21 @@ Pass `tier="beginner"` / `"intermediate"` / `"expert"`. Future work wires this t
 
 Notes without tier markers render their full body as-is.
 
+## Icon convention
+
+Vault pedagogy affordances **always use the `BookOpen` lucide icon**, never `Info`.
+`BookOpen` reads as "there is knowledge to read here"; `Info` is reserved for
+transient UI hints and error/warning contexts (where `Info` / `AlertCircle` may
+already be in use).
+
+- The shared trigger primitive `<VaultInfoIcon>` (`client/src/components/ui/vault-info-icon.tsx`)
+  renders a tiny `BookOpen` — consume it rather than hand-rolling an icon span.
+- `<VaultHoverCard>` and `<VaultExplainer>` likewise lead with `BookOpen`.
+- Historical drift: early pilots split between `Info` (BomToolbar) and `BookOpen`;
+  unified to `BookOpen` in commit `8fec8c8d` (2026-04-19). Tracked as BL-0860.
+
+If you find a vault affordance using `Info`, it is a bug — switch it to `BookOpen`.
+
 ## Slug conventions
 
 Every note under `knowledge/<slug>.md` is addressable by its filename stem:

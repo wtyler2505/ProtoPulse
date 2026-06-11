@@ -66,15 +66,15 @@ function OutputView() {
   }, [outputLog, toast]);
 
   return (
-    <div className="h-full w-full bg-background/80 backdrop-blur p-4 font-mono text-xs md:text-sm text-foreground/80 overflow-hidden flex flex-col">
-      <div className="mb-2 pb-2 border-b border-white/10 flex flex-col gap-2 text-muted-foreground bg-white/5 backdrop-blur -mx-4 -mt-4 px-4 pt-4 pb-2">
+    <div className="flex h-full w-full flex-col overflow-hidden bg-background/80 p-2 font-mono text-xs text-foreground/80 backdrop-blur md:text-sm">
+      <div className="-mx-2 -mt-2 mb-2 flex flex-col gap-1.5 border-b border-white/10 bg-white/5 px-2 pt-2 pb-2 text-muted-foreground backdrop-blur">
         <div className="flex justify-between items-center">
-          <span>CONSOLE OUTPUT</span>
+          <span className="text-xs">CONSOLE OUTPUT</span>
           <div className="flex items-center gap-2">
             <StyledTooltip content={copiedAll ? 'Copied!' : 'Copy all logs'} side="bottom">
               <button
                 data-testid="button-copy-all-logs"
-                className="p-1 hover:bg-white/10 text-muted-foreground hover:text-primary transition-colors focus-ring"
+                className="p-0.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-primary focus-ring"
                 onClick={handleCopyAll}
                 aria-label="Copy all logs"
               >
@@ -86,7 +86,7 @@ function OutputView() {
                 <StyledTooltip content="Clear output" side="bottom">
                   <button
                     data-testid="button-clear-logs"
-                    className="p-1 hover:bg-white/10 text-muted-foreground hover:text-destructive transition-colors focus-ring"
+                    className="p-0.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-destructive focus-ring"
                     aria-label="Clear logs"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -99,8 +99,8 @@ function OutputView() {
               onConfirm={clearOutputLog}
               variant="destructive"
             />
-            <span className="text-[10px]">{outputLog.length} entries</span>
-            <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground border-border pointer-events-none select-none" data-testid="label-shell-type">SYSTEM LOG</Badge>
+            <span className="text-[11px]">{outputLog.length} entries</span>
+            <Badge variant="outline" className="pointer-events-none h-5 select-none border-border text-[10px] font-mono text-muted-foreground" data-testid="label-shell-type">SYSTEM LOG</Badge>
           </div>
         </div>
         <div className="relative">
@@ -112,7 +112,7 @@ function OutputView() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             data-testid="input-search-logs"
-            className="w-full pl-8 pr-3 py-1 bg-white/5 border border-white/10 text-xs text-foreground/80 focus-visible:outline-none focus-visible:border-primary/50 transition-colors font-mono placeholder:text-muted-foreground focus-ring"
+            className="w-full border border-white/10 bg-white/5 py-1 pl-8 pr-2 text-[11px] font-mono text-foreground/80 placeholder:text-muted-foreground transition-colors focus-visible:border-primary/50 focus-visible:outline-none focus-ring"
           />
         </div>
       </div>
@@ -127,7 +127,7 @@ function OutputView() {
               <div
                 key={`log-${originalIndex}`}
                 data-testid={`log-entry-${originalIndex}`}
-                className="break-all hover:bg-white/10 px-1 cursor-pointer transition-colors group"
+                className="group cursor-pointer break-all px-0.5 transition-colors hover:bg-white/10"
                 style={{
                   position: 'absolute',
                   top: 0,
@@ -138,17 +138,16 @@ function OutputView() {
                 }}
                 onClick={() => handleCopyEntry(log, originalIndex)}
               >
-                <span className="text-muted-foreground/50 mr-1.5">{formatTimestamp(timestamp)}</span>
+                <span className="text-muted-foreground/50 mr-1.5 text-[11px]">{formatTimestamp(timestamp)}</span>
                 <span className="text-muted-foreground mr-2">[{String(originalIndex).padStart(3, '0')}]</span>
                 {log}
                 {copiedIndex === originalIndex && (
-                  <span className="ml-2 text-primary text-[10px]">copied!</span>
+                  <span className="ml-2 text-primary text-[11px]">copied!</span>
                 )}
               </div>
             );
           })}
         </div>
-        <div className="animate-pulse">_</div>
       </div>
     </div>
   );

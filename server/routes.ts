@@ -35,6 +35,10 @@ import { registerPartsRoutes } from './routes/parts';
 import { registerSupplyChainRoutes } from './routes/supply-chain';
 import { registerBomTemplateRoutes } from './routes/bom-templates';
 import { registerKnowledgeVaultRoutes } from './routes/knowledge-vault';
+import { registerJitSkillRoutes } from './routes/jit-skills';
+import { registerSchemaViewerRoutes } from './routes/schema-viewer';
+import { registerHardwareInspectionRoutes } from './routes/hardware-inspection';
+import { registerV3ArchitectureRoutes } from './routes/v3-architecture';
 
 // Re-export shared utilities for backward compatibility
 // (consumed by circuit-routes.ts, circuit-ai.ts, and tests)
@@ -80,6 +84,10 @@ export async function registerRoutes(app: Express): Promise<void> {
   registerSupplyChainRoutes(app);
   registerBomTemplateRoutes(app);
   registerKnowledgeVaultRoutes(app);
+  registerJitSkillRoutes(app);
+  registerSchemaViewerRoutes(app);
+  registerHardwareInspectionRoutes(app);
+  registerV3ArchitectureRoutes(app);
 
   // --- Circuit Schematic Routes ---
   const { registerCircuitRoutes } = await import('./circuit-routes');

@@ -6,7 +6,7 @@ import { AI_MODELS, type RoutingStrategy } from '@/components/panels/chat/consta
 import { getUserSettingStore } from '@/lib/desktop/desktop-store-adapter';
 
 interface ChatSettings {
-  aiProvider: 'gemini';
+  aiProvider: 'gemini' | 'openai';
   aiModel: string;
   aiTemperature: number;
   customSystemPrompt: string;
@@ -34,7 +34,8 @@ function readLocalStorage(): ChatSettings {
     // sessionStorage scratch). Any value left over from a previous session is a liability.
     try { localStorage.removeItem(LEGACY_GOOGLE_WORKSPACE_KEY); } catch { /* ignore */ }
 
-    const provider = 'gemini';
+    const storedProvider = localStorage.getItem(STORAGE_KEYS.AI_PROVIDER);
+    const provider = storedProvider === 'openai' ? 'openai' : 'gemini';
     const storedModel = localStorage.getItem(STORAGE_KEYS.AI_MODEL);
     const models = AI_MODELS[provider];
     const model = storedModel && models.some(m => m.id === storedModel) ? storedModel : models[0].id;
@@ -131,7 +132,7 @@ export function useChatSettings() {
   useEffect(() => {
     if (settingsQuery.data) {
       const serverData = settingsQuery.data;
-      const provider = 'gemini' as const;
+      const provider = serverData.aiProvider === 'openai' ? 'openai' : 'gemini';
       const models = AI_MODELS[provider];
       const validModel = models.some(m => m.id === serverData.aiModel)
         ? serverData.aiModel
@@ -172,7 +173,7 @@ export function useChatSettings() {
     };
   }, [saveToServer]);
 
-  const setAiProvider = useCallback((v: 'gemini') => {
+  const setAiProvider = useCallback((v: 'gemini' | 'openai') => {
     setSettings(prev => {
       const models = AI_MODELS[v];
       const model = models.some(m => m.id === prev.aiModel) ? prev.aiModel : models[0].id;

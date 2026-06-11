@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertTriangle,
@@ -243,10 +243,10 @@ export default function BaudRateSelector({
       {/* Custom rate input */}
       {showCustomInput && (
         <div className="flex items-center gap-2">
-          <Input
+          <NumberInput
             data-testid="baud-rate-custom-input"
-            type="number"
             min={1}
+            max={4_000_000}
             step={1}
             placeholder="Custom baud rate..."
             aria-label="Custom baud rate"

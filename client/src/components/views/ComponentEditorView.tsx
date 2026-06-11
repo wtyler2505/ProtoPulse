@@ -10,6 +10,15 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import {
+  VIEWER_3D_REPAIR_EVENT,
+  buildViewer3DRepairExactPartSeed,
+  normalizeViewer3DRepairTarget,
+  publishViewer3DBridgeTarget,
+  readViewer3DRepairTarget,
+  type Viewer3DRepairTarget,
+} from '@/lib/viewer-3d-bridge';
 import type { EditorViewType, PartMeta, Connector, Bus, PartViews, Constraint } from '@shared/component-types';
 import {
   getSourceEvidence,
@@ -22,6 +31,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import type { TrustBadgeKind } from '@/components/ui/TrustBadge';
+import { SurfaceStatusDock } from '@/components/ui/SurfaceStatusDock';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText, Download, Upload, FileImage, History, Shield, Share2, Library, Plus, Sparkles, Camera, RefreshCw, BadgeCheck, Wand2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +60,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Checkbox } from '@/components/ui/checkbox';
 import type { ComponentPart } from '@shared/schema';
 import { buildExactPartVerificationReadiness } from '@shared/exact-part-verification';
+import type { ExactPartDraftSeed } from '@shared/exact-part-resolver';
 
 const TABS: { id: EditorViewType; label: string }[] = [
   { id: 'breadboard', label: 'Breadboard' },
@@ -93,6 +105,32 @@ function verificationLevelLabel(level: string): string {
     default:
       return 'Community-only';
   }
+}
+
+function componentPinMapConfidence(meta: PartMeta): string {
+  const pin = meta.pinAccuracyReport;
+  if (!pin) return 'unknown';
+  const values = [pin.connectorNames, pin.electricalRoles, pin.breadboardAnchors];
+  if (values.every((value) => value === 'exact')) return 'exact';
+  if (values.some((value) => value === 'exact' || value === 'approximate')) return 'mixed';
+  return 'unknown';
+}
+
+function componentSurfaceTrustKind({
+  authoritativeWiringAllowed,
+  requiresVerification,
+}: {
+  authoritativeWiringAllowed: boolean;
+  requiresVerification: boolean;
+}): TrustBadgeKind {
+  if (authoritativeWiringAllowed) return 'verified';
+  if (requiresVerification) return 'unverified';
+  return 'estimated';
+}
+
+function getComponentEditorRepairTarget(): Viewer3DRepairTarget | null {
+  const target = readViewer3DRepairTarget();
+  return target?.destination === 'component-editor' ? target : null;
 }
 
 function MetadataForm() {
@@ -255,6 +293,7 @@ function ComponentEditorContent() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = useComponentEditor();
   const { pendingComponentPartId, setPendingComponentPartId } = useArchitecture();
   const projectId = useProjectId();
+  const { setActiveView: setWorkspaceView } = useProjectMeta();
   const activeView = state.ui.activeEditorView;
   const { toast } = useToast();
 
@@ -262,6 +301,7 @@ function ComponentEditorContent() {
   const loadedRef = useRef(false);
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const [exactDraftOpen, setExactDraftOpen] = useState(false);
+  const [exactDraftSeed, setExactDraftSeed] = useState<ExactPartDraftSeed | undefined>(undefined);
   const [modifyOpen, setModifyOpen] = useState(false);
   const [datasheetExtractOpen, setDatasheetExtractOpen] = useState(false);
   const [pinExtractOpen, setPinExtractOpen] = useState(false);
@@ -279,8 +319,10 @@ function ComponentEditorContent() {
   const [publishOpen, setPublishOpen] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [digitalTwinRepairTarget, setDigitalTwinRepairTarget] = useState<Viewer3DRepairTarget | null>(() => getComponentEditorRepairTarget());
   const [publishTags, setPublishTags] = useState('');
   const [publishIsPublic, setPublishIsPublic] = useState(true);
+  const [componentSurfaceStatusCollapsed, setComponentSurfaceStatusCollapsed] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: parts, isLoading: partsLoading, isError: partsError, error: partsFetchError, refetch: refetchParts } = useComponentParts(projectId);
@@ -297,6 +339,20 @@ function ComponentEditorContent() {
     state.present.connectors,
     state.present.views,
   );
+  const canvasEditorView = activeView === 'breadboard' || activeView === 'schematic' || activeView === 'pcb'
+    ? activeView
+    : null;
+  const canvasShapeCount = canvasEditorView
+    ? state.present.views[canvasEditorView].shapes.length
+    : 0;
+  const canvasPinCount = state.present.connectors.length;
+  const pinMapConfidence = componentPinMapConfidence(state.present.meta);
+  const componentSurfaceKind = componentSurfaceTrustKind(trustSummary);
+  const componentSurfaceLabel = trustSummary.authoritativeWiringAllowed
+    ? 'COMPONENT_VERIFIED'
+    : trustSummary.requiresVerification
+      ? 'COMPONENT_REVIEW'
+      : 'COMPONENT_LOCAL';
 
   useEffect(() => {
     if (loadedRef.current || !parts) return;
@@ -322,6 +378,23 @@ function ComponentEditorContent() {
     }
     loadedRef.current = true;
   }, [parts, dispatch, pendingComponentPartId, setPendingComponentPartId]);
+
+  useEffect(() => {
+    const nextTarget = getComponentEditorRepairTarget();
+    if (nextTarget) {
+      setDigitalTwinRepairTarget(nextTarget);
+    }
+
+    const handleRepairTarget = (event: Event) => {
+      const target = normalizeViewer3DRepairTarget((event as CustomEvent<unknown>).detail);
+      if (target?.destination === 'component-editor') {
+        setDigitalTwinRepairTarget(target);
+      }
+    };
+
+    window.addEventListener(VIEWER_3D_REPAIR_EVENT, handleRepairTarget);
+    return () => window.removeEventListener(VIEWER_3D_REPAIR_EVENT, handleRepairTarget);
+  }, []);
 
   const handleSave = useCallback(async () => {
     const payload = {
@@ -457,6 +530,7 @@ function ComponentEditorContent() {
     });
     loadedRef.current = true;
     setExactDraftOpen(false);
+    setExactDraftSeed(undefined);
     setVerifyOpen(false);
     toast({
       title: 'Candidate exact part created',
@@ -464,9 +538,65 @@ function ComponentEditorContent() {
     });
   }, [dispatch, toast]);
 
+  const handleExactDraftOpenChange = useCallback((open: boolean) => {
+    setExactDraftOpen(open);
+    if (!open) {
+      setExactDraftSeed(undefined);
+    }
+  }, []);
+
+  const handleOpenEmptyExactDraft = useCallback(() => {
+    setExactDraftSeed(undefined);
+    setExactDraftOpen(true);
+  }, []);
+
+  const handleOpenRepairExactDraft = useCallback(() => {
+    setExactDraftSeed(
+      digitalTwinRepairTarget
+        ? buildViewer3DRepairExactPartSeed(digitalTwinRepairTarget)
+        : undefined,
+    );
+    setExactDraftOpen(true);
+  }, [digitalTwinRepairTarget]);
+
   const handleOpenVerify = useCallback(() => {
     setVerifyOpen(true);
   }, []);
+
+  const handleViewPartIn3D = useCallback(() => {
+    publishViewer3DBridgeTarget({
+      sourceView: 'component-editor',
+      projectId,
+      sourceId: partId ? String(partId) : undefined,
+      title: state.present.meta.title || 'Untitled component',
+      subtitle: state.present.meta.description || trustSummary.summary,
+      trustTier: trustSummary.family,
+      verificationLevel,
+      verificationStatus,
+      pinMapConfidence: componentPinMapConfidence(state.present.meta),
+      readyNow: !trustSummary.requiresVerification || trustSummary.authoritativeWiringAllowed,
+      modelKind: activeView,
+      modelFormat: state.present.meta.packageType,
+    });
+    setWorkspaceView('viewer_3d');
+    toast({
+      title: 'Opening 3D view',
+      description: 'Component context and verification state were sent to the 3D viewer.',
+    });
+  }, [
+    activeView,
+    partId,
+    projectId,
+    setWorkspaceView,
+    state.present.meta,
+    toast,
+    trustSummary.authoritativeWiringAllowed,
+    trustSummary.family,
+    trustSummary.requiresVerification,
+    trustSummary.summary,
+    verificationLevel,
+    verificationStatus,
+  ]);
 
   const handleConfirmVerify = useCallback(async (payload: {
     evidence: unknown[];
@@ -740,14 +870,14 @@ function ComponentEditorContent() {
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div className="w-full h-full flex flex-col bg-background" data-testid="component-editor">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <div className="flex items-center gap-1">
+    <div className="flex h-full min-h-0 w-full flex-col bg-background" data-testid="component-editor">
+      <div className="flex min-h-9 shrink-0 items-center gap-2 overflow-x-auto border-b border-border px-3 py-1.5">
+        <div className="flex shrink-0 items-center gap-1">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               data-testid={`tab-${tab.id}`}
-              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`px-2 py-1 text-xs font-medium transition-colors ${
                 activeView === tab.id
                   ? 'bg-primary/20 text-primary'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -759,25 +889,25 @@ function ComponentEditorContent() {
           ))}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="ml-auto flex shrink-0 items-center gap-0.5">
           <Button
             variant="ghost"
             size="sm"
             data-testid="button-generate"
             onClick={() => setGeneratorOpen(true)}
-            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+            className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
           >
-            <Cpu className="w-4 h-4" />
+            <Cpu className="w-3.5 h-3.5" />
             <span className="text-xs">Generate</span>
           </Button>
           <Button
             variant="ghost"
             size="sm"
             data-testid="button-exact-part-draft"
-            onClick={() => setExactDraftOpen(true)}
-            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+            onClick={handleOpenEmptyExactDraft}
+            className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
           >
-            <Wand2 className="w-4 h-4" />
+            <Wand2 className="w-3.5 h-3.5" />
             <span className="text-xs">Exact Draft</span>
           </Button>
           <Button
@@ -786,10 +916,23 @@ function ComponentEditorContent() {
             data-testid="button-ai-modify"
             onClick={() => setModifyOpen(true)}
             disabled={!partId}
-            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+            className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="w-3.5 h-3.5" />
             <span className="text-xs">AI Modify</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-view-3d"
+            onClick={handleViewPartIn3D}
+            disabled={!partId}
+            aria-label="View active component in 3D"
+            title="View active component in 3D"
+            className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
+          >
+            <Box className="w-3.5 h-3.5" />
+            <span className="text-xs">View in 3D</span>
           </Button>
           <Button
             variant="ghost"
@@ -797,9 +940,9 @@ function ComponentEditorContent() {
             data-testid="button-extract-datasheet"
             onClick={() => setDatasheetExtractOpen(true)}
             disabled={!partId}
-            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+            className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
           >
-            <FileText className="w-4 h-4" />
+            <FileText className="w-3.5 h-3.5" />
             <span className="text-xs">Datasheet</span>
           </Button>
           <Button
@@ -808,9 +951,9 @@ function ComponentEditorContent() {
             data-testid="button-extract-pins"
             onClick={() => setPinExtractOpen(true)}
             disabled={!partId}
-            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+            className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
           >
-            <Camera className="w-4 h-4" />
+            <Camera className="w-3.5 h-3.5" />
             <span className="text-xs">Pins</span>
           </Button>
           <Button
@@ -818,9 +961,9 @@ function ComponentEditorContent() {
             size="sm"
             data-testid="button-validate"
             onClick={handleValidateAll}
-            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+            className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
           >
-            <ShieldCheck className="w-4 h-4" />
+            <ShieldCheck className="w-3.5 h-3.5" />
             <span className="text-xs">Validate</span>
           </Button>
           <Button
@@ -829,9 +972,9 @@ function ComponentEditorContent() {
             data-testid="button-export-fzpz"
             onClick={handleExportFzpz}
             disabled={!partId}
-            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+            className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3.5 h-3.5" />
             <span className="text-xs">Export</span>
           </Button>
           <Button
@@ -840,9 +983,9 @@ function ComponentEditorContent() {
             data-testid="button-publish"
             onClick={handlePublish}
             disabled={!partId}
-            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+            className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
           >
-            <Share2 className="w-4 h-4" />
+            <Share2 className="w-3.5 h-3.5" />
             <span className="text-xs">Publish</span>
           </Button>
           <Button
@@ -850,9 +993,9 @@ function ComponentEditorContent() {
             size="sm"
             data-testid="button-library"
             onClick={() => setLibraryOpen(true)}
-            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+            className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
           >
-            <Library className="w-4 h-4" />
+            <Library className="w-3.5 h-3.5" />
             <span className="text-xs">Library</span>
           </Button>
           <Button
@@ -861,9 +1004,9 @@ function ComponentEditorContent() {
             data-testid="button-import-fzpz"
             onClick={() => fileInputRef.current?.click()}
             disabled={isImporting}
-            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+            className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
           >
-            {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
             <span className="text-xs">Import</span>
           </Button>
           <input
@@ -881,9 +1024,9 @@ function ComponentEditorContent() {
             data-testid="button-import-svg"
             onClick={() => svgFileInputRef.current?.click()}
             disabled={isImportingSvg}
-            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+            className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
           >
-            {isImportingSvg ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileImage className="w-4 h-4" />}
+            {isImportingSvg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileImage className="w-3.5 h-3.5" />}
             <span className="text-xs">Import SVG</span>
           </Button>
           <input
@@ -900,9 +1043,9 @@ function ComponentEditorContent() {
             size="sm"
             data-testid="button-drc"
             onClick={() => setDrcOpen((v) => !v)}
-            className={`h-8 gap-1 relative ${drcOpen ? 'text-editor-accent bg-editor-accent/10' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`h-7 gap-1 px-2 relative ${drcOpen ? 'text-editor-accent bg-editor-accent/10' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            <Shield className="w-4 h-4" />
+            <Shield className="w-3.5 h-3.5" />
             <span className="text-xs">DRC</span>
             {drcViolations.length > 0 && (
               <span
@@ -922,9 +1065,9 @@ function ComponentEditorContent() {
             size="sm"
             data-testid="button-history"
             onClick={() => setHistoryOpen((v) => !v)}
-            className={`h-8 gap-1 relative ${historyOpen ? 'text-editor-accent bg-editor-accent/10' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`h-7 gap-1 px-2 relative ${historyOpen ? 'text-editor-accent bg-editor-accent/10' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            <History className="w-4 h-4" />
+            <History className="w-3.5 h-3.5" />
             <span className="text-xs">History</span>
             {(state.past.length + state.future.length) > 0 && (
               <span
@@ -935,7 +1078,7 @@ function ComponentEditorContent() {
               </span>
             )}
           </Button>
-          <div className="w-px h-5 bg-border mx-1" />
+          <div className="mx-1 h-4 w-px bg-border" />
           {state.ui.isDirty && (
             <span
               data-testid="indicator-dirty"
@@ -949,13 +1092,13 @@ function ComponentEditorContent() {
             disabled={!state.ui.isDirty || isSaving}
             onClick={handleSave}
             aria-label="Save"
-            className={`h-8 w-8 ${
+            className={`h-7 w-7 ${
               state.ui.isDirty
                 ? 'text-primary hover:text-primary hover:bg-primary/20'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Save className="w-4 h-4" />
+            <Save className="w-3.5 h-3.5" />
           </Button>
           <Button
             variant="ghost"
@@ -964,9 +1107,9 @@ function ComponentEditorContent() {
             disabled={!canUndo}
             onClick={undo}
             aria-label="Undo"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
           >
-            <Undo2 className="w-4 h-4" />
+            <Undo2 className="w-3.5 h-3.5" />
           </Button>
           <Button
             variant="ghost"
@@ -975,17 +1118,54 @@ function ComponentEditorContent() {
             disabled={!canRedo}
             onClick={redo}
             aria-label="Redo"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
           >
-            <Redo2 className="w-4 h-4" />
+            <Redo2 className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>
 
+      {digitalTwinRepairTarget && (
+        <div
+          className="flex flex-wrap items-center gap-2 border-b border-cyan-400/25 bg-cyan-400/10 px-4 py-2 text-xs text-cyan-50"
+          data-testid="component-editor-digital-twin-repair-context"
+          data-ref-des={digitalTwinRepairTarget.refDes ?? ''}
+          data-channel={digitalTwinRepairTarget.channel?.id ?? ''}
+          data-pin={digitalTwinRepairTarget.channel?.pinLabel ?? ''}
+          data-net={digitalTwinRepairTarget.channel?.netName ?? ''}
+        >
+          <div className="min-w-[220px] flex-1">
+            <span className="font-semibold">Digital Twin repair target</span>
+            <span className="ml-2 text-cyan-100/80" data-testid="component-editor-digital-twin-repair-summary">
+              {digitalTwinRepairTarget.summary ?? digitalTwinRepairTarget.title}
+            </span>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            data-testid="component-editor-open-repair-exact-draft"
+            onClick={handleOpenRepairExactDraft}
+          >
+            Open exact draft
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            data-testid="component-editor-dismiss-digital-twin-repair"
+            onClick={() => setDigitalTwinRepairTarget(null)}
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
+
       {partId && (
         <div
-          className="flex flex-wrap items-center gap-2 border-b border-border/70 bg-card/35 px-4 py-2"
+          className="flex max-h-24 flex-wrap items-center gap-2 overflow-y-auto border-b border-border/70 bg-card/35 px-4 py-2"
           data-testid="exact-part-trust-strip"
+          data-scrollable="true"
         >
           <Badge
             variant="outline"
@@ -1035,10 +1215,15 @@ function ComponentEditorContent() {
         </div>
       )}
 
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-48 border-r border-border flex flex-col bg-card/50">
-          <div className="p-2 flex items-center justify-between border-b border-border">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Parts</span>
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div
+          className="flex min-h-0 w-44 min-w-36 max-w-72 shrink-0 resize-x flex-col overflow-hidden border-r border-border bg-card/50"
+          data-resizable="true"
+          data-resize-axis="horizontal"
+          data-testid="component-editor-parts-rail"
+        >
+          <div className="flex items-center justify-between border-b border-border p-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground">Parts</span>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCreateNewPart} data-testid="button-new-part" aria-label="Add new part">
               <Plus className="w-3.5 h-3.5" />
             </Button>
@@ -1048,15 +1233,15 @@ function ComponentEditorContent() {
               <button
                 key={part.id}
                 data-testid={`part-item-${part.id}`}
-                className={`w-full text-left px-3 py-2 text-sm border-b border-border/50 transition-colors ${
+                className={`w-full border-b border-border/50 px-2 py-1.5 text-left transition-colors ${
                   partId === part.id
                     ? 'bg-editor-accent/10 text-editor-accent border-l-2 border-l-editor-accent'
                     : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 }`}
                 onClick={() => handleSwitchPart(part)}
               >
-                <div className="font-medium truncate">{(part.meta as PartMeta)?.title || `Part #${part.id}`}</div>
-                <div className="text-xs opacity-60 truncate">{(part.meta as PartMeta)?.family || 'No family'}</div>
+                <div className="truncate text-xs font-medium">{(part.meta as PartMeta)?.title || `Part #${part.id}`}</div>
+                <div className="truncate text-[10px] opacity-60">{(part.meta as PartMeta)?.family || 'No family'}</div>
                 {(() => {
                   const itemTrust = summarizePartTrust((part.meta as PartMeta) ?? {});
                   if (!itemTrust.requiresVerification) {
@@ -1075,7 +1260,7 @@ function ComponentEditorContent() {
             ))}
           </div>
         </div>
-        <div className="flex-1 overflow-auto">
+        <div className="min-w-0 flex-1 overflow-auto" data-testid="component-editor-main-surface">
           {partsError ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 h-full" data-testid="component-editor-error">
               <Cpu className="w-10 h-10 text-destructive/60" />
@@ -1109,8 +1294,71 @@ function ComponentEditorContent() {
             <PinTable />
           ) : activeView === 'spice' ? (
             <SpiceSubcircuitEditor />
-          ) : activeView === 'breadboard' || activeView === 'schematic' || activeView === 'pcb' ? (
-            <ShapeCanvas view={activeView} drcViolations={showDrcOverlays ? drcViolations : []} />
+          ) : canvasEditorView ? (
+            <div className="relative flex h-full min-h-0 overflow-hidden" data-testid="component-editor-work-surface">
+              <ShapeCanvas view={canvasEditorView} drcViolations={showDrcOverlays ? drcViolations : []} />
+              <div className="pointer-events-none absolute left-2 right-2 top-10 z-20 flex justify-end">
+                <SurfaceStatusDock
+                  ariaLabel="Component editor surface provenance status"
+                  title={state.present.meta.title || 'Untitled component'}
+                  origin={`${canvasEditorView} authoring surface`}
+                  trustKind={componentSurfaceKind}
+                  trustLabel={componentSurfaceLabel}
+                  collapsed={componentSurfaceStatusCollapsed}
+                  onToggle={() => setComponentSurfaceStatusCollapsed((value) => !value)}
+                  bodyTestId="component-editor-surface-detail"
+                  testId="component-editor-surface-status"
+                  titleTestId="component-editor-surface-title"
+                  originTestId="component-editor-surface-origin"
+                  toggleTestId="button-toggle-component-editor-surface-status"
+                  expandedClassName="w-full min-w-0 sm:w-[clamp(13rem,24vw,22rem)]"
+                >
+                  <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                    <div className="rounded border border-border/70 bg-muted/25 px-2 py-1">
+                      <p className="text-muted-foreground">View</p>
+                      <p className="font-medium capitalize text-foreground" data-testid="component-editor-surface-view">
+                        {canvasEditorView}
+                      </p>
+                    </div>
+                    <div className="rounded border border-border/70 bg-muted/25 px-2 py-1">
+                      <p className="text-muted-foreground">Shapes</p>
+                      <p className="font-medium text-foreground" data-testid="component-editor-surface-shape-count">
+                        {String(canvasShapeCount)}
+                      </p>
+                    </div>
+                    <div className="rounded border border-border/70 bg-muted/25 px-2 py-1">
+                      <p className="text-muted-foreground">Pins</p>
+                      <p className="font-medium text-foreground" data-testid="component-editor-surface-pin-count">
+                        {String(canvasPinCount)}
+                      </p>
+                    </div>
+                    <div className="rounded border border-border/70 bg-muted/25 px-2 py-1">
+                      <p className="text-muted-foreground">DRC</p>
+                      <p
+                        className={drcViolations.length > 0 ? 'font-medium text-amber-200' : 'font-medium text-emerald-300'}
+                        data-testid="component-editor-surface-drc-count"
+                      >
+                        {drcViolations.length > 0 ? String(drcViolations.length) : 'Clear'}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="leading-snug text-muted-foreground" data-testid="component-editor-surface-trust-summary">
+                    {trustSummary.summary}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5" data-testid="component-editor-surface-provenance">
+                    <Badge variant="outline" className="h-5 border-white/10 px-1.5 text-[10px] text-muted-foreground">
+                      {String(sourceEvidence.length)} evidence source{sourceEvidence.length === 1 ? '' : 's'}
+                    </Badge>
+                    <Badge variant="outline" className="h-5 border-white/10 px-1.5 text-[10px] text-muted-foreground">
+                      pin map {pinMapConfidence}
+                    </Badge>
+                    <Badge variant="outline" className="h-5 border-white/10 px-1.5 text-[10px] text-muted-foreground">
+                      {verificationLevelLabel(verificationLevel)}
+                    </Badge>
+                  </div>
+                </SurfaceStatusDock>
+              </div>
+            </div>
           ) : (
             <CanvasPlaceholder view={activeView} />
           )}
@@ -1136,10 +1384,10 @@ function ComponentEditorContent() {
       />
       <ExactPartDraftModal
         open={exactDraftOpen}
-        onOpenChange={setExactDraftOpen}
+        onOpenChange={handleExactDraftOpenChange}
         onCreated={handleExactPartCreated}
         projectId={projectId}
-        initialSeed={undefined}
+        initialSeed={exactDraftSeed}
       />
       {partId && (
         <>

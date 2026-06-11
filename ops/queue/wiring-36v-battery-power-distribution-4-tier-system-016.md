@@ -36,4 +36,8 @@ Added wire-gauge reference table to target insight `knowledge/power-budget-hiera
 **Agent note:** The power-budget hierarchy is an ORDERING constraint (not a sizing formula). It says: whatever your numbers are, they must satisfy continuous < peak < fuse < ampacity. That architectural character makes it a frequent upstream citation for sizing notes. Keep it lean — do not let it accumulate component-specific content; defer that to the notes it grounds.
 
 ## Revisit
+
+- Updated `knowledge/awg-vs-mm2-wire-sizing-logarithmic-conversion.md` to link to `[[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]]` in Relevant Notes, noting it as the reference table for the 7 rover power tiers.
+- Updated `knowledge/motor-power-wiring-below-14awg-overheats-at-15a-and-creates-fire-risk-so-gauge-is-chosen-by-steady-state-current-not-voltage.md` to enhance the description of the `[[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]]` link, mentioning it contains the full gauge reference table.
+
 ## Verify

@@ -67,6 +67,14 @@ export class CollaborationClient {
   // BL-0524: Pending conflicts awaiting user review
   private pendingConflicts: Conflict[] = [];
 
+  // BL-0879: Highest server Lamport timestamp observed from any incoming
+  // state-update broadcast for this project. Sent as each outgoing op's
+  // `baseTimestamp` so the server can detect concurrent edits (the
+  // Yjs/Automerge client-supplied-baseline convention). One CollaborationClient
+  // instance is scoped to a single projectId, so this single counter IS the
+  // per-project baseline.
+  private maxSeenLamport = 0;
+
   // Lock tracking
   private activeLocks = new Map<string, number>(); // entityKey -> userId
   // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
@@ -206,9 +214,21 @@ export class CollaborationClient {
           selection: message.payload.selection as { type: string; ids: string[] },
         });
         break;
-      case 'state-update':
-        this.emit('state-update', message.payload.operations as CRDTOperation[]);
+      case 'state-update': {
+        const ops = message.payload.operations as CRDTOperation[];
+        // BL-0879: Advance our known baseline from every broadcast op's
+        // server-assigned Lamport timestamp so subsequent local edits carry
+        // an accurate `baseTimestamp`. After we have seen a remote op, our
+        // next op's baseline exceeds that op's serverTs → the re-applied
+        // ("accept mine") edit wins LWW cleanly instead of false-conflicting.
+        for (const op of ops) {
+          if (typeof op.timestamp === 'number' && op.timestamp > this.maxSeenLamport) {
+            this.maxSeenLamport = op.timestamp;
+          }
+        }
+        this.emit('state-update', ops);
         break;
+      }
       case 'lock-granted':
         this.handleLockGranted(message);
         break;
@@ -424,13 +444,35 @@ export class CollaborationClient {
   /*  State operations                                                 */
   /* ---------------------------------------------------------------- */
 
+  /**
+   * @danger BL-0886 — `baseTimestamp` is bound HERE, at transmit time, from the
+   * current `maxSeenLamport`. This is correct ONLY for the present callers
+   * (conflict resolution: accept-mine / merge), where re-stamping with the
+   * latest observed baseline is exactly what makes the re-applied edit win.
+   *
+   * It is UNSAFE for live-edit queues or offline batching. If you later wire
+   * live editing — accumulating edits and flushing them after broadcasts have
+   * advanced `maxSeenLamport` — an edit composed at baseline N would be stamped
+   * with a later baseline M (> N), so it would silently overwrite concurrent
+   * edits it never actually observed (offline-overwrite / lost update). When
+   * that day comes, capture `baseTimestamp` at mutation/intent time and pass it
+   * through as an explicit field (this method already preserves a pre-set
+   * `baseTimestamp`). Tracked as BL-0886. (Gemini adversarial review R1/R2,
+   * 2026-05-26.)
+   */
   sendStateUpdate(operations: CRDTOperation[]): void {
+    // BL-0879: Stamp each outgoing op with the highest server Lamport we have
+    // observed so the server can detect concurrent edits. An op that already
+    // carries an explicit baseline (e.g. a deliberate re-base) keeps it.
+    const stamped = operations.map((op) => (
+      op.baseTimestamp === undefined ? { ...op, baseTimestamp: this.maxSeenLamport } : op
+    ));
     this.send({
       type: 'state-update',
       userId: this.myUserId,
       projectId: this.projectId,
       timestamp: Date.now(),
-      payload: { operations },
+      payload: { operations: stamped },
     });
   }
 

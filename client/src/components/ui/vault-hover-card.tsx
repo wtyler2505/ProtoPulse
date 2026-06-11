@@ -1,6 +1,10 @@
 /**
  * VaultHoverCard — the canonical way to show vault content on hover.
  *
+ * Icon convention (BL-0860): vault pedagogy affordances ALWAYS use the
+ * `BookOpen` lucide icon, never `Info` (which is reserved for transient hints
+ * and error/warning contexts). See `docs/design-system/vault-primitives.md`.
+ *
  * Wraps Radix HoverCard + `useVaultQuickFetch`. Renders states:
  *  - loading:  animated spinner + slug placeholder
  *  - success:  title, topic badges, 140-char summary, "Read more" affordance

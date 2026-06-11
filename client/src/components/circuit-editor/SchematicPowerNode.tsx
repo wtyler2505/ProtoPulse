@@ -5,7 +5,7 @@
  * Phase 3. Tracked as part of E2E-552 / Plan 03 Phase 4.
  */
 import { memo, useState, useRef, useEffect, type ReactNode } from 'react';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { Handle, Position, type Node, type NodeProps } from '@/lib/xyflow-compat';
 import { cn } from '@/lib/utils';
 import type { PowerSymbolType } from '@shared/circuit-types';
 

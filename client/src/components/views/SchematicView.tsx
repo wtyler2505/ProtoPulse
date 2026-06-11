@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ReactFlowProvider } from '@xyflow/react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import {
   useCircuitDesigns,
@@ -25,18 +24,27 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Loader2, CircuitBoard, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Cpu, Zap, ShieldCheck, GitBranchPlus, FileStack, RefreshCw, ChevronUp, History, ArrowRightToLine, Wand2, AlertTriangle } from 'lucide-react';
+import { Plus, Loader2, CircuitBoard, PanelLeftClose, PanelLeftOpen, Cpu, Zap, ShieldCheck, GitBranchPlus, FileStack, RefreshCw, ChevronUp, History, ArrowRightToLine, Wand2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CircuitAiExactPartWorkflow } from '@shared/circuit-ai-types';
 import type { CircuitDesignRow } from '@shared/schema';
 import type { ERCViolation } from '@shared/circuit-types';
-import { SchematicCanvasInner } from '@/components/circuit-editor/SchematicCanvas';
+import TSCircuitCanvasAdapter from '@/components/circuit-editor/TSCircuitCanvasAdapter';
+import type { SchematicCanvasProps } from '@/components/circuit-editor/schematic/canvas-contract';
 import ComponentPlacer from '@/components/circuit-editor/ComponentPlacer';
 import PowerSymbolPalette from '@/components/circuit-editor/PowerSymbolPalette';
 import ERCPanel from '@/components/circuit-editor/ERCPanel';
 import HierarchicalSheetPanel from '@/components/circuit-editor/HierarchicalSheetPanel';
 import SimulationScenarioPanel from '@/components/circuit-editor/SimulationScenarioPanel';
+import DesignDecayCard from '@/components/circuit-editor/DesignDecayCard';
+import JustInTimeSkillCard from '@/components/circuit-editor/JustInTimeSkillCard';
+import JitRunHistoryPanel from '@/components/circuit-editor/JitRunHistoryPanel';
 import { useToast } from '@/hooks/use-toast';
+import { getSchematicCanvasMode } from '@/lib/schematic-canvas-mode';
+import { getTopDesignDecayRecommendation } from '@/lib/design-decay';
+import { getTopJustInTimeSkill } from '@/lib/just-in-time-skills';
+import type { TrustBadgeKind } from '@/components/ui/TrustBadge';
+import { SurfaceStatusDock } from '@/components/ui/SurfaceStatusDock';
 
 function SchematicViewContent() {
   const projectId = useProjectId();
@@ -58,16 +66,45 @@ function SchematicViewContent() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiApiKey, setAiApiKey] = useState('');
   const [aiWorkflow, setAiWorkflow] = useState<CircuitAiExactPartWorkflow | null>(null);
+  const [surfaceStatusCollapsed, setSurfaceStatusCollapsed] = useState(false);
 
   const activeCircuit = circuits?.find(c => c.id === activeCircuitId) ?? circuits?.[0] ?? null;
 
   // Fetch instances for the active circuit to power the "Push to PCB" feature
   const { data: instances } = useCircuitInstances(activeCircuit?.id ?? 0);
+  const instanceCount = instances?.length ?? 0;
   const unplacedInstances = instances?.filter((inst) => inst.pcbX == null || inst.pcbY == null) ?? [];
+  const ercIssueCount = ercViolations.length;
+  const exactPartCount = aiWorkflow
+    ? Math.max(aiWorkflow.usedParts.length, aiWorkflow.requestedExactParts.length)
+    : 0;
+  const provisionalExactPartCount = aiWorkflow?.usedParts.filter((usage) => !usage.authoritativeWiringAllowed).length ?? 0;
+  const surfaceTrustKind: TrustBadgeKind = aiWorkflow
+    ? aiWorkflow.authoritativeWiringAllowed ? 'verified' : 'unverified'
+    : 'estimated';
+  const surfaceTrustLabel = aiWorkflow
+    ? aiWorkflow.authoritativeWiringAllowed ? 'AI_VERIFIED_EXACT' : 'AI_PROVISIONAL'
+    : 'LOCAL_MODEL';
+  const surfaceOriginLabel = aiWorkflow
+    ? aiWorkflow.authoritativeWiringAllowed ? 'AI exact workflow verified' : 'AI exact workflow provisional'
+    : 'Local schematic model';
+  const surfaceTrustSummary = aiWorkflow
+    ? aiWorkflow.authoritativeWiringAllowed
+      ? 'Exact-part workflow cleared authoritative wiring for this generated schematic.'
+      : 'Verify candidate exact parts before push-to-PCB or fabrication work.'
+    : 'No active AI exact-part run is attached to this surface.';
 
   const handleEnterSheet = useCallback((id: number) => {
     setActiveCircuitId(id);
   }, []);
+  const activeCanvasProps: SchematicCanvasProps | null = activeCircuit ? {
+    circuitId: activeCircuit.id,
+    ercViolations,
+    highlightedViolationId,
+    onEnterSheet: handleEnterSheet,
+  } : null;
+  const topDecayRecommendation = getTopDesignDecayRecommendation(ercViolations);
+  const topSkillRecommendation = getTopJustInTimeSkill(ercViolations);
 
   // Listen for SchematicToolbar "place-component" / "place-power" clicks.
   // The toolbar lives inside SchematicCanvas and does not own the side-panel
@@ -219,14 +256,14 @@ function SchematicViewContent() {
   }
 
   return (
-    <div className="flex flex-col h-full" data-testid="schematic-view">
-      <div className="h-10 border-b border-border bg-card/60 backdrop-blur-xl flex items-center px-3 gap-2 shrink-0">
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden" data-testid="schematic-view">
+      <div className="flex h-9 shrink-0 items-center gap-1.5 overflow-x-auto border-b border-border bg-card/60 px-2 backdrop-blur-xl">
         <Button
           variant="ghost"
           size="sm"
           data-testid="button-toggle-parts-panel"
           onClick={() => setPartsPanel((v) => !v)}
-          className="h-7 px-1.5 text-muted-foreground hover:text-foreground"
+          className="h-7 px-2 rounded-sm text-muted-foreground hover:text-foreground"
           aria-label="Toggle parts panel"
         >
           {partsPanel ? (
@@ -235,24 +272,24 @@ function SchematicViewContent() {
             <PanelLeftOpen className="w-4 h-4" />
           )}
         </Button>
-        <div className="w-px h-5 bg-border" />
+        <div className="w-px h-4 bg-border" />
         <div className="flex items-center gap-1">
           {activeCircuit?.parentDesignId && (
             <Button
               variant="ghost"
               size="sm"
               onClick={handleGoToParent}
-              className="h-7 px-1.5 text-primary hover:text-primary hover:bg-primary/10"
+              className="h-7 px-2 text-primary hover:text-primary hover:bg-primary/10"
               title="Go to parent sheet"
             >
-              <ChevronUp className="w-4 h-4" />
+              <ChevronUp className="w-3.5 h-3.5" />
             </Button>
           )}
           <Select
             value={String(activeCircuit?.id ?? '')}
             onValueChange={v => setActiveCircuitId(Number(v))}
           >
-            <SelectTrigger className="h-7 w-48 text-xs" data-testid="select-circuit">
+            <SelectTrigger className="h-7 w-36 lg:w-40 text-xs" data-testid="select-circuit">
               <SelectValue placeholder="Select circuit" />
             </SelectTrigger>
             <SelectContent>
@@ -270,12 +307,12 @@ function SchematicViewContent() {
           data-testid="button-create-circuit"
           onClick={handleCreateCircuit}
           disabled={createMutation.isPending}
-          className="h-7 gap-1 text-muted-foreground hover:text-foreground"
+          className="h-7 px-2 rounded-sm text-muted-foreground hover:text-foreground"
+          title="Create circuit"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span className="text-xs">New</span>
         </Button>
-        <div className="w-px h-5 bg-border" />
+        <div className="w-px h-4 bg-border" />
         <Button
           variant="ghost"
           size="sm"
@@ -283,13 +320,13 @@ function SchematicViewContent() {
           onClick={() => setAiDialogOpen(true)}
           disabled={!activeCircuit}
           className={cn(
-            'h-7 gap-1 text-muted-foreground hover:text-foreground',
+            'h-7 px-2 rounded-sm text-muted-foreground hover:text-foreground',
             aiWorkflow && !aiWorkflow.authoritativeWiringAllowed && 'text-amber-300 hover:text-amber-200',
           )}
           title={!activeCircuit ? 'Select a circuit first' : 'Generate schematic content with AI'}
+          aria-label="AI Generate"
         >
           <Wand2 className="w-3.5 h-3.5" />
-          <span className="text-xs">AI Generate</span>
         </Button>
         <Button
           variant="ghost"
@@ -297,50 +334,52 @@ function SchematicViewContent() {
           data-testid="button-push-to-pcb"
           onClick={() => setPushDialogOpen(true)}
           disabled={!activeCircuit || !instances || instances.length === 0 || unplacedInstances.length === 0 || pushToPcbMutation.isPending}
-          className="h-7 gap-1 text-muted-foreground hover:text-foreground"
+          className="h-7 px-2 rounded-sm text-muted-foreground hover:text-foreground"
           title={!instances || instances.length === 0 ? 'No components to push — add components to the schematic first' : unplacedInstances.length === 0 ? 'All components already placed on PCB' : `Push ${String(unplacedInstances.length)} component${unplacedInstances.length === 1 ? '' : 's'} to PCB`}
+          aria-label="Push to PCB"
         >
           {pushToPcbMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRightToLine className="w-3.5 h-3.5" />}
-          <span className="text-xs">Push to PCB</span>
         </Button>
         <div className="flex-1" />
-        <span className="text-xs text-muted-foreground">
+        <span className="hidden xl:inline whitespace-nowrap text-[11px] text-muted-foreground">
           {activeCircuit ? activeCircuit.name : 'No circuit selected'}
         </span>
-        <div className="w-px h-5 bg-border" />
+        <Badge
+          variant="outline"
+          className="hidden h-5 whitespace-nowrap px-1.5 text-[11px] text-muted-foreground lg:inline-flex"
+          data-testid="schematic-canvas-mode-badge"
+        >
+          Canvas: TSCircuit
+        </Badge>
+        <div className="w-px h-4 bg-border" />
         <Button
           variant="ghost"
           size="sm"
           data-testid="button-toggle-erc-panel"
           onClick={() => setErcPanel((v) => !v)}
           className={cn(
-            'h-7 px-1.5 gap-1 text-muted-foreground hover:text-foreground',
+            'h-7 px-2 rounded-sm text-muted-foreground hover:text-foreground',
             ercPanel && 'text-primary',
           )}
           title="Electrical Rule Check"
           aria-label="Toggle ERC panel"
         >
-          <ShieldCheck className="w-4 h-4" />
-          {ercPanel ? (
-            <PanelRightClose className="w-3.5 h-3.5" />
-          ) : (
-            <PanelRightOpen className="w-3.5 h-3.5" />
-          )}
+          <ShieldCheck className="w-3.5 h-3.5" />
         </Button>
       </div>
 
       {aiWorkflow ? (
         <div
           className={cn(
-            'border-b px-3 py-2 text-xs',
+            'border-b px-2 py-1 text-[11px]',
             aiWorkflow.authoritativeWiringAllowed
               ? 'border-emerald-500/30 bg-emerald-500/10'
               : 'border-amber-500/30 bg-amber-500/10',
           )}
           data-testid="schematic-ai-workflow-banner"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge
                   variant={aiWorkflow.authoritativeWiringAllowed ? 'default' : 'outline'}
@@ -355,7 +394,7 @@ function SchematicViewContent() {
               </div>
               <p
                 className={cn(
-                  'max-w-5xl leading-relaxed',
+                  'max-w-5xl leading-snug',
                   aiWorkflow.authoritativeWiringAllowed ? 'text-emerald-100' : 'text-amber-50',
                 )}
                 data-testid="schematic-ai-workflow-summary"
@@ -363,9 +402,9 @@ function SchematicViewContent() {
                 {aiWorkflow.summary}
               </p>
               {aiWorkflow.requestedExactParts.length > 0 ? (
-                <div className="space-y-1" data-testid="schematic-ai-requested-exact-parts">
+                <div className="space-y-0.5" data-testid="schematic-ai-requested-exact-parts">
                   {aiWorkflow.requestedExactParts.map((intent) => (
-                    <div key={`${intent.title}-${intent.kind}`} className="flex flex-wrap items-center gap-2">
+                    <div key={`${intent.title}-${intent.kind}`} className="flex flex-wrap items-center gap-1.5">
                       <Badge
                         variant="outline"
                         className={cn(
@@ -379,18 +418,18 @@ function SchematicViewContent() {
                       >
                         {intent.title}
                       </Badge>
-                      <span className="text-muted-foreground">{intent.message}</span>
+                      <span className="text-muted-foreground text-[11px]">{intent.message}</span>
                     </div>
                   ))}
                 </div>
               ) : null}
               {aiWorkflow.usedParts.length > 0 ? (
-                <div className="flex flex-wrap gap-2" data-testid="schematic-ai-used-parts">
+                <div className="flex flex-wrap gap-1.5" data-testid="schematic-ai-used-parts">
                   {aiWorkflow.usedParts.map((usage) => (
                     <Badge
                       key={`${usage.referenceDesignator}-${usage.partId}`}
                       variant="outline"
-                      className="border-white/10 text-foreground"
+                      className="border-white/10 text-foreground text-[11px]"
                     >
                       {usage.referenceDesignator}: {usage.title} ({usage.placementMode})
                     </Badge>
@@ -398,11 +437,11 @@ function SchematicViewContent() {
                 </div>
               ) : null}
               {aiWorkflow.warnings.length > 0 ? (
-                <div className="space-y-1" data-testid="schematic-ai-workflow-warnings">
+                <div className="space-y-0.5" data-testid="schematic-ai-workflow-warnings">
                   {aiWorkflow.warnings.slice(0, 3).map((warning) => (
-                    <div key={warning} className="flex items-start gap-2 text-amber-100">
-                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      <span>{warning}</span>
+                    <div key={warning} className="flex items-start gap-1 text-amber-100">
+                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                      <span className="text-[11px]">{warning}</span>
                     </div>
                   ))}
                 </div>
@@ -413,74 +452,84 @@ function SchematicViewContent() {
               size="sm"
               data-testid="button-dismiss-ai-workflow-banner"
               onClick={() => setAiWorkflow(null)}
-              className="h-7 text-muted-foreground hover:text-foreground"
+              className="h-5 px-1.5 text-[11px] text-muted-foreground hover:text-foreground"
             >
               Dismiss
             </Button>
           </div>
         </div>
       ) : null}
+      {topDecayRecommendation ? (
+        <DesignDecayCard recommendation={topDecayRecommendation} />
+      ) : null}
+      {topSkillRecommendation ? (
+        <JustInTimeSkillCard recommendation={topSkillRecommendation} />
+      ) : null}
+      <JitRunHistoryPanel />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {partsPanel && activeCircuit && (
-          <div className="w-56 shrink-0 flex flex-col border-r border-border" data-testid="parts-panel-container">
+          <div
+            className="flex min-h-0 w-[clamp(11rem,16vw,13rem)] shrink-0 flex-col border-r border-border bg-card/25"
+            data-testid="parts-panel-container"
+          >
             {/* Tab switcher */}
             <div className="flex border-b border-border shrink-0">
               <button
                 data-testid="panel-tab-components"
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-1 py-1.5 text-[10px] font-medium transition-colors',
+                  'flex flex-1 items-center justify-center gap-1 py-1 text-[11px] font-medium transition-colors',
                   panelTab === 'components'
                     ? 'text-primary border-b-2 border-primary'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
                 onClick={() => setPanelTab('components')}
               >
-                <Cpu className="w-3 h-3" />
+                <Cpu className="w-2.5 h-2.5" />
                 Parts
               </button>
               <button
                 data-testid="panel-tab-power"
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-1 py-1.5 text-[10px] font-medium transition-colors',
+                  'flex flex-1 items-center justify-center gap-1 py-1 text-[11px] font-medium transition-colors',
                   panelTab === 'power'
                     ? 'text-primary border-b-2 border-primary'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
                 onClick={() => setPanelTab('power')}
               >
-                <Zap className="w-3 h-3" />
+                <Zap className="w-2.5 h-2.5" />
                 Power
               </button>
               <button
                 data-testid="panel-tab-sheets"
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-1 py-1.5 text-[10px] font-medium transition-colors',
+                  'flex flex-1 items-center justify-center gap-1 py-1 text-[11px] font-medium transition-colors',
                   panelTab === 'sheets'
                     ? 'text-primary border-b-2 border-primary'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
                 onClick={() => setPanelTab('sheets')}
               >
-                <FileStack className="w-3 h-3" />
+                <FileStack className="w-2.5 h-2.5" />
                 Sheets
               </button>
               <button
                 data-testid="panel-tab-sim"
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-1 py-1.5 text-[10px] font-medium transition-colors',
+                  'flex flex-1 items-center justify-center gap-1 py-1 text-[11px] font-medium transition-colors',
                   panelTab === 'sim'
                     ? 'text-primary border-b-2 border-primary'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
                 onClick={() => setPanelTab('sim')}
               >
-                <History className="w-3 h-3" />
+                <History className="w-2.5 h-2.5" />
                 Sim
               </button>
             </div>
             {/* Panel content */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-gutter-stable">
               {panelTab === 'components' ? (
                 <ComponentPlacer />
               ) : panelTab === 'power' ? (
@@ -500,14 +549,67 @@ function SchematicViewContent() {
             </div>
           </div>
         )}
-        <div className="flex-1 relative overflow-hidden">
-          {activeCircuit ? (
-            <SchematicCanvasInner
-              circuitId={activeCircuit.id}
-              ercViolations={ercViolations}
-              highlightedViolationId={highlightedViolationId}
-              onEnterSheet={handleEnterSheet}
-            />
+        <div className="flex-1 min-h-0 relative overflow-hidden">
+          {activeCanvasProps && activeCircuit ? (
+            <>
+              <TSCircuitCanvasAdapter {...activeCanvasProps} />
+              <div className="pointer-events-none absolute left-2 right-2 top-2 z-20">
+                <SurfaceStatusDock
+                  ariaLabel="Schematic surface provenance status"
+                  title={activeCircuit.name}
+                  origin={surfaceOriginLabel}
+                  trustKind={surfaceTrustKind}
+                  trustLabel={surfaceTrustLabel}
+                  collapsed={surfaceStatusCollapsed}
+                  onToggle={() => setSurfaceStatusCollapsed((value) => !value)}
+                  bodyTestId="schematic-surface-detail"
+                  testId="schematic-surface-status"
+                  titleTestId="schematic-surface-circuit-name"
+                  originTestId="schematic-surface-origin"
+                  toggleTestId="button-toggle-schematic-surface-status"
+                  expandedClassName="w-full sm:min-w-[12rem] sm:w-[clamp(13rem,24vw,22rem)]"
+                >
+                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+                    <div className="rounded border border-border/70 bg-muted/25 px-2 py-1">
+                      <p className="text-muted-foreground">Parts</p>
+                      <p className="font-medium text-foreground" data-testid="schematic-surface-part-count">
+                        {String(instanceCount)}
+                      </p>
+                    </div>
+                    <div className="rounded border border-border/70 bg-muted/25 px-2 py-1">
+                      <p className="text-muted-foreground">ERC</p>
+                      <p
+                        className={cn('font-medium', ercIssueCount > 0 ? 'text-amber-200' : 'text-emerald-300')}
+                        data-testid="schematic-surface-erc-state"
+                      >
+                        {ercIssueCount > 0 ? String(ercIssueCount) : 'Clear'}
+                      </p>
+                    </div>
+                    <div className="rounded border border-border/70 bg-muted/25 px-2 py-1">
+                      <p className="text-muted-foreground">Canvas</p>
+                      <p className="font-medium text-foreground" data-testid="schematic-surface-canvas-mode">
+                        TSCircuit
+                      </p>
+                    </div>
+                  </div>
+                  <p className="leading-snug text-muted-foreground" data-testid="schematic-surface-trust-summary">
+                    {surfaceTrustSummary}
+                  </p>
+                  {aiWorkflow ? (
+                    <div className="flex flex-wrap items-center gap-1.5" data-testid="schematic-surface-exact-parts">
+                      <Badge variant="outline" className="h-5 border-white/10 px-1.5 text-[10px] text-muted-foreground">
+                        {String(exactPartCount)} exact part{exactPartCount === 1 ? '' : 's'} tracked
+                      </Badge>
+                      {provisionalExactPartCount > 0 ? (
+                        <Badge variant="outline" className="h-5 border-amber-300/40 px-1.5 text-[10px] text-amber-100">
+                          {String(provisionalExactPartCount)} needs verification
+                        </Badge>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </SurfaceStatusDock>
+              </div>
+            </>
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
               Select a circuit to begin editing
@@ -515,7 +617,10 @@ function SchematicViewContent() {
           )}
         </div>
         {ercPanel && activeCircuit && (
-          <div className="w-64 shrink-0 border-l border-border flex flex-col" data-testid="erc-panel-container">
+          <div
+            className="flex min-h-0 w-[clamp(11rem,16vw,14rem)] shrink-0 flex-col border-l border-border bg-card/20"
+            data-testid="erc-panel-container"
+          >
             <ERCPanel
               circuitId={activeCircuit.id}
               onHighlightViolation={handleHighlightViolation}
@@ -526,16 +631,16 @@ function SchematicViewContent() {
       </div>
 
       <AlertDialog open={pushDialogOpen} onOpenChange={setPushDialogOpen}>
-        <AlertDialogContent data-testid="push-to-pcb-dialog">
+        <AlertDialogContent data-testid="push-to-pcb-dialog" className="max-w-[28rem] p-4">
           <AlertDialogHeader>
-            <AlertDialogTitle>Push to PCB</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-base">Push to PCB</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
               Push {unplacedInstances.length} component{unplacedInstances.length === 1 ? '' : 's'} to
               the PCB layout as unplaced footprints?
             </AlertDialogDescription>
           </AlertDialogHeader>
           {unplacedInstances.length > 0 && (
-            <ul className="max-h-40 overflow-y-auto text-xs text-muted-foreground space-y-0.5 pl-4 list-disc" data-testid="push-to-pcb-list">
+            <ul className="max-h-36 overflow-y-auto text-[11px] text-muted-foreground space-y-0.5 pl-4 list-disc" data-testid="push-to-pcb-list">
               {unplacedInstances.map((inst) => (
                 <li key={inst.id}>
                   {inst.referenceDesignator}
@@ -563,23 +668,23 @@ function SchematicViewContent() {
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-[11px] text-muted-foreground mt-1.5">
             After pushing, you can switch to the PCB view to arrange the footprints.
           </p>
         </AlertDialogContent>
       </AlertDialog>
 
       <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
-        <DialogContent className="sm:max-w-2xl bg-card border-border" data-testid="dialog-ai-generate-circuit">
+        <DialogContent className="sm:max-w-[42rem] bg-card border-border p-4" data-testid="dialog-ai-generate-circuit">
           <DialogHeader>
-            <DialogTitle>Generate schematic with AI</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base">Generate schematic with AI</DialogTitle>
+            <DialogDescription className="text-sm">
               Ask ProtoPulse to place parts and connect a starting schematic. Exact board/module requests will be checked against the verified exact-part pipeline before the result is marked authoritative.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="ai-generate-description" className="text-sm font-medium text-foreground">
+          <div className="space-y-2.5">
+            <div className="space-y-1">
+              <label htmlFor="ai-generate-description" className="text-xs font-medium text-foreground">
                 Circuit request
               </label>
               <Textarea
@@ -588,11 +693,11 @@ function SchematicViewContent() {
                 placeholder="Example: Add an Arduino Mega 2560 R3, a RioRand motor controller, and the power wiring needed for a first-pass bench test."
                 value={aiPrompt}
                 onChange={(event) => setAiPrompt(event.target.value)}
-                className="min-h-[140px]"
+                className="min-h-[108px] text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="ai-generate-api-key" className="text-sm font-medium text-foreground">
+            <div className="space-y-1">
+              <label htmlFor="ai-generate-api-key" className="text-xs font-medium text-foreground">
                 Gemini API key
               </label>
               <Input
@@ -606,7 +711,7 @@ function SchematicViewContent() {
               />
             </div>
             <div
-              className="rounded-lg border border-border/70 bg-muted/30 p-3 text-xs text-muted-foreground"
+              className="rounded-md border border-border/70 bg-muted/30 p-2.5 text-[11px] text-muted-foreground"
               data-testid="ai-generate-exact-part-note"
             >
               Verified exact boards/modules can unlock authoritative wiring. Candidate exact boards/modules can still be placed, but ProtoPulse will flag the result as provisional until the part is reviewed.
@@ -632,9 +737,7 @@ function SchematicViewContent() {
 }
 
 export default function SchematicView() {
-  return (
-    <ReactFlowProvider>
-      <SchematicViewContent />
-    </ReactFlowProvider>
-  );
+  // ProtoPulse v3: schematic canvas is always tscircuit.
+  getSchematicCanvasMode();
+  return <SchematicViewContent />;
 }

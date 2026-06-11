@@ -1,10 +1,10 @@
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import type { AIAction } from '../chat-types';
 import type { BomItem, ValidationIssue, ViewMode } from '@/lib/project-context';
 
 export interface IntentContext {
-  nodes: Node[];
-  edges: Edge[];
+  nodes: GraphNode[];
+  edges: GraphEdge[];
   bom: BomItem[];
   issues: ValidationIssue[];
   projectName: string;

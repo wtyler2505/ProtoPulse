@@ -21,7 +21,32 @@ For a motor running at 15A under normal load, a sudden reversal can produce inst
 3. Toggle Z/F direction pin
 4. Ramp EL back up gradually: increment from 0 toward target speed over 500ms-2s
 
-**The mechanical alternative:** If "forward" spins the wrong way from the start, don't toggle Z/F in software -- swap any two motor phase wires (MA/MB, MB/MC, or MA/MC) at the physical connection. This changes the permanent rotation direction without requiring runtime direction changes.
+*Concrete Arduino implementation (setDirection wrapper with ramp pattern):*
+```cpp
+void setDirectionSafe(bool newDir, int targetSpeed) {
+  // 1. Ramp down
+  for (int speed = targetSpeed; speed >= 0; speed -= 5) {
+    analogWrite(EL_PIN, speed);
+    delay(50); // 50ms delay per step
+  }
+  analogWrite(EL_PIN, 0); // Stop (0% duty cycle, held HIGH by controller pull-up)
+  
+  // 2. Wait for rotor to stop completely
+  delay(1500); // 1.5s conservative wait depending on load
+  
+  // 3. Safely toggle direction
+  digitalWrite(ZF_PIN, newDir ? HIGH : LOW);
+  
+  // 4. Ramp up (0->targetSpeed in steps of 5)
+  for (int speed = 0; speed <= targetSpeed; speed += 5) {
+    analogWrite(EL_PIN, speed);
+    delay(50);
+  }
+}
+```
+
+**Troubleshooting / Hardware Alternative:** 
+If the symptom is "motor runs backwards" on initial startup, the solution is to **swap any two motor phase wires** (MA/MB, MB/MC, or MA/MC) at the physical connection, OR invert the software direction logic. This changes the permanent rotation direction without risking dangerous runtime direction changes. Do not attempt to fix a permanent wiring direction issue by blindly calling a reverse function at runtime under load.
 
 **ProtoPulse implication:** The bench coach should enforce a sequencing rule in generated Arduino code: any `setDirection()` function must include a stop-wait-change-ramp sequence. Direct `digitalWrite(DIR_PIN, !currentDir)` without stopping first should be flagged as a DRC error, not a warning, because the consequence is hardware destruction.
 

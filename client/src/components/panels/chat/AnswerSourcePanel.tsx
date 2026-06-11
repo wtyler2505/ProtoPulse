@@ -94,19 +94,19 @@ const AnswerSourcePanel = ({ sources, confidence, className }: AnswerSourcePanel
   if (sources.length === 0 && !confidence) return null;
 
   return (
-    <div className={cn("mt-3 pt-3 border-t border-border/40 space-y-3", className)}>
+    <div className={cn("mt-2.5 pt-2.5 border-t border-border/40 space-y-2.5", className)}>
       {sources.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-bold px-1">
             <Database className="w-3 h-3" />
             Design Sources ({sources.length})
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1">
             {sources.map((source, idx) => {
               const Icon = getSourceIcon(source.type);
               const isVault = source.type === 'knowledge_base';
               const vaultSlug = isVault && typeof source.id === 'string' ? source.id : null;
-              const baseClass = "flex items-center gap-1.5 px-2 py-1 bg-muted/30 border border-border/50 rounded-sm text-[10px] text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors group";
+              const baseClass = "flex items-center gap-1 px-1.5 py-0.5 bg-muted/30 border border-border/50 rounded-sm text-[10px] text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors group";
               const clickableClass = vaultSlug ? "cursor-pointer hover:bg-muted/50" : "cursor-default";
               return (
                 <button
@@ -134,7 +134,7 @@ const AnswerSourcePanel = ({ sources, confidence, className }: AnswerSourcePanel
       )}
 
       {confidence && (
-        <div className="space-y-1.5 bg-muted/20 p-2 rounded-sm border border-border/30">
+        <div className="space-y-1 bg-muted/20 p-1.5 rounded-sm border border-border/30">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
               <AlertCircle className="w-3 h-3" />
@@ -145,14 +145,14 @@ const AnswerSourcePanel = ({ sources, confidence, className }: AnswerSourcePanel
           
           <button 
             onClick={() => setShowConfidenceDetails(!showConfidenceDetails)}
-            className="flex items-center gap-1 text-[9px] text-primary/70 hover:text-primary transition-colors mt-1 font-medium"
+            className="flex items-center gap-1 text-[9px] text-primary/70 hover:text-primary transition-colors mt-0.5 font-medium"
           >
             {showConfidenceDetails ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRight className="w-2.5 h-2.5" />}
             {showConfidenceDetails ? 'Hide details' : 'Why this score?'}
           </button>
 
           {showConfidenceDetails && (
-            <div className="pt-1.5 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="pt-1 space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
               <p className="text-[10px] text-muted-foreground leading-relaxed italic">
                 "{confidence.explanation}"
               </p>

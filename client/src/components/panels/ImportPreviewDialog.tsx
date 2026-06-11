@@ -78,7 +78,7 @@ function DiffRow({ label, count, variant, testId }: DiffRowProps) {
 
   return (
     <div
-      className="flex items-center justify-between py-1.5"
+      className="flex items-center justify-between py-1"
       data-testid={testId}
     >
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -291,7 +291,7 @@ function ImportPreviewDialogInner({
         data-testid="import-preview-dialog"
       >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-sm">
+        <DialogTitle className="flex items-center gap-1.5 text-sm">
             <FileInput className="w-4 h-4 text-primary" />
             Import Preview
           </DialogTitle>
@@ -302,7 +302,7 @@ function ImportPreviewDialogInner({
 
         {/* Diff summary */}
         <div
-          className="space-y-0.5 border border-border/50 rounded-md px-3 py-2"
+          className="space-y-0.5 border border-border/50 rounded-md px-2.5 py-1.5"
           data-testid="import-preview-diff"
         >
           <DiffRow
@@ -350,7 +350,7 @@ function ImportPreviewDialogInner({
 
           {!hasChanges && (
             <p
-              className="text-xs text-muted-foreground py-2 text-center"
+              className="text-xs text-muted-foreground py-1.5 text-center"
               data-testid="import-no-changes"
             >
               No changes detected.
@@ -366,7 +366,7 @@ function ImportPreviewDialogInner({
         {/* Warnings */}
         {hasWarnings && (
           <div
-            className="space-y-1 border border-amber-400/30 bg-amber-400/5 rounded-md px-3 py-2"
+            className="space-y-1 border border-amber-400/30 bg-amber-400/5 rounded-md px-2.5 py-1.5"
             data-testid="import-preview-warnings"
           >
             <div className="flex items-center gap-1.5 text-xs font-medium text-amber-400">
@@ -390,7 +390,7 @@ function ImportPreviewDialogInner({
         {/* Conflicts */}
         {hasConflicts && (
           <div
-            className="space-y-1 border border-red-400/30 bg-red-400/5 rounded-md px-3 py-2"
+            className="space-y-1 border border-red-400/30 bg-red-400/5 rounded-md px-2.5 py-1.5"
             data-testid="import-preview-conflicts"
           >
             <div className="flex items-center gap-1.5 text-xs font-medium text-red-400">

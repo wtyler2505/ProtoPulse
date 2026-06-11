@@ -36,11 +36,12 @@ Created `knowledge/el-pin-floating-at-mcu-boot-defaults-the-motor-to-full-speed-
 
 **Agent note:** Boot-window hazards are a whole class of BLDC init bugs. This note pairs tightly with safe-bldc-startup-sequence to form the "power-on behavior contract" for BLDC motor drivers. Together they answer "what pin states does the driver see in the first 200ms of boot?" — a question beginners rarely ask but always need the answer to.
 
-## Revisit
-(to be filled by revisit phase)
-
-## Revisit
-(to be filled by revisit phase)
+## Reweave
+- `knowledge/zs-x11h-el-speed-input-is-active-low-and-flips-polarity-between-pwm-and-analog-modes.md`: Added an inline link to this note in the "safe startup pattern" paragraph and under "Relevant Notes", establishing the connection between the active-LOW polarity and the boot-time hazard.
+- `knowledge/safe-bldc-startup-sequence-initializes-el-stopped-then-brake-engaged-then-enable-low-before-setting-any-active-state.md`: Verified this note already effectively integrates and links to this boot-time hazard claim.
 
 ## Verify
-(to be filled by verify phase)
+- [x] Note exists at `knowledge/el-pin-floating-at-mcu-boot-defaults-the-motor-to-full-speed-so-explicit-high-initialization-is-mandatory-before-stop-is-enabled.md`
+- [x] Links are correct and bidirectional where appropriate.
+- [x] Note passes Schema checks (frontmatter, structure, description).
+- [x] All 4 phases complete. Marked task DONE.

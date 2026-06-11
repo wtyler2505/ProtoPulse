@@ -7,9 +7,20 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR" || exit 1
 
 RUST_TOOLCHAIN_FILE="src-tauri/rust-toolchain.toml"
-RUST_TOOLCHAIN="${CARGO_TOOLCHAIN:-}"
-if [[ -z "$RUST_TOOLCHAIN" && -f "$RUST_TOOLCHAIN_FILE" ]]; then
-  RUST_TOOLCHAIN="$(awk -F'"' '/^channel[[:space:]]*=[[:space:]]*"/ {print $2; exit}' "$RUST_TOOLCHAIN_FILE")"
+# Per Phase 1 migration contract, this file is REQUIRED and is the single
+# source of truth for the Rust toolchain used by preflight Rust gates.
+if [[ ! -f "$RUST_TOOLCHAIN_FILE" ]]; then
+  fail_gate "toolchain" "Missing required $RUST_TOOLCHAIN_FILE." "Restore src-tauri/rust-toolchain.toml with the pinned channel before running preflight."
+fi
+
+RUST_TOOLCHAIN_EXPECTED="$(awk -F'"' '/^channel[[:space:]]*=[[:space:]]*"/ {print $2; exit}' "$RUST_TOOLCHAIN_FILE")"
+if [[ -z "$RUST_TOOLCHAIN_EXPECTED" ]]; then
+  fail_gate "toolchain" "Could not read toolchain channel from $RUST_TOOLCHAIN_FILE." "Ensure rust-toolchain.toml declares [toolchain] channel = \"<version>\"."
+fi
+
+RUST_TOOLCHAIN="${CARGO_TOOLCHAIN:-$RUST_TOOLCHAIN_EXPECTED}"
+if [[ "${CARGO_TOOLCHAIN:-}" != "" && "${CARGO_TOOLCHAIN}" != "$RUST_TOOLCHAIN_EXPECTED" ]]; then
+  fail_gate "toolchain" "CARGO_TOOLCHAIN=$CARGO_TOOLCHAIN mismatches expected $RUST_TOOLCHAIN_EXPECTED from $RUST_TOOLCHAIN_FILE." "Unset CARGO_TOOLCHAIN or set it to the pinned value."
 fi
 
 if [[ -n "$RUST_TOOLCHAIN" && ! "$(command -v rustup)" ]]; then
@@ -258,6 +269,7 @@ for crate in \
 done
 
 run_required "typescript-check" npm run check
+run_required "ipc-contract-guard" npm run lint:ipc-contract
 run_required "rust-check" cargo_exec check --manifest-path src-tauri/Cargo.toml
 # Keep preflight bounded: smoke the Linux packaging path with a single bundle.
 # Full matrix bundling belongs in CI/release workflows, not this local gate.
@@ -286,6 +298,13 @@ if node -e "const c=require('./src-tauri/tauri.conf.json'); process.exit(c.app &
   add_pass "tauri-config-report" "withGlobalTauri:false confirmed"
 else
   fail_gate "tauri-config-report" "src-tauri/tauri.conf.json does not confirm app.withGlobalTauri:false." "Restore withGlobalTauri:false before Phase 1 continues."
+fi
+
+tauri_identifier="$(node -e "const c=require('./src-tauri/tauri.conf.json'); process.stdout.write(c.identifier || '')")"
+if [[ "$tauri_identifier" =~ \.app$ ]]; then
+  add_warn "bundle-identifier-report" "identifier '$tauri_identifier' ends with .app. Prefer an owned reverse-DNS id that does not end with '.app' (e.g. io.github.wtyler2505.protopulse) before public signing/notarization."
+else
+  add_pass "bundle-identifier-report" "identifier '$tauri_identifier'"
 fi
 
 if node -e "const c=require('./src-tauri/tauri.conf.json'); process.exit(c.app && c.app.security && c.app.security.csp ? 0 : 1)"; then

@@ -1,0 +1,15 @@
+components.json
+data/metrics.json
+docs/Trace-20260314T160602.json.gz
+docs/lighthouselocalhost_5000-20260306T225835.json
+drizzle.config.ts
+eslint.config.js
+package-lock.json
+package.json
+playwright.config.ts
+postcss.config.js
+reports/i18n-audit.json
+src-tauri/tauri.conf.json
+tsconfig.json
+vite.config.ts
+vitest.config.ts

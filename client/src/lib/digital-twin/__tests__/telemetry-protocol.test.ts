@@ -40,6 +40,35 @@ describe('parseFrame — manifest', () => {
     expect(manifest.channels[0].pin).toBe(54);
   });
 
+  it('preserves optional 3D scene mapping metadata on manifest channels', () => {
+    const line = JSON.stringify({
+      type: 'manifest',
+      board: 'ESP32-S3',
+      firmware: 'proto-1.1',
+      channels: [
+        {
+          id: 'U1:A0',
+          name: 'Sensor voltage',
+          dataType: 'analog',
+          pin: 36,
+          refDes: 'U1',
+          pinLabel: 'A0',
+          netName: 'SENSOR_OUT',
+        },
+      ],
+    });
+
+    const frame = parseFrame(line) as TelemetryManifest;
+
+    expect(frame).not.toBeNull();
+    expect(frame.channels[0]).toMatchObject({
+      id: 'U1:A0',
+      refDes: 'U1',
+      pinLabel: 'A0',
+      netName: 'SENSOR_OUT',
+    });
+  });
+
   it('parses manifest with multiple channels', () => {
     const line = JSON.stringify({
       type: 'manifest',

@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import StarterCircuitsPanel from '../StarterCircuitsPanel';
 import { PENDING_STARTER_CIRCUIT_LAUNCH_KEY } from '@/lib/starter-circuit-launch';
+import { RADIAL_COMMAND_EVENT, type RadialCommandEventDetail } from '@/lib/radial-menu-actions';
+import { RADIAL_AI_CHAT_DRAFT_EVENT } from '@/lib/radial-ai-commands';
 import {
   getAllStarterCircuits,
   getStarterCircuitsByCategory,
@@ -13,12 +15,76 @@ import {
 import type { StarterCategory, StarterDifficulty } from '@shared/starter-circuits';
 
 const mockSetActiveView = vi.fn();
+const mockToast = vi.fn();
 
 vi.mock('@/lib/contexts/project-meta-context', () => ({
   useProjectMeta: () => ({
     setActiveView: mockSetActiveView,
   }),
 }));
+
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({ toast: mockToast }),
+}));
+
+function dispatchStarterRadialCommand(
+  commandId: string,
+  targetId?: string,
+  targetLabel?: string,
+  activation?: RadialCommandEventDetail['activation'],
+): RadialCommandEventDetail {
+  const detail: RadialCommandEventDetail = {
+    commandId,
+    context: {
+      view: 'starter_circuits',
+      target: 'starter_circuit',
+      targetId,
+      targetLabel,
+    },
+    source: 'radial-menu',
+  };
+  if (activation) {
+    detail.activation = activation;
+  }
+  act(() => {
+    window.dispatchEvent(new CustomEvent(RADIAL_COMMAND_EVENT, { detail }));
+  });
+  return detail;
+}
+
+function dispatchStarterCanvasRadialCommand(
+  commandId: string,
+  activation?: RadialCommandEventDetail['activation'],
+): RadialCommandEventDetail {
+  const detail: RadialCommandEventDetail = {
+    commandId,
+    context: {
+      view: 'starter_circuits',
+      target: 'canvas',
+      targetLabel: 'Starter gallery',
+    },
+    source: 'radial-menu',
+  };
+  if (activation) {
+    detail.activation = activation;
+  }
+  act(() => {
+    window.dispatchEvent(new CustomEvent(RADIAL_COMMAND_EVENT, { detail }));
+  });
+  return detail;
+}
+
+type TestStarterCircuit = ReturnType<typeof getAllStarterCircuits>[number];
+
+function starterPartsText(circuit: TestStarterCircuit): string {
+  return [
+    `${circuit.name} parts`,
+    ...circuit.components.map(
+      (component) =>
+        `${String(component.quantity)}x ${component.name}${component.value ? ` (${component.value})` : ''}`,
+    ),
+  ].join('\n');
+}
 
 // ---------------------------------------------------------------------------
 // Shared library unit tests
@@ -143,6 +209,7 @@ describe('StarterCircuitsPanel', () => {
     });
     mockWriteText.mockClear();
     mockSetActiveView.mockClear();
+    mockToast.mockClear();
     sessionStorage.clear();
   });
 
@@ -163,6 +230,15 @@ describe('StarterCircuitsPanel', () => {
     for (const c of getAllStarterCircuits()) {
       expect(screen.getByTestId(`starter-card-${c.id}`)).toBeDefined();
     }
+  });
+
+  it('exposes starter circuit metadata for radial targeting', () => {
+    render(<StarterCircuitsPanel />);
+    const firstCircuit = getAllStarterCircuits()[0];
+    const card = screen.getByTestId(`starter-card-${firstCircuit.id}`);
+
+    expect(card).toHaveAttribute('data-starter-circuit-id', firstCircuit.id);
+    expect(card).toHaveAttribute('data-starter-circuit-label', firstCircuit.name);
   });
 
   it('renders search input', () => {
@@ -352,6 +428,226 @@ describe('StarterCircuitsPanel', () => {
     expect(parsed.arduinoCode).toBe(firstCircuit.arduinoCode);
   });
 
+  it('drafts starter learning context to AI chat from a radial command', () => {
+    const firstCircuit = getAllStarterCircuits()[0];
+    const chatOpenListener = vi.fn();
+    const chatDraftListener = vi.fn();
+    window.addEventListener('protopulse:open-chat-panel', chatOpenListener);
+    window.addEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, chatDraftListener);
+
+    try {
+      render(<StarterCircuitsPanel />);
+
+      const detail = dispatchStarterRadialCommand('ai_starter_learn', firstCircuit.id, firstCircuit.name);
+
+      expect(detail.handled).toBe(true);
+      expect(chatOpenListener).toHaveBeenCalledTimes(1);
+      expect((chatOpenListener.mock.calls[0]?.[0] as CustomEvent<{ designAgent?: boolean }>).detail.designAgent).toBe(
+        false,
+      );
+      expect(chatDraftListener).toHaveBeenCalledTimes(1);
+      const message = (chatDraftListener.mock.calls[0]?.[0] as CustomEvent<{ message: string }>).detail.message;
+      expect(message).toContain('AI intent: starter_learn.');
+      expect(message).toContain(`Starter circuit learning prompt: ${firstCircuit.name}`);
+      expect(message).toContain(`Target: starter_circuit "${firstCircuit.name}"`);
+      expect(message).toContain(`Selected starter: ${firstCircuit.name}`);
+      expect(message).toContain('Components needed:');
+      expect(message).toContain(firstCircuit.components[0].name);
+      expect(message).toContain('What Tyler will learn:');
+      expect(message).toContain(firstCircuit.learningObjectives[0]);
+      expect(message).toContain('Arduino code preview:');
+      expect(message).toContain('Gallery state:');
+      expect(message).toContain('Search filter: none');
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'AI Starter Drafted',
+          description: `Drafted ${firstCircuit.name} learning prompt in AI chat.`,
+        }),
+      );
+    } finally {
+      window.removeEventListener('protopulse:open-chat-panel', chatOpenListener);
+      window.removeEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, chatDraftListener);
+    }
+  });
+
+  it('sends starter learning context immediately when radial AI command is shift-activated', () => {
+    const firstCircuit = getAllStarterCircuits()[0];
+    const chatDraftListener = vi.fn();
+    const chatSendListener = vi.fn();
+    window.addEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, chatDraftListener);
+    window.addEventListener('protopulse:chat-send', chatSendListener);
+
+    try {
+      render(<StarterCircuitsPanel />);
+
+      const detail = dispatchStarterRadialCommand('ai_starter_learn', firstCircuit.id, firstCircuit.name, {
+        input: 'mouse',
+        sendNow: true,
+        modifier: 'shift',
+      });
+
+      expect(detail.handled).toBe(true);
+      expect(chatDraftListener).not.toHaveBeenCalled();
+      expect(chatSendListener).toHaveBeenCalledTimes(1);
+      const event = chatSendListener.mock.calls[0]?.[0] as CustomEvent<{
+        message: string;
+        source: string;
+        delivery: string;
+      }>;
+      expect(event.detail.source).toBe('radial-ai');
+      expect(event.detail.delivery).toBe('send-now');
+      expect(event.detail.message).toContain('AI intent: starter_learn.');
+      expect(event.detail.message).toContain(`Selected starter: ${firstCircuit.name}`);
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'AI Starter Sent',
+          description: `Sent ${firstCircuit.name} learning prompt to AI chat.`,
+        }),
+      );
+    } finally {
+      window.removeEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, chatDraftListener);
+      window.removeEventListener('protopulse:chat-send', chatSendListener);
+    }
+  });
+
+  it('opens and copies a starter circuit from radial commands', () => {
+    const firstCircuit = getAllStarterCircuits()[0];
+    render(<StarterCircuitsPanel />);
+
+    const openDetail = dispatchStarterRadialCommand('open_starter_circuit', firstCircuit.id, firstCircuit.name);
+
+    expect(openDetail.handled).toBe(true);
+    expect(mockSetActiveView).toHaveBeenCalledWith('arduino');
+    expect(sessionStorage.getItem(PENDING_STARTER_CIRCUIT_LAUNCH_KEY)).not.toBeNull();
+
+    const copyDetail = dispatchStarterRadialCommand('copy_starter_code', firstCircuit.id, firstCircuit.name);
+
+    expect(copyDetail.handled).toBe(true);
+    expect(mockWriteText).toHaveBeenCalledWith(firstCircuit.arduinoCode);
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Starter code copied',
+        description: `Copied ${firstCircuit.name} code from the radial menu.`,
+      }),
+    );
+  });
+
+  it('uses target-aware starter radial commands for filters, details, and parts', () => {
+    const firstCircuit = getAllStarterCircuits()[0];
+    render(<StarterCircuitsPanel />);
+
+    const categoryDetail = dispatchStarterRadialCommand('starter_show_category', firstCircuit.id, firstCircuit.name);
+    expect(categoryDetail.handled).toBe(true);
+    expect(screen.getByTestId('starter-circuits-count').textContent).toContain(
+      `${getStarterCircuitsByCategory(firstCircuit.category).length} / ${getAllStarterCircuits().length}`,
+    );
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: `Filtered starter circuits to ${firstCircuit.name}'s category.`,
+      }),
+    );
+
+    const difficultyDetail = dispatchStarterRadialCommand(
+      'starter_show_difficulty',
+      firstCircuit.id,
+      firstCircuit.name,
+    );
+    expect(difficultyDetail.handled).toBe(true);
+    expect(screen.getByTestId('starter-circuits-count').textContent).toContain(
+      `${getStarterCircuitsByDifficulty(firstCircuit.difficulty).length} / ${getAllStarterCircuits().length}`,
+    );
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: `Filtered starter circuits to ${firstCircuit.name}'s difficulty level.`,
+      }),
+    );
+
+    const expandDetail = dispatchStarterRadialCommand('starter_toggle_details', firstCircuit.id, firstCircuit.name);
+    expect(expandDetail.handled).toBe(true);
+    expect(screen.getByTestId(`starter-details-${firstCircuit.id}`)).toBeDefined();
+
+    const collapseDetail = dispatchStarterRadialCommand('starter_toggle_details', firstCircuit.id, firstCircuit.name);
+    expect(collapseDetail.handled).toBe(true);
+    expect(screen.queryByTestId(`starter-details-${firstCircuit.id}`)).toBeNull();
+
+    const partsDetail = dispatchStarterRadialCommand('copy_starter_parts', firstCircuit.id, firstCircuit.name);
+    expect(partsDetail.handled).toBe(true);
+    expect(mockWriteText).toHaveBeenCalledWith(starterPartsText(firstCircuit));
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Starter parts copied',
+        description: `Copied ${firstCircuit.name} parts list from the radial menu.`,
+      }),
+    );
+  });
+
+  it('uses the first visible starter circuit for canvas radial AI, open, and copy commands', () => {
+    const firstCircuit = getAllStarterCircuits()[0];
+    const chatDraftListener = vi.fn();
+    window.addEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, chatDraftListener);
+
+    try {
+      render(<StarterCircuitsPanel />);
+
+      const aiDetail = dispatchStarterCanvasRadialCommand('ai_starter_learn');
+
+      expect(aiDetail.handled).toBe(true);
+      expect(chatDraftListener).toHaveBeenCalledTimes(1);
+      const message = (chatDraftListener.mock.calls[0]?.[0] as CustomEvent<{ message: string }>).detail.message;
+      expect(message).toContain(`Starter circuit learning prompt: ${firstCircuit.name}`);
+      expect(message).toContain('Target: canvas "Starter gallery"');
+      expect(message).toContain(`Selected starter: ${firstCircuit.name}`);
+
+      const openDetail = dispatchStarterCanvasRadialCommand('open_starter_circuit');
+      expect(openDetail.handled).toBe(true);
+      expect(mockSetActiveView).toHaveBeenCalledWith('arduino');
+
+      const copyDetail = dispatchStarterCanvasRadialCommand('copy_starter_code');
+      expect(copyDetail.handled).toBe(true);
+      expect(mockWriteText).toHaveBeenCalledWith(firstCircuit.arduinoCode);
+    } finally {
+      window.removeEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, chatDraftListener);
+    }
+  });
+
+  it('filters and resets starter circuits from canvas radial commands', () => {
+    render(<StarterCircuitsPanel />);
+
+    const beginnerDetail = dispatchStarterCanvasRadialCommand('starter_filter_beginner');
+    expect(beginnerDetail.handled).toBe(true);
+    expect(screen.getByTestId('starter-circuits-count').textContent).toContain(
+      `${getStarterCircuitsByDifficulty('beginner').length} / ${getAllStarterCircuits().length}`,
+    );
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Beginner Starters' }));
+
+    const resetDetail = dispatchStarterCanvasRadialCommand('starter_reset_filters');
+    expect(resetDetail.handled).toBe(true);
+    expect(screen.getByTestId('starter-circuits-count').textContent).toContain(
+      `${getAllStarterCircuits().length} / ${getAllStarterCircuits().length}`,
+    );
+
+    const sensorDetail = dispatchStarterCanvasRadialCommand('starter_filter_sensors');
+    expect(sensorDetail.handled).toBe(true);
+    expect(screen.getByTestId('starter-circuits-count').textContent).toContain(
+      `${getStarterCircuitsByCategory('sensors').length} / ${getAllStarterCircuits().length}`,
+    );
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Sensor Starters' }));
+
+    const motorDetail = dispatchStarterCanvasRadialCommand('starter_filter_motors');
+    expect(motorDetail.handled).toBe(true);
+    expect(screen.getByTestId('starter-circuits-count').textContent).toContain(
+      `${getStarterCircuitsByCategory('motors').length} / ${getAllStarterCircuits().length}`,
+    );
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Motor Starters' }));
+
+    const displayDetail = dispatchStarterCanvasRadialCommand('starter_filter_displays');
+    expect(displayDetail.handled).toBe(true);
+    expect(screen.getByTestId('starter-circuits-count').textContent).toContain(
+      `${getStarterCircuitsByCategory('displays').length} / ${getAllStarterCircuits().length}`,
+    );
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Display Starters' }));
+  });
+
   it('displays difficulty badge for each circuit', () => {
     render(<StarterCircuitsPanel />);
     for (const c of getAllStarterCircuits()) {
@@ -381,9 +677,7 @@ describe('StarterCircuitsPanel', () => {
     fireEvent.click(screen.getByTestId('starter-filter-category-sensors'));
     fireEvent.click(screen.getByTestId('starter-filter-difficulty-beginner'));
 
-    const expected = getAllStarterCircuits().filter(
-      (c) => c.category === 'sensors' && c.difficulty === 'beginner',
-    );
+    const expected = getAllStarterCircuits().filter((c) => c.category === 'sensors' && c.difficulty === 'beginner');
 
     const count = screen.getByTestId('starter-circuits-count');
     expect(count.textContent).toContain(`${expected.length} /`);

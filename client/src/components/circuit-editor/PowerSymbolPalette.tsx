@@ -72,14 +72,14 @@ function SymbolItem({ def }: { def: PowerSymbolDef }) {
         onDragStart={onDragStart}
         data-testid={`power-symbol-${def.type.toLowerCase()}`}
         className={cn(
-          'flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-grab active:cursor-grabbing',
+          'flex items-center gap-2 px-2 py-1 rounded-sm cursor-grab active:cursor-grabbing',
           'hover:bg-muted/60 transition-colors group',
         )}
       >
         <GripVertical className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-        <Zap className="w-3.5 h-3.5 shrink-0" style={{ color: def.color }} />
+        <Zap className="w-3 h-3 shrink-0" style={{ color: def.color }} />
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-medium" style={{ color: def.color }}>
+          <div className="text-[11px] font-medium" style={{ color: def.color }}>
             {def.label}
           </div>
           <div className="text-[10px] text-muted-foreground truncate">
@@ -121,8 +121,8 @@ function CustomSymbolInput({
   );
 
   return (
-    <div className="px-2 py-1.5">
-      <div className="text-[10px] text-muted-foreground mb-1">Custom Power Net</div>
+    <div className="px-2 py-1">
+      <div className="text-[10px] text-muted-foreground mb-0.5">Custom Power Net</div>
       <div className="flex gap-1">
         <Input
           data-testid="power-symbol-custom-input"
@@ -130,13 +130,13 @@ function CustomSymbolInput({
           onChange={(e) => setCustomNet(e.target.value)}
           placeholder="Net name..."
           aria-label="Custom power net name"
-          className="h-6 text-xs flex-1"
+          className="h-5.5 text-xs flex-1"
         />
         <div
           draggable={!!customNet.trim()}
           onDragStart={handleDragStart}
           className={cn(
-            'h-6 px-2 flex items-center rounded-sm text-[10px] font-medium',
+            'h-5.5 px-2 flex items-center rounded-sm text-[10px] font-medium',
             customNet.trim()
               ? 'bg-primary/20 text-primary cursor-grab active:cursor-grabbing'
               : 'bg-muted/30 text-muted-foreground/40 cursor-not-allowed',
@@ -165,15 +165,15 @@ export default function PowerSymbolPalette() {
       className="flex flex-col h-full bg-card/40 border-r border-border"
       data-testid="power-symbol-palette"
     >
-      <div className="px-3 py-2 border-b border-border shrink-0">
-        <h3 className="text-xs font-semibold text-foreground">Power Symbols</h3>
+      <div className="px-2.5 py-1.5 border-b border-border shrink-0">
+        <h3 className="text-[11px] font-semibold text-foreground">Power Symbols</h3>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="py-1">
           {/* Supply group */}
-          <div className="px-2 py-1">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="px-2 py-0.5">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
               Supply Rails
             </span>
           </div>
@@ -182,8 +182,8 @@ export default function PowerSymbolPalette() {
           ))}
 
           {/* Ground group */}
-          <div className="px-2 py-1 mt-1">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="px-2 py-0.5 mt-0.5">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
               Ground
             </span>
           </div>
@@ -192,13 +192,13 @@ export default function PowerSymbolPalette() {
           ))}
 
           {/* Custom */}
-          <div className="mt-2 border-t border-border pt-1">
+          <div className="mt-1.5 border-t border-border pt-1">
             <CustomSymbolInput onDragStart={handleCustomDragStart} />
           </div>
         </div>
       </ScrollArea>
 
-      <div className="px-3 py-1.5 border-t border-border text-[10px] text-muted-foreground/60 shrink-0">
+      <div className="px-2.5 py-1 border-t border-border text-[10px] text-muted-foreground/60 shrink-0">
         Drag a power symbol onto the canvas
       </div>
     </div>

@@ -7,14 +7,14 @@ import BreadboardQuickIntake from '../BreadboardQuickIntake';
 describe('BreadboardQuickIntake', () => {
   it('renders inline form with part name, quantity, and submit', () => {
     render(<BreadboardQuickIntake onAdd={vi.fn()} />);
-    expect(screen.getByPlaceholderText(/part name/i)).toBeInTheDocument();
-    expect(screen.getByTestId('quick-intake-quantity')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /quick add part name/i })).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: /quick add quantity/i })).toBeInTheDocument();
     expect(screen.getByTestId('quick-intake-submit')).toBeInTheDocument();
   });
 
   it('renders storage location field', () => {
     render(<BreadboardQuickIntake onAdd={vi.fn()} />);
-    expect(screen.getByTestId('quick-intake-storage')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /quick add storage location/i })).toBeInTheDocument();
   });
 
   it('calls onAdd with part name and quantity on submit', async () => {

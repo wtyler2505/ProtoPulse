@@ -1,4 +1,5 @@
 import type { ActionHandler } from './types';
+import { apiRequest } from '@/lib/queryClient';
 
 // ---------------------------------------------------------------------------
 // Tutorials database
@@ -195,6 +196,44 @@ const startTutorial: ActionHandler = (action, ctx) => {
   ctx.history.addToHistory(`Started tutorial: ${action.topic}`, 'AI');
 };
 
+const runJitSkill: ActionHandler = (action, ctx) => {
+  const command = typeof action.command === 'string' ? action.command.trim() : '';
+  if (!command) {
+    return;
+  }
+  ctx.output.addOutputLog(`[AI] Sending JIT skill command: ${command}`);
+
+  void apiRequest('POST', `/api/projects/${String(ctx.projectId)}/jit-skills/run`, { command })
+    .then(async (res) => {
+      const data = (await res.json()) as { message?: string; status?: string };
+      const status = data.status ?? 'accepted';
+      const message = data.message ?? `JIT skill command accepted: ${command}`;
+      ctx.output.addOutputLog(`[AI] ${message} (${status})`);
+      ctx.history.addToHistory(`JIT skill command accepted: ${command}`, 'AI');
+      window.dispatchEvent(new CustomEvent('protopulse:jit-skill-updated', {
+        detail: { command, status },
+      }));
+      ctx.validation.addValidationIssue({
+        severity: 'info',
+        message: `Just-in-time skill command accepted: ${command}`,
+        suggestion: 'Review resulting wiring updates and confirm they match the intended remediation.',
+      });
+    })
+    .catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      ctx.output.addOutputLog(`[AI] JIT skill command failed: ${msg}`);
+      ctx.history.addToHistory(`JIT skill command failed: ${command}`, 'AI');
+      window.dispatchEvent(new CustomEvent('protopulse:jit-skill-updated', {
+        detail: { command, status: 'failed' },
+      }));
+      ctx.validation.addValidationIssue({
+        severity: 'warning',
+        message: `Just-in-time skill command failed: ${command}`,
+        suggestion: msg,
+      });
+    });
+};
+
 // ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
@@ -210,4 +249,5 @@ export const miscHandlers: Record<string, ActionHandler> = {
   set_explain_mode: setExplainMode,
   parametric_search: parametricSearch,
   start_tutorial: startTutorial,
+  run_jit_skill: runJitSkill,
 };

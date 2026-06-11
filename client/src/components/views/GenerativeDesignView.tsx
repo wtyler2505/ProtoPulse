@@ -18,11 +18,14 @@ import {
 } from '@/lib/generative-design/generative-adopt';
 import { AdoptCandidateDialog } from '@/components/dialogs/AdoptCandidateDialog';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { publishViewer3DBridgeTarget } from '@/lib/viewer-3d-bridge';
 import { toast } from '@/hooks/use-toast';
 import type { DesignSpec, CandidateEntry } from '@/lib/generative-design/generative-engine';
 import type { ComparisonResult, AdoptResult } from '@/lib/generative-design/generative-adopt';
 import type { CircuitIR } from '@/lib/circuit-dsl/circuit-ir';
 import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
+import { NumberInput } from '@/components/ui/number-input';
 
 // ---------------------------------------------------------------------------
 // Default base circuit for seeding the generation
@@ -50,6 +53,7 @@ function defaultBaseCircuit(): CircuitIR {
 export default function GenerativeDesignView() {
   const { state, results, run, cancel } = useGenerativeDesign();
   const { nodes: existingNodes, edges: existingEdges, setNodes, setEdges, pushUndoState } = useArchitecture();
+  const { setActiveView } = useProjectMeta();
 
   const [description, setDescription] = useState('');
   const [budgetUsd, setBudgetUsd] = useState(25);
@@ -105,13 +109,34 @@ export default function GenerativeDesignView() {
     exportCandidate(candidate);
   }, []);
 
+  const handleViewIn3D = useCallback((candidate: CandidateEntry) => {
+    const firstComponent = candidate.ir.components[0];
+    publishViewer3DBridgeTarget({
+      sourceView: 'generative',
+      sourceId: candidate.id,
+      refDes: firstComponent?.refdes,
+      title: candidate.ir.meta.name || `Candidate ${candidate.id}`,
+      subtitle: `Fitness ${(candidate.fitness.overall * 100).toFixed(1)}%`,
+      sourceName: 'Generative design engine',
+      trustTier: 'ai-generated',
+      verificationLevel: 'generated',
+      verificationStatus: 'candidate',
+      readyNow: false,
+      componentCount: candidate.ir.components.length,
+      generatedFrom: 'generative-design',
+      fitnessScore: candidate.fitness.overall,
+      modelKind: 'candidate',
+    });
+    setActiveView('viewer_3d');
+  }, [setActiveView]);
+
   const latestResult = results.length > 0 ? results[results.length - 1] : null;
 
   return (
-    <div data-testid="generative-design-view" className="flex h-full gap-4 p-4 overflow-hidden">
+    <div data-testid="generative-design-view" className="flex h-full gap-3 overflow-hidden p-3">
       {/* Left panel — Spec input */}
-      <div className="w-80 shrink-0 flex flex-col gap-4 overflow-y-auto">
-        <h2 className="text-lg font-semibold text-cyan-400">Generative Design</h2>
+      <div className="flex w-72 shrink-0 flex-col gap-3 overflow-y-auto">
+        <h2 className="text-sm font-semibold text-cyan-400">Generative Design</h2>
 
         {/* Description */}
         <div className="flex flex-col gap-1">
@@ -121,7 +146,8 @@ export default function GenerativeDesignView() {
           <textarea
             id="spec-desc"
             data-testid="spec-description-input"
-            className="rounded border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100 resize-none"
+            aria-label="Circuit description"
+            className="resize-none rounded border border-zinc-700 bg-zinc-900 p-2 text-[13px] text-zinc-100"
             rows={3}
             placeholder="e.g., LED driver for 12V, 350mA"
             value={description}
@@ -130,11 +156,13 @@ export default function GenerativeDesignView() {
         </div>
 
         {/* Constraint sliders */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           <div data-testid="constraint-budget" className="flex flex-col gap-1">
             <label htmlFor="constraint-budget-input" className="text-xs text-zinc-400">Budget: ${budgetUsd}</label>
             <input
               id="constraint-budget-input"
+              data-testid="constraint-budget-input"
+              aria-label="Budget limit"
               type="range"
               min={1}
               max={200}
@@ -148,6 +176,8 @@ export default function GenerativeDesignView() {
             <label htmlFor="constraint-power-input" className="text-xs text-zinc-400">Max Power: {maxWatts}W</label>
             <input
               id="constraint-power-input"
+              data-testid="constraint-power-input"
+              aria-label="Maximum power"
               type="range"
               min={0.1}
               max={50}
@@ -162,6 +192,8 @@ export default function GenerativeDesignView() {
             <label htmlFor="constraint-temperature-input" className="text-xs text-zinc-400">Max Temp: {maxTempC}C</label>
             <input
               id="constraint-temperature-input"
+              data-testid="constraint-temperature-input"
+              aria-label="Maximum temperature"
               type="range"
               min={25}
               max={150}
@@ -173,7 +205,7 @@ export default function GenerativeDesignView() {
         </div>
 
         {/* Population / generation controls */}
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <div className="flex flex-col gap-1 flex-1">
             <label htmlFor="population-size-input" className="text-xs text-zinc-400 flex items-center gap-1">
               Population
@@ -183,15 +215,15 @@ export default function GenerativeDesignView() {
                 ariaLabel="About genetic algorithm population parameter"
               />
             </label>
-            <input
+            <NumberInput
               id="population-size-input"
               data-testid="population-size-input"
-              type="number"
+              aria-label="Generation population size"
               min={2}
               max={20}
               value={populationSize}
               onChange={(e) => { setPopulationSize(Number(e.target.value)); }}
-              className="rounded border border-zinc-700 bg-zinc-900 p-1.5 text-sm text-zinc-100"
+              className="rounded border border-zinc-700 bg-zinc-900 p-1.5 text-[12px] text-zinc-100"
             />
           </div>
           <div className="flex flex-col gap-1 flex-1">
@@ -203,15 +235,15 @@ export default function GenerativeDesignView() {
                 ariaLabel="About genetic algorithm generations parameter"
               />
             </label>
-            <input
+            <NumberInput
               id="generations-input"
               data-testid="generations-input"
-              type="number"
+              aria-label="Generation count"
               min={1}
               max={50}
               value={generations}
               onChange={(e) => { setGenerations(Number(e.target.value)); }}
-              className="rounded border border-zinc-700 bg-zinc-900 p-1.5 text-sm text-zinc-100"
+              className="rounded border border-zinc-700 bg-zinc-900 p-1.5 text-[12px] text-zinc-100"
             />
           </div>
         </div>
@@ -222,7 +254,7 @@ export default function GenerativeDesignView() {
             data-testid="generate-button"
             onClick={handleGenerate}
             disabled={isRunning || description.trim().length === 0}
-            className="flex-1 rounded bg-cyan-600 px-3 py-2 text-sm font-medium text-white hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 rounded bg-cyan-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {state === 'complete' ? 'Regenerate' : 'Generate'}
           </button>
@@ -230,7 +262,7 @@ export default function GenerativeDesignView() {
             <button
               data-testid="cancel-button"
               onClick={cancel}
-              className="rounded border border-zinc-600 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
+              className="rounded border border-zinc-600 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800"
             >
               Cancel
             </button>
@@ -266,12 +298,12 @@ export default function GenerativeDesignView() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
             {latestResult.candidates.map((candidate) => (
               <div
                 key={candidate.id}
                 data-testid={`candidate-card-${candidate.id}`}
-                className="rounded-lg border border-zinc-700 bg-zinc-900 p-3 hover:border-cyan-600 transition-colors"
+                className="rounded-md border border-zinc-700 bg-zinc-900 p-2.5 transition-colors hover:border-cyan-600"
               >
                 {/* Fitness score */}
                 <div className="flex items-center justify-between mb-2">
@@ -323,27 +355,34 @@ export default function GenerativeDesignView() {
                 )}
 
                 {/* Action buttons */}
-                <div className="mt-3 flex gap-1.5">
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
                   <button
                     data-testid={`compare-button-${candidate.id}`}
                     onClick={() => { handleCompare(candidate); }}
-                    className="flex-1 rounded border border-zinc-600 px-2 py-1 text-[11px] text-zinc-300 hover:bg-zinc-800 hover:border-cyan-600 transition-colors"
+                    className="flex-1 rounded border border-zinc-600 px-2.5 py-1.5 text-[11px] text-zinc-300 transition-colors hover:border-cyan-600 hover:bg-zinc-800"
                   >
                     Compare
                   </button>
                   <button
                     data-testid={`adopt-button-${candidate.id}`}
                     onClick={() => { handleAdoptClick(candidate); }}
-                    className="flex-1 rounded bg-cyan-700 px-2 py-1 text-[11px] font-medium text-white hover:bg-cyan-600 transition-colors"
+                    className="flex-1 rounded bg-cyan-700 px-2.5 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-cyan-600"
                   >
                     Adopt
                   </button>
                   <button
                     data-testid={`export-button-${candidate.id}`}
                     onClick={() => { handleExport(candidate); }}
-                    className="flex-1 rounded border border-zinc-600 px-2 py-1 text-[11px] text-zinc-300 hover:bg-zinc-800 hover:border-cyan-600 transition-colors"
+                    className="flex-1 rounded border border-zinc-600 px-2.5 py-1.5 text-[11px] text-zinc-300 transition-colors hover:border-cyan-600 hover:bg-zinc-800"
                   >
                     Export
+                  </button>
+                  <button
+                    data-testid={`view-3d-button-${candidate.id}`}
+                    onClick={() => { handleViewIn3D(candidate); }}
+                    className="flex-1 rounded border border-cyan-700/70 px-2.5 py-1.5 text-[11px] text-cyan-200 transition-colors hover:border-cyan-500 hover:bg-cyan-950/60"
+                  >
+                    View 3D
                   </button>
                 </div>
 
@@ -360,7 +399,7 @@ export default function GenerativeDesignView() {
                       .map((d) => (
                         <div key={d.refdes} className="flex items-center gap-1.5">
                           <span
-                            className={`text-[10px] uppercase font-medium ${
+                            className={`text-[11px] uppercase font-medium ${
                               d.status === 'added'
                                 ? 'text-green-400'
                                 : d.status === 'removed'
@@ -390,7 +429,7 @@ export default function GenerativeDesignView() {
         onAdopt={(result: AdoptResult) => {
           pushUndoState();
 
-          // Convert AdoptResult nodes to @xyflow/react Node format and merge with existing
+          // Convert AdoptResult nodes to canvas node format and merge with existing
           const newNodes = result.nodes.map((n) => ({
             id: n.nodeId,
             type: 'custom' as const,
@@ -402,7 +441,7 @@ export default function GenerativeDesignView() {
             },
           }));
 
-          // Convert AdoptResult edges to @xyflow/react Edge format and merge with existing
+          // Convert AdoptResult edges to canvas edge format and merge with existing
           const newEdges = result.edges.map((e) => ({
             id: e.edgeId,
             source: e.source,

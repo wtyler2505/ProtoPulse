@@ -192,6 +192,95 @@ export function useDeleteCircuitInstance() {
   });
 }
 
+export function useRunCircuitPinVerification() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { circuitId: number; dryRun?: boolean }) => {
+      const { circuitId, ...body } = data;
+      const res = await apiRequest('POST', `/api/circuits/${circuitId}/pin-verification/run`, body);
+      return res.json() as Promise<{
+        ok: boolean;
+        circuitId: number;
+        totalInstances: number;
+        flaggedInstances: number;
+        unverifiedGuessCount: number;
+        conflictCount: number;
+        dryRun: boolean;
+        results: Array<{
+          instanceId: number;
+          referenceDesignator: string;
+          authoritativeSource: string;
+          authoritativeSourceLabel?: string;
+          entries: Array<{
+            pinLabel: string;
+            status: 'verified' | 'unverified_ai_guess' | 'conflict';
+            source: string;
+            note?: string;
+            trust: {
+              verified: boolean;
+              source: 'live_supplier_api' | 'historical_estimate' | 'manual_entry' | 'fallback_unknown';
+              value: 'verified' | 'unverified_ai_guess' | 'conflict';
+              note?: string;
+              isMock?: boolean;
+            };
+          }>;
+        }>;
+        orchestration?: {
+          mode: 'local_mcp_swarm';
+          engine: {
+            coordinator: 'genkit';
+            transport: 'mcp';
+            openaiAgentsCompatible: boolean;
+          };
+          stages: Array<{
+            role: 'drafter' | 'auditor' | 'judge';
+            source: string;
+            action: string;
+          }>;
+        };
+      }>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['circuit-instances', variables.circuitId] });
+    },
+  });
+}
+
+export function useCircuitPinVerificationHistory(circuitId: number) {
+  return useQuery<Array<{
+    runId: string;
+    circuitId: number;
+    createdAt: number;
+    flaggedInstances: number;
+    unverifiedGuessCount: number;
+    conflictCount: number;
+    dryRun: boolean;
+    topAuthoritativeSourceLabel: string;
+  }>>({
+    queryKey: ['circuit-pin-verification-history', circuitId],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/circuits/${circuitId}/pin-verification/history`);
+      const json = await res.json() as {
+        ok: boolean;
+        circuitId: number;
+        total: number;
+        data: Array<{
+          runId: string;
+          circuitId: number;
+          createdAt: number;
+          flaggedInstances: number;
+          unverifiedGuessCount: number;
+          conflictCount: number;
+          dryRun: boolean;
+          topAuthoritativeSourceLabel: string;
+        }>;
+      };
+      return json.data;
+    },
+    enabled: circuitId > 0,
+  });
+}
+
 // ===========================================================================
 // Circuit Nets
 // ===========================================================================

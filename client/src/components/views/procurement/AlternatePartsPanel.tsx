@@ -2,6 +2,7 @@ import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 import { cn } from '@/lib/utils';
 import type { BomItem } from '@/lib/project-context';
 import type { AlternatePart, EquivalenceLevel, MatchConfidence } from '@/lib/alternate-parts';
@@ -70,9 +71,12 @@ export function AlternatePartsPanel({
       {altResults.length > 0 && (
         <div className="border border-border bg-card/80 backdrop-blur overflow-hidden" data-testid="alternates-results">
           <div className="p-4 border-b border-border bg-muted/10">
-            <h4 className="text-sm font-medium text-foreground">
-              Found {altResults.length} alternate{altResults.length !== 1 ? 's' : ''}
-            </h4>
+            <div className="flex items-center justify-between gap-3">
+              <h4 className="text-sm font-medium text-foreground">
+                Found {altResults.length} alternate{altResults.length !== 1 ? 's' : ''}
+              </h4>
+              <TrustBadge kind="estimated" />
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left min-w-[700px]" data-testid="table-alternates">
@@ -152,9 +156,14 @@ function ConfidenceBadge({ confidence }: { confidence: MatchConfidence }) {
     medium: 'text-yellow-500 border-yellow-500/30',
     low: 'text-orange-500 border-orange-500/30',
   };
+
+  const trustKind = confidence === 'high' ? 'verified' : confidence === 'medium' ? 'estimated' : 'unverified';
   return (
-    <Badge variant="outline" className={cn('text-[10px]', styles[confidence])} data-testid="confidence-badge">
-      {confidence}
-    </Badge>
+    <span className="inline-flex items-center gap-1.5">
+      <Badge variant="outline" className={cn('text-[10px]', styles[confidence])} data-testid="confidence-badge">
+        {confidence}
+      </Badge>
+      <TrustBadge kind={trustKind} />
+    </span>
   );
 }

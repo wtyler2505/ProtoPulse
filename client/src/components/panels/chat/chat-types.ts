@@ -1,4 +1,4 @@
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import type { TrustReceipt } from '@/lib/feature-maturity';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -13,8 +13,8 @@ export interface CustomNodeData {
   [key: string]: unknown;
 }
 
-/** Helper to read typed node data from a generic @xyflow/react Node. */
-export function nodeData(n: Node): CustomNodeData {
+/** Helper to read typed node data from a graph node. */
+export function nodeData(n: GraphNode): CustomNodeData {
   return n.data as CustomNodeData;
 }
 
@@ -27,8 +27,8 @@ export interface CustomEdgeData {
   [key: string]: unknown;
 }
 
-/** Helper to read typed edge data from a generic @xyflow/react Edge. */
-export function edgeData(e: Edge): CustomEdgeData | undefined {
+/** Helper to read typed edge data from a graph edge. */
+export function edgeData(e: GraphEdge): CustomEdgeData | undefined {
   return e.data as CustomEdgeData | undefined;
 }
 

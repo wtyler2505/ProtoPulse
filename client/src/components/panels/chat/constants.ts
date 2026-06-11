@@ -19,6 +19,10 @@ export const AI_MODELS = {
     { id: 'gemini-3-flash-preview', label: 'Gemini 3.0 Flash' },
     { id: 'gemini-robotics-er-1.5-preview', label: 'Gemini ER (Embodied Reasoning)' },
   ],
+  openai: [
+    { id: 'gpt-5-mini', label: 'GPT-5 Mini' },
+    { id: 'gpt-5', label: 'GPT-5' },
+  ],
 };
 
 export type RoutingStrategy = 'user' | 'auto' | 'quality' | 'speed' | 'cost';
@@ -90,4 +94,5 @@ export const ACTION_LABELS: Record<string, string> = {
   export_eagle: 'Exported Eagle',
   export_fritzing_project: 'Exported Fritzing',
   export_tinkercad_project: 'Exported TinkerCad',
+  run_jit_skill: 'Queued JIT skill',
 };

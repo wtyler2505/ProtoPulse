@@ -17,6 +17,7 @@ import {
 
 import { cn } from '@/lib/utils';
 import type { Prediction, PredictionCategory } from '@/lib/ai-prediction-engine';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 
 // ---------------------------------------------------------------------------
 // Category config
@@ -76,6 +77,12 @@ function getConfidenceColor(confidence: number): string {
   return 'text-zinc-400';
 }
 
+function getTrustKind(confidence: number): 'verified' | 'estimated' | 'unverified' {
+  if (confidence >= 0.9) { return 'verified'; }
+  if (confidence >= 0.6) { return 'estimated'; }
+  return 'unverified';
+}
+
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -100,60 +107,65 @@ export default function PredictionCard({ prediction, onAccept, onDismiss }: Pred
     <div
       data-testid={`prediction-card-${prediction.id}`}
       className={cn(
-        'group relative rounded-lg border border-zinc-700/50 bg-zinc-900/60 p-3',
+        'group relative rounded-md border border-zinc-700/50 bg-zinc-900/65 p-2',
         'transition-all duration-200 hover:border-zinc-600/70',
         'animate-in slide-in-from-right-4 fade-in duration-300',
       )}
     >
       {/* Header row */}
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-1.5">
         {/* Category icon */}
         <div
           data-testid={`prediction-icon-${prediction.id}`}
-          className={cn('mt-0.5 flex-shrink-0 rounded-md p-1', config.bgColor)}
+          className={cn('mt-0.5 shrink-0 rounded-sm p-1', config.bgColor)}
         >
-          <Icon className={cn('h-4 w-4', config.color)} />
+          <Icon className={cn('h-3.5 w-3.5', config.color)} />
         </div>
 
         {/* Title + category label */}
         <div className="min-w-0 flex-1">
           <h4
             data-testid={`prediction-title-${prediction.id}`}
-            className="text-sm font-medium leading-tight text-zinc-100"
+            className="text-xs font-medium leading-tight text-zinc-100"
           >
             {prediction.title}
           </h4>
           <span
             data-testid={`prediction-category-${prediction.id}`}
-            className={cn('text-xs', config.color)}
+            className={cn('text-[10px]', config.color)}
           >
             {config.label}
           </span>
         </div>
 
-        {/* Confidence badge */}
-        <span
-          data-testid={`prediction-confidence-${prediction.id}`}
-          className={cn(
-            'flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium',
-            'bg-zinc-800 border border-zinc-700/50',
-            getConfidenceColor(prediction.confidence),
-          )}
-        >
-          {Math.round(prediction.confidence * 100)}%
-        </span>
+        {/* Confidence + trust badges */}
+        <div className="flex shrink-0 items-center gap-1">
+          <span
+            data-testid={`prediction-confidence-${prediction.id}`}
+            className={cn(
+              'rounded-full px-1.5 py-0 text-[10px] font-medium leading-4',
+              'bg-zinc-800 border border-zinc-700/50',
+              getConfidenceColor(prediction.confidence),
+            )}
+          >
+            {Math.round(prediction.confidence * 100)}%
+          </span>
+          <span data-testid={`prediction-trust-${prediction.id}`}>
+            <TrustBadge kind={getTrustKind(prediction.confidence)} />
+          </span>
+        </div>
 
         {/* Dismiss button */}
         <button
           data-testid={`prediction-dismiss-${prediction.id}`}
           onClick={() => { onDismiss(prediction.id); }}
           className={cn(
-            'flex-shrink-0 rounded p-0.5 text-zinc-400 transition-colors',
+            'shrink-0 rounded-sm p-0.5 text-zinc-400 transition-colors',
             'hover:bg-zinc-700/50 hover:text-zinc-300',
           )}
           aria-label="Dismiss suggestion"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-3 w-3" />
         </button>
       </div>
 
@@ -161,7 +173,7 @@ export default function PredictionCard({ prediction, onAccept, onDismiss }: Pred
       <p
         data-testid={`prediction-description-${prediction.id}`}
         className={cn(
-          'mt-1.5 text-xs leading-relaxed text-zinc-400',
+          'mt-1 text-[11px] leading-snug text-zinc-400',
           !expanded && 'line-clamp-2',
         )}
       >
@@ -169,11 +181,11 @@ export default function PredictionCard({ prediction, onAccept, onDismiss }: Pred
       </p>
 
       {/* Expand/collapse + action row */}
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-1.5 flex items-center gap-1.5">
         <button
           data-testid={`prediction-toggle-${prediction.id}`}
           onClick={() => { setExpanded(!expanded); }}
-          className="flex items-center gap-1 text-xs text-zinc-400 transition-colors hover:text-zinc-300"
+          className="flex items-center gap-1 text-[11px] text-zinc-400 transition-colors hover:text-zinc-300"
         >
           {expanded ? (
             <>
@@ -195,7 +207,7 @@ export default function PredictionCard({ prediction, onAccept, onDismiss }: Pred
             data-testid={`prediction-accept-${prediction.id}`}
             onClick={() => { onAccept(prediction.id); }}
             className={cn(
-              'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+              'rounded-sm px-2 py-0.5 text-[11px] font-medium transition-colors',
               'bg-[var(--color-editor-accent)]/10 text-[var(--color-editor-accent)] hover:bg-[var(--color-editor-accent)]/20',
             )}
           >
@@ -208,7 +220,7 @@ export default function PredictionCard({ prediction, onAccept, onDismiss }: Pred
       {expanded && prediction.action && (
         <div
           data-testid={`prediction-details-${prediction.id}`}
-          className="mt-2 rounded-md bg-zinc-800/50 p-2 text-xs text-zinc-400"
+          className="mt-1.5 rounded-sm bg-zinc-800/50 p-1.5 text-[11px] text-zinc-400"
         >
           <span className="font-medium text-zinc-300">Action: </span>
           {prediction.action.type.replace(/_/g, ' ')}

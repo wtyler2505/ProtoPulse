@@ -1,0 +1,370 @@
+{
+  "boundaries": [
+    {
+      "id": "mega-2560",
+      "label": "Arduino Mega 2560",
+      "kind": "hardware",
+      "sourceShapeId": "shape-mega-2560",
+      "position": {
+        "x": 120,
+        "y": 160
+      },
+      "provenance": ["sample-boundary"],
+      "metadata": {
+        "partNumber": "Arduino Mega 2560 R3",
+        "verifiedFacts": ["logic_voltage"]
+      }
+    },
+    {
+      "id": "hid-firmware",
+      "label": "USB HID Firmware",
+      "kind": "firmware",
+      "sourceShapeId": "shape-hid-firmware",
+      "position": {
+        "x": 420,
+        "y": 160
+      },
+      "provenance": ["sample-boundary"],
+      "metadata": {
+        "targetBoard": "Arduino Mega 2560 R3",
+        "ownedPins": ["D2", "D3"]
+      }
+    }
+  ],
+  "legacyArchitecture": {
+    "nodes": [
+      {
+        "nodeId": "mega-2560",
+        "nodeType": "controller",
+        "label": "Arduino Mega 2560",
+        "positionX": 120,
+        "positionY": 160,
+        "data": {
+          "partNumber": "Arduino Mega 2560 R3",
+          "footprint": "arduino_mega_2560_r3"
+        }
+      },
+      {
+        "nodeId": "power-5v",
+        "nodeType": "power",
+        "label": "5V Rail",
+        "positionX": 120,
+        "positionY": 40,
+        "data": {
+          "voltage": "5V",
+          "currentLimit": "500mA"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "edgeId": "usb-d-plus",
+        "source": "usb-connector",
+        "target": "mega-2560",
+        "label": "USB D+",
+        "signalType": "USB",
+        "voltage": "5V",
+        "busWidth": 1,
+        "netName": "net.USB_DP"
+      }
+    ]
+  },
+  "tldrawShapes": [
+    {
+      "id": "shape:mega-2560",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 120,
+      "y": 160,
+      "props": {
+        "text": "Arduino Mega 2560"
+      },
+      "meta": {
+        "protopulse": {
+          "id": "mega-2560",
+          "kind": "hardware",
+          "label": "Arduino Mega 2560",
+          "provenance": ["sample-tldraw-shape"],
+          "metadata": {
+            "partNumber": "Arduino Mega 2560 R3",
+            "verifiedFacts": ["logic_voltage"],
+            "elementKind": "chip",
+            "footprint": "arduino_mega_2560_r3"
+          }
+        }
+      }
+    },
+    {
+      "id": "shape:hid-firmware",
+      "typeName": "shape",
+      "type": "note",
+      "x": 420,
+      "y": 160,
+      "props": {
+        "text": "USB HID Firmware"
+      },
+      "meta": {
+        "protopulse": {
+          "id": "hid-firmware",
+          "kind": "firmware",
+          "label": "USB HID Firmware",
+          "provenance": ["sample-tldraw-shape"],
+          "metadata": {
+            "targetBoard": "Arduino Mega 2560 R3",
+            "ownedPins": ["D2", "D3"]
+          }
+        }
+      }
+    },
+    {
+      "id": "shape:power-5v",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 120,
+      "y": 40,
+      "props": {
+        "text": "5V Rail"
+      },
+      "meta": {
+        "protopulse": {
+          "id": "power-5v",
+          "kind": "power",
+          "label": "5V Rail",
+          "provenance": ["sample-tldraw-shape"],
+          "metadata": {
+            "voltage": "5V",
+            "currentLimit": "500mA",
+            "net": "net.VCC"
+          }
+        }
+      }
+    },
+    {
+      "id": "shape:usb-connector",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 80,
+      "y": 260,
+      "props": {
+        "text": "USB Connector"
+      },
+      "meta": {
+        "protopulse": {
+          "id": "usb-connector",
+          "kind": "hardware",
+          "label": "USB Connector",
+          "provenance": ["sample-tldraw-shape"],
+          "metadata": {
+            "partNumber": "USB-B connector",
+            "verifiedFacts": ["logic_voltage"],
+            "elementKind": "connector",
+            "footprint": "usb_b"
+          }
+        }
+      }
+    },
+    {
+      "id": "shape:usb-d-plus",
+      "typeName": "shape",
+      "type": "arrow",
+      "x": 190,
+      "y": 250,
+      "props": {
+        "text": "USB D+"
+      },
+      "meta": {
+        "protopulse": {
+          "id": "usb-d-plus",
+          "kind": "signal",
+          "label": "USB D+",
+          "provenance": ["sample-tldraw-shape"],
+          "metadata": {
+            "source": ".usb_connector > .pin1",
+            "target": ".mega_2560 > .pin1",
+            "protocol": "USB",
+            "net": "net.USB_DP"
+          }
+        }
+      }
+    },
+    {
+      "id": "shape:board-outline",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 40,
+      "y": 20,
+      "props": {
+        "text": "Board outline"
+      },
+      "meta": {
+        "protopulse": {
+          "id": "board-outline",
+          "kind": "mechanical",
+          "label": "Board outline",
+          "provenance": ["sample-tldraw-shape"],
+          "metadata": {
+            "dimensions": "90mm x 60mm",
+            "clearance": "8mm",
+            "boardSize": true,
+            "width": "90mm",
+            "height": "60mm"
+          }
+        }
+      }
+    },
+    {
+      "id": "shape:plain-note",
+      "typeName": "shape",
+      "type": "note",
+      "x": 60,
+      "y": 360,
+      "props": {
+        "text": "Unmapped note"
+      },
+      "meta": {}
+    }
+  ],
+  "hardwareFactRequest": {
+    "partNumber": "Arduino Mega 2560 R3",
+    "requiredFacts": ["pinout", "logic_voltage", "usb_interface"],
+    "knownFacts": {
+      "logic_voltage": {
+        "value": "5V",
+        "source": "ProtoPulse verified hardware note",
+        "status": "verified"
+      }
+    }
+  },
+  "knowledgeFactPreview": {
+    "sourcePath": "docs/parts/arduino-mega-2560-is-a-54-io-5v-board-with-4-hardware-uarts.md",
+    "facts": {
+      "logic_voltage": {
+        "key": "logic_voltage",
+        "value": "5V",
+        "source": "docs/parts/arduino-mega-2560-is-a-54-io-5v-board-with-4-hardware-uarts.md",
+        "status": "verified"
+      },
+      "pinout": {
+        "key": "pinout",
+        "value": "Pinout section available in source note",
+        "source": "docs/parts/arduino-mega-2560-is-a-54-io-5v-board-with-4-hardware-uarts.md",
+        "status": "verified"
+      },
+      "usb_interface": {
+        "key": "usb_interface",
+        "value": "USB-B",
+        "source": "docs/parts/arduino-mega-2560-is-a-54-io-5v-board-with-4-hardware-uarts.md",
+        "status": "verified"
+      }
+    },
+    "missingFacts": []
+  },
+  "firmwareRequest": {
+    "board": "Arduino Mega 2560 R3",
+    "voltageAssumptions": ["logic_voltage must be verified before pin mapping"],
+    "ownedPins": ["D2", "D3"],
+    "behavior": "Generate USB HID profile only after pin ownership is verified."
+  },
+  "firmwareOutput": {
+    "sketchName": "mega_hid_profile",
+    "board": "Arduino Mega 2560 R3",
+    "fqbn": "arduino:avr:mega",
+    "files": [
+      {
+        "path": "mega_hid_profile.ino",
+        "language": "arduino",
+        "content": "void setup() {\\n}\\n\\nvoid loop() {\\n}\\n"
+      }
+    ],
+    "requiredLibraries": [],
+    "ownedPins": ["D2", "D3"],
+    "verificationNotes": ["Ready sample owns D2 and D3 after pinout verification."]
+  },
+  "multimodalDatasheetInput": {
+    "projectId": 1,
+    "sourceUri": "inbox/datasheets/arduino-mega-2560-r3.pdf",
+    "partNumber": "Arduino Mega 2560 R3",
+    "requestedFacts": ["pinout", "logic_voltage", "usb_interface"]
+  },
+  "visualHardwareInspectionInput": {
+    "projectId": 1,
+    "imageUrl": "data:image/png;base64,AAAA",
+    "query": "Compare physical wiring against the schematic.",
+    "expectedFacts": ["pinout", "logic_voltage"],
+    "verifiedFacts": ["logic_voltage"]
+  },
+  "embodiedLayoutAnalysisInput": {
+    "projectId": 1,
+    "chassisDescription": "Compact rover chassis with battery bay under the controller plate.",
+    "query": "Check wire routing, thermal risks, and service access.",
+    "imageUrl": "data:image/png;base64,AAAA",
+    "expectedFacts": ["board_dimensions", "battery_clearance"],
+    "verifiedFacts": ["board_dimensions"]
+  },
+  "swarmTasks": [
+    {
+      "id": "firmware-hid-mega",
+      "role": "firmware-writer",
+      "claimedFiles": ["src/ai/swarms/firmware-writer.ts"],
+      "prompt": "Draft Arduino Mega 2560 HID firmware only after pin ownership is verified.",
+      "requiresHardwareFacts": ["logic_voltage", "pinout"],
+      "verifiedHardwareFacts": ["logic_voltage", "pinout"]
+    },
+    {
+      "id": "component-mega-boundary",
+      "role": "component-generator",
+      "claimedFiles": ["src/components/circuits/HardwareBoundary.tsx"],
+      "prompt": "Generate component boundary metadata for Arduino Mega 2560.",
+      "requiresHardwareFacts": ["pinout", "logic_voltage"],
+      "verifiedHardwareFacts": ["pinout", "logic_voltage"]
+    }
+  ],
+  "tscircuitDraft": {
+    "elements": [
+      {
+        "kind": "board",
+        "props": {
+          "width": "20mm",
+          "height": "20mm"
+        },
+        "provenance": ["Example board dimensions for draft compiler smoke test"],
+        "status": "verified"
+      },
+      {
+        "kind": "resistor",
+        "name": "R1",
+        "props": {
+          "resistance": "1k",
+          "footprint": "0402",
+          "pcbX": 0,
+          "pcbY": 0
+        },
+        "provenance": ["Example passive part for draft compiler smoke test"],
+        "status": "verified"
+      }
+    ]
+  },
+  "unsafeTscircuitDraft": {
+    "elements": [
+      {
+        "kind": "board",
+        "props": {
+          "width": "20mm",
+          "height": "20mm"
+        },
+        "provenance": ["Example board dimensions for draft compiler smoke test"],
+        "status": "verified"
+      },
+      {
+        "kind": "capacitor",
+        "name": "C1",
+        "props": {
+          "capacitance": "10uF",
+          "footprint": "0805"
+        },
+        "provenance": ["Missing verification case"],
+        "status": "needs_verification"
+      }
+    ]
+  }
+}

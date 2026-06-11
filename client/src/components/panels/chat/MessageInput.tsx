@@ -20,7 +20,7 @@ interface MessageInputProps {
   showQuickActions: boolean;
   onVoiceToggle: () => void;
   isListening: boolean;
-  aiProvider: 'gemini';
+  aiProvider: 'gemini' | 'openai';
   aiModel: string;
   apiKeyValid: boolean;
   aiApiKey: string;
@@ -67,20 +67,22 @@ export default function MessageInput({
   onMultimodalFile,
 }: MessageInputProps) {
   return (
-    <div className="p-4 border-t border-border bg-card/40 backdrop-blur shrink-0 min-w-0 overflow-hidden">
+    <div className="p-2.5 border-t border-border bg-card/40 backdrop-blur shrink-0 min-w-0 overflow-hidden">
       {!apiKeyValid && aiApiKey && (
         <div className="flex items-center gap-2 text-[10px] text-amber-400/80 mb-2 px-1">
           <AlertTriangle className="w-3 h-3 shrink-0" />
-          <span>API key format looks incorrect for {'Gemini'}</span>
+          <span>
+            API key format looks incorrect for {aiProvider === 'openai' ? 'OpenAI' : 'Gemini'}
+          </span>
         </div>
       )}
       {attachedImage && (
-        <div className="flex items-center gap-2 mb-2 px-1">
+        <div className="flex items-center gap-2 mb-1.5 px-1">
           <div className="relative group/img">
             <img
               src={attachedImage.previewUrl}
               alt={attachedImage.name}
-              className="w-16 h-16 object-cover border border-border"
+              className="w-14 h-14 object-cover border border-border"
               data-testid="attached-image-preview"
             />
             {onRemoveImage && (
@@ -88,7 +90,7 @@ export default function MessageInput({
                 onClick={onRemoveImage}
                 data-testid="remove-attached-image"
                 aria-label="Remove image"
-                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground flex items-center justify-center text-[10px] font-bold opacity-60 hover:opacity-100 transition-opacity"
+                className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-destructive text-destructive-foreground flex items-center justify-center text-[10px] font-bold opacity-60 hover:opacity-100 transition-opacity"
               >
                 &times;
               </button>
@@ -113,17 +115,17 @@ export default function MessageInput({
           }}
           placeholder="Describe your system... (Shift+Enter for new line)"
           rows={1}
-          className="w-full bg-muted/30 border border-border focus-visible:border-primary pr-[6.5rem] pl-10 py-3 shadow-inner resize-none text-sm text-foreground placeholder:text-muted-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 min-w-0"
+          className="w-full bg-muted/30 border border-border focus-visible:border-primary pr-[6rem] pl-9 py-2 shadow-inner resize-none text-sm text-foreground placeholder:text-muted-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 min-w-0"
           style={TEXTAREA_STYLE}
         />
-        <div className="absolute left-3 top-3">
+        <div className="absolute left-2.5 top-2">
           <StyledTooltip content="Quick actions" side="top">
               <button type="button" data-testid="toggle-quick-actions" aria-label="Toggle quick actions" className="flex items-center justify-center" onClick={onToggleQuickActions}>
                 <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-pointer" />
               </button>
           </StyledTooltip>
         </div>
-        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0">
           <label htmlFor="chat-image-upload" className="sr-only">Upload image</label>
           <input
             id="chat-image-upload"
@@ -142,13 +144,13 @@ export default function MessageInput({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
             onClick={() => fileInputRef.current?.click()}
             data-testid="button-image-upload"
             aria-label="Upload image"
             title="Upload image"
           >
-            <ImagePlus className="h-4 w-4" />
+            <ImagePlus className="h-3.5 w-3.5" />
           </Button>
           {onToggleMultimodalMenu && (
             <div className="relative">
@@ -177,7 +179,7 @@ export default function MessageInput({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "h-8 w-8",
+                  "h-7 w-7",
                   showMultimodalMenu ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
                   multimodalStatus === 'preprocessing' && 'text-yellow-400',
                   multimodalStatus === 'complete' && 'text-green-400',
@@ -189,9 +191,9 @@ export default function MessageInput({
                 title="Capture circuit image for AI analysis"
               >
                 {multimodalStatus === 'capturing' || multimodalStatus === 'preprocessing' ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Camera className="h-4 w-4" />
+                  <Camera className="h-3.5 w-3.5" />
                 )}
               </Button>
               {showMultimodalMenu && onMultimodalTypeSelect && (
@@ -229,13 +231,13 @@ export default function MessageInput({
           <Button
             variant="ghost"
             size="icon"
-            className={cn("h-8 w-8", isListening ? 'text-red-400 animate-pulse' : 'text-muted-foreground hover:text-foreground')}
+            className={cn("h-7 w-7", isListening ? 'text-red-400 animate-pulse' : 'text-muted-foreground hover:text-foreground')}
             onClick={onVoiceToggle}
             data-testid="button-voice-input"
             aria-label="Voice input"
             title={isListening ? 'Stop listening' : 'Voice input'}
           >
-            <Mic className="h-4 w-4" />
+            <Mic className="h-3.5 w-3.5" />
           </Button>
           )}
           <StyledTooltip content="Send (Enter)" side="top">
@@ -245,9 +247,9 @@ export default function MessageInput({
                 disabled={isGenerating || !input.trim()}
                 data-testid="send-button"
                 aria-label="Send message"
-                className="w-8 h-8 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                className="w-7 h-7 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-3.5 h-3.5" />
               </Button>
           </StyledTooltip>
         </div>
@@ -259,7 +261,7 @@ export default function MessageInput({
         isGenerating={isGenerating}
       />
 
-      <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground/70 mt-2 font-mono" data-testid="chat-status-line">
+      <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground mt-1.5 font-mono" data-testid="chat-status-line">
         {aiApiKey ? (
           <>
             <StyledTooltip content="AI Mode: natural language understanding, 124 tools, architecture generation, code analysis, multi-model routing" side="top">
@@ -268,7 +270,7 @@ export default function MessageInput({
                 <span>API</span>
               </span>
             </StyledTooltip>
-            <span className="text-muted-foreground/40">—</span>
+            <span className="text-muted-foreground">—</span>
             <span>{AI_MODELS[aiProvider].find(m => m.id === aiModel)?.label || aiModel}</span>
           </>
         ) : (
@@ -281,11 +283,11 @@ export default function MessageInput({
             </StyledTooltip>
             {onOpenSettings && (
               <>
-                <span className="text-muted-foreground/40">—</span>
+                <span className="text-muted-foreground">—</span>
                 <button
                   onClick={onOpenSettings}
                   data-testid="configure-api-key-link"
-                  className="text-primary/70 hover:text-primary underline transition-colors"
+                  className="text-primary hover:text-primary underline transition-colors"
                 >
                   Add API key for AI
                 </button>

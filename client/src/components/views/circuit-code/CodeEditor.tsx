@@ -41,7 +41,7 @@ const protoPulseTheme = EditorView.theme(
     },
     '.cm-gutters': {
       backgroundColor: 'hsl(222.2, 84%, 4.9%)',
-      color: 'hsl(215, 20.2%, 45%)',
+      color: 'hsl(215, 20.2%, 68%)',
       borderRight: '1px solid hsl(217.2, 32.6%, 17.5%)',
     },
     '.cm-activeLineGutter': {
@@ -163,6 +163,9 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
       autocompletion(),
       highlightSelectionMatches(),
       lintGutter(),
+      EditorView.contentAttributes.of({
+        'aria-label': readOnly ? 'Circuit code viewer' : 'Circuit DSL code editor',
+      }),
       languageCompartment.current.of(getLanguageExtension(language)),
       protoPulseTheme,
       keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
@@ -187,6 +190,8 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
     });
 
     viewRef.current = view;
+    view.scrollDOM.tabIndex = 0;
+    view.scrollDOM.setAttribute('aria-label', 'Circuit code editor scroll area');
 
     return () => {
       view.destroy();

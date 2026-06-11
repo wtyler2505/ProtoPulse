@@ -269,22 +269,24 @@
     {
       "id": "enrich-014",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "four-motor-bldc-systems-exceed-standard-hoverboard-bms-ratings-requiring-firmware-current-limiting",
       "source_detail": "Add ANL 100A fuse and Albright SW200 contactor as hardware mitigation",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-014.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "enrich",
-        "reflect"
+        "reflect",
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "enrich-015",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "zs-x11h-has-no-reverse-polarity-overcurrent-or-thermal-protection-making-inline-fuse-mandatory",
       "source_detail": "Add 470uF 63V cap placement in complete capacitor placement table",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -299,7 +301,7 @@
     {
       "id": "enrich-016",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity",
       "source_detail": "Add wire gauge reference table with concrete AWG mappings",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -324,22 +326,24 @@
     {
       "id": "claim-017",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "EL pin floating at MCU boot defaults the motor to full speed so explicit HIGH initialization is mandatory before STOP is enabled",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
       "file": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control-017.md",
       "created": "2026-04-14T07:48:50Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "claim-018",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Powering the MCU from the ZS-X11H 5V output causes resets because motor switching noise on the shared rail corrupts the logic supply",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -354,7 +358,7 @@
     {
       "id": "claim-019",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Motor power wiring below 14AWG overheats at 15A and creates fire risk so gauge is chosen by steady-state current not voltage",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -369,7 +373,7 @@
     {
       "id": "claim-020",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Motor speed must be ramped below 50 percent before activating the brake because high-speed regenerative braking stresses the controller",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -384,7 +388,7 @@
     {
       "id": "claim-021",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "STOP is the correct emergency kill and CT brake is for controlled deceleration because only STOP removes the controller power path entirely",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -398,7 +402,7 @@
     {
       "id": "claim-022",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Safe BLDC startup sequence initializes EL stopped then brake engaged then enable LOW before setting any active state",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -412,7 +416,7 @@
     {
       "id": "claim-023",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "BMS overcurrent protection tripping on acceleration is a software problem solved by ramp rate limiting not a hardware fault",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -426,7 +430,7 @@
     {
       "id": "claim-024",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "CT brake polarity on the ZS-X11H is active-low contradicting the KJL-01 claim that brake is active-high suggesting the polarity is vendor-specific not a BLDC convention",
       "classification": "open",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -440,7 +444,7 @@
     {
       "id": "enrich-025",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "zs-x11h-el-speed-input-is-active-low-and-flips-polarity-between-pwm-and-analog-modes",
       "source_detail": "add analogWrite->duty->speed mapping table and 255-speed inversion wrapper",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -454,7 +458,7 @@
     {
       "id": "enrich-026",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "bldc-controller-and-mcu-must-share-common-ground-or-control-signals-float",
       "source_detail": "add Arduino Mega to ZS-X11H pin wiring table and ASCII connection diagram",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -466,7 +470,7 @@
     {
       "id": "enrich-027",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "sc-speed-pulse-output-enables-closed-loop-rpm-measurement-via-interrupt-counting",
       "source_detail": "add complete Arduino ISR and getRPM pattern plus flag the 15-vs-90 pulses-per-revolution discrepancy",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -478,7 +482,7 @@
     {
       "id": "enrich-028",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "dynamic-brake-must-be-pulsed-not-held-because-stationary-phase-shorting-overheats-mosfets",
       "source_detail": "add CT state table and electrical-vs-mechanical brake framing",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -490,7 +494,7 @@
     {
       "id": "enrich-029",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "bldc-direction-reversal-under-load-creates-destructive-current-spikes-through-mosfets",
       "source_detail": "add concrete ramp-up/ramp-down Arduino pattern and phase-swap-vs-logic-invert framing",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -502,7 +506,7 @@
     {
       "id": "enrich-030",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "inductive-motor-loads-require-bypass-capacitor-to-absorb-voltage-spikes-above-supply-rail",
       "source_detail": "add field Common Mistakes validation entry confirming 470uF 63V spec",
       "batch": "wiring-zs-x11h-to-arduino-mega-for-single-motor-control",
@@ -524,7 +528,7 @@
     {
       "id": "claim-031",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "3.3V output sits in the TTL-to-CMOS threshold boundary making direct connection to 5V logic inputs a per-unit gamble rather than a reliable connection",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -536,7 +540,7 @@
     {
       "id": "claim-032",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Single-MOSFET DIY level shifter inverts the signal requiring either code compensation or a second stage re-inversion",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -548,7 +552,7 @@
     {
       "id": "claim-033",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Voltage divider impedance must be lowered for digital pulse signals because high source impedance interacts with input capacitance to degrade edge rates",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -560,7 +564,7 @@
     {
       "id": "claim-034",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Level shifter HV reference must come from a clean regulated supply not from the motor controller 5V rail because motor switching noise on the shared rail produces erratic level shifting",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -572,7 +576,7 @@
     {
       "id": "claim-035",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "ESP32 dual-core architecture separates real-time motor control from wireless communication by pinning each to its own core eliminating timing interference",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -584,7 +588,7 @@
     {
       "id": "claim-036",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "ESP32-S3 input-only pins are the correct allocation for 5V feedback signals through voltage dividers because they cannot be accidentally driven as outputs preserving bidirectional GPIOs for control signals",
       "classification": "closed",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -596,7 +600,7 @@
     {
       "id": "enrich-037",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "74hct-buffers-are-purpose-built-3v3-to-5v-level-shifters-for-timing-critical-signals",
       "source_detail": "Add ZS-X11H as second use case with DIR=HIGH/OE=LOW wiring and overkill-for-4-signals sizing framing",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -608,7 +612,7 @@
     {
       "id": "enrich-038",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "esp32-has-14-safe-gpio-pins-with-no-boot-or-flash-restrictions",
       "source_detail": "Add concrete motor-control GPIO16-19 output plus GPIO4 interrupt-input allocation",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -620,7 +624,7 @@
     {
       "id": "enrich-039",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "zs-x11h-el-speed-input-is-active-low-and-flips-polarity-between-pwm-and-analog-modes",
       "source_detail": "Add ESP32 LEDC-based inversion pattern ledcWrite(channel, 255 - speed)",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -632,7 +636,7 @@
     {
       "id": "enrich-040",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "bss138-switching-speed-caps-at-400khz-making-it-unsuitable-for-fast-spi-and-high-speed-push-pull-signals",
       "source_detail": "Add motor PWM case showing sluggish BSS138 rise times cause ZS-X11H misinterpretation even below 400kHz",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -644,7 +648,7 @@
     {
       "id": "enrich-041",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "sc-speed-pulse-output-enables-closed-loop-rpm-measurement-via-interrupt-counting",
       "source_detail": "Add ESP32 IRAM_ATTR ISR pattern and mandatory voltage divider front-end",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -656,7 +660,7 @@
     {
       "id": "enrich-042",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "esp32-replaces-tone-with-ledcwritetone-and-the-api-is-not-a-drop-in-substitution",
       "source_detail": "Add motor PWM as second use case with ledcSetup(PWM_CHANNEL, 1000, 8) for 1kHz motor control",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -668,7 +672,7 @@
     {
       "id": "enrich-043",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "signal-topology-not-voltage-alone-determines-level-shifter-selection",
       "source_detail": "Add ZS-X11H control signals (EL/Z/F/CT/STOP) as unidirectional push-pull 4-channel case selecting TXS0108E",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -680,7 +684,7 @@
     {
       "id": "enrich-044",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "bldc-stop-active-low-brake-active-high",
       "source_detail": "Add explicit CT brake state table and ramp-speed-before-brake operating discipline; note vendor-specific brake polarity",
       "batch": "wiring-zs-x11h-to-esp32-with-level-shifter",
@@ -702,7 +706,7 @@
     {
       "id": "claim-045",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Direct 36V motor battery to TXS0108E B-side instantly destroys the level shifter because absolute-max VCCB is 5.5V and 36V is seven times that limit",
       "classification": "closed",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
@@ -714,7 +718,7 @@
     {
       "id": "claim-046",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Wire runs between level shifter and MCU must stay under 10cm in motor-controller environments because longer runs pick up PWM switching noise and produce phantom Hall transitions",
       "classification": "closed",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
@@ -726,7 +730,7 @@
     {
       "id": "claim-047",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "4WD Hall-sensor scaling needs 16 level-shifted channels which makes one TXS0108E per controller the cleanest topology because cross-controller channel grouping mixes ground references and invites noise",
       "classification": "closed",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
@@ -738,7 +742,7 @@
     {
       "id": "claim-048",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Hall Temp output is a fourth level-shifted channel available on many BLDC controllers that provides motor thermal monitoring through the same 5V-to-3.3V path as the Hall position signals",
       "classification": "open",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
@@ -750,7 +754,7 @@
     {
       "id": "claim-049",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Bit-shifting three Hall reads into a single 3-bit state byte produces atomic commutation lookups that avoid race conditions from reading bits independently between transitions",
       "classification": "closed",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
@@ -762,7 +766,7 @@
     {
       "id": "claim-050",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "TXS0108E A-side internal pull-ups eliminate the need for external pull resistors on ESP32 input-only pins receiving level-shifted Hall signals",
       "classification": "closed",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
@@ -774,7 +778,7 @@
     {
       "id": "enrich-051",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "txs0108e-oe-pin-is-active-high-and-floating-by-default-silently-disabling-all-outputs",
       "source_detail": "Add Hall-sensor wiring as worked example \u2014 OE tied to VCCA (3.3V) with pin-19/pin-11 callouts in BLDC Hall readback topology",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
@@ -786,7 +790,7 @@
     {
       "id": "enrich-052",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "esp32-gpio34-39-are-input-only-with-no-internal-pull-resistors",
       "source_detail": "Add positive-case allocation rationale \u2014 ADC1 WiFi-safe + no-strapping conflict + read-only matches Hall topology + TXS-provides-pullups exception",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
@@ -798,7 +802,7 @@
     {
       "id": "enrich-053",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "bldc-controller-hall-sensor-outputs-are-push-pull-digital-making-txs-class-shifters-the-correct-bridge-to-3v3-mcus",
       "source_detail": "Add concrete RioRand\u2192TXS0108E\u2192ESP32 pin mapping table (Hall A/B/C/Temp through B1-B4/A1-A4 to GPIO 34/35/36/39)",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
@@ -810,7 +814,7 @@
     {
       "id": "enrich-054",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "every-digital-ic-requires-a-100nf-ceramic-decoupling-capacitor-between-vcc-and-gnd-to-absorb-switching-transients",
       "source_detail": "Add phantom Hall transitions as named failure mode when TXS0108E VCCA/VCCB decoupling is omitted or placed too far from chip",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
@@ -822,7 +826,7 @@
     {
       "id": "enrich-055",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "bldc-controller-and-mcu-must-share-common-ground-or-control-signals-float",
       "source_detail": "Add three-node ground rule for multi-voltage builds (ESP32+RioRand+TXS0108E joined at single point) and 36V/3.3V ground-loop failure mode",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
@@ -962,7 +966,7 @@
     {
       "id": "2026-04-18-e2e-3d-view-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-3d-view-meticulous/2026-04-18-e2e-3d-view-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-3d-view-meticulous.md",
       "file": "2026-04-18-e2e-3d-view-meticulous.md",
@@ -972,7 +976,7 @@
     {
       "id": "2026-04-18-e2e-alternates-part-usage-broken",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-alternates-part-usage-broken/2026-04-18-e2e-alternates-part-usage-broken.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-alternates-part-usage-broken.md",
       "file": "2026-04-18-e2e-alternates-part-usage-broken.md",
@@ -982,17 +986,18 @@
     {
       "id": "2026-04-18-e2e-architecture-tab-tested",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-architecture-tab-tested/2026-04-18-e2e-architecture-tab-tested.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-architecture-tab-tested.md",
       "file": "2026-04-18-e2e-architecture-tab-tested.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "completed": "2026-05-17T22:55:26Z"
     },
     {
       "id": "2026-04-18-e2e-audit-trail-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-audit-trail-meticulous/2026-04-18-e2e-audit-trail-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-audit-trail-meticulous.md",
       "file": "2026-04-18-e2e-audit-trail-meticulous.md",
@@ -1002,7 +1007,7 @@
     {
       "id": "2026-04-18-e2e-bom-templates-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-bom-templates-meticulous/2026-04-18-e2e-bom-templates-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-bom-templates-meticulous.md",
       "file": "2026-04-18-e2e-bom-templates-meticulous.md",
@@ -1012,7 +1017,7 @@
     {
       "id": "2026-04-18-e2e-breadboard-tab-tested-already-deeply-audited-per-bl-plan",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-breadboard-tab-tested-already-deeply-audited-per-bl-plan/2026-04-18-e2e-breadboard-tab-tested-already-deeply-audited-per-bl-plan.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-breadboard-tab-tested-already-deeply-audited-per-bl-plan.md",
       "file": "2026-04-18-e2e-breadboard-tab-tested-already-deeply-audited-per-bl-plan.md",
@@ -1022,7 +1027,7 @@
     {
       "id": "2026-04-18-e2e-calculators-meticulous-baby-step",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-calculators-meticulous-baby-step/2026-04-18-e2e-calculators-meticulous-baby-step.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-calculators-meticulous-baby-step.md",
       "file": "2026-04-18-e2e-calculators-meticulous-baby-step.md",
@@ -1032,7 +1037,7 @@
     {
       "id": "2026-04-18-e2e-circuit-code-tab-tested",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-circuit-code-tab-tested/2026-04-18-e2e-circuit-code-tab-tested.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-circuit-code-tab-tested.md",
       "file": "2026-04-18-e2e-circuit-code-tab-tested.md",
@@ -1042,37 +1047,40 @@
     {
       "id": "2026-04-18-e2e-comments-design-review-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-comments-design-review-meticulous/2026-04-18-e2e-comments-design-review-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-comments-design-review-meticulous.md",
       "file": "2026-04-18-e2e-comments-design-review-meticulous.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "completed": "2026-05-17T23:50:33Z"
     },
     {
       "id": "2026-04-18-e2e-community-meticulous-baby-step",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-community-meticulous-baby-step/2026-04-18-e2e-community-meticulous-baby-step.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-community-meticulous-baby-step.md",
       "file": "2026-04-18-e2e-community-meticulous-baby-step.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "completed": "2026-05-17T23:20:30Z"
     },
     {
       "id": "2026-04-18-e2e-community-tab-tested",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-community-tab-tested/2026-04-18-e2e-community-tab-tested.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-community-tab-tested.md",
       "file": "2026-04-18-e2e-community-tab-tested.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "completed": "2026-05-17T23:23:19Z"
     },
     {
       "id": "2026-04-18-e2e-component-editor-tab-tested",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-component-editor-tab-tested/2026-04-18-e2e-component-editor-tab-tested.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-component-editor-tab-tested.md",
       "file": "2026-04-18-e2e-component-editor-tab-tested.md",
@@ -1082,17 +1090,18 @@
     {
       "id": "2026-04-18-e2e-dashboard-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-dashboard-meticulous/2026-04-18-e2e-dashboard-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-dashboard-meticulous.md",
       "file": "2026-04-18-e2e-dashboard-meticulous.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "completed": "2026-05-17T23:23:05Z"
     },
     {
       "id": "2026-04-18-e2e-dashboard-tab-tested",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-dashboard-tab-tested/2026-04-18-e2e-dashboard-tab-tested.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-dashboard-tab-tested.md",
       "file": "2026-04-18-e2e-dashboard-tab-tested.md",
@@ -1102,7 +1111,7 @@
     {
       "id": "2026-04-18-e2e-digital-twin-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-digital-twin-meticulous/2026-04-18-e2e-digital-twin-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-digital-twin-meticulous.md",
       "file": "2026-04-18-e2e-digital-twin-meticulous.md",
@@ -1112,7 +1121,7 @@
     {
       "id": "2026-04-18-e2e-exports-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-exports-meticulous/2026-04-18-e2e-exports-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-exports-meticulous.md",
       "file": "2026-04-18-e2e-exports-meticulous.md",
@@ -1122,7 +1131,7 @@
     {
       "id": "2026-04-18-e2e-generative-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-generative-meticulous/2026-04-18-e2e-generative-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-generative-meticulous.md",
       "file": "2026-04-18-e2e-generative-meticulous.md",
@@ -1132,7 +1141,7 @@
     {
       "id": "2026-04-18-e2e-history-design-version-history-meticulous-baby-step",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-history-design-version-history-meticulous-baby-step/2026-04-18-e2e-history-design-version-history-meticulous-baby-step.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-history-design-version-history-meticulous-baby-step.md",
       "file": "2026-04-18-e2e-history-design-version-history-meticulous-baby-step.md",
@@ -1142,7 +1151,7 @@
     {
       "id": "2026-04-18-e2e-inventory-storage-meticulous-baby-step",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-inventory-storage-meticulous-baby-step/2026-04-18-e2e-inventory-storage-meticulous-baby-step.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-inventory-storage-meticulous-baby-step.md",
       "file": "2026-04-18-e2e-inventory-storage-meticulous-baby-step.md",
@@ -1152,7 +1161,7 @@
     {
       "id": "2026-04-18-e2e-labs-meticulous-baby-step",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-labs-meticulous-baby-step/2026-04-18-e2e-labs-meticulous-baby-step.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-labs-meticulous-baby-step.md",
       "file": "2026-04-18-e2e-labs-meticulous-baby-step.md",
@@ -1162,7 +1171,7 @@
     {
       "id": "2026-04-18-e2e-learn-knowledge-tab-tested",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-learn-knowledge-tab-tested/2026-04-18-e2e-learn-knowledge-tab-tested.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-learn-knowledge-tab-tested.md",
       "file": "2026-04-18-e2e-learn-knowledge-tab-tested.md",
@@ -1172,7 +1181,7 @@
     {
       "id": "2026-04-18-e2e-learn-meticulous-baby-step",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-learn-meticulous-baby-step/2026-04-18-e2e-learn-meticulous-baby-step.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-learn-meticulous-baby-step.md",
       "file": "2026-04-18-e2e-learn-meticulous-baby-step.md",
@@ -1182,7 +1191,7 @@
     {
       "id": "2026-04-18-e2e-lifecycle-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-lifecycle-meticulous/2026-04-18-e2e-lifecycle-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-lifecycle-meticulous.md",
       "file": "2026-04-18-e2e-lifecycle-meticulous.md",
@@ -1192,7 +1201,7 @@
     {
       "id": "2026-04-18-e2e-method-note-efficient-walkthrough",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-method-note-efficient-walkthrough/2026-04-18-e2e-method-note-efficient-walkthrough.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-method-note-efficient-walkthrough.md",
       "file": "2026-04-18-e2e-method-note-efficient-walkthrough.md",
@@ -1202,7 +1211,7 @@
     {
       "id": "2026-04-18-e2e-my-parts-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-my-parts-meticulous/2026-04-18-e2e-my-parts-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-my-parts-meticulous.md",
       "file": "2026-04-18-e2e-my-parts-meticulous.md",
@@ -1212,7 +1221,7 @@
     {
       "id": "2026-04-18-e2e-order-pcb-meticulous-baby-step",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-order-pcb-meticulous-baby-step/2026-04-18-e2e-order-pcb-meticulous-baby-step.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-order-pcb-meticulous-baby-step.md",
       "file": "2026-04-18-e2e-order-pcb-meticulous-baby-step.md",
@@ -1222,7 +1231,7 @@
     {
       "id": "2026-04-18-e2e-order-pcb-tab-tested",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-order-pcb-tab-tested/2026-04-18-e2e-order-pcb-tab-tested.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-order-pcb-tab-tested.md",
       "file": "2026-04-18-e2e-order-pcb-tab-tested.md",
@@ -1232,7 +1241,7 @@
     {
       "id": "2026-04-18-e2e-pass-10-schematic-tab-deep-dive-e2e-845",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-10-schematic-tab-deep-dive-e2e-845/2026-04-18-e2e-pass-10-schematic-tab-deep-dive-e2e-845.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-10-schematic-tab-deep-dive-e2e-845.md",
       "file": "2026-04-18-e2e-pass-10-schematic-tab-deep-dive-e2e-845.md",
@@ -1242,302 +1251,1260 @@
     {
       "id": "2026-04-18-e2e-pass-11-schematic-wiring-component-play-e2e-874",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-11-schematic-wiring-component-play-e2e-874/2026-04-18-e2e-pass-11-schematic-wiring-component-play-e2e-874.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-11-schematic-wiring-component-play-e2e-874.md",
       "file": "2026-04-18-e2e-pass-11-schematic-wiring-component-play-e2e-874.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pass-12-schematic-iterate-innovate-e2e-915",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-12-schematic-iterate-innovate-e2e-915/2026-04-18-e2e-pass-12-schematic-iterate-innovate-e2e-915.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-12-schematic-iterate-innovate-e2e-915.md",
       "file": "2026-04-18-e2e-pass-12-schematic-iterate-innovate-e2e-915.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pass-12b-schematic-re-do-on-a-populated-canvas-e2e-942",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-12b-schematic-re-do-on-a-populated-canvas-e2e-942/2026-04-18-e2e-pass-12b-schematic-re-do-on-a-populated-canvas-e2e-942.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-12b-schematic-re-do-on-a-populated-canvas-e2e-942.md",
       "file": "2026-04-18-e2e-pass-12b-schematic-re-do-on-a-populated-canvas-e2e-942.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pass-13-ui-ux-design-system-deep-dive-e2e-968",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-13-ui-ux-design-system-deep-dive-e2e-968/2026-04-18-e2e-pass-13-ui-ux-design-system-deep-dive-e2e-968.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-13-ui-ux-design-system-deep-dive-e2e-968.md",
       "file": "2026-04-18-e2e-pass-13-ui-ux-design-system-deep-dive-e2e-968.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pass-2-app-wide-critique-cross-tab-themes",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-2-app-wide-critique-cross-tab-themes/2026-04-18-e2e-pass-2-app-wide-critique-cross-tab-themes.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-2-app-wide-critique-cross-tab-themes.md",
       "file": "2026-04-18-e2e-pass-2-app-wide-critique-cross-tab-themes.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pass-2-visual-flow-audience-critique",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-2-visual-flow-audience-critique/2026-04-18-e2e-pass-2-visual-flow-audience-critique.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-2-visual-flow-audience-critique.md",
       "file": "2026-04-18-e2e-pass-2-visual-flow-audience-critique.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pass-3-missed-sections-competitive-innovation-e2e-497-onwards",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-3-missed-sections-competitive-innovation-e2e-497-onwards/2026-04-18-e2e-pass-3-missed-sections-competitive-innovation-e2e-497-onwards.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-3-missed-sections-competitive-innovation-e2e-497-onwards.md",
       "file": "2026-04-18-e2e-pass-3-missed-sections-competitive-innovation-e2e-497-onwards.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pass-4-breadboard-lab-deep-dive-e2e-562-onwards",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-4-breadboard-lab-deep-dive-e2e-562-onwards/2026-04-18-e2e-pass-4-breadboard-lab-deep-dive-e2e-562-onwards.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-4-breadboard-lab-deep-dive-e2e-562-onwards.md",
       "file": "2026-04-18-e2e-pass-4-breadboard-lab-deep-dive-e2e-562-onwards.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pass-5-breadboard-wiring-component-play-workflow-e2e-611",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-5-breadboard-wiring-component-play-workflow-e2e-611/2026-04-18-e2e-pass-5-breadboard-wiring-component-play-workflow-e2e-611.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-5-breadboard-wiring-component-play-workflow-e2e-611.md",
       "file": "2026-04-18-e2e-pass-5-breadboard-wiring-component-play-workflow-e2e-611.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pass-6-iterate-innovate-e2e-676",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-6-iterate-innovate-e2e-676/2026-04-18-e2e-pass-6-iterate-innovate-e2e-676.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-6-iterate-innovate-e2e-676.md",
       "file": "2026-04-18-e2e-pass-6-iterate-innovate-e2e-676.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pass-7-architecture-tab-deep-dive-e2e-743",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-7-architecture-tab-deep-dive-e2e-743/2026-04-18-e2e-pass-7-architecture-tab-deep-dive-e2e-743.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-7-architecture-tab-deep-dive-e2e-743.md",
       "file": "2026-04-18-e2e-pass-7-architecture-tab-deep-dive-e2e-743.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pass-8-architecture-node-edge-interaction-e2e-779",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-8-architecture-node-edge-interaction-e2e-779/2026-04-18-e2e-pass-8-architecture-node-edge-interaction-e2e-779.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-8-architecture-node-edge-interaction-e2e-779.md",
       "file": "2026-04-18-e2e-pass-8-architecture-node-edge-interaction-e2e-779.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pass-9-architecture-iterate-innovate-e2e-819",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pass-9-architecture-iterate-innovate-e2e-819/2026-04-18-e2e-pass-9-architecture-iterate-innovate-e2e-819.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pass-9-architecture-iterate-innovate-e2e-819.md",
       "file": "2026-04-18-e2e-pass-9-architecture-iterate-innovate-e2e-819.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-patterns-meticulous-baby-step",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-patterns-meticulous-baby-step/2026-04-18-e2e-patterns-meticulous-baby-step.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-patterns-meticulous-baby-step.md",
       "file": "2026-04-18-e2e-patterns-meticulous-baby-step.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-pcb-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-pcb-meticulous/2026-04-18-e2e-pcb-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-pcb-meticulous.md",
       "file": "2026-04-18-e2e-pcb-meticulous.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-procurement-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-procurement-meticulous/2026-04-18-e2e-procurement-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-procurement-meticulous.md",
       "file": "2026-04-18-e2e-procurement-meticulous.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-procurement-tab-tested",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-procurement-tab-tested/2026-04-18-e2e-procurement-tab-tested.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-procurement-tab-tested.md",
       "file": "2026-04-18-e2e-procurement-tab-tested.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-schematic-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-schematic-meticulous/2026-04-18-e2e-schematic-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-schematic-meticulous.md",
       "file": "2026-04-18-e2e-schematic-meticulous.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-serial-monitor-meticulous-baby-step",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-serial-monitor-meticulous-baby-step/2026-04-18-e2e-serial-monitor-meticulous-baby-step.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-serial-monitor-meticulous-baby-step.md",
       "file": "2026-04-18-e2e-serial-monitor-meticulous-baby-step.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-simulation-meticulous-baby-step",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-simulation-meticulous-baby-step/2026-04-18-e2e-simulation-meticulous-baby-step.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-simulation-meticulous-baby-step.md",
       "file": "2026-04-18-e2e-simulation-meticulous-baby-step.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-simulation-tab-tested",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-simulation-tab-tested/2026-04-18-e2e-simulation-tab-tested.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-simulation-tab-tested.md",
       "file": "2026-04-18-e2e-simulation-tab-tested.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-starter-circuits-meticulous-baby-step",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-starter-circuits-meticulous-baby-step/2026-04-18-e2e-starter-circuits-meticulous-baby-step.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-starter-circuits-meticulous-baby-step.md",
       "file": "2026-04-18-e2e-starter-circuits-meticulous-baby-step.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-supply-chain-meticulous",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-supply-chain-meticulous/2026-04-18-e2e-supply-chain-meticulous.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-supply-chain-meticulous.md",
       "file": "2026-04-18-e2e-supply-chain-meticulous.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-tab-inventory-dynamic-32-35-after-first-node-added",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-tab-inventory-dynamic-32-35-after-first-node-added/2026-04-18-e2e-tab-inventory-dynamic-32-35-after-first-node-added.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-tab-inventory-dynamic-32-35-after-first-node-added.md",
       "file": "2026-04-18-e2e-tab-inventory-dynamic-32-35-after-first-node-added.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-tasks-kanban-meticulous-baby-step",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-tasks-kanban-meticulous-baby-step/2026-04-18-e2e-tasks-kanban-meticulous-baby-step.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-tasks-kanban-meticulous-baby-step.md",
       "file": "2026-04-18-e2e-tasks-kanban-meticulous-baby-step.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-tasks-kanban-tab-tested",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-tasks-kanban-tab-tested/2026-04-18-e2e-tasks-kanban-tab-tested.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-tasks-kanban-tab-tested.md",
       "file": "2026-04-18-e2e-tasks-kanban-tab-tested.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-tl-dr-top-opportunities-ux-idea",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-tl-dr-top-opportunities-ux-idea/2026-04-18-e2e-tl-dr-top-opportunities-ux-idea.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-tl-dr-top-opportunities-ux-idea.md",
       "file": "2026-04-18-e2e-tl-dr-top-opportunities-ux-idea.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-tl-dr-top-p0-p1-bugs-action-items",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-tl-dr-top-p0-p1-bugs-action-items/2026-04-18-e2e-tl-dr-top-p0-p1-bugs-action-items.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-tl-dr-top-p0-p1-bugs-action-items.md",
       "file": "2026-04-18-e2e-tl-dr-top-p0-p1-bugs-action-items.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-validation-tab-tested-revealed-by-clicking-coach-help-dynamic-tab",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-validation-tab-tested-revealed-by-clicking-coach-help-dynamic-tab/2026-04-18-e2e-validation-tab-tested-revealed-by-clicking-coach-help-dynamic-tab.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-validation-tab-tested-revealed-by-clicking-coach-help-dynamic-tab.md",
       "file": "2026-04-18-e2e-validation-tab-tested-revealed-by-clicking-coach-help-dynamic-tab.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     },
     {
       "id": "2026-04-18-e2e-vault-tab-tested",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "/home/wtyler/Projects/ProtoPulse/ops/queue/archive/2026-04-18-2026-04-18-e2e-vault-tab-tested/2026-04-18-e2e-vault-tab-tested.md",
       "original_path": "/home/wtyler/Projects/ProtoPulse/inbox/2026-04-18-e2e-vault-tab-tested.md",
       "file": "2026-04-18-e2e-vault-tab-tested.md",
       "created": "2026-04-18T00:00:00Z",
-      "next_claim_start": 63
+      "next_claim_start": 63,
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-063",
+      "type": "claim",
+      "status": "done",
+      "target": "Loading state panel-skeleton shows empty text before content appears",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-063.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-064",
+      "type": "claim",
+      "status": "done",
+      "target": "Asset Library flat list requires category dividers for 12+ items",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-064.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-065",
+      "type": "claim",
+      "status": "done",
+      "target": "Asset Library category numeric badges are opaque without labels",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-065.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-066",
+      "type": "claim",
+      "status": "done",
+      "target": "Global recent assets confuse users expecting project-scoped recents",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-066.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-067",
+      "type": "claim",
+      "status": "done",
+      "target": "Generate Architecture button requires API key state awareness",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-067.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-068",
+      "type": "claim",
+      "status": "done",
+      "target": "Test IDs using integer IDs are fragile and should use part name slugs",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-068.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-069",
+      "type": "claim",
+      "status": "done",
+      "target": "Asset search correctly filters across MCU, sensor, and power categories with debounce",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-069.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-070",
+      "type": "claim",
+      "status": "done",
+      "target": "Tool-analyze button silently fails when clicked with node on canvas",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-070.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-071",
+      "type": "claim",
+      "status": "done",
+      "target": "Toolbar mode buttons require aria-pressed state for screen reader accessibility",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-071.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-072",
+      "type": "claim",
+      "status": "done",
+      "target": "Generate Architecture empty state CTA lacks follow-up after first node addition",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-072.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-073",
+      "type": "claim",
+      "status": "done",
+      "target": "Node labels concatenating category and name without separators are hard to read",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-073.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-074",
+      "type": "claim",
+      "status": "done",
+      "target": "Node inspector panel provides comprehensive editing for labels, types, description, position, connections",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-074.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-075",
+      "type": "claim",
+      "status": "done",
+      "target": "Node context menu offers extensive actions like validation, schematic generation, and JSON export",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-075.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-076",
+      "type": "claim",
+      "status": "done",
+      "target": "Context menu leaves shadow DOM mount with empty items",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-076.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-077",
+      "type": "claim",
+      "status": "done",
+      "target": "Node type recategorization requires downstream rule validation",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-077.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-078",
+      "type": "claim",
+      "status": "done",
+      "target": "Numeric X-Y position inputs should support unit toggling for power users",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-078.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-079",
+      "type": "claim",
+      "status": "done",
+      "target": "Node inspector type button requires aria-labels for screen reader accessibility",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-079.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-080",
+      "type": "claim",
+      "status": "done",
+      "target": "Context menu actions require real pointer events for e2e testing instead of synthetic clicks",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-architecture-tab-tested",
+      "file": "2026-04-18-e2e-architecture-tab-tested-080.md",
+      "created": "2026-05-17T22:55:26Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-081",
+      "type": "claim",
+      "status": "done",
+      "target": "Community card onclick is dead, producing no visible dialog, detail panel, or install button.",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-community-meticulous-baby-step",
+      "file": "2026-04-18-e2e-community-meticulous-baby-step-081.md",
+      "created": "2026-05-17T23:20:30Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-082",
+      "type": "claim",
+      "status": "done",
+      "target": "Community cards have onclick handlers but lack role='button', creating systemic a11y issues.",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-community-meticulous-baby-step",
+      "file": "2026-04-18-e2e-community-meticulous-baby-step-082.md",
+      "created": "2026-05-17T23:20:30Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-083",
+      "type": "claim",
+      "status": "done",
+      "target": "Community license badges (MIT/CC0/CC-BY) are displayed but cannot be filtered.",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-community-meticulous-baby-step",
+      "file": "2026-04-18-e2e-community-meticulous-baby-step-083.md",
+      "created": "2026-05-17T23:20:30Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-084",
+      "type": "claim",
+      "status": "done",
+      "target": "Community lacks a 'Submit your component' CTA, making it a read-only library without a contribution path.",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-community-meticulous-baby-step",
+      "file": "2026-04-18-e2e-community-meticulous-baby-step-084.md",
+      "created": "2026-05-17T23:20:30Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-081",
+      "type": "claim",
+      "status": "done",
+      "target": "Dashboard Architecture card navigation functions correctly with authentic DevTools click events",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-081.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-082",
+      "type": "claim",
+      "status": "done",
+      "target": "Instantaneous tab navigation without visual transitions fails to orient users to context changes",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-082.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-083",
+      "type": "claim",
+      "status": "done",
+      "target": "Icon-only buttons with proper aria-labels remain inaccessible to sighted users without on-hover tooltips",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-083.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-084",
+      "type": "claim",
+      "status": "done",
+      "target": "Displaying the same asset in Favorites Recently Used and main lists creates excessive visual clutter",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-084.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-085",
+      "type": "claim",
+      "status": "done",
+      "target": "Favorite toggle buttons require explicit visual state indicators to convey current status",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-085.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-086",
+      "type": "claim",
+      "status": "done",
+      "target": "Asset Library favorites section correctly persists and updates dynamically",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-086.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-087",
+      "type": "claim",
+      "status": "done",
+      "target": "Toggle button aria-labels must dynamically reflect their current state for screen-reader accessibility",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-087.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-088",
+      "type": "claim",
+      "status": "done",
+      "target": "Implementing a toggle to hide already-favorited items from the main list reduces asset library duplication",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-088.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-089",
+      "type": "claim",
+      "status": "done",
+      "target": "Search filters that ignore Favorites and Recents sections create confusing UX inconsistencies",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-089.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-090",
+      "type": "claim",
+      "status": "done",
+      "target": "Search inputs without result count indicators create silent confusion when yielding empty results",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-090.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-091",
+      "type": "claim",
+      "status": "done",
+      "target": "Search fields without dedicated clear buttons force awkward text selection workflows",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-091.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-092",
+      "type": "claim",
+      "status": "done",
+      "target": "Automated text clearing on React-controlled inputs requires explicit Backspace sequences for reliable E2E testing",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-092.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-093",
+      "type": "claim",
+      "status": "done",
+      "target": "Combining category filters with active text search creates visual ambiguity without explicit intersection logic",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-093.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-094",
+      "type": "claim",
+      "status": "done",
+      "target": "Category filter buttons should display numeric count badges to set user expectations before interaction",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-094.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-095",
+      "type": "claim",
+      "status": "done",
+      "target": "Active filters require persistent visual distinctiveness beyond transient keyboard focus styles",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-dashboard-meticulous",
+      "file": "2026-04-18-e2e-dashboard-meticulous-095.md",
+      "created": "2026-05-17T23:23:05Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-081",
+      "type": "claim",
+      "status": "done",
+      "target": "Community library stats lack author breakdown requiring a top authors list",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-community-tab-tested",
+      "file": "2026-04-18-e2e-community-tab-tested-081.md",
+      "created": "2026-05-17T23:23:19Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-082",
+      "type": "claim",
+      "status": "done",
+      "target": "Seed data components require clear visual indicators to distinguish them from real user submissions",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-community-tab-tested",
+      "file": "2026-04-18-e2e-community-tab-tested-082.md",
+      "created": "2026-05-17T23:23:19Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-083",
+      "type": "claim",
+      "status": "done",
+      "target": "Component cards display license types but lack filtering capability by license",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-community-tab-tested",
+      "file": "2026-04-18-e2e-community-tab-tested-083.md",
+      "created": "2026-05-17T23:23:19Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-084",
+      "type": "claim",
+      "status": "done",
+      "target": "Community tab lacks a prominently placed call-to-action for submitting new components",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-community-tab-tested",
+      "file": "2026-04-18-e2e-community-tab-tested-084.md",
+      "created": "2026-05-17T23:23:19Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-085",
+      "type": "claim",
+      "status": "done",
+      "target": "Raw star rating elements require aria-labels with textual scores for screen reader accessibility",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-community-tab-tested",
+      "file": "2026-04-18-e2e-community-tab-tested-085.md",
+      "created": "2026-05-17T23:23:19Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-086",
+      "type": "claim",
+      "status": "done",
+      "target": "Community tab edge cases require testing for zero-state components, malicious payloads, and pagination over 100 items",
+      "classification": "open",
+      "batch": "2026-04-18-e2e-community-tab-tested",
+      "file": "2026-04-18-e2e-community-tab-tested-086.md",
+      "created": "2026-05-17T23:23:19Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
+    },
+    {
+      "id": "claim-081",
+      "type": "claim",
+      "status": "done",
+      "target": "anchoring comments to specific design objects prevents context loss during design review",
+      "classification": "closed",
+      "batch": "2026-04-18-e2e-comments-design-review-meticulous",
+      "file": "2026-04-18-e2e-comments-design-review-meticulous-081.md",
+      "created": "2026-05-17T23:50:33Z",
+      "current_phase": "",
+      "completed_phases": [
+        "create",
+        "reflect",
+        "reweave",
+        "verify"
+      ]
     }
   ],
   "maintenance_conditions": {

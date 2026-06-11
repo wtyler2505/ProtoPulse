@@ -46,9 +46,9 @@ export interface CollabMessage {
 }
 
 export type CRDTOperation =
-  | { op: 'insert'; path: string[]; value: unknown; timestamp?: number; clientId?: number }
-  | { op: 'delete'; path: string[]; key: string; timestamp?: number; clientId?: number }
-  | { op: 'update'; path: string[]; key: string; value: unknown; timestamp?: number; clientId?: number };
+  | { op: 'insert'; path: string[]; value: unknown; baseTimestamp?: number; timestamp?: number; clientId?: number }
+  | { op: 'delete'; path: string[]; key: string; baseTimestamp?: number; timestamp?: number; clientId?: number }
+  | { op: 'update'; path: string[]; key: string; value: unknown; baseTimestamp?: number; timestamp?: number; clientId?: number };
 
 /**
  * Resolved operation after CRDT merge — includes the server-assigned
@@ -218,6 +218,21 @@ export interface Conflict {
 export function detectConflict(
   incoming: CRDTOperation,
   recent: ReadonlyArray<{ op: CRDTOperation; serverTs: number; clientId: number }>,
+  /**
+   * BL-0879: The highest server Lamport timestamp the incoming client had
+   * observed when it composed this op (client-supplied baseline — the
+   * Yjs/Automerge convention). A recent op from a *different* client whose
+   * `serverTs` exceeds this baseline was generated after the client's known
+   * state → the two edits are concurrent → conflict.
+   *
+   * Defaults to `0` (fail-safe): an op that omits the field is treated as
+   * "I have observed nothing", so any recent same-key update from a different
+   * client (serverTs > 0) raises a conflict rather than silently winning. A
+   * `MAX_SAFE_INTEGER` default would be fail-deadly — a fieldless op would
+   * never conflict and would silently overwrite concurrent edits, defeating
+   * BL-0879's entire purpose (Gemini adversarial review R1, 2026-05-26).
+   */
+  baseTimestamp: number = 0,
 ): { kind: ConflictKind; path: string[]; key: string; yourOp: CRDTOperation; theirOp: CRDTOperation } | null {
   const incomingTs = incoming.timestamp ?? 0;
   const incomingClient = incoming.clientId ?? 0;
@@ -230,8 +245,11 @@ export function detectConflict(
       if (r.op.op !== 'update') { continue; }
       const rKey = `${r.op.path.join('.')}:${r.op.key}`;
       if (rKey !== opKey) { continue; }
-      // If incoming cannot win LWW, this is a conflict.
-      if (!lwwWins(r.serverTs, r.clientId, incomingTs, incomingClient)) {
+      // BL-0879: A prior op the client had NOT yet seen (serverTs > baseline)
+      // from a different client means our edit raced theirs → conflict. The
+      // server-monotonic Lamport alone always post-dates the incoming op, so
+      // the old `!lwwWins(...)` check could never fire for the update path.
+      if (r.serverTs > baseTimestamp && r.clientId !== incomingClient) {
         return {
           kind: 'lww-update',
           path: incoming.path,
@@ -240,7 +258,7 @@ export function detectConflict(
           theirOp: r.op,
         };
       }
-      // Incoming would win — no conflict for this key.
+      // Incoming has already seen this op (or it is our own) — no conflict.
       return null;
     }
     return null;

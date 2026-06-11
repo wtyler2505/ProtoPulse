@@ -36,6 +36,13 @@
       "when": 1776886802974,
       "tag": "0004_add_boards_table",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779098516824,
+      "tag": "0005_v3_architecture_storage",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react';
-import type { Node } from '@xyflow/react';
+import type { GraphNode } from '@/lib/graph-types';
 import { useDraggable } from '@dnd-kit/core';
 import {
   ChevronRight,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
+import { PROTOPULSE_DRAG_TYPE, PROTOPULSE_DRAG_LABEL } from '@/lib/drag-mime';
 import { copyToClipboard } from '@/lib/clipboard';
 import { createComponentSearch, highlightMatches } from '@/lib/fuzzy-search';
 import type { HighlightSegment } from '@/lib/fuzzy-search';
@@ -57,7 +58,7 @@ function DraggableCategoryHeader({ cat, config, IconComp, expanded, catNodeCount
       aria-label={`${expanded ? 'Collapse' : 'Expand'} ${config.label} category`}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCategory(cat); } }}
       className={cn(
-        'flex items-center gap-2 py-1 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer hover:bg-muted/30 group/cat focus-ring',
+        'flex items-center gap-1.5 py-1 px-1.5 text-[11px] text-muted-foreground hover:text-foreground cursor-pointer hover:bg-muted/30 group/cat focus-ring',
         isDragging && 'opacity-50',
       )}
       draggable
@@ -66,12 +67,12 @@ function DraggableCategoryHeader({ cat, config, IconComp, expanded, catNodeCount
       style={{ cursor: 'grab' }}
     >
       <div {...listeners} {...attributes} data-testid={`drag-handle-category-${cat}`} className="touch-none">
-        <GripVertical className="w-3 h-3 opacity-0 group-hover/cat:opacity-50 shrink-0" />
+        <GripVertical className="w-3.5 h-3.5 opacity-0 group-hover/cat:opacity-50 shrink-0" />
       </div>
-      {expanded ? <ChevronDown className="w-3 h-3 shrink-0" /> : <ChevronRight className="w-3 h-3 shrink-0" />}
-      <IconComp className="w-3 h-3 shrink-0" />
+      {expanded ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
+      <IconComp className="w-3.5 h-3.5 shrink-0" />
       <span className="flex-1">{config.label}</span>
-      <span className="text-[10px] font-medium bg-muted/50 text-muted-foreground px-1.5 py-0.5 tabular-nums">{catNodeCount}</span>
+      <span className="text-[10px] font-medium bg-muted/50 text-muted-foreground px-1 py-0 tabular-nums rounded-sm">{catNodeCount}</span>
     </div>
   );
 }
@@ -98,12 +99,12 @@ function HighlightedLabel({ segments }: { segments: HighlightSegment[] }) {
 }
 
 interface DraggableNodeRowProps {
-  node: Node;
+  node: GraphNode;
   cat: string;
   selectedNodeId: string | null;
-  allNodes: Node[];
+  allNodes: GraphNode[];
   focusNode: (id: string) => void;
-  setNodes: (nodes: Node[]) => void;
+  setNodes: (nodes: GraphNode[]) => void;
   addOutputLog: (msg: string) => void;
   onDragStart: (e: React.DragEvent, nodeType: string, label: string) => void;
   highlightSegments?: HighlightSegment[];
@@ -130,7 +131,7 @@ function DraggableNodeRow({ node, cat, selectedNodeId, allNodes, focusNode, setN
           aria-label={`Focus node: ${nodeLabel}`}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focusNode(node.id); } }}
           className={cn(
-            'text-xs cursor-pointer py-1 px-2 flex items-center gap-2 transition-colors group/node focus-ring',
+            'text-[11px] cursor-pointer py-1 px-1.5 flex items-center gap-1.5 transition-colors group/node focus-ring',
             selectedNodeId === node.id
               ? 'bg-primary/20 text-primary'
               : 'text-muted-foreground hover:text-foreground hover:bg-accent',
@@ -142,9 +143,9 @@ function DraggableNodeRow({ node, cat, selectedNodeId, allNodes, focusNode, setN
           style={{ cursor: 'grab' }}
         >
           <div {...listeners} {...attributes} data-testid={`drag-handle-node-${node.id}`} className="touch-none">
-            <GripVertical className="w-3 h-3 opacity-0 group-hover/node:opacity-50 shrink-0" />
+            <GripVertical className="w-3.5 h-3.5 opacity-0 group-hover/node:opacity-50 shrink-0" />
           </div>
-          <div className="w-1 h-1 bg-muted-foreground/50 shrink-0"></div>
+          <div className="w-1 h-1 bg-muted-foreground/50 shrink-0" />
           {highlightSegments ? <HighlightedLabel segments={highlightSegments} /> : <span className="truncate">{nodeLabel}</span>}
         </div>
       </ContextMenuTrigger>
@@ -163,13 +164,13 @@ function DraggableNodeRow({ node, cat, selectedNodeId, allNodes, focusNode, setN
 // ---------------------------------------------------------------------------
 
 interface ComponentTreeProps {
-  nodes: Node[];
+  nodes: GraphNode[];
   searchQuery: string;
   selectedNodeId: string | null;
   expandedCategories: Record<string, boolean>;
   setExpandedCategories: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   focusNode: (id: string) => void;
-  setNodes: (nodes: Node[]) => void;
+  setNodes: (nodes: GraphNode[]) => void;
   addOutputLog: (msg: string) => void;
 }
 
@@ -184,13 +185,13 @@ const ComponentTree = memo(function ComponentTree({
   addOutputLog,
 }: ComponentTreeProps) {
   const onDragStart = (e: React.DragEvent, nodeType: string, label: string) => {
-    e.dataTransfer.setData('application/reactflow/type', nodeType);
-    e.dataTransfer.setData('application/reactflow/label', label);
+    e.dataTransfer.setData(PROTOPULSE_DRAG_TYPE, nodeType);
+    e.dataTransfer.setData(PROTOPULSE_DRAG_LABEL, label);
     e.dataTransfer.effectAllowed = 'move';
   };
 
   const filteredCategories = useMemo(() => {
-    const grouped: Record<string, Node[]> = {};
+    const grouped: Record<string, GraphNode[]> = {};
     (nodes || []).forEach((node) => {
       const type = String(node.data?.type || 'generic');
       const key = TYPE_CONFIG[type] ? type : 'generic';
@@ -212,7 +213,7 @@ const ComponentTree = memo(function ComponentTree({
 
     // Build a flat Fuse index of all nodes for fuzzy matching
     const allNodes = activeCategories.flatMap(cat => grouped[cat]);
-    const fuse = createComponentSearch<Node>(allNodes, [{ name: 'data.label', getFn: (n) => String(n.data?.label || '') }]);
+    const fuse = createComponentSearch<GraphNode>(allNodes, [{ name: 'data.label', getFn: (n) => String(n.data?.label || '') }]);
     const fuseResults = fuse.search(query);
 
     // Build a map of node id → highlight segments from Fuse results
@@ -237,9 +238,9 @@ const ComponentTree = memo(function ComponentTree({
   const isCategoryExpanded = (cat: string) => expandedCategories[cat] !== false;
 
   return (
-    <div className="pl-4 pr-2 py-1 space-y-0.5">
+    <div className="pl-3 pr-1.5 py-0.5 space-y-0.5">
       {filteredCategories.length === 0 && searchQuery.trim() && (
-        <div className="text-xs text-muted-foreground/60 pl-4 py-1">No results</div>
+      <div className="text-[11px] text-muted-foreground/60 pl-3 py-1">No results</div>
       )}
       {filteredCategories.map(({ cat, nodes: catNodes, highlights }) => {
         const config = TYPE_CONFIG[cat];
@@ -257,7 +258,7 @@ const ComponentTree = memo(function ComponentTree({
               onDragStart={onDragStart}
             />
             {expanded && (
-              <div className="pl-6 space-y-0.5">
+              <div className="pl-5 space-y-0.5">
                 {catNodes.map((node) => (
                   <DraggableNodeRow
                     key={node.id}

@@ -163,6 +163,11 @@ describe('BomToolbar', () => {
     renderWithQuery(<BomToolbar searchTerm="" onSearchChange={noop} showSettings={false} onToggleSettings={noop} esdFilterOnly={false} onToggleEsdFilter={noop} esdCount={0} showAssemblyGroups={false} onToggleAssemblyGroups={noop} onAddItem={noop} totalCost={123.45} onExportCSV={noop} />);
     expect(screen.getByTestId('text-total-cost').textContent).toContain('123.45');
   });
+
+  it('disables CSV export when procurement blockers are present', () => {
+    renderWithQuery(<BomToolbar searchTerm="" onSearchChange={noop} showSettings={false} onToggleSettings={noop} esdFilterOnly={false} onToggleEsdFilter={noop} esdCount={0} showAssemblyGroups={false} onToggleAssemblyGroups={noop} onAddItem={noop} totalCost={123.45} onExportCSV={noop} exportBlocked={true} exportBlockerCount={1} />);
+    expect((screen.getByTestId('button-export-csv') as HTMLButtonElement).disabled).toBe(true);
+  });
 });
 
 describe('BomSettings', () => {
@@ -225,6 +230,34 @@ describe('AlternatePartsPanel', () => {
     render(<AlternatePartsPanel bom={[]} altSearchPartNumber="XYZ" onAltSearchChange={noop} altResults={[]} altSearching={false} onFindAlternates={noop} />);
     expect(screen.getByTestId('alternates-empty-state')).toBeDefined();
   });
+
+  it('shows trust badges on alternate results', () => {
+    render(
+      <AlternatePartsPanel
+        bom={[]}
+        altSearchPartNumber="STM32F407"
+        onAltSearchChange={noop}
+        altSearching={false}
+        onFindAlternates={noop}
+        altResults={[
+          {
+            part: {
+              partNumber: 'STM32F407VGT6',
+              manufacturer: 'STMicro',
+              description: 'MCU ARM Cortex-M4',
+              quantity: 1,
+              unitPrice: 6.0,
+            },
+            equivalenceLevel: 'functional',
+            confidence: 'medium',
+            score: 88.5,
+            matchingParameters: ['voltage', 'package', 'clock'],
+          },
+        ] as never}
+      />,
+    );
+    expect(screen.getAllByText('ESTIMATED').length).toBeGreaterThan(0);
+  });
 });
 
 describe('SupplierPricingPanel', () => {
@@ -238,6 +271,55 @@ describe('SupplierPricingPanel', () => {
   it('shows empty state when no quote', () => {
     render(<SupplierPricingPanel bom={[]} bomQuote={null} pricingSearching={false} pricingPartMpn="" onPricingPartMpnChange={noop} onQuoteBom={noop} onSearchPartPricing={noop} distributors={[]} currency="USD" />);
     expect(screen.getByTestId('pricing-empty-state')).toBeDefined();
+  });
+
+  it('disables whole-BOM quote when procurement blockers are present', () => {
+    render(<SupplierPricingPanel bom={[makeBomItem()]} bomQuote={null} pricingSearching={false} pricingPartMpn="" onPricingPartMpnChange={noop} onQuoteBom={noop} onSearchPartPricing={noop} distributors={[]} currency="USD" quoteBlocked={true} quoteBlockerCount={2} />);
+    expect(screen.getByTestId('procurement-pricing-safety-alert')).toBeDefined();
+    expect((screen.getByTestId('button-quote-bom') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('renders trust/estimated badges when quote data is marked as mock', () => {
+    render(
+      <SupplierPricingPanel
+        bom={[makeBomItem()]}
+        bomQuote={{
+          items: [
+            {
+              mpn: 'STM32F407',
+              quantity: 2,
+              bestPrice: {
+                distributor: 'digikey',
+                unitPrice: 5.5,
+                totalPrice: 11,
+                sku: 'DK-STM32',
+                isMock: true,
+              },
+              allOffers: [],
+              inStock: true,
+              warnings: [],
+              isMock: true,
+            },
+          ],
+          totalCost: 11,
+          currency: 'USD',
+          itemsFound: 1,
+          itemsMissing: 0,
+          timestamp: Date.now(),
+          containsMockData: true,
+        }}
+        pricingSearching={false}
+        pricingPartMpn=""
+        onPricingPartMpnChange={noop}
+        onQuoteBom={noop}
+        onSearchPartPricing={noop}
+        distributors={[{ distributorId: 'dk', name: 'Digi-Key', enabled: true }]}
+        currency="USD"
+      />,
+    );
+
+    expect(screen.getByTestId('supplier-mock-disclaimer')).toBeDefined();
+    expect(screen.getByText('ESTIMATED')).toBeDefined();
   });
 });
 

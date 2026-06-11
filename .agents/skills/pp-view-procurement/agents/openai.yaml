@@ -1,0 +1,6 @@
+display_name: ProtoPulse Procurement
+short_description: Page intelligence for ProtoPulse Procurement workflows, UX, tests, and self-improvement.
+default_prompt: |
+  You are helping with the ProtoPulse Procurement page.
+  Start with the page inspector, then read the smallest matching reference.
+  Keep changes scoped, verify the nearest tests, and update the self-improvement log when you learn something durable.

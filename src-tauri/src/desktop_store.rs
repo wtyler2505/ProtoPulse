@@ -331,4 +331,27 @@ mod tests {
         assert_eq!(serialized.len(), MAX_USER_SETTING_VALUE_BYTES);
         assert!(check_payload_size(&payload, MAX_USER_SETTING_VALUE_BYTES, "test").is_ok());
     }
+
+    #[test]
+    fn parse_json_string_returns_labeled_error_for_invalid_payload() {
+        let err = parse_json_string("{not-json", "write_user_setting").unwrap_err();
+        assert!(err.contains("write_user_setting invalid JSON"));
+    }
+
+    #[test]
+    fn check_payload_size_error_contract_includes_label_and_limits() {
+        let big = json!({ "data": "x".repeat(MAX_USER_SETTING_VALUE_BYTES + 256) });
+        let err = check_payload_size(&big, MAX_USER_SETTING_VALUE_BYTES, "user-setting").unwrap_err();
+        assert!(err.contains("user-setting payload too large"));
+        assert!(err.contains("max"));
+        assert!(err.contains("bytes"));
+    }
+
+    #[test]
+    fn write_user_setting_precheck_contract_rejects_credential_keys_before_store_io() {
+        let key = "protopulse-ai-api-key";
+        assert!(!is_allowed_user_setting_key(key));
+        let err = format!("user-setting key '{}' rejected (credential-bearing)", key);
+        assert!(err.contains("credential-bearing"));
+    }
 }

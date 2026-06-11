@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/lib/auth-context';
 
-export type ApiKeyProvider = 'gemini';
+export type ApiKeyProvider = 'gemini' | 'openai';
 
 /**
  * Sentinel value returned when the real API key is stored server-side.
@@ -23,6 +23,7 @@ export const STORED_KEY_SENTINEL = '********';
  */
 const SESSION_STORAGE_KEYS: Record<ApiKeyProvider, string> = {
   gemini: 'protopulse-ai-api-key-gemini-scratch',
+  openai: 'protopulse-ai-api-key-openai-scratch',
 };
 
 /**
@@ -33,6 +34,7 @@ const SESSION_STORAGE_KEYS: Record<ApiKeyProvider, string> = {
  */
 const LEGACY_LOCALSTORAGE_KEYS: Record<ApiKeyProvider, readonly string[]> = {
   gemini: ['protopulse-ai-api-key', 'protopulse-ai-api-key-gemini'],
+  openai: ['protopulse-ai-api-key-openai'],
 };
 
 interface UseApiKeysResult {
@@ -108,17 +110,20 @@ export function useApiKeys(): UseApiKeysResult {
   const isAuthenticated = !!sessionId;
   const queryClient = useQueryClient();
   const migrationDoneRef = useRef(false);
-  const activeProvider: ApiKeyProvider = 'gemini';
+  const activeProvider: ApiKeyProvider = localStorage.getItem('protopulse_ai_provider') === 'openai'
+    ? 'openai'
+    : 'gemini';
 
   const [localKeys, setLocalKeys] = useState<Record<ApiKeyProvider, string>>(() => ({
     gemini: readScratchKey('gemini'),
+    openai: readScratchKey('openai'),
   }));
 
   // Audit #60: scrub any legacy plaintext localStorage entries once per hook lifetime,
   // even for unauthenticated users. readScratchKey drained them into the initial state
   // above; this belt-and-suspenders call covers late-arriving writes and StrictMode.
   useEffect(() => {
-    for (const provider of ['gemini'] as ApiKeyProvider[]) {
+    for (const provider of ['gemini', 'openai'] as ApiKeyProvider[]) {
       drainLegacyLocalStorage(provider);
     }
   }, []);
@@ -163,7 +168,7 @@ export function useApiKeys(): UseApiKeysResult {
     migrationDoneRef.current = true;
     const serverProviders = new Set(providersQuery.data ?? []);
 
-    const allProviders: ApiKeyProvider[] = ['gemini'];
+    const allProviders: ApiKeyProvider[] = ['gemini', 'openai'];
     for (const provider of allProviders) {
       // readScratchKey drains legacy localStorage AND returns current sessionStorage scratch.
       const scratch = readScratchKey(provider);
@@ -175,7 +180,7 @@ export function useApiKeys(): UseApiKeysResult {
       }
     }
 
-    setLocalKeys({ gemini: '' });
+    setLocalKeys({ gemini: '', openai: '' });
   }, [isAuthenticated, providersQuery.isFetched, providersQuery.data, storeOnServer]);
 
   const updateLocalKey = useCallback(

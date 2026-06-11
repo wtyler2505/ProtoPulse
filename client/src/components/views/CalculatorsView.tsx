@@ -63,7 +63,7 @@ function ResultRow({
   accent?: boolean;
 }) {
   return (
-    <div data-testid={testId} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-b-0">
+    <div data-testid={testId} className="flex items-center justify-between py-1 border-b border-border/30 last:border-b-0">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className={cn('text-sm font-mono font-semibold', accent ? 'text-[var(--color-editor-accent)]' : 'text-foreground')}>
         {value}
@@ -74,7 +74,7 @@ function ResultRow({
 
 function ErrorDisplay({ errors, testId }: { errors: CalculatorError[]; testId: string }) {
   return (
-    <div data-testid={testId} className="rounded-md bg-destructive/10 border border-destructive/20 p-2 space-y-1">
+    <div data-testid={testId} className="rounded-md bg-destructive/10 border border-destructive/20 p-1.5 space-y-1">
       {errors.map((err) => (
         <p key={`${err.field}-${err.message}`} className="text-xs text-destructive">
           {err.message}
@@ -135,6 +135,7 @@ function OhmsLawCard() {
             <NumberInput
               id="ohms-voltage"
               data-testid="calc-ohms-voltage-input"
+              aria-label="Ohm's Law voltage in volts"
               placeholder="V"
               value={voltageRaw}
               onChange={(e) => setVoltage(e.target.value)}
@@ -148,6 +149,7 @@ function OhmsLawCard() {
             <NumberInput
               id="ohms-current"
               data-testid="calc-ohms-current-input"
+              aria-label="Ohm's Law current in amps"
               placeholder="A"
               value={currentRaw}
               onChange={(e) => setCurrent(e.target.value)}
@@ -161,6 +163,7 @@ function OhmsLawCard() {
             <NumberInput
               id="ohms-resistance"
               data-testid="calc-ohms-resistance-input"
+              aria-label="Ohm's Law resistance in ohms"
               placeholder={'\u03A9'}
               value={resistanceRaw}
               onChange={(e) => setResistance(e.target.value)}
@@ -248,6 +251,7 @@ function LedResistorCard() {
             <NumberInput
               id="led-vs"
               data-testid="calc-led-supply-input"
+              aria-label="LED supply voltage in volts"
               placeholder="5"
               value={vsRaw}
               onChange={(e) => setVs(e.target.value)}
@@ -261,6 +265,7 @@ function LedResistorCard() {
             <NumberInput
               id="led-vf"
               data-testid="calc-led-forward-voltage-input"
+              aria-label="LED forward voltage in volts"
               placeholder="2"
               value={vfRaw}
               onChange={(e) => setVf(e.target.value)}
@@ -274,6 +279,7 @@ function LedResistorCard() {
             <NumberInput
               id="led-if"
               data-testid="calc-led-forward-current-input"
+              aria-label="LED forward current in amps"
               placeholder="0.02"
               value={ifRaw}
               onChange={(e) => setIf(e.target.value)}
@@ -380,11 +386,11 @@ function VoltageDividerCard() {
       </CardHeader>
       <CardContent className="space-y-3">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-full">
-            <TabsTrigger value="forward" data-testid="calc-divider-forward-tab" className="flex-1">
+          <TabsList className="w-full h-7">
+            <TabsTrigger value="forward" data-testid="calc-divider-forward-tab" className="flex-1 h-6 text-[10px] px-1.5">
               Forward
             </TabsTrigger>
-            <TabsTrigger value="reverse" data-testid="calc-divider-reverse-tab" className="flex-1">
+            <TabsTrigger value="reverse" data-testid="calc-divider-reverse-tab" className="flex-1 h-6 text-[10px] px-1.5">
               Reverse
             </TabsTrigger>
           </TabsList>
@@ -396,6 +402,7 @@ function VoltageDividerCard() {
                 <NumberInput
                   id="div-r1"
                   data-testid="calc-divider-r1-input"
+                  aria-label="Voltage divider R1 resistance in ohms"
                   value={r1Raw}
                   onChange={(e) => setR1(e.target.value)}
                   min={0}
@@ -408,6 +415,7 @@ function VoltageDividerCard() {
                 <NumberInput
                   id="div-r2"
                   data-testid="calc-divider-r2-input"
+                  aria-label="Voltage divider R2 resistance in ohms"
                   value={r2Raw}
                   onChange={(e) => setR2(e.target.value)}
                   min={0}
@@ -420,6 +428,7 @@ function VoltageDividerCard() {
                 <NumberInput
                   id="div-vin"
                   data-testid="calc-divider-vin-input"
+                  aria-label="Voltage divider input voltage in volts"
                   value={vinRaw}
                   onChange={(e) => setVin(e.target.value)}
                   min={0}
@@ -464,6 +473,7 @@ function VoltageDividerCard() {
                 <NumberInput
                   id="div-rev-vin"
                   data-testid="calc-divider-rev-vin-input"
+                  aria-label="Reverse voltage divider input voltage in volts"
                   value={vinRaw}
                   onChange={(e) => setVin(e.target.value)}
                   min={0}
@@ -476,6 +486,7 @@ function VoltageDividerCard() {
                 <NumberInput
                   id="div-rev-vout"
                   data-testid="calc-divider-rev-vout-input"
+                  aria-label="Reverse voltage divider target output voltage in volts"
                   value={targetVoutRaw}
                   onChange={(e) => setTargetVout(e.target.value)}
                   min={0}
@@ -581,6 +592,7 @@ function RcTimeConstantCard() {
             <NumberInput
               id="rc-r"
               data-testid="calc-rc-resistance-input"
+              aria-label="RC time constant resistance in ohms"
               value={rRaw}
               onChange={(e) => setR(e.target.value)}
               min={0}
@@ -593,6 +605,7 @@ function RcTimeConstantCard() {
             <NumberInput
               id="rc-c"
               data-testid="calc-rc-capacitance-input"
+              aria-label="RC time constant capacitance in farads"
               value={cRaw}
               onChange={(e) => setC(e.target.value)}
               min={0}
@@ -706,11 +719,11 @@ function FilterCutoffCard() {
       </CardHeader>
       <CardContent className="space-y-3">
         <Tabs value={filterTab} onValueChange={setFilterTab}>
-          <TabsList className="w-full">
-            <TabsTrigger value="rc" data-testid="calc-filter-rc-tab" className="flex-1">
+          <TabsList className="w-full h-7">
+            <TabsTrigger value="rc" data-testid="calc-filter-rc-tab" className="flex-1 h-6 text-[10px] px-1.5">
               RC Filter
             </TabsTrigger>
-            <TabsTrigger value="bandpass" data-testid="calc-filter-bandpass-tab" className="flex-1">
+            <TabsTrigger value="bandpass" data-testid="calc-filter-bandpass-tab" className="flex-1 h-6 text-[10px] px-1.5">
               Bandpass
             </TabsTrigger>
           </TabsList>
@@ -742,6 +755,7 @@ function FilterCutoffCard() {
                 <NumberInput
                   id="filter-rc-r"
                   data-testid="calc-filter-resistance-input"
+                  aria-label="RC filter resistance in ohms"
                   value={rcRRaw}
                   onChange={(e) => setRcR(e.target.value)}
                   min={0}
@@ -754,6 +768,7 @@ function FilterCutoffCard() {
                 <NumberInput
                   id="filter-rc-c"
                   data-testid="calc-filter-capacitance-input"
+                  aria-label="RC filter capacitance in farads"
                   value={rcCRaw}
                   onChange={(e) => setRcC(e.target.value)}
                   min={0}
@@ -797,6 +812,7 @@ function FilterCutoffCard() {
                 <NumberInput
                   id="filter-bp-r"
                   data-testid="calc-filter-bp-resistance-input"
+                  aria-label="Bandpass filter resistance in ohms"
                   value={bpRRaw}
                   onChange={(e) => setBpR(e.target.value)}
                   min={0}
@@ -809,6 +825,7 @@ function FilterCutoffCard() {
                 <NumberInput
                   id="filter-bp-l"
                   data-testid="calc-filter-bp-inductance-input"
+                  aria-label="Bandpass filter inductance in henries"
                   value={bpLRaw}
                   onChange={(e) => setBpL(e.target.value)}
                   min={0}
@@ -821,6 +838,7 @@ function FilterCutoffCard() {
                 <NumberInput
                   id="filter-bp-c"
                   data-testid="calc-filter-bp-capacitance-input"
+                  aria-label="Bandpass filter capacitance in farads"
                   value={bpCRaw}
                   onChange={(e) => setBpC(e.target.value)}
                   min={0}
@@ -910,6 +928,7 @@ function PowerDissipationCard() {
             <NumberInput
               id="pwr-p"
               data-testid="calc-power-power-input"
+              aria-label="Power dissipation power in watts"
               placeholder="W"
               value={powerRaw}
               onChange={(e) => setPower(e.target.value)}
@@ -923,6 +942,7 @@ function PowerDissipationCard() {
             <NumberInput
               id="pwr-i"
               data-testid="calc-power-current-input"
+              aria-label="Power dissipation current in amps"
               placeholder="A"
               value={currentRaw}
               onChange={(e) => setCurrent(e.target.value)}
@@ -936,6 +956,7 @@ function PowerDissipationCard() {
             <NumberInput
               id="pwr-v"
               data-testid="calc-power-voltage-input"
+              aria-label="Power dissipation voltage in volts"
               placeholder="V"
               value={voltageRaw}
               onChange={(e) => setVoltage(e.target.value)}
@@ -949,6 +970,7 @@ function PowerDissipationCard() {
             <NumberInput
               id="pwr-r"
               data-testid="calc-power-resistance-input"
+              aria-label="Power dissipation resistance in ohms"
               placeholder={'\u03A9'}
               value={resistanceRaw}
               onChange={(e) => setResistance(e.target.value)}
@@ -996,19 +1018,19 @@ export default function CalculatorsView() {
   return (
     <div
       data-testid="calculators-view"
-      className="h-full overflow-auto bg-background/50 p-4 md:p-6"
+      className="h-full overflow-auto bg-background/50 p-3"
     >
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="mx-auto max-w-6xl space-y-3">
         <div data-testid="calculators-header">
-          <h2 className="text-xl md:text-2xl font-display font-bold text-foreground">
+          <h2 className="text-base font-display font-bold text-foreground md:text-[17px]">
             Engineering Calculators
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             Quick electronics calculations for common design tasks
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
           <OhmsLawCard />
           <LedResistorCard />
           <VoltageDividerCard />

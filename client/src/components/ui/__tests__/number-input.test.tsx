@@ -88,6 +88,78 @@ describe('NumberInput — aria-valuemax / aria-valuemin contract (E2E-236/271/28
     expect(el.getAttribute('aria-valuemin')).not.toBe('0');
   });
 
+  // BL-0881: aria-valuenow must faithfully represent ultra-small/large values
+  // without exponential notation AND without silently rounding to "0". The old
+  // `toLocaleString(..., { maximumFractionDigits: 20 })` rendered 1e-21 → "0",
+  // a lie that axe's aria-valid-attr-value would happily pass.
+  it('BL-0881: renders sub-1e-20 values as a faithful plain decimal, not "0"', () => {
+    render(<NumberInput data-testid="spin" value={1e-21} max={1} onChange={noop} />);
+    const el = screen.getByTestId('spin');
+    expect(el.getAttribute('aria-valuenow')).toBe('0.000000000000000000001');
+  });
+
+  it('BL-0881: preserves fractional mantissa digits for sub-1e-20 values', () => {
+    render(<NumberInput data-testid="spin" value={1.5e-21} max={1} onChange={noop} />);
+    const el = screen.getByTestId('spin');
+    expect(el.getAttribute('aria-valuenow')).toBe('0.0000000000000000000015');
+  });
+
+  it('BL-0881: expands negative sub-1e-20 values without losing the sign', () => {
+    render(<NumberInput data-testid="spin" value={-1e-21} min={-1} max={1} onChange={noop} />);
+    const el = screen.getByTestId('spin');
+    expect(el.getAttribute('aria-valuenow')).toBe('-0.000000000000000000001');
+  });
+
+  it('BL-0881: expands small exponential values (1e-7) to plain decimal', () => {
+    render(<NumberInput data-testid="spin" value={1e-7} max={1} onChange={noop} />);
+    const el = screen.getByTestId('spin');
+    expect(el.getAttribute('aria-valuenow')).toBe('0.0000001');
+  });
+
+  it('BL-0881: expands large exponential values (1e21) to plain decimal (no "e")', () => {
+    render(<NumberInput data-testid="spin" value={1e21} onChange={noop} />);
+    const el = screen.getByTestId('spin');
+    expect(el.getAttribute('aria-valuenow')).toBe('1000000000000000000000');
+  });
+
+  it('BL-0781 follow-up: expands small exponential min/max ARIA bounds', () => {
+    render(
+      <NumberInput
+        data-testid="spin"
+        value={5e-13}
+        min={1e-21}
+        max={1e-12}
+        onChange={noop}
+      />,
+    );
+    const el = screen.getByTestId('spin');
+    expect(el.getAttribute('aria-valuemin')).toBe('0.000000000000000000001');
+    expect(el.getAttribute('aria-valuemax')).toBe('0.000000000001');
+    expect(el.getAttribute('aria-valuenow')).toBe('0.0000000000005');
+  });
+
+  it('BL-0781 follow-up: expands large exponential min/max ARIA bounds', () => {
+    render(
+      <NumberInput
+        data-testid="spin"
+        value={5e20}
+        min={1e20}
+        max={1e21}
+        onChange={noop}
+      />,
+    );
+    const el = screen.getByTestId('spin');
+    expect(el.getAttribute('aria-valuemin')).toBe('100000000000000000000');
+    expect(el.getAttribute('aria-valuemax')).toBe('1000000000000000000000');
+    expect(el.getAttribute('aria-valuenow')).toBe('500000000000000000000');
+  });
+
+  it('BL-0881: leaves ordinary decimals untouched', () => {
+    render(<NumberInput data-testid="spin" value={0.001} max={1} onChange={noop} />);
+    const el = screen.getByTestId('spin');
+    expect(el.getAttribute('aria-valuenow')).toBe('0.001');
+  });
+
   it('forwards ref to the underlying input', () => {
     const ref = createRef<HTMLInputElement>();
     render(<NumberInput ref={ref} data-testid="spin" max={100} />);

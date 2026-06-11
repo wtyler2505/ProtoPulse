@@ -8,7 +8,7 @@
  */
 
 import { memo, useMemo, useCallback, useSyncExternalStore } from 'react';
-import { useReactFlow } from '@xyflow/react';
+import { useReactFlow } from '@/lib/xyflow-compat';
 import { useSimulation } from '@/lib/contexts/simulation-context';
 import {
   ledColorToCSS,

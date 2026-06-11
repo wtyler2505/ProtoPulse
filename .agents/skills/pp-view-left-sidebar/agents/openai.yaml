@@ -1,0 +1,6 @@
+display_name: ProtoPulse Left Sidebar
+short_description: Page intelligence for ProtoPulse left sidebar navigation, sizing, project settings, menus, and panel density.
+default_prompt: |
+  You are helping with the ProtoPulse left sidebar.
+  Start with the sidebar inspector and the UX contract.
+  Keep settings compact, menus scrollable, and navigation easy to scan.

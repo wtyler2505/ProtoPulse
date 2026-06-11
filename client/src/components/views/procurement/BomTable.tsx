@@ -4,8 +4,10 @@ import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { ArrowUpDown, ArrowUp, ArrowDown, GripVertical, Pencil, Check, X, ShoppingCart, Trash2, Shield, Zap, CheckCircle2, AlertCircle, XCircle, RefreshCw, Clock, PackageX } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
+import { NumberInput } from '@/components/ui/number-input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { LifecycleBadge } from '@/components/ui/LifecycleBadge';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -14,8 +16,9 @@ import type { useToast } from '@/hooks/use-toast';
 import type { BomItem } from '@/lib/project-context';
 import type { EnrichedBomItem, EditValues } from './types';
 import type { BomShortfall } from '@shared/parts/shortfall';
+import { isUnverified } from '@/types/TrustBoundaries';
 
-const BOM_ROW_HEIGHT = 48;
+const BOM_ROW_HEIGHT = 52;
 
 type SortField = 'status' | 'partNumber' | 'manufacturer' | 'stock' | 'quantity' | 'unitPrice' | 'totalPrice';
 type SortDir = 'asc' | 'desc';
@@ -35,10 +38,10 @@ function SortableHeader({ field, label, sortField, sortDir, onToggle, align }: {
         type="button"
         data-testid={`sort-${field}`}
         onClick={() => { onToggle(field); }}
-        className={cn('inline-flex items-center gap-1 hover:text-foreground transition-colors', active && 'text-primary')}
+        className={cn('inline-flex items-center gap-1.5 text-[11px] hover:text-foreground transition-colors', active && 'text-primary')}
       >
         {label}
-        {active ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />) : <ArrowUpDown className="w-2.5 h-2.5 opacity-40" />}
+        {active ? (sortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
       </button>
     </th>
   );
@@ -128,9 +131,9 @@ export function BomTable({
   return (
     <div className="hidden lg:block border border-border overflow-hidden bg-card/80 backdrop-blur shadow-sm">
       <table aria-label="Bill of Materials" className="w-full text-sm text-left min-w-[800px]" data-testid="table-bom">
-        <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-[10px] tracking-wider">
+        <thead className="bg-muted/50 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="w-8 px-1 py-3"><StyledTooltip content="Drag to reorder" side="right"><ArrowUpDown className="w-3 h-3 mx-auto" /></StyledTooltip></th>
+            <th className="w-8 px-1 py-3"><StyledTooltip content="Drag to reorder" side="right"><ArrowUpDown className="w-3.5 h-3.5 mx-auto" /></StyledTooltip></th>
             <SortableHeader field="status" label="Status" sortField={sortField} sortDir={sortDir} onToggle={toggleSort} />
             <SortableHeader field="partNumber" label="Part Number" sortField={sortField} sortDir={sortDir} onToggle={toggleSort} />
             <SortableHeader field="manufacturer" label="Manufacturer" sortField={sortField} sortDir={sortDir} onToggle={toggleSort} />
@@ -144,7 +147,7 @@ export function BomTable({
           </tr>
         </thead>
       </table>
-      <div ref={parentRef} className="overflow-auto max-h-[calc(100vh-20rem)]" style={{ contain: 'strict' }}>
+      <div ref={parentRef} className="overflow-auto max-h-[calc(100vh-19rem)]" style={{ contain: 'strict' }}>
         <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
           <table className="w-full text-sm text-left min-w-[800px]" style={{ position: 'absolute', top: 0, left: 0, width: '100%' }}>
             <SortableContext items={sortedBom.map(item => Number(item.id))} strategy={verticalListSortingStrategy}>
@@ -198,8 +201,11 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
             isEditing && 'bg-primary/10 ring-1 ring-inset ring-primary/40',
             highlighted && 'ring-1 ring-inset ring-[var(--color-editor-accent)]/60 bg-[var(--color-editor-accent)]/5 animate-pulse',
             isDuplicate && !isEditing && !highlighted && 'bg-amber-500/5 ring-1 ring-inset ring-amber-500/30',
+            isUnverified(item.pricingTrust) && !isEditing && 'border-l-2 border-l-amber-500/70',
           )}
           data-testid={`row-bom-${item.id}`}
+          data-bom-id={String(item.id)}
+          data-bom-label={`${item.partNumber} · ${item.manufacturer}`}
           data-bom-item-highlight={highlighted ? 'true' : undefined}
           onClick={() => onHighlight(Number(item.id))}
         >
@@ -213,7 +219,7 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
             )}
           </td>
           <td className="px-4 py-3">
-            <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide',
+            <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border uppercase tracking-wide',
               item.status === 'In Stock' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                 : item.status === 'Low Stock' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                   : item.status === 'On Order' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
@@ -237,8 +243,8 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
                 </select>
               </td>
               <td className="px-4 py-3 text-right font-mono text-xs">{item.stock.toLocaleString()}</td>
-              <td className="px-4 py-1"><input data-testid={`edit-quantity-${item.id}`} type="number" min={1} max={999999} className="w-16 bg-primary/5 border border-primary/30 px-2 py-1 text-xs font-mono text-right focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50" value={editValues.quantity} onChange={e => setEditValues(v => ({ ...v, quantity: parseInt(e.target.value) || 1 }))} onKeyDown={handleEditKeyDown} /></td>
-              <td className="px-4 py-1"><input data-testid={`edit-unit-price-${item.id}`} type="number" min={0} max={99999.99} step={0.01} className="w-24 bg-primary/5 border border-primary/30 px-2 py-1 text-xs font-mono text-right focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50" value={editValues.unitPrice} onChange={e => setEditValues(v => ({ ...v, unitPrice: parseFloat(e.target.value) || 0 }))} onKeyDown={handleEditKeyDown} /></td>
+              <td className="px-4 py-1"><NumberInput data-testid={`edit-quantity-${item.id}`} min={1} max={999_999} className="!w-16 !h-7 !rounded-none !bg-primary/5 !border !border-primary/30 !px-2 !py-1 !text-xs !font-mono !text-right !shadow-none focus-visible:!outline-none focus-visible:!border-primary focus-visible:!ring-2 focus-visible:!ring-cyan-400/50 focus-visible:!ring-offset-0" value={editValues.quantity} onChange={e => setEditValues(v => ({ ...v, quantity: parseInt(e.target.value) || 1 }))} onKeyDown={handleEditKeyDown} /></td>
+              <td className="px-4 py-1"><NumberInput data-testid={`edit-unit-price-${item.id}`} min={0} max={99_999.99} step={0.01} className="!w-24 !h-7 !rounded-none !bg-primary/5 !border !border-primary/30 !px-2 !py-1 !text-xs !font-mono !text-right !shadow-none focus-visible:!outline-none focus-visible:!border-primary focus-visible:!ring-2 focus-visible:!ring-cyan-400/50 focus-visible:!ring-offset-0" value={editValues.unitPrice} onChange={e => setEditValues(v => ({ ...v, unitPrice: parseFloat(e.target.value) || 0 }))} onKeyDown={handleEditKeyDown} /></td>
               <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground">${(editValues.quantity * editValues.unitPrice).toFixed(2)}</td>
               <td className="px-4 py-3 text-right flex gap-1">
                 <StyledTooltip content="Save changes" side="left"><button type="button" aria-label="Save changes" className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 transition-colors" onClick={saveEdit} data-testid={`button-save-${item.id}`}><Check className="w-4 h-4" /></button></StyledTooltip>
@@ -257,7 +263,7 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
                   {item.partNumber}
                   {isDuplicate && (
                     <StyledTooltip content="Duplicate part number detected in BOM" side="right">
-                      <span className="inline-flex items-center px-1 py-0 text-[9px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase tracking-wider" data-testid={`duplicate-badge-${item.id}`}>
+                      <span className="inline-flex items-center px-1 py-0 text-[10px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase tracking-wider" data-testid={`duplicate-badge-${item.id}`}>
                         DUP
                       </span>
                     </StyledTooltip>
@@ -273,7 +279,7 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
                   {item.stock.toLocaleString()}
                   {shortfall && shortfall.shortfall > 0 && (
                     <StyledTooltip content={`Need ${shortfall.shortfall} more (BOM wants ${shortfall.quantityNeeded}, on hand ${shortfall.quantityOnHand})`} side="left">
-                      <span className="inline-flex items-center gap-0.5 px-1 py-0 text-[9px] font-medium bg-red-500/10 text-red-500 border border-red-500/20 uppercase tracking-wider" data-testid={`shortfall-badge-${item.id}`}>
+                      <span className="inline-flex items-center gap-0.5 px-1 py-0 text-[10px] font-medium bg-red-500/10 text-red-500 border border-red-500/20 uppercase tracking-wider" data-testid={`shortfall-badge-${item.id}`}>
                         <PackageX className="w-2.5 h-2.5" />
                         -{shortfall.shortfall}
                       </span>
@@ -282,7 +288,18 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
                 </span>
               </td>
               <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-quantity-${item.id}`}>{item.quantity}</td>
-              <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${(Math.round(Number(item.unitPrice) * 100) / 100).toFixed(2)}</td>
+              <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>
+                <span className="inline-flex items-center justify-end gap-1.5">
+                  ${(Math.round(Number(item.unitPrice) * 100) / 100).toFixed(2)}
+                  {isUnverified(item.pricingTrust) && (
+                    <StyledTooltip content={item.pricingTrust.note ?? 'Estimated pricing from unverified fallback data.'} side="left">
+                      <span data-testid={`estimated-badge-${item.id}`}>
+                        <TrustBadge kind="estimated" />
+                      </span>
+                    </StyledTooltip>
+                  )}
+                </span>
+              </td>
               <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${(Math.round(Number(item.totalPrice) * 100) / 100).toFixed(2)}</td>
               <td className="px-4 py-3 text-right flex gap-1">
                 <StyledTooltip content="Edit item" side="left"><button type="button" aria-label="Edit item" className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => startEdit(item)} data-testid={`button-edit-${item.id}`}><Pencil className="w-4 h-4" /></button></StyledTooltip>

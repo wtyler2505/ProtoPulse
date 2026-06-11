@@ -41,7 +41,7 @@ export interface FocusStop {
   testid: string;
   /** Resolved accessible name — see interface docstring for priority order. */
   accessibleName: string;
-  /** CSS selector stable enough to re-find the element (testid > tag+text). */
+  /** Stable focus fingerprint for diagnostics (testid > tag+accessible name). */
   selector: string;
 }
 
@@ -75,9 +75,12 @@ async function snapshotActiveElement(page: Page): Promise<FocusStop | null> {
     const testid = el.getAttribute('data-testid') ?? '';
     const role = el.getAttribute('role') ?? '';
 
+    const nameFingerprint = accessibleName
+      ? `[name=${JSON.stringify(accessibleName)}]`
+      : '';
     const selector = testid
       ? `[data-testid="${testid}"]`
-      : `${el.tagName.toLowerCase()}${role ? `[role="${role}"]` : ''}`;
+      : `${el.tagName.toLowerCase()}${role ? `[role="${role}"]` : ''}${nameFingerprint}`;
 
     return {
       tag: el.tagName,

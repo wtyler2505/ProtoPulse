@@ -56,6 +56,9 @@ const BreadboardBenchPartRenderer = memo(function BreadboardBenchPartRenderer({
     return (
       <g
         data-testid={`bench-exact-view-${instance.id}`}
+        data-id={String(instance.id)}
+        data-node-label={instance.referenceDesignator}
+        aria-label={`Breadboard bench part ${instance.referenceDesignator}`}
         transform={rotationTransform}
         className={cn('cursor-pointer', selected && 'filter drop-shadow-[0_0_4px_var(--color-editor-accent)]')}
         onClick={() => onClick?.(instance.id)}
@@ -120,6 +123,9 @@ const BreadboardBenchPartRenderer = memo(function BreadboardBenchPartRenderer({
   return (
     <g
       data-testid={`bench-component-${instance.id}`}
+      data-id={String(instance.id)}
+      data-node-label={instance.referenceDesignator}
+      aria-label={`Breadboard bench part ${instance.referenceDesignator}`}
       transform={`translate(${String(pos.x)} ${String(pos.y)})`}
       onClick={() => onClick?.(instance.id)}
       className="cursor-pointer"

@@ -2,7 +2,6 @@
  * Keyboard shortcuts and custom-event listeners for the schematic canvas.
  */
 import { useCallback, useEffect } from 'react';
-import type { ReactFlowInstance, Node } from '@xyflow/react';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
 import type { CircuitNetRow } from '@shared/schema';
 import type { CircuitSettings, PowerSymbol, SchematicTool } from '@shared/circuit-types';
@@ -14,6 +13,7 @@ import type { AnnotationNodeData } from '../SchematicAnnotationNode';
 import type { SchematicClipboardBundle, NetSegmentJSON } from './converters';
 import { getToolChangeAnnouncement } from '@/lib/canvas-accessibility';
 import type { UpdateDesignMutation, UpdateInstanceMutation, CreateInstanceMutation } from './types';
+import type { SchematicFlowLike, SchematicNode } from './flow-types';
 
 // ---------------------------------------------------------------------------
 // Mutation ref types
@@ -32,14 +32,14 @@ interface UseKeyboardShortcutsParams {
   nets: CircuitNetRow[] | undefined;
   partsMap: Map<number, ComponentPart>;
   settings: CircuitSettings;
-  localNodes: Node[];
-  setLocalNodes: React.Dispatch<React.SetStateAction<Node[]>>;
+  localNodes: SchematicNode[];
+  setLocalNodes: React.Dispatch<React.SetStateAction<SchematicNode[]>>;
   activeTool: SchematicTool;
   setActiveTool: React.Dispatch<React.SetStateAction<SchematicTool>>;
   setSnapEnabled: React.Dispatch<React.SetStateAction<boolean>>;
   snapEnabled: boolean;
   gridSize: number;
-  reactFlowInstance: ReactFlowInstance;
+  reactFlowInstance: SchematicFlowLike;
   handleFitView: () => void;
   handleCopy: () => Promise<boolean>;
   handlePaste: (bundle: SchematicClipboardBundle) => Promise<void>;

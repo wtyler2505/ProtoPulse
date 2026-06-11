@@ -235,6 +235,7 @@ describe('Sidebar', () => {
     expect(screen.getByTestId('sidebar-search')).toBeDefined();
     expect(screen.getByText('Project Explorer')).toBeDefined();
     expect(screen.getByTestId('project-health-indicator')).toBeDefined();
+    fireEvent.click(screen.getByTestId('project-health-details-toggle'));
     expect(screen.getByTestId('project-health-fact-restore')).toHaveTextContent('No restore point yet');
     expect(screen.getByTestId('project-health-action')).toHaveTextContent('Create restore point');
     expect(screen.getByTestId('hardware-status-indicator')).toBeDefined();
@@ -244,6 +245,7 @@ describe('Sidebar', () => {
 
   it('hardware status action opens the Arduino workspace', () => {
     renderSidebar();
+    fireEvent.click(screen.getByTestId('project-health-details-toggle'));
     fireEvent.click(screen.getByTestId('hardware-status-action'));
     expect(mockSetActiveView).toHaveBeenCalledWith('arduino');
   });

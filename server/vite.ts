@@ -1,26 +1,38 @@
 import { type Express } from "express";
 import { type Server } from "http";
 import fs from "fs";
-import { nanoid } from "nanoid";
 import path from "path";
 import { createLogger, createServer as createViteServer } from "vite";
 import viteConfig from "../vite.config";
 
 const viteLogger = createLogger();
 
+function readPort(value: string | undefined) {
+  if (!value) {
+    return undefined;
+  }
+
+  const port = Number.parseInt(value, 10);
+  return Number.isFinite(port) && port > 0 ? port : undefined;
+}
+
 export function buildViteServerOptions(server: Server) {
+  const appPort = readPort(process.env.PORT) ?? 5000;
+  const hmrPort = readPort(process.env.VITE_HMR_PORT) ?? appPort + 20_000;
+  const isPlaywrightServer = process.env.PLAYWRIGHT === "1";
+
   return {
     middlewareMode: true as const,
-    hmr: {
-      server,
-      protocol: "ws" as const,
-      // Force the runtime fallback branch in Vite's client so the websocket
-      // uses the page hostname (127.0.0.1 vs localhost) instead of baking in a
-      // single host string that can break dev QA on alternate loopback names.
-      host: "",
-      clientPort: 5000,
-      path: "/vite-hmr",
-    },
+    // HMR websocket is unstable in this embedded middleware stack and can
+    // cascade into repeated optimizer invalidations. Use full-page reloads in
+    // normal dev, but give Playwright a unique websocket port so fresh test
+    // servers can run beside an already-open local dev server.
+    hmr: isPlaywrightServer
+      ? {
+          port: hmrPort,
+          clientPort: hmrPort,
+        }
+      : false as const,
     allowedHosts: true as const,
   };
 }
@@ -57,10 +69,6 @@ export async function setupVite(server: Server, app: Express) {
 
       // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`,
-      );
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {

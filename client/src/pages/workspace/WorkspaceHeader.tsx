@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo, Suspense } from 'react';
 import { useIsMutating } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Upload, GraduationCap, CircuitBoard, Activity } from 'lucide-react';
+import { Camera, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, MoreHorizontal } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import FeatureMaturityBadge from '@/components/ui/FeatureMaturityBadge';
@@ -12,7 +12,6 @@ import { useBeginnerMode } from '@/lib/beginner-mode';
 import { getViewFeatureMaturity } from '@/lib/feature-maturity';
 import { useArchitecture, useBom, useProjectId, useProjectMeta, useValidation } from '@/lib/project-context';
 import {
-  getHardwareWorkspaceFactClasses,
   getHardwareWorkspaceToneClasses,
   useHardwareWorkspaceStatus,
 } from '@/lib/hardware-workspace-status';
@@ -68,17 +67,17 @@ function ScrollableTabBar({ children }: { children: React.ReactNode }) {
         <button
           data-testid="tab-scroll-left"
           onClick={() => scroll('left')}
-          className="absolute left-0 z-10 h-full w-7 flex items-center justify-center bg-gradient-to-r from-background/90 to-transparent hover:from-background"
+          className="absolute left-0 z-10 flex h-full w-5 items-center justify-center bg-gradient-to-r from-background/80 to-transparent hover:from-background/90"
           aria-label="Scroll tabs left"
         >
-          <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" />
+          <ChevronLeft className="h-3 w-3 text-muted-foreground/80" />
         </button>
       )}
       <div
         ref={scrollRef}
         role="tablist"
         aria-label="Main views"
-        className="flex items-center gap-0 overflow-x-auto no-scrollbar"
+        className="flex items-center gap-1 overflow-x-auto no-scrollbar"
       >
         {children}
       </div>
@@ -86,10 +85,10 @@ function ScrollableTabBar({ children }: { children: React.ReactNode }) {
         <button
           data-testid="tab-scroll-right"
           onClick={() => scroll('right')}
-          className="absolute right-0 z-10 h-full w-7 flex items-center justify-center bg-gradient-to-l from-background/90 to-transparent hover:from-background"
+          className="absolute right-0 z-10 flex h-full w-5 items-center justify-center bg-gradient-to-l from-background/80 to-transparent hover:from-background/90"
           aria-label="Scroll tabs right"
         >
-          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+          <ChevronRight className="h-3 w-3 text-muted-foreground/80" />
         </button>
       )}
     </div>
@@ -103,9 +102,10 @@ interface WorkspaceHeaderProps {
   dispatch: React.Dispatch<WorkspaceAction>;
   activeView: ViewMode;
   setActiveView: (view: ViewMode) => void;
+  onOpenHardwareInspection?: () => void;
 }
 
-export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: WorkspaceHeaderProps) {
+export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView, onOpenHardwareInspection }: WorkspaceHeaderProps) {
   const projectId = useProjectId();
   const { projectName } = useProjectMeta();
   const { preset } = useRolePreset();
@@ -126,6 +126,21 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
   const visibleTabs = useMemo(
     () => navItems.filter(t => t.view !== 'project_explorer' && (alwaysVisibleIds.has(t.view) || hasDesignContent)),
     [hasDesignContent]
+  );
+  const primaryHeaderTabIds = useMemo(() => new Set<ViewMode>([
+    'dashboard',
+    'architecture',
+    'schematic',
+    'breadboard',
+    'pcb',
+  ]), []);
+  const primaryTabs = useMemo(
+    () => visibleTabs.filter((tab) => primaryHeaderTabIds.has(tab.view)),
+    [primaryHeaderTabIds, visibleTabs],
+  );
+  const secondaryTabs = useMemo(
+    () => visibleTabs.filter((tab) => !primaryHeaderTabIds.has(tab.view)),
+    [primaryHeaderTabIds, visibleTabs],
   );
 
   const validationErrorCount = (issues ?? []).filter(i => i.severity === 'error').length;
@@ -223,37 +238,32 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
   return (
     <header
       data-testid="workspace-header"
-      className="h-20 border-b border-border bg-background/60 backdrop-blur-xl hidden lg:flex flex-col px-1 z-10"
+      className="hidden h-12 items-center gap-1 border-b border-border/70 bg-background/65 px-1.5 backdrop-blur-xl lg:flex z-10"
     >
-      {/* Plan 17 Phase 1 — Row 1 (40px): identity + navigation */}
       <div
-        data-testid="header-row-identity"
-        className="h-10 flex items-center gap-0 shrink-0"
+        data-testid="header-row-main"
+        className="flex min-w-0 flex-1 items-center gap-1"
       >
-      {/* AS-04: Larger toggle buttons with better contrast */}
       <StyledTooltip content="Toggle sidebar" side="bottom">
         <button
           data-testid="toggle-sidebar"
           onClick={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: !ws.sidebarCollapsed })}
-          className="p-2 hover:bg-muted/50 bg-muted/20 border border-border/50 rounded-sm text-muted-foreground hover:text-foreground transition-colors mr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="inline-flex h-6.5 w-6.5 items-center justify-center rounded-sm border border-border/40 bg-muted/10 text-muted-foreground transition-colors hover:bg-muted/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
           title={ws.sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
           aria-label={ws.sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
         >
-          {ws.sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+          {ws.sidebarCollapsed ? <PanelLeftOpen className="h-3.75 w-3.75" /> : <PanelLeftClose className="h-3.75 w-3.75" />}
         </button>
       </StyledTooltip>
-      <div className="w-px h-5 bg-border mr-1" />
 
-      {/* AS-08: Show project name when sidebar collapsed */}
-      {ws.sidebarCollapsed && projectName && (
-        <span data-testid="header-project-name" className="text-xs text-muted-foreground truncate max-w-[200px] mr-2" title={projectName}>
+      <div className="min-w-0 max-w-[200px] shrink">
+        <span data-testid="header-project-name" className="hidden xl:block truncate text-[11px] font-medium text-muted-foreground" title={projectName}>
           {projectName}
         </span>
-      )}
+      </div>
 
-      {/* AS-05 + RS-09: Scrollable tab bar with fade indicators */}
       <ScrollableTabBar>
-        {visibleTabs.map((tab) => {
+        {primaryTabs.map((tab) => {
           const maturity = getViewFeatureMaturity(tab.view);
           return (
             <StyledTooltip
@@ -276,27 +286,26 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
               data-testid={`tab-${tab.view}`}
               onClick={() => setActiveView(tab.view)}
               className={cn(
-                /* Icon-only tabs — labels shown via tooltip on hover */
-                'h-8 w-8 flex items-center justify-center text-sm font-medium transition-all relative top-[1px] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
+                'h-7.5 shrink-0 rounded-sm px-2.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
                 activeView === tab.view
-                  ? 'bg-card border-x border-t border-border text-primary z-20 before:absolute before:inset-x-0 before:-top-[1px] before:h-[3px] before:bg-primary before:rounded-b-sm'
-                  : 'text-muted-foreground hover:bg-muted/30 hover:text-foreground border-transparent'
+                  ? 'bg-primary/12 text-primary'
+                  : 'text-muted-foreground/90 hover:bg-muted/25 hover:text-foreground'
               )}
             >
-              {tab.icon && <tab.icon className="w-4 h-4 [stroke-width:1.75]" />}
+              <span>{tab.label}</span>
               {/* UI-18: Badge counts for Validation and Procurement */}
               {tab.view === 'validation' && validationErrorCount > 0 && (
-                <span data-testid="tab-validation-badge" className="text-[10px] font-medium bg-destructive/20 text-destructive px-1.5 py-0.5 tabular-nums rounded-sm">
+                <span data-testid="tab-validation-badge" className="ml-1 rounded-sm bg-destructive/20 px-1 py-0.5 text-[11px] font-medium tabular-nums text-destructive">
                   {validationErrorCount}
                 </span>
               )}
               {tab.view === 'validation' && validationErrorCount === 0 && validationWarningCount > 0 && (
-                <span data-testid="tab-validation-badge" className="text-[10px] font-medium bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 tabular-nums rounded-sm">
+                <span data-testid="tab-validation-badge" className="ml-1 rounded-sm bg-yellow-500/20 px-1 py-0.5 text-[11px] font-medium tabular-nums text-yellow-500">
                   {validationWarningCount}
                 </span>
               )}
               {tab.view === 'procurement' && bomCount > 0 && (
-                <span data-testid="tab-procurement-badge" className="text-[10px] font-medium bg-muted/50 text-muted-foreground px-1.5 py-0.5 tabular-nums rounded-sm">
+                <span data-testid="tab-procurement-badge" className="ml-1 rounded-sm bg-muted/50 px-1 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
                   {bomCount}
                 </span>
               )}
@@ -305,153 +314,130 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
           );
         })}
       </ScrollableTabBar>
-
-      <div className="border-b border-border h-full w-2 shrink-0"></div>
       </div>
-      {/* Plan 17 Phase 1 — Row 2 (40px): action + AI + environment clusters */}
-      <div
-        data-testid="header-row-tools"
-        className="h-10 flex items-center gap-2 shrink-0 border-t border-border/40"
-      >
-      <div className="w-px h-5 bg-border ml-1" />
-      {/* AS-04: Larger chat toggle button with better contrast */}
-      <StyledTooltip content="Toggle AI assistant" side="bottom">
-        <button
-          data-testid="toggle-chat"
-          onClick={() => dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: !ws.chatCollapsed })}
-          className="p-2 hover:bg-muted/50 bg-muted/20 border border-border/50 rounded-sm text-muted-foreground hover:text-foreground transition-colors ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          title={ws.chatCollapsed ? 'Show chat' : 'Hide chat'}
-          aria-label={ws.chatCollapsed ? 'Show chat' : 'Hide chat'}
-        >
-          {ws.chatCollapsed ? <PanelRightOpen className="w-5 h-5" /> : <PanelRightClose className="w-5 h-5" />}
-        </button>
-      </StyledTooltip>
 
-      <div className="ml-2 flex items-center gap-1">
-        <StyledTooltip
-          content={(
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-foreground">{hardwareStatus.summary}</p>
-              <p className="max-w-[260px] text-[11px] leading-relaxed text-muted-foreground">{hardwareStatus.detail}</p>
-              <div className="flex flex-wrap gap-1">
-                {hardwareStatus.facts.map((fact) => (
-                  <span
-                    key={fact.id}
-                    className={cn(
-                      'inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
-                      getHardwareWorkspaceFactClasses(fact.tone),
-                    )}
-                  >
-                    {fact.label}
-                  </span>
-                ))}
-              </div>
-              <p className="text-[10px] font-medium text-primary">{hardwareStatus.actionLabel}</p>
-            </div>
-          )}
-          side="bottom"
-        >
+      <div data-testid="header-actions" className="flex shrink-0 items-center gap-0">
+        <StyledTooltip content="Open hardware inspection" side="bottom">
           <button
+            data-testid="workspace-open-hardware-inspection"
             type="button"
-            data-testid="workspace-hardware-badge"
-            aria-label={hardwareStatus.actionLabel}
-            onClick={() => setActiveView(hardwareStatus.actionView)}
-            className={cn(
-              'inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              getHardwareWorkspaceToneClasses(hardwareStatus.tone),
-            )}
+            onClick={onOpenHardwareInspection}
+            className="mr-1 inline-flex h-7 items-center gap-1.5 rounded-sm border border-primary/40 bg-primary/10 px-2 text-[11px] font-medium text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {hardwareStatus.badgeLabel}
-          </button>
-        </StyledTooltip>
-        <StyledTooltip
-          content={(
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-foreground">{health.summary}</p>
-              <p className="max-w-[260px] text-[11px] leading-relaxed text-muted-foreground">{health.detail}</p>
-              <div className="flex flex-wrap gap-1">
-                {health.facts.map((fact) => (
-                  <span
-                    key={fact.id}
-                    className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-foreground"
-                  >
-                    {fact.label}
-                  </span>
-                ))}
-              </div>
-              <p className="text-[10px] font-medium text-primary">{health.actionLabel}</p>
-            </div>
-          )}
-          side="bottom"
-        >
-          <button
-            type="button"
-            data-testid="workspace-health-badge"
-            aria-label="Open Design History"
-            onClick={() => setActiveView('design_history')}
-            className={cn(
-              'inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              getProjectHealthToneClasses(health.tone),
-            )}
-          >
-            {health.badgeLabel}
+            <Camera className="h-3.5 w-3.5" />
+            Inspect
           </button>
         </StyledTooltip>
         <Popover>
           <PopoverTrigger asChild>
             <button
-              data-testid="workspace-mode-button"
-              className="inline-flex items-center gap-2 rounded-sm border border-border/60 bg-muted/20 px-2.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              data-testid="workspace-more-button"
+              type="button"
+              aria-label="More workspace actions"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-sm border border-border/50 text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <GraduationCap className="h-4 w-4" />
-              <span>{preset.label} Mode</span>
+              <MoreHorizontal className="h-4 w-4" />
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 space-y-3" align="end">
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-foreground">Workspace Mode</p>
-              <p className="text-xs leading-relaxed text-muted-foreground">{preset.description}</p>
+          <PopoverContent className="max-h-[min(500px,calc(100vh-72px))] w-[17rem] overflow-y-auto overscroll-contain scrollbar-gutter-stable p-1.5" align="end">
+            <div className="space-y-0.5">
+              <p className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">Status</p>
+              <button
+                data-testid="more-status-hardware"
+                type="button"
+                onClick={() => setActiveView(hardwareStatus.actionView)}
+                className={cn(
+                  'flex h-7.5 w-full items-center justify-between rounded-sm px-2 text-left text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  getHardwareWorkspaceToneClasses(hardwareStatus.tone),
+                )}
+              >
+                <span>Hardware</span>
+                <span className="text-[11px]">{hardwareStatus.badgeLabel}</span>
+              </button>
+              <button
+                data-testid="more-status-health"
+                type="button"
+                onClick={() => setActiveView('design_history')}
+                className={cn(
+                  'flex h-7.5 w-full items-center justify-between rounded-sm border px-2 text-left text-[11px] font-medium transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  getProjectHealthToneClasses(health.tone),
+                )}
+              >
+                <span>Project health</span>
+                <span className="text-[11px]">{health.badgeLabel}</span>
+              </button>
             </div>
-            <RolePresetSelector className="flex-wrap bg-background/60" />
-            <button
-              data-testid="workspace-plain-labels-toggle"
-              type="button"
-              onClick={togglePlainLabels}
-              className={cn(
-                'w-full rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors',
-                plainLabelsEnabled
-                  ? 'border-primary/30 bg-primary/10 text-primary'
-                  : 'border-border bg-background/60 text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {plainLabelsEnabled ? 'Plain-language labels are on' : 'Use plain-language labels'}
-            </button>
-          </PopoverContent>
-        </Popover>
+            <div className="mt-0.5 border-t border-border/60 pt-0.5">
+            <div className="space-y-0.5">
+              <p className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">Quick actions</p>
+              <div className="grid grid-cols-2 gap-0.5">
+                <button
+                  data-testid="quick-action-import"
+                  type="button"
+                  onClick={handleImportDesign}
+                  className="inline-flex h-7.5 items-center justify-center rounded-sm text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  Import
+                </button>
+                <button
+                  data-testid="quick-action-chat"
+                  type="button"
+                  onClick={() => dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: !ws.chatCollapsed })}
+                  className={cn(
+                    'inline-flex h-7.5 items-center justify-center rounded-sm text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    ws.chatCollapsed
+                      ? 'text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+                      : 'text-primary bg-primary/10',
+                  )}
+                >
+                  {ws.chatCollapsed ? 'Show chat' : 'Hide chat'}
+                </button>
+                <button
+                  data-testid="quick-action-hardware-inspection"
+                  type="button"
+                  onClick={onOpenHardwareInspection}
+                  className="inline-flex h-7.5 items-center justify-center rounded-sm text-[11px] font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  Inspect hardware
+                </button>
+              </div>
+            </div>
+            </div>
+            {secondaryTabs.length > 0 && (
+              <div className="mt-0.5 border-t border-border/60 pt-0.5">
+                <p className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">More views</p>
+                {secondaryTabs.map((tab) => (
+                  <button
+                    key={tab.view}
+                    data-testid={`more-tab-${tab.view}`}
+                    type="button"
+                    onClick={() => setActiveView(tab.view)}
+                    className={cn(
+                      'flex h-7.5 w-full items-center justify-between rounded-sm px-2 text-left text-[11px] transition-colors',
+                      activeView === tab.view
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+                    )}
+                  >
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="mt-0.5 border-t border-border/60 pt-0.5">
+              <p className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">Workspace actions</p>
+              <div className="grid gap-0.5">
         <Suspense fallback={null}>
           <ExplainPanelButton view={activeView} onNavigate={setActiveView} />
         </Suspense>
-        <StyledTooltip content="Import design file" side="bottom">
-          <button
-            data-testid="import-design-button"
-            type="button"
-            aria-label="Import design file"
-            className="inline-flex items-center gap-1.5 p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors rounded-sm text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            onClick={handleImportDesign}
-          >
-            <Upload className="w-4 h-4" />
-            <span className="hidden xl:inline">Import design file</span>
-          </button>
-        </StyledTooltip>
         <Popover>
           <StyledTooltip content="Coach and tutorials" side="bottom">
             <PopoverTrigger asChild>
               <button
                 data-testid="coach-help-button"
                 type="button"
-                className="inline-flex items-center gap-2 rounded-sm px-2.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-7.5 w-full items-center rounded-sm px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <GraduationCap className="w-4 h-4" />
                 <span>Coach &amp; Help</span>
               </button>
             </PopoverTrigger>
@@ -482,22 +468,15 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
             aria-pressed={ws.pcbTutorialOpen}
             onClick={() => dispatch({ type: 'SET_PCB_TUTORIAL_OPEN', open: !ws.pcbTutorialOpen })}
             className={cn(
-              'inline-flex items-center gap-1.5 p-2 transition-colors rounded-sm text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'flex h-7.5 w-full items-center rounded-sm px-2 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               ws.pcbTutorialOpen
                 ? 'text-primary bg-primary/10'
-                : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground',
+                : 'hover:bg-muted/40 text-muted-foreground hover:text-foreground',
             )}
           >
-            <CircuitBoard className="w-4 h-4" />
-            <span className="hidden xl:inline">PCB Tutorial</span>
+            <span>PCB Tutorial</span>
           </button>
         </StyledTooltip>
-        <Suspense fallback={null}>
-          <WhatsNewPanel />
-        </Suspense>
-        <Suspense fallback={null}>
-          <MentionBadge />
-        </Suspense>
         <StyledTooltip content="Activity feed" side="bottom">
           <button
             data-testid="toggle-activity-feed"
@@ -506,21 +485,72 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
             aria-pressed={ws.activityFeedOpen}
             onClick={() => dispatch({ type: 'SET_ACTIVITY_FEED_OPEN', open: !ws.activityFeedOpen })}
             className={cn(
-              'inline-flex items-center gap-1.5 p-2 transition-colors rounded-sm text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'flex h-7.5 w-full items-center rounded-sm px-2 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               ws.activityFeedOpen
                 ? 'text-primary bg-primary/10'
-                : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground',
+                : 'hover:bg-muted/40 text-muted-foreground hover:text-foreground',
             )}
           >
-            <Activity className="w-4 h-4" />
-            <span className="hidden xl:inline">Activity feed</span>
+            <span>Activity feed</span>
           </button>
         </StyledTooltip>
-        <Suspense fallback={null}>
-          <ShareProjectButton projectId={projectId} />
-        </Suspense>
-        <ThemeToggle />
-      </div>
+              </div>
+            </div>
+            <div className="mt-0.5 border-t border-border/60 pt-0.5">
+              <p className="px-2 py-1 text-[11px] font-semibold text-muted-foreground">Collaboration & updates</p>
+              <div className="grid gap-0.5">
+                <Suspense fallback={null}>
+                  <WhatsNewPanel />
+                </Suspense>
+                <Suspense fallback={null}>
+                  <MentionBadge />
+                </Suspense>
+                <Suspense fallback={null}>
+                  <ShareProjectButton projectId={projectId} />
+                </Suspense>
+              </div>
+            </div>
+            <div className="mt-0.5 border-t border-border/60 pt-0.5">
+              <p className="px-2 py-1 text-[11px] font-semibold text-muted-foreground">Workspace mode</p>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    data-testid="workspace-mode-button"
+                    className="flex h-7 w-full items-center rounded-sm px-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span>{preset.label}</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[19rem] space-y-2" align="end">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">Workspace Mode</p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">{preset.description}</p>
+                  </div>
+                  <RolePresetSelector className="flex-wrap bg-background/60" />
+                  <button
+                    data-testid="workspace-plain-labels-toggle"
+                    type="button"
+                    onClick={togglePlainLabels}
+                    className={cn(
+                      'w-full rounded-md border px-2 py-1.5 text-left text-[11px] font-medium transition-colors',
+                      plainLabelsEnabled
+                        ? 'border-primary/30 bg-primary/10 text-primary'
+                        : 'border-border bg-background/60 text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {plainLabelsEnabled ? 'Plain-language labels are on' : 'Use plain-language labels'}
+                  </button>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="mt-0.5 border-t border-border/60 pt-0.5">
+              <p className="px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Display</p>
+              <div className="grid gap-0.5">
+                <ThemeToggle />
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </header>
   );

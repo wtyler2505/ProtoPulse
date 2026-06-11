@@ -28,7 +28,7 @@ Rationale: The core claim about EL polarity inversion is unchanged. Source adds 
 ---
 
 ## Enrich
-(to be filled by enrich phase)
+Added the ESP32 LEDC translation equivalent of the active-LOW inversion wrapper, and the safe boot initialization pattern using `ledcWrite`.
 
 ## Connect
 (to be filled by connect phase)

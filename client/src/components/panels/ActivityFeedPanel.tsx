@@ -111,7 +111,7 @@ function FilterDropdown({
         aria-label={`Filter by ${label}`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none bg-muted/50 border border-border text-xs px-2 py-1 pr-6 text-foreground focus-visible:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-cyan-400/50 transition-colors cursor-pointer"
+        className="appearance-none bg-muted/50 border border-border text-[11px] px-1.5 py-0.5 pr-5 text-foreground focus-visible:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-cyan-400/50 transition-colors cursor-pointer"
       >
         <option value="">{`All ${label}s`}</option>
         {options.map((opt) => (
@@ -120,7 +120,7 @@ function FilterDropdown({
           </option>
         ))}
       </select>
-      <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+      <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-muted-foreground pointer-events-none" />
     </div>
   );
 }
@@ -196,14 +196,14 @@ export default function ActivityFeedPanel() {
   return (
     <div data-testid="activity-feed-panel" className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between shrink-0">
+      <div className="px-4 py-2.5 border-b border-border flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-primary" />
           <h2 className="text-sm font-semibold text-foreground">Activity Feed</h2>
           {count > 0 && (
             <span
               data-testid="activity-feed-count"
-              className="text-[10px] bg-muted/50 border border-border px-1.5 py-0.5 text-muted-foreground"
+              className="text-[9px] bg-muted/50 border border-border px-1 py-0.5 text-muted-foreground rounded-sm"
             >
               {count}
             </span>
@@ -214,32 +214,32 @@ export default function ActivityFeedPanel() {
             data-testid="activity-filter-toggle"
             aria-label="Toggle filters"
             className={cn(
-              'p-1 transition-colors',
+              'p-0.5 transition-colors',
               showFilters || hasActiveFilters
                 ? 'text-primary bg-primary/10'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
             )}
             onClick={() => setShowFilters(!showFilters)}
           >
-            <Filter className="w-3.5 h-3.5" />
+            <Filter className="w-3 h-3" />
           </button>
           {count > 0 && (
             <button
               data-testid="activity-clear-all"
               aria-label="Clear all activity"
-              className="p-1 text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors"
+              className="p-0.5 text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors"
               onClick={clearAll}
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-3 h-3" />
             </button>
           )}
         </div>
       </div>
 
       {/* Search + Filters */}
-      <div className="px-4 py-2 border-b border-border/50 space-y-2 shrink-0">
+      <div className="px-4 py-1 border-b border-border/50 space-y-1 shrink-0">
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+          <Search className="absolute left-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-muted-foreground" />
           <input
             data-testid="activity-search"
             type="text"
@@ -247,12 +247,12 @@ export default function ActivityFeedPanel() {
             aria-label="Search activity feed"
             value={searchQuery}
             onChange={handleSearchChange}
-            className="w-full pl-7 pr-2 py-1.5 text-xs bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-cyan-400/50 transition-colors"
+            className="w-full pl-5 pr-1.5 py-1 text-[11px] bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-cyan-400/50 transition-colors"
           />
         </div>
 
         {showFilters && (
-          <div data-testid="activity-filters" className="flex items-center gap-2 flex-wrap">
+          <div data-testid="activity-filters" className="flex items-center gap-1.5 flex-wrap">
             <FilterDropdown
               label="Action"
               value={filter.action ?? ''}

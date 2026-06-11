@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import type { Edge, Node } from '@xyflow/react';
 import type { BomItem, ValidationIssue } from '@/lib/project-context';
+import type { GraphEdge, GraphNode } from '@/lib/graph-types';
 
 const mockAuth = {
   sessionId: 'session-1' as string | null,
@@ -25,7 +25,7 @@ const mockReview = {
   threshold: 50,
 };
 
-const mockNodes: Node[] = [
+const mockNodes: GraphNode[] = [
   {
     id: 'n-1',
     type: 'mcu',
@@ -37,7 +37,7 @@ const mockNodes: Node[] = [
   },
 ];
 
-const mockEdges: Edge[] = [
+const mockEdges: GraphEdge[] = [
   {
     id: 'e-1',
     source: 'n-1',

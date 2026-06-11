@@ -9,7 +9,7 @@
 import { useSimulation } from '@/lib/contexts/simulation-context';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Activity, PanelLeftClose, PanelLeftOpen, Square } from 'lucide-react';
+import { Activity, Camera, PanelLeftClose, PanelLeftOpen, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CircuitDesignRow } from '@shared/schema';
 
@@ -19,6 +19,7 @@ export interface BreadboardToolbarProps {
   onSelectCircuit: (id: number) => void;
   workbenchOpen: boolean;
   onToggleWorkbench: () => void;
+  onOpenHardwareInspection?: () => void;
 }
 
 export function BreadboardToolbar({
@@ -27,6 +28,7 @@ export function BreadboardToolbar({
   onSelectCircuit,
   workbenchOpen,
   onToggleWorkbench,
+  onOpenHardwareInspection,
 }: BreadboardToolbarProps) {
   const { isLive, setIsLive, clearStates } = useSimulation();
 
@@ -60,6 +62,18 @@ export function BreadboardToolbar({
       </Select>
 
       <div className="w-px h-4 bg-border mx-1" />
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        data-testid="button-open-hardware-inspection"
+        className="h-7 gap-1.5 px-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+        onClick={onOpenHardwareInspection}
+      >
+        <Camera className="h-3.5 w-3.5" />
+        Inspect
+      </Button>
 
       <Button
         variant="outline"

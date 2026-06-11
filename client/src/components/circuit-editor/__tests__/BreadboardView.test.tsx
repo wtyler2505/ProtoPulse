@@ -20,6 +20,13 @@ import type { CircuitInstanceRow } from '@shared/schema';
 
 import { COMPONENT_DRAG_TYPE } from '../ComponentPlacer';
 import { coordToPixel } from '@/lib/circuit-editor/breadboard-model';
+import { PROTOPULSE_DRAG_LABEL, PROTOPULSE_DRAG_TYPE } from '@/lib/drag-mime';
+import {
+  RADIAL_COMMAND_PREVIEW_EVENT,
+  type MenuContext,
+  type RadialCommandPreviewEventDetail,
+} from '@/lib/radial-menu-actions';
+import { RADIAL_AI_CHAT_DRAFT_EVENT } from '@/lib/radial-ai-commands';
 
 // ---------------------------------------------------------------------------
 // Mock all hooks and child components before importing BreadboardView
@@ -71,7 +78,10 @@ const baseMockWires = [
     circuitDesignId: 1,
     netId: 1,
     view: 'breadboard',
-    points: [{ x: 30, y: 50 }, { x: 60, y: 50 }],
+    points: [
+      { x: 30, y: 50 },
+      { x: 60, y: 50 },
+    ],
     layer: null,
     width: 1.5,
     color: '#e74c3c',
@@ -82,7 +92,10 @@ const baseMockWires = [
     circuitDesignId: 1,
     netId: 1,
     view: 'schematic', // Should be filtered out
-    points: [{ x: 0, y: 0 }, { x: 100, y: 100 }],
+    points: [
+      { x: 0, y: 0 },
+      { x: 100, y: 100 },
+    ],
     layer: null,
     width: 1,
     color: '#333',
@@ -159,6 +172,7 @@ const mockParts = baseMockParts.map((part) => ({
 const mockCreateNet = { mutateAsync: vi.fn() };
 const mockCreateWire = { mutate: vi.fn() };
 const mockCreateInstance = { mutate: vi.fn() };
+const mockDeleteInstance = { mutate: vi.fn() };
 const mockDeleteWire = { mutate: vi.fn() };
 const mockUpdateInstance = { mutate: vi.fn() };
 const mockUpdateWire = { mutate: vi.fn() };
@@ -183,10 +197,15 @@ const baseMockBom = [
 ];
 const mockBom = baseMockBom.map((item) => ({ ...item }));
 const mockCreateCircuitDesign = { mutateAsync: vi.fn().mockResolvedValue({ id: 3, name: 'Breadboard Wiring Canvas' }) };
-const mockExpandArchitecture = { mutateAsync: vi.fn().mockResolvedValue({ circuit: { id: 4, name: 'Expanded Circuit' }, instanceCount: 3, netCount: 2 }) };
+const mockExpandArchitecture = {
+  mutateAsync: vi
+    .fn()
+    .mockResolvedValue({ circuit: { id: 4, name: 'Expanded Circuit' }, instanceCount: 3, netCount: 2 }),
+};
 const mockSetActiveView = vi.fn();
 const mockToast = vi.fn();
 const chatSendListener = vi.fn();
+const chatDraftListener = vi.fn();
 const chatOpenListener = vi.fn();
 
 vi.mock('@/lib/contexts/project-id-context', () => ({
@@ -216,6 +235,7 @@ vi.mock('@/lib/circuit-editor/hooks', () => ({
   useCreateCircuitNet: () => mockCreateNet,
   useCreateCircuitWire: () => mockCreateWire,
   useCreateCircuitInstance: () => mockCreateInstance,
+  useDeleteCircuitInstance: () => mockDeleteInstance,
   useDeleteCircuitWire: () => mockDeleteWire,
   useExpandArchitecture: () => mockExpandArchitecture,
   useUpdateCircuitInstance: () => mockUpdateInstance,
@@ -277,25 +297,24 @@ vi.mock('../BreadboardGrid', () => ({
 }));
 
 vi.mock('../RatsnestOverlay', () => ({
-  default: (props: Record<string, unknown>) => (
-    <g data-testid="mock-ratsnest-overlay" data-nets={String(props.nets)} />
-  ),
+  default: (props: Record<string, unknown>) => <g data-testid="mock-ratsnest-overlay" data-nets={String(props.nets)} />,
 }));
 
 vi.mock('../ToolButton', () => ({
-  default: ({ icon: _icon, label, active, onClick, testId }: {
+  default: ({
+    icon: _icon,
+    label,
+    active,
+    onClick,
+    testId,
+  }: {
     icon: unknown;
     label: string;
     active?: boolean;
     onClick: () => void;
     testId: string;
   }) => (
-    <button type="button"
-      data-testid={testId}
-      data-active={String(active ?? false)}
-      title={label}
-      onClick={onClick}
-    >
+    <button type="button" data-testid={testId} data-active={String(active ?? false)} title={label} onClick={onClick}>
       {label}
     </button>
   ),
@@ -312,35 +331,77 @@ vi.mock('@/components/views/component-editor/ExactPartDraftModal', () => ({
   }: {
     initialSeed?: { description?: string; marketplaceSourceUrl?: string };
     open: boolean;
-  }) => (
+  }) =>
     open ? (
       <div data-testid="mock-exact-part-draft-modal">
         {initialSeed?.description ?? ''}
         {initialSeed?.marketplaceSourceUrl ? ` | ${initialSeed.marketplaceSourceUrl}` : ''}
       </div>
-    ) : null
-  ),
+    ) : null,
 }));
 
 vi.mock('@/components/ui/select', () => ({
-  Select: ({ children, onValueChange, value }: { children: ReactNode; onValueChange: (v: string) => void; value: string }) => (
+  Select: ({
+    children,
+    onValueChange,
+    value,
+  }: {
+    children: ReactNode;
+    onValueChange: (v: string) => void;
+    value: string;
+  }) => (
     <div data-testid="mock-select" data-value={value} onClick={() => onValueChange('2')}>
       {children}
     </div>
   ),
   SelectTrigger: ({ children, ...props }: { children: ReactNode; 'data-testid'?: string }) => (
-    <button type="button" data-testid={props['data-testid'] ?? 'select-trigger'}>{children}</button>
+    <button type="button" data-testid={props['data-testid'] ?? 'select-trigger'}>
+      {children}
+    </button>
   ),
   SelectValue: ({ placeholder }: { placeholder: string }) => <span>{placeholder}</span>,
   SelectContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SelectItem: ({ children, value }: { children: ReactNode; value: string }) => (
-    <div data-value={value}>{children}</div>
-  ),
+  SelectItem: ({ children, value }: { children: ReactNode; value: string }) => <div data-value={value}>{children}</div>,
+}));
+
+vi.mock('../HardwareInspectionPanel', () => ({
+  default: ({ open }: { open: boolean }) => (open ? <div data-testid="hardware-inspection-panel" /> : null),
+}));
+
+vi.mock('@/components/ui/vault-hover-card', () => ({
+  VaultHoverCard: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('lucide-react', () => ({
   Bot: () => <svg data-testid="icon-bot" />,
+  BarChart3: () => <svg data-testid="icon-bar-chart-3" />,
+  User: () => <svg data-testid="icon-user" />,
+  ClipboardPaste: () => <svg data-testid="icon-clipboard-paste" />,
+  CheckSquare: () => <svg data-testid="icon-check-square" />,
+  Copy: () => <svg data-testid="icon-copy" />,
+  Crosshair: () => <svg data-testid="icon-crosshair" />,
+  Edit: () => <svg data-testid="icon-edit" />,
+  Check: () => <svg data-testid="icon-check" />,
+  Wrench: () => <svg data-testid="icon-wrench" />,
+  FlaskConical: () => <svg data-testid="icon-flask-conical" />,
+  GitBranch: () => <svg data-testid="icon-git-branch" />,
+  Settings2: () => <svg data-testid="icon-settings-2" />,
+  Play: () => <svg data-testid="icon-play" />,
+  FileCode: () => <svg data-testid="icon-file-code" />,
+  FileJson: () => <svg data-testid="icon-file-json" />,
+  FileText: () => <svg data-testid="icon-file-text" />,
+  FlipHorizontal2: () => <svg data-testid="icon-flip-horizontal-2" />,
+  Gauge: () => <svg data-testid="icon-gauge" />,
+  Grid3X3: () => <svg data-testid="icon-grid-3x3" />,
+  History: () => <svg data-testid="icon-history" />,
+  Link: () => <svg data-testid="icon-link" />,
   Loader2: () => <svg data-testid="icon-loader" />,
+  Maximize: () => <svg data-testid="icon-maximize" />,
+  MessageSquarePlus: () => <svg data-testid="icon-message-square-plus" />,
+  Microscope: () => <svg data-testid="icon-microscope" />,
+  Monitor: () => <svg data-testid="icon-monitor" />,
+  Move: () => <svg data-testid="icon-move" />,
+  Package: () => <svg data-testid="icon-package" />,
   AlertTriangle: () => <svg data-testid="icon-alert-triangle" />,
   CheckCircle2: () => <svg data-testid="icon-check-circle-2" />,
   RefreshCw: () => <svg data-testid="icon-refresh-cw" />,
@@ -355,6 +416,8 @@ vi.mock('lucide-react', () => ({
   Activity: () => <svg data-testid="icon-activity" />,
   Square: () => <svg data-testid="icon-square" />,
   ShieldAlert: () => <svg data-testid="icon-shield-alert" />,
+  ShieldCheck: () => <svg data-testid="icon-shield-check" />,
+  SlidersHorizontal: () => <svg data-testid="icon-sliders-horizontal" />,
   XCircle: () => <svg data-testid="icon-x-circle" />,
   PanelLeftClose: () => <svg data-testid="icon-panel-left-close" />,
   PanelLeftOpen: () => <svg data-testid="icon-panel-left-open" />,
@@ -384,10 +447,20 @@ vi.mock('lucide-react', () => ({
   BadgeCheck: () => <svg data-testid="icon-badge-check" />,
   DraftingCompass: () => <svg data-testid="icon-drafting-compass" />,
   Layers3: () => <svg data-testid="icon-layers-3" />,
+  Box: () => <svg data-testid="icon-box" />,
+  PanelRightClose: () => <svg data-testid="icon-panel-right-close" />,
+  PanelRightOpen: () => <svg data-testid="icon-panel-right-open" />,
   HelpCircle: () => <svg data-testid="icon-help-circle" />,
   Rocket: () => <svg data-testid="icon-rocket" />,
   Camera: () => <svg data-testid="icon-camera" />,
+  FileImage: () => <svg data-testid="icon-file-image" />,
+  SearchCheck: () => <svg data-testid="icon-search-check" />,
+  ThermometerSun: () => <svg data-testid="icon-thermometer-sun" />,
   Plus: () => <svg data-testid="icon-plus" />,
+  Pentagon: () => <svg data-testid="icon-pentagon" />,
+  Printer: () => <svg data-testid="icon-printer" />,
+  Ruler: () => <svg data-testid="icon-ruler" />,
+  RotateCw: () => <svg data-testid="icon-rotate-cw" />,
   Download: () => <svg data-testid="icon-download" />,
 }));
 
@@ -449,6 +522,52 @@ vi.mock('@/lib/utils', () => ({
 // Now import BreadboardView after all mocks
 import BreadboardView from '../BreadboardView';
 
+function dispatchBreadboardRadial(
+  commandId: string,
+  context: Record<string, unknown> = {},
+): {
+  commandId: string;
+  context: Record<string, unknown>;
+  source: string;
+  handled?: boolean;
+} {
+  const detail: {
+    commandId: string;
+    context: Record<string, unknown>;
+    source: string;
+    handled?: boolean;
+  } = {
+    commandId,
+    context: {
+      view: 'breadboard',
+      target: 'canvas',
+      ...context,
+    },
+    source: 'radial-menu',
+  };
+  window.dispatchEvent(new CustomEvent('protopulse:radial-command', { detail }));
+  return detail;
+}
+
+function dispatchBreadboardRadialPreview(
+  commandId: string,
+  context: Partial<MenuContext> = {},
+): RadialCommandPreviewEventDetail {
+  const detail: RadialCommandPreviewEventDetail = {
+    commandId,
+    context: {
+      view: 'breadboard',
+      target: 'canvas',
+      pointer: { x: 240, y: 180 },
+      ...context,
+    },
+    source: 'radial-menu',
+    phase: 'show',
+  };
+  window.dispatchEvent(new CustomEvent<RadialCommandPreviewEventDetail>(RADIAL_COMMAND_PREVIEW_EVENT, { detail }));
+  return detail;
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -495,10 +614,16 @@ describe('BreadboardView', () => {
     mockInstances[0].properties = { type: 'mcu' };
     mockCreateNet.mutateAsync.mockResolvedValue({ id: 99, name: 'VCC', circuitDesignId: 1, netType: 'power' });
     mockCreateCircuitDesign.mutateAsync.mockResolvedValue({ id: 3, name: 'Breadboard Wiring Canvas' });
-    mockExpandArchitecture.mutateAsync.mockResolvedValue({ circuit: { id: 4, name: 'Expanded Circuit' }, instanceCount: 3, netCount: 2 });
+    mockExpandArchitecture.mutateAsync.mockResolvedValue({
+      circuit: { id: 4, name: 'Expanded Circuit' },
+      instanceCount: 3,
+      netCount: 2,
+    });
     window.removeEventListener('protopulse:chat-send', chatSendListener as EventListener);
+    window.removeEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, chatDraftListener as EventListener);
     window.removeEventListener('protopulse:open-chat-panel', chatOpenListener as EventListener);
     window.addEventListener('protopulse:chat-send', chatSendListener as EventListener);
+    window.addEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, chatDraftListener as EventListener);
     window.addEventListener('protopulse:open-chat-panel', chatOpenListener as EventListener);
   });
 
@@ -579,6 +704,165 @@ describe('BreadboardView', () => {
       render(<BreadboardView />);
       fireEvent.click(screen.getByTestId('tool-delete'));
       expect(screen.getByTestId('tool-delete').getAttribute('data-active')).toBe('true');
+    });
+
+    it('handles radial add_wire by activating the wire tool', async () => {
+      render(<BreadboardView />);
+
+      const detail = dispatchBreadboardRadial('add_wire');
+
+      expect(detail.handled).toBe(true);
+      await waitFor(() => {
+        expect(screen.getByTestId('tool-wire').getAttribute('data-active')).toBe('true');
+      });
+    });
+
+    it('handles radial delete on the canvas by activating the delete tool', async () => {
+      render(<BreadboardView />);
+
+      const detail = dispatchBreadboardRadial('delete');
+
+      expect(detail.handled).toBe(true);
+      await waitFor(() => {
+        expect(screen.getByTestId('tool-delete').getAttribute('data-active')).toBe('true');
+      });
+    });
+
+    it('handles radial show_rails by opening the connectivity explainer', async () => {
+      render(<BreadboardView />);
+
+      const detail = dispatchBreadboardRadial('show_rails');
+
+      expect(detail.handled).toBe(true);
+      await waitFor(() => {
+        expect(screen.getByTestId('connectivity-explainer')).toBeDefined();
+      });
+    });
+
+    it('renders and clears a breadboard rail radial preview', async () => {
+      render(<BreadboardView />);
+
+      dispatchBreadboardRadialPreview('show_rails');
+
+      await waitFor(() => {
+        expect(screen.getByTestId('breadboard-radial-adapter-preview')).toHaveAttribute(
+          'data-command-id',
+          'show_rails',
+        );
+      });
+      expect(screen.getByTestId('breadboard-radial-adapter-preview')).toHaveAttribute('data-board-x');
+      expect(screen.getByTestId('breadboard-radial-adapter-preview')).toHaveAttribute('data-board-y');
+
+      window.dispatchEvent(
+        new CustomEvent<RadialCommandPreviewEventDetail>(RADIAL_COMMAND_PREVIEW_EVENT, {
+          detail: { source: 'radial-menu', phase: 'clear' },
+        }),
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('breadboard-radial-adapter-preview')).toBeNull();
+      });
+    });
+
+    it('outlines a placed breadboard part for radial delete previews', async () => {
+      mockInstances[0].breadboardX = 70;
+      mockInstances[0].breadboardY = 50;
+
+      render(<BreadboardView />);
+
+      dispatchBreadboardRadialPreview('delete', {
+        target: 'node',
+        targetId: '1',
+        targetLabel: 'U1',
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('breadboard-radial-adapter-preview')).toHaveAttribute('data-command-id', 'delete');
+      });
+      const preview = screen.getByTestId('breadboard-radial-adapter-preview');
+      expect(preview).toHaveAttribute('data-target-kind', 'part');
+      expect(preview).toHaveAttribute('data-target-id', '1');
+      const outline = screen.getByTestId('breadboard-radial-part-outline');
+      expect(Number(outline.getAttribute('width'))).toBeGreaterThan(0);
+      expect(Number(outline.getAttribute('height'))).toBeGreaterThan(0);
+    });
+
+    it('outlines a breadboard wire path for radial delete previews', async () => {
+      render(<BreadboardView />);
+
+      dispatchBreadboardRadialPreview('delete', {
+        target: 'wire',
+        targetId: '1',
+        targetLabel: 'Wire 1',
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('breadboard-radial-adapter-preview')).toHaveAttribute('data-command-id', 'delete');
+      });
+      expect(screen.getByTestId('breadboard-radial-adapter-preview')).toHaveAttribute('data-target-kind', 'wire');
+      expect(screen.getByTestId('breadboard-radial-wire-outline')).toHaveAttribute('d', 'M 30 50 L 60 50');
+    });
+
+    it('handles radial validate_wiring by running the board audit', () => {
+      render(<BreadboardView />);
+
+      const detail = dispatchBreadboardRadial('validate_wiring');
+
+      expect(detail.handled).toBe(true);
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringContaining('Board health'),
+        }),
+      );
+    });
+
+    it('drafts breadboard wiring context to AI chat from a radial command', () => {
+      mockInstances[0].breadboardX = 120;
+      mockInstances[0].breadboardY = 90;
+
+      render(<BreadboardView />);
+
+      const detail = dispatchBreadboardRadial('ai_breadboard_wiring', {
+        target: 'node',
+        targetId: '1',
+        targetLabel: 'U1',
+      });
+
+      expect(detail.handled).toBe(true);
+      expect(chatOpenListener).toHaveBeenCalledTimes(1);
+      const openEvent = chatOpenListener.mock.calls[0]?.[0] as CustomEvent<{ designAgent?: boolean }>;
+      expect(openEvent.detail.designAgent).toBe(false);
+      expect(chatDraftListener).toHaveBeenCalledTimes(1);
+      expect(chatSendListener).not.toHaveBeenCalled();
+      const message = (chatDraftListener.mock.calls[0]?.[0] as CustomEvent<{ message: string }>).detail.message;
+      expect(message).toContain('AI intent: breadboard_wiring.');
+      expect(message).toContain('Breadboard wiring review: 1 placed part(s)');
+      expect(message).toContain('Target: node "U1"');
+      expect(message).toContain('Project: Bench Test Project');
+      expect(message).toContain('Target part: U1');
+      expect(message).toContain('Placed parts:');
+      expect(message).toContain('Breadboard jumpers:');
+      expect(message).toContain('wire 1 net=1');
+      expect(message).toContain('Known nets:');
+      expect(message).toContain('- GND id=1');
+      expect(message).toContain('Board status:');
+    });
+
+    it('handles targeted breadboard rotate and delete commands', () => {
+      mockInstances[0].breadboardX = 120;
+      mockInstances[0].breadboardY = 90;
+      render(<BreadboardView />);
+      const context = { target: 'node', targetId: '1', targetLabel: 'U1' };
+
+      expect(dispatchBreadboardRadial('rotate', context).handled).toBe(true);
+      expect(mockUpdateInstance.mutate).toHaveBeenCalledWith({
+        id: 1,
+        circuitId: 1,
+        breadboardRotation: 90,
+      });
+
+      expect(dispatchBreadboardRadial('delete', context).handled).toBe(true);
+      expect(mockDeleteInstance.mutate).toHaveBeenCalledWith({ circuitId: 1, id: 1 });
     });
   });
 
@@ -669,7 +953,9 @@ describe('BreadboardView', () => {
         target: { value: 'Arduino Mega 2560 R3' },
       });
 
-      expect(screen.getByTestId('breadboard-exact-part-resolution-message').textContent).toContain('verified exact part');
+      expect(screen.getByTestId('breadboard-exact-part-resolution-message').textContent).toContain(
+        'verified exact part',
+      );
       // The verified board pack uses synthetic negative IDs — find the place button dynamically
       const placeButtons = screen.getAllByTestId(/^button-breadboard-exact-place-/);
       expect(placeButtons.length).toBeGreaterThanOrEqual(1);
@@ -682,6 +968,7 @@ describe('BreadboardView', () => {
             breadboardY: null,
             circuitId: 1,
             properties: expect.objectContaining({
+              breadboardProvenance: 'exact',
               componentTitle: 'Arduino Mega 2560 R3',
             }),
           }),
@@ -715,12 +1002,18 @@ describe('BreadboardView', () => {
       expect(screen.getByTestId('breadboard-part-inspector-trust').textContent).toContain('Connector-defined');
       expect(screen.getByTestId('breadboard-part-inspector-coach').textContent).toContain('center trench');
       expect(screen.getByTestId('breadboard-part-inspector-layout-quality').textContent).toContain('Layout quality');
-      expect(screen.getByTestId('breadboard-layout-quality-metric-rail-readiness').textContent).toContain('Rail readiness');
+      expect(screen.getByTestId('breadboard-layout-quality-metric-rail-readiness').textContent).toContain(
+        'Rail readiness',
+      );
       expect(screen.getByTestId('breadboard-part-inspector-plan').textContent).toContain('6 pending');
       expect(screen.getByTestId('breadboard-coach-action-bridge-power-rails').textContent).toContain('VCC rail bridge');
-      expect(screen.getByTestId('breadboard-coach-action-bridge-ground-rails').textContent).toContain('GND rail bridge');
+      expect(screen.getByTestId('breadboard-coach-action-bridge-ground-rails').textContent).toContain(
+        'GND rail bridge',
+      );
       expect(screen.getByTestId('breadboard-coach-action-hookup-power-pin-3').textContent).toContain('VCC rail jumper');
-      expect(screen.getByTestId('breadboard-coach-action-hookup-ground-pin-2').textContent).toContain('GND rail jumper');
+      expect(screen.getByTestId('breadboard-coach-action-hookup-ground-pin-2').textContent).toContain(
+        'GND rail jumper',
+      );
       expect(screen.getByTestId('breadboard-pin-anchor-overlay')).toBeDefined();
       expect(screen.getByTestId('breadboard-pin-anchor-pin-1')).toBeDefined();
 
@@ -740,6 +1033,43 @@ describe('BreadboardView', () => {
       expect(openEvent.detail.prompt).toContain('Bench layout risks:');
       expect(openEvent.detail.prompt).toContain('PB0 -> e1');
       expect(openEvent.detail.prompt).toContain('Orientation guidance:');
+    });
+
+    it('opens the selected breadboard part in the 3D viewer with trust context', () => {
+      mockInstances[0].breadboardX = 70;
+      mockInstances[0].breadboardY = 50;
+      const viewIn3DListener = vi.fn();
+      window.addEventListener('protopulse:breadboard-view-in-3d', viewIn3DListener as EventListener);
+
+      render(<BreadboardView />);
+
+      fireEvent.click(screen.getByTestId('mock-instance-1'));
+      fireEvent.click(screen.getByTestId('breadboard-view-in-3d'));
+
+      expect(mockSetActiveView).toHaveBeenCalledWith('viewer_3d');
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Opening 3D View',
+          description: expect.stringContaining('U1 context sent'),
+        }),
+      );
+      expect(viewIn3DListener).toHaveBeenCalledTimes(1);
+      const event = viewIn3DListener.mock.calls[0]?.[0] as CustomEvent<Record<string, unknown>>;
+      expect(event.detail).toMatchObject({
+        sourceView: 'breadboard',
+        projectId: 1,
+        circuitId: 1,
+        instanceId: 1,
+        refDes: 'U1',
+        title: 'ATmega328P DIP',
+        trustTier: 'connector-defined',
+        verificationLevel: 'community-only',
+        verificationStatus: 'candidate',
+        pinMapConfidence: 'exact',
+        readyNow: true,
+      });
+
+      window.removeEventListener('protopulse:breadboard-view-in-3d', viewIn3DListener as EventListener);
     });
 
     it('previews and applies the bench coach support plan around the selected part', async () => {
@@ -771,6 +1101,7 @@ describe('BreadboardView', () => {
           circuitId: 1,
           partId: null,
           properties: expect.objectContaining({
+            breadboardProvenance: 'coach',
             coachPlanFor: 'U1',
             coachPlanKey: 'support-decoupler',
             type: 'capacitor',
@@ -781,6 +1112,7 @@ describe('BreadboardView', () => {
         2,
         expect.objectContaining({
           properties: expect.objectContaining({
+            breadboardProvenance: 'coach',
             coachPlanFor: 'U1',
             coachPlanKey: 'support-control-pull',
             type: 'resistor',
@@ -821,9 +1153,7 @@ describe('BreadboardView', () => {
           netId: 99,
           view: 'breadboard',
           wireType: 'jump',
-          points: expect.arrayContaining([
-            expect.objectContaining({ y: expect.any(Number) }),
-          ]),
+          points: expect.arrayContaining([expect.objectContaining({ y: expect.any(Number) })]),
         }),
       );
       expect(mockCreateWire.mutate).toHaveBeenNthCalledWith(
@@ -833,9 +1163,7 @@ describe('BreadboardView', () => {
           netId: 1,
           view: 'breadboard',
           wireType: 'jump',
-          points: expect.arrayContaining([
-            expect.objectContaining({ y: expect.any(Number) }),
-          ]),
+          points: expect.arrayContaining([expect.objectContaining({ y: expect.any(Number) })]),
         }),
       );
       expect(mockToast).toHaveBeenCalledWith(
@@ -843,6 +1171,67 @@ describe('BreadboardView', () => {
           title: 'Bench coach support staged',
         }),
       );
+    });
+
+    it('surfaces selected-part coach plan access on the work surface', () => {
+      mockInstances[0].breadboardX = 70;
+      mockInstances[0].breadboardY = 50;
+
+      render(<BreadboardView />);
+
+      expect(screen.getByTestId('breadboard-work-surface-status').textContent).toContain('Select a part');
+
+      fireEvent.click(screen.getByTestId('mock-instance-1'));
+
+      const coachStatus = screen.getByTestId('breadboard-work-surface-coach');
+      expect(coachStatus.textContent).toContain('U1:');
+      expect(coachStatus.textContent).toContain('coach move');
+      const provenanceStatus = screen.getByTestId('breadboard-work-surface-provenance');
+      expect(provenanceStatus.textContent).toContain('CONNECTOR DEFINED');
+      expect(screen.getByTestId('breadboard-work-surface-pin-map').textContent).toContain('pin exact');
+      expect(screen.getByTestId('breadboard-work-surface-verification').textContent).toContain('community only');
+      expect(screen.getByTestId('breadboard-work-surface-stash').textContent).toContain('ready now');
+      expect(screen.getByTestId('breadboard-work-surface-verification-status').textContent).toContain('candidate');
+
+      fireEvent.click(screen.getByTestId('button-breadboard-surface-coach-toggle'));
+
+      expect(screen.getByTestId('breadboard-coach-plan-overlay')).toBeDefined();
+      expect(screen.getByTestId('button-breadboard-surface-coach-toggle').textContent).toContain('Hide plan');
+    });
+
+    it('keeps selected-part View in 3D reachable from the collapsed work surface', () => {
+      mockInstances[0].breadboardX = 70;
+      mockInstances[0].breadboardY = 50;
+      const viewIn3DListener = vi.fn();
+      window.addEventListener('protopulse:breadboard-view-in-3d', viewIn3DListener as EventListener);
+
+      render(<BreadboardView />);
+
+      expect(screen.queryByTestId('button-breadboard-surface-view-in-3d')).toBeNull();
+
+      fireEvent.click(screen.getByTestId('mock-instance-1'));
+      const surfaceStatus = screen.getByTestId('breadboard-work-surface-status');
+      const surfaceToggle = screen.getByTestId('button-breadboard-surface-status-toggle');
+      expect(screen.getByTestId('breadboard-work-surface-3d').textContent).toContain('U1');
+
+      fireEvent.click(surfaceToggle);
+      expect(surfaceStatus.getAttribute('data-collapsed')).toBe('true');
+      expect(screen.queryByTestId('breadboard-work-surface-status-body')).toBeNull();
+
+      fireEvent.click(screen.getByTestId('button-breadboard-surface-view-in-3d'));
+
+      expect(mockSetActiveView).toHaveBeenCalledWith('viewer_3d');
+      expect(viewIn3DListener).toHaveBeenCalledTimes(1);
+      const event = viewIn3DListener.mock.calls[0]?.[0] as CustomEvent<Record<string, unknown>>;
+      expect(event.detail).toMatchObject({
+        sourceView: 'breadboard',
+        refDes: 'U1',
+        trustTier: 'connector-defined',
+        pinMapConfidence: 'exact',
+        readyNow: true,
+      });
+
+      window.removeEventListener('protopulse:breadboard-view-in-3d', viewIn3DListener as EventListener);
     });
 
     it('applies a single coach remediation directly from the overlay', async () => {
@@ -864,6 +1253,7 @@ describe('BreadboardView', () => {
           circuitId: 1,
           partId: null,
           properties: expect.objectContaining({
+            breadboardProvenance: 'coach',
             coachPlanFor: 'U1',
             coachPlanKey: 'support-decoupler',
             type: 'capacitor',
@@ -1096,6 +1486,32 @@ describe('BreadboardView', () => {
       );
     });
 
+    it('keeps board health visible, runnable, and collapsible on the work surface', async () => {
+      mockInstances[0].breadboardX = 70;
+      mockInstances[0].breadboardY = 50;
+
+      render(<BreadboardView />);
+
+      const surfaceStatus = screen.getByTestId('breadboard-work-surface-status');
+      const surfaceToggle = screen.getByTestId('button-breadboard-surface-status-toggle');
+      expect(surfaceStatus.getAttribute('data-resizable')).toBe('true');
+      expect(surfaceStatus.getAttribute('data-resize-axis')).toBe('both');
+      expect(surfaceToggle.getAttribute('aria-expanded')).toBe('true');
+      expect(screen.getByTestId('breadboard-work-surface-health').textContent).toContain('Not checked');
+
+      fireEvent.click(screen.getByTestId('button-breadboard-surface-audit'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('breadboard-work-surface-health').textContent).toContain('score');
+      });
+
+      fireEvent.click(surfaceToggle);
+      expect(surfaceStatus.getAttribute('data-collapsed')).toBe('true');
+      expect(surfaceToggle.getAttribute('aria-expanded')).toBe('false');
+      expect(screen.queryByTestId('breadboard-work-surface-status-body')).toBeNull();
+      expect(surfaceStatus.textContent).toContain('Board Health');
+    });
+
     it('focuses the affected part from a board-health issue', async () => {
       mockInstances[0].breadboardX = 70;
       mockInstances[0].breadboardY = 50;
@@ -1202,6 +1618,7 @@ describe('BreadboardView — drag-to-place', () => {
     expect(callArgs.referenceDesignator).toBe('U2');
     expect(typeof callArgs.breadboardX).toBe('number');
     expect(typeof callArgs.breadboardY).toBe('number');
+    expect(callArgs.properties).toMatchObject({ breadboardProvenance: 'project' });
   });
 
   it('still supports starter shelf drops for generic parts', () => {
@@ -1215,6 +1632,7 @@ describe('BreadboardView — drag-to-place', () => {
     const callArgs = mockCreateInstance.mutate.mock.calls[0][0] as Record<string, unknown>;
     expect(callArgs.partId).toBeNull();
     expect(callArgs.referenceDesignator).toBe('L1');
+    expect(callArgs.properties).toMatchObject({ breadboardProvenance: 'starter' });
   });
 
   it('drop without component data type does NOT create instance', () => {
@@ -1249,8 +1667,8 @@ function createLegacyDropEvent(nodeType: string, label: string, clientX: number,
     clientY: number;
   };
   const dataStore: Record<string, string> = {
-    'application/reactflow/type': nodeType,
-    'application/reactflow/label': label,
+    [PROTOPULSE_DRAG_TYPE]: nodeType,
+    [PROTOPULSE_DRAG_LABEL]: label,
   };
   Object.defineProperty(event, 'dataTransfer', {
     value: {
@@ -1295,7 +1713,7 @@ function createPartDropEvent(partId: number, clientX: number, clientY: number) {
 
 describe('BreadboardView — loading state', () => {
   it('shows loader when circuits are loading', async () => {
-    const hooksModule = await import('@/lib/circuit-editor/hooks') as Record<string, unknown>;
+    const hooksModule = (await import('@/lib/circuit-editor/hooks')) as Record<string, unknown>;
     const originalUseCircuitDesigns = hooksModule.useCircuitDesigns;
     hooksModule.useCircuitDesigns = vi.fn().mockReturnValue({ data: undefined, isLoading: true });
 
@@ -1309,7 +1727,7 @@ describe('BreadboardView — loading state', () => {
 
 describe('BreadboardView — empty state', () => {
   it('shows empty state when no circuits exist', async () => {
-    const hooksModule = await import('@/lib/circuit-editor/hooks') as Record<string, unknown>;
+    const hooksModule = (await import('@/lib/circuit-editor/hooks')) as Record<string, unknown>;
     const originalUseCircuitDesigns = hooksModule.useCircuitDesigns;
     hooksModule.useCircuitDesigns = vi.fn().mockReturnValue({ data: [], isLoading: false });
 
@@ -1321,7 +1739,7 @@ describe('BreadboardView — empty state', () => {
   });
 
   it('can create the first breadboard circuit directly from the empty state', async () => {
-    const hooksModule = await import('@/lib/circuit-editor/hooks') as Record<string, unknown>;
+    const hooksModule = (await import('@/lib/circuit-editor/hooks')) as Record<string, unknown>;
     const originalUseCircuitDesigns = hooksModule.useCircuitDesigns;
     hooksModule.useCircuitDesigns = vi.fn().mockReturnValue({ data: [], isLoading: false });
 

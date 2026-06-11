@@ -12,24 +12,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 // Mocks
 // ---------------------------------------------------------------------------
 
-// Mock @xyflow/react
-vi.mock('@xyflow/react', () => {
-  const ReactFlowProvider = ({ children }: { children: React.ReactNode }) => <div data-testid="mock-rfp">{children}</div>;
-  const ReactFlow = (props: Record<string, unknown>) => (
-    <div
-      data-testid="mock-reactflow"
-      data-nodes-draggable={String(props.nodesDraggable)}
-      data-nodes-connectable={String(props.nodesConnectable)}
-      data-elements-selectable={String(props.elementsSelectable)}
-    >
-      {(props.children as React.ReactNode)}
-    </div>
-  );
-  const Background = () => <div data-testid="mock-background" />;
-  const Controls = () => <div data-testid="mock-controls" />;
-  return { ReactFlowProvider, ReactFlow, Background, Controls };
-});
-
 // Mock lucide-react icons
 vi.mock('lucide-react', () => {
   const icon = (name: string) => (props: Record<string, unknown>) => <span data-testid={`icon-${name}`} {...props} />;
@@ -151,15 +133,14 @@ describe('EmbedViewerPage', () => {
       });
     });
 
-    it('renders ReactFlow in read-only mode', async () => {
+    it('renders embedded read-only canvas', async () => {
       mockDecode.mockResolvedValue(sampleCircuit);
       render(<EmbedViewerPage dataParam="rEncodedData" />);
 
       await waitFor(() => {
-        const flow = screen.getByTestId('mock-reactflow');
-        expect(flow.getAttribute('data-nodes-draggable')).toBe('false');
-        expect(flow.getAttribute('data-nodes-connectable')).toBe('false');
-        expect(flow.getAttribute('data-elements-selectable')).toBe('false');
+        const flow = screen.getByTestId('embed-flow-canvas');
+        expect(flow).toBeDefined();
+        expect(screen.getByTestId('embed-flow-summary')).toBeDefined();
       });
     });
 
@@ -185,13 +166,13 @@ describe('EmbedViewerPage', () => {
       });
     });
 
-    it('renders background when showGrid is true', async () => {
+    it('renders canvas when showGrid is true', async () => {
       mockResolveTheme.mockReturnValue({ ...defaultTheme, showGrid: true });
       mockDecode.mockResolvedValue(sampleCircuit);
       render(<EmbedViewerPage dataParam="rEncodedData" />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('mock-background')).toBeDefined();
+        expect(screen.getByTestId('embed-flow-canvas')).toBeDefined();
       });
     });
   });
@@ -311,13 +292,13 @@ describe('EmbedViewerPage', () => {
     });
   });
 
-  describe('ReactFlowProvider', () => {
-    it('wraps the viewer in ReactFlowProvider', async () => {
+  describe('embed canvas', () => {
+    it('renders the read-only embed flow canvas', async () => {
       mockDecode.mockResolvedValue(sampleCircuit);
       render(<EmbedViewerPage dataParam="rData" />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('mock-rfp')).toBeDefined();
+        expect(screen.getByTestId('embed-flow-canvas')).toBeDefined();
       });
     });
   });

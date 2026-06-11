@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-write-project-design-variables"
+description = "Enables the write_project_design_variables command without any pre-configured scope."
+commands.allow = ["write_project_design_variables"]
+
+[[permission]]
+identifier = "deny-write-project-design-variables"
+description = "Denies the write_project_design_variables command without any pre-configured scope."
+commands.deny = ["write_project_design_variables"]

@@ -11,12 +11,12 @@ interface BomCompletenessSectionProps {
 
 export function BomCompletenessSection({ bomLength, bomCompletionIssues, bomWarningCount, bomInfoCount }: BomCompletenessSectionProps) {
   return (
-    <div data-testid="bom-completeness-section" className="w-full max-w-5xl mt-4 bg-card/40 border border-border backdrop-blur-xl shadow-xl p-4">
-      <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+    <div data-testid="bom-completeness-section" className="w-full max-w-5xl mt-4 bg-card/40 border border-border backdrop-blur-xl shadow-xl p-4.5">
+      <h3 className="text-sm font-semibold flex items-center gap-2 mb-3.5">
         <ShieldCheck className="w-4 h-4 text-primary" />
         BOM Completeness
         {bomCompletionIssues.length > 0 && (
-          <span className="text-[10px] text-muted-foreground font-normal ml-auto">
+          <span className="text-[11px] text-muted-foreground font-normal ml-auto">
             {bomWarningCount > 0 && <>{bomWarningCount} warning{bomWarningCount !== 1 ? 's' : ''}</>}
             {bomWarningCount > 0 && bomInfoCount > 0 && ', '}
             {bomInfoCount > 0 && <>{bomInfoCount} info item{bomInfoCount !== 1 ? 's' : ''}</>}
@@ -31,12 +31,12 @@ export function BomCompletenessSection({ bomLength, bomCompletionIssues, bomWarn
           All BOM items are complete — no issues found.
         </div>
       ) : (
-        <div className="space-y-1.5 max-h-60 overflow-auto">
+        <div className="space-y-2 max-h-60 overflow-auto">
           {bomCompletionIssues.map((issue) => (
             <div
               key={issue.id}
               data-testid={`bom-issue-${issue.id}`}
-              className="flex items-start gap-2 text-xs py-1 px-2 border border-border/30 rounded hover:bg-muted/10"
+              className="flex items-start gap-2.5 text-xs py-1.5 px-2.5 border border-border/30 rounded hover:bg-muted/10"
             >
               {issue.severity === 'warning' ? (
                 <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0 mt-0.5" />
@@ -45,7 +45,7 @@ export function BomCompletenessSection({ bomLength, bomCompletionIssues, bomWarn
               )}
               <span className="flex-1 text-muted-foreground">{issue.message}</span>
               {issue.partNumber && (
-                <Badge variant="outline" className="text-[10px] flex-shrink-0">{issue.partNumber}</Badge>
+                <Badge variant="outline" className="text-[10px] px-1.5 flex-shrink-0">{issue.partNumber}</Badge>
               )}
             </div>
           ))}

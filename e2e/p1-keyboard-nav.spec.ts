@@ -3,7 +3,7 @@
  *
  * Kinetic counterpart to `p1-a11y-scan.spec.ts` (Phase 5, static axe scan).
  * For each major tab/route this spec:
- *   1. Navigates via /projects/1/{viewName} (same inventory as Phase 5).
+ *   1. Navigates via the setup-created project route (same inventory as Phase 5).
  *   2. Waits for the workspace-main landmark and lets lazy chunks resolve.
  *   3. Runs `tabThrough(page, 20)` and asserts:
  *        - at least one reachable focus stop,
@@ -25,15 +25,17 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import { tabThrough, assertNoKeyboardTrap, type FocusStop } from './keyboard-helpers';
+import { clearLastProjectSelection, getSetupProjectPath } from './e2e-project';
 
 test.use({ storageState: 'e2e/.auth-state.json' });
+test.describe.configure({ timeout: 60_000 });
 
 /**
  * Navigate to a project view and wait for the workspace shell to mount.
  * Mirrors `p1-a11y-scan.spec.ts::openView` for consistency.
  */
 async function openView(page: Page, viewName: string): Promise<void> {
-  await page.goto(`/projects/1/${viewName}`);
+  await page.goto(getSetupProjectPath(viewName));
   await page.waitForSelector('[data-testid="workspace-main"]', { timeout: 15_000 });
   await page.waitForTimeout(2_000);
   await expect(page.locator('[data-testid="workspace-main"]')).toBeVisible();
@@ -98,9 +100,7 @@ async function runKeyboardKernel(page: Page, label: string): Promise<void> {
 test.describe('Keyboard nav — Project Picker', () => {
   test('project-picker page is keyboard-navigable', async ({ page }) => {
     await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.removeItem('protopulse-last-project');
-    });
+    await clearLastProjectSelection(page);
     await page.goto('/');
     await page.waitForSelector('[data-testid="project-picker-page"]', {
       timeout: 10_000,
@@ -143,11 +143,27 @@ test.describe('Keyboard nav — Core Design Views', () => {
     await runKeyboardKernel(page, 'component_editor');
   });
 
-  // 3D viewer is a Three.js canvas — keyboard navigation is deferred (BL-0870).
-  // Pointer-only today; adding WASD/arrow-nav requires a dedicated camera
-  // controller. Skipped rather than failed per Plan 03 Phase 6 "don't be
-  // perfectionist" policy.
-  test.skip('viewer_3d — canvas-only, keyboard story deferred (BL-0870)', () => {});
+  test('viewer_3d', async ({ page }) => {
+    await page.goto(getSetupProjectPath());
+    await page.evaluate(() => {
+      localStorage.setItem('protopulse-viewer3d-engine', 'webgl');
+      sessionStorage.removeItem('protopulse:pending-view-in-3d');
+    });
+    await openView(page, 'viewer_3d');
+    await expect(page.getByTestId('viewer-3d-webgl-engine')).toBeVisible({ timeout: 45_000 });
+    await runKeyboardKernel(page, 'viewer_3d');
+
+    const engine = page.getByTestId('viewer-3d-webgl-engine');
+    await engine.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(engine).toHaveAttribute('data-camera-command', 'Orbit left');
+    await page.keyboard.press('=');
+    await expect(engine).toHaveAttribute('data-camera-command', 'Zoom in');
+    await page.keyboard.press('2');
+    await expect(engine).toHaveAttribute('data-camera-preset', 'top');
+    await page.keyboard.press('r');
+    await expect(engine).toHaveAttribute('data-camera-preset', 'home');
+  });
 });
 
 // ---------------------------------------------------------------------------

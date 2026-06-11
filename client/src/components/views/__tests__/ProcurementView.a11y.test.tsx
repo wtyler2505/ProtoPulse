@@ -55,6 +55,19 @@ vi.mock('@/lib/contexts/project-id-context', () => ({
   useProjectId: () => 1,
 }));
 
+vi.mock('@/lib/contexts/project-meta-context', () => ({
+  useProjectMeta: () => ({
+    projectName: 'Procurement A11y Project',
+    projectDescription: '',
+    activeView: 'procurement',
+    setActiveView: vi.fn(),
+  }),
+}));
+
+vi.mock('@/lib/contexts/architecture-context', () => ({
+  useArchitecture: () => ({ nodes: [], edges: [] }),
+}));
+
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: mockToast }),
 }));
@@ -70,6 +83,16 @@ vi.mock('@/lib/csv', () => ({
 
 vi.mock('@/lib/component-editor/hooks', () => ({
   useComponentParts: () => ({ data: [], isLoading: false }),
+}));
+
+vi.mock('@/lib/circuit-editor/hooks', () => ({
+  useCircuitDesigns: () => ({ data: [] }),
+  useCircuitInstances: () => ({ data: [] }),
+}));
+
+vi.mock('@/lib/parts/use-bom-shortfalls', () => ({
+  useBomShortfalls: () => ({ data: undefined }),
+  indexShortfallsByPartNumber: () => new Map(),
 }));
 
 vi.mock('@/lib/constants', () => ({

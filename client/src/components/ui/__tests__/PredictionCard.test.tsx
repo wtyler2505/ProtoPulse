@@ -175,6 +175,24 @@ describe('PredictionCard', () => {
     render(<PredictionCard prediction={pred} onAccept={onAccept} onDismiss={onDismiss} />);
     expect(screen.getByTestId(`prediction-confidence-${pred.id}`).textContent).toBe('35%');
   });
+
+  it('shows VERIFIED trust label for very high confidence predictions', () => {
+    const pred = makePrediction({ confidence: 0.95 });
+    render(<PredictionCard prediction={pred} onAccept={onAccept} onDismiss={onDismiss} />);
+    expect(screen.getByTestId(`prediction-trust-${pred.id}`).textContent).toContain('VERIFIED');
+  });
+
+  it('shows ESTIMATED trust label for medium confidence predictions', () => {
+    const pred = makePrediction({ confidence: 0.7 });
+    render(<PredictionCard prediction={pred} onAccept={onAccept} onDismiss={onDismiss} />);
+    expect(screen.getByTestId(`prediction-trust-${pred.id}`).textContent).toContain('ESTIMATED');
+  });
+
+  it('shows UNVERIFIED trust label for low confidence predictions', () => {
+    const pred = makePrediction({ confidence: 0.2 });
+    render(<PredictionCard prediction={pred} onAccept={onAccept} onDismiss={onDismiss} />);
+    expect(screen.getByTestId(`prediction-trust-${pred.id}`).textContent).toContain('UNVERIFIED');
+  });
 });
 
 // ---------------------------------------------------------------------------

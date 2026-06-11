@@ -1,0 +1,49 @@
+{
+  "name": "protopulse-v3-architecture",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "tsc && vite build",
+    "genkit:start": "genkit start -- npm run dev",
+    "compile:check": "tsx scripts/run-v3-compile-check.ts",
+    "agents:dispatch": "tsx scripts/orchestrate-swarm.ts",
+    "agents:dispatch:sample": "tsx scripts/orchestrate-swarm.ts examples/sample-swarm.json",
+    "validate:v3": "tsx scripts/validate-v3-architecture.ts",
+    "validate:real-sample": "tsx scripts/validate-v3-real-sample-project.ts",
+    "test:no-unverified-emit": "tsx scripts/test-v3-no-unverified-emit.ts",
+    "test:swarm-bad-cases": "tsx scripts/test-v3-swarm-bad-cases.ts",
+    "test:openai-dispatch": "tsx scripts/test-v3-openai-dispatch.ts",
+    "test:codex-templates": "tsx scripts/test-v3-codex-templates.ts",
+    "test:firmware-contract": "tsx scripts/test-v3-firmware-contract.ts",
+    "test:pin-ownership": "tsx scripts/test-v3-pin-ownership.ts",
+    "test:tscircuit-render": "tsx scripts/test-v3-tscircuit-render-proof.ts",
+    "test:xyflow-migration": "tsx scripts/test-v3-xyflow-migration.ts",
+    "test:inspection-report-storage": "tsx scripts/test-v3-inspection-report-storage.ts",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@genkit-ai/google-genai": "^1.30.1",
+    "@openai/agents": "^0.11.4",
+    "@tscircuit/core": "^0.0.1255",
+    "@tscircuit/props": "^0.0.534",
+    "drizzle-orm": "^0.45.2",
+    "genkit": "^1.30.1",
+    "openai": "^6.38.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tldraw": "^5.0.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.39",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "drizzle-kit": "^0.31.9",
+    "tsx": "^4.20.5",
+    "typescript": "5.6.3",
+    "vite": "^7.1.9"
+  }
+}

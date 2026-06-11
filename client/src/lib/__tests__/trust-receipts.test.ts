@@ -156,6 +156,34 @@ describe('buildExportTrustReceipt', () => {
     expect(receipt.warnings?.some((warning) => warning.includes('selected circuit only'))).toBe(true);
     expect(receipt.warnings?.some((warning) => warning.includes('Firmware scaffold'))).toBe(true);
   });
+
+  it('returns caution when export formats pass but upstream trust is incomplete', () => {
+    const receipt = buildExportTrustReceipt({
+      selectedCircuitName: 'Main Board',
+      availableCircuitCount: 1,
+      buildProfileCount: 1,
+      exportData: makeExportData({
+        placedPartCount: 4,
+        verifiedExactPartCount: 3,
+        verifiedMechanicalModelCount: 2,
+        redBreadboardHealthCount: 0,
+        estimatedInventoryLineCount: 1,
+      }),
+      validationResults: {
+        gerber: { format: 'gerber', canExport: true, warnings: [], errors: [], suggestions: [] },
+        step: { format: 'step', canExport: true, warnings: [], errors: [], suggestions: [] },
+      },
+    });
+
+    expect(receipt.status).toBe('caution');
+    expect(receipt.label).toBe('Trust warnings');
+    expect(receipt.facts).toContainEqual({ label: 'Exact parts', value: '3 / 4' });
+    expect(receipt.facts).toContainEqual({ label: '3D models', value: '2 / 4' });
+    expect(receipt.facts).toContainEqual({ label: 'Breadboard health', value: 'No red findings' });
+    expect(receipt.warnings?.some((warning) => warning.includes('exact-part verified'))).toBe(true);
+    expect(receipt.warnings?.some((warning) => warning.includes('3D/mechanical'))).toBe(true);
+    expect(receipt.warnings?.some((warning) => warning.includes('estimated or unknown confidence'))).toBe(true);
+  });
 });
 
 describe('buildOrderingTrustReceipt', () => {
@@ -191,6 +219,61 @@ describe('buildOrderingTrustReceipt', () => {
     expect(receipt.status).toBe('caution');
     expect(receipt.label).toBe('Preflight blocked');
     expect(receipt.nextStep).toContain('Resolve the DFM errors');
+  });
+
+  it('blocks ordering trust when fabrication safety precheck has blockers', () => {
+    const receipt = buildOrderingTrustReceipt({
+      compatibleFabCount: 3,
+      dfmResult: {
+        passed: true,
+        fabricator: 'jlcpcb',
+        issues: [],
+        timestamp: Date.now(),
+      },
+      fabricationPrecheck: {
+        format: 'fab-package',
+        passed: false,
+        checks: [
+          {
+            name: 'AI-Generated Circuit Provenance',
+            status: 'fail',
+            message: '1 AI-generated circuit instance still needs exact-part verification before fabrication export.',
+          },
+          {
+            name: 'Verified Mechanical Models',
+            status: 'warn',
+            message: '1 placed part is missing verified mechanical model data; STEP fit checks are incomplete.',
+          },
+        ],
+        blockers: ['1 AI-generated circuit instance still needs exact-part verification before fabrication export.'],
+        warnings: ['1 placed part is missing verified mechanical model data; STEP fit checks are incomplete.'],
+      },
+      quotes: [
+        {
+          fabricator: 'jlcpcb',
+          quantity: 5,
+          unitPrice: 2,
+          totalPrice: 10,
+          setupFee: 0,
+          shippingCost: 5,
+          grandTotal: 15,
+          turnaround: 'standard',
+          turnaroundDays: 3,
+          currency: 'USD',
+          validUntil: Date.now() + 1000,
+          breakdown: [],
+        },
+      ],
+      selectedFabName: 'JLCPCB',
+      totalFabCount: 5,
+    });
+
+    expect(receipt.status).toBe('caution');
+    expect(receipt.label).toBe('Safety blocked');
+    expect(receipt.facts).toContainEqual({ label: 'Fab safety', value: '1 blocker' });
+    expect(receipt.warnings?.some((warning) => warning.includes('Fab safety blocker'))).toBe(true);
+    expect(receipt.warnings?.some((warning) => warning.includes('Fab safety warning'))).toBe(true);
+    expect(receipt.nextStep).toContain('source views');
   });
 
   it('becomes quote-ready after a passed DFM with quotes', () => {

@@ -277,13 +277,24 @@ describe('AI circuit tools: mutation guards reject cross-project circuitId', () 
   it('source contains guardCircuitInProject guards on mutation executors', () => {
     // Structural assertion: every server-side execute that touches
     // ctx.storage with params.circuitId must call the guard first.
+    //
+    // The former monolithic `server/ai-tools/circuit.ts` was refactored
+    // (2026-04-18) into a barrel module that re-exports category submodules
+    // under `server/ai-tools/circuit/*.ts`. The guard helper now lives in
+    // `circuit/shared.ts` and its invocations are spread across the executor
+    // modules (pcb, pcb-autoroute, schematic, pcb-advanced). We enumerate the
+    // whole `circuit/` directory and assert against the combined source so the
+    // intent (guard defined + wired into every mutation executor) survives any
+    // further reorganization of the tools module.
     const fs = require('node:fs') as typeof import('node:fs');
     const path = require('node:path') as typeof import('node:path');
-    const src: string = fs.readFileSync(
-      path.join(__dirname, '..', 'ai-tools', 'circuit.ts'),
-      'utf8',
-    );
-    // Guard function exists
+    const circuitDir = path.join(__dirname, '..', 'ai-tools', 'circuit');
+    const src: string = fs
+      .readdirSync(circuitDir)
+      .filter((f) => f.endsWith('.ts'))
+      .map((f) => fs.readFileSync(path.join(circuitDir, f), 'utf8'))
+      .join('\n');
+    // Guard function exists (defined in circuit/shared.ts)
     expect(src).toMatch(/async function guardCircuitInProject/);
     // At minimum 8 guard invocations — one per executor we audited
     const guardMatches = src.match(/guardCircuitInProject\(params\.circuitId, ctx\)/g) ?? [];

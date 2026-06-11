@@ -51,7 +51,12 @@ vi.mock('@/components/ui/button', () => ({
 }));
 
 vi.mock('@/components/ui/collapsible', () => ({
-  Collapsible: ({ children, ...props }: Record<string, unknown>) => <div {...props}>{children as React.ReactNode}</div>,
+  Collapsible: ({
+    children,
+    open: _open,
+    onOpenChange: _onOpenChange,
+    ...props
+  }: Record<string, unknown>) => <div {...props}>{children as React.ReactNode}</div>,
   CollapsibleTrigger: ({ children }: Record<string, unknown>) => <>{children as React.ReactNode}</>,
   CollapsibleContent: ({ children }: Record<string, unknown>) => <div>{children as React.ReactNode}</div>,
 }));
@@ -77,6 +82,8 @@ const ALTERNATES = [
     manufacturer: 'Yageo',
     mpn: 'RC0402FR-0710KL',
     canonicalCategory: 'resistor',
+    trustLevel: 'library',
+    matchScore: 0.94,
   },
   {
     id: 'alt-2',
@@ -85,6 +92,8 @@ const ALTERNATES = [
     manufacturer: 'Vishay',
     mpn: 'CRCW040210K0FKED',
     canonicalCategory: 'resistor',
+    trustLevel: 'verified',
+    matchScore: 0.78,
   },
 ];
 
@@ -165,9 +174,13 @@ describe('PartAlternatesPanel', () => {
     expect(screen.getByTestId('alternate-title-alt-2').textContent).toBe('Vishay CRCW040210K0FKED');
     expect(screen.getByTestId('substitute-btn-alt-1')).toBeInTheDocument();
     expect(screen.getByTestId('substitute-btn-alt-2')).toBeInTheDocument();
+    expect(screen.getByTestId('alternate-match-alt-1').textContent).toBe('94% match');
+    expect(screen.getByTestId('alternate-trust-alt-1').textContent).toContain('library');
+    expect(screen.getByTestId('alternate-reason-alt-1').textContent).toContain('Strong catalog match');
+    expect(screen.getByTestId('alternate-tradeoff-alt-1').textContent).toContain('trust source is library');
   });
 
-  it('calls substitute mutation when Replace is clicked', () => {
+  it('opens a replacement preview before calling substitute mutation', () => {
     mockUsePartAlternates.mockReturnValue({
       data: ALTERNATES,
       isLoading: false,
@@ -181,10 +194,38 @@ describe('PartAlternatesPanel', () => {
 
     fireEvent.click(screen.getByTestId('substitute-btn-alt-1'));
 
+    expect(screen.getByTestId('replacement-preview')).toBeInTheDocument();
+    expect(screen.getByTestId('replacement-preview-match').textContent).toBe('94% match');
+    expect(screen.getByTestId('replacement-preview-summary').textContent).toContain('Replace 10K Resistor with Yageo');
+    expect(mockMutate).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('replacement-preview-confirm'));
+
     expect(mockMutate).toHaveBeenCalledWith(
       { oldPartId: 'abc', substituteId: 'alt-1', projectId: 1 },
       expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
     );
+  });
+
+  it('cancels a replacement preview without mutating', () => {
+    mockUsePartAlternates.mockReturnValue({
+      data: ALTERNATES,
+      isLoading: false,
+      error: null,
+    });
+
+    render(
+      <PartAlternatesPanel partId="abc" projectId={1} partTitle="10K Resistor" />,
+      { wrapper: createWrapper() },
+    );
+
+    fireEvent.click(screen.getByTestId('substitute-btn-alt-1'));
+    expect(screen.getByTestId('replacement-preview')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('replacement-preview-cancel'));
+
+    expect(screen.queryByTestId('replacement-preview')).not.toBeInTheDocument();
+    expect(mockMutate).not.toHaveBeenCalled();
   });
 
   it('disables buttons when substitution is in progress', () => {

@@ -5,7 +5,7 @@
  * Phase 3. Tracked as part of E2E-552 / Plan 03 Phase 4.
  */
 import { memo, useState, useRef, useEffect } from 'react';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { Handle, Position, type Node, type NodeProps } from '@/lib/xyflow-compat';
 import type { Connector, Shape, TerminalPosition } from '@shared/component-types';
 import PartSymbolRenderer, { computeShapesBounds } from './PartSymbolRenderer';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,7 @@ export interface InstanceNodeData {
   connectors: Connector[];
   schematicShapes: Shape[];
   onRefdesChange?: (newRefdes: string) => void;
-  [key: string]: unknown; // Required by @xyflow/react — all node data types must be indexable
+  [key: string]: unknown; // Required by canvas node contracts — node data types must be indexable
 }
 
 const PIN_SPACING = 20;

@@ -4,6 +4,28 @@
 **If it won't exist next session, write it down now.**
 You are the primary operator of this knowledge system. Not an assistant helping organize knowledge, but the agent who builds, maintains, and traverses a knowledge network.
 
+## Communication With Tyler
+
+- Use simple, clear language in direct chat. Keep wording easy to understand and easy to learn from.
+- Prefer short explanations with concrete steps and plain labels.
+- If technical terms are needed, explain them quickly in normal words.
+- Keep tone supportive and practical; avoid dense or overly abstract wording.
+
+## Warning And Error Policy
+
+- Treat runtime warnings and test warnings as real defects.
+- When a warning or error is discovered, fix it in the same work pass unless Tyler explicitly defers it.
+- Do not close out with "tests passed" while known warnings are still present in that lane.
+
+## UI Container Rule
+
+- Every ProtoPulse panel, box, drawer, modal, inspector, sidebar, floating gate, and window must be reachable by default.
+- Make these surfaces scrollable when content can overflow.
+- Make them resizable when users may need more or less working space.
+- Make them collapsible when they can block the main canvas or workspace.
+- Do not leave clipped controls, hidden bottom buttons, or fixed-height panels that trap content off-screen.
+- Treat missing scroll, resize, or collapse behavior as a UX defect, not optional polish.
+
 ## Discovery-First Design
 **Every note you create must be findable by a future agent who doesn't know it exists.**
 1. **Title as claim** — Does the title work as prose when linked?
@@ -108,6 +130,71 @@ Permission denied on built-in?
   → Switch to MCP equivalent. Don't retry. Don't ask.
 ```
 
+## Working With Codex (Claude-side rules)
+
+> **Symmetric:** `~/.codex/AGENTS.md` has the matching "Working With Claude" section.
+> **Full protocol:** `~/.claude/skills/claude-codex-routing/SKILL.md` v2.0.0.
+> **Validated:** 2026-05-10 via 4-round Claude×Codex collab self-improvement campaign.
+
+### Routing (compact)
+
+| To CODEX | To CLAUDE | To BOTH (adversarial review) |
+|---|---|---|
+| Bulk file ops, CI/CD, build/test/lint, headless E2E, schema output, refactors | Research, browser automation, copywriting, multi-AI orchestration, memory persistence | Architecture, design, complex bugs, multi-decision packets |
+
+### Channel naming (HARD RULE)
+
+| File family | Use |
+|---|---|
+| `CODEX_HANDOFF.md` / `CODEX_DONE.md` | Single-task ad-hoc (one round) |
+| `COLLAB_HANDOFF_R<N>.md` / `COLLAB_RESPONSE_R<N>.md` | Multi-round campaigns |
+
+**Pre-flight:** if `CODEX_HANDOFF.md` mid-flight, use `COLLAB_*` (avoids context-clobber; validated 2026-05-10 Tauri R6 collision).
+
+### Lane Reservation header (every handoff opens with)
+
+```
+## Lane Reservation
+- Active channels: [...]
+- Claimed files: [paths I will edit]
+- Forbidden files: [paths the other side claimed]
+- Background sessions: [...]
+- Round type: discovery | proposal | review-only | implement
+- Target file edits permitted this round: [yes | no | listed-only]
+- Agent cap status: N/6 active (source: lane header / visible process list / named log)
+```
+
+### Convergence block (every handoff/response ends with)
+
+The `---` lines are visible delimiters, NOT YAML frontmatter:
+
+```
+---
+ROUND_STATUS: discovery-complete | proposed | needs-revision | ratified | blocked
+OPEN_CRITIQUES: none | [list]
+SIGNOFF: Claude | Codex | both
+OWNERSHIP: [next-action-owner]
+NEXT_ROUND: [what happens next]
+---
+```
+
+Round closes on `SIGNOFF: both` AND `OPEN_CRITIQUES: none`. No vibes-based convergence.
+
+### Hard-rule pointers (memory notes)
+
+| Rule | Memory note |
+|---|---|
+| Adversarial review for architecture (multi-round, never one-shot) | `feedback_codex_bidirectional_iteration.md` |
+| Bulk-mechanical / test-verify → Codex | `feedback_codex_peer_pattern.md` |
+| Claude orchestrates, Tyler doesn't dispatch | `feedback_drive_codex_dont_handoff_to_tyler.md` |
+| Peer-decide multi-decision packets | `feedback_dont_compile_decision_packets_for_tyler.md` |
+| Codex Context7 broken (probe + fall back to WebSearch/WebFetch) | `feedback_codex_context7_broken.md` |
+| Cap = 6 (Claude subagents + Codex sessions + builds) | `feedback_agent_count_cap.md` |
+| Codex owns PP-NLM; Claude owns development (ProtoPulse-only) | `feedback_jurisdiction_codex_owns_nlm.md` |
+| Newest user instruction overrides prior decisions | `claude-codex-routing/SKILL.md` §Newest user instruction wins |
+
+Backlog queue when at cap: `docs/MASTER_BACKLOG.md:40-55` (the active backlog/handoff).
+
 ## Pipeline Compliance
 **NEVER write directly to knowledge/.** All content routes through the pipeline: inbox/ → /extract → knowledge/. 
 If you find yourself creating a file in knowledge/ without having run /extract, STOP. Route through inbox/ first.
@@ -163,3 +250,17 @@ ProtoPulse's evolving knowledge is consolidated (2026-05-09) into **2 active hub
 When friction occurs:
 1. Use /remember to capture it as an observation in ops/observations/
 2. If the same friction occurs 3+ times, propose updating this context file.
+
+
+
+# UICanvas Usage Rules
+When visual UI design/mockup is requested:
+1. ALWAYS call `open_canvas` first to open the live preview panel.
+2. Call `init_project` to establish design specs (colors/fonts) before page creation.
+3. Call `create_artboard` to create the page.
+4. Call `write_html` to render HTML/CSS.
+NEVER create local .html files for UI design.
+
+## Project Reference
+**STOP. Before broad repo orientation or "current state" claims:**
+→ Read `.ref/project-dna.md` for project navigation context. Read `.ref/project-map.md` for structural details.

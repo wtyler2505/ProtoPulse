@@ -9,6 +9,7 @@ import {
   BB,
   checkCollision,
   coordToPixel,
+  type BreadboardCoord,
   type ColumnLetter,
   type ComponentPlacement,
   type PixelPos,
@@ -16,6 +17,10 @@ import {
 } from '@/lib/circuit-editor/breadboard-model';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
 import type { PartMeta } from '@shared/component-types';
+import {
+  getBreadboardInstancePlacement,
+  type BreadboardInstanceProvenance,
+} from '@/lib/breadboard-instance-provenance';
 
 // ---------------------------------------------------------------------------
 // Types (canvas-local)
@@ -35,6 +40,132 @@ export interface AutoPlacementPlan {
   id: number;
   breadboardX: number;
   breadboardY: number;
+}
+
+type CanvasDropProvenance = Extract<BreadboardInstanceProvenance, 'project' | 'starter'>;
+
+export interface BreadboardCanvasDropProperties extends Record<string, string> {
+  breadboardProvenance: CanvasDropProvenance;
+  label: string;
+  type: string;
+}
+
+export type BreadboardCanvasInstanceDraft = {
+  circuitId: number;
+  partId: number | null;
+  referenceDesignator: string;
+  properties: BreadboardCanvasDropProperties;
+} & (
+  | { benchX: number; benchY: number }
+  | { breadboardX: number; breadboardY: number }
+);
+
+interface BuildProjectDropInstanceDraftInput {
+  circuitId: number;
+  partId: number;
+  referenceDesignator: string;
+  label: string;
+  type: string;
+  placementMode: 'bench' | 'board';
+  pixel: PixelPos;
+}
+
+interface BuildStarterDropInstanceDraftInput {
+  circuitId: number;
+  referenceDesignator: string;
+  label: string;
+  type: string;
+  pixel: PixelPos;
+}
+
+interface ResolveBoardDropPlacementInput {
+  coord: BreadboardCoord | null | undefined;
+  type: string;
+  pinCount: number;
+  existingPlacements: ComponentPlacement[];
+}
+
+export interface BoardDropPlacementResolution {
+  placement: ComponentPlacement;
+  snapPx: PixelPos;
+}
+
+interface DragTypeList {
+  includes(type: string): boolean;
+}
+
+interface DragDataReader {
+  getData(type: string): string;
+}
+
+export interface BreadboardDropMimeTypes {
+  projectPart: string;
+  starterType: string;
+  starterLabel: string;
+}
+
+export interface BreadboardProjectPartDropData {
+  partId: number;
+}
+
+export interface BreadboardStarterDropData {
+  nodeType: string;
+  label: string;
+}
+
+// ---------------------------------------------------------------------------
+// Drag payload parsing
+// ---------------------------------------------------------------------------
+
+export function hasBreadboardDropPayloadType(
+  types: DragTypeList,
+  mimeTypes: Pick<BreadboardDropMimeTypes, 'projectPart' | 'starterType'>,
+): boolean {
+  return types.includes(mimeTypes.projectPart) || types.includes(mimeTypes.starterType);
+}
+
+export function readProjectPartDropData(
+  dataTransfer: DragDataReader,
+  mimeType: string,
+): BreadboardProjectPartDropData | null {
+  const raw = dataTransfer.getData(mimeType);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as { partId?: unknown };
+    return typeof parsed.partId === 'number' && Number.isFinite(parsed.partId)
+      ? { partId: parsed.partId }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function readStarterDropData(
+  dataTransfer: DragDataReader,
+  mimeTypes: Pick<BreadboardDropMimeTypes, 'starterType' | 'starterLabel'>,
+): BreadboardStarterDropData | null {
+  const nodeType = dataTransfer.getData(mimeTypes.starterType);
+  if (!nodeType) {
+    return null;
+  }
+
+  return {
+    nodeType,
+    label: dataTransfer.getData(mimeTypes.starterLabel),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Instance classification
+// ---------------------------------------------------------------------------
+
+export function getCanvasBenchInstances(
+  instances: CircuitInstanceRow[] | undefined | null,
+): CircuitInstanceRow[] {
+  return (instances ?? []).filter((instance) => getBreadboardInstancePlacement(instance) === 'bench');
 }
 
 // ---------------------------------------------------------------------------
@@ -108,6 +239,31 @@ export function buildPlacementForDrop(
   };
 }
 
+export function resolveBoardDropPlacement({
+  coord,
+  type,
+  pinCount,
+  existingPlacements,
+}: ResolveBoardDropPlacementInput): BoardDropPlacementResolution | null {
+  if (!coord || coord.type !== 'terminal') {
+    return null;
+  }
+
+  const placement = buildPlacementForDrop(coord, type, pinCount);
+  if (checkCollision(placement, existingPlacements)) {
+    return null;
+  }
+
+  return {
+    placement,
+    snapPx: coordToPixel({
+      type: 'terminal',
+      col: placement.startCol,
+      row: placement.startRow,
+    }),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Part → drop-type resolution
 // (Moved here from BreadboardView.tsx to break the circular import.)
@@ -120,6 +276,66 @@ export function getDropTypeFromPart(
   const meta = (part?.meta ?? {}) as Partial<PartMeta> & Record<string, unknown>;
   const candidate = meta.type ?? meta.family ?? fallbackType;
   return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate : fallbackType;
+}
+
+// ---------------------------------------------------------------------------
+// Drop mutation draft building
+// ---------------------------------------------------------------------------
+
+export function buildProjectDropInstanceDraft({
+  circuitId,
+  partId,
+  referenceDesignator,
+  label,
+  type,
+  placementMode,
+  pixel,
+}: BuildProjectDropInstanceDraftInput): BreadboardCanvasInstanceDraft {
+  const base = {
+    circuitId,
+    partId,
+    referenceDesignator,
+    properties: {
+      breadboardProvenance: 'project',
+      label,
+      type,
+    },
+  } satisfies Omit<BreadboardCanvasInstanceDraft, 'benchX' | 'benchY' | 'breadboardX' | 'breadboardY'>;
+
+  if (placementMode === 'bench') {
+    return {
+      ...base,
+      benchX: pixel.x,
+      benchY: pixel.y,
+    };
+  }
+
+  return {
+    ...base,
+    breadboardX: pixel.x,
+    breadboardY: pixel.y,
+  };
+}
+
+export function buildStarterDropInstanceDraft({
+  circuitId,
+  referenceDesignator,
+  label,
+  type,
+  pixel,
+}: BuildStarterDropInstanceDraftInput): BreadboardCanvasInstanceDraft {
+  return {
+    circuitId,
+    partId: null,
+    referenceDesignator,
+    breadboardX: pixel.x,
+    breadboardY: pixel.y,
+    properties: {
+      breadboardProvenance: 'starter',
+      type,
+      label: label || type,
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------

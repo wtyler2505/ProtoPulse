@@ -15,6 +15,7 @@ import { shapesInMarquee } from './HitTester';
 import { buildDragOrigins, computeDragMove } from './DragManager';
 import { pathDToNodes, nodesToPathD, simplifyPath, computeNodesBounds, computePathPointsBounds, pathPointsToNodes, toggleNodeType } from './PathEditor';
 import type { PathNode, PathPoint } from './PathEditor';
+import { NumberInput } from '@/components/ui/number-input';
 
 const SEL = '#00F0FF';
 
@@ -580,7 +581,7 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
 
   // --- Toolbar ---
   const toolbar = useMemo(() => (
-    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card" data-testid="canvas-toolbar" role="toolbar" aria-label="Drawing tools">
+    <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-card px-2 py-1" data-testid="canvas-toolbar" role="toolbar" aria-label="Drawing tools">
       {TOOLS.map((t) => (
         <button key={t.id} data-testid={`tool-${t.id}`} title={`${t.label} (${t.shortcut})`}
           aria-label={`${t.label} (${t.shortcut})`} aria-pressed={activeTool === t.id}
@@ -639,13 +640,13 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
           </label>
           <label className="flex items-center gap-1 text-xs text-muted-foreground ml-1" title="Reference image X offset">
             <span>X</span>
-            <input data-testid="ref-image-x" type="number" value={Math.round(refImage.x)}
+            <NumberInput data-testid="ref-image-x" min={-10000} max={10000} value={Math.round(refImage.x)}
               className="w-14 h-5 text-xs bg-background border border-border rounded px-1"
               onChange={(e) => setRefImage({ ...refImage, x: parseFloat(e.target.value) || 0 })} />
           </label>
           <label className="flex items-center gap-1 text-xs text-muted-foreground" title="Reference image Y offset">
             <span>Y</span>
-            <input data-testid="ref-image-y" type="number" value={Math.round(refImage.y)}
+            <NumberInput data-testid="ref-image-y" min={-10000} max={10000} value={Math.round(refImage.y)}
               className="w-14 h-5 text-xs bg-background border border-border rounded px-1"
               onChange={(e) => setRefImage({ ...refImage, y: parseFloat(e.target.value) || 0 })} />
           </label>
@@ -681,9 +682,9 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
 
   // --- Render ---
   return (
-    <div className="flex flex-col flex-1 h-full relative" data-testid="shape-canvas-container">
+    <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden" data-testid="shape-canvas-container">
       {toolbar}
-      <svg ref={svgRef} data-testid="shape-canvas-svg" className="flex-1 w-full"
+      <svg ref={svgRef} data-testid="shape-canvas-svg" className="min-h-0 w-full flex-1"
         role="application" aria-label={`Component editor canvas - ${view} view`} aria-roledescription="drawing canvas" tabIndex={0}
         style={{ background: '#0a0a0a', cursor: isPanning || spaceHeld ? 'grabbing' : isCalibrating ? 'crosshair' : activeTool === 'select' ? 'default' : 'crosshair' }}
         onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove}

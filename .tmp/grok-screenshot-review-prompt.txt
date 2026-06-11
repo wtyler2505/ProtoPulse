@@ -1,0 +1,1 @@
+Read GROK_SCREENSHOT_REVIEW_HANDOFF.md. Review only. Do not edit files. Do not start subagents. Return only compact JSON with keys: status, summary, blockers, risks, recommended_immediate_changes, full_run_go_no_go, notes_for_backlog_report_enrichment.

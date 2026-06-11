@@ -18,15 +18,15 @@ function UsageRow({ row }: { row: UsageBrowseRow }) {
         <button
           type="button"
           data-testid={`usage-row-${row.part.id}`}
-          className="w-full flex items-center justify-between gap-3 rounded-md border border-border/40 bg-muted/30 px-3 py-2.5 text-left hover:bg-accent/50 transition-colors"
+          className="flex w-full items-center justify-between gap-3 rounded-md border border-border/40 bg-muted/30 px-3 py-2.5 text-left transition-colors hover:bg-accent/50"
         >
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {expanded ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
             <div className="min-w-0">
-              <span className="text-sm font-medium text-foreground truncate block">{row.part.title}</span>
-              <div className="flex items-center gap-2 mt-0.5">
+              <span className="block truncate text-sm font-medium text-foreground">{row.part.title}</span>
+              <div className="mt-1 flex items-center gap-2.5">
                 {row.part.mpn && (
-                  <span className="text-xs text-muted-foreground font-mono">{row.part.mpn}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{row.part.mpn}</span>
                 )}
                 {row.part.manufacturer && (
                   <span className="text-xs text-muted-foreground">{row.part.manufacturer}</span>
@@ -34,17 +34,17 @@ function UsageRow({ row }: { row: UsageBrowseRow }) {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Badge variant="secondary" data-testid={`usage-projects-${row.part.id}`}>
+          <div className="flex shrink-0 items-center gap-2">
+            <Badge variant="secondary" className="h-5 text-[11px]" data-testid={`usage-projects-${row.part.id}`}>
               {row.projectCount} {row.projectCount === 1 ? 'project' : 'projects'}
             </Badge>
             {row.totalQuantityNeeded > 0 && (
-              <Badge variant="outline" className="text-[10px]" data-testid={`usage-qty-${row.part.id}`}>
+              <Badge variant="outline" className="h-5 text-[11px]" data-testid={`usage-qty-${row.part.id}`}>
                 {row.totalQuantityNeeded} needed
               </Badge>
             )}
             {row.totalPlacements > 0 && (
-              <Badge variant="outline" className="text-[10px]" data-testid={`usage-placements-${row.part.id}`}>
+              <Badge variant="outline" className="h-5 text-[11px]" data-testid={`usage-placements-${row.part.id}`}>
                 {row.totalPlacements} placed
               </Badge>
             )}
@@ -52,7 +52,7 @@ function UsageRow({ row }: { row: UsageBrowseRow }) {
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="ml-6 mt-1 space-y-1 mb-2">
+        <div className="mb-2.5 ml-6 mt-1.5 space-y-1.5">
           {isLoading ? (
             <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -63,21 +63,21 @@ function UsageRow({ row }: { row: UsageBrowseRow }) {
               <div
                 key={proj.projectId}
                 data-testid={`usage-project-${row.part.id}-${proj.projectId}`}
-                className="flex items-center justify-between rounded-md border border-border/20 bg-background/50 px-3 py-1.5"
+                className="flex items-center justify-between rounded-md border border-border/20 bg-background/50 px-3 py-2"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <FolderOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <span className="text-sm text-foreground">{proj.projectName}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground">
                     Need {proj.stockQuantityNeeded}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground">
                     Have {proj.stockQuantityOnHand ?? '—'}
                   </span>
                   {proj.placementCount > 0 && (
-                    <Badge variant="outline" className="text-[10px]">{proj.placementCount} placed</Badge>
+                    <Badge variant="outline" className="h-5 text-[11px]">{proj.placementCount} placed</Badge>
                   )}
                 </div>
               </div>
@@ -121,16 +121,16 @@ export default function PartUsageBrowserView() {
   )).size;
 
   return (
-    <Card data-testid="usage-browser" className="h-full flex flex-col">
-      <CardHeader className="pb-2 shrink-0">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <BarChart3 className="h-4 w-4" />
+    <Card data-testid="usage-browser" className="flex h-full flex-col">
+      <CardHeader className="shrink-0 pb-2 pt-3">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <BarChart3 className="h-3.5 w-3.5" />
           Cross-Project Usage
-          <Badge variant="secondary" data-testid="usage-browser-count">
+          <Badge variant="secondary" className="h-5 text-[11px]" data-testid="usage-browser-count">
             {rows.length} {rows.length === 1 ? 'part' : 'parts'} in use
           </Badge>
         </CardTitle>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="mt-1 text-xs text-muted-foreground">
           Parts used across multiple projects, sorted by usage count. Expand for per-project breakdown.
         </p>
       </CardHeader>

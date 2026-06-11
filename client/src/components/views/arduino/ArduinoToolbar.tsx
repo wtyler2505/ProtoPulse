@@ -90,20 +90,20 @@ export default function ArduinoToolbar({
       {/* Tool Header */}
       <div className="flex items-center justify-between border-b border-border bg-card/50 px-4 py-2 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="bg-primary/10 p-1.5 rounded-md">
-            <FileCode className="w-4 h-4 text-primary" />
+          <div className="bg-primary/10 p-1 rounded-md">
+            <FileCode className="w-3.5 h-3.5 text-primary" />
           </div>
           <div>
             <h2 className="text-sm font-bold text-foreground">Arduino Workbench</h2>
             <div className="flex items-center gap-2">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">Firmware Development</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-medium">Firmware Development</p>
               {isHealthLoading ? (
-                <Badge variant="outline" className="h-3.5 px-1.5 text-[8px]"><Loader2 className="w-2 h-2 animate-spin" /></Badge>
+                <Badge variant="outline" className="h-4 px-1.5 text-[10px]"><Loader2 className="w-2.5 h-2.5 animate-spin" /></Badge>
               ) : health?.status === 'ok' ? (
-                <Badge variant="outline" className="h-3.5 px-1.5 text-[8px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5">CLI v{health.version}</Badge>
+                <Badge variant="outline" className="h-4 px-1.5 text-[10px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5">CLI v{health.version}</Badge>
               ) : (
-                <Badge variant="outline" className="h-3.5 px-1.5 text-[8px] border-destructive/20 text-destructive bg-destructive/5 gap-1">
-                  <AlertCircle className="w-2 h-2" />CLI Disconnected
+                <Badge variant="outline" className="h-4 px-1.5 text-[10px] border-destructive/20 text-destructive bg-destructive/5 gap-1">
+                  <AlertCircle className="w-2.5 h-2.5" />CLI Disconnected
                 </Badge>
               )}
             </div>
@@ -112,8 +112,12 @@ export default function ArduinoToolbar({
 
         <div className="flex items-center gap-2">
           <Select value={selectedProfileId} onValueChange={onProfileChange}>
-            <SelectTrigger className="h-8 w-44 text-[11px] bg-background/50 border-border/50">
-              <Cpu className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+            <SelectTrigger
+              className="h-8.5 w-48 text-xs bg-background/50 border-border/50"
+              aria-label="Select Arduino build profile"
+              data-testid="select-arduino-profile"
+            >
+            <Cpu className="w-3.5 h-3.5 mr-1.5 shrink-0" />
               <SelectValue placeholder="Select Profile" />
             </SelectTrigger>
             <SelectContent>
@@ -129,7 +133,7 @@ export default function ArduinoToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 text-muted-foreground hover:text-foreground"
+            className="h-8.5 px-2 text-muted-foreground hover:text-foreground"
             disabled={!selectedProfile}
             onClick={onEditProfile}
             title="Edit Profile & Port"
@@ -142,7 +146,7 @@ export default function ArduinoToolbar({
           <Button
             variant="outline"
             size="sm"
-            className="h-8 px-2 text-muted-foreground hover:text-foreground border-border/50"
+            className="h-8.5 px-2 text-muted-foreground hover:text-foreground border-border/50"
             onClick={onSave}
             disabled={!activeFilePath || isSaving || !isDirty}
             title="Save (Ctrl+S)"
@@ -154,7 +158,7 @@ export default function ArduinoToolbar({
           <Button
             variant="outline"
             size="sm"
-            className="h-8 px-2 text-muted-foreground hover:text-foreground border-border/50"
+            className="h-8.5 px-2 text-muted-foreground hover:text-foreground border-border/50"
             onClick={onFormat}
             disabled={!activeFilePath || !code}
             title="Format Code (Ctrl+T)"
@@ -166,7 +170,7 @@ export default function ArduinoToolbar({
           <div className="inline-flex items-center gap-1">
             <Button
               size="sm"
-              className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20"
+              className="h-8.5 gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20"
               disabled={!workspace || !!activeJob || !selectedProfile}
               onClick={onCompile}
               data-testid="button-arduino-compile"
@@ -184,7 +188,7 @@ export default function ArduinoToolbar({
 
           <Button
             size="sm"
-            className="h-8 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
+            className="h-8.5 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
             disabled={!workspace || !!activeJob || !selectedProfile || Boolean(uploadBlockedReason)}
             onClick={onUpload}
             data-testid="button-arduino-upload"
@@ -199,7 +203,7 @@ export default function ArduinoToolbar({
             <Button
               variant="destructive"
               size="sm"
-              className="h-8 gap-1.5"
+              className="h-8.5 gap-1.5"
               onClick={onCancelJob}
               data-testid="button-arduino-cancel-job"
             >
@@ -213,7 +217,7 @@ export default function ArduinoToolbar({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5 border-border/50 text-muted-foreground hover:text-foreground"
+              className="h-8.5 gap-1.5 border-border/50 text-muted-foreground hover:text-foreground"
               onClick={() => onDownloadArtifact(lastCompletedCompile.id)}
               data-testid="button-arduino-download-binary"
             >

@@ -1,0 +1,38 @@
+{
+  "project_name": "ProtoPulse",
+  "tech_stack": "React 19.2.0 + TypeScript + Express 5 + Drizzle ORM + PostgreSQL + Vite + Tailwind + Vitest + OpenAI/Gemini + Tauri (Desktop) + extensive custom EDA tooling (schematic, PCB, breadboard, 3D, simulation, inventory, procurement)",
+  "domain": "EDA / Electronics Prototyping Platform (breadboard, schematic, PCB, 3D, simulation, digital twin, inventory, procurement)",
+  "project_root": "/home/wtyler/Projects/ProtoPulse",
+  "key_files": [
+    "client/src/App.tsx",
+    "client/src/pages/workspace/ViewRenderer.tsx",
+    "client/src/components/views/PCBLayoutView.tsx",
+    "client/src/components/views/BreadboardView.tsx",
+    "client/src/components/views/SchematicView.tsx",
+    "client/src/lib/board-viewer-3d.ts",
+    "server/src/routes.ts",
+    "package.json",
+    "CLAUDE.md",
+    "docs/MASTER_BACKLOG.md"
+  ],
+  "competitors": [
+    "KiCad",
+    "Altium Designer",
+    "EasyEDA",
+    "Fritzing",
+    "Eagle",
+    "OrCAD",
+    "Flux.ai"
+  ],
+  "personas": [
+    "Hobbyist maker",
+    "Professional electrical engineer",
+    "Hardware startup founder"
+  ],
+  "date": "2026-05-18",
+  "baseline": {
+    "loc": 1425440,
+    "files": 6318,
+    "languages": "Markdown, TypeScript, JSON, Shell, JavaScript, Plain Text, YAML, CSS, Python, TOML, HTML, SQL, Rust, SVG"
+  }
+}

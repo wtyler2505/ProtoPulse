@@ -3,7 +3,6 @@
  * paste bundles (from internal ref or system clipboard).
  */
 import { useCallback, useRef } from 'react';
-import type { ReactFlowInstance, Node } from '@xyflow/react';
 import { generateRefDes } from '@/lib/circuit-editor/ref-des';
 import type { InstanceNodeData } from '../SchematicInstanceNode';
 import type { PowerNodeData } from '../SchematicPowerNode';
@@ -18,6 +17,7 @@ import type {
 } from './converters';
 import type { CreateInstanceMutation, UpdateDesignMutation, CreateNetMutation, ToastFn } from './types';
 import { logger } from '@/lib/logger';
+import type { SchematicFlowLike, SchematicNode } from './flow-types';
 
 // ---------------------------------------------------------------------------
 // Mutation ref types — uses proper types derived from actual hooks
@@ -37,8 +37,8 @@ interface UseClipboardParams {
   nets: CircuitNetRow[] | undefined;
   partsMap: Map<number, ComponentPart>;
   settings: CircuitSettings;
-  localNodes: Node[];
-  reactFlowInstance: ReactFlowInstance;
+  localNodes: SchematicNode[];
+  reactFlowInstance: SchematicFlowLike;
   mutationRefs: MutationRefs;
 }
 

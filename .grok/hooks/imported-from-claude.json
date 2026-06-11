@@ -1,0 +1,392 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/hardware-enforcement.sh"
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit|replace"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run file-guard"
+          }
+        ],
+        "matcher": "Read|Edit|MultiEdit|Write|Bash"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/protected-files.sh"
+          }
+        ],
+        "matcher": "Edit|Write|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/file-freshness.sh"
+          }
+        ],
+        "matcher": "Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/dangerous-bash-guard.sh",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/enforce-test-background.sh",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/auto-create-parent-moc.sh"
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run lint-changed"
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_OPTIONS='--max-old-space-size=16384' claudekit-hooks run typecheck-changed",
+            "timeout": 600
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run check-any-changed"
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run test-changed",
+            "timeout": 180
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run check-comment-replacement"
+          }
+        ],
+        "matcher": "Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run check-unused-parameters"
+          }
+        ],
+        "matcher": "Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run codebase-map-update"
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/context-budget.sh"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/read-tsc-errors.sh"
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/validate-note.sh"
+          }
+        ],
+        "matcher": "Write"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/auto-commit-vault.sh"
+          }
+        ],
+        "matcher": "Write"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/schema-change-verifier.sh"
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/never-idle-while-waiting.sh",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Bash|Agent"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/pp-nlm-commit-to-journal.sh",
+            "timeout": 8000
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/wrap-claudekit-stop.sh lint-project"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/wrap-claudekit-stop.sh test-project"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/wrap-claudekit-stop.sh check-todos"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/smart-stop-gate.sh",
+            "timeout": 10
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run create-checkpoint"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/.claude/scripts/auto-push-protopulse.sh --session-end &",
+            "timeout": 60
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/session-capture.sh"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/pp-nlm-stop-draft-recap.sh",
+            "timeout": 10000
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/inject-subagent-context.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/smart-stop-gate.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "TeammateIdle": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/smart-stop-gate.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/pre-compact-checkpoint.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/post-compact-memory-trim.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/check-hook-deps.sh"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/start-tsc-watch.sh"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/session-orient.sh"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/pp-nlm-session-start.sh",
+            "timeout": 8000
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run codebase-map"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run thinking-level"
+          }
+        ],
+        "matcher": "*"
+      }
+    ]
+  }
+}

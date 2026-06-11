@@ -1,4 +1,18 @@
-import { Ban, Bot, CircleHelp, Lightbulb, MapPin, PackageCheck, ShieldCheck, Sparkles, Wand2 } from 'lucide-react';
+import { useState } from 'react';
+import {
+  Ban,
+  Bot,
+  Box,
+  CircleHelp,
+  Lightbulb,
+  MapPin,
+  PackageCheck,
+  PanelRightClose,
+  PanelRightOpen,
+  ShieldCheck,
+  Sparkles,
+  Wand2,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -45,6 +59,7 @@ interface BreadboardPartInspectorProps {
   onSelectionAiAction: (actionId: BreadboardSelectionActionId) => void;
   onToggleCoachPlan: () => void;
   onValueChange: (value: number | string) => void;
+  onViewIn3D?: () => void;
 }
 
 function fitBadgeClass(fit: BreadboardSelectedPartModel['fit']): string {
@@ -313,7 +328,9 @@ export default function BreadboardPartInspector({
   onSelectionAiAction,
   onToggleCoachPlan,
   onValueChange,
+  onViewIn3D,
 }: BreadboardPartInspectorProps) {
+  const [collapsed, setCollapsed] = useState(false);
   const pendingCoachActionCount = coachActions.filter((action) => action.status === 'pending').length;
   const canReviewCoachPlan = coachActions.length > 0;
   const coachPlanToggleLabel = coachPlanVisible
@@ -325,7 +342,10 @@ export default function BreadboardPartInspector({
   return (
     <aside
       data-testid="breadboard-part-inspector"
-      className="absolute right-3 top-3 z-20 flex w-[330px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-[24px] border border-border/70 bg-[linear-gradient(180deg,rgba(10,13,19,0.98),rgba(6,8,12,0.98))] shadow-[0_28px_120px_rgba(0,0,0,0.44)] backdrop-blur-xl"
+      data-collapsed={collapsed ? 'true' : 'false'}
+      data-resize-axis="both"
+      data-resizable="true"
+      className="absolute right-3 top-3 z-20 flex max-h-[min(34rem,calc(100dvh-21rem))] min-h-[4rem] min-w-[280px] w-[330px] max-w-[min(460px,calc(100vw-1.5rem))] resize flex-col overflow-hidden rounded-[24px] border border-border/70 bg-[linear-gradient(180deg,rgba(10,13,19,0.98),rgba(6,8,12,0.98))] shadow-[0_28px_120px_rgba(0,0,0,0.44)] backdrop-blur-xl"
     >
       <div className="border-b border-border/60 p-4">
         <div className="flex items-start justify-between gap-3">
@@ -346,9 +366,28 @@ export default function BreadboardPartInspector({
               {model.manufacturer ?? 'Unknown maker'}{model.mpn ? ` · ${model.mpn}` : ''}
             </p>
           </div>
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
-            <PackageCheck className="h-4.5 w-4.5" />
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground"
+              aria-expanded={!collapsed}
+              aria-label={collapsed ? 'Expand bench inspector' : 'Collapse bench inspector'}
+              title={collapsed ? 'Expand inspector' : 'Collapse inspector'}
+              data-testid="breadboard-part-inspector-toggle"
+              onClick={() => setCollapsed((value) => !value)}
+            >
+              {collapsed ? (
+                <PanelRightOpen className="h-4 w-4" />
+              ) : (
+                <PanelRightClose className="h-4 w-4" />
+              )}
+            </Button>
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+              <PackageCheck className="h-4.5 w-4.5" />
+            </span>
+          </div>
         </div>
 
         <div className="mt-3 flex flex-wrap gap-2">
@@ -378,16 +417,35 @@ export default function BreadboardPartInspector({
           </Badge>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <StatCard label="On hand" value={String(model.ownedQuantity)} />
-          <StatCard label="Missing" value={String(model.missingQuantity)} />
-          <StatCard label="Need" value={String(model.requiredQuantity)} />
-          <StatCard label="Bench state" value={model.readyNow ? 'Ready now' : 'Needs parts'} />
-        </div>
+        {onViewIn3D && (
+          <div className="mt-3">
+            <Button
+              data-testid="breadboard-view-in-3d"
+              variant="outline"
+              size="sm"
+              className="h-7 w-full text-[11px]"
+              onClick={onViewIn3D}
+              title="Open this placement in the 3D View for mechanical fit and wiring guides"
+            >
+              <Box className="mr-1.5 h-3.5 w-3.5" />
+              View in 3D
+            </Button>
+          </div>
+        )}
+
+        {!collapsed && (
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <StatCard label="On hand" value={String(model.ownedQuantity)} />
+            <StatCard label="Missing" value={String(model.missingQuantity)} />
+            <StatCard label="Need" value={String(model.requiredQuantity)} />
+            <StatCard label="Bench state" value={model.readyNow ? 'Ready now' : 'Needs parts'} />
+          </div>
+        )}
       </div>
 
-      <ScrollArea className="max-h-[calc(100vh-14rem)]">
-        <div className="space-y-4 p-4">
+      {!collapsed && (
+        <ScrollArea className="min-h-0 flex-1" data-testid="breadboard-part-inspector-body">
+          <div className="space-y-4 p-4">
           <section className="rounded-2xl border border-border/60 bg-background/45 p-3" data-testid="breadboard-part-inspector-trust">
             <div className="flex items-start gap-2">
               <Sparkles className="mt-0.5 h-4 w-4 text-primary" />
@@ -829,8 +887,9 @@ export default function BreadboardPartInspector({
               </Button>
             </div>
           </section>
-        </div>
-      </ScrollArea>
+          </div>
+        </ScrollArea>
+      )}
     </aside>
   );
 }

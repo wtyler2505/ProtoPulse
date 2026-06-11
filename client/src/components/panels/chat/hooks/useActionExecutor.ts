@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import {
   useArchitecture,
   useArduino,
@@ -14,6 +14,7 @@ import { ACTION_LABELS } from '../constants';
 import type { AIAction } from '../chat-types';
 import { ACTION_HANDLERS } from './action-handlers';
 import type { ActionContext, ActionState } from './action-handlers';
+import { useProjectId } from '@/lib/contexts/project-id-context';
 
 /**
  * Hook that returns a function to execute AI-generated actions against the
@@ -29,6 +30,7 @@ import type { ActionContext, ActionState } from './action-handlers';
  * mutations.
  */
 export function useActionExecutor(): (actions: AIAction[]) => string[] {
+  const projectId = useProjectId();
   const {
     setNodes, setEdges, nodes, edges, pushUndoState, undo, redo,
   } = useArchitecture();
@@ -47,8 +49,8 @@ export function useActionExecutor(): (actions: AIAction[]) => string[] {
 
     // ---- Local mutable accumulators ----
     const state: ActionState = {
-      currentNodes: [...nodes] as Node[],
-      currentEdges: [...edges] as Edge[],
+      currentNodes: [...nodes] as GraphNode[],
+      currentEdges: [...edges] as GraphEdge[],
       currentBom: [...bom] as BomItem[],
       currentIssues: [...issues],
       nodesDirty: false,
@@ -58,6 +60,7 @@ export function useActionExecutor(): (actions: AIAction[]) => string[] {
     // ---- Build context object passed to every handler ----
     const ctx: ActionContext = {
       state,
+      projectId,
       setActiveView,
       arch: { setActiveView, undo, redo },
       bom: { addBomItem, deleteBomItem, updateBomItem },

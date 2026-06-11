@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useArduino } from '@/lib/contexts/arduino-context';
+import { useToast } from '@/hooks/use-toast';
 import {
   useWebSerial,
   COMMON_BAUD_RATES,
@@ -36,7 +37,6 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import TrustReceiptCard from '@/components/ui/TrustReceiptCard';
 import {
   Zap,
@@ -62,6 +62,13 @@ import {
   Loader2,
 } from 'lucide-react';
 import { logger } from '@/lib/logger';
+import { RADIAL_COMMAND_EVENT, type RadialCommandEventDetail } from '@/lib/radial-menu-actions';
+import {
+  getRadialAiDeliveryVerb,
+  getRadialAiPromptDelivery,
+  runRadialAiCommand,
+  type RadialAiPromptSection,
+} from '@/lib/radial-ai-commands';
 
 const TroubleshootWizard = lazy(() => import('@/components/arduino/TroubleshootWizard'));
 const TelemetryDashboard = lazy(() => import('@/components/arduino/TelemetryDashboard'));
@@ -164,6 +171,23 @@ function formatRecordingSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function downloadSerialJson(filename: string, entries: SerialMonitorLine[]): void {
+  const blob = new Blob([JSON.stringify({
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    entries,
+  }, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  URL.revokeObjectURL(url);
+  a.remove();
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -183,6 +207,7 @@ function normalizeBoardFilterValue(value: string | null | undefined): string {
 export default function SerialMonitorPanel({ code = '', projectId }: SerialMonitorPanelProps) {
   const contextProjectId = useProjectId();
   const resolvedProjectId = projectId ?? contextProjectId;
+  const { toast } = useToast();
   const {
     state,
     requestPort,
@@ -285,7 +310,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
           // Feed telemetry store (always, for RX lines)
           if (line.direction === 'rx') {
             telemetryStoreRef.current.ingest(line.data);
-            
+
             // BL-0518: Route parsed telemetry to Digital Twin
             const parsed = parseLine(line.data);
             if (parsed) {
@@ -407,6 +432,27 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
     serialLoggerRef.current.downloadAsFile();
   }, []);
 
+  const handleExportVisibleLog = useCallback(() => {
+    if (serialLoggerRef.current.hasData()) {
+      handleDownloadRecording();
+      toast({ title: 'Serial recording exported', description: 'Recorded serial output downloaded.' });
+      return;
+    }
+
+    const visibleEntries = isReplaying ? replayData : state.monitor;
+    if (visibleEntries.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No serial output yet',
+        description: 'Connect, replay, or record data before exporting a log.',
+      });
+      return;
+    }
+
+    downloadSerialJson(`serial-log-${Date.now()}.json`, visibleEntries);
+    toast({ title: 'Serial log exported', description: `${visibleEntries.length} visible line${visibleEntries.length === 1 ? '' : 's'} downloaded.` });
+  }, [handleDownloadRecording, isReplaying, replayData, state.monitor, toast]);
+
   const handleStopReplay = useCallback(() => {
     setIsReplaying(false);
     replayTimeoutsRef.current.forEach(clearTimeout);
@@ -427,9 +473,9 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
           clearMonitor(); // Clear current monitor
           setIsReplaying(true);
           setReplayData([]);
-          
+
           const entries = parsed.entries as SerialMonitorLine[];
-          
+
           // Replay lines with their original relative timing
           entries.forEach((entry, idx) => {
             const timeoutId = setTimeout(() => {
@@ -441,7 +487,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
                 }
                 return next;
               });
-              
+
               // Feed to telemetry store for dashboard playback
               if (entry.direction === 'rx') {
                 telemetryStoreRef.current.ingest(entry.data);
@@ -465,7 +511,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
       } catch (err) {
         logger.error('Failed to parse replay file', err);
       }
-      
+
       // Reset input
       if (replayFileRef.current) {
         replayFileRef.current.value = '';
@@ -608,6 +654,221 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
     setBaudMismatch(null);
     setBaudWarningDismissed(true);
   }, []);
+
+  const handleAiSerialDecode = useCallback((detail: RadialCommandEventDetail): boolean => {
+    const visibleEntries = isReplaying ? replayData : state.monitor;
+    if (visibleEntries.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No serial output yet',
+        description: 'Connect, replay, or paste serial output before asking AI to decode it.',
+      });
+      return true;
+    }
+
+    const targetIdMatch = /^serial:(\d+):(\d+)$/.exec(detail.context.targetId ?? '');
+    const targetIndex = targetIdMatch ? Number(targetIdMatch[2]) : NaN;
+    const targetLine = Number.isInteger(targetIndex) ? visibleEntries[targetIndex] ?? null : null;
+    const delivery = getRadialAiPromptDelivery(detail);
+    const deliveryVerb = getRadialAiDeliveryVerb(delivery);
+    const formatLine = (line: SerialMonitorLine, index: number): string =>
+      `${String(index + 1)}. ${new Date(line.timestamp).toISOString()} ${line.direction.toUpperCase()}: ${line.data.slice(0, 240)}`;
+    const recentLines = visibleEntries.slice(-30);
+    const recentStart = Math.max(0, visibleEntries.length - recentLines.length);
+    const sketchLines = code
+      .trim()
+      .split('\n')
+      .slice(0, 40)
+      .map((line, index) => `${String(index + 1)}: ${line}`);
+
+    const detectorLines = [
+      `Hardware co-debug readiness: ${coDebugReadiness.canRun ? 'ready' : 'blocked'} - ${coDebugReadiness.title}`,
+      coDebugReadiness.blockedReason ? `Co-debug blocker: ${coDebugReadiness.blockedReason}` : null,
+      baudMismatch?.detected
+        ? `Baud mismatch: likely ${String(baudMismatch.likelyBaud)} from current ${String(baudMismatch.currentBaud)} (${String(Math.round(baudMismatch.confidence * 100))}% confidence) - ${baudMismatch.evidence}`
+        : `Baud mismatch: ${baudWarningDismissed ? 'dismissed or not active' : 'not currently detected'}`,
+      espException?.decoded
+        ? `ESP exception: ${espException.crashType} - ${espException.description}; frames=${String(espException.stackFrames.length)}`
+        : 'ESP exception: not currently decoded',
+    ].filter((line): line is string => Boolean(line));
+
+    const sections: RadialAiPromptSection[] = [
+      {
+        title: 'Target line',
+        lines: targetLine ? [formatLine(targetLine, targetIndex)] : [detail.context.targetLabel ?? 'No target line matched the current visible log.'],
+      },
+      {
+        title: 'Recent serial output',
+        lines: recentLines.map((line, index) => formatLine(line, recentStart + index)),
+      },
+      {
+        title: 'Serial settings',
+        lines: [
+          `Connection: ${state.connectionState}`,
+          `Baud: ${String(state.baudRate)}`,
+          `Line ending: ${state.lineEnding}`,
+          `DTR: ${state.dtr ? 'on' : 'off'}`,
+          `RTS: ${state.rts ? 'on' : 'off'}`,
+          `Selected board filter: ${normalizedBoardFilter || 'none'}`,
+          `Arduino profile: ${defaultArduinoProfile?.name ?? 'none'}`,
+          `Replay mode: ${isReplaying ? 'yes' : 'no'}`,
+          `Bytes received: ${String(state.bytesReceived)}`,
+          `Bytes sent: ${String(state.bytesSent)}`,
+        ],
+      },
+      {
+        title: 'Detector signals',
+        lines: detectorLines,
+      },
+      {
+        title: 'Sketch context',
+        lines: sketchLines.length > 0 ? sketchLines : ['No sketch code was available in this Serial Monitor context.'],
+      },
+    ];
+
+    runRadialAiCommand({
+      intent: 'serial_decode',
+      intro:
+        'Decode this Serial Monitor context like an embedded hardware and firmware debugging partner. Focus on crash signatures, garbled baud output, boot/reset loops, sensor messages, missing prints, and the next bench action.',
+      summary: `Serial decode: ${String(visibleEntries.length)} visible line(s), ${String(state.bytesReceived)} byte(s) received, ${state.connectionState} at ${String(state.baudRate)} baud.`,
+      historyLabel: detail.context.targetLabel ? `Serial decode: ${detail.context.targetLabel}` : 'Serial decode',
+      context: detail.context,
+      delivery,
+      targetDetails: [
+        `Project id: ${String(resolvedProjectId)}`,
+        targetLine ? `Selected log line: ${targetLine.data.slice(0, 160)}` : 'Selected log line: not matched',
+      ],
+      sections,
+      finalInstruction:
+        'Give Tyler a concise decode: what the output most likely means, what to check physically, what to check in firmware, and the safest next serial-monitor action.',
+    });
+    toast({
+      title: `AI Serial Decode ${deliveryVerb}`,
+      description: delivery === 'send-now'
+        ? 'Sent recent serial output and device context to AI chat.'
+        : 'Drafted recent serial output and device context in AI chat.',
+    });
+    return true;
+  }, [
+    baudMismatch,
+    baudWarningDismissed,
+    code,
+    coDebugReadiness.blockedReason,
+    coDebugReadiness.canRun,
+    coDebugReadiness.title,
+    defaultArduinoProfile?.name,
+    espException,
+    isReplaying,
+    normalizedBoardFilter,
+    replayData,
+    resolvedProjectId,
+    state.baudRate,
+    state.bytesReceived,
+    state.bytesSent,
+    state.connectionState,
+    state.dtr,
+    state.lineEnding,
+    state.monitor,
+    state.rts,
+    toast,
+  ]);
+
+  const handleRadialCommand = useCallback((detail: RadialCommandEventDetail): boolean => {
+    if (detail.source !== 'radial-menu' || detail.context.view !== 'serial') {
+      return false;
+    }
+
+    switch (detail.commandId) {
+      case 'ai_serial_decode':
+        return handleAiSerialDecode(detail);
+      case 'mark_event': {
+        const loggerInstance = serialLoggerRef.current;
+        if (!loggerInstance.isRecording()) {
+          loggerInstance.startRecording();
+        }
+        const label = detail.context.targetLabel ? ` ${detail.context.targetLabel}` : '';
+        loggerInstance.appendData(`\n--- RADIAL MARK ${new Date().toISOString()}${label} ---\n`, 'rx');
+        toast({ title: 'Serial mark added', description: 'A timestamp marker was added to the recording.' });
+        return true;
+      }
+      case 'resume_serial':
+        if (state.connectionState === 'connected') {
+          void handleDisconnect();
+          toast({ title: 'Serial paused', description: 'Disconnected from the active serial stream.' });
+        } else if (isSupported) {
+          void handleConnect();
+          toast({ title: 'Serial connect requested', description: 'Browser port selection is opening.' });
+        } else {
+          toast({ variant: 'destructive', title: 'Web Serial unavailable', description: 'This browser cannot open a serial stream.' });
+        }
+        return true;
+      case 'analyze_log':
+        if (coDebugReadiness.canRun) {
+          copilotMutation.mutate();
+          toast({ title: 'Serial analysis running', description: coDebugReadiness.title });
+        } else {
+          setShowTroubleshootHint(true);
+          toast({
+            variant: 'destructive',
+            title: 'Serial analysis blocked',
+            description: coDebugReadiness.blockedReason ?? 'Serial output or sketch context is missing.',
+          });
+        }
+        return true;
+      case 'decode_serial':
+        setActiveTab('monitor');
+        setShowEspDecode(true);
+        handleDecodeException();
+        toast({ title: 'Serial decode opened', description: 'Recent ESP-style crash output was parsed if present.' });
+        return true;
+      case 'clear_serial':
+        clearMonitor();
+        toast({ title: 'Serial monitor cleared', description: 'Visible serial output was cleared.' });
+        return true;
+      case 'filter_serial':
+        setActiveTab('monitor');
+        setShowPresetSave(true);
+        requestAnimationFrame(() => {
+          document.querySelector<HTMLElement>('[data-testid="serial-board-select"]')?.focus();
+        });
+        toast({ title: 'Serial controls focused', description: 'Board, baud, line ending, and preset controls are ready.' });
+        return true;
+      case 'export_log':
+        handleExportVisibleLog();
+        return true;
+      default:
+        return false;
+    }
+  }, [
+    clearMonitor,
+    coDebugReadiness.blockedReason,
+    coDebugReadiness.canRun,
+    coDebugReadiness.title,
+    copilotMutation,
+    handleAiSerialDecode,
+    handleConnect,
+    handleDecodeException,
+    handleDisconnect,
+    handleExportVisibleLog,
+    isSupported,
+    state.connectionState,
+    toast,
+  ]);
+
+  useEffect(() => {
+    const handleCommandEvent = (event: Event) => {
+      const detail = (event as CustomEvent<RadialCommandEventDetail>).detail;
+      if (!detail) {
+        return;
+      }
+      if (handleRadialCommand(detail)) {
+        detail.handled = true;
+      }
+    };
+
+    window.addEventListener(RADIAL_COMMAND_EVENT, handleCommandEvent);
+    return () => window.removeEventListener(RADIAL_COMMAND_EVENT, handleCommandEvent);
+  }, [handleRadialCommand]);
 
   // Unsupported browser
   const serialDevicePreflight = useMemo(
@@ -764,7 +1025,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
               value={normalizedBoardFilter || 'any'}
               onValueChange={(value) => setSelectedBoardProfile(normalizeBoardFilterValue(value))}
             >
-              <SelectTrigger data-testid="serial-board-select" className="h-7 w-[160px] text-xs">
+              <SelectTrigger data-testid="serial-board-select" className="h-7 w-[160px] text-xs" aria-label="Board device filter">
                 <SelectValue placeholder="Any device" />
               </SelectTrigger>
               <SelectContent>
@@ -785,7 +1046,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
               value={String(state.baudRate)}
               onValueChange={(v) => setBaudRate(Number(v))}
             >
-              <SelectTrigger data-testid="serial-baud-select" className="h-7 w-[100px] text-xs">
+              <SelectTrigger data-testid="serial-baud-select" className="h-7 w-[100px] text-xs" aria-label="Baud rate">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -805,7 +1066,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
               value={state.lineEnding}
               onValueChange={(v) => setLineEnding(v as LineEnding)}
             >
-              <SelectTrigger data-testid="serial-line-ending-select" className="h-7 w-[130px] text-xs">
+              <SelectTrigger data-testid="serial-line-ending-select" className="h-7 w-[130px] text-xs" aria-label="Line ending">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -825,6 +1086,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
             <Switch
               data-testid="serial-dtr-toggle"
               id="serial-dtr"
+              aria-label="Toggle DTR signal"
               checked={state.dtr}
               onCheckedChange={(checked) => void setSignals({ dtr: checked })}
               className="h-4 w-7"
@@ -835,6 +1097,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
             <Switch
               data-testid="serial-rts-toggle"
               id="serial-rts"
+              aria-label="Toggle RTS signal"
               checked={state.rts}
               onCheckedChange={(checked) => void setSignals({ rts: checked })}
               className="h-4 w-7"
@@ -848,6 +1111,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
             <Switch
               data-testid="serial-autoscroll-toggle"
               id="serial-autoscroll"
+              aria-label="Toggle serial monitor auto-scroll"
               checked={autoScroll}
               onCheckedChange={setAutoScroll}
               className="h-4 w-7"
@@ -859,6 +1123,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
             <Switch
               data-testid="serial-timestamps-toggle"
               id="serial-timestamps"
+              aria-label="Toggle serial monitor timestamps"
               checked={showTimestamps}
               onCheckedChange={setShowTimestamps}
               className="h-4 w-7"
@@ -909,6 +1174,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
                         e.stopPropagation();
                         handleDeletePreset(p.name);
                       }}
+                      aria-label={`Delete preset: ${p.name}`}
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -1155,14 +1421,20 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
 
       {/* Monitor Output (visible when monitor tab active) */}
       {activeTab === 'monitor' && (
-        <ScrollArea className="flex-1 min-h-0">
+        <div
+          className="flex-1 min-h-0 overflow-y-auto"
+          role="region"
+          aria-label="Serial monitor output"
+          tabIndex={0}
+        >
           {copilotResult && (
             <div className="m-2 p-3 bg-primary/10 border border-primary/20 rounded-md relative text-foreground">
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="absolute top-1 right-1 h-6 w-6 p-0 hover:bg-primary/20 text-muted-foreground"
                 onClick={() => setCopilotResult(null)}
+                aria-label="Dismiss hardware co-debug analysis"
               >
                 <X className="w-3 h-3" />
               </Button>
@@ -1201,6 +1473,8 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
               (isReplaying ? replayData : state.monitor).map((line: SerialMonitorLine, i: number) => (
                 <div
                   key={`${String(line.timestamp)}-${String(i)}`}
+                  data-log-line-id={`serial:${String(line.timestamp)}:${String(i)}`}
+                  data-log-line-label={line.data.slice(0, 96)}
                   className={cn(
                     'flex gap-2 py-0.5 hover:bg-muted/30 rounded-sm px-1',
                     line.direction === 'tx' && 'text-[var(--color-editor-accent)]',
@@ -1221,7 +1495,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
             )}
             <div ref={monitorEndRef} />
           </div>
-        </ScrollArea>
+        </div>
       )}
 
       {/* Telemetry Dashboard (visible when dashboard tab active) */}
@@ -1323,7 +1597,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
       )}
 
       {/* Command Sandbox */}
-      <DeviceCommandSandbox 
+      <DeviceCommandSandbox
         onSendCommand={(cmd) => {
           setSendValue(cmd);
           // Small delay to ensure state updates before sending
@@ -1331,8 +1605,8 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
             const btn = document.querySelector('[data-testid="serial-send-btn"]') as HTMLButtonElement;
             if (btn) btn.click();
           }, 50);
-        }} 
-        disabled={!isConnected} 
+        }}
+        disabled={!isConnected}
       />
 
       {/* Send Input + Actions */}
@@ -1368,6 +1642,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
           disabled={!isConnected}
           className="h-8 text-xs gap-1"
           title="Reset board (toggle DTR)"
+          aria-label="Reset board by toggling DTR"
         >
           <RotateCcw className="w-3 h-3" />
         </Button>
@@ -1378,6 +1653,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
           onClick={clearMonitor}
           className="h-8 text-xs gap-1"
           title="Clear monitor"
+          aria-label="Clear serial monitor output"
         >
           <Trash2 className="w-3 h-3" />
         </Button>

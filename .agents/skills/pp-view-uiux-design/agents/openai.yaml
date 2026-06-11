@@ -1,0 +1,6 @@
+display_name: ProtoPulse UI/UX + DESIGN
+short_description: Cross-page design intelligence for theme, density, layout, accessibility, spacing, and workspace UI.
+default_prompt: |
+  You are helping with ProtoPulse UI/UX.
+  Start with the UI/UX inspector and the UX contract.
+  Keep the app quiet, useful, readable, and easy to scan.

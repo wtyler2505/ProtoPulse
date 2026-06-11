@@ -26,13 +26,19 @@ Rationale: This is subtle — the existing note claims BRAKE is active-high (for
 ---
 
 ## Enrich
-(to be filled by enrich phase)
+- Updated `knowledge/bldc-stop-active-low-brake-active-high.md` to clarify that polarity is vendor-specific.
+- Added the exact ZS-X11H state table indicating CT is active-LOW.
+- Added the "Braking Operating Discipline" stating to reduce speed before braking and release within 2-3 seconds.
 
 ## Connect
-(to be filled by connect phase)
+- Re-evaluated connection to [[hall-sensor-wiring-order-matters-for-bldc]] and other notes. 
+- Connected explicitly to `claim-024` context by noting the tension between vendors.
 
 ## Revisit
-(to be filled by revisit phase)
+- Existing notes generally assumed KJL-01 behavior was universal. This was corrected in the main text.
+- Re-aligned the core claim to emphasize inverted-pair traps while acknowledging the polarity is not universal.
 
 ## Verify
-(to be filled by verify phase)
+- Read prediction: Future searches for "brake polarity" will find the explicit ZS-X11H table and the warning about vendor specificity.
+- Schema compliance: The file `knowledge/bldc-stop-active-low-brake-active-high.md` retains its frontmatter and structure.
+- Health checks: Links intact, content flows logically.

@@ -80,7 +80,7 @@ const HistoryItem = memo(function HistoryItem({ item, isExpanded, isLastInGroup,
     <div key={item.id} className="relative">
       {!isLastInGroup && (
         <div
-          className="absolute left-[5px] top-[18px] bottom-0 w-px z-0"
+          className="absolute left-[5px] top-[16px] bottom-0 w-px z-0"
           style={{ backgroundColor: color }}
         />
       )}
@@ -88,7 +88,7 @@ const HistoryItem = memo(function HistoryItem({ item, isExpanded, isLastInGroup,
         role="button"
         tabIndex={0}
         aria-label={`View details: ${item.action}`}
-        className="relative pl-6 py-1.5 group/item cursor-pointer"
+        className="group/item relative cursor-pointer py-1.5 pl-5"
         onClick={() => onToggleExpand(item.id)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -98,14 +98,14 @@ const HistoryItem = memo(function HistoryItem({ item, isExpanded, isLastInGroup,
         }}
         data-testid={`timeline-item-${item.id}`}
       >
-        <div className="absolute left-0 top-[6px] z-10 flex items-center justify-center w-3 h-3">
-          <IconComp className="w-3 h-3" style={{ color }} />
+        <div className="absolute left-0 top-[5px] z-10 flex items-center justify-center w-3 h-3">
+          <IconComp className="w-2.5 h-2.5" style={{ color }} />
         </div>
 
         <button
           aria-label="Undo action"
           data-testid={`timeline-undo-${item.id}`}
-          className="absolute right-0 top-1.5 opacity-60 hover:opacity-100 transition-opacity p-0.5 hover:bg-muted/50 focus-ring"
+          className="absolute right-0 top-0.5 rounded-sm p-0.5 opacity-60 transition-opacity hover:bg-muted/50 hover:opacity-100 focus-ring"
           onClick={(e) => {
             e.stopPropagation();
             addOutputLog('[TIMELINE] Undo requested: ' + item.action);
@@ -115,21 +115,21 @@ const HistoryItem = memo(function HistoryItem({ item, isExpanded, isLastInGroup,
         </button>
 
         {isExpanded ? (
-          <div className="border border-border/50 bg-muted/20 p-2 mr-4">
-            <div className="text-xs font-medium text-foreground mb-1">{item.action}</div>
-            <div className="flex items-center gap-2 mb-1">
+          <div className="mr-4 rounded-sm border border-border/50 bg-muted/20 p-2">
+            <div className="mb-1 text-[11px] font-medium text-foreground">{item.action}</div>
+            <div className="mb-1 flex items-center gap-1.5">
               <span className={cn(
-                "text-[9px] px-1.5 py-0.5 border",
+                "border px-1.5 py-0.5 text-[11px]",
                 item.user === 'AI'
                   ? "bg-primary/20 text-primary border-primary/30"
                   : "bg-muted/50 text-muted-foreground border-border/50"
               )}>{item.user}</span>
-              <span className="text-[10px] text-muted-foreground">{formatExactTime(item.timestamp)}</span>
+              <span className="text-[11px] text-muted-foreground">{formatExactTime(item.timestamp)}</span>
             </div>
             <div className="flex items-center gap-1 mt-1.5">
               <button
                 aria-label="Copy details"
-                className="text-[10px] px-1.5 py-0.5 bg-muted/30 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center gap-1 focus-ring"
+                className="flex items-center gap-1 rounded-sm border border-border/50 bg-muted/30 px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-ring"
                 onClick={(e) => {
                   e.stopPropagation();
                   copyToClipboard(item.action);
@@ -141,7 +141,7 @@ const HistoryItem = memo(function HistoryItem({ item, isExpanded, isLastInGroup,
               </button>
               <button
                 aria-label="Close details"
-                className="text-[10px] px-1.5 py-0.5 bg-muted/30 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center gap-1 focus-ring"
+                className="flex items-center gap-1 rounded-sm border border-border/50 bg-muted/30 px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-ring"
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleExpand(item.id);
@@ -154,8 +154,8 @@ const HistoryItem = memo(function HistoryItem({ item, isExpanded, isLastInGroup,
           </div>
         ) : (
           <>
-            <div className="text-xs font-medium text-foreground group-hover/item:text-primary transition-colors truncate pr-4" title={item.action}>{item.action}</div>
-            <div className="text-[11px] text-muted-foreground flex justify-between pr-4">
+            <div className="truncate pr-4 text-[11px] font-medium text-foreground transition-colors group-hover/item:text-primary" title={item.action}>{item.action}</div>
+            <div className="flex justify-between pr-4 text-[11px] text-muted-foreground">
               <span>{item.user}</span>
               <span>{formatRelativeTime(item.timestamp)}</span>
             </div>
@@ -229,23 +229,23 @@ function HistoryList({
   });
 
   return (
-    <div className="mb-6">
-      <div className="px-4 py-2 mb-2 border-t border-border/50">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+    <div className="mb-2">
+      <div className="px-2.5 py-0.5 mb-0.5 border-t border-border/50">
+        <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <History className="w-3 h-3" />
           Timeline
-          <span className="text-[10px] font-medium bg-muted/50 text-muted-foreground px-1.5 py-0.5 ml-auto tabular-nums">{filteredHistory.length}</span>
+          <span className="ml-auto rounded-sm bg-muted/50 px-1 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">{filteredHistory.length}</span>
         </span>
       </div>
 
-      <div className="px-4 mb-2 flex items-center gap-1">
+      <div className="px-2.5 mb-0.5 flex items-center gap-1">
         {(['all', 'User', 'AI'] as const).map((filter) => (
           <button
             key={filter}
             data-testid={`timeline-filter-${filter}`}
             aria-label={`Filter timeline: ${filter === 'all' ? 'All' : filter}`}
             className={cn(
-              "text-xs px-3 min-h-[32px] border font-medium transition-colors focus-ring",
+              "min-h-[22px] rounded-sm border px-1.5 text-[11px] font-medium transition-colors focus-ring",
               timelineFilter === filter
                 ? "bg-accent text-accent-foreground border-primary/40"
                 : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/50 hover:text-foreground"
@@ -257,47 +257,55 @@ function HistoryList({
         ))}
       </div>
 
-      <div className="px-4 relative">
-        <div className="flex items-center gap-2 mb-3" data-testid="timeline-live-indicator">
+      <div className="px-2.5 relative">
+        <div className="flex items-center gap-1.5 mb-1" data-testid="timeline-live-indicator">
           <div className={cn(
-            "w-2.5 h-2.5 rounded-full shrink-0",
+            "w-2 h-2 rounded-full shrink-0",
             hasRecentActivity
               ? "bg-cyan-400 animate-pulse shadow-[0_0_8px_2px_rgba(6,182,212,0.6)]"
               : "bg-muted-foreground/50"
           )} />
           {hasRecentActivity && (
-            <span className="text-[10px] text-cyan-400 font-medium uppercase tracking-wider">Live</span>
+            <span className="text-[11px] font-medium uppercase tracking-wider text-cyan-400">Live</span>
           )}
         </div>
 
-        {groupedVisibleHistory.map((group, groupIdx) => (
-          <div key={group.period}>
-            <div className="flex items-center gap-2 mb-2 mt-1">
-              <div className="h-px flex-1 bg-border/50" />
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{group.period}</span>
-              <div className="h-px flex-1 bg-border/50" />
+        <div
+          data-testid="timeline-items-region"
+          className={cn(
+            'space-y-0.5',
+            timelineExpanded && filteredHistory.length > TIMELINE_LIMIT && 'max-h-56 overflow-y-auto overscroll-y-contain pr-1 scrollbar-thin',
+          )}
+        >
+          {groupedVisibleHistory.map((group) => (
+            <div key={group.period}>
+              <div className="flex items-center gap-1.5 mb-1 mt-0.5">
+                <div className="h-px flex-1 bg-border/50" />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{group.period}</span>
+                <div className="h-px flex-1 bg-border/50" />
+              </div>
+              <div className="relative space-y-0">
+                {group.items.map((item, itemIdx) => (
+                  <HistoryItem
+                    key={item.id}
+                    item={item}
+                    isExpanded={expandedTimelineItem === item.id}
+                    isLastInGroup={itemIdx === group.items.length - 1}
+                    onToggleExpand={handleToggleExpand}
+                    addOutputLog={addOutputLog}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="relative space-y-0">
-              {group.items.map((item, itemIdx) => (
-                <HistoryItem
-                  key={item.id}
-                  item={item}
-                  isExpanded={expandedTimelineItem === item.id}
-                  isLastInGroup={itemIdx === group.items.length - 1}
-                  onToggleExpand={handleToggleExpand}
-                  addOutputLog={addOutputLog}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
       {filteredHistory.length > TIMELINE_LIMIT && (
-        <div className="px-4 mt-2">
+        <div className="px-2.5 mt-0.5">
           <button
             data-testid="timeline-show-more"
             aria-label={timelineExpanded ? 'Show fewer timeline entries' : `Show ${hiddenCount} more timeline entries`}
-            className="text-xs text-primary hover:text-primary/80 transition-colors w-full text-left pl-6 py-1 flex items-center gap-1 focus-ring"
+            className="text-[11px] text-primary hover:text-primary/80 transition-colors w-full text-left pl-5 py-1 flex items-center gap-1 rounded-sm focus-ring"
             onClick={() => setTimelineExpanded(!timelineExpanded)}
           >
             {timelineExpanded ? (

@@ -48,6 +48,10 @@ function check(name: string, status: PrecheckStatus, message: string): PrecheckR
   return { name, status, message };
 }
 
+function plural(count: number, singular: string, pluralLabel = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : pluralLabel}`;
+}
+
 function sessionCheck(data: ProjectExportData): PrecheckResult {
   return data.hasSession
     ? check('Authentication', 'pass', 'Active session detected.')
@@ -113,6 +117,50 @@ function bomPartNumberCheck(data: ProjectExportData): PrecheckResult {
   );
 }
 
+function inventoryEntryCheck(data: ProjectExportData): PrecheckResult {
+  if (data.bomItemCount > 0) {
+    return check('Inventory Lines', 'pass', `${plural(data.bomItemCount, 'inventory line')} tracked.`);
+  }
+  return check('Inventory Lines', 'fail', 'No inventory lines found.');
+}
+
+function inventoryPartNumberCheck(data: ProjectExportData): PrecheckResult {
+  if (data.bomItemCount === 0) {
+    return check('Inventory Part Numbers', 'pass', 'No inventory lines to check.');
+  }
+  if (data.bomItemsWithPartNumber === data.bomItemCount) {
+    return check('Inventory Part Numbers', 'pass', 'All inventory lines have part numbers.');
+  }
+  const missing = data.bomItemCount - data.bomItemsWithPartNumber;
+  return check(
+    'Inventory Part Numbers',
+    'warn',
+    `${plural(missing, 'inventory line')} ${missing === 1 ? 'is' : 'are'} missing a part number; labels and stock review may be ambiguous.`,
+  );
+}
+
+function lifecycleEntryCheck(data: ProjectExportData): PrecheckResult {
+  if (data.bomItemCount > 0) {
+    return check('Lifecycle Entries', 'pass', `${plural(data.bomItemCount, 'lifecycle entry', 'lifecycle entries')} tracked.`);
+  }
+  return check('Lifecycle Entries', 'warn', 'No lifecycle entries are tracked yet.');
+}
+
+function lifecyclePartNumberCheck(data: ProjectExportData): PrecheckResult {
+  if (data.bomItemCount === 0) {
+    return check('Lifecycle Part Numbers', 'pass', 'No lifecycle entries to check.');
+  }
+  if (data.bomItemsWithPartNumber === data.bomItemCount) {
+    return check('Lifecycle Part Numbers', 'pass', 'All lifecycle entries have part numbers.');
+  }
+  const missing = data.bomItemCount - data.bomItemsWithPartNumber;
+  return check(
+    'Lifecycle Part Numbers',
+    'warn',
+    `${plural(missing, 'lifecycle entry', 'lifecycle entries')} ${missing === 1 ? 'is' : 'are'} missing a part number.`,
+  );
+}
+
 function circuitSourceCheck(data: ProjectExportData): PrecheckResult {
   return data.hasCircuitSource
     ? check('Circuit Source', 'pass', 'Voltage/current source found.')
@@ -153,6 +201,128 @@ function bomShortfallCheck(data: ProjectExportData): PrecheckResult {
   );
 }
 
+function aiGeneratedCircuitProvenanceCheck(data: ProjectExportData): PrecheckResult {
+  const generated = data.aiGeneratedCircuitInstanceCount ?? 0;
+  const unverified = data.unverifiedAiGeneratedCircuitInstanceCount ?? 0;
+
+  if (generated === 0) {
+    return check('AI-Generated Circuit Provenance', 'pass', 'No AI-generated circuit instances detected.');
+  }
+
+  if (unverified > 0) {
+    return check(
+      'AI-Generated Circuit Provenance',
+      'fail',
+      `${plural(unverified, 'AI-generated circuit instance')} ${unverified === 1 ? 'still needs' : 'still need'} exact-part verification before fabrication export.`,
+    );
+  }
+
+  return check('AI-Generated Circuit Provenance', 'pass', 'AI-generated circuit instances have exact-part trust metadata.');
+}
+
+function exactPartVerificationCheck(data: ProjectExportData): PrecheckResult {
+  if (data.placedPartCount === undefined || data.verifiedExactPartCount === undefined) {
+    return check('Exact-Part Verification', 'pass', 'Exact-part verification data not loaded; skipping.');
+  }
+
+  if (data.placedPartCount === 0) {
+    return check('Exact-Part Verification', 'pass', 'No PCB-placed linked parts to verify.');
+  }
+
+  if (data.verifiedExactPartCount >= data.placedPartCount) {
+    return check('Exact-Part Verification', 'pass', 'All PCB-placed linked parts are exact-part verified.');
+  }
+
+  const missing = data.placedPartCount - data.verifiedExactPartCount;
+  return check(
+    'Exact-Part Verification',
+    'warn',
+    `${plural(missing, 'placed part')} ${missing === 1 ? 'is' : 'are'} not exact-part verified; verify before release.`,
+  );
+}
+
+function verifiedMechanicalModelsCheck(data: ProjectExportData): PrecheckResult {
+  if (data.placedPartCount === undefined || data.verifiedMechanicalModelCount === undefined) {
+    return check('Verified Mechanical Models', 'pass', 'Mechanical model data not loaded; skipping.');
+  }
+
+  if (data.placedPartCount === 0) {
+    return check('Verified Mechanical Models', 'pass', 'No PCB-placed linked parts need mechanical models.');
+  }
+
+  if (data.verifiedMechanicalModelCount >= data.placedPartCount) {
+    return check('Verified Mechanical Models', 'pass', 'All PCB-placed linked parts have verified mechanical model metadata.');
+  }
+
+  const missing = data.placedPartCount - data.verifiedMechanicalModelCount;
+  return check(
+    'Verified Mechanical Models',
+    'warn',
+    `${plural(missing, 'placed part')} ${missing === 1 ? 'is' : 'are'} missing verified mechanical model data; STEP fit checks are incomplete.`,
+  );
+}
+
+function breadboardHealthCheck(data: ProjectExportData): PrecheckResult {
+  const redCount = data.redBreadboardHealthCount ?? 0;
+  if (redCount === 0) {
+    return check('Breadboard Health', 'pass', 'No red breadboard-health findings are currently blocking release.');
+  }
+
+  return check(
+    'Breadboard Health',
+    'fail',
+    `${plural(redCount, 'red breadboard-health finding')} ${redCount === 1 ? 'is' : 'are'} unresolved; fix before fabrication or assembly handoff.`,
+  );
+}
+
+function lifecycleRiskCheck(data: ProjectExportData): PrecheckResult {
+  const obsolete = data.obsoletePartCount ?? 0;
+  const eol = data.eolPartCount ?? 0;
+  const nrnd = data.nrndPartCount ?? 0;
+  const noAlternate = data.lifecycleNoAlternateCount ?? 0;
+
+  if (obsolete > 0 || noAlternate > 0) {
+    const blockers = [
+      obsolete > 0 ? plural(obsolete, 'obsolete part') : null,
+      noAlternate > 0 ? `${plural(noAlternate, 'lifecycle-risk part')} without a known alternate` : null,
+    ].filter(Boolean).join(' and ');
+    return check('Lifecycle Risk', 'fail', `${blockers} must be replaced or assigned a verified alternate before release.`);
+  }
+
+  if (eol > 0 || nrnd > 0) {
+    const warnings = [
+      eol > 0 ? plural(eol, 'end-of-life part') : null,
+      nrnd > 0 ? plural(nrnd, 'NRND part') : null,
+    ].filter(Boolean).join(' and ');
+    return check('Lifecycle Risk', 'warn', `${warnings} should be reviewed before procurement.`);
+  }
+
+  return check('Lifecycle Risk', 'pass', 'No EOL, obsolete, or NRND lifecycle risks are currently visible.');
+}
+
+function inventoryConfidenceCheck(data: ProjectExportData): PrecheckResult {
+  const estimated = data.estimatedInventoryLineCount ?? 0;
+  if (estimated === 0) {
+    return check('Inventory Confidence', 'pass', 'No estimated inventory-confidence lines are currently visible.');
+  }
+
+  return check(
+    'Inventory Confidence',
+    'warn',
+    `${plural(estimated, 'inventory line')} ${estimated === 1 ? 'uses' : 'use'} estimated or unknown confidence; review quantities before ordering.`,
+  );
+}
+
+function fabricationTrustChecks(data: ProjectExportData): PrecheckResult[] {
+  return [
+    aiGeneratedCircuitProvenanceCheck(data),
+    exactPartVerificationCheck(data),
+    breadboardHealthCheck(data),
+    lifecycleRiskCheck(data),
+    inventoryConfidenceCheck(data),
+  ];
+}
+
 function bomFailureDataCheck(data: ProjectExportData): PrecheckResult {
   if (data.bomItemCount === 0) {
     return check('Failure Mode Data', 'fail', 'No BOM items — cannot check failure data.');
@@ -186,6 +356,22 @@ function gerberChecks(data: ProjectExportData): PrecheckResult[] {
     projectNameCheck(data, false),
     pcbLayoutCheck(data),
     circuitInstanceCheck(data),
+    ...fabricationTrustChecks(data),
+  ];
+}
+
+function tscircuitGerberChecks(data: ProjectExportData): PrecheckResult[] {
+  return [
+    sessionCheck(data),
+    projectNameCheck(data, false),
+    pcbLayoutCheck(data),
+    circuitInstanceCheck(data),
+    ...fabricationTrustChecks(data),
+    check(
+      'TSCircuit Export Path',
+      'warn',
+      'Maps supported project components and net segments through tscircuit; unsupported families or endpoints are skipped until full v3 mapping lands.',
+    ),
   ];
 }
 
@@ -195,6 +381,7 @@ function fabPackageChecks(data: ProjectExportData): PrecheckResult[] {
     projectNameCheck(data, false),
     pcbLayoutCheck(data),
     circuitInstanceCheck(data),
+    ...fabricationTrustChecks(data),
     bomItemCheck(data),
     bomPartNumberCheck(data),
     bomShortfallCheck(data),
@@ -241,7 +428,58 @@ function bomCsvChecks(data: ProjectExportData): PrecheckResult[] {
     projectNameCheck(data, false),
     bomItemCheck(data),
     bomPartNumberCheck(data),
+    lifecycleRiskCheck(data),
+    inventoryConfidenceCheck(data),
     bomShortfallCheck(data),
+  ];
+}
+
+function inventoryReviewChecks(data: ProjectExportData): PrecheckResult[] {
+  return [
+    sessionCheck(data),
+    inventoryEntryCheck(data),
+    inventoryPartNumberCheck(data),
+    inventoryConfidenceCheck(data),
+    bomShortfallCheck(data),
+  ];
+}
+
+function lifecycleReviewChecks(data: ProjectExportData): PrecheckResult[] {
+  return [
+    sessionCheck(data),
+    projectNameCheck(data, false),
+    lifecycleEntryCheck(data),
+    lifecyclePartNumberCheck(data),
+    lifecycleRiskCheck(data),
+  ];
+}
+
+function procurementPackageChecks(data: ProjectExportData): PrecheckResult[] {
+  return [
+    sessionCheck(data),
+    projectNameCheck(data, false),
+    bomItemCheck(data),
+    bomPartNumberCheck(data),
+    aiGeneratedCircuitProvenanceCheck(data),
+    exactPartVerificationCheck(data),
+    verifiedMechanicalModelsCheck(data),
+    breadboardHealthCheck(data),
+    lifecycleRiskCheck(data),
+    inventoryConfidenceCheck(data),
+    bomShortfallCheck(data),
+  ];
+}
+
+function bomTemplateApplyChecks(data: ProjectExportData): PrecheckResult[] {
+  return [
+    sessionCheck(data),
+    projectNameCheck(data, false),
+    aiGeneratedCircuitProvenanceCheck(data),
+    exactPartVerificationCheck(data),
+    verifiedMechanicalModelsCheck(data),
+    breadboardHealthCheck(data),
+    lifecycleRiskCheck(data),
+    inventoryConfidenceCheck(data),
   ];
 }
 
@@ -284,6 +522,7 @@ function pickPlaceChecks(data: ProjectExportData): PrecheckResult[] {
     sessionCheck(data),
     projectNameCheck(data, false),
     pcbLayoutCheck(data),
+    ...fabricationTrustChecks(data),
     bomShortfallCheck(data),
   ];
 }
@@ -293,6 +532,7 @@ function odbPlusPlusChecks(data: ProjectExportData): PrecheckResult[] {
     sessionCheck(data),
     projectNameCheck(data, false),
     pcbLayoutCheck(data),
+    ...fabricationTrustChecks(data),
   ];
 }
 
@@ -301,6 +541,7 @@ function ipc2581Checks(data: ProjectExportData): PrecheckResult[] {
     sessionCheck(data),
     projectNameCheck(data, false),
     pcbLayoutCheck(data),
+    ...fabricationTrustChecks(data),
   ];
 }
 
@@ -309,6 +550,9 @@ function stepChecks(data: ProjectExportData): PrecheckResult[] {
     sessionCheck(data),
     projectNameCheck(data, false),
     pcbLayoutCheck(data),
+    aiGeneratedCircuitProvenanceCheck(data),
+    exactPartVerificationCheck(data),
+    verifiedMechanicalModelsCheck(data),
   ];
 }
 
@@ -328,6 +572,7 @@ function etchablePcbChecks(data: ProjectExportData): PrecheckResult[] {
     sessionCheck(data),
     projectNameCheck(data, false),
     pcbLayoutCheck(data),
+    ...fabricationTrustChecks(data),
   ];
 }
 
@@ -341,8 +586,13 @@ const FORMAT_PRECHECK_RUNNERS: Record<string, FormatPrecheckRunner> = {
   spice: spiceChecks,
   'fab-package': fabPackageChecks,
   gerber: gerberChecks,
+  'tscircuit-gerber': tscircuitGerberChecks,
   'pick-place': pickPlaceChecks,
   'bom-csv': bomCsvChecks,
+  'inventory-review': inventoryReviewChecks,
+  'lifecycle-review': lifecycleReviewChecks,
+  'procurement-package': procurementPackageChecks,
+  'bom-template-apply': bomTemplateApplyChecks,
   pdf: pdfChecks,
   'design-report': designReportChecks,
   fmea: fmeaChecks,

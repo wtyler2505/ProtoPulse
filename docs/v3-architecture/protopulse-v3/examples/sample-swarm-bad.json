@@ -1,0 +1,60 @@
+{
+  "tasks": [
+    {
+      "id": "unsafe-root",
+      "role": "firmware-writer",
+      "claimedFiles": ["/tmp/owned.ts"],
+      "prompt": "This must be blocked because it claims an absolute path.",
+      "requiresHardwareFacts": [],
+      "verifiedHardwareFacts": []
+    },
+    {
+      "id": "unsafe-parent",
+      "role": "component-generator",
+      "claimedFiles": ["../server/genkit.ts"],
+      "prompt": "This must be blocked because it escapes the v3 lane.",
+      "requiresHardwareFacts": [],
+      "verifiedHardwareFacts": []
+    },
+    {
+      "id": "duplicate-a",
+      "role": "constraint-checker",
+      "claimedFiles": ["src/hardware/fact-gate.ts"],
+      "prompt": "First owner of the file.",
+      "requiresHardwareFacts": [],
+      "verifiedHardwareFacts": []
+    },
+    {
+      "id": "duplicate-b",
+      "role": "constraint-checker",
+      "claimedFiles": ["src/hardware/fact-gate.ts"],
+      "prompt": "Second owner of the same file must be blocked.",
+      "requiresHardwareFacts": [],
+      "verifiedHardwareFacts": []
+    },
+    {
+      "id": "worker-5",
+      "role": "firmware-writer",
+      "claimedFiles": ["src/ai/swarms/worker-5.ts"],
+      "prompt": "Worker cap filler.",
+      "requiresHardwareFacts": [],
+      "verifiedHardwareFacts": []
+    },
+    {
+      "id": "worker-6",
+      "role": "firmware-writer",
+      "claimedFiles": ["src/ai/swarms/worker-6.ts"],
+      "prompt": "Worker cap filler.",
+      "requiresHardwareFacts": [],
+      "verifiedHardwareFacts": []
+    },
+    {
+      "id": "worker-7",
+      "role": "firmware-writer",
+      "claimedFiles": ["src/ai/swarms/worker-7.ts"],
+      "prompt": "This seventh task must trip the 6 worker cap.",
+      "requiresHardwareFacts": [],
+      "verifiedHardwareFacts": []
+    }
+  ]
+}

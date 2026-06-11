@@ -1,5 +1,5 @@
 import { memo, useMemo, useState, useCallback } from 'react';
-import { useReactFlow } from '@xyflow/react';
+import { useReactFlow } from '@/lib/xyflow-compat';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import {
   useCircuitDesign,
@@ -183,44 +183,44 @@ const ERCPanel = memo(function ERCPanel({ circuitId, onHighlightViolation, onVio
   return (
     <div className="flex flex-col h-full bg-card/40" data-testid="erc-panel">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
-        <span className="text-xs font-medium text-foreground flex-1">ERC</span>
+      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border shrink-0">
+        <span className="text-[11px] font-medium text-foreground flex-1">ERC</span>
         <button
           data-testid="button-erc-settings"
           onClick={() => setShowSettings((v) => !v)}
           className={cn(
-            'p-1 rounded hover:bg-accent/50 transition-colors',
+            'p-0.5 rounded-sm hover:bg-accent/50 transition-colors',
             showSettings && 'bg-accent text-accent-foreground',
           )}
           title="Rule settings"
           aria-label="ERC settings"
         >
-          <Settings2 className="w-3.5 h-3.5" />
+          <Settings2 className="w-3 h-3" />
         </button>
         <button
           data-testid="button-run-erc"
           onClick={handleRunERC}
-          className="flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-medium transition-colors"
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-medium transition-colors"
           title="Run ERC"
           aria-label="Run ERC"
         >
-          <Play className="w-3 h-3" />
+          <Play className="w-2.5 h-2.5" />
           Run
         </button>
       </div>
 
       {/* Settings panel */}
       {showSettings && (
-        <div className="border-b border-border px-3 py-2 space-y-1" data-testid="erc-settings">
+        <div className="border-b border-border px-2 py-1.5 space-y-0.5" data-testid="erc-settings">
           <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">
             Rule Configuration
           </span>
           {rules.map((rule) => (
-            <div key={rule.type} className="flex items-center gap-2 text-[10px]">
+            <div key={rule.type} className="flex items-center gap-1.5 text-[10px]">
               <button
                 data-testid={`erc-rule-toggle-${rule.type}`}
                 onClick={() => toggleRule(rule.type)}
-                className="p-0.5"
+                className="p-0.5 rounded-sm"
                 title={rule.enabled ? 'Disable rule' : 'Enable rule'}
                 aria-label={`Toggle ${RULE_LABELS[rule.type]}`}
               >
@@ -233,7 +233,7 @@ const ERCPanel = memo(function ERCPanel({ circuitId, onHighlightViolation, onVio
               <button
                 data-testid={`erc-rule-severity-${rule.type}`}
                 onClick={() => cycleSeverity(rule.type)}
-                className="p-0.5"
+                className="p-0.5 rounded-sm"
                 title={`Severity: ${rule.severity} (click to toggle)`}
                 aria-label={`Toggle ${rule.severity === 'error' ? 'errors' : 'warnings'} for ${RULE_LABELS[rule.type]}`}
               >
@@ -271,7 +271,7 @@ const ERCPanel = memo(function ERCPanel({ circuitId, onHighlightViolation, onVio
         ) : (
           <div className="py-1">
             {/* Summary bar */}
-            <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] text-muted-foreground border-b border-border/50">
+            <div className="flex items-center gap-2.5 px-2 py-1 text-[10px] text-muted-foreground border-b border-border/50">
               {errorCount > 0 && (
                 <span className="flex items-center gap-1 text-destructive">
                   <XCircle className="w-3 h-3" />
@@ -290,7 +290,7 @@ const ERCPanel = memo(function ERCPanel({ circuitId, onHighlightViolation, onVio
             {Array.from(groupedViolations.entries()).map(([ruleType, ruleViolations]) => (
               <div key={ruleType} data-testid={`erc-group-${ruleType}`}>
                 <button
-                  className="w-full flex items-center gap-1.5 px-3 py-1.5 hover:bg-accent/30 transition-colors text-left"
+                  className="w-full flex items-center gap-1.5 px-2 py-1 hover:bg-accent/30 transition-colors text-left"
                   onClick={() => toggleGroup(ruleType)}
                 >
                   {expandedRules.has(ruleType) ? (
@@ -312,10 +312,10 @@ const ERCPanel = memo(function ERCPanel({ circuitId, onHighlightViolation, onVio
                 </button>
 
                 {expandedRules.has(ruleType) && (
-                  <div className="ml-5">
+                  <div className="ml-4">
                     {/* "Why does this matter?" expandable explanation */}
                     {DRC_EXPLANATIONS[ruleType] && (
-                      <div className="px-2 py-1">
+                      <div className="px-1.5 py-0.5">
                         <button
                           data-testid={`rule-explanation-toggle-${ruleType}`}
                           className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-foreground transition-colors"
@@ -328,7 +328,7 @@ const ERCPanel = memo(function ERCPanel({ circuitId, onHighlightViolation, onVio
                         {expandedExplanations.has(ruleType) && (
                           <p
                             data-testid={`rule-explanation-${ruleType}`}
-                            className="mt-1 ml-4 text-xs text-muted-foreground leading-relaxed"
+                            className="mt-0.5 ml-4 text-[11px] text-muted-foreground leading-relaxed"
                           >
                             {DRC_EXPLANATIONS[ruleType]}
                           </p>
@@ -339,7 +339,7 @@ const ERCPanel = memo(function ERCPanel({ circuitId, onHighlightViolation, onVio
                       <button
                         key={violation.id}
                         data-testid={`erc-violation-${violation.id}`}
-                        className="w-full flex items-start gap-1.5 px-2 py-1 hover:bg-accent/20 transition-colors text-left rounded-sm"
+                        className="w-full flex items-start gap-1.5 px-1.5 py-1 hover:bg-accent/20 transition-colors text-left rounded-sm"
                         onClick={() => handleClickViolation(violation)}
                       >
                         <span className="text-[10px] text-muted-foreground leading-relaxed">

@@ -84,7 +84,9 @@ export default function BreadboardWorkbenchSidebar({
 }: BreadboardWorkbenchSidebarProps) {
   return (
     <aside
+      aria-label="Breadboard workbench sidebar"
       data-testid="breadboard-workbench"
+      tabIndex={0}
       className="hidden w-[340px] shrink-0 overflow-y-auto border-r border-border/70 bg-[linear-gradient(180deg,rgba(10,14,20,0.95),rgba(8,10,16,0.92))] lg:flex lg:flex-col"
     >
       <div className="border-b border-border/60 p-4">

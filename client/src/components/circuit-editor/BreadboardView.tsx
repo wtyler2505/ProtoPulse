@@ -41,6 +41,7 @@ import BreadboardDrcOverlay from './BreadboardDrcOverlay';
 import { type ShoppingListItem } from './BreadboardShoppingList';
 import BreadboardPartInspector from './BreadboardPartInspector';
 import BreadboardWorkbenchSidebar from './BreadboardWorkbenchSidebar';
+import HardwareInspectionPanel from './HardwareInspectionPanel';
 import BreadboardWireEditor from './BreadboardWireEditor';
 import BreadboardBenchPartRenderer from './BreadboardBenchPartRenderer';
 import { COMPONENT_DRAG_TYPE } from './ComponentPlacer';
@@ -61,7 +62,15 @@ import {
 } from '@/lib/breadboard-ai-prompts';
 import {
   buildBreadboardSelectedPartModel,
+  type BreadboardSelectedPartModel,
 } from '@/lib/breadboard-part-inspector';
+import { publishBreadboard3DBridgeTarget } from '@/lib/breadboard-3d-bridge';
+import {
+  VIEWER_3D_REPAIR_EVENT,
+  normalizeViewer3DRepairTarget,
+  readViewer3DRepairTarget,
+  type Viewer3DRepairTarget,
+} from '@/lib/viewer-3d-bridge';
 import { auditBreadboard, type BoardAuditIssue, type BoardAuditSummary } from '@/lib/breadboard-board-audit';
 import { runPreflight, type PreflightResult } from '@/lib/breadboard-preflight';
 import {
@@ -184,6 +193,24 @@ function findAutoPlacement(
   return null;
 }
 
+function boardAuditHealthStatus(summary: BoardAuditSummary | null): string | undefined {
+  if (!summary) {
+    return undefined;
+  }
+  if (summary.issues.some((issue) => issue.severity === 'critical')) {
+    return 'critical';
+  }
+  if (summary.issues.some((issue) => issue.severity === 'warning')) {
+    return 'warning';
+  }
+  return 'clean';
+}
+
+function getBreadboardRepairTarget(): Viewer3DRepairTarget | null {
+  const target = readViewer3DRepairTarget();
+  return target?.destination === 'breadboard' ? target : null;
+}
+
 // Canonical home is breadboard-canvas/canvas-helpers; re-exported here for
 // backward-compat with external importers.
 import { getDropTypeFromPart } from './breadboard-canvas/canvas-helpers';
@@ -243,6 +270,9 @@ export default function BreadboardView() {
   const dialogState = useBreadboardDialogState();
   const [exactDraftSeed, setExactDraftSeed] = useState<ExactPartDraftSeed | null>(null);
   const [workbenchOpen, setWorkbenchOpen] = useState(true);
+  const [hardwareInspectionOpen, setHardwareInspectionOpen] = useState(false);
+  const [digitalTwinRepairTarget, setDigitalTwinRepairTarget] = useState<Viewer3DRepairTarget | null>(() => getBreadboardRepairTarget());
+  const lastDigitalTwinRepairFocusId = useRef<string | null>(null);
 
   const activeCircuit = circuits?.find(c => c.id === activeCircuitId) ?? circuits?.[0] ?? null;
   const circuitId = activeCircuit?.id ?? 0;
@@ -284,6 +314,29 @@ export default function BreadboardView() {
     });
   }, [activeCircuit, breadboardWires, instances, nets, parts]);
   const boardAudit = boardAuditEnabled ? computedBoardAudit : null;
+  const digitalTwinRepairFocusIssue = useMemo<BoardAuditIssue | null>(() => {
+    if (!digitalTwinRepairTarget || digitalTwinRepairTarget.destination !== 'breadboard' || !instances) {
+      return null;
+    }
+    const refDes = digitalTwinRepairTarget.refDes?.toUpperCase();
+    if (!refDes) {
+      return null;
+    }
+    const targetInstance = instances.find((instance) => instance.referenceDesignator.toUpperCase() === refDes);
+    if (!targetInstance) {
+      return null;
+    }
+    const channel = digitalTwinRepairTarget.channel;
+    return {
+      id: `digital-twin-repair-${String(digitalTwinRepairTarget.createdAt)}-${String(targetInstance.id)}`,
+      severity: channel?.state === 'live' ? 'info' : 'warning',
+      category: 'signal',
+      title: 'Digital Twin repair target',
+      detail: digitalTwinRepairTarget.summary ?? `${targetInstance.referenceDesignator} is the active Digital Twin repair target.`,
+      affectedInstanceIds: [targetInstance.id],
+      affectedPinIds: [channel?.pinLabel ?? channel?.id].filter((value): value is string => Boolean(value)),
+    };
+  }, [digitalTwinRepairTarget, instances]);
   const [preflightResult, setPreflightResult] = useState<PreflightResult | null>(null);
   const shoppingListItems = useMemo(() => {
     const missingInsights = benchSummary.insights.filter((insight) => insight.missingQuantity > 0);
@@ -326,6 +379,31 @@ export default function BreadboardView() {
   useEffect(() => {
     setFocusAuditIssue(null);
   }, [circuitId]);
+
+  useEffect(() => {
+    const nextTarget = getBreadboardRepairTarget();
+    if (nextTarget) {
+      setDigitalTwinRepairTarget(nextTarget);
+    }
+
+    const handleRepairTarget = (event: Event) => {
+      const target = normalizeViewer3DRepairTarget((event as CustomEvent<unknown>).detail);
+      if (target?.destination === 'breadboard') {
+        setDigitalTwinRepairTarget(target);
+      }
+    };
+
+    window.addEventListener(VIEWER_3D_REPAIR_EVENT, handleRepairTarget);
+    return () => window.removeEventListener(VIEWER_3D_REPAIR_EVENT, handleRepairTarget);
+  }, []);
+
+  useEffect(() => {
+    if (!digitalTwinRepairFocusIssue || lastDigitalTwinRepairFocusId.current === digitalTwinRepairFocusIssue.id) {
+      return;
+    }
+    lastDigitalTwinRepairFocusId.current = digitalTwinRepairFocusIssue.id;
+    setFocusAuditIssue(digitalTwinRepairFocusIssue);
+  }, [digitalTwinRepairFocusIssue]);
 
   const openChatPanel = useCallback((detail: { designAgent?: boolean; prompt?: string }) => {
     window.dispatchEvent(new CustomEvent('protopulse:open-chat-panel', { detail }));
@@ -435,6 +513,34 @@ export default function BreadboardView() {
       description: 'Use the barcode scanner in Storage to capture part labels, then return here to finish intake.',
     });
   }, [setActiveView, toast]);
+
+  const handleViewSelectedPartIn3D = useCallback((model: BreadboardSelectedPartModel) => {
+    const criticalCount = computedBoardAudit?.issues.filter((issue) => issue.severity === 'critical').length ?? 0;
+    const warningCount = computedBoardAudit?.issues.filter((issue) => issue.severity === 'warning').length ?? 0;
+    publishBreadboard3DBridgeTarget({
+      sourceView: 'breadboard',
+      projectId,
+      circuitId,
+      instanceId: model.instanceId,
+      refDes: model.refDes,
+      title: model.title,
+      trustTier: model.trustTier,
+      verificationLevel: model.verificationLevel,
+      verificationStatus: model.verificationStatus,
+      pinMapConfidence: model.pinMapConfidence,
+      readyNow: model.readyNow,
+      netCount: nets?.length ?? 0,
+      healthStatus: boardAuditHealthStatus(computedBoardAudit),
+      boardHealthScore: computedBoardAudit?.score,
+      boardHealthCriticalCount: criticalCount,
+      boardHealthWarningCount: warningCount,
+    });
+    setActiveView('viewer_3d');
+    toast({
+      title: 'Opening 3D View',
+      description: `${model.refDes} context sent with ${model.trustTier.replace(/-/g, ' ')} trust.`,
+    });
+  }, [circuitId, computedBoardAudit, nets, projectId, setActiveView, toast]);
 
   const handleUpdateTrackedBenchPart = useCallback(
     (
@@ -577,6 +683,7 @@ export default function BreadboardView() {
       breadboardX: null,
       breadboardY: null,
       properties: {
+        breadboardProvenance: 'exact',
         componentTitle: partMeta.title ?? '',
         label: partMeta.title ?? 'Exact part',
         type: partType,
@@ -662,7 +769,42 @@ export default function BreadboardView() {
         onUpdateTrackedPart={handleUpdateTrackedBenchPart}
       />
 
+      <HardwareInspectionPanel
+        open={hardwareInspectionOpen}
+        onOpenChange={setHardwareInspectionOpen}
+        projectId={projectId}
+      />
+
       <div className="flex min-w-0 flex-1 flex-col">
+        {digitalTwinRepairTarget && (
+          <div
+            className="m-2 rounded-md border border-cyan-400/30 bg-cyan-400/10 p-2 text-xs text-cyan-50"
+            data-testid="breadboard-digital-twin-repair-context"
+            data-ref-des={digitalTwinRepairTarget.refDes ?? ''}
+            data-channel={digitalTwinRepairTarget.channel?.id ?? ''}
+            data-pin={digitalTwinRepairTarget.channel?.pinLabel ?? ''}
+            data-net={digitalTwinRepairTarget.channel?.netName ?? ''}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-semibold">Digital Twin repair target</div>
+                <div className="mt-0.5 text-cyan-100/80" data-testid="breadboard-digital-twin-repair-summary">
+                  {digitalTwinRepairTarget.summary ?? digitalTwinRepairTarget.title}
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 border-cyan-300/40 px-2 text-[11px]"
+                data-testid="breadboard-dismiss-digital-twin-repair"
+                onClick={() => setDigitalTwinRepairTarget(null)}
+              >
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        )}
         {circuits && circuits.length > 0 ? (
           <>
             <BreadboardToolbar
@@ -671,15 +813,18 @@ export default function BreadboardView() {
               onSelectCircuit={setActiveCircuitId}
               workbenchOpen={workbenchOpen}
               onToggleWorkbench={() => setWorkbenchOpen((open) => !open)}
+              onOpenHardwareInspection={() => setHardwareInspectionOpen(true)}
             />
             {activeCircuit ? (
               <BreadboardCanvas
                 boardAudit={boardAudit}
                 circuitId={circuitId}
                 benchInsights={benchInsights}
+                digitalTwinRepairTarget={digitalTwinRepairTarget}
                 focusAuditIssue={focusAuditIssue}
                 onConsumeFocusAuditIssue={() => setFocusAuditIssue(null)}
                 onRunBoardAudit={handleRunBoardAudit}
+                onViewIn3D={handleViewSelectedPartIn3D}
                 projectName={projectName}
               />
             ) : null}

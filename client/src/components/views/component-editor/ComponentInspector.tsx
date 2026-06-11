@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import type { Shape, ShapeStyle, RectShape, CircleShape, TextShape, PathShape } from '@shared/component-types';
 import type { Constraint, ConstraintType } from '@shared/component-types';
 import { createConstraint } from '@/lib/component-editor/constraint-solver';
-import { Link2, Trash2, ToggleLeft, ToggleRight, Sparkles, Check, X } from 'lucide-react';
+import { Link2, PanelRightClose, PanelRightOpen, Trash2, ToggleLeft, ToggleRight, Sparkles, Check, X } from 'lucide-react';
 import { inferConstraints, type InferredConstraint } from '@/lib/component-editor/constraint-inference';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -71,9 +72,8 @@ function NumberField({
   return (
     <div className="flex items-center gap-2">
       <Label className="text-xs text-muted-foreground w-16 shrink-0">{label}</Label>
-      <Input
+      <NumberInput
         data-testid={testId}
-        type="number"
         value={value}
         aria-label={label}
         onChange={(e) => onChange?.(parseFloat(e.target.value) || 0)}
@@ -378,8 +378,9 @@ function ConstraintSection({ view }: { view: CanvasView }) {
               {c.type}
             </span>
             {c.params.distance !== undefined && (
-              <Input
-                type="number"
+              <NumberInput
+                min={0}
+                max={1000}
                 value={Number(c.params.distance)}
                 onChange={(e) => {
                   const val = parseFloat(e.target.value) || 0;
@@ -390,8 +391,9 @@ function ConstraintSection({ view }: { view: CanvasView }) {
               />
             )}
             {c.params.pitch !== undefined && (
-              <Input
-                type="number"
+              <NumberInput
+                min={0.1}
+                max={10}
                 value={Number(c.params.pitch)}
                 onChange={(e) => {
                   const val = parseFloat(e.target.value) || 0;
@@ -455,6 +457,7 @@ export default function ComponentInspector() {
   const { state } = useComponentEditor();
   const activeView = state.ui.activeEditorView;
   const selectedIds = state.ui.selectedShapeIds;
+  const [collapsed, setCollapsed] = useState(false);
 
   const isCanvasView = activeView === 'breadboard' || activeView === 'schematic' || activeView === 'pcb';
   if (!isCanvasView) return null;
@@ -468,25 +471,52 @@ export default function ComponentInspector() {
       data-testid="inspector-panel"
       role="complementary"
       aria-label="Shape properties inspector"
-      className="w-64 flex-shrink-0 border-l border-border bg-card overflow-y-auto"
+      className={`flex min-h-0 flex-shrink-0 flex-col overflow-hidden border-l border-border bg-card/95 ${
+        collapsed ? 'w-9 min-w-9 max-w-9' : 'w-72 min-w-56 max-w-96 resize-x'
+      }`}
+      data-collapsed={String(collapsed)}
+      data-resizable={String(!collapsed)}
+      data-resize-axis="horizontal"
     >
-      {selectedShapes.length === 0 && (
-        <div className="flex items-center justify-center h-full p-4">
-          <p data-testid="inspector-empty" className="text-sm text-muted-foreground text-center">
-            Select a shape to edit properties
-          </p>
+      <div className="flex h-8 shrink-0 items-center justify-between border-b border-border px-2">
+        {!collapsed ? (
+          <span className="text-xs font-medium text-muted-foreground">Inspector</span>
+        ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="ml-auto h-6 w-6 text-muted-foreground hover:text-foreground"
+          data-testid="button-toggle-component-inspector"
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Expand shape properties inspector' : 'Collapse shape properties inspector'}
+          onClick={() => setCollapsed((value) => !value)}
+        >
+          {collapsed ? <PanelRightOpen className="h-3.5 w-3.5" /> : <PanelRightClose className="h-3.5 w-3.5" />}
+        </Button>
+      </div>
+
+      {!collapsed ? (
+        <div className="min-h-0 flex-1 overflow-y-auto" data-testid="inspector-panel-body">
+          {selectedShapes.length === 0 && (
+            <div className="flex h-full items-center justify-center p-4">
+              <p data-testid="inspector-empty" className="text-center text-sm text-muted-foreground">
+                Select a shape to edit properties
+              </p>
+            </div>
+          )}
+
+          {selectedShapes.length === 1 && (
+            <SingleShapeInspector shape={selectedShapes[0]} view={view} />
+          )}
+
+          {selectedShapes.length > 1 && (
+            <MultiShapeInspector shapes={selectedShapes} view={view} />
+          )}
+
+          <ConstraintSection view={view} />
         </div>
-      )}
-
-      {selectedShapes.length === 1 && (
-        <SingleShapeInspector shape={selectedShapes[0]} view={view} />
-      )}
-
-      {selectedShapes.length > 1 && (
-        <MultiShapeInspector shapes={selectedShapes} view={view} />
-      )}
-
-      <ConstraintSection view={view} />
+      ) : null}
     </div>
   );
 }

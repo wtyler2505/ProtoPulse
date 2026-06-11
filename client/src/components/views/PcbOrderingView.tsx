@@ -5,8 +5,9 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { useProjectBoard } from '@/hooks/useProjectBoard';
-import type { Board, UpdateBoard } from '@shared/schema';
+import type { Board, CircuitInstanceRow, UpdateBoard } from '@shared/schema';
 import {
   ShoppingBag,
   CheckCircle2,
@@ -56,6 +57,11 @@ import { buildOrderingTrustReceipt } from '@/lib/trust-receipts';
 import { buildWorkspaceReleaseConfidence } from '@/lib/workspace-release-confidence';
 import { FabApiSettings } from '@/components/views/procurement/FabApiSettings';
 import TrustReceiptCard from '@/components/ui/TrustReceiptCard';
+import { useCircuitDesigns, useCircuitInstances } from '@/lib/circuit-editor/hooks';
+import { useComponentParts } from '@/lib/component-editor/hooks';
+import type { ProjectExportData } from '@/lib/export-validation';
+import { runExportPrecheck, type ExportPrecheck } from '@/lib/export-precheck';
+import { buildValidationSafetyGateData } from '@/lib/validation-safety-gates';
 import type {
   BoardSpecification,
   FabricatorId,
@@ -72,6 +78,7 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
+const SESSION_KEY = 'protopulse-session-id';
 const STEPS = ['Board Specs', 'Select Fab', 'DFM Check', 'Quotes', 'Summary'] as const;
 
 const FINISH_OPTIONS: Array<{ value: BoardFinish; label: string }> = [
@@ -166,6 +173,27 @@ function specDiffToBoardPatch(prev: BoardSpecification, next: BoardSpecification
   return patch;
 }
 
+function readHasSession(): boolean {
+  return typeof window !== 'undefined' && Boolean(window.localStorage.getItem(SESSION_KEY));
+}
+
+function readInstanceProperties(instance: CircuitInstanceRow): Record<string, unknown> {
+  return instance.properties && typeof instance.properties === 'object'
+    ? instance.properties as Record<string, unknown>
+    : {};
+}
+
+function isCircuitSourceInstance(instance: CircuitInstanceRow): boolean {
+  const props = readInstanceProperties(instance);
+  const componentType = String(props.componentType ?? '');
+  return /^[VI]/i.test(instance.referenceDesignator)
+    || /voltage.source|current.source|dc.source|ac.source|signal.source|function.generator/i.test(componentType);
+}
+
+function hasPcbPlacement(instance: CircuitInstanceRow): boolean {
+  return instance.pcbX != null && instance.pcbY != null;
+}
+
 // ---------------------------------------------------------------------------
 // Step 1: Board Specs Form
 // ---------------------------------------------------------------------------
@@ -191,6 +219,7 @@ const BoardSpecForm = memo(function BoardSpecForm({ spec, onChange }: BoardSpecF
           <NumberInput
             data-testid="spec-width"
             id="spec-width"
+            aria-label="Board width in millimeters"
             value={spec.width}
             onChange={(e) => { update('width', parseFloat(e.target.value) || 0); }}
             min={1}
@@ -203,6 +232,7 @@ const BoardSpecForm = memo(function BoardSpecForm({ spec, onChange }: BoardSpecF
           <NumberInput
             data-testid="spec-height"
             id="spec-height"
+            aria-label="Board height in millimeters"
             value={spec.height}
             onChange={(e) => { update('height', parseFloat(e.target.value) || 0); }}
             min={1}
@@ -677,11 +707,84 @@ const OrderSummary = memo(function OrderSummary({ spec, fabName, quote, quantity
   );
 });
 
+interface OrderingSafetyGatePanelProps {
+  precheck: ExportPrecheck;
+}
+
+const OrderingSafetyGatePanel = memo(function OrderingSafetyGatePanel({ precheck }: OrderingSafetyGatePanelProps) {
+  const blockers = precheck.checks.filter((check) => check.status === 'fail');
+  const warnings = precheck.checks.filter((check) => check.status === 'warn');
+  const passes = precheck.checks.length - blockers.length - warnings.length;
+  const Icon = blockers.length > 0 ? XCircle : warnings.length > 0 ? AlertTriangle : CheckCircle2;
+  const statusLabel = blockers.length > 0 ? 'Blocked' : warnings.length > 0 ? 'Warnings' : 'Ready';
+
+  return (
+    <section
+      id="ordering-safety-gate"
+      data-testid="ordering-safety-gate"
+      aria-labelledby="ordering-safety-gate-title"
+      aria-live="polite"
+      className={cn(
+        'rounded-md border p-3 text-sm',
+        blockers.length > 0
+          ? 'border-destructive/40 bg-destructive/10'
+          : warnings.length > 0
+            ? 'border-amber-500/40 bg-amber-500/10'
+            : 'border-green-500/30 bg-green-500/10',
+      )}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-2">
+          <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="min-w-0">
+            <h3 id="ordering-safety-gate-title" className="text-sm font-semibold">Fabrication Safety Gate</h3>
+            <p data-testid="ordering-safety-summary" className="text-xs text-muted-foreground">
+              {passes} passed, {warnings.length} warning{warnings.length === 1 ? '' : 's'}, {blockers.length} blocker{blockers.length === 1 ? '' : 's'}
+            </p>
+          </div>
+        </div>
+        <Badge
+          data-testid="ordering-safety-status"
+          variant="outline"
+          className={cn(
+            blockers.length > 0 && 'border-destructive/50 bg-destructive/10 text-destructive',
+            warnings.length > 0 && blockers.length === 0 && 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+            blockers.length === 0 && warnings.length === 0 && 'border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300',
+          )}
+        >
+          {statusLabel}
+        </Badge>
+      </div>
+
+      {blockers.length > 0 && (
+        <ul data-testid="ordering-safety-blockers" className="mt-2 space-y-1">
+          {blockers.map((check) => (
+            <li key={`${check.name}-${check.message}`} data-testid="ordering-safety-blocker" className="text-xs text-destructive">
+              <span className="font-medium">{check.name}:</span> {check.message}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {warnings.length > 0 && (
+        <ul data-testid="ordering-safety-warnings" className="mt-2 space-y-1">
+          {warnings.map((check) => (
+            <li key={`${check.name}-${check.message}`} data-testid="ordering-safety-warning" className="text-xs text-amber-700 dark:text-amber-300">
+              <span className="font-medium">{check.name}:</span> {check.message}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+});
+
 // ---------------------------------------------------------------------------
 // PcbOrderingView
 // ---------------------------------------------------------------------------
 
 export default function PcbOrderingView() {
+  const { projectName } = useProjectMeta();
   const { nodes, edges } = useArchitecture();
   const { bom } = useBom();
   const { issues } = useValidation();
@@ -697,6 +800,10 @@ export default function PcbOrderingView() {
 
   const projectId = useProjectId();
   const { board, updateBoard } = useProjectBoard(projectId);
+  const { data: componentParts = [] } = useComponentParts(projectId);
+  const { data: circuitDesigns = [] } = useCircuitDesigns(projectId);
+  const activeCircuitId = circuitDesigns[0]?.id ?? 0;
+  const { data: activeCircuitInstances = [] } = useCircuitInstances(activeCircuitId);
 
   const [step, setStep] = useState(0);
   const [spec, setSpec] = useState<BoardSpecification>(() => boardToSpec(board));
@@ -742,6 +849,55 @@ export default function PcbOrderingView() {
     return quotes.find((q) => q.fabricator === selectedFab) ?? null;
   }, [quotes, selectedFab]);
 
+  const selectedCircuitSafetyGates = useMemo(
+    () =>
+      buildValidationSafetyGateData({
+        circuitInstances: activeCircuitInstances,
+        componentParts,
+        bomItems: bom,
+      }),
+    [activeCircuitInstances, bom, componentParts],
+  );
+
+  const selectedCircuitHasInstances = activeCircuitInstances.length > 0;
+  const selectedCircuitHasPcbLayout = activeCircuitInstances.some(hasPcbPlacement);
+  const selectedCircuitHasSource = activeCircuitInstances.some(isCircuitSourceInstance);
+  const selectedCircuitHasComponents = activeCircuitInstances.some((instance) => !isCircuitSourceInstance(instance));
+
+  const orderingExportData = useMemo<ProjectExportData>(() => ({
+    projectName,
+    hasSession: readHasSession(),
+    architectureNodeCount: nodes.length,
+    hasCircuitInstances: selectedCircuitHasInstances,
+    hasPcbLayout: selectedCircuitHasPcbLayout,
+    bomItemCount: bom.length,
+    bomItemsWithPartNumber: bom.filter((item) => item.partNumber.trim().length > 0).length,
+    hasCircuitSource: selectedCircuitHasSource,
+    hasCircuitComponent: selectedCircuitHasComponents,
+    hasBoardProfile: true,
+    bomItemsWithFailureData: 0,
+    ...selectedCircuitSafetyGates,
+  }), [
+    bom,
+    nodes.length,
+    projectName,
+    selectedCircuitHasComponents,
+    selectedCircuitHasInstances,
+    selectedCircuitHasPcbLayout,
+    selectedCircuitHasSource,
+    selectedCircuitSafetyGates,
+  ]);
+
+  const orderingPrecheck = useMemo(
+    () => runExportPrecheck('fab-package', orderingExportData),
+    [orderingExportData],
+  );
+  const orderBlockers = useMemo(
+    () => orderingPrecheck.checks.filter((check) => check.status === 'fail'),
+    [orderingPrecheck],
+  );
+  const hasOrderBlockers = orderBlockers.length > 0;
+
   const handleSelectFab = useCallback((fab: FabricatorId) => {
     setSelectedFab(fab);
     setDfmResult(null);
@@ -761,12 +917,12 @@ export default function PcbOrderingView() {
   }, [selectedFab, spec, runDfmCheck, compareQuotes, quantity]);
 
   const handleCreateOrder = useCallback(() => {
-    if (!selectedFab) {
+    if (!selectedFab || !currentQuote || hasOrderBlockers) {
       return;
     }
     const order = createOrder(selectedFab, spec, quantity);
     submitOrder(order.id);
-  }, [selectedFab, spec, quantity, createOrder, submitOrder]);
+  }, [selectedFab, currentQuote, hasOrderBlockers, spec, quantity, createOrder, submitOrder]);
 
   const canAdvance = useMemo(() => {
     switch (step) {
@@ -788,11 +944,12 @@ export default function PcbOrderingView() {
       buildOrderingTrustReceipt({
         compatibleFabCount,
         dfmResult,
+        fabricationPrecheck: orderingPrecheck,
         quotes,
         selectedFabName: selectedFabProfile?.name ?? null,
         totalFabCount: fabricators.length,
       }),
-    [compatibleFabCount, dfmResult, fabricators.length, quotes, selectedFabProfile?.name],
+    [compatibleFabCount, dfmResult, fabricators.length, orderingPrecheck, quotes, selectedFabProfile?.name],
   );
 
   const releaseConfidence = useMemo(
@@ -807,11 +964,11 @@ export default function PcbOrderingView() {
   );
 
   return (
-    <div data-testid="pcb-ordering-view" className="flex flex-col h-full gap-4 p-4">
+    <div data-testid="pcb-ordering-view" className="flex h-full flex-col gap-2.5 p-3">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <ShoppingBag className="w-5 h-5 text-primary" />
-        <h2 data-testid="ordering-title" className="text-lg font-semibold">Order PCB</h2>
+      <div className="flex items-center gap-1.5">
+        <ShoppingBag className="h-4 w-4 text-primary" />
+        <h2 data-testid="ordering-title" className="text-sm font-semibold">Order PCB</h2>
       </div>
 
       <ReleaseConfidenceCard
@@ -822,39 +979,42 @@ export default function PcbOrderingView() {
 
       <TrustReceiptCard receipt={orderingReceipt} data-testid="trust-receipt-ordering" />
 
+      <OrderingSafetyGatePanel precheck={orderingPrecheck} />
+
       <Tabs
         value={String(step)}
         onValueChange={(v) => { setStep(parseInt(v, 10)); }}
         className="flex-1 flex flex-col min-h-0"
       >
-        <TabsList data-testid="ordering-steps" className="w-full justify-start">
+        <TabsList data-testid="ordering-steps" className="h-7 w-full justify-start overflow-x-auto whitespace-nowrap">
           {STEPS.map((label, i) => (
             <TabsTrigger
               key={i}
               data-testid={`step-${i}`}
               value={String(i)}
               disabled={i > step + 1}
-              className="text-xs"
+              className="h-6 px-2 text-[11px]"
             >
-              <span className="mr-1.5 text-xs opacity-60">{i + 1}.</span>
+              <span className="mr-1 text-[10px] opacity-60">{i + 1}.</span>
               {label}
             </TabsTrigger>
           ))}
         </TabsList>
 
         {/* Step 0: Board Specs */}
-        <TabsContent value="0" className="flex-1 min-h-0 mt-3">
+        <TabsContent value="0" className="mt-2 flex min-h-0 flex-1">
           <ScrollArea className="h-full">
-            <div className="space-y-4">
+            <div className="space-y-2.5">
               <div className="flex items-center gap-2 mb-2">
                 <Ruler className="w-4 h-4 text-muted-foreground" />
                 <h3 className="text-sm font-semibold">Board Specifications</h3>
               </div>
-              <div className="flex items-center gap-2 mb-4">
+              <div className="mb-3 flex items-center gap-2">
                 <Label htmlFor="quantity">Quantity</Label>
                 <NumberInput
                   data-testid="spec-quantity"
                   id="quantity"
+                  aria-label="PCB order quantity"
                   min={1}
                   max={10000}
                   step={1}
@@ -869,9 +1029,9 @@ export default function PcbOrderingView() {
         </TabsContent>
 
         {/* Step 1: Select Fab */}
-        <TabsContent value="1" className="flex-1 min-h-0 mt-3">
+        <TabsContent value="1" className="mt-2 flex min-h-0 flex-1">
           <ScrollArea className="h-full">
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <div className="flex items-center gap-2 mb-2">
                 <Package className="w-4 h-4 text-muted-foreground" />
                 <h3 className="text-sm font-semibold">Select Fabricator</h3>
@@ -888,9 +1048,9 @@ export default function PcbOrderingView() {
         </TabsContent>
 
         {/* Step 2: DFM Check */}
-        <TabsContent value="2" className="flex-1 min-h-0 mt-3">
+        <TabsContent value="2" className="mt-2 flex min-h-0 flex-1">
           <ScrollArea className="h-full">
-            <div className="space-y-4">
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ClipboardCheck className="w-4 h-4 text-muted-foreground" />
@@ -914,9 +1074,9 @@ export default function PcbOrderingView() {
         </TabsContent>
 
         {/* Step 3: Quote Comparison */}
-        <TabsContent value="3" className="flex-1 min-h-0 mt-3">
+        <TabsContent value="3" className="mt-2 flex min-h-0 flex-1">
           <ScrollArea className="h-full">
-            <div className="space-y-4">
+            <div className="space-y-2.5">
               <div className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-muted-foreground" />
                 <h3 className="text-sm font-semibold">Quote Comparison ({quantity} boards)</h3>
@@ -927,9 +1087,9 @@ export default function PcbOrderingView() {
         </TabsContent>
 
         {/* Step 4: Order Summary */}
-        <TabsContent value="4" className="flex-1 min-h-0 mt-3">
+        <TabsContent value="4" className="mt-2 flex min-h-0 flex-1">
           <ScrollArea className="h-full">
-            <div className="space-y-4">
+            <div className="space-y-2.5">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-4 h-4 text-muted-foreground" />
                 <h3 className="text-sm font-semibold">Order Summary</h3>
@@ -943,12 +1103,18 @@ export default function PcbOrderingView() {
               {selectedFab && selectedFabProfile && (
                 <FabApiSettings fabId={selectedFab} fabName={selectedFabProfile.name} />
               )}
+              {hasOrderBlockers && (
+                <p data-testid="place-order-blocked-message" role="alert" className="text-xs text-destructive">
+                  Place Order is blocked by the fabrication safety gate.
+                </p>
+              )}
               <Button
                 data-testid="place-order-btn"
                 size="lg"
                 className="w-full max-w-lg"
                 onClick={handleCreateOrder}
-                disabled={!selectedFab || !currentQuote}
+                disabled={!selectedFab || !currentQuote || hasOrderBlockers}
+                aria-describedby={hasOrderBlockers ? 'ordering-safety-gate' : undefined}
               >
                 <ShoppingBag className="w-4 h-4 mr-2" />
                 Place Order
@@ -959,7 +1125,7 @@ export default function PcbOrderingView() {
       </Tabs>
 
       {/* Navigation */}
-      <div data-testid="step-navigation" className="flex items-center justify-between border-t border-border/50 pt-3">
+      <div data-testid="step-navigation" className="flex items-center justify-between border-t border-border/50 pt-2">
         <Button
           data-testid="step-prev"
           variant="outline"

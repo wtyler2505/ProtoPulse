@@ -136,7 +136,7 @@ export type AIStreamEvent =
   | { type: 'text'; text: string }
   | { type: 'tool_call'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'tool_result'; id: string; name: string; result: ToolResult }
-  | { type: 'provider_info'; provider: 'gemini'; model: string; isFallback: boolean }
+  | { type: 'provider_info'; provider: 'gemini' | 'openai'; model: string; isFallback: boolean }
   | { type: 'usage'; model: string; inputTokens: number; outputTokens: number }
   | { type: 'done'; message: string; actions: AIAction[]; toolCalls: ToolCallRecord[]; actionGroupId?: string }
   | { type: 'error'; message: string };
@@ -160,6 +160,11 @@ const MODEL_TIERS: Record<string, { fast: string; standard: string; premium: str
     fast: 'gemini-2.5-flash-lite',
     standard: 'gemini-2.5-flash',
     premium: 'gemini-2.5-pro',
+  },
+  openai: {
+    fast: 'gpt-5-mini',
+    standard: 'gpt-5',
+    premium: 'gpt-5',
   },
 };
 
@@ -280,7 +285,7 @@ export function detectTaskComplexity(message: string, appState: Pick<AppState, '
  */
 export function routeToModel(params: {
   strategy: RoutingStrategy;
-  provider: 'gemini';
+  provider: 'gemini' | 'openai';
   userModel: string;
   messageLength: number;
   hasImage: boolean;

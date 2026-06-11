@@ -8,6 +8,7 @@
 import { useState, useMemo, useSyncExternalStore, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -180,11 +181,12 @@ function NewScenarioForm({ onSubmit, onCancel }: NewScenarioFormProps) {
 
       {/* Type-specific parameter fields */}
       {simType === 'dc' && (
-        <Input
+        <NumberInput
           value={temperature}
           onChange={(e) => setTemperature(e.target.value)}
           placeholder="Temperature (\u00B0C)"
-          type="number"
+          min={-273}
+          max={1000}
           className="h-7 text-xs"
           data-testid="scenario-form-temperature"
         />
@@ -192,27 +194,30 @@ function NewScenarioForm({ onSubmit, onCancel }: NewScenarioFormProps) {
 
       {simType === 'ac' && (
         <div className="flex flex-col gap-1">
-          <Input
+          <NumberInput
             value={frequencyStart}
             onChange={(e) => setFrequencyStart(e.target.value)}
             placeholder="Start freq (Hz)"
-            type="number"
+            min={0}
+            max={1_000_000_000_000}
             className="h-7 text-xs"
             data-testid="scenario-form-freq-start"
           />
-          <Input
+          <NumberInput
             value={frequencyEnd}
             onChange={(e) => setFrequencyEnd(e.target.value)}
             placeholder="End freq (Hz)"
-            type="number"
+            min={0}
+            max={1_000_000_000_000}
             className="h-7 text-xs"
             data-testid="scenario-form-freq-end"
           />
-          <Input
+          <NumberInput
             value={frequencyPoints}
             onChange={(e) => setFrequencyPoints(e.target.value)}
             placeholder="Points"
-            type="number"
+            min={2}
+            max={100_000}
             className="h-7 text-xs"
             data-testid="scenario-form-freq-points"
           />
@@ -221,20 +226,22 @@ function NewScenarioForm({ onSubmit, onCancel }: NewScenarioFormProps) {
 
       {simType === 'transient' && (
         <div className="flex flex-col gap-1">
-          <Input
+          <NumberInput
             value={timeSpan}
             onChange={(e) => setTimeSpan(e.target.value)}
             placeholder="Time span (s)"
-            type="number"
+            min={0}
+            max={86400}
             step="0.001"
             className="h-7 text-xs"
             data-testid="scenario-form-timespan"
           />
-          <Input
+          <NumberInput
             value={timeStep}
             onChange={(e) => setTimeStep(e.target.value)}
             placeholder="Time step (s)"
-            type="number"
+            min={0}
+            max={1}
             step="0.0001"
             className="h-7 text-xs"
             data-testid="scenario-form-timestep"

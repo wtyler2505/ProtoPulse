@@ -5,16 +5,16 @@ import AppearanceSection from './sections/AppearanceSection';
 import ProfileSection from './sections/ProfileSection';
 
 /**
- * Skeleton /settings route (Plan 01 Phase 4, E2E-502).
+ * Lightweight /settings route (Plan 01 Phase 4, E2E-502).
  *
  * This page exists to close E2E-502 — the /settings URL used to 404 because
  * no route was registered. The full settings catalog (profile editor,
  * appearance picker, API key manager, etc.) is tracked in plan 17
  * (17-shell-header-nav.md) and is deliberately out of scope here.
  *
- * Each tab renders a short placeholder section. The page is intentionally
- * lightweight: its job is to assert "/settings is a real page" for both
- * humans and Playwright, nothing more.
+ * Each tab renders a small keyboard-reachable control group. The broader
+ * settings catalog is still tracked in plan 17-shell-header-nav, but this
+ * route must not behave like a tabpanel dead end for keyboard users.
  */
 export default function SettingsPage() {
   return (
@@ -23,7 +23,7 @@ export default function SettingsPage() {
         <header className="space-y-1">
           <h1 className="text-2xl font-bold text-foreground">Settings</h1>
           <p className="text-sm text-muted-foreground">
-            Manage your profile, appearance, and API keys. Full controls land with plan 17-shell-header-nav.
+            Manage profile, appearance, and API key defaults for this workspace.
           </p>
         </header>
 

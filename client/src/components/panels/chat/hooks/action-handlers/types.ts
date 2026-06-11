@@ -1,12 +1,12 @@
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import type { BomItem, ValidationIssue, ViewMode } from '@/lib/project-context';
 import type { AIAction } from '../../chat-types';
 import type { ArduinoJob } from '@shared/schema';
 
 /** Mutable accumulator state passed by reference to all handlers. */
 export interface ActionState {
-  currentNodes: Node[];
-  currentEdges: Edge[];
+  currentNodes: GraphNode[];
+  currentEdges: GraphEdge[];
   currentBom: BomItem[];
   currentIssues: ValidationIssue[];
   nodesDirty: boolean;
@@ -16,6 +16,7 @@ export interface ActionState {
 /** Context hooks and metadata that handlers use to dispatch side-effects. */
 export interface ActionContext {
   state: ActionState;
+  projectId: number;
   setActiveView: (view: ViewMode) => void;
   arch: {
     setActiveView: (view: ViewMode) => void;

@@ -1,0 +1,38 @@
+{
+  "project_name": "ProtoPulse",
+  "feature_focus": "3D View (BoardViewer3DView / board-viewer-3d / webgl-viewer)",
+  "tech_stack": "React 19 + TypeScript + CSS 3D transforms + partial WebGL engine (unused) + Vite",
+  "domain": "EDA / PCB Visualization",
+  "project_root": "/home/wtyler/Projects/ProtoPulse",
+  "key_files": [
+    "client/src/components/views/BoardViewer3DView.tsx (719 LOC, CSS 3D renderer + controls)",
+    "client/src/lib/board-viewer-3d.ts (1189 LOC, scene model + useBoardViewer3D hook CCN 20)",
+    "client/src/lib/pcb/webgl-viewer.ts (1298 LOC, full WebGL engine — completely unused in UI)",
+    "client/src/components/views/__tests__/BoardViewer3DView.test.tsx (711 LOC)",
+    "client/src/lib/__tests__/board-viewer-3d.test.ts (1155 LOC)",
+    "client/src/lib/pcb/__tests__/webgl-viewer.test.ts (960 LOC)"
+  ],
+  "competitors": [
+    "KiCad 3D Viewer (real-time OpenGL, STEP, raytrace, measurement, BOM sync)",
+    "Altium Designer 3D (MCAD integration, collision detection, photo-real)",
+    "Fusion 360 / Electronics (enclosure fit, mechanical sync)",
+    "EasyEDA 3D View (browser WebGL, decent but basic)",
+    "Upverter / Flux (modern web 3D)"
+  ],
+  "personas": [
+    "Hobbyist maker verifying part fit before ordering",
+    "Professional EE doing mechanical clearance checks on complex boards",
+    "Hardware startup founder reviewing DFM/assembly in 3D during reviews"
+  ],
+  "date": "2026-05-18",
+  "scope_note": "This analysis is scoped exclusively to the 3D View feature. Whole-project metrics are irrelevant except where they impact this surface (e.g. shared useProjectBoard hook). Focus on actionable defects, gaps, debt, and innovations for making the 3D board viewer production-grade.",
+  "baseline": {
+    "loc_3d_core": 3205,
+    "test_loc_3d": 2826,
+    "high_ccn_functions": [
+      "addComponent (CCN 23 in board-viewer-3d.ts)",
+      "useBoardViewer3D hook (CCN 20, 57 NLOC)",
+      "anonymous in handleUpdateDimensions (CCN 17 in BoardViewer3DView.tsx)"
+    ]
+  }
+}

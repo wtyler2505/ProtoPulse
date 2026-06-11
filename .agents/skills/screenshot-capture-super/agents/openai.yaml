@@ -1,0 +1,4 @@
+name: Screenshot Capture Super
+description: Research-backed Playwright screenshot capture workflow with preflight, auth bootstrap, deterministic capture, and artifact validation.
+version: 1
+entrypoint: SKILL.md

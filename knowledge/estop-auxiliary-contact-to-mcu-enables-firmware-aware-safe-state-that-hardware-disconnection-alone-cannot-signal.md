@@ -34,6 +34,7 @@ Relevant Notes:
 - [[two-stage-estop-separates-control-circuit-from-power-circuit-for-safe-high-current-interruption]] -- the aux contact is a third independent circuit alongside control and power
 - [[bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors]] -- explains why aux-signaled shutdown is the only way to get diagnostic logging
 - [[emergency-stop-must-use-normally-closed-contacts-because-wire-failure-must-equal-safe-shutdown]] -- the fail-safe NC principle applied to the signal path, not just the power path
+- [[four-motor-bldc-systems-exceed-standard-hoverboard-bms-ratings-requiring-firmware-current-limiting]] -- applying Albright contactors with auxiliary contacts to manage 4-motor peak currents safely
 
 Topics:
 - [[power-systems]]

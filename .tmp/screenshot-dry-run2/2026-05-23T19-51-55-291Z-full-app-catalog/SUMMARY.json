@@ -1,0 +1,112 @@
+{
+  "createdAt": "2026-05-23T19:51:55.439Z",
+  "dryRun": true,
+  "allowPanelErrors": false,
+  "scope": "full-app",
+  "pilot": true,
+  "seedMode": "mixed",
+  "targets": [],
+  "status": "ok",
+  "delegatedScript": null,
+  "notes": [
+    "Research-backed wrapper initialized.",
+    "Dry run mode: no delegated capture executed.",
+    "Full-app inventory entries: 6"
+  ],
+  "inventory": [
+    {
+      "skill": "pp-view-ai-chat",
+      "viewKey": "shell:ai-chat",
+      "kind": "shell",
+      "label": "AI Chat",
+      "folder": "pp-view-ai-chat__shell-ai-chat",
+      "sectionKey": "pp-view-ai-chat",
+      "reportTitle": "AI Chat",
+      "reportLine": 17,
+      "reportSectionNumber": 1,
+      "required": true
+    },
+    {
+      "skill": "pp-view-dashboard",
+      "viewKey": "dashboard",
+      "kind": "route",
+      "label": "Dashboard",
+      "folder": "pp-view-dashboard__dashboard",
+      "sectionKey": "pp-view-dashboard",
+      "reportTitle": "Dashboard",
+      "reportLine": 912,
+      "reportSectionNumber": 15,
+      "required": true
+    },
+    {
+      "skill": "pp-view-exports",
+      "viewKey": "output",
+      "kind": "route",
+      "label": "Exports",
+      "folder": "pp-view-exports__output",
+      "sectionKey": "pp-view-exports",
+      "reportTitle": "Exports",
+      "reportLine": 1080,
+      "reportSectionNumber": 17,
+      "required": true
+    },
+    {
+      "skill": "pp-view-left-sidebar",
+      "viewKey": "shell:left-sidebar",
+      "kind": "shell",
+      "label": "Left Sidebar",
+      "folder": "pp-view-left-sidebar__shell-left-sidebar",
+      "sectionKey": "pp-view-left-sidebar",
+      "reportTitle": "Left Sidebar",
+      "reportLine": 1590,
+      "reportSectionNumber": 23,
+      "required": true
+    },
+    {
+      "skill": "pp-view-right-sidebar",
+      "viewKey": "shell:right-sidebar",
+      "kind": "shell",
+      "label": "Right Sidebar",
+      "folder": "pp-view-right-sidebar__shell-right-sidebar",
+      "sectionKey": "pp-view-right-sidebar",
+      "reportTitle": "Right Sidebar",
+      "reportLine": 2388,
+      "reportSectionNumber": 32,
+      "required": true
+    },
+    {
+      "skill": "pp-view-validation",
+      "viewKey": "validation",
+      "kind": "route",
+      "label": "Validation",
+      "folder": "pp-view-validation__validation",
+      "sectionKey": "pp-view-validation",
+      "reportTitle": "Validation",
+      "reportLine": 3022,
+      "reportSectionNumber": 40,
+      "required": true
+    }
+  ],
+  "viewports": [
+    "desktop"
+  ],
+  "manifestRows": [],
+  "consoleEvents": [],
+  "totals": {
+    "captured": 0,
+    "skipped": 0,
+    "failed": 0,
+    "attempted": 0
+  },
+  "requiredCoverage": {
+    "coveredRequiredViews": [],
+    "missingRequiredViews": [
+      "shell:ai-chat",
+      "dashboard",
+      "output",
+      "shell:left-sidebar",
+      "shell:right-sidebar",
+      "validation"
+    ]
+  }
+}

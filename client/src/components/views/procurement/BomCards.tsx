@@ -23,7 +23,12 @@ interface BomCardItemProps {
 
 const BomCardItem = memo(function BomCardItem({ item, deleteBomItem, toast }: BomCardItemProps) {
   return (
-    <div className="border border-border bg-card/80 backdrop-blur p-3 space-y-2" data-testid={`card-bom-${item.id}`}>
+    <div
+      className="border border-border bg-card/80 backdrop-blur p-3 space-y-2"
+      data-testid={`card-bom-${item.id}`}
+      data-bom-id={String(item.id)}
+      data-bom-label={`${item.partNumber} · ${item.manufacturer}`}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {item._isEsd && (

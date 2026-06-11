@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '@/test-utils/createTestQueryClient';
 
@@ -11,22 +11,61 @@ import { createTestQueryClient } from '@/test-utils/createTestQueryClient';
 vi.mock('lucide-react', () => {
   const icon = (name: string) => (props: Record<string, unknown>) => <span data-testid={`icon-${name}`} {...props} />;
   return {
+    ArrowRight: icon('arrow-right'),
+    BarChart3: icon('bar-chart-3'),
+    Box: icon('box'),
+    Check: icon('check'),
+    CheckSquare: icon('check-square'),
     ChevronDown: icon('chevron-down'),
     ChevronRight: icon('chevron-right'),
+    ChevronUp: icon('chevron-up'),
+    CircuitBoard: icon('circuit-board'),
+    ClipboardPaste: icon('clipboard-paste'),
+    Copy: icon('copy'),
+    Crosshair: icon('crosshair'),
+    Download: icon('download'),
+    Edit: icon('edit'),
+    FileCode: icon('file-code'),
+    FileJson: icon('file-json'),
+    FileText: icon('file-text'),
+    FlipHorizontal2: icon('flip-horizontal-2'),
+    Gauge: icon('gauge'),
+    Grid3X3: icon('grid-3x3'),
+    History: icon('history'),
+    Link: icon('link'),
+    Maximize: icon('maximize'),
+    MessageSquarePlus: icon('message-square-plus'),
+    Microscope: icon('microscope'),
+    Monitor: icon('monitor'),
+    Move: icon('move'),
     Package: icon('package'),
+    Pentagon: icon('pentagon'),
+    Play: icon('play'),
+    Plus: icon('plus'),
+    RefreshCw: icon('refresh-cw'),
+    RotateCw: icon('rotate-cw'),
+    Ruler: icon('ruler'),
     Search: icon('search'),
+    Settings2: icon('settings-2'),
+    ShieldAlert: icon('shield-alert'),
+    ShieldCheck: icon('shield-check'),
+    SlidersHorizontal: icon('sliders-horizontal'),
+    Sparkles: icon('sparkles'),
+    Trash2: icon('trash-2'),
+    Zap: icon('zap'),
+    Activity: icon('activity'),
+    AlertTriangle: icon('alert-triangle'),
     MapPin: icon('map-pin'),
     ScanBarcode: icon('scan-barcode'),
     Printer: icon('printer'),
-    Activity: icon('activity'),
-    AlertTriangle: icon('alert-triangle'),
     Info: icon('info'),
     X: icon('x'),
     Video: icon('video'),
     VideoOff: icon('video-off'),
+    CheckCircle2: icon('check-circle-2'),
+    XCircle: icon('x-circle'),
   };
 });
-
 
 // Mock shadcn/ui primitives
 vi.mock('@/components/ui/card', () => ({
@@ -45,25 +84,57 @@ vi.mock('@/components/ui/input', () => ({
 }));
 
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, ...props }: Record<string, unknown>) => <button type="button" {...props}>{children as React.ReactNode}</button>,
+  Button: ({ children, ...props }: Record<string, unknown>) => (
+    <button type="button" {...props}>
+      {children as React.ReactNode}
+    </button>
+  ),
+}));
+
+vi.mock('@/components/ui/dialog', () => ({
+  Dialog: ({ open, children }: { open?: boolean; children: React.ReactNode }) => (open ? <div>{children}</div> : null),
+  DialogContent: ({ children, ...props }: Record<string, unknown>) => (
+    <div {...props}>{children as React.ReactNode}</div>
+  ),
+  DialogHeader: ({ children, ...props }: Record<string, unknown>) => (
+    <div {...props}>{children as React.ReactNode}</div>
+  ),
+  DialogTitle: ({ children, ...props }: Record<string, unknown>) => <div {...props}>{children as React.ReactNode}</div>,
+  DialogDescription: ({ children, ...props }: Record<string, unknown>) => (
+    <div {...props}>{children as React.ReactNode}</div>
+  ),
+  DialogFooter: ({ children, ...props }: Record<string, unknown>) => (
+    <div {...props}>{children as React.ReactNode}</div>
+  ),
 }));
 
 vi.mock('@/components/ui/collapsible', () => ({
-  Collapsible: ({ children, ...props }: Record<string, unknown>) => <div {...props}>{children as React.ReactNode}</div>,
+  Collapsible: ({ children, open: _open, onOpenChange: _onOpenChange, ...props }: Record<string, unknown>) => (
+    <div {...props}>{children as React.ReactNode}</div>
+  ),
   CollapsibleTrigger: ({ children }: Record<string, unknown>) => <>{children as React.ReactNode}</>,
   CollapsibleContent: ({ children }: Record<string, unknown>) => <div>{children as React.ReactNode}</div>,
 }));
 
 let mockBomData: unknown[] = [];
+const mockAddBomItem = vi.fn();
+const mockDeleteBomItem = vi.fn();
+const mockUpdateBomItem = vi.fn();
+const mockToast = vi.fn();
+
 vi.mock('@/lib/contexts/bom-context', () => ({
   useBom: () => ({
     bom: mockBomData,
     bomSettings: { maxCost: 50, batchSize: 1000, inStockOnly: true, manufacturingDate: new Date() },
     setBomSettings: vi.fn(),
-    addBomItem: vi.fn(),
-    deleteBomItem: vi.fn(),
-    updateBomItem: vi.fn(),
+    addBomItem: mockAddBomItem,
+    deleteBomItem: mockDeleteBomItem,
+    updateBomItem: mockUpdateBomItem,
   }),
+}));
+
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({ toast: mockToast }),
 }));
 
 // ----------------------------------------------------------------
@@ -71,8 +142,11 @@ vi.mock('@/lib/contexts/bom-context', () => ({
 // ----------------------------------------------------------------
 
 import StorageManagerPanel from '@/components/views/StorageManagerPanel';
+import type { BomItem } from '@/lib/project-context';
+import { RADIAL_COMMAND_EVENT, type RadialCommandEventDetail } from '@/lib/radial-menu-actions';
+import { RADIAL_AI_CHAT_DRAFT_EVENT } from '@/lib/radial-ai-commands';
 
-const mockBomItems = [
+const mockBomItems: BomItem[] = [
   {
     id: '1',
     partNumber: 'ESP32-S3',
@@ -139,7 +213,7 @@ const mockBomItems = [
   },
 ];
 
-function renderStorageManager(items = mockBomItems) {
+function renderStorageManager(items: BomItem[] = mockBomItems) {
   mockBomData = items;
 
   const qc = createTestQueryClient();
@@ -150,6 +224,29 @@ function renderStorageManager(items = mockBomItems) {
   );
 }
 
+function withInventoryMetadata(item: BomItem, metadata: Record<string, unknown>): BomItem {
+  return { ...item, ...metadata } as BomItem;
+}
+
+function dispatchInventoryRadial(commandId: string, targetId?: string, targetLabel?: string): RadialCommandEventDetail {
+  const detail: RadialCommandEventDetail = {
+    commandId,
+    context: {
+      view: 'inventory',
+      target: targetId ? 'part' : 'canvas',
+      targetId,
+      targetLabel,
+    },
+    source: 'radial-menu',
+  };
+
+  act(() => {
+    window.dispatchEvent(new CustomEvent<RadialCommandEventDetail>(RADIAL_COMMAND_EVENT, { detail }));
+  });
+
+  return detail;
+}
+
 // ----------------------------------------------------------------
 // Tests
 // ----------------------------------------------------------------
@@ -158,6 +255,8 @@ describe('StorageManagerPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
+    window.localStorage.clear();
+    window.localStorage.setItem('protopulse-session-id', 'test-session');
   });
 
   it('renders the storage manager panel', async () => {
@@ -287,5 +386,217 @@ describe('StorageManagerPanel', () => {
     expect(screen.getByTestId('item-qty-1').textContent).toBe('10 / 3');
     // R-10K: not tracked
     expect(screen.getByTestId('item-qty-4').textContent).toBe('--');
+  });
+
+  it('shows an inventory confidence review gate for untracked quantity lines', async () => {
+    renderStorageManager();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('inventory-confidence-gate')).toBeDefined();
+    });
+
+    expect(screen.getByTestId('inventory-confidence-status').textContent).toBe('Review');
+    expect(screen.getByTestId('inventory-confidence-warnings').textContent).toContain('Inventory Confidence');
+    expect(screen.getByTestId('storage-print-btn')).not.toHaveProperty('disabled', true);
+  });
+
+  it('shows the inventory confidence gate as ready when tracked stock covers BOM demand', async () => {
+    const fullyTracked = mockBomItems.map((item) => ({
+      ...item,
+      quantityOnHand: item.quantity + 10,
+      minimumStock: 1,
+    }));
+
+    renderStorageManager(fullyTracked);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('inventory-confidence-status').textContent).toBe('Ready');
+    });
+
+    expect(screen.queryByTestId('inventory-confidence-warnings')).toBeNull();
+    expect(screen.getByTestId('storage-print-btn')).not.toHaveProperty('disabled', true);
+  });
+
+  it('warns when BOM demand exceeds tracked on-hand inventory', async () => {
+    const shortStock = mockBomItems.map((item) => ({
+      ...item,
+      quantityOnHand: item.id === '1' ? 1 : item.quantity + 10,
+      minimumStock: 1,
+    }));
+
+    renderStorageManager(shortStock);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('inventory-confidence-status').textContent).toBe('Review');
+    });
+
+    expect(screen.getByTestId('inventory-confidence-warnings').textContent).toContain('Inventory Coverage');
+    expect(screen.getByTestId('inventory-confidence-warnings').textContent).toContain('1 unit short');
+  });
+
+  it('blocks label printing when no inventory lines exist', async () => {
+    renderStorageManager([]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('inventory-confidence-status').textContent).toBe('Blocked');
+    });
+
+    expect(screen.getByTestId('inventory-confidence-blockers').textContent).toContain('No inventory lines found');
+    expect(screen.getByTestId('storage-print-btn')).toHaveProperty('disabled', true);
+  });
+
+  it('marks saved-part provenance and 3D readiness on inventory rows', async () => {
+    renderStorageManager([
+      withInventoryMetadata(mockBomItems[0], {
+        verificationLevel: 'official-backed',
+        mechanicalModelQuality: 'verified',
+        pricingTrust: { verified: true, source: 'octopart' },
+      }),
+      withInventoryMetadata(mockBomItems[1], {
+        generatedFrom: 'generative-design',
+        inventoryConfidence: 'estimated',
+      }),
+      mockBomItems[2],
+    ]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('item-trust-1')).toBeDefined();
+    });
+
+    expect(screen.getByTestId('item-trust-marker-1-exact').textContent).toBe('Verified exact');
+    expect(screen.getByTestId('item-trust-marker-1-mechanical').textContent).toBe('3D verified');
+    expect(screen.getByTestId('item-trust-marker-2-generated').textContent).toBe('AI generated');
+    expect(screen.getByTestId('item-trust-marker-2-confidence').textContent).toBe('Qty review');
+    expect(screen.getByTestId('item-trust-marker-3-local').textContent).toBe('Local unverified');
+  });
+
+  it('marks storage rows as radial part targets', async () => {
+    renderStorageManager();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('storage-item-1')).toBeDefined();
+    });
+
+    expect(screen.getByTestId('storage-item-1').getAttribute('data-part-id')).toBe('1');
+    expect(screen.getByTestId('storage-item-1').getAttribute('data-part-label')).toBe('ESP32-S3');
+  });
+
+  it('handles radial part inspection by filtering and highlighting the row', async () => {
+    renderStorageManager();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('storage-locations-list')).toBeDefined();
+    });
+
+    const detail = dispatchInventoryRadial('inspect_part', '2', 'SHT40');
+
+    await waitFor(() => {
+      expect((screen.getByTestId('storage-search-input') as HTMLInputElement).value).toBe('SHT40');
+    });
+
+    expect(detail.handled).toBe(true);
+    expect(screen.getByTestId('storage-item-2').className).toContain('ring-primary');
+    expect(screen.queryByTestId('storage-item-1')).toBeNull();
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Part centered' }));
+  });
+
+  it('opens inventory intake from the radial add command', async () => {
+    renderStorageManager();
+
+    const detail = dispatchInventoryRadial('add_inventory_item');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('barcode-scanner-dialog')).toBeDefined();
+    });
+
+    expect(detail.handled).toBe(true);
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Inventory intake opened' }));
+  });
+
+  it('fills missing stock fields from the radial edit command', async () => {
+    renderStorageManager();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('storage-locations-list')).toBeDefined();
+    });
+
+    const detail = dispatchInventoryRadial('edit_inventory_item', '4', 'R-10K');
+
+    expect(detail.handled).toBe(true);
+    expect(mockUpdateBomItem).toHaveBeenCalledWith('4', {
+      quantityOnHand: 10,
+      minimumStock: 5,
+      storageLocation: 'Unassigned',
+    });
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Inventory fields staged' }));
+  });
+
+  it('drafts inventory readiness context to AI chat from a radial command', async () => {
+    const chatOpenListener = vi.fn();
+    const chatDraftListener = vi.fn();
+    window.addEventListener('protopulse:open-chat-panel', chatOpenListener);
+    window.addEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, chatDraftListener);
+
+    try {
+      renderStorageManager();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('storage-locations-list')).toBeDefined();
+      });
+
+      const detail = dispatchInventoryRadial('ai_inventory_plan', '2', 'SHT40');
+
+      await waitFor(() => {
+        expect((screen.getByTestId('storage-search-input') as HTMLInputElement).value).toBe('SHT40');
+      });
+
+      expect(detail.handled).toBe(true);
+      expect(chatOpenListener).toHaveBeenCalledTimes(1);
+      expect(chatDraftListener).toHaveBeenCalledTimes(1);
+      const message = (chatDraftListener.mock.calls[0]?.[0] as CustomEvent<{ message: string }>).detail.message;
+      expect(message).toContain('AI intent: inventory_plan.');
+      expect(message).toContain('Inventory plan:');
+      expect(message).toContain('Target: part "SHT40"');
+      expect(message).toContain('Selected part: SHT40');
+      expect(message).toContain('Clicked or representative parts:');
+      expect(message).toContain('SHT40: needed');
+      expect(message).toContain('Inventory confidence gate:');
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'AI Inventory Plan Drafted' }));
+    } finally {
+      window.removeEventListener('protopulse:open-chat-panel', chatOpenListener);
+      window.removeEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, chatDraftListener);
+    }
+  });
+
+  it('opens inventory labels from the radial labels command', async () => {
+    renderStorageManager();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('storage-locations-list')).toBeDefined();
+    });
+
+    const detail = dispatchInventoryRadial('print_inventory_label', '1', 'ESP32-S3');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('print-labels-dialog')).toBeDefined();
+    });
+
+    expect(detail.handled).toBe(true);
+    expect((screen.getByTestId('storage-search-input') as HTMLInputElement).value).toBe('ESP32-S3');
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Inventory labels opened' }));
+  });
+
+  it('removes inventory rows through the radial remove command', async () => {
+    renderStorageManager();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('storage-locations-list')).toBeDefined();
+    });
+
+    const detail = dispatchInventoryRadial('remove_inventory_item', '2', 'SHT40');
+
+    expect(detail.handled).toBe(true);
+    expect(mockDeleteBomItem).toHaveBeenCalledWith('2');
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Inventory item removed' }));
   });
 });

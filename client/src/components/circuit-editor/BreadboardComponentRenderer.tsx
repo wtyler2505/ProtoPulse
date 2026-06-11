@@ -376,6 +376,9 @@ const BreadboardComponent = memo(({ instance, part, selected, onClick }: Breadbo
   return (
     <g
       data-testid={`bb-instance-${instance.id}`}
+      data-id={String(instance.id)}
+      data-node-label={instance.referenceDesignator}
+      aria-label={`Breadboard part ${instance.referenceDesignator}`}
       className={cn(selected && "filter drop-shadow-[0_0_2px_var(--color-editor-accent)]")}
     >
       {renderShape()}

@@ -13,7 +13,7 @@
  *   3. Result: a single undo entry that restores the pre-snippet state.
  */
 
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import type { PlacementResult, SnippetNode, SnippetEdge } from '@/lib/design-reuse';
 
 // ---------------------------------------------------------------------------
@@ -37,9 +37,9 @@ export interface SnippetPlacementCallbacks {
   /** Push one undo snapshot before any mutations. */
   pushUndoState: () => void;
   /** Batch-update the node list. */
-  setNodes: (updater: (nodes: Node[]) => Node[]) => void;
+  setNodes: (updater: (nodes: GraphNode[]) => GraphNode[]) => void;
   /** Batch-update the edge list. */
-  setEdges: (updater: (edges: Edge[]) => Edge[]) => void;
+  setEdges: (updater: (edges: GraphEdge[]) => GraphEdge[]) => void;
   /** Mark that nodes were locally modified (for sync). */
   markNodeInteracted: () => void;
   /** Mark that edges were locally modified (for sync). */
@@ -50,8 +50,8 @@ export interface SnippetPlacementCallbacks {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Convert a SnippetNode to a ReactFlow Node. */
-function snippetNodeToFlowNode(sn: SnippetNode): Node {
+/** Convert a SnippetNode to a graph node. */
+function snippetNodeToFlowNode(sn: SnippetNode): GraphNode {
   return {
     id: sn.id,
     type: 'custom',
@@ -64,8 +64,8 @@ function snippetNodeToFlowNode(sn: SnippetNode): Node {
   };
 }
 
-/** Convert a SnippetEdge to a ReactFlow Edge. */
-function snippetEdgeToFlowEdge(se: SnippetEdge): Edge {
+/** Convert a SnippetEdge to a graph edge. */
+function snippetEdgeToFlowEdge(se: SnippetEdge): GraphEdge {
   return {
     id: se.id,
     source: se.source,
@@ -82,7 +82,7 @@ function snippetEdgeToFlowEdge(se: SnippetEdge): Edge {
  * Place a snippet onto the architecture canvas as a single atomic undo unit.
  *
  * 1. Pushes exactly one undo snapshot (the "before" state).
- * 2. Converts snippet nodes/edges to ReactFlow format and appends them.
+ * 2. Converts snippet nodes/edges to graph format and appends them.
  * 3. Returns a `SnippetPlacementAction` describing what was added.
  *
  * Returns `null` if `placement` is null (snippet not found).
@@ -99,7 +99,7 @@ export function placeSnippetAtomic(
 
   const { nodes: snippetNodes, edges: snippetEdges } = placement;
 
-  // Convert to ReactFlow types
+  // Convert to graph types
   const flowNodes = snippetNodes.map(snippetNodeToFlowNode);
   const flowEdges = snippetEdges.map(snippetEdgeToFlowEdge);
 
@@ -148,12 +148,12 @@ export function removeSnippetPlacement(
 }
 
 /**
- * Convert a PlacementResult to ReactFlow-compatible arrays without applying them.
+ * Convert a PlacementResult to graph-compatible arrays without applying them.
  * Useful when you need to inspect what would be placed before committing.
  */
 export function previewSnippetPlacement(placement: PlacementResult): {
-  nodes: Node[];
-  edges: Edge[];
+  nodes: GraphNode[];
+  edges: GraphEdge[];
 } {
   return {
     nodes: placement.nodes.map(snippetNodeToFlowNode),

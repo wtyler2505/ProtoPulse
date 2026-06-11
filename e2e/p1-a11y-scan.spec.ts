@@ -3,7 +3,7 @@
  *
  * Dynamic counterpart to Plan 03 Phase 4 (ESLint jsx-a11y static rules).
  * For each major tab/route, this spec:
- *   1. Navigates via /projects/1/{viewName} (matches tab-route-matrix.spec.ts).
+ *   1. Navigates via the setup-created project route (matches tab-route-matrix.spec.ts).
  *   2. Waits for the workspace-main landmark and allows lazy Suspense chunks to
  *      resolve.
  *   3. Runs axe-core with WCAG 2.1 A/AA + best-practice tags.
@@ -22,14 +22,20 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import { runAxeScan, type RunAxeScanOptions } from './a11y-helpers';
+import {
+  clearLastProjectSelection,
+  getSetupProjectName,
+  getSetupProjectPath,
+} from './e2e-project';
 
 test.use({ storageState: 'e2e/.auth-state.json' });
+test.setTimeout(60_000);
 
 /**
  * Navigate to a project view and wait for the workspace shell to mount.
  */
 async function openView(page: Page, viewName: string): Promise<void> {
-  await page.goto(`/projects/1/${viewName}`);
+  await page.goto(getSetupProjectPath(viewName));
   await page.waitForSelector('[data-testid="workspace-main"]', { timeout: 15_000 });
   // Let lazy chunks + data-fetching effects settle. Matches the cadence used by
   // tab-route-matrix.spec.ts, which is the de-facto load-waiting convention for
@@ -66,13 +72,13 @@ test.describe('A11y scan — Project Picker', () => {
   }) => {
     await page.goto('/');
     // Ensure we land on the picker, not an auto-selected workspace.
-    await page.evaluate(() => {
-      localStorage.removeItem('protopulse-last-project');
-    });
+    await clearLastProjectSelection(page);
     await page.goto('/');
     await page.waitForSelector('[data-testid="project-picker-page"]', {
       timeout: 10_000,
     });
+    await page.getByTestId('input-search-projects').fill(getSetupProjectName());
+    await expect(page.locator('[data-testid^="project-card-open-"]')).toHaveCount(1);
     await scanAndAssert(page, 'project-picker');
   });
 });
@@ -240,6 +246,11 @@ test.describe('A11y scan — Project Management', () => {
 // Inventory & Community
 // ---------------------------------------------------------------------------
 test.describe('A11y scan — Inventory & Community', () => {
+  test('supply_chain', async ({ page }) => {
+    await openView(page, 'supply_chain');
+    await scanAndAssert(page, 'supply_chain');
+  });
+
   test('storage', async ({ page }) => {
     await openView(page, 'storage');
     await scanAndAssert(page, 'storage');

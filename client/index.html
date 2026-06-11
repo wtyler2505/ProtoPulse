@@ -1,8 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!--
+      EARLY GLOBAL GUARD for duplicate custom element registration.
+      The chat rich-text editor (TinyMCE-based) loads overlay_bundle.js + webcomponents-ce.js
+      which unconditionally calls customElements.define('mce-autosize-textarea').
+      Under Vite HMR, prefetch, or multiple lazy ChatPanel mounts this fires more than once
+      and throws an Uncaught Error that pollutes the console and error overlay.
+
+      We patch BEFORE any Vite client code, dynamic imports, or third-party bundles run.
+      This is the most reliable pattern for legacy editor bundles + modern dev servers.
+    -->
+    <script>
+      (function () {
+        try {
+          // 1. Patch customElements.define to be idempotent for the known noisy name from TinyMCE.
+          if (typeof customElements !== 'undefined') {
+            var origDefine = customElements.define.bind(customElements);
+            // @ts-ignore
+            customElements.define = function (name, ctor, opts) {
+              if (name === 'mce-autosize-textarea' && customElements.get(name)) {
+                return;
+              }
+              return origDefine(name, ctor, opts);
+            };
+          }
+
+          // 2. Ultra-early global error suppressor (multiple techniques for maximum coverage).
+          //    The webcomponents polyfill (inside overlay_bundle from the chat editor)
+          //    has its own internal duplicate check and throws directly.
+          //    We use several independent techniques so even if one path is missed,
+          //    the error is still swallowed before any overlay or console red error appears.
+
+          function isMceError(msg, stk) {
+            if (!msg && !stk) return false;
+            var s = (msg || '') + (stk || '');
+            return s.indexOf('mce-autosize-textarea') > -1 ||
+                   s.indexOf('webcomponents-ce.js') > -1 ||
+                   s.indexOf('overlay_bundle.js') > -1;
+          }
+
+          // a) Capture phase listeners (good for most bubbling errors)
+          function swallowMce(ev) {
+            var err = ev.error || ev.reason || ev;
+            var msg = (err && (err.message || String(err))) || '';
+            var stk = (err && err.stack) || '';
+            // Also check the event itself (some script errors put message on ev directly)
+            if (ev.message) msg += ' ' + ev.message;
+            if (isMceError(msg, stk)) {
+              if (ev.preventDefault) ev.preventDefault();
+              if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+              return true;
+            }
+          }
+          window.addEventListener('error', swallowMce, true);
+          window.addEventListener('unhandledrejection', swallowMce, true);
+
+          // b) Classic window.onerror (catches many synchronous script evaluation throws that don't always fire the event listener the same way)
+          var oldOnError = window.onerror;
+          window.onerror = function (msg, url, line, col, error) {
+            var stk = (error && error.stack) || '';
+            if (isMceError(msg, stk) || (typeof msg === 'string' && isMceError(msg, ''))) {
+              return true; // returning true tells the browser "I handled it, do not report"
+            }
+            if (oldOnError) return oldOnError.apply(this, arguments);
+          };
+
+          // c) Console filter (hides the noise even if something logs it directly)
+          var oldError = console.error;
+          var oldWarn = console.warn;
+          function filterConsole(orig) {
+            return function () {
+              var args = Array.prototype.slice.call(arguments);
+              var text = args.join(' ');
+              if (text.indexOf('mce-autosize-textarea') > -1 ||
+                  text.indexOf('webcomponents-ce.js') > -1 ||
+                  text.indexOf('overlay_bundle.js') > -1) {
+                return; // swallow the noisy log
+              }
+              return orig.apply(console, args);
+            };
+          }
+          console.error = filterConsole(oldError);
+          console.warn = filterConsole(oldWarn);
+        } catch (e) {
+          // Never let guard code break the boot splash / app
+        }
+      })();
+    </script>
+
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>ProtoPulse</title>
     <meta property="og:title" content="ProtoPulse" />
@@ -10,18 +98,90 @@
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@replit" />
     <meta name="twitter:title" content="ProtoPulse" />
     <meta name="twitter:description" content="Next-generation AI-assisted electronics and system design platform." />
     <meta name="twitter:image" content="/og-image.png" />
 
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..800&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script>
+      (function () {
+        var disableRemoteFonts = new URLSearchParams(location.search).get("disableRemoteFonts") === "1";
+        try {
+          disableRemoteFonts = disableRemoteFonts || localStorage.getItem("pp:disable-remote-fonts") === "1";
+        } catch (e) {
+          // Leave fonts enabled if storage is unavailable.
+        }
+        if (disableRemoteFonts) {
+          document.documentElement.dataset.remoteFonts = "disabled";
+          return;
+        }
+
+        [
+          { rel: "preconnect", href: "https://fonts.googleapis.com" },
+          { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+          {
+            rel: "stylesheet",
+            href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..800&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap",
+          },
+        ].forEach(function (attrs) {
+          var link = document.createElement("link");
+          Object.keys(attrs).forEach(function (key) {
+            link[key] = attrs[key];
+          });
+          document.head.appendChild(link);
+        });
+      })();
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <style>
+      html, body { margin: 0; background: #05070b; color: #d6dde8; }
+      #pp-boot-splash {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        font-size: 14px;
+        letter-spacing: 0;
+      }
+    </style>
+    <div id="root"><div id="pp-boot-splash">Loading ProtoPulse...</div></div>
+    <script>
+      (function () {
+        var isLocalDev =
+          location.hostname === "localhost" ||
+          location.hostname === "127.0.0.1";
+        if (!isLocalDev) return;
+        var flagKey = "__pp_bootstrap_blank_reload__";
+        var checks = 0;
+        var maxChecks = 5;
+        var checkTimer = window.setInterval(function () {
+          checks += 1;
+          var root = document.getElementById("root");
+          if (root && (root.childElementCount > 0 || (root.textContent || "").trim().length > 0)) {
+            window.clearInterval(checkTimer);
+            try { sessionStorage.removeItem(flagKey); } catch (_err) {}
+            return;
+          }
+          if (checks < 2) return;
+          try {
+            var attempts = Number(sessionStorage.getItem(flagKey) || "0");
+            if (attempts >= 3) {
+              window.clearInterval(checkTimer);
+              return;
+            }
+            sessionStorage.setItem(flagKey, String(attempts + 1));
+          } catch (_err) {
+            window.clearInterval(checkTimer);
+            return;
+          }
+          window.clearInterval(checkTimer);
+          location.reload();
+        }, 2500);
+        window.setTimeout(function () { window.clearInterval(checkTimer); }, maxChecks * 2500 + 500);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

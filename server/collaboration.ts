@@ -25,7 +25,6 @@ import {
   isValidCollabMessage,
   lockKey,
   operationEntityKey,
-  lwwWins,
   structuralMerge,
   detectConflict,
 } from '@shared/collaboration';
@@ -507,9 +506,19 @@ export class CollaborationServer {
       // Tag the operation with server timestamp and clientId
       const taggedOp: CRDTOperation = { ...op, timestamp: clock, clientId: userId };
 
+      // BL-0879: The client-supplied baseline Lamport (highest server
+      // timestamp the client had seen when composing this op). Absent → 0
+      // (fail-safe): a fieldless op is treated as "observed nothing", so any
+      // recent same-key update from another client raises a conflict rather
+      // than silently overwriting it. A MAX_SAFE_INTEGER default would be
+      // fail-deadly (Gemini adversarial review R1, 2026-05-26). detectConflict
+      // + the LWW drop check below must use the SAME comparator so
+      // `conflicts[]` and `survivingOps` never diverge.
+      const baseTimestamp = op.baseTimestamp ?? 0;
+
       // BL-0524: Detect conflicts BEFORE the drop decision so we can
       // surface the losing value to the client.
-      const conflictHit = detectConflict(taggedOp, recent);
+      const conflictHit = detectConflict(taggedOp, recent, baseTimestamp);
 
       // Structural merge for insert/delete
       if (op.op === 'insert' || op.op === 'delete') {
@@ -528,13 +537,15 @@ export class CollaborationServer {
         }
       }
 
-      // LWW for updates: check if a more recent update for the same key exists
+      // LWW for updates: drop the op when a recent same-key update from a
+      // different client was generated after this client's known baseline
+      // (BL-0879 — symmetric with detectConflict's update path).
       if (op.op === 'update') {
         const opKey = `${op.path.join('.')}:${op.key}`;
         const newerExists = recent.some((r) => {
           if (r.op.op !== 'update') { return false; }
           const rKey = `${r.op.path.join('.')}:${r.op.key}`;
-          return rKey === opKey && !lwwWins(r.serverTs, r.clientId, clock, userId);
+          return rKey === opKey && r.serverTs > baseTimestamp && r.clientId !== userId;
         });
         if (newerExists) {
           if (conflictHit) {

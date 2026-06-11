@@ -34,7 +34,7 @@ validateEnv();
 
 const app = express();
 
-// Replit runs behind one reverse proxy, so trust exactly 1 hop.
+// Trust exactly one reverse proxy hop by default.
 // Adjust this value if deploying behind additional proxies (e.g., Cloudflare + load balancer = 2).
 app.set("trust proxy", 1);
 
@@ -85,7 +85,7 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "blob:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: isDev
-        ? ["'self'", "ws://localhost:*", "ws://127.0.0.1:*", "http://localhost:*", "http://127.0.0.1:*"]
+        ? ["'self'", "ws://localhost:*", "ws://127.0.0.1:*", "http://localhost:*", "http://127.0.0.1:*", "ipc://localhost"]
         : ["'self'"],
       frameSrc: ["'none'"],
       workerSrc: ["'self'", "blob:"],
@@ -162,9 +162,27 @@ app.use((_req, res, next) => {
 });
 
 // Rate limit API requests to prevent brute-force attacks and abuse【697222849486831†L78-L93】.
+const DEFAULT_API_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const DEFAULT_API_RATE_LIMIT_MAX = 300;
+
+function readPositiveIntegerEnv(name: string): number | null {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim().length === 0) {
+    return null;
+  }
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    logger.warn('Ignoring invalid positive integer env override', { name, value: raw });
+    return null;
+  }
+  return Math.floor(parsed);
+}
+
+const apiRateLimitMax = readPositiveIntegerEnv('RATE_LIMIT_MAX') ?? DEFAULT_API_RATE_LIMIT_MAX;
+
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 300,
+  windowMs: DEFAULT_API_RATE_LIMIT_WINDOW_MS,
+  limit: apiRateLimitMax,
   standardHeaders: true,
   legacyHeaders: false,
   skip: isSSERequest,
@@ -177,12 +195,16 @@ app.use('/api', (req, res, next) => {
 });
 const httpServer = createServer(app);
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "20mb" }));
 
-app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+app.use(express.urlencoded({ extended: false, limit: "20mb" }));
 
-app.use(express.raw({ limit: "5mb", type: ['application/octet-stream', 'application/zip', 'application/x-zip-compressed'] }));
-app.use(express.text({ limit: "2mb", type: ['text/xml', 'application/xml', 'image/svg+xml', 'text/plain'] }));
+// NOTE: Raised from 1MB because several AI vision features (hardware visual inspection,
+// datasheet extraction, chat image uploads, etc.) send resized images as base64 data URLs
+// inside JSON bodies. The per-route `payloadLimit(16MB)` checks are pointless if the
+// global body parser rejects first.
+app.use(express.raw({ limit: "20mb", type: ['application/octet-stream', 'application/zip', 'application/x-zip-compressed'] }));
+app.use(express.text({ limit: "20mb", type: ['text/xml', 'application/xml', 'image/svg+xml', 'text/plain'] }));
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   if (isSSERequest(req)) return next();
@@ -442,19 +464,24 @@ app.use((req, res, next) => {
     res.json({ version: 1, routes: apiDocs });
   });
 
+  app.get('/.well-known/appspecific/com.chrome.devtools.json', (_req, res) => {
+    res.type('application/json').send('{}');
+  });
+
   // BL-0010: Catch-all for unmatched /api/* routes — return JSON 404 instead of
   // falling through to the SPA catch-all which would return HTML (index.html)
   app.all('/api/{*path}', (_req: Request, res: Response) => {
     res.status(404).json({ message: 'API endpoint not found' });
   });
 
-  app.use((err: Error & { status?: number; statusCode?: number }, _req: Request, res: Response, next: NextFunction) => {
+  app.use((err: Error & { status?: number; statusCode?: number; httpStatus?: number }, _req: Request, res: Response, next: NextFunction) => {
     if (res.headersSent) {
       return next(err);
     }
 
-    const status = err.status ?? err.statusCode ?? 500;
-    logger.error("Server error", { stack: err.stack, status });
+    // StorageError and similar custom errors expose httpStatus instead of status/statusCode.
+    const status = err.status ?? err.statusCode ?? err.httpStatus ?? 500;
+    logger.error("Server error", { stack: err.stack, status, name: err.name });
 
     let clientMessage: string;
     if (status < 500) {

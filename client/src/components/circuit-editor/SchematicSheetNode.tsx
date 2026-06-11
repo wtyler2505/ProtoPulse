@@ -1,5 +1,5 @@
 import { memo, useState, useRef, useEffect } from 'react';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { Handle, Position, type Node, type NodeProps } from '@/lib/xyflow-compat';
 import { FileStack, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { HierarchicalPortRow } from '@shared/schema';

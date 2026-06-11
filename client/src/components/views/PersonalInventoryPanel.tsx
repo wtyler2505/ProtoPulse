@@ -15,13 +15,13 @@ function StockRow({ stock }: { stock: PartStockRow }) {
   return (
     <div
       data-testid={`personal-stock-${stock.id}`}
-      className="flex items-center justify-between gap-3 rounded-md border border-border/40 bg-muted/30 px-3 py-2"
+      className="flex items-center justify-between gap-3.5 rounded-md border border-border/40 bg-muted/30 px-3.5 py-2.5"
     >
       <div className="min-w-0 flex-1">
         <span className="text-sm font-medium text-foreground truncate block" data-testid={`personal-stock-part-${stock.id}`}>
           {stock.partId.slice(0, 8)}...
         </span>
-        <div className="flex items-center gap-2 mt-0.5">
+        <div className="mt-1 flex items-center gap-2.5">
           {stock.storageLocation && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <MapPin className="h-3 w-3" />
@@ -33,12 +33,12 @@ function StockRow({ stock }: { stock: PartStockRow }) {
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Badge variant="outline" data-testid={`personal-stock-qty-${stock.id}`}>
+      <div className="flex shrink-0 items-center gap-2">
+        <Badge variant="outline" className="h-5 text-[11px]" data-testid={`personal-stock-qty-${stock.id}`}>
           {stock.quantityOnHand ?? 0} on hand
         </Badge>
         {stock.unitPrice && (
-          <Badge variant="secondary" className="text-[10px]">
+          <Badge variant="secondary" className="h-5 text-[11px]">
             ${Number(stock.unitPrice).toFixed(2)}
           </Badge>
         )}
@@ -99,11 +99,11 @@ export default function PersonalInventoryPanel() {
 
   return (
     <Card data-testid="personal-inventory-panel">
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2.5 pt-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Warehouse className="h-4 w-4" />
           Personal Inventory
-          <Badge variant="secondary" data-testid="personal-inventory-count">
+          <Badge variant="secondary" className="h-5 text-[11px]" data-testid="personal-inventory-count">
             {stockCount} {stockCount === 1 ? 'item' : 'items'}
           </Badge>
         </CardTitle>
@@ -116,7 +116,7 @@ export default function PersonalInventoryPanel() {
             placeholder="Search parts to add to your bin..."
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); }}
-            className="h-8 text-sm"
+            className="h-8.5 text-sm"
           />
           {searchQuery.length >= 2 && searchResults.length > 0 && (
             <div className="absolute z-10 w-full mt-1 rounded-md border border-border bg-popover shadow-md">
@@ -125,7 +125,7 @@ export default function PersonalInventoryPanel() {
                   key={part.id}
                   type="button"
                   data-testid={`personal-add-${part.id}`}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors first:rounded-t-md last:rounded-b-md"
+                  className="w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-accent first:rounded-t-md last:rounded-b-md"
                   onClick={() => { handleAddPart(part.id); }}
                 >
                   <span className="font-medium">{part.title}</span>
@@ -142,16 +142,16 @@ export default function PersonalInventoryPanel() {
             Your personal inventory is empty. Search above to add parts.
           </p>
         ) : (
-          <ScrollArea className="max-h-[400px]">
-            <div className="space-y-4" data-testid="personal-inventory-list">
+          <ScrollArea className="max-h-[420px]">
+            <div className="space-y-4.5" data-testid="personal-inventory-list">
               {Array.from(byLocation.entries()).map(([location, items]) => (
                 <div key={location}>
-                  <div className="flex items-center gap-2 mb-1.5">
+                  <div className="mb-2 flex items-center gap-2">
                     <Package className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{location}</span>
-                    <Badge variant="outline" className="text-[10px]">{items.length}</Badge>
+                    <Badge variant="outline" className="h-5 text-[11px]">{items.length}</Badge>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {items.map((stock) => <StockRow key={stock.id} stock={stock} />)}
                   </div>
                 </div>

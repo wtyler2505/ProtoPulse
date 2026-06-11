@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildWorkspaceReleaseConfidence } from '@/lib/workspace-release-confidence';
-import type { Edge, Node } from '@xyflow/react';
+import type { GraphEdge, GraphNode } from '@/lib/graph-types';
 import type { BomItem, ValidationIssue } from '@/lib/project-context';
 
 describe('buildWorkspaceReleaseConfidence', () => {
@@ -29,7 +29,7 @@ describe('buildWorkspaceReleaseConfidence', () => {
         message: 'Critical DRC issue',
       },
     ];
-    const nodes: Node[] = [
+    const nodes: GraphNode[] = [
       {
         id: 'n-1',
         type: 'mcu',
@@ -40,7 +40,7 @@ describe('buildWorkspaceReleaseConfidence', () => {
         },
       },
     ];
-    const edges: Edge[] = [];
+    const edges: GraphEdge[] = [];
 
     const result = buildWorkspaceReleaseConfidence({
       bomItems,

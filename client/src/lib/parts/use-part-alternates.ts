@@ -4,8 +4,12 @@ import { apiRequest } from '@/lib/queryClient';
 import { partsQueryKeys } from './query-keys';
 import type { PartRow } from '@shared/parts/part-row';
 
+export type PartAlternateCandidate = PartRow & {
+  matchScore: number;
+};
+
 interface AlternatesResponse {
-  data: PartRow[];
+  data: PartAlternateCandidate[];
   total: number;
 }
 

@@ -9,7 +9,7 @@
 import { memo, useState, useCallback, useEffect } from 'react';
 import { Activity, Check, X, Zap, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -168,12 +168,11 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
           <Label htmlFor="dielectric-constant" className="text-xs text-zinc-400">
             Dielectric Constant (εr)
           </Label>
-          <Input
+          <NumberInput
             id="dielectric-constant"
-            type="number"
-            step="0.01"
-            min="1"
-            max="20"
+            step={0.01}
+            min={1}
+            max={20}
             value={dielectricConstant}
             onChange={(e) => {
               setDielectricConstant(Math.max(1, parseFloat(e.target.value) || 1));
@@ -187,12 +186,11 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
           <Label htmlFor="dielectric-height" className="text-xs text-zinc-400">
             Dielectric Height (mm)
           </Label>
-          <Input
+          <NumberInput
             id="dielectric-height"
-            type="number"
-            step="0.01"
-            min="0.01"
-            max="5"
+            step={0.01}
+            min={0.01}
+            max={5}
             value={dielectricHeight}
             onChange={(e) => {
               setDielectricHeight(Math.max(0.01, parseFloat(e.target.value) || 0.01));
@@ -206,12 +204,11 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
           <Label htmlFor="copper-thickness" className="text-xs text-zinc-400">
             Copper Thickness (mm)
           </Label>
-          <Input
+          <NumberInput
             id="copper-thickness"
-            type="number"
-            step="0.001"
-            min="0"
-            max="0.5"
+            step={0.001}
+            min={0}
+            max={0.5}
             value={copperThickness}
             onChange={(e) => {
               setCopperThickness(Math.max(0, parseFloat(e.target.value) || 0));
@@ -248,12 +245,11 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
           <Label htmlFor="tolerance" className="text-xs text-zinc-400">
             Tolerance (%)
           </Label>
-          <Input
+          <NumberInput
             id="tolerance"
-            type="number"
-            step="1"
-            min="0"
-            max="100"
+            step={1}
+            min={0}
+            max={100}
             value={tolerance}
             onChange={(e) => {
               setTolerance(Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)));

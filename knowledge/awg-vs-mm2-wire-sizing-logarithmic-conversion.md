@@ -34,6 +34,7 @@ Outside North America, **IEC 60228** and the equivalent metric system specifies 
 ---
 
 Relevant Notes:
+- [[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]] — complete wire gauge reference table across the 7 rover power tiers
 - [[motor-power-wiring-below-14awg-overheats-at-15a-and-creates-fire-risk-so-gauge-is-chosen-by-steady-state-current-not-voltage]] — ampacity-driven sizing for motor wiring
 - [[high-current-motor-phase-wires-require-14awg-minimum-and-undersized-wiring-is-a-fire-hazard]] — minimum-AWG rule for phase wiring
 - [[moc-electronics-math]] — parent MOC

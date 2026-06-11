@@ -33,6 +33,7 @@ Relevant Notes:
 - [[bldc-controller-and-mcu-must-share-common-ground-or-control-signals-float]] — the single connection that must exist between the two domains
 - [[10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownouts-because-radio-bursts-pull-current-faster-than-the-buck-regulator-responds]] — the Vin cap that rides on the clean LM2596 rail
 - [[100uf-capacitor-on-arduino-5v-input-absorbs-motor-switching-emi-that-causes-mcu-resets]] — the filter pattern that still does not substitute for supply separation
+- [[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]] — an example of how isolation and hierarchy prevent cascading failures in the power domain
 
 Topics:
 - [[actuators]]

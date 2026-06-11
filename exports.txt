@@ -1,0 +1,295 @@
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:3:export default defineConfig({
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:4:  testDir: './e2e',
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:5:  outputDir: './e2e-results',
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:6:  fullyParallel: true,
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:7:  forbidOnly: !!process.env.CI,
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:8:  retries: 1,
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:9:  workers: process.env.CI ? 1 : undefined,
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:10:  reporter: 'html',
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:11:  timeout: 30_000,
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:12:  expect: {
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:13:    timeout: 10_000,
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:14:  },
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:15:  use: {
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:16:    baseURL: 'http://localhost:5000',
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:17:    trace: 'on-first-retry',
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:18:    screenshot: 'only-on-failure',
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:19:  },
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:20:  projects: [
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:21:    {
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:22:      name: 'setup',
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:23:      testMatch: /auth\.setup\.ts/,
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:24:    },
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:25:    {
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:26:      name: 'chromium',
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:27:      use: { ...devices['Desktop Chrome'] },
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:28:      dependencies: ['setup'],
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:29:    },
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:30:  ],
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:31:  webServer: {
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:32:    command: 'npm run dev',
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:33:    url: 'http://localhost:5000',
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:34:    reuseExistingServer: true,
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:35:    timeout: 120_000,
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:36:  },
+/home/wtyler/Projects/ProtoPulse/playwright.config.ts:37:});
+/home/wtyler/Projects/ProtoPulse/drizzle.config.ts:15:export default defineConfig({
+/home/wtyler/Projects/ProtoPulse/drizzle.config.ts:16:  out: "./migrations",
+/home/wtyler/Projects/ProtoPulse/drizzle.config.ts:17:  schema: "./shared/schema.ts",
+/home/wtyler/Projects/ProtoPulse/drizzle.config.ts:18:  dialect: "postgresql",
+/home/wtyler/Projects/ProtoPulse/drizzle.config.ts:19:  dbCredentials: {
+/home/wtyler/Projects/ProtoPulse/drizzle.config.ts:20:    url: process.env.DATABASE_URL,
+/home/wtyler/Projects/ProtoPulse/drizzle.config.ts:21:  },
+/home/wtyler/Projects/ProtoPulse/drizzle.config.ts:22:});
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:5:export default defineConfig({
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:6:  plugins: [react()],
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:7:  resolve: {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:8:    alias: {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:9:      '@': path.resolve(import.meta.dirname, 'client', 'src'),
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:10:      '@shared': path.resolve(import.meta.dirname, 'shared'),
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:11:    },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:12:  },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:13:  css: {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:14:    postcss: {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:15:      plugins: [],
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:16:    },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:17:  },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:18:  test: {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:19:    projects: [
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:20:      {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:21:        extends: true,
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:22:        test: {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:23:          name: 'server',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:24:          environment: 'node',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:25:          include: ['server/**/*.test.ts'],
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:26:          // scrypt-based auth tests need headroom — each hash is ~2-3s at N=16384
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:27:          testTimeout: 15000,
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:28:        },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:29:      },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:30:      {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:31:        extends: true,
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:32:        test: {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:33:          name: 'client',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:34:          environment: 'happy-dom',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:35:          include: ['client/**/*.test.ts', 'client/**/*.test.tsx'],
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:36:          setupFiles: ['client/src/test-setup.ts'],
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:37:        },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:38:      },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:39:      {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:40:        extends: true,
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:41:        test: {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:42:          name: 'shared',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:43:          environment: 'node',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:44:          include: ['shared/**/*.test.ts'],
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:45:        },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:46:      },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:47:      {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:48:        extends: true,
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:49:        test: {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:50:          name: 'electron',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:51:          environment: 'node',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:52:          include: ['electron/**/*.test.ts'],
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:53:        },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:54:      },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:55:      {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:56:        extends: true,
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:57:        test: {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:58:          name: 'scripts',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:59:          environment: 'node',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:60:          include: ['scripts/**/*.test.ts'],
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:61:        },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:62:      },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:63:    ],
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:64:    coverage: {
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:65:      provider: 'v8',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:66:      reporter: ['text', 'html', 'json-summary'],
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:67:      reportsDirectory: 'coverage',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:68:      include: ['server/**/*.ts', 'client/src/**/*.ts', 'client/src/**/*.tsx', 'shared/**/*.ts'],
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:69:      exclude: [
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:70:        'server/__tests__/**',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:71:        'server/index.ts',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:72:        'client/src/test-setup.ts',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:73:        '**/*.test.ts',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:74:        '**/*.test.tsx',
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:75:      ],
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:76:    },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:77:  },
+/home/wtyler/Projects/ProtoPulse/vitest.config.ts:78:});
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:43:export default function useMultimodalState() {
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:44:  const [state, dispatch] = useReducer(multimodalReducer, initialState);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:45:
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:46:  const setMultimodalInputType = useCallback((value: InputType | null) => dispatch({ type: 'SET_INPUT_TYPE', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:47:  const setMultimodalStatus = useCallback((value: ProcessingStatus) => dispatch({ type: 'SET_STATUS', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:48:  const setAttachedImage = useCallback((value: AttachedImage | null) => dispatch({ type: 'SET_ATTACHED_IMAGE', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:49:  const resetMultimodal = useCallback(() => dispatch({ type: 'RESET_MULTIMODAL' }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:50:
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:51:  return {
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:52:    ...state,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:53:    setMultimodalInputType,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:54:    setMultimodalStatus,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:55:    setAttachedImage,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:56:    resetMultimodal,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:57:  };
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useMultimodalState.ts:58:}
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:67:export default function useChatMessaging() {
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:68:  const [state, dispatch] = useReducer(chatMessagingReducer, initialState);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:69:
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:70:  const setInput = useCallback((value: string | ((prev: string) => string)) => {
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:71:    if (typeof value === 'function') {
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:72:      dispatch({ type: 'SET_INPUT_FN', payload: value });
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:73:    } else {
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:74:      dispatch({ type: 'SET_INPUT', payload: value });
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:75:    }
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:76:  }, []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:77:
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:78:  const setChatSearch = useCallback((value: string) => dispatch({ type: 'SET_CHAT_SEARCH', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:79:  const setLastUserMessage = useCallback((value: string) => dispatch({ type: 'SET_LAST_USER_MESSAGE', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:80:  const setStreamingContent = useCallback((value: string) => dispatch({ type: 'SET_STREAMING_CONTENT', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:81:  const setPendingActions = useCallback((value: PendingActionReview | null) => dispatch({ type: 'SET_PENDING_ACTIONS', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:82:  const setCopiedId = useCallback((value: string | null) => dispatch({ type: 'SET_COPIED_ID', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:83:  const setTokenInfo = useCallback((value: TokenInfo | null) => dispatch({ type: 'SET_TOKEN_INFO', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:84:  const resetMessaging = useCallback(() => dispatch({ type: 'RESET_MESSAGING' }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:85:
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:86:  return {
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:87:    ...state,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:88:    setInput,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:89:    setChatSearch,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:90:    setLastUserMessage,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:91:    setStreamingContent,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:92:    setPendingActions,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:93:    setCopiedId,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:94:    setTokenInfo,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:95:    resetMessaging,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:96:  };
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatMessaging.ts:97:}
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:77:export default function useChatPanelUI() {
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:78:  const [state, dispatch] = useReducer(chatPanelUIReducer, initialState);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:79:
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:80:  const toggleSettings = useCallback(() => dispatch({ type: 'TOGGLE_SETTINGS' }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:81:  const toggleApiKey = useCallback(() => dispatch({ type: 'TOGGLE_API_KEY' }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:82:  const toggleSetupDialog = useCallback(() => dispatch({ type: 'TOGGLE_SETUP_DIALOG' }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:83:  const toggleSearch = useCallback(() => dispatch({ type: 'TOGGLE_SEARCH' }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:84:  const toggleDesignAgent = useCallback(() => dispatch({ type: 'TOGGLE_DESIGN_AGENT' }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:85:  const toggleQuickActions = useCallback(() => dispatch({ type: 'TOGGLE_QUICK_ACTIONS' }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:86:  const toggleMultimodalMenu = useCallback(() => dispatch({ type: 'TOGGLE_MULTIMODAL_MENU' }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:87:
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:88:  const setShowScrollBtn = useCallback((value: boolean) => dispatch({ type: 'SET_SCROLL_BTN', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:89:  const setShowSettings = useCallback((value: boolean) => dispatch({ type: 'SET_SETTINGS', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:90:  const setShowApiKey = useCallback((value: boolean) => dispatch({ type: 'SET_API_KEY', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:91:  const setShowSetupDialog = useCallback((value: boolean) => dispatch({ type: 'SET_SETUP_DIALOG', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:92:  const setShowSearch = useCallback((value: boolean) => dispatch({ type: 'SET_SEARCH', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:93:  const setShowDesignAgent = useCallback((value: boolean) => dispatch({ type: 'SET_DESIGN_AGENT', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:94:  const setShowQuickActions = useCallback((value: boolean) => dispatch({ type: 'SET_QUICK_ACTIONS', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:95:  const setShowMultimodalMenu = useCallback((value: boolean) => dispatch({ type: 'SET_MULTIMODAL_MENU', payload: value }), []);
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:96:
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:97:  return {
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:98:    ...state,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:99:    toggleSettings,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:100:    toggleApiKey,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:101:    toggleSetupDialog,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:102:    toggleSearch,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:103:    toggleDesignAgent,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:104:    toggleQuickActions,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:105:    toggleMultimodalMenu,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:106:    setShowScrollBtn,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:107:    setShowSettings,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:108:    setShowApiKey,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:109:    setShowSetupDialog,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:110:    setShowSearch,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:111:    setShowDesignAgent,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:112:    setShowQuickActions,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:113:    setShowMultimodalMenu,
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:114:  };
+/home/wtyler/Projects/ProtoPulse/client/src/components/panels/chat/hooks/useChatPanelUI.ts:115:}
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:8:export default defineConfig({
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:9:  // Required for packaged WebView builds so asset URLs resolve relative to
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:10:  // bundled index.html instead of assuming an absolute server root.
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:11:  base: "./",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:12:  plugins: [
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:13:    react(),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:14:    // Filter out errors that originate from user browser extensions
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:15:    // (Grammarly, LanguageTool, Microsoft Editor, etc.) rather than our code.
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:16:    runtimeErrorOverlay({
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:17:      filter: (error) => {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:18:        const message = error.message ?? "";
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:19:        const stack = error.stack ?? "";
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:20:        const extensionSignals = [
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:21:          "mce-autosize-textarea",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:22:          "A listener indicated an asynchronous response",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:23:          "message channel closed before a response",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:24:          "webcomponents-ce.js",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:25:          "overlay_bundle.js",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:26:          "chrome-extension://",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:27:          "moz-extension://",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:28:        ];
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:29:        return !extensionSignals.some(
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:30:          (signal) => message.includes(signal) || stack.includes(signal),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:31:        );
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:32:      },
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:33:    }),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:34:    tailwindcss(),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:35:    metaImagesPlugin(),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:36:    ...(process.env.NODE_ENV !== "production" &&
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:37:    process.env.REPL_ID !== undefined
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:38:      ? [
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:39:          await import("@replit/vite-plugin-cartographer").then((m) =>
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:40:            m.cartographer(),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:41:          ),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:42:          await import("@replit/vite-plugin-dev-banner").then((m) =>
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:43:            m.devBanner(),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:44:          ),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:45:        ]
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:46:      : []),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:47:  ],
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:48:  resolve: {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:49:    alias: {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:50:      "@": path.resolve(import.meta.dirname, "client", "src"),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:51:      "@shared": path.resolve(import.meta.dirname, "shared"),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:52:      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:53:      // Patched Radix Slot to fix React 19 infinite-loop bug.
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:54:      // See client/src/vendor/radix-slot-fixed.tsx for details.
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:55:      "@radix-ui/react-slot": path.resolve(
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:56:        import.meta.dirname,
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:57:        "client",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:58:        "src",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:59:        "vendor",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:60:        "radix-slot-fixed.tsx",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:61:      ),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:62:    },
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:63:  },
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:64:  css: {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:65:    postcss: {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:66:      plugins: [],
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:67:    },
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:68:  },
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:69:  root: path.resolve(import.meta.dirname, "client"),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:70:  build: {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:71:    outDir: path.resolve(import.meta.dirname, "dist/public"),
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:72:    emptyOutDir: true,
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:73:    sourcemap: 'hidden',
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:74:    rollupOptions: {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:75:      output: {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:76:        manualChunks(id: string) {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:77:          if (id.includes('node_modules')) {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:78:            // Only chunk truly universal dependencies needed on every page load.
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:79:            // Everything else (xyflow, recharts, codemirror, markdown, etc.) is
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:80:            // used in specific lazy-loaded views and should be split naturally by
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:81:            // Vite's dynamic import analysis for proper tree-shaking.
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:82:            if (id.includes('/react-dom/') || id.includes('/react/') || id.includes('/scheduler/')) {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:83:              return 'react-vendor';
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:84:            }
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:85:          }
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:86:          return undefined;
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:87:        },
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:88:      },
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:89:    },
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:90:  },
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:91:  server: {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:92:    host: "0.0.0.0",
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:93:    allowedHosts: true,
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:94:    fs: {
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:95:      strict: true,
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:96:      deny: ["**/.*"],
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:97:    },
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:98:  },
+/home/wtyler/Projects/ProtoPulse/vite.config.ts:99:});

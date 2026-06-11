@@ -33,6 +33,7 @@ Relevant Notes:
 - [[ac-switches-cannot-interrupt-dc-arcs-and-will-cause-fire-or-explosion-in-battery-systems]] -- the same physics (DC arc suppression) drives both switch and fuse selection
 - [[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]] -- the four-number ordering that determines the specific ANL-100 rating
 - [[per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main]] -- the downstream blade-class tier that the ANL main fuse coordinates with
+- [[four-motor-bldc-systems-exceed-standard-hoverboard-bms-ratings-requiring-firmware-current-limiting]] -- applying ANL fuses as the hardware backstop when 4-motor peak loads exceed BMS ratings
 
 Topics:
 - [[power-systems]]

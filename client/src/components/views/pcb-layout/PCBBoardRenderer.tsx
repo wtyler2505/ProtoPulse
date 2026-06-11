@@ -107,6 +107,9 @@ const ComponentFootprints = memo(function ComponentFootprints({
               onInstanceClick(inst.id, e);
             }}
             data-testid={`pcb-instance-${inst.id}`}
+            data-id={String(inst.id)}
+            data-node-label={inst.referenceDesignator}
+            aria-label={`PCB footprint ${inst.referenceDesignator}`}
           >
             {footprint ? (
               <>
@@ -234,22 +237,22 @@ const LayerLegend = memo(function LayerLegend({ boardWidth, boardHeight }: Layer
       className="absolute bottom-3 left-3 z-10 bg-card/80 backdrop-blur-xl border border-border p-2 shadow-lg"
       data-testid="pcb-layer-legend"
     >
-      <p className="text-[9px] font-medium text-muted-foreground mb-1">Layers</p>
-      <div className="flex flex-col gap-0.5">
+      <p className="text-[11px] font-medium text-muted-foreground mb-1.5">Layers</p>
+      <div className="flex flex-col gap-1">
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-0.5 bg-red-400 inline-block" />
-          <span className="text-[9px] text-muted-foreground">F.Cu (Front Copper)</span>
+          <span className="text-[11px] text-muted-foreground">F.Cu (Front Copper)</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-0.5 bg-blue-400 inline-block" />
-          <span className="text-[9px] text-muted-foreground">B.Cu (Back Copper)</span>
+          <span className="text-[11px] text-muted-foreground">B.Cu (Back Copper)</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-0.5 bg-yellow-400 inline-block border-dashed" />
-          <span className="text-[9px] text-muted-foreground">Board Outline</span>
+          <span className="text-[11px] text-muted-foreground">Board Outline</span>
         </div>
       </div>
-      <p className="text-[8px] text-muted-foreground/60 mt-1">
+      <p className="text-[10px] text-muted-foreground/70 mt-1.5">
         {boardWidth / 10} x {boardHeight / 10} mm
       </p>
     </div>

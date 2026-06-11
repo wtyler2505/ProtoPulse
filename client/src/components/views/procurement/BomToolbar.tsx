@@ -1,5 +1,6 @@
 import { Search, SlidersHorizontal, Plus, Download, Zap, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,9 @@ export interface BomToolbarProps {
   onAddItem: () => void;
   totalCost: number;
   onExportCSV: () => void;
+  exportBlocked?: boolean;
+  exportBlockerCount?: number;
+  exportWarningCount?: number;
 }
 
 export function BomToolbar({
@@ -32,10 +36,19 @@ export function BomToolbar({
   onAddItem,
   totalCost,
   onExportCSV,
+  exportBlocked = false,
+  exportBlockerCount = 0,
+  exportWarningCount = 0,
 }: BomToolbarProps) {
+  const exportTooltip = exportBlocked
+    ? `Resolve ${exportBlockerCount} procurement safety blocker${exportBlockerCount === 1 ? '' : 's'} before exporting.`
+    : exportWarningCount > 0
+      ? `Review ${exportWarningCount} procurement warning${exportWarningCount === 1 ? '' : 's'} before ordering.`
+      : 'Download BOM as CSV file';
+
   return (
-    <div className="p-4 border-b border-border flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-card/30 backdrop-blur">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+    <div className="flex flex-col gap-4 border-b border-border bg-card/30 p-4 backdrop-blur md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
         <div className="relative group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <input
@@ -45,7 +58,7 @@ export function BomToolbar({
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             data-testid="input-search-bom"
-            className="pl-9 pr-4 py-2 bg-muted/30 border border-border text-sm focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50 w-full sm:w-64 transition-all"
+            className="w-full border border-border bg-muted/30 py-2.5 pl-9 pr-4 text-sm transition-all focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50 sm:w-64"
           />
         </div>
         <StyledTooltip content="Configure BOM optimization settings" side="bottom">
@@ -70,7 +83,7 @@ export function BomToolbar({
               data-testid="button-toggle-esd-filter"
             >
               <Zap className="w-4 h-4 mr-2" />
-              ESD{esdCount > 0 && <span className="ml-1 text-[10px] font-mono">({esdCount})</span>}
+              ESD{esdCount > 0 && <span className="ml-1 text-[11px] font-mono">({esdCount})</span>}
             </Button>
           </StyledTooltip>
           {/* TODO(plan-10-wave-2): add identical vault info icons on Cost Optimisation + Assembly toggles */}
@@ -107,14 +120,22 @@ export function BomToolbar({
 
       <div className="flex items-center gap-4 md:gap-6">
         <div className="text-right flex-1 md:flex-none">
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Estimated BOM Cost</div>
+          <div className="inline-flex items-center justify-end gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
+            Estimated BOM Cost
+            <TrustBadge kind="estimated" />
+          </div>
           <div className="text-xl font-mono font-bold text-primary flex items-baseline justify-end gap-1" data-testid="text-total-cost">
             ${totalCost.toFixed(2)}
             <span className="text-xs text-muted-foreground font-sans font-normal">/ unit @ 1k qty</span>
           </div>
         </div>
-        <StyledTooltip content="Download BOM as CSV file" side="bottom">
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={onExportCSV} data-testid="button-export-csv">
+        <StyledTooltip content={exportTooltip} side="bottom">
+          <Button
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={onExportCSV}
+            disabled={exportBlocked}
+            data-testid="button-export-csv"
+          >
             <Download className="w-4 h-4 mr-2" /> Export CSV
           </Button>
         </StyledTooltip>

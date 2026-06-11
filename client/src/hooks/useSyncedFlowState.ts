@@ -1,15 +1,15 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 
 interface UseSyncedFlowStateParams {
-  nodes: Node[];
-  edges: Edge[];
-  setNodes: (nodes: Node[]) => void;
-  setEdges: (edges: Edge[]) => void;
-  localNodes: Node[];
-  localEdges: Edge[];
-  setLocalNodes: Dispatch<SetStateAction<Node[]>>;
-  setLocalEdges: Dispatch<SetStateAction<Edge[]>>;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  setNodes: (nodes: GraphNode[]) => void;
+  setEdges: (edges: GraphEdge[]) => void;
+  localNodes: GraphNode[];
+  localEdges: GraphEdge[];
+  setLocalNodes: Dispatch<SetStateAction<GraphNode[]>>;
+  setLocalEdges: Dispatch<SetStateAction<GraphEdge[]>>;
 }
 
 interface UseSyncedFlowStateReturn {

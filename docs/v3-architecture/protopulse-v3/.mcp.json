@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "context7": {
+      "purpose": "Current library and API docs"
+    },
+    "notebooklm": {
+      "purpose": "ProtoPulse knowledge checks"
+    },
+    "arduino-cli": {
+      "purpose": "Firmware compile and board checks"
+    }
+  }
+}

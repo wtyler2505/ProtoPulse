@@ -8,7 +8,7 @@
 
 import { useSyncExternalStore, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import {
@@ -178,11 +178,11 @@ function FrequencyControl({
         Frequency
       </Label>
       <div className="flex gap-1">
-        <Input
+        <NumberInput
           id="funcgen-frequency"
           data-testid="funcgen-frequency-input"
-          type="number"
           min={0}
+          max={1_000_000_000}
           step="any"
           value={displayValue}
           className="h-7 flex-1 text-xs tabular-nums"
@@ -296,11 +296,11 @@ export function FunctionGeneratorPanel({
         <Label htmlFor="funcgen-amplitude" className="text-xs text-muted-foreground">
           Amplitude ({formattedAmplitude.unit})
         </Label>
-        <Input
+        <NumberInput
           id="funcgen-amplitude"
           data-testid="funcgen-amplitude-input"
-          type="number"
           min={0}
+          max={1000}
           step="any"
           value={amplitude}
           className="h-7 text-xs tabular-nums"
@@ -318,10 +318,11 @@ export function FunctionGeneratorPanel({
         <Label htmlFor="funcgen-dc-offset" className="text-xs text-muted-foreground">
           DC Offset (V)
         </Label>
-        <Input
+        <NumberInput
           id="funcgen-dc-offset"
           data-testid="funcgen-dc-offset-input"
-          type="number"
+          min={-1000}
+          max={1000}
           step="any"
           value={dcOffset}
           className="h-7 text-xs tabular-nums"

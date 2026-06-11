@@ -108,29 +108,29 @@ function PartItem({
         onDragStart={onDragStart}
         data-testid={`component-placer-part-${part.id}`}
         className={cn(
-          'flex items-start gap-2 rounded-xl border border-transparent px-2.5 py-2.5 transition-all',
+          'flex items-start gap-2 rounded-md border border-transparent px-2 py-1.5 transition-all',
           'cursor-grab active:cursor-grabbing hover:border-primary/20 hover:bg-muted/60 group',
         )}
       >
         <div className="flex items-start gap-2.5 min-w-0 flex-1">
           <GripVertical className="mt-1 w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary/80">
-            <Cpu className="w-4 h-4" />
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary/80">
+            <Cpu className="w-3.5 h-3.5" />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="text-xs font-medium text-foreground truncate">{title}</div>
-            <div className="mt-1 flex flex-wrap gap-1">
-              <span className="inline-flex items-center rounded-full border border-border/70 bg-background/60 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="text-[11px] font-medium text-foreground truncate">{title}</div>
+            <div className="mt-0.5 flex flex-wrap gap-1">
+              <span className="inline-flex items-center rounded-full border border-border/70 bg-background/60 px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                 {packageLabel}
               </span>
-              <span className="inline-flex items-center rounded-full border border-border/70 bg-background/60 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              <span className="inline-flex items-center rounded-full border border-border/70 bg-background/60 px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                 {pinCount} pin{pinCount === 1 ? '' : 's'}
               </span>
               {breadboardMode && insight && (
                 <>
                   <span
                     className={cn(
-                      'inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em]',
+                      'inline-flex items-center rounded-full px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.12em]',
                       insight.fit === 'native'
                         ? 'border border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
                         : insight.fit === 'requires_jumpers'
@@ -148,7 +148,7 @@ function PartItem({
                   </span>
                   <span
                     className={cn(
-                      'inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em]',
+                      'inline-flex items-center rounded-full px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.12em]',
                       insight.modelQuality === 'verified'
                         ? 'border border-violet-400/30 bg-violet-400/10 text-violet-200'
                         : insight.modelQuality === 'basic'
@@ -166,7 +166,7 @@ function PartItem({
                   </span>
                   <span
                     className={cn(
-                      'inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em]',
+                      'inline-flex items-center rounded-full px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.12em]',
                       insight.isOwned
                         ? 'border border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
                         : 'border border-border/70 bg-background/60 text-muted-foreground',
@@ -178,12 +178,12 @@ function PartItem({
               )}
             </div>
             {meta?.manufacturer && (
-              <div className="mt-1 text-[10px] text-muted-foreground truncate">
+              <div className="mt-0.5 text-[10px] text-muted-foreground truncate">
                 {meta.manufacturer}
               </div>
             )}
             {breadboardMode && insight?.storageLocation && (
-              <div className="mt-1 text-[10px] text-muted-foreground truncate">
+              <div className="mt-0.5 text-[10px] text-muted-foreground truncate">
                 Stored in {insight.storageLocation}
               </div>
             )}
@@ -216,7 +216,7 @@ function FamilyGroup({
   return (
     <div data-testid={`component-placer-group-${family.toLowerCase().replace(/\s+/g, '-')}`}>
       <button
-        className="flex items-center gap-1 px-2 py-1 w-full text-left hover:bg-muted/40 transition-colors"
+        className="flex items-center gap-1 px-2 py-0.5 w-full text-left hover:bg-muted/40 transition-colors rounded-sm"
         onClick={() => setOpen((o) => !o)}
       >
         {open ? (
@@ -224,7 +224,7 @@ function FamilyGroup({
         ) : (
           <ChevronRight className="w-3 h-3 text-muted-foreground" />
         )}
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
           {family}
         </span>
         <span className="text-[10px] text-muted-foreground/60 ml-auto">{parts.length}</span>

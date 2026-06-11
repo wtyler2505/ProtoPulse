@@ -3,6 +3,7 @@ name = "protopulse"
 version = "1.0.0"
 description = "AI-assisted EDA platform for makers, hobbyists, and embedded engineers"
 edition = "2021"
+default-run = "protopulse"
 
 [dependencies]
 # Phase 6.1: NO unconditional `devtools` feature. Tauri enables devtools in
@@ -10,7 +11,7 @@ edition = "2021"
 # `devtools` feature flag would force them on in RELEASE too, which is what
 # we don't want for distribution. The `toggle-devtools` menu item in lib.rs
 # is separately #[cfg(debug_assertions)]-gated.
-tauri = { version = "2" }
+tauri = { version = "2", features = [] }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"

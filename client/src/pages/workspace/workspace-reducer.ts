@@ -91,7 +91,7 @@ export function createInitialWorkspaceState(projectId: number): WorkspaceState {
     chatOpen: false,
     sidebarCollapsed: persisted.sidebarCollapsed ?? false,
     chatCollapsed: persisted.chatCollapsed ?? false,
-    sidebarWidth: persisted.sidebarWidth ?? 256,
+    sidebarWidth: persisted.sidebarWidth ?? 280,
     chatWidth: persisted.chatWidth ?? 350,
     shortcutsOpen: false,
     moreMenuOpen: false,

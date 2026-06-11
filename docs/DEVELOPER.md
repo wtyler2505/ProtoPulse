@@ -1466,6 +1466,26 @@ npx prettier --write . # Prettier formatting
 
 ESLint uses flat config (`eslint.config.js`) with `strictTypeChecked` + `stylisticTypeChecked`. `@typescript-eslint/no-explicit-any` is an error. Consistent type imports enforced.
 
+### IPC Contract Workflow (Tauri)
+
+Rust `#[tauri::command]` is the source of truth. Frontend calls must use generated `commands.*` from `client/src/lib/bindings.ts`.
+
+```bash
+# 1) Regenerate bindings from Rust command surface
+npm run tauri:bindings:export
+
+# 2) Verify bindings are fresh + tauri-api.ts consumes commands.*
+npm run tauri:bindings:verify
+
+# 3) One-shot command (export + verify)
+npm run tauri:bindings:sync-check
+
+# 4) Guard against legacy raw invoke names
+npm run lint:ipc-contract
+```
+
+If drift is detected, regenerate bindings and commit the resulting `client/src/lib/bindings.ts` diff.
+
 ---
 
 ## 12. Code Conventions & Patterns

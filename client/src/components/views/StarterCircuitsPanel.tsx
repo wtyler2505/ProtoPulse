@@ -4,10 +4,17 @@
  * text search filters.
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useProjectMeta } from '@/lib/project-context';
 import { queueStarterCircuitLaunch } from '@/lib/starter-circuit-launch';
+import {
+  getRadialAiDeliveryVerb,
+  getRadialAiPromptDelivery,
+  runRadialAiCommand,
+  type RadialAiPromptSection,
+} from '@/lib/radial-ai-commands';
+import { RADIAL_COMMAND_EVENT, type RadialCommandEventDetail } from '@/lib/radial-menu-actions';
 import {
   Search,
   Zap,
@@ -29,16 +36,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import {
-  getAllStarterCircuits,
-  STARTER_CATEGORIES,
-  STARTER_DIFFICULTIES,
-} from '@shared/starter-circuits';
-import type {
-  StarterCircuit,
-  StarterCategory,
-  StarterDifficulty,
-} from '@shared/starter-circuits';
+import { getAllStarterCircuits, STARTER_CATEGORIES, STARTER_DIFFICULTIES } from '@shared/starter-circuits';
+import type { StarterCircuit, StarterCategory, StarterDifficulty } from '@shared/starter-circuits';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -70,6 +69,14 @@ const BOARD_LABELS: Record<string, string> = {
   nano: 'Arduino Nano',
   mega: 'Arduino Mega',
 };
+
+function formatStarterComponent(component: StarterCircuit['components'][number]): string {
+  return `${String(component.quantity)}x ${component.name}${component.value ? ` (${component.value})` : ''}`;
+}
+
+function buildStarterPartsText(circuit: StarterCircuit): string {
+  return [`${circuit.name} parts`, ...circuit.components.map(formatStarterComponent)].join('\n');
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -121,20 +128,292 @@ export default function StarterCircuitsPanel() {
     }
   }, []);
 
+  const handleCopyParts = useCallback(async (circuit: StarterCircuit) => {
+    try {
+      await navigator.clipboard.writeText(buildStarterPartsText(circuit));
+    } catch {
+      // Clipboard API may fail in non-secure contexts; fall back silently
+    }
+  }, []);
+
   const { toast } = useToast();
 
-  const handleOpenCircuit = useCallback((circuit: StarterCircuit) => {
-    queueStarterCircuitLaunch({
-      id: circuit.id,
-      name: circuit.name,
-      arduinoCode: circuit.arduinoCode,
-    });
-    setActiveView('arduino');
-    toast({
-      title: `"${circuit.name}" opened`,
-      description: 'Queued the starter sketch and switched to the Arduino workbench.',
-    });
-  }, [setActiveView, toast]);
+  const handleOpenCircuit = useCallback(
+    (circuit: StarterCircuit) => {
+      queueStarterCircuitLaunch({
+        id: circuit.id,
+        name: circuit.name,
+        arduinoCode: circuit.arduinoCode,
+      });
+      setActiveView('arduino');
+      toast({
+        title: `"${circuit.name}" opened`,
+        description: 'Queued the starter sketch and switched to the Arduino workbench.',
+      });
+    },
+    [setActiveView, toast],
+  );
+
+  const findRadialCircuit = useCallback(
+    (targetId?: string | null): StarterCircuit | null => {
+      if (targetId) {
+        return allCircuits.find((circuit) => circuit.id === targetId) ?? null;
+      }
+      return filteredCircuits[0] ?? allCircuits[0] ?? null;
+    },
+    [allCircuits, filteredCircuits],
+  );
+
+  const handleAiStarterLearn = useCallback(
+    (detail: RadialCommandEventDetail): void => {
+      const selected = findRadialCircuit(detail.context.targetId);
+      if (!selected) {
+        toast({
+          title: 'No starter circuit selected',
+          description: 'Right-click a starter circuit card first.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const delivery = getRadialAiPromptDelivery(detail);
+      const deliveryVerb = getRadialAiDeliveryVerb(delivery);
+      const codePreview = selected.arduinoCode.split('\n').slice(0, 40);
+      const sections: RadialAiPromptSection[] = [
+        {
+          title: 'Components needed',
+          lines: selected.components.slice(0, 12).map(formatStarterComponent),
+        },
+        {
+          title: 'What Tyler will learn',
+          lines: selected.learningObjectives.slice(0, 10),
+        },
+        {
+          title: 'Arduino code preview',
+          lines: codePreview.length > 0 ? codePreview : ['No code preview available.'],
+        },
+        {
+          title: 'Gallery state',
+          lines: [
+            `Visible starter cards: ${String(filteredCircuits.length)} of ${String(allCircuits.length)}`,
+            `Search filter: ${searchQuery.trim() || 'none'}`,
+            `Category filter: ${selectedCategory}`,
+            `Difficulty filter: ${selectedDifficulty}`,
+            `Expanded starter: ${expandedId ?? 'none'}`,
+          ],
+        },
+      ].filter((section) => section.lines.length > 0);
+
+      runRadialAiCommand({
+        intent: 'starter_learn',
+        intro:
+          'Explain this starter circuit like a patient electronics mentor. Focus on why each part is there, the safest wiring order, what the code does, and what Tyler should observe first on the bench.',
+        summary: `Starter circuit learning prompt: ${selected.name}, ${selected.difficulty}, ${CATEGORY_LABELS[selected.category]}, ${BOARD_LABELS[selected.boardType] ?? selected.boardType}.`,
+        historyLabel: `Starter learn: ${selected.name}`,
+        context: detail.context,
+        delivery,
+        targetDetails: [
+          `Selected starter: ${selected.name}`,
+          `Description: ${selected.description}`,
+          `Board: ${BOARD_LABELS[selected.boardType] ?? selected.boardType}`,
+          `Tags: ${selected.tags.slice(0, 10).join(', ') || 'none'}`,
+        ],
+        sections,
+        finalInstruction:
+          'Give Tyler a concise learning guide: the circuit idea, exact first wiring step, one common beginner mistake, and one safe variation to try after it works.',
+      });
+      toast({
+        title: `AI Starter ${deliveryVerb}`,
+        description:
+          delivery === 'send-now'
+            ? `Sent ${selected.name} learning prompt to AI chat.`
+            : `Drafted ${selected.name} learning prompt in AI chat.`,
+      });
+    },
+    [
+      allCircuits.length,
+      expandedId,
+      filteredCircuits.length,
+      findRadialCircuit,
+      searchQuery,
+      selectedCategory,
+      selectedDifficulty,
+      toast,
+    ],
+  );
+
+  useEffect(() => {
+    const handleCommandEvent = (event: Event) => {
+      const detail = (event as CustomEvent<RadialCommandEventDetail>).detail;
+      if (!detail || detail.source !== 'radial-menu' || detail.context.view !== 'starter_circuits') {
+        return;
+      }
+
+      const selected = findRadialCircuit(detail.context.targetId);
+      switch (detail.commandId) {
+        case 'ai_starter_learn':
+          handleAiStarterLearn(detail);
+          detail.handled = true;
+          return;
+        case 'starter_show_difficulty':
+          if (selected) {
+            setSearchQuery('');
+            setSelectedCategory('all');
+            setSelectedDifficulty(selected.difficulty);
+            toast({
+              title: `${selected.difficulty.charAt(0).toUpperCase()}${selected.difficulty.slice(1)} Starters`,
+              description: `Filtered starter circuits to ${selected.name}'s difficulty level.`,
+            });
+          } else {
+            toast({
+              title: 'No starter circuit selected',
+              description: 'Right-click a starter circuit card first.',
+              variant: 'destructive',
+            });
+          }
+          detail.handled = true;
+          return;
+        case 'starter_show_category':
+          if (selected) {
+            setSearchQuery('');
+            setSelectedCategory(selected.category);
+            setSelectedDifficulty('all');
+            toast({
+              title: `${CATEGORY_LABELS[selected.category]} Starters`,
+              description: `Filtered starter circuits to ${selected.name}'s category.`,
+            });
+          } else {
+            toast({
+              title: 'No starter circuit selected',
+              description: 'Right-click a starter circuit card first.',
+              variant: 'destructive',
+            });
+          }
+          detail.handled = true;
+          return;
+        case 'starter_toggle_details':
+          if (selected) {
+            handleToggleExpand(selected.id);
+            toast({
+              title: expandedId === selected.id ? 'Starter Details Collapsed' : 'Starter Details Opened',
+              description: `${selected.name} details are ${expandedId === selected.id ? 'collapsed' : 'expanded'}.`,
+            });
+          } else {
+            toast({
+              title: 'No starter circuit selected',
+              description: 'Right-click a starter circuit card first.',
+              variant: 'destructive',
+            });
+          }
+          detail.handled = true;
+          return;
+        case 'starter_filter_beginner':
+          setSearchQuery('');
+          setSelectedDifficulty('beginner');
+          toast({
+            title: 'Beginner Starters',
+            description: 'Filtered starter circuits to beginner-friendly builds.',
+          });
+          detail.handled = true;
+          return;
+        case 'starter_filter_sensors':
+          setSearchQuery('');
+          setSelectedCategory('sensors');
+          toast({
+            title: 'Sensor Starters',
+            description: 'Filtered starter circuits to sensor builds.',
+          });
+          detail.handled = true;
+          return;
+        case 'starter_filter_motors':
+          setSearchQuery('');
+          setSelectedCategory('motors');
+          toast({
+            title: 'Motor Starters',
+            description: 'Filtered starter circuits to motor builds.',
+          });
+          detail.handled = true;
+          return;
+        case 'starter_filter_displays':
+          setSearchQuery('');
+          setSelectedCategory('displays');
+          toast({
+            title: 'Display Starters',
+            description: 'Filtered starter circuits to display builds.',
+          });
+          detail.handled = true;
+          return;
+        case 'starter_reset_filters':
+          setSearchQuery('');
+          setSelectedCategory('all');
+          setSelectedDifficulty('all');
+          toast({
+            title: 'Starter Filters Reset',
+            description: 'Showing every starter circuit again.',
+          });
+          detail.handled = true;
+          return;
+        case 'open_starter_circuit':
+          if (selected) {
+            handleOpenCircuit(selected);
+          } else {
+            toast({
+              title: 'No starter circuit selected',
+              description: 'Right-click a starter circuit card first.',
+              variant: 'destructive',
+            });
+          }
+          detail.handled = true;
+          return;
+        case 'copy_starter_parts':
+          if (selected) {
+            void handleCopyParts(selected);
+            toast({
+              title: 'Starter parts copied',
+              description: `Copied ${selected.name} parts list from the radial menu.`,
+            });
+          } else {
+            toast({
+              title: 'No starter circuit selected',
+              description: 'Right-click a starter circuit card first.',
+              variant: 'destructive',
+            });
+          }
+          detail.handled = true;
+          return;
+        case 'copy_starter_code':
+          if (selected) {
+            void handleCopyCode(selected);
+            toast({
+              title: 'Starter code copied',
+              description: `Copied ${selected.name} code from the radial menu.`,
+            });
+          } else {
+            toast({
+              title: 'No starter circuit selected',
+              description: 'Right-click a starter circuit card first.',
+              variant: 'destructive',
+            });
+          }
+          detail.handled = true;
+          return;
+        default:
+          return;
+      }
+    };
+
+    window.addEventListener(RADIAL_COMMAND_EVENT, handleCommandEvent);
+    return () => window.removeEventListener(RADIAL_COMMAND_EVENT, handleCommandEvent);
+  }, [
+    expandedId,
+    findRadialCircuit,
+    handleAiStarterLearn,
+    handleCopyCode,
+    handleCopyParts,
+    handleOpenCircuit,
+    handleToggleExpand,
+    toast,
+  ]);
 
   return (
     <div data-testid="starter-circuits-panel" className="h-full flex flex-col overflow-hidden">
@@ -147,7 +426,7 @@ export default function StarterCircuitsPanel() {
             {filteredCircuits.length} / {allCircuits.length}
           </Badge>
         </div>
-        <p className="text-xs text-muted-foreground mb-4">
+        <p className="mb-4 text-xs text-muted-foreground">
           Pre-built circuits with complete Arduino code. Pick one, wire it up, upload, and see results instantly.
         </p>
 
@@ -159,7 +438,7 @@ export default function StarterCircuitsPanel() {
             placeholder="Search circuits..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 h-8 text-xs"
+            className="h-8.5 pl-9 text-xs"
           />
         </div>
 
@@ -182,7 +461,7 @@ export default function StarterCircuitsPanel() {
                 data-testid={`starter-filter-category-${cat}`}
                 variant={selectedCategory === cat ? 'default' : 'outline'}
                 size="sm"
-                className="h-7 text-xs px-2.5 gap-1"
+                className="h-7 px-2.5 text-xs gap-1.5"
                 onClick={() => setSelectedCategory(cat)}
               >
                 <Icon className="w-3 h-3" />
@@ -221,7 +500,10 @@ export default function StarterCircuitsPanel() {
       {/* Circuit cards */}
       <div className="flex-1 overflow-y-auto p-4">
         {filteredCircuits.length === 0 ? (
-          <div data-testid="starter-circuits-empty" className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
+          <div
+            data-testid="starter-circuits-empty"
+            className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2"
+          >
             <Search className="w-8 h-8 opacity-50" />
             <p className="text-sm">No circuits match your filters.</p>
             <Button
@@ -283,6 +565,8 @@ function StarterCircuitCard({
   return (
     <Card
       data-testid={`starter-card-${circuit.id}`}
+      data-starter-circuit-id={circuit.id}
+      data-starter-circuit-label={circuit.name}
       className={cn(
         'transition-all duration-200 hover:border-primary/40',
         isExpanded && 'border-primary/50 shadow-[0_0_12px_rgba(0,240,255,0.1)]',
@@ -295,9 +579,7 @@ function StarterCircuitCard({
               <CategoryIcon className="w-4 h-4 text-primary shrink-0" />
               <span className="truncate">{circuit.name}</span>
             </CardTitle>
-            <CardDescription className="text-xs mt-1 line-clamp-2">
-              {circuit.description}
-            </CardDescription>
+            <CardDescription className="text-xs mt-1 line-clamp-2">{circuit.description}</CardDescription>
           </div>
           <button
             data-testid={`starter-expand-${circuit.id}`}
@@ -312,15 +594,15 @@ function StarterCircuitCard({
         <div className="flex flex-wrap gap-1.5 mt-2">
           <Badge
             variant="outline"
-            className={cn('text-[10px] px-1.5 py-0', DIFFICULTY_COLORS[circuit.difficulty])}
+            className={cn('h-5 px-2 py-0.5 text-[11px]', DIFFICULTY_COLORS[circuit.difficulty])}
             data-testid={`starter-difficulty-${circuit.id}`}
           >
             {circuit.difficulty}
           </Badge>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+          <Badge variant="outline" className="h-5 px-2 py-0.5 text-[11px]">
             {CATEGORY_LABELS[circuit.category]}
           </Badge>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+          <Badge variant="outline" className="h-5 px-2 py-0.5 text-[11px]">
             {BOARD_LABELS[circuit.boardType] ?? circuit.boardType}
           </Badge>
         </div>
@@ -375,7 +657,7 @@ function StarterCircuitCard({
                 data-testid={`starter-copy-${circuit.id}`}
                 variant="ghost"
                 size="sm"
-                className="h-6 text-[10px] px-2 gap-1"
+                className="h-7 px-2.5 text-[11px] gap-1.5"
                 onClick={(e) => {
                   e.stopPropagation();
                   onCopyCode(circuit);
@@ -396,7 +678,7 @@ function StarterCircuitCard({
             </div>
             <pre
               data-testid={`starter-code-${circuit.id}`}
-              className="text-[10px] leading-relaxed bg-muted/50 border border-border rounded p-3 overflow-x-auto max-h-48 overflow-y-auto font-mono text-foreground/80"
+              className="max-h-48 overflow-x-auto overflow-y-auto rounded border border-border bg-muted/50 p-3 text-[11px] font-mono leading-relaxed text-foreground/80"
             >
               {circuit.arduinoCode}
             </pre>

@@ -1,5 +1,6 @@
 import type { Express } from 'express';
 import { GoogleGenAI } from '@google/genai';
+import OpenAI from 'openai';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error/v3';
@@ -39,7 +40,7 @@ export function registerSettingsRoutes(app: Express): void {
         return res.status(401).json({ message: 'Authentication required' });
       }
       const schema = z.object({
-        provider: z.enum(['gemini', 'jlcpcb', 'pcbway', 'oshpark', 'google_workspace']),
+        provider: z.enum(['gemini', 'openai', 'jlcpcb', 'pcbway', 'oshpark', 'google_workspace']),
         apiKey: z.string().min(1).max(4096),
       });
       const parsed = schema.safeParse(req.body);
@@ -59,7 +60,7 @@ export function registerSettingsRoutes(app: Express): void {
         return res.status(401).json({ message: 'Authentication required' });
       }
       const provider = req.params.provider;
-      if (provider !== 'gemini' && provider !== 'jlcpcb' && provider !== 'pcbway' && provider !== 'oshpark' && provider !== 'google_workspace') {
+      if (provider !== 'gemini' && provider !== 'openai' && provider !== 'jlcpcb' && provider !== 'pcbway' && provider !== 'oshpark' && provider !== 'google_workspace') {
         return res.status(400).json({ message: 'Invalid provider' });
       }
       const deleted = await deleteApiKey(req.userId, provider);
@@ -78,7 +79,7 @@ export function registerSettingsRoutes(app: Express): void {
     payloadLimit(4 * 1024),
     async (req, res) => {
       const schema = z.object({
-        provider: z.enum(['gemini', 'jlcpcb', 'pcbway', 'oshpark', 'google_workspace']),
+        provider: z.enum(['gemini', 'openai', 'jlcpcb', 'pcbway', 'oshpark', 'google_workspace']),
         apiKey: z.string().max(4096).optional(),
         useStored: z.boolean().optional(),
       });
@@ -113,11 +114,20 @@ export function registerSettingsRoutes(app: Express): void {
           return;
         }
 
-        const genAI = new GoogleGenAI({ apiKey });
-        await genAI.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: 'Hi',
-        });
+        if (provider === 'openai') {
+          const openai = new OpenAI({ apiKey });
+          await openai.responses.create({
+            model: 'gpt-5-mini',
+            input: 'Hi',
+            max_output_tokens: 16,
+          });
+        } else {
+          const genAI = new GoogleGenAI({ apiKey });
+          await genAI.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: 'Hi',
+          });
+        }
         res.json({ valid: true });
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Validation failed';
@@ -169,7 +179,7 @@ export function registerSettingsRoutes(app: Express): void {
         return res.status(401).json({ message: 'Authentication required' });
       }
       const chatSettingsSchema = z.object({
-        aiProvider: z.enum(['gemini']).optional(),
+        aiProvider: z.enum(['gemini', 'openai']).optional(),
         aiModel: z.string().min(1).max(200).optional(),
         aiTemperature: z.number().min(0).max(2).optional(),
         customSystemPrompt: z.string().max(10000).optional(),

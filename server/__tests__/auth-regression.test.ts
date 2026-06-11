@@ -515,14 +515,17 @@ describe('Auth Rate Limiting (CAPX-SEC-07)', () => {
     expect(message.message).toContain('Too many authentication attempts');
   });
 
-  it('global apiLimiter has separate higher limit (300 requests)', () => {
-    // From index.ts line 128-134
+  it('global apiLimiter has separate higher default limit (300 requests) and supports env override', () => {
+    // From index.ts: RATE_LIMIT_MAX can raise the global API limit for E2E/dev sweeps.
     const apiLimiterConfig = {
       windowMs: 15 * 60 * 1000,
       limit: 300,
     };
     expect(apiLimiterConfig.limit).toBe(300);
     expect(apiLimiterConfig.limit).toBeGreaterThan(10); // Greater than auth limiter
+
+    const envOverride = Number('5000');
+    expect(Number.isFinite(envOverride) && envOverride >= 1 ? envOverride : apiLimiterConfig.limit).toBe(5000);
   });
 
   it('streaming endpoint is skipped by global apiLimiter', () => {

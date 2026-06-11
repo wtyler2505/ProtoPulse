@@ -5,7 +5,7 @@
  * Phase 3. Tracked as part of E2E-552 / Plan 03 Phase 4.
  */
 import { useState, useCallback, memo, type Dispatch, type SetStateAction } from 'react';
-import type { Node } from '@xyflow/react';
+import type { GraphNode } from '@/lib/graph-types';
 import {
   ChevronRight,
   ChevronDown,
@@ -83,7 +83,10 @@ function SectionHeader({ config, count, expanded, hasChildren, onToggle, onNavig
       tabIndex={0}
       aria-label={hasChildren ? (expanded ? `Collapse ${config.label}` : `Expand ${config.label}`) : `Navigate to ${config.label}`}
       aria-expanded={hasChildren ? expanded : undefined}
-      className="px-4 py-1.5 flex items-center gap-2 text-muted-foreground hover:text-foreground cursor-pointer hover:bg-muted/50 focus-ring group"
+      className={cn(
+        "flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-muted-foreground hover:bg-muted/30 hover:text-foreground focus-ring group cursor-pointer",
+        hasChildren && expanded && "bg-muted/20 text-foreground",
+      )}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
     >
@@ -92,10 +95,10 @@ function SectionHeader({ config, count, expanded, hasChildren, onToggle, onNavig
       ) : (
         <span className="w-3 shrink-0" />
       )}
-      <Icon className="w-3 h-3 shrink-0" />
+      <Icon className="w-3 h-3 shrink-0 text-muted-foreground/70" />
       <span
         data-testid={`explorer-nav-${config.key}`}
-        className="text-xs flex-1 truncate hover:text-primary cursor-pointer"
+        className="flex-1 cursor-pointer truncate text-[11px] leading-5 hover:text-primary"
         onClick={(e) => {
           e.stopPropagation();
           onNavigate();
@@ -106,7 +109,7 @@ function SectionHeader({ config, count, expanded, hasChildren, onToggle, onNavig
       {severityCounts && severityCounts.error > 0 ? (
         <span
           data-testid={`explorer-badge-${config.key}-errors`}
-          className="text-[10px] font-medium bg-destructive/20 text-destructive px-1.5 py-0.5 tabular-nums"
+        className="rounded-sm bg-destructive/20 px-1 py-0.5 text-[11px] font-medium tabular-nums text-destructive"
         >
           {severityCounts.error}
         </span>
@@ -114,14 +117,14 @@ function SectionHeader({ config, count, expanded, hasChildren, onToggle, onNavig
       {severityCounts && severityCounts.warning > 0 ? (
         <span
           data-testid={`explorer-badge-${config.key}-warnings`}
-          className="text-[10px] font-medium bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 tabular-nums"
+        className="rounded-sm bg-yellow-500/20 px-1 py-0.5 text-[11px] font-medium tabular-nums text-yellow-500"
         >
           {severityCounts.warning}
         </span>
       ) : null}
       <span
         data-testid={`explorer-badge-${config.key}`}
-        className="text-[10px] font-medium bg-muted/50 text-muted-foreground px-1.5 py-0.5 ml-auto tabular-nums"
+        className="ml-auto rounded-sm bg-muted/50 px-1 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground"
       >
         {count}
       </span>
@@ -134,7 +137,7 @@ function SectionHeader({ config, count, expanded, hasChildren, onToggle, onNavig
 // ---------------------------------------------------------------------------
 
 interface ProjectExplorerProps {
-  nodes: Node[];
+  nodes: GraphNode[];
   bom: BomItem[];
   issues: ValidationIssue[];
   searchQuery: string;
@@ -142,7 +145,7 @@ interface ProjectExplorerProps {
   expandedCategories: Record<string, boolean>;
   setExpandedCategories: Dispatch<SetStateAction<Record<string, boolean>>>;
   focusNode: (id: string) => void;
-  setNodes: (nodes: Node[]) => void;
+  setNodes: (nodes: GraphNode[]) => void;
   addOutputLog: (msg: string) => void;
 }
 
@@ -209,7 +212,7 @@ function ProjectExplorer({
   };
 
   return (
-    <div data-testid="project-explorer" className="mt-2 space-y-0.5">
+    <div data-testid="project-explorer" className="mt-0.5 space-y-0.5">
       {SECTIONS.map((section) => {
         const expanded = expandedSections[section.key] === true;
         const count = getCounts(section.key);
@@ -226,7 +229,7 @@ function ProjectExplorer({
               severityCounts={section.key === 'validation' ? { error: errorCount, warning: warningCount } : undefined}
             />
             {section.key === 'architecture' && expanded && (
-              <div className="pl-2">
+              <div className="pl-2.5">
                 <ComponentTree
                   nodes={nodes}
                   searchQuery={searchQuery}

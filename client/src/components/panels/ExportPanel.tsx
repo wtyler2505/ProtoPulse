@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, lazy, Suspense, memo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense, memo } from 'react';
 import {
   Download,
   FileText,
@@ -29,7 +29,8 @@ import { useBom } from '@/lib/contexts/bom-context';
 import { useArduino } from '@/lib/contexts/arduino-context';
 import { useOutput } from '@/lib/contexts/output-context';
 import { useValidation } from '@/lib/contexts/validation-context';
-import { useCircuitDesigns, useCircuitInstances } from '@/lib/circuit-editor/hooks';
+import { useCircuitDesigns, useCircuitInstances, useCircuitNets } from '@/lib/circuit-editor/hooks';
+import { useComponentParts } from '@/lib/component-editor/hooks';
 import { useCircuitSelector } from '@/lib/circuit-selector';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -40,6 +41,14 @@ import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { downloadBlob } from '@/lib/csv';
 import { validateExportPreflight } from '@/lib/export-validation';
 import { runExportPrecheck } from '@/lib/export-precheck';
+import { RADIAL_COMMAND_EVENT, type RadialCommandEventDetail } from '@/lib/radial-menu-actions';
+import {
+  getRadialAiDeliveryVerb,
+  getRadialAiPromptDelivery,
+  runRadialAiCommand,
+  type RadialAiPromptSection,
+} from '@/lib/radial-ai-commands';
+import { buildValidationSafetyGateData } from '@/lib/validation-safety-gates';
 import { shouldAutoSnapshot, createExportSnapshot } from '@/lib/export-snapshot';
 import { buildExportTrustReceipt } from '@/lib/trust-receipts';
 import { buildWorkspaceReleaseConfidence } from '@/lib/workspace-release-confidence';
@@ -69,6 +78,24 @@ const PickPlacePreview = lazy(() => import('@/components/panels/PickPlacePreview
 const DesignDiffPanel = lazy(() => import('@/components/panels/DesignDiffPanel'));
 
 const SESSION_KEY = 'protopulse-session-id';
+const DEFAULT_RADIAL_EXPORT_FORMAT_ID = 'fab-package';
+
+function scheduleExportElementFocus(selector: string): void {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return;
+  }
+
+  const scheduleFrame =
+    typeof window.requestAnimationFrame === 'function'
+      ? window.requestAnimationFrame.bind(window)
+      : (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 0);
+
+  scheduleFrame(() => {
+    const element = document.querySelector<HTMLElement>(selector);
+    element?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    element?.focus({ preventScroll: true });
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Export format definitions
@@ -85,6 +112,8 @@ interface ExportFormat {
   body?: Record<string, unknown>;
   /** When true the response is JSON with a `files` array instead of a raw blob. */
   jsonResponse?: boolean;
+  /** Local browser/desktop export path for v3 client-side generators. */
+  localExport?: 'tscircuit-gerber';
 }
 
 interface ExportCategory {
@@ -174,6 +203,16 @@ const EXPORT_CATEGORIES: ExportCategory[] = [
         endpoint: '/export/gerber',
         method: 'POST',
         jsonResponse: true,
+      },
+      {
+        id: 'tscircuit-gerber',
+        label: 'Gerber — tscircuit',
+        extension: '.gbr (React → Circuit JSON → Gerber)',
+        description: 'v3 tscircuit export path: React circuit compiled to Circuit JSON and Gerber layers',
+        icon: LayoutGrid,
+        endpoint: '',
+        method: 'POST',
+        localExport: 'tscircuit-gerber',
       },
       {
         id: 'pick-place',
@@ -292,6 +331,32 @@ const EXPORT_CATEGORIES: ExportCategory[] = [
   },
 ];
 
+function getExportCategoryId(formatId: string): string | undefined {
+  return EXPORT_CATEGORIES.find((category) => category.formats.some((format) => format.id === formatId))?.id;
+}
+
+async function writeExportSummaryToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Per-format download state
 // ---------------------------------------------------------------------------
@@ -313,6 +378,7 @@ function ExportPanel() {
   const { addOutputLog } = useOutput();
   const { toast } = useToast();
   const { data: circuits } = useCircuitDesigns(projectId);
+  const { data: componentParts } = useComponentParts(projectId);
 
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
     schematic: true,
@@ -362,69 +428,86 @@ function ExportPanel() {
   const activeCircuitId = selectedCircuit?.circuitId ?? availableCircuits[0]?.id ?? 0;
   const activeCircuitName = selectedCircuit?.circuitName ?? availableCircuits[0]?.name ?? null;
   const { data: activeCircuitInstances } = useCircuitInstances(activeCircuitId);
+  const { data: activeCircuitNets } = useCircuitNets(activeCircuitId);
+  const selectedCircuitSafetyGates = useMemo(
+    () =>
+      buildValidationSafetyGateData({
+        circuitInstances: activeCircuitInstances ?? [],
+        componentParts: componentParts ?? [],
+        bomItems: bom,
+      }),
+    [activeCircuitInstances, componentParts, bom],
+  );
 
   const selectedCircuitHasInstances = (activeCircuitInstances?.length ?? 0) > 0;
   const selectedCircuitHasPcbLayout = useMemo(
-    () =>
-      (activeCircuitInstances ?? []).some(
-        (instance) => instance.pcbX !== null && instance.pcbY !== null,
-      ),
+    () => (activeCircuitInstances ?? []).some((instance) => instance.pcbX !== null && instance.pcbY !== null),
     [activeCircuitInstances],
   );
   const selectedCircuitHasSource = useMemo(
     () =>
       (activeCircuitInstances ?? []).some((instance) => {
-        const props = instance.properties && typeof instance.properties === 'object'
-          ? instance.properties as Record<string, unknown>
-          : {};
+        const props =
+          instance.properties && typeof instance.properties === 'object'
+            ? (instance.properties as Record<string, unknown>)
+            : {};
         const componentType = String(props.componentType ?? '');
-        return /^[VI]/i.test(instance.referenceDesignator)
-          || /voltage.source|current.source|dc.source|ac.source|signal.source|function.generator/i.test(componentType);
+        return (
+          /^[VI]/i.test(instance.referenceDesignator) ||
+          /voltage.source|current.source|dc.source|ac.source|signal.source|function.generator/i.test(componentType)
+        );
       }),
     [activeCircuitInstances],
   );
   const selectedCircuitHasComponents = useMemo(
     () =>
       (activeCircuitInstances ?? []).some((instance) => {
-        const props = instance.properties && typeof instance.properties === 'object'
-          ? instance.properties as Record<string, unknown>
-          : {};
+        const props =
+          instance.properties && typeof instance.properties === 'object'
+            ? (instance.properties as Record<string, unknown>)
+            : {};
         const componentType = String(props.componentType ?? '');
-        const isSource = /^[VI]/i.test(instance.referenceDesignator)
-          || /voltage.source|current.source|dc.source|ac.source|signal.source|function.generator/i.test(componentType);
+        const isSource =
+          /^[VI]/i.test(instance.referenceDesignator) ||
+          /voltage.source|current.source|dc.source|ac.source|signal.source|function.generator/i.test(componentType);
         return !isSource;
       }),
     [activeCircuitInstances],
   );
 
   // Build export validation data from available context
-  const exportData: ProjectExportData = useMemo(() => ({
-    projectName,
-    hasSession: !!localStorage.getItem(SESSION_KEY),
-    architectureNodeCount: nodes.length,
-    hasCircuitInstances: selectedCircuitHasInstances,
-    hasPcbLayout: selectedCircuitHasPcbLayout,
-    bomItemCount: bom.length,
-    bomItemsWithPartNumber: bom.filter((item) => item.partNumber.trim().length > 0).length,
-    hasCircuitSource: selectedCircuitHasSource,
-    hasCircuitComponent: selectedCircuitHasComponents,
-    hasBoardProfile: profiles.length > 0,
-    bomItemsWithFailureData: 0,
-    // BL-0150 — inventory shortfall signal for fab/pick-and-place precheck.
-    bomShortfallUnits: shortfallsResp?.totalShortfallUnits,
-    bomShortfallLineCount: shortfallsResp?.total,
-  }), [
-    bom,
-    nodes.length,
-    profiles.length,
-    projectName,
-    selectedCircuitHasComponents,
-    selectedCircuitHasInstances,
-    selectedCircuitHasPcbLayout,
-    selectedCircuitHasSource,
-    shortfallsResp?.totalShortfallUnits,
-    shortfallsResp?.total,
-  ]);
+  const exportData: ProjectExportData = useMemo(
+    () => ({
+      projectName,
+      hasSession: !!localStorage.getItem(SESSION_KEY),
+      architectureNodeCount: nodes.length,
+      hasCircuitInstances: selectedCircuitHasInstances,
+      hasPcbLayout: selectedCircuitHasPcbLayout,
+      bomItemCount: bom.length,
+      bomItemsWithPartNumber: bom.filter((item) => item.partNumber.trim().length > 0).length,
+      hasCircuitSource: selectedCircuitHasSource,
+      hasCircuitComponent: selectedCircuitHasComponents,
+      hasBoardProfile: profiles.length > 0,
+      bomItemsWithFailureData: 0,
+      ...selectedCircuitSafetyGates,
+      // BL-0150 — inventory shortfall signal for fab/pick-and-place precheck.
+      bomShortfallUnits: shortfallsResp?.totalShortfallUnits,
+      bomShortfallLineCount: shortfallsResp?.total,
+    }),
+    [
+      bom,
+      nodes.length,
+      profiles.length,
+      projectName,
+      selectedCircuitHasComponents,
+      selectedCircuitHasInstances,
+      selectedCircuitHasPcbLayout,
+      selectedCircuitHasSource,
+      selectedCircuitSafetyGates,
+      shortfallsResp?.totalShortfallUnits,
+      shortfallsResp?.total,
+    ],
+  );
 
   // Pre-compute validation results for all formats
   const validationResults = useMemo(() => {
@@ -464,135 +547,171 @@ function ExportPanel() {
     setExpandedCategories((prev) => ({ ...prev, [catId]: !prev[catId] }));
   }, []);
 
-  const handleExport = useCallback(async (format: ExportFormat) => {
-    setDownloadStates((prev) => ({ ...prev, [format.id]: 'loading' }));
-    addOutputLog(`[EXPORT] Starting ${format.label} export...`);
+  const handleExport = useCallback(
+    async (format: ExportFormat) => {
+      setDownloadStates((prev) => ({ ...prev, [format.id]: 'loading' }));
+      addOutputLog(`[EXPORT] Starting ${format.label} export...`);
 
-    try {
-      const url = `/api/projects/${projectId}${format.endpoint}`;
-      const sessionId = localStorage.getItem(SESSION_KEY) ?? '';
-      const res = await fetch(url, {
-        method: format.method,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Session-Id': sessionId,
-        },
-        body: JSON.stringify(format.body ?? {}),
-      });
+      try {
+        const exportedFiles: { name: string; sizeBytes: number }[] = [];
 
-      if (!res.ok) {
-        const errorBody = await res.text();
-        throw new Error(errorBody || `HTTP ${res.status}`);
-      }
+        if (format.localExport === 'tscircuit-gerber') {
+          const { buildTSCircuitGerberProof } = await import('@/lib/tscircuit-gerber-proof');
+          const proof = await buildTSCircuitGerberProof({
+            instances: activeCircuitInstances ?? [],
+            nets: activeCircuitNets ?? [],
+            boardWidth: '50mm',
+            boardHeight: '40mm',
+          });
 
-      const exportedFiles: { name: string; sizeBytes: number }[] = [];
+          for (const [layerName, content] of Object.entries(proof.gerberFiles)) {
+            const filename = `${layerName}.gbr`;
+            const blob = new Blob([content], { type: 'application/octet-stream' });
+            await downloadBlob(blob, filename);
+            exportedFiles.push({ name: filename, sizeBytes: blob.size });
+          }
 
-      if (format.jsonResponse) {
-        // JSON response with file(s) or layer(s) array
-        const json = (await res.json()) as Record<string, unknown>;
+          for (const [filename, content] of Object.entries(proof.drillFiles)) {
+            const blob = new Blob([content], { type: 'application/octet-stream' });
+            await downloadBlob(blob, filename);
+            exportedFiles.push({ name: filename, sizeBytes: blob.size });
+          }
 
-        // Handle `files` array (KiCad, Eagle, Firmware)
-        const files = json.files as { filename: string; content: string }[] | undefined;
-        if (files && Array.isArray(files)) {
-          for (const file of files) {
-            const blob = new Blob([file.content], { type: 'application/octet-stream' });
-            downloadBlob(blob, file.filename);
-            exportedFiles.push({ name: file.filename, sizeBytes: blob.size });
+          addOutputLog(
+            `[EXPORT] Downloaded ${exportedFiles.length} tscircuit Gerber file(s) from ${String(proof.circuitJsonElementCount)} Circuit JSON elements (${proof.summary.inputMode}, ${String(proof.summary.mappedInstanceCount)} mapped instance(s), ${String(proof.summary.mappedTraceCount)} mapped trace(s))`,
+          );
+          if (proof.summary.mappingWarnings.length > 0) {
+            addOutputLog(`[EXPORT] TSCircuit mapping warnings: ${proof.summary.mappingWarnings.join('; ')}`);
+          }
+        } else {
+          const url = `/api/projects/${projectId}${format.endpoint}`;
+          const sessionId = localStorage.getItem(SESSION_KEY) ?? '';
+          const res = await fetch(url, {
+            method: format.method,
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Session-Id': sessionId,
+            },
+            body: JSON.stringify(format.body ?? {}),
+          });
+
+          if (!res.ok) {
+            const errorBody = await res.text();
+            throw new Error(errorBody || `HTTP ${res.status}`);
+          }
+
+          if (format.jsonResponse) {
+            // JSON response with file(s) or layer(s) array
+            const json = (await res.json()) as Record<string, unknown>;
+
+            // Handle `files` array (KiCad, Eagle, Firmware)
+            const files = json.files as { filename: string; content: string }[] | undefined;
+            if (files && Array.isArray(files)) {
+              for (const file of files) {
+                const blob = new Blob([file.content], { type: 'application/octet-stream' });
+                downloadBlob(blob, file.filename);
+                exportedFiles.push({ name: file.filename, sizeBytes: blob.size });
+              }
+            }
+
+            // Handle `layers` array (Gerber export)
+            const layers = json.layers as { filename: string; content: string }[] | undefined;
+            if (layers && Array.isArray(layers)) {
+              for (const layer of layers) {
+                const blob = new Blob([layer.content], { type: 'application/octet-stream' });
+                downloadBlob(blob, layer.filename);
+                exportedFiles.push({ name: layer.filename, sizeBytes: blob.size });
+              }
+            }
+
+            // Handle drill sub-object from Gerber export
+            const drill = json.drill as { filename: string; content: string } | undefined;
+            if (drill) {
+              const blob = new Blob([drill.content], { type: 'application/octet-stream' });
+              downloadBlob(blob, drill.filename);
+              exportedFiles.push({ name: drill.filename, sizeBytes: blob.size });
+            }
+
+            addOutputLog(`[EXPORT] Downloaded ${exportedFiles.length} file(s) for ${format.label}`);
+          } else {
+            // Raw content response (SPICE, CSV, SVG, FZZ ZIP, etc.)
+            const contentDisposition = res.headers.get('Content-Disposition');
+            let filename = `export${format.extension.split('/')[0].split('(')[0].trim()}`;
+            if (contentDisposition) {
+              const match = /filename="?([^";\n]+)"?/.exec(contentDisposition);
+              if (match) {
+                filename = match[1];
+              }
+            }
+            const blob = await res.blob();
+            downloadBlob(blob, filename);
+            exportedFiles.push({ name: filename, sizeBytes: blob.size });
+            addOutputLog(`[EXPORT] Downloaded ${format.label}: ${filename}`);
           }
         }
 
-        // Handle `layers` array (Gerber export)
-        const layers = json.layers as { filename: string; content: string }[] | undefined;
-        if (layers && Array.isArray(layers)) {
-          for (const layer of layers) {
-            const blob = new Blob([layer.content], { type: 'application/octet-stream' });
-            downloadBlob(blob, layer.filename);
-            exportedFiles.push({ name: layer.filename, sizeBytes: blob.size });
-          }
-        }
-
-        // Handle drill sub-object from Gerber export
-        const drill = json.drill as { filename: string; content: string } | undefined;
-        if (drill) {
-          const blob = new Blob([drill.content], { type: 'application/octet-stream' });
-          downloadBlob(blob, drill.filename);
-          exportedFiles.push({ name: drill.filename, sizeBytes: blob.size });
-        }
-
-        addOutputLog(`[EXPORT] Downloaded ${exportedFiles.length} file(s) for ${format.label}`);
-      } else {
-        // Raw content response (SPICE, CSV, SVG, FZZ ZIP, etc.)
-        const contentDisposition = res.headers.get('Content-Disposition');
-        let filename = `export${format.extension.split('/')[0].split('(')[0].trim()}`;
-        if (contentDisposition) {
-          const match = /filename="?([^";\n]+)"?/.exec(contentDisposition);
-          if (match) {
-            filename = match[1];
-          }
-        }
-        const blob = await res.blob();
-        downloadBlob(blob, filename);
-        exportedFiles.push({ name: filename, sizeBytes: blob.size });
-        addOutputLog(`[EXPORT] Downloaded ${format.label}: ${filename}`);
-      }
-
-      // Track export result for the results panel
-      ExportResultsManager.getInstance().addResult({
-        formatId: format.id,
-        formatLabel: format.label,
-        files: exportedFiles,
-        timestamp: Date.now(),
-        success: true,
-      });
-
-      setDownloadStates((prev) => ({ ...prev, [format.id]: 'success' }));
-      const fileNames = exportedFiles.map((f) => f.name);
-      toast({
-        title: 'Export complete',
-        description: fileNames.length > 1
-          ? `${format.label}: ${fileNames.length} files exported (${fileNames.join(', ')})`
-          : `${format.label} exported successfully.`,
-      });
-
-      // Auto-create a design snapshot for manufacturing exports
-      if (shouldAutoSnapshot(format.id)) {
-        const snap = createExportSnapshot(format.id);
-        apiRequest('POST', `/api/projects/${projectId}/snapshots`, {
-          name: snap.label,
-          description: `Auto-snapshot on ${format.label} export at ${snap.timestamp}`,
-        }).then(() => {
-          addOutputLog(`[EXPORT] Design snapshot saved: "${snap.label}"`);
-          toast({ title: 'Snapshot saved', description: snap.label });
-        }).catch((snapErr: unknown) => {
-          const snapMsg = snapErr instanceof Error ? snapErr.message : 'Unknown error';
-          addOutputLog(`[EXPORT] Failed to save snapshot: ${snapMsg}`);
+        // Track export result for the results panel
+        ExportResultsManager.getInstance().addResult({
+          formatId: format.id,
+          formatLabel: format.label,
+          files: exportedFiles,
+          timestamp: Date.now(),
+          success: true,
         });
+
+        setDownloadStates((prev) => ({ ...prev, [format.id]: 'success' }));
+        const fileNames = exportedFiles.map((f) => f.name);
+        toast({
+          title: 'Export complete',
+          description:
+            fileNames.length > 1
+              ? `${format.label}: ${fileNames.length} files exported (${fileNames.join(', ')})`
+              : `${format.label} exported successfully.`,
+        });
+
+        // Auto-create a design snapshot for manufacturing exports
+        if (shouldAutoSnapshot(format.id)) {
+          const snap = createExportSnapshot(format.id);
+          apiRequest('POST', `/api/projects/${projectId}/snapshots`, {
+            name: snap.label,
+            description: `Auto-snapshot on ${format.label} export at ${snap.timestamp}`,
+          })
+            .then(() => {
+              addOutputLog(`[EXPORT] Design snapshot saved: "${snap.label}"`);
+              toast({ title: 'Snapshot saved', description: snap.label });
+            })
+            .catch((snapErr: unknown) => {
+              const snapMsg = snapErr instanceof Error ? snapErr.message : 'Unknown error';
+              addOutputLog(`[EXPORT] Failed to save snapshot: ${snapMsg}`);
+            });
+        }
+
+        // Reset success state after 3 seconds
+        setTimeout(() => {
+          setDownloadStates((prev) => ({ ...prev, [format.id]: 'idle' }));
+        }, 3000);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        setDownloadStates((prev) => ({ ...prev, [format.id]: 'error' }));
+        addOutputLog(`[EXPORT] Failed ${format.label}: ${message}`);
+        toast({ title: 'Export failed', description: message, variant: 'destructive' });
+
+        // Track failed export in results panel
+        ExportResultsManager.getInstance().addResult({
+          formatId: format.id,
+          formatLabel: format.label,
+          files: [],
+          timestamp: Date.now(),
+          success: false,
+        });
+
+        setTimeout(() => {
+          setDownloadStates((prev) => ({ ...prev, [format.id]: 'idle' }));
+        }, 5000);
       }
-
-      // Reset success state after 3 seconds
-      setTimeout(() => {
-        setDownloadStates((prev) => ({ ...prev, [format.id]: 'idle' }));
-      }, 3000);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      setDownloadStates((prev) => ({ ...prev, [format.id]: 'error' }));
-      addOutputLog(`[EXPORT] Failed ${format.label}: ${message}`);
-      toast({ title: 'Export failed', description: message, variant: 'destructive' });
-
-      // Track failed export in results panel
-      ExportResultsManager.getInstance().addResult({
-        formatId: format.id,
-        formatLabel: format.label,
-        files: [],
-        timestamp: Date.now(),
-        success: false,
-      });
-
-      setTimeout(() => {
-        setDownloadStates((prev) => ({ ...prev, [format.id]: 'idle' }));
-      }, 5000);
-    }
-  }, [projectId, addOutputLog, toast]);
+    },
+    [projectId, addOutputLog, toast],
+  );
 
   // -- Pre-check aware export handler --
   // Flat lookup for format objects by id
@@ -606,15 +725,18 @@ function ExportPanel() {
     return map;
   }, []);
 
-  const handleExportClick = useCallback((format: ExportFormat) => {
-    // Run precheck — if all pass, export immediately; otherwise show panel
-    const precheck = runExportPrecheck(format.id, exportData);
-    if (precheck.passed && precheck.warnings.length === 0) {
-      void handleExport(format);
-    } else {
-      setPrecheckFormatId(format.id);
-    }
-  }, [exportData, handleExport]);
+  const handleExportClick = useCallback(
+    (format: ExportFormat) => {
+      // Run precheck — if all pass, export immediately; otherwise show panel
+      const precheck = runExportPrecheck(format.id, exportData);
+      if (precheck.passed && precheck.warnings.length === 0) {
+        void handleExport(format);
+      } else {
+        setPrecheckFormatId(format.id);
+      }
+    },
+    [exportData, handleExport],
+  );
 
   // -- Pick-and-place preview handler --
   const handlePickPlacePreview = useCallback(async () => {
@@ -684,6 +806,221 @@ function ExportPanel() {
     return s;
   }, [downloadStates]);
 
+  const getRadialExportFormat = useCallback(
+    (targetId?: string): ExportFormat | undefined =>
+      (targetId ? formatById[targetId] : undefined) ??
+      formatById[DEFAULT_RADIAL_EXPORT_FORMAT_ID] ??
+      Object.values(formatById)[0],
+    [formatById],
+  );
+
+  const revealExportFormat = useCallback((format: ExportFormat) => {
+    const categoryId = getExportCategoryId(format.id);
+    if (categoryId) {
+      setExpandedCategories((prev) => ({ ...prev, [categoryId]: true }));
+    }
+
+    scheduleExportElementFocus(`[data-testid="export-download-${format.id}"]`);
+  }, []);
+
+  const buildExportSummary = useCallback(
+    (format: ExportFormat) =>
+      [
+        'ProtoPulse export summary',
+        `Project: ${projectName}`,
+        `Active circuit: ${activeCircuitName ?? 'Not selected'}`,
+        `Format: ${format.label} (${format.id})`,
+        `Architecture nodes: ${String(nodes.length)}`,
+        `BOM lines: ${String(bom.length)}`,
+        `Validation issues: ${String(issues.length)}`,
+        `Build profiles: ${String(profiles.length)}`,
+        `Release confidence: ${releaseConfidence.confidence.label}`,
+      ].join('\n'),
+    [
+      activeCircuitName,
+      bom.length,
+      issues.length,
+      nodes.length,
+      profiles.length,
+      projectName,
+      releaseConfidence.confidence.label,
+    ],
+  );
+
+  const handleAiExportPlan = useCallback(
+    (detail: RadialCommandEventDetail, format: ExportFormat): void => {
+      const delivery = getRadialAiPromptDelivery(detail);
+      const deliveryVerb = getRadialAiDeliveryVerb(delivery);
+      const representativeIssues = issues.slice(0, 6).map((issue) => `${issue.severity}: ${issue.message}`);
+      const representativeBom = bom
+        .slice(0, 6)
+        .map((item) => `${item.partNumber || item.description || item.id} x${String(item.quantity ?? 1)}`);
+      const sections: RadialAiPromptSection[] = [
+        {
+          title: 'Export target',
+          lines: [
+            `Format: ${format.label} (${format.id})`,
+            `Extension: ${format.extension}`,
+            `Description: ${format.description}`,
+            `Active circuit: ${activeCircuitName ?? 'not selected'}`,
+          ],
+        },
+        {
+          title: 'Workspace signals',
+          lines: [
+            `Architecture nodes: ${String(nodes.length)}`,
+            `BOM lines: ${String(bom.length)}`,
+            `Validation issues: ${String(issues.length)}`,
+            `Build profiles: ${String(profiles.length)}`,
+            `Release confidence: ${releaseConfidence.confidence.label}`,
+          ],
+        },
+        {
+          title: 'Representative BOM lines',
+          lines: representativeBom.length > 0 ? representativeBom : ['No BOM lines are available.'],
+        },
+        {
+          title: 'Representative validation issues',
+          lines:
+            representativeIssues.length > 0 ? representativeIssues : ['No validation issues are currently visible.'],
+        },
+      ];
+
+      runRadialAiCommand({
+        intent: 'export_plan',
+        intro:
+          'Review this ProtoPulse export target like a cautious release engineer. Focus on fab handoff readiness, missing evidence, trust boundaries, and the next fastest safe export step.',
+        summary: `Export readiness prompt: ${format.label}, ${String(nodes.length)} architecture nodes, ${String(bom.length)} BOM lines, ${String(issues.length)} validation issues.`,
+        historyLabel: `Export plan: ${format.label}`,
+        context: detail.context,
+        delivery,
+        targetDetails: [
+          `Project: ${projectName}`,
+          `Target format: ${format.label}`,
+          `Release confidence: ${releaseConfidence.confidence.label}`,
+        ],
+        sections,
+        finalInstruction:
+          'Give Tyler a short export action plan: safest format to produce now, blockers to clear, confidence level, and exactly what to inspect before sending files to a fab or teammate.',
+      });
+      addOutputLog(`[EXPORT] ${deliveryVerb} AI export plan for ${format.label}.`);
+      toast({
+        title: `AI Export Plan ${deliveryVerb}`,
+        description:
+          delivery === 'send-now'
+            ? `Sent ${format.label} export readiness prompt to AI chat.`
+            : `Drafted ${format.label} export readiness prompt in AI chat.`,
+      });
+    },
+    [
+      activeCircuitName,
+      addOutputLog,
+      bom,
+      issues,
+      nodes.length,
+      profiles.length,
+      projectName,
+      releaseConfidence.confidence.label,
+      toast,
+    ],
+  );
+
+  const handleRadialCommand = useCallback(
+    (detail: RadialCommandEventDetail): boolean => {
+      if (detail.source !== 'radial-menu' || detail.context.view !== 'exports') {
+        return false;
+      }
+
+      const format = getRadialExportFormat(detail.context.targetId);
+      if (!format) {
+        return false;
+      }
+
+      switch (detail.commandId) {
+        case 'create_export':
+          revealExportFormat(format);
+          handleExportClick(format);
+          addOutputLog(`[EXPORT] Radial export requested: ${format.label}.`);
+          return true;
+        case 'ai_export_plan':
+          handleAiExportPlan(detail, format);
+          return true;
+        case 'reveal_export_format':
+          revealExportFormat(format);
+          addOutputLog(`[EXPORT] Revealed radial export target: ${format.label}.`);
+          toast({
+            title: 'Export format revealed',
+            description: `${format.label} is centered without starting a download.`,
+          });
+          return true;
+        case 'open_import_design':
+          scheduleExportElementFocus('[data-testid="import-design-file-button"]');
+          addOutputLog('[IMPORT] Radial import chooser focused.');
+          toast({ title: 'Import chooser ready', description: 'Choose a design file to preview before applying.' });
+          return true;
+        case 'run_export_precheck':
+          revealExportFormat(format);
+          setPrecheckFormatId(format.id);
+          addOutputLog(`[EXPORT] Radial precheck opened for ${format.label}.`);
+          toast({ title: 'Export precheck opened', description: `${format.label} readiness is centered for review.` });
+          return true;
+        case 'open_import_history':
+          setImportHistoryExpanded(true);
+          scheduleExportElementFocus('[data-testid="import-history-toggle"]');
+          addOutputLog('[IMPORT] Radial import history opened.');
+          toast({ title: 'Import history opened', description: 'Past imports are ready for restore or review.' });
+          return true;
+        case 'export_settings': {
+          const firstProfile = document.querySelector<HTMLElement>('[data-testid="export-profile-selector"] button');
+          firstProfile?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+          firstProfile?.focus({ preventScroll: true });
+          toast({ title: 'Export settings', description: 'Quick export profiles are ready for editing or launch.' });
+          return true;
+        }
+        case 'copy_export_summary':
+          void writeExportSummaryToClipboard(buildExportSummary(format)).then((copied) => {
+            if (copied) {
+              addOutputLog(`[EXPORT] Copied radial summary for ${format.label}.`);
+              toast({ title: 'Export summary copied', description: `${format.label} summary is on the clipboard.` });
+            } else {
+              toast({
+                title: 'Copy failed',
+                description: 'Clipboard access is unavailable in this browser.',
+                variant: 'destructive',
+              });
+            }
+          });
+          return true;
+        default:
+          return false;
+      }
+    },
+    [
+      addOutputLog,
+      buildExportSummary,
+      getRadialExportFormat,
+      handleAiExportPlan,
+      handleExportClick,
+      revealExportFormat,
+      toast,
+    ],
+  );
+
+  useEffect(() => {
+    const handleCommandEvent = (event: Event) => {
+      const detail = (event as CustomEvent<RadialCommandEventDetail>).detail;
+      if (!detail) {
+        return;
+      }
+      if (handleRadialCommand(detail)) {
+        detail.handled = true;
+      }
+    };
+
+    window.addEventListener(RADIAL_COMMAND_EVENT, handleCommandEvent);
+    return () => window.removeEventListener(RADIAL_COMMAND_EVENT, handleCommandEvent);
+  }, [handleRadialCommand]);
+
   // -- Import handlers --
 
   const handleImportFileSelect = useCallback(() => {
@@ -698,52 +1035,61 @@ function ExportPanel() {
         return;
       }
 
-      file.text().then((content) => {
-        import('@/lib/design-import').then(({ DesignImporter }) => {
-          const importer = DesignImporter.getInstance();
-          const result = importer.importFile(content, file.name);
+      file
+        .text()
+        .then((content) => {
+          import('@/lib/design-import')
+            .then(({ DesignImporter }) => {
+              const importer = DesignImporter.getInstance();
+              const result = importer.importFile(content, file.name);
 
-          if (result.status === 'complete' && result.design) {
-            const projectData = {
-              nodes: nodes.map((n) => ({
-                id: n.id,
-                data: { label: (n.data as Record<string, unknown>)?.label as string | undefined },
-              })),
-              edges: [],
-              bomItems: bom.map((b) => ({
-                partNumber: b.partNumber,
-                description: b.description,
-              })),
-            };
-            const preview = generateImportPreview(result.design, projectData);
-            pendingImportDesignRef.current = result.design;
-            setImportFileName(file.name);
-            setImportPreview(preview);
-            setImportDialogOpen(true);
-          } else if (result.status === 'error') {
-            // Attempt repair if we got a partial design with errors
-            if (result.design) {
-              const repair = repairImportedDesign(result.design);
-              if (repair.success && repair.design && repair.actions.length > 0) {
-                pendingImportDesignRef.current = repair.design;
-                setRepairResult(repair);
-                setRepairFileName(file.name);
-                setRepairDialogOpen(true);
-                return;
+              if (result.status === 'complete' && result.design) {
+                const projectData = {
+                  nodes: nodes.map((n) => ({
+                    id: n.id,
+                    data: { label: (n.data as Record<string, unknown>)?.label as string | undefined },
+                  })),
+                  edges: [],
+                  bomItems: bom.map((b) => ({
+                    partNumber: b.partNumber,
+                    description: b.description,
+                  })),
+                };
+                const preview = generateImportPreview(result.design, projectData);
+                pendingImportDesignRef.current = result.design;
+                setImportFileName(file.name);
+                setImportPreview(preview);
+                setImportDialogOpen(true);
+              } else if (result.status === 'error') {
+                // Attempt repair if we got a partial design with errors
+                if (result.design) {
+                  const repair = repairImportedDesign(result.design);
+                  if (repair.success && repair.design && repair.actions.length > 0) {
+                    pendingImportDesignRef.current = repair.design;
+                    setRepairResult(repair);
+                    setRepairFileName(file.name);
+                    setRepairDialogOpen(true);
+                    return;
+                  }
+                }
+                toast({
+                  variant: 'destructive',
+                  title: 'Import failed',
+                  description: `${String(result.errorCount)} error(s) in "${file.name}". The file could not be parsed.`,
+                });
               }
-            }
-            toast({
-              variant: 'destructive',
-              title: 'Import failed',
-              description: `${String(result.errorCount)} error(s) in "${file.name}". The file could not be parsed.`,
+            })
+            .catch(() => {
+              toast({
+                variant: 'destructive',
+                title: 'Import failed',
+                description: 'Could not load the design import module.',
+              });
             });
-          }
-        }).catch(() => {
-          toast({ variant: 'destructive', title: 'Import failed', description: 'Could not load the design import module.' });
+        })
+        .catch(() => {
+          toast({ variant: 'destructive', title: 'Import failed', description: 'Could not read the file.' });
         });
-      }).catch(() => {
-        toast({ variant: 'destructive', title: 'Import failed', description: 'Could not read the file.' });
-      });
 
       // Reset so the same file can be re-selected
       input.value = '';
@@ -758,22 +1104,26 @@ function ExportPanel() {
       return;
     }
 
-    import('@/lib/design-import').then(({ DesignImporter }) => {
-      const importer = DesignImporter.getInstance();
-      const proto = importer.convertToProtoPulse(design);
-      addOutputLog(`[IMPORT] Applied import: ${String(proto.nodes.length)} nodes, ${String(proto.edges.length)} edges, ${String(proto.bomItems.length)} BOM items from "${importFileName}".`);
-      toast({
-        title: 'Design imported',
-        description: `Added ${String(proto.nodes.length)} nodes, ${String(proto.edges.length)} edges, and ${String(proto.bomItems.length)} BOM items.`,
-      });
+    import('@/lib/design-import')
+      .then(({ DesignImporter }) => {
+        const importer = DesignImporter.getInstance();
+        const proto = importer.convertToProtoPulse(design);
+        addOutputLog(
+          `[IMPORT] Applied import: ${String(proto.nodes.length)} nodes, ${String(proto.edges.length)} edges, ${String(proto.bomItems.length)} BOM items from "${importFileName}".`,
+        );
+        toast({
+          title: 'Design imported',
+          description: `Added ${String(proto.nodes.length)} nodes, ${String(proto.edges.length)} edges, and ${String(proto.bomItems.length)} BOM items.`,
+        });
 
-      // Generate and display import warnings.
-      const warnings = generateImportWarnings(design, design.format);
-      setImportWarnings(warnings);
-      setImportWarningsFileName(importFileName);
-    }).catch(() => {
-      toast({ variant: 'destructive', title: 'Import failed', description: 'Could not apply the import.' });
-    });
+        // Generate and display import warnings.
+        const warnings = generateImportWarnings(design, design.format);
+        setImportWarnings(warnings);
+        setImportWarningsFileName(importFileName);
+      })
+      .catch(() => {
+        toast({ variant: 'destructive', title: 'Import failed', description: 'Could not apply the import.' });
+      });
 
     setImportDialogOpen(false);
     pendingImportDesignRef.current = null;
@@ -784,13 +1134,16 @@ function ExportPanel() {
     pendingImportDesignRef.current = null;
   }, []);
 
-  const handleImportHistoryRestore = useCallback((entry: ImportHistoryEntry) => {
-    addOutputLog(`[IMPORT] Restoring import from history: "${entry.fileName}" (${entry.sourceFormat})`);
-    toast({
-      title: 'Import restored',
-      description: `Restored "${entry.fileName}" from import history.`,
-    });
-  }, [addOutputLog, toast]);
+  const handleImportHistoryRestore = useCallback(
+    (entry: ImportHistoryEntry) => {
+      addOutputLog(`[IMPORT] Restoring import from history: "${entry.fileName}" (${entry.sourceFormat})`);
+      toast({
+        title: 'Import restored',
+        description: `Restored "${entry.fileName}" from import history.`,
+      });
+    },
+    [addOutputLog, toast],
+  );
 
   const handleRepairApply = useCallback(() => {
     const design = pendingImportDesignRef.current;
@@ -836,81 +1189,111 @@ function ExportPanel() {
         return;
       }
 
-      file.text().then((content) => {
-        try {
-          const imported = JSON.parse(content) as Record<string, unknown>;
-          const baselineNodes = Array.isArray(imported.nodes) ? imported.nodes as Array<Record<string, unknown>> : [];
-          const baselineEdges = Array.isArray(imported.edges) ? imported.edges as Array<Record<string, unknown>> : [];
-          const baselineBom = Array.isArray(imported.bomItems) ? imported.bomItems as Array<Record<string, unknown>> : [];
-          const baselineCircuits = Array.isArray(imported.circuitInstances) ? imported.circuitInstances as Array<Record<string, unknown>> : [];
+      file
+        .text()
+        .then((content) => {
+          try {
+            const imported = JSON.parse(content) as Record<string, unknown>;
+            const baselineNodes = Array.isArray(imported.nodes)
+              ? (imported.nodes as Array<Record<string, unknown>>)
+              : [];
+            const baselineEdges = Array.isArray(imported.edges)
+              ? (imported.edges as Array<Record<string, unknown>>)
+              : [];
+            const baselineBom = Array.isArray(imported.bomItems)
+              ? (imported.bomItems as Array<Record<string, unknown>>)
+              : [];
+            const baselineCircuits = Array.isArray(imported.circuitInstances)
+              ? (imported.circuitInstances as Array<Record<string, unknown>>)
+              : [];
 
-          import('@/lib/design-diff-viewer').then(({ computeDesignDiff }) => {
-            const baseline = {
-              nodes: baselineNodes.map((n) => ({
-                nodeId: String(n.nodeId ?? n.id ?? ''),
-                label: String(n.label ?? ''),
-                nodeType: String(n.nodeType ?? n.type ?? ''),
-                positionX: Number(n.positionX ?? n.x ?? 0),
-                positionY: Number(n.positionY ?? n.y ?? 0),
-              })),
-              edges: baselineEdges.map((e) => ({
-                edgeId: String(e.edgeId ?? e.id ?? ''),
-                source: String(e.source ?? ''),
-                target: String(e.target ?? ''),
-                label: e.label != null ? String(e.label) : null,
-                signalType: e.signalType != null ? String(e.signalType) : null,
-              })),
-              bomItems: baselineBom.map((b) => ({
-                partNumber: String(b.partNumber ?? ''),
-                manufacturer: String(b.manufacturer ?? ''),
-                description: String(b.description ?? ''),
-                quantity: Number(b.quantity ?? 0),
-                unitPrice: String(b.unitPrice ?? '0'),
-                supplier: String(b.supplier ?? ''),
-                status: String(b.status ?? 'In Stock'),
-              })),
-              circuitInstances: baselineCircuits.map((c) => ({
-                referenceDesignator: String(c.referenceDesignator ?? c.refDes ?? ''),
-                schematicX: Number(c.schematicX ?? c.x ?? 0),
-                schematicY: Number(c.schematicY ?? c.y ?? 0),
-                properties: null,
-              })),
-            };
+            import('@/lib/design-diff-viewer')
+              .then(({ computeDesignDiff }) => {
+                const baseline = {
+                  nodes: baselineNodes.map((n) => ({
+                    nodeId: String(n.nodeId ?? n.id ?? ''),
+                    label: String(n.label ?? ''),
+                    nodeType: String(n.nodeType ?? n.type ?? ''),
+                    positionX: Number(n.positionX ?? n.x ?? 0),
+                    positionY: Number(n.positionY ?? n.y ?? 0),
+                  })),
+                  edges: baselineEdges.map((e) => ({
+                    edgeId: String(e.edgeId ?? e.id ?? ''),
+                    source: String(e.source ?? ''),
+                    target: String(e.target ?? ''),
+                    label: e.label != null ? String(e.label) : null,
+                    signalType: e.signalType != null ? String(e.signalType) : null,
+                  })),
+                  bomItems: baselineBom.map((b) => ({
+                    partNumber: String(b.partNumber ?? ''),
+                    manufacturer: String(b.manufacturer ?? ''),
+                    description: String(b.description ?? ''),
+                    quantity: Number(b.quantity ?? 0),
+                    unitPrice: String(b.unitPrice ?? '0'),
+                    supplier: String(b.supplier ?? ''),
+                    status: String(b.status ?? 'In Stock'),
+                  })),
+                  circuitInstances: baselineCircuits.map((c) => ({
+                    referenceDesignator: String(c.referenceDesignator ?? c.refDes ?? ''),
+                    schematicX: Number(c.schematicX ?? c.x ?? 0),
+                    schematicY: Number(c.schematicY ?? c.y ?? 0),
+                    properties: null,
+                  })),
+                };
 
-            const current = {
-              nodes: nodes.map((n) => ({
-                nodeId: n.id,
-                label: String((n.data as Record<string, unknown>)?.label ?? ''),
-                nodeType: String(n.type ?? ''),
-                positionX: n.position?.x ?? 0,
-                positionY: n.position?.y ?? 0,
-              })),
-              edges: [] as Array<{ edgeId: string; source: string; target: string; label: string | null; signalType: string | null }>,
-              bomItems: bom.map((b) => ({
-                partNumber: b.partNumber,
-                manufacturer: b.manufacturer,
-                description: b.description,
-                quantity: b.quantity,
-                unitPrice: String(b.unitPrice),
-                supplier: b.supplier,
-                status: b.status,
-              })),
-              circuitInstances: [] as Array<{ referenceDesignator: string; schematicX: number; schematicY: number; properties: null }>,
-            };
+                const current = {
+                  nodes: nodes.map((n) => ({
+                    nodeId: n.id,
+                    label: String((n.data as Record<string, unknown>)?.label ?? ''),
+                    nodeType: String(n.type ?? ''),
+                    positionX: n.position?.x ?? 0,
+                    positionY: n.position?.y ?? 0,
+                  })),
+                  edges: [] as Array<{
+                    edgeId: string;
+                    source: string;
+                    target: string;
+                    label: string | null;
+                    signalType: string | null;
+                  }>,
+                  bomItems: bom.map((b) => ({
+                    partNumber: b.partNumber,
+                    manufacturer: b.manufacturer,
+                    description: b.description,
+                    quantity: b.quantity,
+                    unitPrice: String(b.unitPrice),
+                    supplier: b.supplier,
+                    status: b.status,
+                  })),
+                  circuitInstances: [] as Array<{
+                    referenceDesignator: string;
+                    schematicX: number;
+                    schematicY: number;
+                    properties: null;
+                  }>,
+                };
 
-            const result = computeDesignDiff(baseline, current);
-            setDiffResult(result);
-            setDiffBaselineName(file.name);
-            addOutputLog(`[DIFF] Compared "${file.name}" with current design: ${String(result.totalSummary.total)} elements, ${String(result.totalSummary.added)} added, ${String(result.totalSummary.removed)} removed, ${String(result.totalSummary.modified)} modified.`);
-          }).catch(() => {
-            toast({ variant: 'destructive', title: 'Compare failed', description: 'Could not load the diff module.' });
-          });
-        } catch {
-          toast({ variant: 'destructive', title: 'Compare failed', description: 'Invalid JSON file.' });
-        }
-      }).catch(() => {
-        toast({ variant: 'destructive', title: 'Compare failed', description: 'Could not read the file.' });
-      });
+                const result = computeDesignDiff(baseline, current);
+                setDiffResult(result);
+                setDiffBaselineName(file.name);
+                addOutputLog(
+                  `[DIFF] Compared "${file.name}" with current design: ${String(result.totalSummary.total)} elements, ${String(result.totalSummary.added)} added, ${String(result.totalSummary.removed)} removed, ${String(result.totalSummary.modified)} modified.`,
+                );
+              })
+              .catch(() => {
+                toast({
+                  variant: 'destructive',
+                  title: 'Compare failed',
+                  description: 'Could not load the diff module.',
+                });
+              });
+          } catch {
+            toast({ variant: 'destructive', title: 'Compare failed', description: 'Invalid JSON file.' });
+          }
+        })
+        .catch(() => {
+          toast({ variant: 'destructive', title: 'Compare failed', description: 'Could not read the file.' });
+        });
 
       input.value = '';
     };
@@ -923,14 +1306,21 @@ function ExportPanel() {
   }, []);
 
   return (
-    <div className="h-full w-full bg-background/80 backdrop-blur p-4 overflow-auto flex flex-col gap-4" data-testid="export-panel">
+    <div
+      className="h-full w-full bg-background/80 backdrop-blur p-3 overflow-auto flex flex-col gap-3"
+      data-testid="export-panel"
+    >
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-white/10">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between pb-2 border-b border-white/10">
+        <div className="flex items-center gap-1.5">
           <Download className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-display font-bold text-foreground tracking-wide">EXPORT CENTER</h2>
+          <h2 className="text-[13px] font-display font-bold text-foreground tracking-wide">EXPORT CENTER</h2>
         </div>
-        <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground border-border pointer-events-none select-none" data-testid="label-export-format-count">
+        <Badge
+          variant="outline"
+          className="text-[10px] font-mono text-muted-foreground border-border pointer-events-none select-none"
+          data-testid="label-export-format-count"
+        >
           {EXPORT_CATEGORIES.reduce((sum, cat) => sum + cat.formats.length, 0)} formats
         </Badge>
       </div>
@@ -947,10 +1337,7 @@ function ExportPanel() {
       <CircuitSelectorDropdown />
 
       {/* Quick export profiles */}
-      <ExportProfileSelector
-        onExportProfile={handleProfileExport}
-        exportingFormats={exportingFormats}
-      />
+      <ExportProfileSelector onExportProfile={handleProfileExport} exportingFormats={exportingFormats} />
 
       {/* Categories */}
       {EXPORT_CATEGORIES.map((category) => {
@@ -958,19 +1345,27 @@ function ExportPanel() {
         const isExpanded = expandedCategories[category.id] !== false;
 
         return (
-          <div key={category.id} data-testid={`export-category-${category.id}`} className="border border-border/50 bg-card/30 backdrop-blur">
+          <div
+            key={category.id}
+            data-testid={`export-category-${category.id}`}
+            className="border border-border/50 bg-card/30 backdrop-blur"
+          >
             {/* Category header */}
             <button
               data-testid={`export-category-toggle-${category.id}`}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors focus-ring"
+              className="w-full flex items-center gap-1.5 px-2.5 py-2 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors focus-ring"
               onClick={() => toggleCategory(category.id)}
               aria-expanded={isExpanded}
               aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${category.label}`}
             >
-              {isExpanded ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
+              {isExpanded ? (
+                <ChevronDown className="w-3.5 h-3.5 shrink-0" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+              )}
               <CatIcon className="w-3.5 h-3.5 shrink-0 text-primary/70" />
               <span className="flex-1 text-left">{category.label}</span>
-              <span className="text-[10px] font-mono bg-muted/50 px-1.5 py-0.5 tabular-nums">
+              <span className="text-[9px] font-mono bg-muted/50 px-1 py-0 tabular-nums rounded-sm">
                 {category.formats.length}
               </span>
             </button>
@@ -1003,15 +1398,17 @@ function ExportPanel() {
                     <div key={format.id}>
                       <div
                         data-testid={`export-format-${format.id}`}
+                        data-file-id={format.id}
+                        data-file-label={format.label}
                         className={cn(
-                          'flex items-center gap-3 px-3 py-2.5 transition-colors group',
+                          'flex items-center gap-2 px-2.5 py-2 transition-colors group',
                           hasErrors ? 'opacity-60' : 'hover:bg-muted/20',
                         )}
                       >
                         <FormatIcon className="w-4 h-4 text-muted-foreground shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-foreground">{format.label}</span>
+                            <span className="text-[11px] font-medium text-foreground">{format.label}</span>
                             <span className="text-[10px] font-mono text-muted-foreground/60">{format.extension}</span>
                             {hasErrors && (
                               <StyledTooltip content={validation.errors.join(' | ')} side="top">
@@ -1028,14 +1425,16 @@ function ExportPanel() {
                               </StyledTooltip>
                             )}
                           </div>
-                          <p className="text-[10px] text-muted-foreground/70 leading-tight mt-0.5 line-clamp-1">{format.description}</p>
+                          <p className="text-[10px] text-muted-foreground/75 leading-tight mt-0.5 line-clamp-1">
+                            {format.description}
+                          </p>
                         </div>
 
                         {format.id === 'pick-place' && (
                           <StyledTooltip content="Preview placement data before exporting" side="left">
                             <button
                               data-testid="pick-place-preview-button"
-                              className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors shrink-0 focus-ring"
+                              className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors shrink-0 focus-ring"
                               onClick={() => void handlePickPlacePreview()}
                               aria-label="Preview pick-and-place data"
                             >
@@ -1047,16 +1446,22 @@ function ExportPanel() {
                           <button
                             data-testid={`export-download-${format.id}`}
                             className={cn(
-                              'p-1.5 transition-colors shrink-0 focus-ring',
+                              'p-1 transition-colors shrink-0 focus-ring',
                               hasErrors && 'text-destructive/50 cursor-not-allowed ring-1 ring-destructive/30 rounded',
-                              !hasErrors && state === 'idle' && 'text-muted-foreground hover:text-primary hover:bg-primary/10',
+                              !hasErrors &&
+                                state === 'idle' &&
+                                'text-muted-foreground hover:text-primary hover:bg-primary/10',
                               state === 'loading' && 'text-primary animate-pulse cursor-wait',
                               state === 'success' && 'text-green-400',
                               state === 'error' && 'text-destructive',
                             )}
                             onClick={() => handleExportClick(format)}
                             disabled={state === 'loading'}
-                            aria-label={hasErrors ? `Pre-check ${format.label}: ${validation.errors[0] ?? 'missing data'}` : `Download ${format.label}`}
+                            aria-label={
+                              hasErrors
+                                ? `Pre-check ${format.label}: ${validation.errors[0] ?? 'missing data'}`
+                                : `Download ${format.label}`
+                            }
                           >
                             {state === 'idle' && <Download className="w-4 h-4" />}
                             {state === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -1066,7 +1471,7 @@ function ExportPanel() {
                         </StyledTooltip>
                       </div>
                       {showPrecheck && (
-                        <div className="px-3 pb-2.5">
+                        <div className="px-2.5 pb-2">
                           <ExportPrecheckPanel
                             format={format.id}
                             formatLabel={format.label}
@@ -1077,12 +1482,11 @@ function ExportPanel() {
                         </div>
                       )}
                       {format.id === 'pick-place' && pickPlaceEntries !== null && (
-                        <div className="px-3 pb-2.5">
-                          <Suspense fallback={<div className="text-[10px] text-muted-foreground p-2">Loading preview...</div>}>
-                            <PickPlacePreview
-                              entries={pickPlaceEntries}
-                              onClose={handlePickPlacePreviewClose}
-                            />
+                        <div className="px-2.5 pb-2">
+                          <Suspense
+                            fallback={<div className="text-[10px] text-muted-foreground p-2">Loading preview...</div>}
+                          >
+                            <PickPlacePreview entries={pickPlaceEntries} onClose={handlePickPlacePreviewClose} />
                           </Suspense>
                         </div>
                       )}
@@ -1100,17 +1504,18 @@ function ExportPanel() {
 
       {/* Import section */}
       <div className="border border-border/50 bg-card/30 backdrop-blur" data-testid="import-section">
-        <div className="flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-muted-foreground">
+        <div className="flex items-center gap-1.5 px-2.5 py-2 text-[11px] font-medium text-muted-foreground">
           <Upload className="w-3.5 h-3.5 shrink-0 text-primary/70" />
           <span className="flex-1 text-left">Import Design</span>
         </div>
-        <div className="border-t border-border/30 px-3 py-2.5">
+        <div className="border-t border-border/30 px-2.5 py-2">
           <p className="text-[10px] text-muted-foreground/70 leading-tight mb-2">
-            Import a design file (KiCad, EAGLE, Altium, gEDA, LTspice, Proteus, OrCAD) with a preview of changes before applying.
+            Import a design file (KiCad, EAGLE, Altium, gEDA, LTspice, Proteus, OrCAD) with a preview of changes before
+            applying.
           </p>
           <button
             data-testid="import-design-file-button"
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-foreground bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-sm transition-colors focus-ring"
+            className="w-full flex items-center justify-center gap-1.5 px-2.5 py-2 text-[11px] font-medium text-foreground bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-sm transition-colors focus-ring"
             onClick={handleImportFileSelect}
           >
             <Upload className="w-3.5 h-3.5" />
@@ -1118,7 +1523,7 @@ function ExportPanel() {
           </button>
           <button
             data-testid="compare-design-button"
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 mt-1.5 text-xs font-medium text-foreground bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-sm transition-colors focus-ring"
+            className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 mt-1.5 text-[11px] font-medium text-foreground bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-sm transition-colors focus-ring"
             onClick={handleCompareDesign}
           >
             <GitCompareArrows className="w-3.5 h-3.5" />
@@ -1140,12 +1545,16 @@ function ExportPanel() {
       <div className="border border-border/50 bg-card/30 backdrop-blur" data-testid="import-history-section">
         <button
           data-testid="import-history-toggle"
-          className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors focus-ring"
+          className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors focus-ring"
           onClick={() => setImportHistoryExpanded((prev) => !prev)}
           aria-expanded={importHistoryExpanded}
           aria-label={`${importHistoryExpanded ? 'Collapse' : 'Expand'} import history`}
         >
-          {importHistoryExpanded ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
+          {importHistoryExpanded ? (
+            <ChevronDown className="w-3.5 h-3.5 shrink-0" />
+          ) : (
+            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+          )}
           <History className="w-3.5 h-3.5 shrink-0 text-primary/70" />
           <span className="flex-1 text-left">Import History</span>
         </button>

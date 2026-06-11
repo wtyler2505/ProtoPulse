@@ -25,28 +25,28 @@ export function DfmCheckSection({
   clearDfmHistory, onRunDfm, onRunDfmFromBom, setActiveView,
 }: DfmCheckSectionProps) {
   return (
-    <div data-testid="dfm-check-section" className="bg-card/40 border border-border backdrop-blur-xl shadow-xl p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
+    <div data-testid="dfm-check-section" className="bg-card/40 border border-border backdrop-blur-xl shadow-xl p-4.5 flex flex-col gap-3.5">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <Factory className="w-4 h-4 text-primary" />
           DFM Check
         </h3>
-        <div className="flex items-center gap-1">
-          <Button data-testid="run-dfm-from-bom" variant="outline" size="sm" className="h-7 text-xs" onClick={onRunDfmFromBom}>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button data-testid="run-dfm-from-bom" variant="outline" size="sm" className="h-8 text-xs px-2.5" onClick={onRunDfmFromBom}>
             <Factory className="w-3 h-3 mr-1" />
             Check from BOM
           </Button>
-          <Button data-testid="run-dfm-check" variant="outline" size="sm" className="h-7 text-xs" onClick={onRunDfm}>
+          <Button data-testid="run-dfm-check" variant="outline" size="sm" className="h-8 text-xs px-2.5" onClick={onRunDfm}>
             <Play className="w-3 h-3 mr-1" />
             Run
           </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
         <Label className="text-xs text-muted-foreground flex-shrink-0">Fab:</Label>
         <Select value={selectedFab} onValueChange={setSelectedFab}>
-          <SelectTrigger data-testid="dfm-fab-select" className="h-7 text-xs flex-1">
+          <SelectTrigger data-testid="dfm-fab-select" className="h-8 text-xs flex-1" aria-label="Select fab house for DFM check">
             <SelectValue placeholder="Select fab house..." />
           </SelectTrigger>
           <SelectContent>
@@ -58,12 +58,12 @@ export function DfmCheckSection({
       </div>
 
       {dfmResult && (
-        <div data-testid="dfm-results" className="border-t border-border pt-2 space-y-2">
+        <div data-testid="dfm-results" className="border-t border-border pt-2.5 space-y-2.5">
           <div className="flex items-center justify-between">
             <Badge data-testid="dfm-pass-badge" variant={dfmResult.passed ? 'outline' : 'destructive'} className="text-xs">
               {dfmResult.passed ? 'PASSED' : 'FAILED'}
             </Badge>
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground">
               {dfmResult.summary.errors} error(s), {dfmResult.summary.warnings} warning(s)
             </span>
           </div>
@@ -78,18 +78,18 @@ export function DfmCheckSection({
                     mapDfmViolationToHighlight(v);
                     setActiveView('pcb');
                   }}
-                  className="flex items-start gap-2 text-xs py-1 hover:bg-muted/30 rounded px-1 transition-colors"
+                  className="flex items-start gap-2.5 text-xs py-1.5 hover:bg-muted/30 rounded px-1.5 transition-colors"
                 >
                   <Badge variant={v.severity === 'error' ? 'destructive' : v.severity === 'warning' ? 'secondary' : 'outline'} className="text-[10px] px-1 py-0 flex-shrink-0">
                     {v.severity}
                   </Badge>
                   <div className="flex-1 min-w-0">
                     <p className="truncate">{v.message}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                    <p className="text-[11px] text-muted-foreground mt-0.5 font-mono">
                       {v.category} | actual: {v.actual}{v.unit} / required: {v.required}{v.unit}
                     </p>
                   </div>
-                  <span className="text-[9px] text-primary/60 flex-shrink-0 self-center">View on PCB</span>
+                  <span className="text-[10px] text-primary/70 flex-shrink-0 self-center">View on PCB</span>
                 </InteractiveCard>
               ))}
             </div>

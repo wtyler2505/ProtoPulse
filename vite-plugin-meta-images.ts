@@ -4,7 +4,7 @@ import path from 'path';
 
 /**
  * Vite plugin that updates og:image and twitter:image meta tags
- * to point to the app's opengraph image with the correct Replit domain.
+ * to point to the app's opengraph image with the configured public app URL.
  */
 export function metaImagesPlugin(): Plugin {
   return {
@@ -12,7 +12,7 @@ export function metaImagesPlugin(): Plugin {
     transformIndexHtml(html) {
       const baseUrl = getDeploymentUrl();
       if (!baseUrl) {
-        log('[meta-images] no Replit deployment domain found, skipping meta tag updates');
+        log('[meta-images] no public app URL configured, skipping meta tag updates');
         return html;
       }
 
@@ -56,22 +56,43 @@ export function metaImagesPlugin(): Plugin {
 }
 
 function getDeploymentUrl(): string | null {
-  if (process.env.REPLIT_INTERNAL_APP_DOMAIN) {
-    const url = `https://${process.env.REPLIT_INTERNAL_APP_DOMAIN}`;
-    log('[meta-images] using internal app domain:', url);
-    return url;
-  }
+  const envKeys = [
+    'PROTO_PULSE_PUBLIC_URL',
+    'APP_PUBLIC_URL',
+    'PUBLIC_APP_URL',
+    'VITE_PUBLIC_APP_URL',
+  ];
 
-  if (process.env.REPLIT_DEV_DOMAIN) {
-    const url = `https://${process.env.REPLIT_DEV_DOMAIN}`;
-    log('[meta-images] using dev domain:', url);
-    return url;
+  for (const key of envKeys) {
+    const url = normalizePublicUrl(process.env[key]);
+    if (url) {
+      log(`[meta-images] using ${key}:`, url);
+      return url;
+    }
   }
 
   return null;
 }
 
-function log(...args: any[]): void {
+function normalizePublicUrl(value: string | undefined): string | null {
+  const trimmedValue = value?.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  const withProtocol = /^https?:\/\//i.test(trimmedValue)
+    ? trimmedValue
+    : `https://${trimmedValue}`;
+
+  try {
+    const url = new URL(withProtocol);
+    return url.href.replace(/\/+$/, '');
+  } catch {
+    return null;
+  }
+}
+
+function log(...args: unknown[]): void {
   if (process.env.NODE_ENV === 'production') {
     console.log(...args);
   }

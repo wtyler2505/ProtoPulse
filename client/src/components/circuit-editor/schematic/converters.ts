@@ -1,11 +1,11 @@
 /**
- * Converters: DB rows to React Flow elements, clipboard bundle types, and
- * React Flow type registrations for the schematic canvas.
+ * Converters: DB rows to schematic flow elements, clipboard bundle types, and
+ * schematic type registrations for the canvas.
  */
-import type { Node, Edge } from '@xyflow/react';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, ComponentPart, HierarchicalPortRow } from '@shared/schema';
 import type { Connector, Shape, PartMeta, PartViews } from '@shared/component-types';
 import type { PowerSymbol, SchematicNetLabel, SchematicAnnotation, NoConnectMarker } from '@shared/circuit-types';
+import type { SchematicEdge, SchematicNode } from './flow-types';
 import type { InstanceNodeData } from '../SchematicInstanceNode';
 import type { PowerNodeData } from '../SchematicPowerNode';
 import type { NetLabelNodeData } from '../SchematicNetLabelNode';
@@ -117,7 +117,7 @@ export function instanceToNode(
   portsByDesign?: Map<number, HierarchicalPortRow[]>,
   onEnterSheet?: (id: number) => void,
   onRefdesChange?: (newRefdes: string) => void,
-): Node<InstanceNodeData | SheetNodeData> {
+): SchematicNode<InstanceNodeData | SheetNodeData> {
   // 1. Check if this is a hierarchical sub-sheet
   if (row.subDesignId) {
     const subDesign = subDesigns?.find(d => d.id === row.subDesignId);
@@ -157,14 +157,14 @@ export function instanceToNode(
       schematicShapes,
       onRefdesChange,
     },
-  } as Node<InstanceNodeData>;
+  } as SchematicNode<InstanceNodeData>;
 }
 
 export function netToEdges(
   net: CircuitNetRow,
   connectorsByInstance: Map<number, Connector[]>,
   onNetNameChange?: (netId: number, newName: string) => void,
-): Edge[] {
+): SchematicEdge[] {
   const segments = (net.segments ?? []) as NetSegmentJSON[];
   const style = (net.style ?? {}) as { color?: string };
 
@@ -191,7 +191,7 @@ export function netToEdges(
   });
 }
 
-export function powerSymbolToNode(ps: PowerSymbol): Node<PowerNodeData> {
+export function powerSymbolToNode(ps: PowerSymbol): SchematicNode<PowerNodeData> {
   return {
     id: `power-${ps.id}`,
     type: 'schematic-power',
@@ -209,7 +209,7 @@ export function powerSymbolToNode(ps: PowerSymbol): Node<PowerNodeData> {
 export function netLabelToNode(
   label: SchematicNetLabel,
   onNetNameChange?: (labelId: string, newName: string) => void,
-): Node<NetLabelNodeData> {
+): SchematicNode<NetLabelNodeData> {
   return {
     id: `netlabel-${label.id}`,
     type: 'schematic-net-label',
@@ -223,7 +223,7 @@ export function netLabelToNode(
   };
 }
 
-export function noConnectToNode(nc: NoConnectMarker): Node<NoConnectNodeData> {
+export function noConnectToNode(nc: NoConnectMarker): SchematicNode<NoConnectNodeData> {
   return {
     id: `noconnect-${nc.id}`,
     type: 'schematic-no-connect',
@@ -241,7 +241,7 @@ export function annotationToNode(
   onTextChange?: (id: string, text: string) => void,
   onFontSizeChange?: (id: string, fontSize: number) => void,
   onColorChange?: (id: string, color: string) => void,
-): Node<AnnotationNodeData> {
+): SchematicNode<AnnotationNodeData> {
   return {
     id: `annotation-${ann.id}`,
     type: 'schematic-annotation',

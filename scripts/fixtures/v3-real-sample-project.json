@@ -1,0 +1,155 @@
+{
+  "project": {
+    "id": "v3-real-sample-rover-motor-control",
+    "name": "Rover Motor Control Bench Slice",
+    "description": "Verified v3 sample using Arduino Mega, TXS0108E level shifting, a ZS-X11H motor driver, and an Arduino/C++ firmware boundary."
+  },
+  "nodes": [
+    {
+      "id": "board-envelope",
+      "type": "custom",
+      "position": { "x": 0, "y": -180 },
+      "data": {
+        "label": "Bench chassis plate",
+        "kind": "mechanical",
+        "width": "120mm",
+        "height": "80mm",
+        "verified": true,
+        "sourceFacts": ["mounting-clearance", "board-envelope"],
+        "provenance": ["knowledge:bench-chassis-plate"]
+      }
+    },
+    {
+      "id": "arduino-mega",
+      "type": "custom",
+      "position": { "x": -180, "y": 0 },
+      "data": {
+        "label": "Arduino Mega 2560 R3",
+        "kind": "hardware",
+        "referenceDesignator": "U1",
+        "partNumber": "Arduino Mega 2560 R3",
+        "footprint": "dip-module-mega2560-r3",
+        "verified": true,
+        "pins": ["D2", "D3", "D5", "5V", "GND"],
+        "verifiedFacts": ["pinout", "logic-voltage", "physical-envelope"],
+        "provenance": ["knowledge:arduino-mega-2560-r3"]
+      }
+    },
+    {
+      "id": "level-shifter",
+      "type": "custom",
+      "position": { "x": 40, "y": 0 },
+      "data": {
+        "label": "TXS0108E level shifter",
+        "kind": "hardware",
+        "referenceDesignator": "U2",
+        "partNumber": "TXS0108E",
+        "footprint": "tssop20",
+        "verified": true,
+        "pins": ["A1", "A2", "A3", "B1", "B2", "B3", "OE", "VCCA", "VCCB", "GND"],
+        "verifiedFacts": ["pinout", "oe-active-high", "voltage-domains"],
+        "provenance": ["knowledge:txs0108e-oe-pin-is-active-high-and-floating-by-default-silently-disabling-all-outputs"]
+      }
+    },
+    {
+      "id": "driver-connector",
+      "type": "custom",
+      "position": { "x": 280, "y": 0 },
+      "data": {
+        "label": "ZS-X11H driver harness",
+        "kind": "connector",
+        "referenceDesignator": "J1",
+        "partNumber": "ZS-X11H control header",
+        "footprint": "pinrow6",
+        "verified": true,
+        "pins": ["EL", "Z/F", "VR", "5V", "GND", "SC"],
+        "verifiedFacts": ["pinout", "active-low-enable", "tach-output"],
+        "provenance": ["knowledge:zs-x11h-el-speed-input-is-active-low-and-flips-polarity-between-pwm-and-analog-modes"]
+      }
+    },
+    {
+      "id": "logic-5v",
+      "type": "custom",
+      "position": { "x": -180, "y": -100 },
+      "data": {
+        "label": "Clean 5V logic rail",
+        "kind": "power",
+        "net": "PWR_5V_LOGIC",
+        "voltage": "5V",
+        "verifiedFacts": ["logic-rail-source"],
+        "provenance": ["knowledge:level-shifter-hv-reference-must-come-from-clean-regulated-supply"]
+      }
+    },
+    {
+      "id": "firmware-boundary",
+      "type": "custom",
+      "position": { "x": -180, "y": 140 },
+      "data": {
+        "label": "Arduino motor-control firmware",
+        "kind": "firmware",
+        "board": "Arduino Mega 2560 R3",
+        "referenceDesignator": "U3",
+        "footprint": "virtual-firmware-boundary",
+        "verified": true,
+        "ownedPins": ["D2", "D3", "D5"],
+        "verifiedFacts": ["pinout"],
+        "behavior": "Own enable, direction, and PWM control pins for one ZS-X11H driver channel.",
+        "provenance": ["firmware-contract:arduino-cpp"]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "mega-to-shifter-pwm",
+      "source": "arduino-mega",
+      "target": "level-shifter",
+      "label": "PWM speed control",
+      "data": {
+        "netName": "PWM_SPEED",
+        "signalType": "pwm",
+        "voltage": "5V",
+        "sourcePin": "D5",
+        "targetPin": "A1"
+      }
+    },
+    {
+      "id": "mega-to-shifter-enable",
+      "source": "arduino-mega",
+      "target": "level-shifter",
+      "label": "Enable control",
+      "data": {
+        "netName": "ENABLE_ACTIVE_LOW",
+        "signalType": "digital",
+        "voltage": "5V",
+        "sourcePin": "D2",
+        "targetPin": "A2"
+      }
+    },
+    {
+      "id": "shifter-to-driver-enable",
+      "source": "level-shifter",
+      "target": "driver-connector",
+      "label": "Driver enable",
+      "data": {
+        "netName": "DRIVER_EL",
+        "signalType": "digital",
+        "voltage": "5V",
+        "sourcePin": "B2",
+        "targetPin": "EL"
+      }
+    },
+    {
+      "id": "shifter-to-driver-pwm",
+      "source": "level-shifter",
+      "target": "driver-connector",
+      "label": "Driver PWM",
+      "data": {
+        "netName": "DRIVER_VR",
+        "signalType": "pwm",
+        "voltage": "5V",
+        "sourcePin": "B1",
+        "targetPin": "VR"
+      }
+    }
+  ]
+}

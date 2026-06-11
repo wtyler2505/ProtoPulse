@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, XCircle, PlayCircle, Eye, EyeOff, Shield, ChevronDown, ChevronRight, Download } from 'lucide-react';
 import type { DRCViolation, DRCRule } from '@shared/component-types';
+import { NumberInput } from '@/components/ui/number-input';
 import { VaultExplainer } from '@/components/ui/vault-explainer';
 
 interface DRCPanelProps {
@@ -80,8 +81,10 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
 
   return (
     <div
-      className="w-60 border-l border-border bg-background flex flex-col"
+      className="flex min-h-0 w-60 min-w-52 max-w-96 shrink-0 resize-x flex-col overflow-hidden border-l border-border bg-background"
       data-testid="drc-panel"
+      data-resizable="true"
+      data-resize-axis="horizontal"
     >
       <div className="px-3 py-2 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-1.5">
@@ -120,7 +123,7 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
             <button
               data-testid="button-export-drc-csv"
               onClick={() => downloadCSV(violations, 'drc-report.csv')}
-              className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             >
               <Download className="w-3 h-3" />
               CSV
@@ -142,7 +145,7 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
           <div className="mt-2 flex flex-col gap-2">
             {rules.map((rule, idx) => (
               <div key={rule.type} className="flex flex-col gap-1" data-testid={`drc-rule-${rule.type}`}>
-                <label className="flex items-center gap-1.5 text-[10px] cursor-pointer">
+                <label className="flex items-center gap-1.5 text-[11px] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={rule.enabled}
@@ -153,23 +156,24 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
                   <span className={rule.enabled ? 'text-foreground' : 'text-muted-foreground line-through'}>
                     {formatRuleType(rule.type)}
                   </span>
-                  <span className={`ml-auto text-[9px] px-1 rounded ${rule.severity === 'error' ? 'bg-red-400/10 text-red-400' : 'bg-amber-400/10 text-amber-400'}`}>
+                  <span className={`ml-auto text-[10px] px-1 rounded ${rule.severity === 'error' ? 'bg-red-400/10 text-red-400' : 'bg-amber-400/10 text-amber-400'}`}>
                     {rule.severity}
                   </span>
                 </label>
                 {rule.enabled && Object.keys(rule.params).length > 0 && (
                   <div className="ml-5 flex flex-wrap gap-1.5">
                     {Object.entries(rule.params).map(([key, value]) => (
-                      <label key={key} className="flex items-center gap-1 text-[9px] text-muted-foreground">
+                      <label key={key} className="flex items-center gap-1 text-[10px] text-muted-foreground">
                         <span>{formatParamKey(key)}</span>
-                        <input
-                          type="number"
+                        <NumberInput
+                          min={0}
+                          max={1_000_000}
                           value={value}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value) || 0;
                             onUpdateRule(idx, { params: { ...rule.params, [key]: val } });
                           }}
-                          className="w-12 h-4 text-[9px] bg-card border border-border rounded px-1 text-foreground"
+                          className="w-12 h-5 text-[10px] bg-card border border-border rounded px-1 text-foreground"
                           data-testid={`input-rule-${rule.type}-${key}`}
                         />
                       </label>
@@ -187,11 +191,11 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
           className="px-3 py-1.5 border-b border-border"
           data-testid="drc-summary"
         >
-          <span className="text-[10px] text-muted-foreground">{summary}</span>
+          <span className="text-[11px] text-muted-foreground">{summary}</span>
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {sortedViolations.length === 0 ? (
           <div className="p-4 text-center text-xs text-muted-foreground">
             No DRC violations found

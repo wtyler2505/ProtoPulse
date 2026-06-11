@@ -425,9 +425,9 @@ describe('ProjectPickerPage', () => {
       mockFetchProjects([makeProject({ id: 42, name: 'My Circuit' })]);
       renderPage();
       await waitFor(() => {
-        expect(screen.getByTestId('project-card-42')).toBeDefined();
+        expect(screen.getByTestId('project-card-open-42')).toBeDefined();
       });
-      fireEvent.click(screen.getByTestId('project-card-42'));
+      fireEvent.click(screen.getByTestId('project-card-open-42'));
       expect(mockNavigate).toHaveBeenCalledWith('/projects/42');
     });
 
@@ -435,39 +435,41 @@ describe('ProjectPickerPage', () => {
       mockFetchProjects([makeProject({ id: 7, name: 'Saved Project' })]);
       renderPage();
       await waitFor(() => {
-        expect(screen.getByTestId('project-card-7')).toBeDefined();
+        expect(screen.getByTestId('project-card-open-7')).toBeDefined();
       });
-      fireEvent.click(screen.getByTestId('project-card-7'));
+      fireEvent.click(screen.getByTestId('project-card-open-7'));
       expect(localStorage.getItem(getLastProjectStorageKey())).toBe('7');
     });
 
-    it('navigates on Enter key press on project card', async () => {
+    it('renders the project open control as a native button', async () => {
       mockFetchProjects([makeProject({ id: 3, name: 'Keyboard Nav' })]);
       renderPage();
       await waitFor(() => {
-        expect(screen.getByTestId('project-card-3')).toBeDefined();
+        expect(screen.getByTestId('project-card-open-3')).toBeDefined();
       });
-      fireEvent.keyDown(screen.getByTestId('project-card-3'), { key: 'Enter' });
-      expect(mockNavigate).toHaveBeenCalledWith('/projects/3');
+      const openButton = screen.getByTestId('project-card-open-3');
+      expect(openButton.tagName).toBe('BUTTON');
+      expect(openButton.getAttribute('type')).toBe('button');
     });
 
-    it('navigates on Space key press on project card', async () => {
+    it('labels the project open control for screen readers', async () => {
       mockFetchProjects([makeProject({ id: 4, name: 'Space Nav' })]);
       renderPage();
       await waitFor(() => {
-        expect(screen.getByTestId('project-card-4')).toBeDefined();
+        expect(screen.getByTestId('project-card-open-4')).toBeDefined();
       });
-      fireEvent.keyDown(screen.getByTestId('project-card-4'), { key: ' ' });
-      expect(mockNavigate).toHaveBeenCalledWith('/projects/4');
+      expect(screen.getByTestId('project-card-open-4').getAttribute('aria-label')).toBe(
+        'Open project: Space Nav',
+      );
     });
 
     it('does not navigate on other key presses', async () => {
       mockFetchProjects([makeProject({ id: 5, name: 'No Nav' })]);
       renderPage();
       await waitFor(() => {
-        expect(screen.getByTestId('project-card-5')).toBeDefined();
+        expect(screen.getByTestId('project-card-open-5')).toBeDefined();
       });
-      fireEvent.keyDown(screen.getByTestId('project-card-5'), { key: 'Tab' });
+      fireEvent.keyDown(screen.getByTestId('project-card-open-5'), { key: 'Tab' });
       expect(mockNavigate).not.toHaveBeenCalled();
     });
   });

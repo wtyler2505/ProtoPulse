@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ReactFlow, Background, Controls, ReactFlowProvider } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
 import { ExternalLink, Loader2, AlertCircle } from 'lucide-react';
 
 import { EmbedManager } from '@/lib/embed-viewer';
 
 import type { EmbedCircuitData, EmbedTheme } from '@/lib/embed-viewer';
-import type { Node, Edge } from '@xyflow/react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,91 +18,47 @@ interface EmbedViewerPageProps {
 
 type LoadingState = 'loading' | 'ready' | 'error';
 
-// ---------------------------------------------------------------------------
-// Conversion helpers: EmbedCircuitData → ReactFlow nodes/edges
-// ---------------------------------------------------------------------------
-
-function circuitToFlowNodes(data: EmbedCircuitData): Node[] {
-  return data.nodes.map((node) => ({
-    id: node.id,
-    type: 'default',
-    position: { x: node.x, y: node.y },
-    data: {
-      label: node.label,
-      componentType: node.type,
-      ...node.properties,
-    },
-    style: {
-      background: 'hsl(var(--card))',
-      color: 'hsl(var(--card-foreground))',
-      border: '1px solid hsl(var(--border))',
-      borderRadius: '8px',
-      padding: '8px 12px',
-      fontSize: '12px',
-    },
-  }));
-}
-
-function circuitToFlowEdges(data: EmbedCircuitData): Edge[] {
-  const edges: Edge[] = [];
-
-  for (const wire of data.wires) {
-    const net = data.nets.find((n) => n.id === wire.netId);
-    edges.push({
-      id: `wire-${String(wire.id)}`,
-      source: String(wire.points[0] ?? ''),
-      target: String(wire.points[wire.points.length - 1] ?? ''),
-      label: net?.name,
-      style: {
-        stroke: wire.color ?? 'hsl(var(--primary))',
-        strokeWidth: wire.width ?? 1,
-      },
-    });
-  }
-
-  return edges;
-}
-
-// ---------------------------------------------------------------------------
-// Inner viewer (must be wrapped in ReactFlowProvider)
-// ---------------------------------------------------------------------------
-
 function EmbedFlowViewer({
-  nodes,
-  edges,
+  data,
   theme,
 }: {
-  nodes: Node[];
-  edges: Edge[];
+  data: EmbedCircuitData;
   theme: EmbedTheme;
 }) {
+  const nodeCount = data.nodes.length;
+  const netCount = data.nets.length;
+  const wireCount = data.wires.length;
+
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodesDraggable={false}
-      nodesConnectable={false}
-      elementsSelectable={false}
-      panOnScroll
-      zoomOnScroll
-      fitView
-      minZoom={0.1}
-      maxZoom={4}
-      proOptions={{ hideAttribution: true }}
+    <div
+      className="h-full w-full p-3"
       data-testid="embed-flow-canvas"
     >
-      {theme.showGrid && (
-        <Background
-          color={theme.dark ? '#333' : '#ccc'}
-          gap={20}
-        />
-      )}
-      <Controls
-        showInteractive={false}
-        position="bottom-right"
-        data-testid="embed-flow-controls"
-      />
-    </ReactFlow>
+      <div
+        className="h-full w-full rounded border border-border/70 bg-card/70 p-3"
+        style={{
+          backgroundImage: theme.showGrid
+            ? `linear-gradient(${theme.dark ? '#20232b' : '#e5e7eb'} 1px, transparent 1px), linear-gradient(90deg, ${theme.dark ? '#20232b' : '#e5e7eb'} 1px, transparent 1px)`
+            : undefined,
+          backgroundSize: theme.showGrid ? '20px 20px' : undefined,
+        }}
+      >
+        <div className="grid grid-cols-3 gap-2 text-xs" data-testid="embed-flow-summary">
+          <div className="rounded border border-border/60 bg-background/70 px-2 py-1">
+            <div className="text-muted-foreground">Nodes</div>
+            <div className="font-medium">{nodeCount}</div>
+          </div>
+          <div className="rounded border border-border/60 bg-background/70 px-2 py-1">
+            <div className="text-muted-foreground">Nets</div>
+            <div className="font-medium">{netCount}</div>
+          </div>
+          <div className="rounded border border-border/60 bg-background/70 px-2 py-1">
+            <div className="text-muted-foreground">Wires</div>
+            <div className="font-medium">{wireCount}</div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -155,9 +108,6 @@ export default function EmbedViewerPage({ dataParam, codeParam }: EmbedViewerPag
   useEffect(() => {
     void loadData();
   }, [loadData]);
-
-  const nodes = useMemo(() => (circuitData ? circuitToFlowNodes(circuitData) : []), [circuitData]);
-  const edges = useMemo(() => (circuitData ? circuitToFlowEdges(circuitData) : []), [circuitData]);
 
   // Build "Open in ProtoPulse" link
   const editorUrl = useMemo(() => {
@@ -214,9 +164,7 @@ export default function EmbedViewerPage({ dataParam, codeParam }: EmbedViewerPag
       style={{ backgroundColor: bgColor, color: textColor }}
       data-testid="embed-viewer"
     >
-      <ReactFlowProvider>
-        <EmbedFlowViewer nodes={nodes} edges={edges} theme={theme} />
-      </ReactFlowProvider>
+      {circuitData ? <EmbedFlowViewer data={circuitData} theme={theme} /> : null}
 
       {/* Watermark */}
       <div

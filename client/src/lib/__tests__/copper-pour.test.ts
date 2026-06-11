@@ -874,9 +874,9 @@ describe('CopperPourEngine', () => {
       engine.addZone(defaultZoneInput({ name: 'GND' }));
       expect(localStorage.setItem).toHaveBeenCalled();
 
-      const saved = store['protopulse-copper-pour'];
+      const saved = localStorage.getItem('protopulse-copper-pour');
       expect(saved).toBeDefined();
-      const parsed = JSON.parse(saved);
+      const parsed = JSON.parse(saved!);
       expect(parsed.zones).toHaveLength(1);
     });
 
@@ -902,7 +902,7 @@ describe('CopperPourEngine', () => {
           },
         ],
       };
-      store['protopulse-copper-pour'] = JSON.stringify(zoneData);
+      localStorage.setItem('protopulse-copper-pour', JSON.stringify(zoneData));
 
       CopperPourEngine.resetForTesting();
       const newEngine = CopperPourEngine.getInstance();
@@ -912,7 +912,7 @@ describe('CopperPourEngine', () => {
     });
 
     it('handles corrupt localStorage data gracefully', () => {
-      store['protopulse-copper-pour'] = 'not valid json!!!';
+      localStorage.setItem('protopulse-copper-pour', 'not valid json!!!');
       CopperPourEngine.resetForTesting();
       // Should not throw
       const newEngine = CopperPourEngine.getInstance();

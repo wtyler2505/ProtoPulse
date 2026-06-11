@@ -1,17 +1,17 @@
 import { classifyLifecycle } from '@/lib/lifecycle-badges';
 import { calculateScorecard } from '@/lib/risk-scorecard';
-import type { Edge, Node } from '@xyflow/react';
+import type { GraphEdge, GraphNode } from '@/lib/graph-types';
 import type { BomItem, ValidationIssue } from '@/lib/project-context';
 import type { ScorecardResult } from '@/lib/risk-scorecard';
 
 export interface WorkspaceReleaseConfidenceInput {
   bomItems: readonly BomItem[];
   validationIssues: readonly ValidationIssue[];
-  nodes: readonly Node[];
-  edges: readonly Edge[];
+  nodes: readonly GraphNode[];
+  edges: readonly GraphEdge[];
 }
 
-function getNodeLabel(node: Node): string {
+function getNodeLabel(node: GraphNode): string {
   const data = node.data && typeof node.data === 'object'
     ? node.data as Record<string, unknown>
     : {};
@@ -19,7 +19,7 @@ function getNodeLabel(node: Node): string {
   return typeof data.label === 'string' ? data.label : '';
 }
 
-function getNodeDescription(node: Node): string | undefined {
+function getNodeDescription(node: GraphNode): string | undefined {
   const data = node.data && typeof node.data === 'object'
     ? node.data as Record<string, unknown>
     : {};

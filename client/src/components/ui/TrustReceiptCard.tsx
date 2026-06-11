@@ -58,33 +58,33 @@ export default function TrustReceiptCard({
       data-testid={dataTestId}
       className={cn('border shadow-none backdrop-blur-sm', meta.className, className)}
     >
-      <Icon className="h-4 w-4" />
-      <AlertTitle className="flex items-center gap-2">
+      <Icon className="h-3.5 w-3.5" />
+      <AlertTitle className="flex items-center gap-1.5 text-[11px]">
         <span>{receipt.title}</span>
         {receipt.label && (
-          <span className="rounded-full border border-current/20 px-1.5 py-0.5 text-[10px] font-medium tracking-wide">
+          <span className="rounded-full border border-current/20 px-1 py-0 text-[9px] font-medium tracking-wide">
             {receipt.label}
           </span>
         )}
-        <span className="text-[10px] font-medium uppercase tracking-wide opacity-80">{meta.label}</span>
+        <span className="text-[9px] font-medium uppercase tracking-wide opacity-80">{meta.label}</span>
       </AlertTitle>
-      <AlertDescription className="space-y-2 text-xs">
+      <AlertDescription className="space-y-1.5 text-[11px]">
         <p>{receipt.summary}</p>
         {receipt.facts && receipt.facts.length > 0 && (
-          <dl className="grid gap-2 sm:grid-cols-2">
+          <dl className="grid gap-1.5 sm:grid-cols-2">
             {receipt.facts.map((fact, index) => (
               <div
                 key={`${fact.label}-${fact.value}-${index}`}
-                className="rounded-md border border-current/10 bg-background/30 px-2 py-1.5"
+                className="rounded-md border border-current/10 bg-background/30 px-1.5 py-1"
               >
-                <dt className="text-[10px] uppercase tracking-wide opacity-70">{fact.label}</dt>
-                <dd className="mt-0.5 text-foreground">{fact.value}</dd>
+                <dt className="text-[9px] uppercase tracking-wide opacity-70">{fact.label}</dt>
+                <dd className="mt-0.5 text-foreground text-[11px]">{fact.value}</dd>
               </div>
             ))}
           </dl>
         )}
         {receipt.warnings && receipt.warnings.length > 0 && (
-          <ul className="space-y-1 text-muted-foreground">
+          <ul className="space-y-0.5 text-muted-foreground">
             {receipt.warnings.map((warning, index) => (
               <li key={`${warning}-${index}`}>- {warning}</li>
             ))}

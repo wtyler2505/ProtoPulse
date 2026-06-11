@@ -3,15 +3,23 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import type { ReactNode } from 'react';
-import type { Node, Edge } from '@xyflow/react';
+import type { SchematicNode, SchematicEdge } from '../schematic/flow-types';
 import SchematicCanvas from '../SchematicCanvas';
+import {
+  RADIAL_COMMAND_EVENT,
+  RADIAL_COMMAND_PREVIEW_EVENT,
+  type MenuContext,
+  type RadialCommandEventDetail,
+  type RadialCommandPreviewEventDetail,
+} from '@/lib/radial-menu-actions';
+import { RADIAL_AI_CHAT_DRAFT_EVENT } from '@/lib/radial-ai-commands';
 
 // -------------------------------------------------------------------
 // Mocks
 // -------------------------------------------------------------------
 
 const mockCreateInstance = { mutateAsync: vi.fn() };
-const mockUpdateDesign = { mutateAsync: vi.fn() };
+const mockUpdateDesign = { mutate: vi.fn(), mutateAsync: vi.fn() };
 const mockUpdateInstance = { mutate: vi.fn(), mutateAsync: vi.fn() };
 const mockDeleteInstance = { mutate: vi.fn() };
 const mockCreateNet = { mutateAsync: vi.fn() };
@@ -64,11 +72,11 @@ vi.mock('@/hooks/use-toast', () => ({
 // Mock React Flow
 const mockFitView = vi.fn();
 const mockScreenToFlowPosition = vi.fn().mockReturnValue({ x: 100, y: 100 });
-const mockUseNodesState = vi.fn().mockImplementation((initial: Node[]) => [initial, vi.fn(), vi.fn()]);
-const mockUseEdgesState = vi.fn().mockImplementation((initial: Edge[]) => [initial, vi.fn(), vi.fn()]);
+const mockUseNodesState = vi.fn().mockImplementation((initial: SchematicNode[]) => [initial, vi.fn(), vi.fn()]);
+const mockUseEdgesState = vi.fn().mockImplementation((initial: SchematicEdge[]) => [initial, vi.fn(), vi.fn()]);
 
-vi.mock('@xyflow/react', () => ({
-  ReactFlow: ({ children, nodes, edges }: { children?: ReactNode; nodes?: Node[]; edges?: Edge[] }) => (
+vi.mock('@/lib/xyflow-compat', () => ({
+  ReactFlow: ({ children, nodes, edges }: { children?: ReactNode; nodes?: SchematicNode[]; edges?: SchematicEdge[] }) => (
     <div data-testid="react-flow" data-node-count={nodes?.length || 0} data-edge-count={edges?.length || 0}>
       {children}
     </div>
@@ -79,8 +87,8 @@ vi.mock('@xyflow/react', () => ({
     screenToFlowPosition: mockScreenToFlowPosition,
     getNodes: vi.fn(() => []),
   }),
-  useNodesState: (initial: Node[]) => mockUseNodesState(initial),
-  useEdgesState: (initial: Edge[]) => mockUseEdgesState(initial),
+  useNodesState: (initial: SchematicNode[]) => mockUseNodesState(initial),
+  useEdgesState: (initial: SchematicEdge[]) => mockUseEdgesState(initial),
   Background: () => <div data-testid="rf-background" />,
   Controls: () => <div data-testid="rf-controls" />,
   MiniMap: () => <div data-testid="rf-minimap" />,
@@ -97,8 +105,22 @@ vi.mock('@/components/ui/context-menu', () => ({
   ContextMenu: ({ children }: { children?: ReactNode }) => <>{children}</>,
   ContextMenuTrigger: ({ children }: { children?: ReactNode }) => <>{children}</>,
   ContextMenuContent: ({ children }: { children?: ReactNode }) => <div data-testid="context-menu">{children}</div>,
-  ContextMenuItem: ({ children, onSelect }: { children?: ReactNode; onSelect?: () => void }) => <button type="button" onClick={onSelect}>{children}</button>,
-  ContextMenuSeparator: () => <hr />,
+  ContextMenuItem: ({
+    children,
+    disabled,
+    onSelect,
+    textValue: _textValue,
+    ...props
+  }: {
+    children?: ReactNode;
+    disabled?: boolean;
+    onSelect?: () => void;
+    textValue?: string;
+  } & Record<string, unknown>) => (
+    <button type="button" disabled={disabled} onClick={onSelect} {...props}>{children}</button>
+  ),
+  ContextMenuSeparator: () => <hr data-testid="context-menu-separator" />,
+  ContextMenuShortcut: ({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) => <span {...props}>{children}</span>,
 }));
 
 // Mock BOM context (used by SchematicCanvasInner for component sync)
@@ -161,6 +183,39 @@ function renderCanvas(circuitId = 1) {
   );
 }
 
+function dispatchSchematicRadial(commandId: string, context: Partial<MenuContext> = {}): RadialCommandEventDetail {
+  const detail: RadialCommandEventDetail = {
+    commandId,
+    context: {
+      view: 'schematic',
+      target: 'canvas',
+      ...context,
+    },
+    source: 'radial-menu',
+  };
+  window.dispatchEvent(new CustomEvent<RadialCommandEventDetail>(RADIAL_COMMAND_EVENT, { detail }));
+  return detail;
+}
+
+function dispatchSchematicRadialPreview(
+  commandId: string,
+  context: Partial<MenuContext> = {},
+): RadialCommandPreviewEventDetail {
+  const detail: RadialCommandPreviewEventDetail = {
+    commandId,
+    context: {
+      view: 'schematic',
+      target: 'canvas',
+      pointer: { x: 240, y: 180 },
+      ...context,
+    },
+    phase: 'show',
+    source: 'radial-menu',
+  };
+  window.dispatchEvent(new CustomEvent<RadialCommandPreviewEventDetail>(RADIAL_COMMAND_PREVIEW_EVENT, { detail }));
+  return detail;
+}
+
 // -------------------------------------------------------------------
 // Tests
 // -------------------------------------------------------------------
@@ -168,6 +223,10 @@ function renderCanvas(circuitId = 1) {
 describe('SchematicCanvas', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseCircuitDesign.mockReturnValue({ data: { id: 1, settings: {} } });
+    mockUseCircuitInstances.mockReturnValue({ data: [] });
+    mockUseCircuitNets.mockReturnValue({ data: [] });
+    mockUseComponentParts.mockReturnValue({ data: [] });
     // Mock clipboard
     vi.stubGlobal('navigator', {
       clipboard: {
@@ -236,6 +295,171 @@ describe('SchematicCanvas', () => {
     } finally {
       window.removeEventListener('protopulse:focus-component-search', eventSpy);
     }
+  });
+
+  it('renders the registry-backed schematic linear context menu fallback', () => {
+    renderCanvas();
+
+    expect(screen.getByTestId('ctx-command-add_component')).toHaveTextContent('Add Part');
+    expect(screen.getByTestId('ctx-command-add_power')).toHaveTextContent('Add Power');
+    expect(screen.getByTestId('ctx-command-fit_view')).toHaveTextContent('Fit');
+    expect(screen.getByTestId('ctx-command-toggle_grid')).toHaveTextContent('Toggle Grid');
+    expect(screen.getByTestId('ctx-command-run_erc')).toHaveTextContent('ERC');
+  });
+
+  it('keeps selected-component schematic commands disabled until one instance is selected', () => {
+    renderCanvas();
+
+    expect(screen.getByTestId('ctx-command-replace_component')).toBeDisabled();
+    expect(screen.getByTestId('ctx-command-replace_component')).toHaveAttribute('title', 'Select one schematic component first.');
+    expect(screen.getByTestId('ctx-command-add_decoupling')).toBeDisabled();
+    expect(screen.getByTestId('ctx-command-add_decoupling')).toHaveAttribute('title', 'Select one schematic component first.');
+  });
+
+  it('handles radial add_component through the schematic adapter', () => {
+    const eventSpy = vi.fn();
+    window.addEventListener('protopulse:focus-component-search', eventSpy);
+
+    try {
+      renderCanvas();
+      const detail = dispatchSchematicRadial('add_component');
+
+      expect(detail.handled).toBe(true);
+      expect(eventSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener('protopulse:focus-component-search', eventSpy);
+    }
+  });
+
+  it('handles radial fit_view through the schematic adapter', () => {
+    renderCanvas();
+    const detail = dispatchSchematicRadial('fit_view');
+
+    expect(detail.handled).toBe(true);
+    expect(mockFitView).toHaveBeenCalledWith({ padding: 0.2 });
+  });
+
+  it('handles radial add_power by adding a VCC symbol', () => {
+    renderCanvas();
+    const detail = dispatchSchematicRadial('add_power');
+
+    expect(detail.handled).toBe(true);
+    expect(mockUpdateDesign.mutate).toHaveBeenCalledWith(expect.objectContaining({
+      projectId: 1,
+      id: 1,
+      settings: expect.objectContaining({
+        powerSymbols: [
+          expect.objectContaining({
+            type: 'VCC',
+            netName: 'VCC',
+            x: 100,
+            y: 100,
+          }),
+        ],
+      }),
+    }));
+  });
+
+  it('handles radial run_erc by dispatching the schematic ERC event', () => {
+    const eventSpy = vi.fn();
+    window.addEventListener('protopulse:run-erc', eventSpy);
+
+    try {
+      renderCanvas();
+      const detail = dispatchSchematicRadial('run_erc');
+
+      expect(detail.handled).toBe(true);
+      expect(eventSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener('protopulse:run-erc', eventSpy);
+    }
+  });
+
+  it('drafts schematic review context to AI chat from a radial command', () => {
+    const draftSpy = vi.fn();
+    const openSpy = vi.fn();
+    mockUseCircuitDesign.mockReturnValue({ data: { id: 1, name: 'Main Circuit', settings: {} } });
+    mockUseCircuitInstances.mockReturnValue({
+      data: [
+        { id: 101, circuitId: 1, partId: 1, referenceDesignator: 'U1', schematicX: 42, schematicY: 84, schematicRotation: 0, properties: {} },
+      ],
+    });
+    mockUseCircuitNets.mockReturnValue({ data: [{ id: 7, circuitId: 1, name: 'VCC', color: '#ff0000' }] });
+    window.addEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, draftSpy);
+    window.addEventListener('protopulse:open-chat-panel', openSpy);
+
+    try {
+      renderCanvas();
+      const detail = dispatchSchematicRadial('ai_schematic_review', {
+        target: 'node',
+        targetId: 'instance-101',
+        targetLabel: 'U1',
+      });
+
+      expect(detail.handled).toBe(true);
+      expect(openSpy).toHaveBeenCalledWith(expect.objectContaining({
+        detail: { designAgent: false },
+      }));
+      expect(draftSpy).toHaveBeenCalledTimes(1);
+      const message = (draftSpy.mock.calls[0][0] as CustomEvent<{ message: string }>).detail.message;
+      expect(message).toContain('AI intent: review_schematic.');
+      expect(message).toContain('Schematic review: 1 symbol(s), 1 net(s)');
+      expect(message).toContain('Target: node "U1"');
+      expect(message).toContain('Circuit: Main Circuit');
+      expect(message).toContain('Known nets:');
+      expect(message).toContain('- VCC id=7');
+    } finally {
+      window.removeEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, draftSpy);
+      window.removeEventListener('protopulse:open-chat-panel', openSpy);
+    }
+  });
+
+  it('renders and clears a schematic-space radial wire preview', async () => {
+    renderCanvas();
+
+    dispatchSchematicRadialPreview('add_wire');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('schematic-radial-adapter-preview')).toHaveAttribute('data-command-id', 'add_wire');
+    });
+    expect(screen.getByTestId('schematic-radial-adapter-preview')).toHaveAttribute('data-flow-x', '100');
+    expect(screen.getByTestId('schematic-radial-adapter-preview')).toHaveAttribute('data-flow-y', '100');
+    expect(screen.getByText('Wire anchor')).toBeDefined();
+
+    window.dispatchEvent(new CustomEvent<RadialCommandPreviewEventDetail>(RADIAL_COMMAND_PREVIEW_EVENT, {
+      detail: { phase: 'clear', source: 'radial-menu' },
+    }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('schematic-radial-adapter-preview')).toBeNull();
+    });
+  });
+
+  it('outlines a schematic node target for radial delete previews', async () => {
+    mockUseCircuitInstances.mockReturnValue({
+      data: [
+        { id: 101, circuitId: 1, partId: 1, referenceDesignator: 'R1', schematicX: 160, schematicY: 120, schematicRotation: 0, properties: {} },
+      ],
+    });
+
+    renderCanvas();
+
+    dispatchSchematicRadialPreview('delete', {
+      target: 'node',
+      targetId: '101',
+      targetLabel: 'R1',
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('schematic-radial-adapter-preview')).toHaveAttribute('data-command-id', 'delete');
+    });
+    const preview = screen.getByTestId('schematic-radial-adapter-preview');
+    expect(preview).toHaveAttribute('data-target-kind', 'node');
+    expect(preview).toHaveAttribute('data-target-id', 'instance-101');
+    expect(Number(preview.getAttribute('data-target-width'))).toBeGreaterThan(0);
+    expect(Number(preview.getAttribute('data-target-height'))).toBeGreaterThan(0);
+    expect(screen.getByTestId('schematic-radial-target-outline')).toBeDefined();
+    expect(screen.getByText('R1')).toBeDefined();
   });
 
   it('handles Ctrl+C to copy selected nodes', async () => {

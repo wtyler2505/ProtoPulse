@@ -24,6 +24,7 @@ The BSS138 MOSFET itself can switch in tens of nanoseconds. The BSS138-based lev
 - SPI at or above 1MHz (most useful SPI clocks for SD cards, ADCs, radios)
 - NeoPixel data at 800kHz (edges must be within ~150ns — the pull-up rise alone consumes that)
 - Hall sensor quadrature at kart-motor speeds
+- High-frequency motor PWM (e.g., ZS-X11H BLDC controllers at 1kHz-20kHz). Even though this is well below the 400kHz limit, the RC ramp rise times degrade edge quality. Controllers with tight sampling windows expect sharp square waves and will misinterpret speed commands from sluggish RC edges. Use the TXS0108E instead for push-pull motor PWM.
 - I2S (any audio bit clock — see [[i2s-timing-requirements-make-level-shifting-a-non-solution-for-voltage-incompatible-mcus]])
 
 **What this permits:**

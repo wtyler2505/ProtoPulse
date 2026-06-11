@@ -10,4 +10,8 @@ describe('alwaysVisibleIds', () => {
   it('keeps storage (inventory) reachable before a design graph exists', () => {
     expect(alwaysVisibleIds.has('storage')).toBe(true);
   });
+
+  it('keeps 3D viewer reachable for cross-view model previews', () => {
+    expect(alwaysVisibleIds.has('viewer_3d')).toBe(true);
+  });
 });

@@ -4,9 +4,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronRight, Loader2, RefreshCw, ArrowRightLeft } from 'lucide-react';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 import { cn } from '@/lib/utils';
-import { usePartAlternates, useSubstitutePart } from '@/lib/parts/use-part-alternates';
-import type { PartRow } from '@shared/parts/part-row';
+import { usePartAlternates, useSubstitutePart, type PartAlternateCandidate } from '@/lib/parts/use-part-alternates';
+import {
+  alternateTrustKind,
+  describeAlternateMatchReason,
+  describeAlternateTradeoff,
+  formatAlternateMatchScore,
+  formatAlternateTrustLabel,
+} from '@/lib/parts/alternate-trust';
 import { useToast } from '@/hooks/use-toast';
 
 interface PartAlternatesPanelProps {
@@ -17,20 +24,20 @@ interface PartAlternatesPanelProps {
 
 function AlternateRow({
   alt,
-  onSubstitute,
+  onPreview,
   isSubstituting,
 }: {
-  alt: PartRow;
-  onSubstitute: (altId: string) => void;
+  alt: PartAlternateCandidate;
+  onPreview: (alt: PartAlternateCandidate) => void;
   isSubstituting: boolean;
 }) {
   return (
     <div
       data-testid={`alternate-row-${alt.id}`}
-      className="flex items-center justify-between gap-3 rounded-md border border-border/40 bg-muted/30 px-3 py-2"
+      className="grid gap-3 rounded-md border border-border/40 bg-muted/30 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto]"
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span
             data-testid={`alternate-title-${alt.id}`}
             className="truncate text-sm font-medium text-foreground"
@@ -43,11 +50,20 @@ function AlternateRow({
             </span>
           )}
         </div>
-        {alt.manufacturer && (
-          <span className="text-xs text-muted-foreground">{alt.manufacturer}</span>
-        )}
+        <p className="mt-1 text-[11px] leading-4 text-muted-foreground" data-testid={`alternate-reason-${alt.id}`}>
+          {describeAlternateMatchReason(alt)}
+        </p>
+        <p className="text-[11px] leading-4 text-muted-foreground" data-testid={`alternate-tradeoff-${alt.id}`}>
+          {describeAlternateTradeoff(alt)}
+        </p>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex flex-wrap items-center gap-1.5 shrink-0 sm:justify-end">
+        <Badge variant="outline" className="text-[10px]" data-testid={`alternate-match-${alt.id}`}>
+          {formatAlternateMatchScore(alt.matchScore)}
+        </Badge>
+        <span data-testid={`alternate-trust-${alt.id}`}>
+          <TrustBadge kind={alternateTrustKind(alt.trustLevel)} label={formatAlternateTrustLabel(alt.trustLevel)} />
+        </span>
         {alt.canonicalCategory && (
           <Badge variant="outline" className="text-[10px]">
             {alt.canonicalCategory}
@@ -58,7 +74,7 @@ function AlternateRow({
           size="sm"
           data-testid={`substitute-btn-${alt.id}`}
           disabled={isSubstituting}
-          onClick={() => { onSubstitute(alt.id); }}
+          onClick={() => { onPreview(alt); }}
           className="h-7 gap-1 text-xs"
         >
           {isSubstituting ? (
@@ -73,6 +89,69 @@ function AlternateRow({
   );
 }
 
+function ReplacementPreview({
+  partTitle,
+  alt,
+  isSubstituting,
+  onCancel,
+  onConfirm,
+}: {
+  partTitle: string;
+  alt: PartAlternateCandidate;
+  isSubstituting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3"
+      data-testid="replacement-preview"
+      aria-live="polite"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <p className="text-sm font-medium text-foreground">
+            Preview replacement
+          </p>
+          <p className="text-xs leading-5 text-muted-foreground" data-testid="replacement-preview-summary">
+            Replace {partTitle} with {alt.title}. {describeAlternateMatchReason(alt)}
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge variant="outline" className="text-[10px]" data-testid="replacement-preview-match">
+              {formatAlternateMatchScore(alt.matchScore)}
+            </Badge>
+            <TrustBadge kind={alternateTrustKind(alt.trustLevel)} label={formatAlternateTrustLabel(alt.trustLevel)} />
+          </div>
+          <p className="text-[11px] leading-4 text-muted-foreground" data-testid="replacement-preview-tradeoff">
+            Consequence check: project placements and stock merge will update after confirmation. {describeAlternateTradeoff(alt)}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={isSubstituting}
+            onClick={onCancel}
+            data-testid="replacement-preview-cancel"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            disabled={isSubstituting}
+            onClick={onConfirm}
+            data-testid="replacement-preview-confirm"
+          >
+            {isSubstituting && <Loader2 className="h-3 w-3 animate-spin" />}
+            Confirm replacement
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PartAlternatesPanel({
   partId,
   projectId,
@@ -82,12 +161,18 @@ export default function PartAlternatesPanel({
   const substituteMutation = useSubstitutePart();
   const { toast } = useToast();
   const [open, setOpen] = useState(true);
+  const [previewAlt, setPreviewAlt] = useState<PartAlternateCandidate | null>(null);
 
-  const handleSubstitute = (substituteId: string) => {
+  const handleConfirmSubstitute = () => {
+    if (!previewAlt) {
+      return;
+    }
+
     substituteMutation.mutate(
-      { oldPartId: partId, substituteId, projectId },
+      { oldPartId: partId, substituteId: previewAlt.id, projectId },
       {
         onSuccess: (result) => {
+          setPreviewAlt(null);
           toast({
             title: 'Part replaced',
             description: result.message,
@@ -146,6 +231,15 @@ export default function PartAlternatesPanel({
         </CardHeader>
         <CollapsibleContent>
           <CardContent className="space-y-2 pt-0">
+            {previewAlt && (
+              <ReplacementPreview
+                partTitle={partTitle}
+                alt={previewAlt}
+                isSubstituting={substituteMutation.isPending}
+                onCancel={() => { setPreviewAlt(null); }}
+                onConfirm={handleConfirmSubstitute}
+              />
+            )}
             {count === 0 ? (
               <p
                 data-testid="part-alternates-empty"
@@ -158,7 +252,7 @@ export default function PartAlternatesPanel({
                 <AlternateRow
                   key={alt.id}
                   alt={alt}
-                  onSubstitute={handleSubstitute}
+                  onPreview={setPreviewAlt}
                   isSubstituting={substituteMutation.isPending}
                 />
               ))

@@ -653,6 +653,95 @@ export type InsertDesignComment = z.infer<typeof insertDesignCommentSchema>;
 export type DesignComment = typeof designComments.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// ProtoPulse v3 Architecture Storage
+// ---------------------------------------------------------------------------
+
+export const v3VerifiedFacts = pgTable('v3_verified_facts', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  sourceType: text('source_type').notNull(),
+  sourceRef: text('source_ref').notNull(),
+  factType: text('fact_type').notNull(),
+  subject: text('subject').notNull(),
+  value: jsonb('value').notNull().default({}),
+  provenance: jsonb('provenance').notNull().default([]),
+  confidence: text('confidence').notNull().default('verified'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_v3_verified_facts_project').on(table.projectId),
+  index('idx_v3_verified_facts_subject').on(table.projectId, table.subject),
+  index('v3_verified_facts_value_gin_idx').using('gin', sql`${table.value} jsonb_path_ops`),
+]);
+
+export const v3CompileRuns = pgTable('v3_compile_runs', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  status: text('status').notNull(),
+  acceptedFacts: jsonb('accepted_facts').notNull().default([]),
+  missingFacts: jsonb('missing_facts').notNull().default([]),
+  blockedTasks: jsonb('blocked_tasks').notNull().default([]),
+  emittedTsx: text('emitted_tsx'),
+  compileInput: jsonb('compile_input').notNull().default({}),
+  compileSummary: jsonb('compile_summary').notNull().default({}),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_v3_compile_runs_project').on(table.projectId),
+  index('idx_v3_compile_runs_status').on(table.projectId, table.status),
+]);
+
+export const v3SwarmTasks = pgTable('v3_swarm_tasks', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  taskId: text('task_id').notNull(),
+  status: text('status').notNull().default('planned'),
+  agentType: text('agent_type').notNull(),
+  claimedFiles: jsonb('claimed_files').notNull().default([]),
+  forbiddenFiles: jsonb('forbidden_files').notNull().default([]),
+  commandTemplate: text('command_template'),
+  result: jsonb('result').notNull().default({}),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_v3_swarm_tasks_project').on(table.projectId),
+  uniqueIndex('uq_v3_swarm_tasks_project_task').on(table.projectId, table.taskId),
+]);
+
+export const v3InspectionReports = pgTable('v3_inspection_reports', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  mode: text('mode').notNull(),
+  query: text('query').notNull(),
+  chassisDescription: text('chassis_description'),
+  imageDigest: text('image_digest'),
+  markdown: text('markdown').notNull(),
+  provenance: jsonb('provenance').notNull().default([]),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_v3_inspection_reports_project').on(table.projectId),
+  index('idx_v3_inspection_reports_mode').on(table.projectId, table.mode),
+]);
+
+export const insertV3VerifiedFactSchema = createInsertSchema(v3VerifiedFacts).omit({ id: true, createdAt: true });
+export const insertV3CompileRunSchema = createInsertSchema(v3CompileRuns).omit({ id: true, createdAt: true }).extend({
+  status: z.enum(['ready', 'blocked', 'failed']),
+});
+export const insertV3SwarmTaskSchema = createInsertSchema(v3SwarmTasks).omit({ id: true, createdAt: true, updatedAt: true }).extend({
+  status: z.enum(['planned', 'running', 'completed', 'failed', 'blocked']).optional(),
+});
+export const insertV3InspectionReportSchema = createInsertSchema(v3InspectionReports).omit({ id: true, createdAt: true }).extend({
+  mode: z.enum(['visual', 'layout']),
+});
+
+export type V3VerifiedFact = typeof v3VerifiedFacts.$inferSelect;
+export type InsertV3VerifiedFact = z.infer<typeof insertV3VerifiedFactSchema>;
+export type V3CompileRun = typeof v3CompileRuns.$inferSelect;
+export type InsertV3CompileRun = z.infer<typeof insertV3CompileRunSchema>;
+export type V3SwarmTask = typeof v3SwarmTasks.$inferSelect;
+export type InsertV3SwarmTask = z.infer<typeof insertV3SwarmTaskSchema>;
+export type V3InspectionReport = typeof v3InspectionReports.$inferSelect;
+export type InsertV3InspectionReport = z.infer<typeof insertV3InspectionReportSchema>;
+
+// ---------------------------------------------------------------------------
 // Boards (E2E-228 / Plan 02 Phase 4) — shared PCB source-of-truth for
 // PCBLayoutView, BoardViewer3DView, and PcbOrderingView. One physical board
 // per project (unique project_id). A project may have many circuit designs,

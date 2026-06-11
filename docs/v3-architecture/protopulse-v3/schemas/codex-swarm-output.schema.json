@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "properties": {
+    "taskId": { "type": "string" },
+    "status": { "type": "string", "enum": ["done", "blocked"] },
+    "changedFiles": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "summary": { "type": "string" },
+    "blockedReason": { "type": "string" }
+  },
+  "required": ["taskId", "status", "changedFiles", "summary"],
+  "additionalProperties": false
+}

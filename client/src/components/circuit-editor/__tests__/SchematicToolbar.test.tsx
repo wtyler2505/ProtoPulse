@@ -82,4 +82,11 @@ describe('SchematicToolbar — place-component / place-power (E2E-849, E2E-915, 
     expect(partsSpy).not.toHaveBeenCalled();
     expect(powerSpy).not.toHaveBeenCalled();
   });
+
+  it('opens hardware inspection from the schematic toolbar', () => {
+    const onOpenHardwareInspection = vi.fn();
+    renderToolbar({ onOpenHardwareInspection });
+    fireEvent.click(screen.getByTestId('button-open-hardware-inspection'));
+    expect(onOpenHardwareInspection).toHaveBeenCalledTimes(1);
+  });
 });

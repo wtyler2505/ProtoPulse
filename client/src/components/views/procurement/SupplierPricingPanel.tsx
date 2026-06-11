@@ -2,6 +2,7 @@ import { AlertTriangle, Search, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 import { cn } from '@/lib/utils';
 import type { BomItem } from '@/lib/project-context';
 import type { BomQuote } from '@/lib/supplier-api';
@@ -22,6 +23,9 @@ export interface SupplierPricingPanelProps {
   onSearchPartPricing: (mpn: string) => void;
   distributors: DistributorInfo[];
   currency: string;
+  quoteBlocked?: boolean;
+  quoteBlockerCount?: number;
+  quoteWarningCount?: number;
 }
 
 export function SupplierPricingPanel({
@@ -34,29 +38,57 @@ export function SupplierPricingPanel({
   onSearchPartPricing,
   distributors,
   currency,
+  quoteBlocked = false,
+  quoteBlockerCount = 0,
+  quoteWarningCount = 0,
 }: SupplierPricingPanelProps) {
   return (
     <div className="max-w-5xl mx-auto space-y-4">
-      {/* Simulated data disclaimer */}
-      <div
-        className="flex items-start gap-3 rounded-md border border-yellow-500/30 bg-yellow-500/5 px-4 py-3"
-        role="alert"
-        data-testid="supplier-mock-disclaimer"
-      >
-        <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-500 mt-0.5" />
-        <div className="text-sm">
-          <p className="font-medium text-yellow-500">Simulated pricing data</p>
-          <p className="text-muted-foreground mt-0.5">
-            Stock, pricing, and lead-time data shown here is generated from static fixtures for demonstration purposes.
-            It does not reflect real-time distributor availability. Connect to live supplier APIs in Settings for actual data.
-          </p>
+      {(quoteBlocked || quoteWarningCount > 0) && (
+        <div
+          className={cn(
+            'flex items-start gap-3 rounded-md border px-4 py-3',
+            quoteBlocked
+              ? 'border-destructive/30 bg-destructive/10'
+              : 'border-amber-500/30 bg-amber-500/5',
+          )}
+          role="alert"
+          data-testid="procurement-pricing-safety-alert"
+        >
+          <AlertTriangle className={cn('mt-0.5 h-5 w-5 shrink-0', quoteBlocked ? 'text-destructive' : 'text-yellow-500')} />
+          <div className="text-sm">
+            <p className={cn('font-medium', quoteBlocked ? 'text-destructive' : 'text-yellow-500')}>
+              {quoteBlocked ? 'Quote blocked by procurement safety gate' : 'Procurement warnings need review'}
+            </p>
+            <p className="mt-0.5 text-muted-foreground">
+              {quoteBlocked
+                ? `${quoteBlockerCount} blocker${quoteBlockerCount === 1 ? '' : 's'} must be resolved before quoting the BOM.`
+                : `${quoteWarningCount} warning${quoteWarningCount === 1 ? '' : 's'} should be reviewed before ordering.`}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {(bomQuote?.containsMockData ?? true) && (
+        <div
+          className="flex items-start gap-3 rounded-md border border-yellow-500/30 bg-yellow-500/5 px-4 py-3"
+          role="alert"
+          data-testid="supplier-mock-disclaimer"
+        >
+          <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-500 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-yellow-500">Estimated / simulated pricing data</p>
+            <p className="text-muted-foreground mt-0.5">
+              Some or all values are marked as fallback estimates. Connect live supplier APIs in Settings for verified pricing.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <Button
           onClick={onQuoteBom}
-          disabled={bom.length === 0 || pricingSearching}
+          disabled={bom.length === 0 || pricingSearching || quoteBlocked}
           className="bg-primary text-primary-foreground hover:bg-primary/90"
           data-testid="button-quote-bom"
         >
@@ -139,7 +171,14 @@ export function SupplierPricingPanel({
                       {item.bestPrice ? item.bestPrice.distributor : <span className="text-destructive">Not found</span>}
                     </td>
                     <td className="px-4 py-2 text-right font-mono text-xs text-foreground">
-                      {item.bestPrice ? `$${item.bestPrice.unitPrice.toFixed(3)}` : '\u2014'}
+                      {item.bestPrice ? (
+                        <span className="inline-flex items-center gap-1.5 justify-end">
+                          ${item.bestPrice.unitPrice.toFixed(3)}
+                          {(item.isMock || item.bestPrice.isMock) && (
+                            <TrustBadge kind="estimated" />
+                          )}
+                        </span>
+                      ) : '\u2014'}
                     </td>
                     <td className="px-4 py-2 text-right font-mono text-xs font-bold text-foreground">
                       {item.bestPrice ? `$${item.bestPrice.totalPrice.toFixed(2)}` : '\u2014'}

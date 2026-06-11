@@ -6,6 +6,7 @@ import type { BomItem } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { projectMutationKeys, projectQueryKeys } from '@/lib/query-keys';
 import type { PartWithStock, PartStockRow } from '@shared/parts/part-row';
+import { asUnverified, asVerified, normalizeTrustBoundary } from '@/types/TrustBoundaries';
 
 function errorReason(error: Error): string {
   const msg = error.message.replace(/^\d{3}:\s*/, '');
@@ -33,6 +34,16 @@ function mapToBomItem(entry: PartWithStock): BomItem {
   const s = entry.stock;
   const unitPrice = s?.unitPrice != null ? Number(s.unitPrice) : 0;
   const quantity = s?.quantityNeeded ?? 0;
+  const inferredPricingTrust = unitPrice > 0 && s?.supplier
+    ? asVerified(unitPrice, 'live_supplier_api')
+    : asUnverified(unitPrice, 'historical_estimate', {
+        isMock: true,
+        note: 'Price was inferred from fallback stock metadata and may be estimated.',
+      });
+  const pricingTrust = normalizeTrustBoundary(inferredPricingTrust, asUnverified(unitPrice, 'fallback_unknown', {
+    isMock: true,
+    note: 'Pricing trust metadata was missing and has been treated as unverified fallback.',
+  }));
   return {
     id: s?.id ?? entry.id,
     partNumber: entry.mpn ?? entry.slug,
@@ -50,6 +61,7 @@ function mapToBomItem(entry: PartWithStock): BomItem {
     storageLocation: s?.storageLocation ?? null,
     quantityOnHand: s?.quantityOnHand ?? null,
     minimumStock: s?.minimumStock ?? null,
+    pricingTrust,
   };
 }
 

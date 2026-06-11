@@ -14,7 +14,11 @@ vi.mock('@/components/ui/styled-tooltip', () => ({
   StyledTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock('@/components/ui/ConfidenceBadge', () => ({
-  default: () => <span data-testid="confidence-badge" />,
+  default: ({ confidence }: { confidence?: { score?: number } }) => (
+    <span data-testid="confidence-badge">
+      {typeof confidence?.score === 'number' && confidence.score < 0.5 ? 'UNVERIFIED' : 'ESTIMATED'}
+    </span>
+  ),
 }));
 
 const baseMsg: ChatMessage = {
@@ -70,6 +74,7 @@ describe('MessageBubble', () => {
     expect(tokenEl.textContent).toContain('150 tokens');
     // Exact counts from provider usage should NOT show the estimated caveat.
     expect(tokenEl.textContent).not.toContain('estimated');
+    expect(screen.getByTestId('token-info-trust').textContent).toContain('VERIFIED');
   });
 
   it('labels cost as estimated when tokens are approximated (AI-audit H-2)', () => {
@@ -84,6 +89,25 @@ describe('MessageBubble', () => {
     expect(tokenEl.textContent).toContain('estimated');
     // Tooltip-style title attribute surfaces the full caveat for assistive tech.
     expect(tokenEl.getAttribute('title')).toContain('Estimated');
+    expect(screen.getByTestId('token-info-trust').textContent).toContain('ESTIMATED');
+  });
+
+  it('renders confidence trust badge for assistant confidence metadata', () => {
+    render(
+      <MessageBubble
+        msg={{
+          ...baseMsg,
+          confidence: {
+            score: 0.42,
+            explanation: 'Sparse source grounding.',
+            factors: ['No BOM references', 'No validation checks'],
+          },
+          sources: [],
+        }}
+        {...defaultProps}
+      />,
+    );
+    expect(screen.getByTestId('confidence-badge').textContent).toContain('UNVERIFIED');
   });
 
   it('renders the AI action trust receipt inside pending review blocks', () => {

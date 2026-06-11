@@ -1,0 +1,20 @@
+{
+  "tasks": [
+    {
+      "id": "firmware-hid-mega",
+      "role": "firmware-writer",
+      "claimedFiles": ["src/ai/swarms/firmware-writer.ts"],
+      "prompt": "Draft Arduino Mega 2560 HID firmware only after pin ownership is verified.",
+      "requiresHardwareFacts": ["logic_voltage"],
+      "verifiedHardwareFacts": ["logic_voltage"]
+    },
+    {
+      "id": "component-mega-boundary",
+      "role": "component-generator",
+      "claimedFiles": ["src/components/circuits/HardwareBoundary.tsx"],
+      "prompt": "Generate component boundary metadata for Arduino Mega 2560.",
+      "requiresHardwareFacts": ["pinout", "logic_voltage"],
+      "verifiedHardwareFacts": ["logic_voltage"]
+    }
+  ]
+}

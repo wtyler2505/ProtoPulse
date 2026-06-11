@@ -30,6 +30,7 @@ import {
   useDeleteCircuitWire,
   useUpdateCircuitInstance,
   useCreateCircuitInstance,
+  useDeleteCircuitInstance,
   useUpdateCircuitDesign,
   usePcbZones,
   useCreatePcbZone,
@@ -54,6 +55,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Button } from '@/components/ui/button';
 import {
   Loader2,
@@ -67,11 +69,8 @@ import {
   FlipHorizontal,
   Circle,
   RefreshCw,
-  CheckSquare,
-  Maximize,
   ShieldCheck,
   ShieldAlert,
-  ClipboardPaste,
   Pentagon,
   MessageSquarePlus,
   Scissors,
@@ -83,9 +82,22 @@ import {
   ContextMenu,
   ContextMenuTrigger,
   ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
 } from '@/components/ui/context-menu';
+import RadialCommandLinearMenu from '@/components/ui/RadialCommandLinearMenu';
+import {
+  getLinearActionsForContext,
+  RADIAL_COMMAND_EVENT,
+  RADIAL_COMMAND_PREVIEW_EVENT,
+  type MenuContext,
+  type RadialCommandEventDetail,
+  type RadialCommandPreviewEventDetail,
+} from '@/lib/radial-menu-actions';
+import {
+  getRadialAiDeliveryVerb,
+  getRadialAiPromptDelivery,
+  runRadialAiCommand,
+  type RadialAiPromptDelivery,
+} from '@/lib/radial-ai-commands';
 import {
   DEFAULT_BOARD,
   DEFAULT_ZOOM,
@@ -123,12 +135,21 @@ import type { ActiveLayer, PcbTool, PanState, SelectionRect, SelectionDragState 
 import { useProjectMeta } from '@/lib/project-context';
 import { useBoardStackup } from '@/lib/board-stackup';
 import { calculateRoutingStatus } from '@/lib/pcb/routing-status';
+import {
+  PCB_RUN_DRC_EVENT,
+  getPcbSurfaceSafetyGate,
+  getPcbSurfaceStatus,
+  type PcbRunDrcEventDetail,
+  type PcbSurfaceSafetyGate,
+  type PcbSurfaceStatus,
+} from '@/lib/pcb/pcb-surface-status';
 import type { Via, ViaType } from '@/lib/pcb/via-model';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow } from '@shared/schema';
 import CollaborationCursors, { useCursorEmitter } from './CollaborationCursors';
 import type { CollaborationClient } from '@/lib/collaboration-client';
 import { useDfmHighlights } from '@/lib/dfm-pcb-bridge';
 import { logger } from '@/lib/logger';
+import { SurfaceStatusDock } from '@/components/ui/SurfaceStatusDock';
 
 // ---------------------------------------------------------------------------
 // View3DButton — jumps to viewer_3d ViewMode
@@ -190,6 +211,120 @@ function RoutingStatusBadge({ nets, wires }: { nets: CircuitNetRow[]; wires: Cir
         {status.routed}/{status.total}
       </span>
     </StyledTooltip>
+  );
+}
+
+export function PcbSurfaceStatusDock({
+  status,
+  safetyGate,
+  collapsed,
+  onToggle,
+  onRunDrc,
+}: {
+  status: PcbSurfaceStatus;
+  safetyGate: PcbSurfaceSafetyGate;
+  collapsed: boolean;
+  onToggle: () => void;
+  onRunDrc: () => void;
+}) {
+  const routingLabel = status.totalNets === 0
+    ? 'No nets'
+    : `${String(status.routedCount)}/${String(status.totalNets)}`;
+  const routingIsComplete = status.totalNets > 0 && status.routedCount === status.totalNets;
+  const gateClassName = safetyGate.severity === 'clear'
+    ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-100'
+    : safetyGate.severity === 'warning'
+      ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+      : 'border-destructive/45 bg-destructive/10 text-destructive-foreground';
+  const gateIconClassName = safetyGate.severity === 'clear'
+    ? 'text-emerald-300'
+    : safetyGate.severity === 'warning'
+      ? 'text-amber-200'
+      : 'text-destructive';
+
+  return (
+    <div className="pointer-events-none absolute left-36 right-2 top-2 z-20 flex justify-end max-[420px]:left-2 max-[420px]:top-40">
+      <SurfaceStatusDock
+        ariaLabel="PCB surface provenance status"
+        title="PCB fabrication surface"
+        origin={status.originLabel}
+        trustKind={status.trustKind}
+        trustLabel={status.trustLabel}
+        collapsed={collapsed}
+        onToggle={onToggle}
+        bodyTestId="pcb-surface-detail"
+        testId="pcb-surface-status"
+        titleTestId="pcb-surface-title"
+        originTestId="pcb-surface-origin"
+        toggleTestId="button-toggle-pcb-surface-status"
+      >
+        <div
+          className={cn('rounded border px-2 py-1.5', gateClassName)}
+          data-testid="pcb-surface-drc-gate"
+          data-severity={safetyGate.severity}
+          data-blocks-fabrication={String(safetyGate.blocksFabrication)}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <ShieldAlert className={cn('h-3.5 w-3.5 shrink-0', gateIconClassName)} />
+              <p className="truncate font-medium" data-testid="pcb-surface-drc-gate-label">
+                {safetyGate.label}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-6 min-h-0 shrink-0 gap-1 rounded-sm px-2 text-[10px]"
+              data-testid="button-pcb-surface-run-drc"
+              aria-label={safetyGate.actionLabel}
+              onClick={onRunDrc}
+            >
+              <ShieldCheck className="mr-1 h-3 w-3" />
+              DRC
+            </Button>
+          </div>
+          <p className="mt-1 leading-snug" data-testid="pcb-surface-drc-gate-summary">
+            {safetyGate.summary}
+          </p>
+          <p className="mt-1 leading-snug opacity-85" data-testid="pcb-surface-drc-gate-reasons">
+            {safetyGate.reasons.join('; ')}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          <div className="rounded border border-border/70 bg-muted/25 px-2 py-1">
+            <p className="text-muted-foreground">Placed</p>
+            <p className="font-medium text-foreground" data-testid="pcb-surface-placed-count">
+              {String(status.placedCount)}/{String(status.instanceCount)}
+            </p>
+          </div>
+          <div className="rounded border border-border/70 bg-muted/25 px-2 py-1">
+            <p className="text-muted-foreground">Routing</p>
+            <p
+              className={cn('font-medium', routingIsComplete ? 'text-emerald-300' : 'text-amber-200')}
+              data-testid="pcb-surface-routing-state"
+            >
+              {routingLabel}
+            </p>
+          </div>
+          <div className="rounded border border-border/70 bg-muted/25 px-2 py-1">
+            <p className="text-muted-foreground">Board</p>
+            <p className="font-medium text-foreground" data-testid="pcb-surface-board-size">
+              {status.boardSizeLabel}
+            </p>
+          </div>
+          <div className="rounded border border-border/70 bg-muted/25 px-2 py-1">
+            <p className="text-muted-foreground">Flags</p>
+            <p className="font-medium text-foreground" data-testid="pcb-surface-provenance-flags">
+              {status.provenanceFlagLabel}
+            </p>
+          </div>
+        </div>
+        <p className="leading-snug text-muted-foreground" data-testid="pcb-surface-trust-summary">
+          {status.trustSummary}
+        </p>
+      </SurfaceStatusDock>
+    </div>
   );
 }
 
@@ -266,9 +401,9 @@ export default function PCBLayoutView({ collaborationClient = null }: { collabor
 
   return (
     <div className="flex flex-col h-full" data-testid="pcb-layout-view">
-      <div className="h-10 border-b border-border bg-card/60 backdrop-blur-xl flex items-center px-3 gap-2 shrink-0">
+      <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-border bg-card/60 px-2.5 backdrop-blur-xl">
         <Select value={String(activeCircuit?.id ?? '')} onValueChange={(v) => setActiveCircuitId(Number(v))}>
-          <SelectTrigger className="h-7 w-48 text-xs" data-testid="select-pcb-circuit">
+          <SelectTrigger className="h-6.5 w-44 text-[11px]" data-testid="select-pcb-circuit">
             <SelectValue placeholder="Select circuit" />
           </SelectTrigger>
           <SelectContent>
@@ -280,7 +415,7 @@ export default function PCBLayoutView({ collaborationClient = null }: { collabor
           </SelectContent>
         </Select>
         <div className="flex-1" />
-        <span className="text-xs text-muted-foreground">
+        <span className="text-[11px] text-muted-foreground">
           {activeCircuit ? activeCircuit.name : 'No circuit selected'} — PCB Layout
         </span>
       </div>
@@ -408,6 +543,13 @@ function PCBMiniMap({ boardWidth, boardHeight, instances, panOffset, zoom, conta
 // PCB Canvas — wires together all extracted modules
 // ---------------------------------------------------------------------------
 
+interface PcbRadialAdapterPreview {
+  commandId: string;
+  board: { x: number; y: number };
+  targetId?: string;
+  targetLabel?: string;
+}
+
 function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient = null }: { circuitId: number; projectId: number; circuitSettings: unknown; collaborationClient?: CollaborationClient | null }) {
   // --- Data hooks ---
   const { data: instances } = useCircuitInstances(circuitId);
@@ -445,6 +587,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   const createWireMutation = useCreateCircuitWire();
   const deleteWireMutation = useDeleteCircuitWire();
   const createInstanceMutation = useCreateCircuitInstance();
+  const deleteInstanceMutation = useDeleteCircuitInstance();
   const updateDesignMutation = useUpdateCircuitDesign();
   const createZoneMutation = useCreatePcbZone();
   const deleteZoneMutation = useDeletePcbZone();
@@ -471,6 +614,8 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   const [selectedWireId, setSelectedWireId] = useState<number | null>(null);
   const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
   const [selectedCommentId, setSelectedCommentId] = useState<number | null>(null);
+  const [surfaceStatusCollapsed, setSurfaceStatusCollapsed] = useState(false);
+  const [radialAdapterPreview, setRadialAdapterPreview] = useState<PcbRadialAdapterPreview | null>(null);
 
   // New comment dialog state
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
@@ -562,6 +707,15 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   const containerRef = useRef<HTMLDivElement>(null);
   const panStateRef = useRef<PanState>({ isPanning: false, lastMouse: { x: 0, y: 0 } });
 
+  const clientToBoardPoint = useCallback((point: { x: number; y: number }) => {
+    const el = containerRef.current;
+    const rect = el?.getBoundingClientRect();
+    return {
+      x: (point.x - (rect?.left ?? 0) - panOffset.x) / zoom,
+      y: (point.y - (rect?.top ?? 0) - panOffset.y) / zoom,
+    };
+  }, [panOffset.x, panOffset.y, zoom]);
+
   // --- Derived data ---
   const pcbWires = useMemo(() => (wires ?? []).filter((w: CircuitWireRow) => w.view === 'pcb'), [wires]);
 
@@ -589,6 +743,20 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   const hasPlacedComponents = useMemo(
     () => instances != null && countPlacedInstances(instances) > 0,
     [instances],
+  );
+  const pcbSurfaceStatus = useMemo(
+    () => getPcbSurfaceStatus({
+      instances: instances ?? [],
+      nets: nets ?? [],
+      wires: pcbWires,
+      boardWidth,
+      boardHeight,
+    }),
+    [instances, nets, pcbWires, boardWidth, boardHeight],
+  );
+  const pcbSurfaceSafetyGate = useMemo(
+    () => getPcbSurfaceSafetyGate(pcbSurfaceStatus),
+    [pcbSurfaceStatus],
   );
 
   // --- Callbacks (delegate to PCBInteractionManager) ---
@@ -911,18 +1079,14 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
     [],
   );
 
-  // Context menu handlers
-  const handleCtxAddVia = useCallback(() => {
-    setTool('via');
-  }, []);
-
-  const handleCtxAddTrace = useCallback(() => {
-    setTool('trace');
-  }, []);
-
   const handleCtxRunDrc = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('protopulse:run-drc'));
-  }, []);
+    const detail: PcbRunDrcEventDetail = {
+      source: 'pcb-layout',
+      surfaceStatus: pcbSurfaceStatus,
+      safetyGate: pcbSurfaceSafetyGate,
+    };
+    window.dispatchEvent(new CustomEvent(PCB_RUN_DRC_EVENT, { detail }));
+  }, [pcbSurfaceSafetyGate, pcbSurfaceStatus]);
 
   const handleCtxZoomToFit = useCallback(() => {
     setZoom(DEFAULT_ZOOM);
@@ -930,41 +1094,300 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   }, []);
 
   const handleCtxSelectAll = useCallback(() => {
+    const placedIds = (instances ?? [])
+      .filter((instance) => instance.pcbX != null && instance.pcbY != null)
+      .map((instance) => instance.id);
     setSelectedInstanceId(null);
+    setSelectedInstanceIds(placedIds);
     setSelectedWireId(null);
-  }, []);
+    setSelectedZoneId(null);
+    setSelectedCommentId(null);
+  }, [instances]);
+
+  const getCommandInstance = useCallback((context?: MenuContext): CircuitInstanceRow | null => {
+    const contextId = context?.targetId != null ? Number(context.targetId) : NaN;
+    const targetId = Number.isFinite(contextId) ? contextId : selectedInstanceId;
+    return (instances ?? []).find((instance) => instance.id === targetId) ?? null;
+  }, [instances, selectedInstanceId]);
+
+  const pcbLinearContext = useMemo<MenuContext>(() => {
+    const selectedInstance = selectedInstanceId != null
+      ? (instances ?? []).find((instance) => instance.id === selectedInstanceId)
+      : null;
+    return {
+      view: 'pcb',
+      target: selectedInstance ? 'node' : 'canvas',
+      targetId: selectedInstance ? String(selectedInstance.id) : undefined,
+      targetLabel: selectedInstance?.referenceDesignator,
+    };
+  }, [instances, selectedInstanceId]);
+
+  const pcbLinearActions = useMemo(
+    () => getLinearActionsForContext(pcbLinearContext),
+    [pcbLinearContext],
+  );
+
+  const handleAiPcbReview = useCallback((
+    context: MenuContext,
+    delivery: RadialAiPromptDelivery = 'draft',
+  ): void => {
+    const commandInstance = getCommandInstance(context);
+    const placedInstances = (instances ?? []).filter((instance) => instance.pcbX != null && instance.pcbY != null);
+    const targetLabel = context.targetLabel ?? commandInstance?.referenceDesignator;
+    const deliveryVerb = getRadialAiDeliveryVerb(delivery);
+    const sections = [
+      {
+        title: 'Placed footprints',
+        lines: placedInstances
+          .slice(0, 10)
+          .map((instance) =>
+            `${instance.referenceDesignator} id=${String(instance.id)} side=${instance.pcbSide ?? 'front'} x=${String(instance.pcbX ?? 'unset')} y=${String(instance.pcbY ?? 'unset')} rotation=${String(instance.pcbRotation ?? 0)}`,
+          ),
+      },
+      {
+        title: 'Known nets',
+        lines: (nets ?? []).slice(0, 10).map((net) => `${net.name ?? `net-${String(net.id)}`} id=${String(net.id)}`),
+      },
+      {
+        title: 'Routed traces',
+        lines: pcbWires
+          .slice(0, 8)
+          .map((wire) => `wire ${String(wire.id)} net=${String(wire.netId ?? 'unknown')} layer=${wire.layer ?? activeLayer} width=${String(wire.width ?? traceWidth)}`),
+      },
+      {
+        title: 'Board status',
+        lines: [
+          `Trust: ${pcbSurfaceStatus.trustLabel}`,
+          `Summary: ${pcbSurfaceStatus.trustSummary}`,
+          `Safety gate: ${pcbSurfaceSafetyGate.label} (${pcbSurfaceSafetyGate.severity})`,
+          `Gate summary: ${pcbSurfaceSafetyGate.summary}`,
+          ...pcbSurfaceSafetyGate.reasons.slice(0, 5),
+        ],
+      },
+    ].filter((section) => section.lines.length > 0);
+
+    runRadialAiCommand({
+      intent: 'review_pcb',
+      intro:
+        'Review this PCB context like a practical board-layout and DFM reviewer. Focus on placement, routing, clearance, layer usage, manufacturability, and what Tyler should fix next.',
+      summary: `PCB review: ${String(placedInstances.length)} placed footprint(s), ${String(nets?.length ?? 0)} net(s), ${String(pcbWires.length)} routed trace(s), ${String(zones?.length ?? 0)} zone(s), ${String(projectBoard.layers)} layer(s).`,
+      historyLabel: targetLabel ? `PCB review: ${targetLabel}` : 'PCB review',
+      context,
+      delivery,
+      targetDetails: [
+        `Board: ${String(boardWidth)}mm x ${String(boardHeight)}mm, ${String(projectBoard.layers)} layer(s), active layer ${activeLayer}.`,
+        commandInstance
+          ? `Target footprint: ${commandInstance.referenceDesignator} id=${String(commandInstance.id)} side=${commandInstance.pcbSide ?? 'front'} x=${String(commandInstance.pcbX ?? 'unset')} y=${String(commandInstance.pcbY ?? 'unset')}.`
+          : 'Target: PCB canvas',
+      ],
+      sections,
+      finalInstruction:
+        'Give Tyler a concise board review with exact DRC/DFM risks, what to inspect manually, and the next layout move.',
+    });
+    toast({
+      title: `AI PCB Review ${deliveryVerb}`,
+      description: targetLabel
+        ? `${deliveryVerb} ${targetLabel} PCB prompt ${delivery === 'send-now' ? 'to' : 'in'} AI chat.`
+        : `${deliveryVerb} PCB prompt ${delivery === 'send-now' ? 'to' : 'in'} AI chat.`,
+    });
+  }, [
+    activeLayer,
+    boardHeight,
+    boardWidth,
+    getCommandInstance,
+    instances,
+    nets,
+    pcbSurfaceSafetyGate.reasons,
+    pcbSurfaceSafetyGate.label,
+    pcbSurfaceSafetyGate.severity,
+    pcbSurfaceSafetyGate.summary,
+    pcbSurfaceStatus.trustLabel,
+    pcbSurfaceStatus.trustSummary,
+    pcbWires,
+    projectBoard.layers,
+    toast,
+    traceWidth,
+    zones?.length,
+  ]);
+
+  const handlePcbCommand = useCallback((
+    commandId: string,
+    context: MenuContext = pcbLinearContext,
+    delivery: RadialAiPromptDelivery = 'draft',
+  ): boolean => {
+    const commandInstance = getCommandInstance(context);
+
+    switch (commandId) {
+      case 'ai_pcb_review':
+        handleAiPcbReview(context, delivery);
+        return true;
+      case 'add_via':
+        setTool('via');
+        return true;
+      case 'route_trace':
+        if (commandInstance) {
+          setSelectedInstanceId(commandInstance.id);
+          setSelectedInstanceIds([]);
+        }
+        setTool('trace');
+        return true;
+      case 'add_pour':
+        setTool('pour');
+        return true;
+      case 'add_keepout':
+        setTool('keepout');
+        return true;
+      case 'add_comment':
+        setTool('comment');
+        return true;
+      case 'measure':
+        setTool('select');
+        toast({
+          title: 'Measure ready',
+          description: 'Move over the PCB canvas and use the coordinate readout while measuring geometry.',
+        });
+        return true;
+      case 'run_drc':
+        handleCtxRunDrc();
+        return true;
+      case 'fit_view':
+        handleCtxZoomToFit();
+        return true;
+      case 'select_all':
+        handleCtxSelectAll();
+        return true;
+      case 'copy':
+        void handleCopy();
+        return true;
+      case 'paste':
+        void triggerPaste();
+        return true;
+      case 'rotate':
+        if (!commandInstance) { return false; }
+        setSelectedInstanceId(commandInstance.id);
+        setSelectedInstanceIds([]);
+        updateInstanceMutation.mutate({
+          circuitId,
+          id: commandInstance.id,
+          pcbRotation: ((commandInstance.pcbRotation ?? 0) + 90) % 360,
+        });
+        return true;
+      case 'flip_side':
+        if (!commandInstance) { return false; }
+        setSelectedInstanceId(commandInstance.id);
+        setSelectedInstanceIds([]);
+        updateInstanceMutation.mutate({
+          circuitId,
+          id: commandInstance.id,
+          pcbSide: commandInstance.pcbSide === 'back' ? 'front' : 'back',
+        });
+        return true;
+      case 'delete':
+        if (!commandInstance) { return false; }
+        deleteInstanceMutation.mutate({ circuitId, id: commandInstance.id });
+        setSelectedInstanceId(null);
+        setSelectedInstanceIds((ids) => ids.filter((id) => id !== commandInstance.id));
+        return true;
+      default:
+        return false;
+    }
+  }, [
+    circuitId,
+    deleteInstanceMutation,
+    getCommandInstance,
+    handleCopy,
+    handleAiPcbReview,
+    handleCtxRunDrc,
+    handleCtxSelectAll,
+    handleCtxZoomToFit,
+    pcbLinearContext,
+    toast,
+    triggerPaste,
+    updateInstanceMutation,
+  ]);
+
+  useEffect(() => {
+    const handleRadialCommand = (event: Event) => {
+      if (!(event instanceof CustomEvent)) { return; }
+      const detail = event.detail as RadialCommandEventDetail | undefined;
+      if (!detail || detail.context.view !== 'pcb') { return; }
+
+      if (handlePcbCommand(detail.commandId, detail.context, getRadialAiPromptDelivery(detail))) {
+        detail.handled = true;
+      }
+    };
+
+    window.addEventListener(RADIAL_COMMAND_EVENT, handleRadialCommand);
+    return () => window.removeEventListener(RADIAL_COMMAND_EVENT, handleRadialCommand);
+  }, [handlePcbCommand]);
+
+  useEffect(() => {
+    const handleRadialPreview = (event: Event) => {
+      if (!(event instanceof CustomEvent)) { return; }
+      const detail = event.detail as RadialCommandPreviewEventDetail | undefined;
+      if (!detail || detail.phase === 'clear' || detail.context?.view !== 'pcb') {
+        setRadialAdapterPreview(null);
+        return;
+      }
+      if (!detail.commandId || !detail.context.pointer) {
+        setRadialAdapterPreview(null);
+        return;
+      }
+
+      setRadialAdapterPreview({
+        commandId: detail.commandId,
+        board: clientToBoardPoint(detail.context.pointer),
+        targetId: detail.context.targetId,
+        targetLabel: detail.context.targetLabel,
+      });
+    };
+
+    window.addEventListener(RADIAL_COMMAND_PREVIEW_EVENT, handleRadialPreview);
+    return () => window.removeEventListener(RADIAL_COMMAND_PREVIEW_EVENT, handleRadialPreview);
+  }, [clientToBoardPoint]);
+
+  const radialPreviewInstance = useMemo(() => {
+    if (!radialAdapterPreview?.targetId) {
+      return null;
+    }
+    const targetId = Number(radialAdapterPreview.targetId);
+    if (!Number.isFinite(targetId)) {
+      return null;
+    }
+    return (instances ?? []).find((instance) => instance.id === targetId) ?? null;
+  }, [instances, radialAdapterPreview?.targetId]);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden">
       {/* Toolbar */}
-      <div className="h-8 border-b border-border bg-card/40 flex items-center px-2 gap-1 shrink-0">
+      <div className="flex h-7.5 shrink-0 items-center gap-0.5 border-b border-border bg-card/40 px-1.5">
         <ToolButton icon={MousePointer2} label="Select (1)" active={tool === 'select'} onClick={() => setTool('select')} testId="pcb-tool-select" />
         <ToolButton icon={Pencil} label="Trace (2)" active={tool === 'trace'} onClick={() => setTool('trace')} testId="pcb-tool-trace" />
         <ToolButton icon={Trash2} label="Delete (3)" active={tool === 'delete'} onClick={() => setTool('delete')} testId="pcb-tool-delete" />
         <ToolButton icon={Circle} label="Via (4)" active={tool === 'via'} onClick={() => setTool('via')} testId="pcb-tool-via" />
-        <div className="w-px h-4 bg-border mx-1" />
+        <div className="mx-0.5 h-4 w-px bg-border" />
         <ToolButton icon={Pentagon} label="Pour (P)" active={tool === 'pour'} onClick={() => setTool('pour')} testId="pcb-tool-pour" />
         <ToolButton icon={ShieldAlert} label="Keepout (K)" active={tool === 'keepout'} onClick={() => setTool('keepout')} testId="pcb-tool-keepout" />
         <ToolButton icon={ShieldCheck} label="Keepin" active={tool === 'keepin'} onClick={() => setTool('keepin')} testId="pcb-tool-keepin" />
         <ToolButton icon={Scissors} label="Cutout (X)" active={tool === 'cutout'} onClick={() => setTool('cutout')} testId="pcb-tool-cutout" />
         <ToolButton icon={Cable} label="Diff Pair (D)" active={tool === 'diff-pair'} onClick={() => setTool('diff-pair')} testId="pcb-tool-diff-pair" />
         <ToolButton icon={MessageSquarePlus} label="Comment (C)" active={tool === 'comment'} onClick={() => setTool('comment')} testId="pcb-tool-comment" />
-        <div className="w-px h-4 bg-border mx-1" />
+        <div className="mx-0.5 h-4 w-px bg-border" />
         <button
           data-testid="pcb-layer-toggle"
           onClick={() => setActiveLayer(toggleLayer)}
           title="Toggle copper layer (F) — Click to switch between Front and Back"
           aria-label={`Active layer: ${activeLayer === 'front' ? 'Front Copper' : 'Back Copper'}. Click to toggle.`}
           className={cn(
-            'h-7 px-2.5 flex items-center gap-1.5 rounded text-[11px] font-medium transition-colors cursor-pointer border hover:brightness-125',
+            'flex h-6.5 cursor-pointer items-center gap-1 rounded border px-2 text-[10px] font-medium transition-colors hover:brightness-125',
             layerToggleClasses(activeLayer),
           )}
         >
-          <FlipHorizontal className="w-3.5 h-3.5" />
+          <FlipHorizontal className="w-3 h-3" />
           {layerLabel(activeLayer)}
           <svg className="w-2.5 h-2.5 opacity-60" viewBox="0 0 10 10" fill="currentColor"><path d="M2 4l3 3 3-3" /></svg>
         </button>
-        <div className="w-px h-4 bg-border mx-1" />
+        <div className="mx-0.5 h-4 w-px bg-border" />
         <span className="text-[10px] text-muted-foreground">Trace:</span>
         <input
           type="range"
@@ -977,7 +1400,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
           data-testid="pcb-trace-width"
           aria-label="Trace width"
         />
-        <span className="text-[10px] text-muted-foreground tabular-nums w-9">{traceWidth.toFixed(1)}mm</span>
+        <span className="w-9 text-[10px] tabular-nums text-muted-foreground">{traceWidth.toFixed(1)}mm</span>
         <div className="flex items-center gap-0.5 ml-0.5">
           {TRACE_WIDTH_PRESETS.map((w) => (
             <button
@@ -986,7 +1409,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
               onClick={() => setTraceWidth(w)}
               title={`${w}mm trace width`}
               className={cn(
-                'h-5 px-1 text-[9px] rounded transition-colors tabular-nums',
+                'h-5 rounded px-1 text-[9px] tabular-nums transition-colors',
                 traceWidth === w
                   ? 'bg-primary/20 text-primary font-medium'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted',
@@ -996,39 +1419,37 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
             </button>
           ))}
         </div>
-        <div className="w-px h-4 bg-border mx-1" />
+        <div className="mx-0.5 h-4 w-px bg-border" />
         <ToolButton icon={ZoomIn} label="Zoom in" onClick={() => setZoom((z) => clampZoom(z + ZOOM_BUTTON_STEP))} testId="pcb-tool-zoom-in" />
         <ToolButton icon={ZoomOut} label="Zoom out" onClick={() => setZoom((z) => clampZoom(z - ZOOM_BUTTON_STEP))} testId="pcb-tool-zoom-out" />
         <ToolButton icon={RotateCcw} label="Reset view" onClick={() => { setZoom(DEFAULT_ZOOM); setPanOffset(DEFAULT_PAN); }} testId="pcb-tool-reset" />
-        <div className="w-px h-4 bg-border mx-1" />
+        <div className="mx-0.5 h-4 w-px bg-border" />
         <span className="text-[10px] text-muted-foreground">Board:</span>
-        <input
-          type="number"
+        <NumberInput
           min={10}
           max={500}
           step={5}
           value={boardWidth / 10}
           onChange={(e) => setBoardWidth(Math.max(10, Number(e.target.value)) * 10)}
-          className="w-12 h-5 px-1 text-[10px] text-foreground bg-muted/50 border border-border rounded text-center tabular-nums"
+          className="!w-12 !h-5 !px-1 text-[10px] text-foreground bg-muted/50 border border-border rounded text-center tabular-nums"
           data-testid="pcb-board-width"
           aria-label="Board width (mm)"
           title="Board width (mm)"
         />
         <span className="text-[9px] text-muted-foreground">x</span>
-        <input
-          type="number"
+        <NumberInput
           min={10}
           max={500}
           step={5}
           value={boardHeight / 10}
           onChange={(e) => setBoardHeight(Math.max(10, Number(e.target.value)) * 10)}
-          className="w-12 h-5 px-1 text-[10px] text-foreground bg-muted/50 border border-border rounded text-center tabular-nums"
+          className="!w-12 !h-5 !px-1 text-[10px] text-foreground bg-muted/50 border border-border rounded text-center tabular-nums"
           data-testid="pcb-board-height"
           aria-label="Board height (mm)"
           title="Board height (mm)"
         />
         <span className="text-[9px] text-muted-foreground">mm</span>
-        <div className="w-px h-4 bg-border mx-1" />
+        <div className="mx-0.5 h-4 w-px bg-border" />
         <RoutingStatusBadge nets={nets ?? []} wires={wires ?? []} />
         <div className="w-px h-4 bg-border mx-1" />
         <View3DButton />
@@ -1200,6 +1621,77 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                 )}
 
                 <TraceInProgress points={tracePoints} activeLayer={activeLayer} traceWidth={traceWidth} />
+                {radialAdapterPreview && (
+                  <g
+                    data-testid="pcb-radial-adapter-preview"
+                    data-command-id={radialAdapterPreview.commandId}
+                    data-board-x={Math.round(radialAdapterPreview.board.x)}
+                    data-board-y={Math.round(radialAdapterPreview.board.y)}
+                    pointerEvents="none"
+                  >
+                    {radialAdapterPreview.commandId === 'delete' && radialPreviewInstance ? (
+                      <g transform={`translate(${radialPreviewInstance.pcbX ?? radialPreviewInstance.schematicX}, ${radialPreviewInstance.pcbY ?? radialPreviewInstance.schematicY})`}>
+                        <rect
+                          x={-10}
+                          y={-8}
+                          width={20}
+                          height={16}
+                          rx={2}
+                          fill="rgba(248,113,113,0.14)"
+                          stroke="#fca5a5"
+                          strokeWidth={2 / zoom}
+                          strokeDasharray={`${5 / zoom},${4 / zoom}`}
+                        />
+                        <line x1={-8} y1={-6} x2={8} y2={6} stroke="#fca5a5" strokeWidth={1.8 / zoom} strokeLinecap="round" />
+                        <line x1={8} y1={-6} x2={-8} y2={6} stroke="#fca5a5" strokeWidth={1.8 / zoom} strokeLinecap="round" />
+                      </g>
+                    ) : radialAdapterPreview.commandId === 'add_via' ? (
+                      <g>
+                        <circle
+                          cx={radialAdapterPreview.board.x}
+                          cy={radialAdapterPreview.board.y}
+                          r={5 / zoom}
+                          fill="rgba(250,204,21,0.16)"
+                          stroke="#fde68a"
+                          strokeWidth={1.8 / zoom}
+                        />
+                        <circle
+                          cx={radialAdapterPreview.board.x}
+                          cy={radialAdapterPreview.board.y}
+                          r={2.2 / zoom}
+                          fill="rgba(250,204,21,0.3)"
+                          stroke="#fde68a"
+                          strokeWidth={1 / zoom}
+                        />
+                      </g>
+                    ) : (
+                      <g>
+                        <polyline
+                          points={[
+                            `${radialAdapterPreview.board.x},${radialAdapterPreview.board.y}`,
+                            `${radialAdapterPreview.board.x + 18},${radialAdapterPreview.board.y}`,
+                            `${radialAdapterPreview.board.x + 18},${radialAdapterPreview.board.y - 18}`,
+                            `${radialAdapterPreview.board.x + 44},${radialAdapterPreview.board.y - 18}`,
+                          ].join(' ')}
+                          fill="none"
+                          stroke="#67e8f9"
+                          strokeWidth={Math.max(traceWidth, 1.5) / zoom}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeDasharray={`${7 / zoom},${5 / zoom}`}
+                        />
+                        <circle
+                          cx={radialAdapterPreview.board.x}
+                          cy={radialAdapterPreview.board.y}
+                          r={4 / zoom}
+                          fill="rgba(34,211,238,0.16)"
+                          stroke="#67e8f9"
+                          strokeWidth={1.5 / zoom}
+                        />
+                      </g>
+                    )}
+                  </g>
+                )}
                 <ViaOverlay vias={vias} selectedViaId={selectedViaId} onViaClick={(id) => setSelectedViaId(id)} />
                 <RatsnestOverlay nets={ratsnestNets} opacity={0.4} showLabels />
                 {selectionRect && (
@@ -1254,6 +1746,13 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                 )}
               </g>
             </svg>
+            <PcbSurfaceStatusDock
+              status={pcbSurfaceStatus}
+              safetyGate={pcbSurfaceSafetyGate}
+              collapsed={surfaceStatusCollapsed}
+              onToggle={() => setSurfaceStatusCollapsed((value) => !value)}
+              onRunDrc={handleCtxRunDrc}
+            />
             <div className="absolute top-3 left-3 z-10">
               <LayerStackPanel activeLayer={activeLayer} onLayerSelect={setActiveLayer} />
             </div>
@@ -1273,42 +1772,11 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
             <CollaborationCursors client={collaborationClient} view="pcb" zoom={zoom} />
           </div>
         </ContextMenuTrigger>
-        <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
-          <ContextMenuItem data-testid="ctx-add-via" onSelect={handleCtxAddVia}>
-            <Circle className="w-4 h-4 mr-2" />
-            Add Via
-            <span className="ml-auto text-muted-foreground text-[10px]">4</span>
-          </ContextMenuItem>
-          <ContextMenuItem data-testid="ctx-add-trace" onSelect={handleCtxAddTrace}>
-            <Pencil className="w-4 h-4 mr-2" />
-            Add Trace
-            <span className="ml-auto text-muted-foreground text-[10px]">2</span>
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem data-testid="ctx-run-drc" onSelect={handleCtxRunDrc}>
-            <ShieldCheck className="w-4 h-4 mr-2" />
-            Run DRC
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem data-testid="ctx-zoom-to-fit" onSelect={handleCtxZoomToFit}>
-            <Maximize className="w-4 h-4 mr-2" />
-            Zoom to Fit
-          </ContextMenuItem>
-          <ContextMenuItem data-testid="ctx-select-all" onSelect={handleCtxSelectAll}>
-            <CheckSquare className="w-4 h-4 mr-2" />
-            Select All
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem data-testid="ctx-copy" onSelect={handleCopy}>
-            <Circle className="w-4 h-4 mr-2" />
-            Copy
-            <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+C</span>
-          </ContextMenuItem>
-          <ContextMenuItem data-testid="ctx-paste" onSelect={triggerPaste}>
-            <ClipboardPaste className="w-4 h-4 mr-2" />
-            Paste
-            <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+V</span>
-          </ContextMenuItem>
+        <ContextMenuContent className="min-w-[15rem] border-border bg-card/90 backdrop-blur-xl">
+          <RadialCommandLinearMenu
+            items={pcbLinearActions}
+            onSelect={handlePcbCommand}
+          />
         </ContextMenuContent>
       </ContextMenu>
 

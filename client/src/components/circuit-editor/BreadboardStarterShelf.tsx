@@ -3,9 +3,10 @@ import type { ComponentType } from 'react';
 import { Cpu, Lightbulb, Radio, Shield, ToggleLeft, Waves, Zap } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { PROTOPULSE_DRAG_TYPE, PROTOPULSE_DRAG_LABEL } from '@/lib/drag-mime';
 
-const LEGACY_COMPONENT_DRAG_TYPE = 'application/reactflow/type';
-const LEGACY_COMPONENT_LABEL = 'application/reactflow/label';
+const LEGACY_COMPONENT_DRAG_TYPE = PROTOPULSE_DRAG_TYPE;
+const LEGACY_COMPONENT_LABEL = PROTOPULSE_DRAG_LABEL;
 
 interface StarterPart {
   id: string;

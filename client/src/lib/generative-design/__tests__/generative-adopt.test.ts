@@ -9,7 +9,7 @@ import {
   buildExportPayload,
   exportCandidate,
 } from '../generative-adopt';
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import type { ComparisonResult, AdoptResult, ExportPayload } from '../generative-adopt';
 
 // ---------------------------------------------------------------------------
@@ -486,7 +486,7 @@ describe('architectureToCurrentIR', () => {
   });
 
   it('derives components from architecture nodes using label + type', () => {
-    const nodes: Node[] = [
+    const nodes: GraphNode[] = [
       {
         id: 'node-1',
         type: 'custom',
@@ -509,7 +509,7 @@ describe('architectureToCurrentIR', () => {
   });
 
   it('preserves IR-native metadata on previously adopted generative nodes', () => {
-    const nodes: Node[] = [
+    const nodes: GraphNode[] = [
       {
         id: 'gen-c1',
         type: 'custom',
@@ -532,11 +532,11 @@ describe('architectureToCurrentIR', () => {
   });
 
   it('derives pins from connected edges and builds nets with type inference', () => {
-    const nodes: Node[] = [
+    const nodes: GraphNode[] = [
       { id: 'a', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'A', type: 'mcu' } },
       { id: 'b', type: 'custom', position: { x: 200, y: 0 }, data: { label: 'B', type: 'led' } },
     ];
-    const edges: Edge[] = [
+    const edges: GraphEdge[] = [
       { id: 'e1', source: 'a', target: 'b', label: 'VCC' },
       { id: 'e2', source: 'a', target: 'b', label: 'GND' },
       { id: 'e3', source: 'a', target: 'b', label: 'DATA' },
@@ -555,7 +555,7 @@ describe('architectureToCurrentIR', () => {
     // Simulates audit C-1: current project holds U1 (mcu) and R2 (resistor).
     // Candidate has R2 (unchanged) + new C1 (capacitor). Comparison should
     // show U1 as REMOVED and C1 as ADDED — NOT fall back to the R1 stub.
-    const nodes: Node[] = [
+    const nodes: GraphNode[] = [
       { id: 'u1', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'U1', type: 'mcu' } },
       { id: 'r2', type: 'custom', position: { x: 200, y: 0 }, data: { label: 'R2', type: 'resistor', value: '1k' } },
     ];

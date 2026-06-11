@@ -2,12 +2,12 @@
  * Context menu action handlers for the schematic canvas.
  */
 import { useCallback } from 'react';
-import type { ReactFlowInstance, Node } from '@xyflow/react';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
 import type { CircuitSettings, PowerSymbol, SchematicTool } from '@shared/circuit-types';
 import type { Connector } from '@shared/component-types';
 import type { CreateInstanceMutation, UpdateDesignMutation, CreateNetMutation, ToastFn } from './types';
 import { logger } from '@/lib/logger';
+import type { SchematicFlowLike, SchematicNode } from './flow-types';
 
 // ---------------------------------------------------------------------------
 // Mutation ref types
@@ -26,11 +26,11 @@ interface UseContextMenuParams {
   instances: CircuitInstanceRow[] | undefined;
   partsMap: Map<number, ComponentPart>;
   settings: CircuitSettings;
-  reactFlowInstance: ReactFlowInstance;
+  reactFlowInstance: SchematicFlowLike;
   snapEnabled: boolean;
   gridSize: number;
   setActiveTool: React.Dispatch<React.SetStateAction<SchematicTool>>;
-  setLocalNodes: React.Dispatch<React.SetStateAction<Node[]>>;
+  setLocalNodes: React.Dispatch<React.SetStateAction<SchematicNode[]>>;
   setReplacementInstance: React.Dispatch<React.SetStateAction<CircuitInstanceRow | null>>;
   setReplacementPart: React.Dispatch<React.SetStateAction<ComponentPart | null>>;
   setIsReplacementOpen: React.Dispatch<React.SetStateAction<boolean>>;

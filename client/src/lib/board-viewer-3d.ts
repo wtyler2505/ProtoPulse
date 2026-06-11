@@ -157,7 +157,8 @@ export interface PackageModel {
 }
 
 // ---------------------------------------------------------------------------
-// Input types (partial — IDs assigned internally)
+// Input types (partial — component IDs assigned internally; pin IDs are
+// preserved when provided so telemetry/provenance overlays can target them)
 // ---------------------------------------------------------------------------
 
 export interface AddComponentInput {
@@ -171,6 +172,7 @@ export interface AddComponentInput {
   bodyDepth?: number;
   color?: string;
   pins?: Array<{
+    id?: string;
     position: { x: number; y: number };
     diameter: number;
     type: 'through-hole' | 'smd';
@@ -416,7 +418,7 @@ export class BoardViewer3D {
       bodyDepth: input.bodyDepth ?? pkg?.bodyDepth ?? 2.0,
       color: input.color ?? pkg?.color ?? '#1a1a1a',
       pins: (input.pins ?? []).map((p) => ({
-        id: crypto.randomUUID(),
+        id: p.id ?? crypto.randomUUID(),
         position: { ...p.position },
         diameter: p.diameter,
         type: p.type,

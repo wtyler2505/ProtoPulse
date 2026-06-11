@@ -120,10 +120,10 @@ function ExportResultsPanel() {
       data-testid="export-results-panel"
     >
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2.5">
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5">
         <button
           data-testid="export-results-toggle"
-          className="flex items-center gap-2 flex-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors focus-ring"
+          className="flex items-center gap-1.5 flex-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors focus-ring"
           onClick={handleToggle}
           aria-expanded={isOpen}
           aria-label={`${isOpen ? 'Collapse' : 'Expand'} export results`}
@@ -138,7 +138,7 @@ function ExportResultsPanel() {
         </button>
         <Badge
           variant="outline"
-          className="text-[10px] font-mono text-muted-foreground border-border pointer-events-none select-none"
+          className="text-[9px] font-mono text-muted-foreground border-border pointer-events-none select-none px-1 py-0"
           data-testid="export-results-file-count"
         >
           {totalFileCount} file{totalFileCount !== 1 ? 's' : ''}
@@ -151,7 +151,7 @@ function ExportResultsPanel() {
         </span>
         <button
           data-testid="export-results-dismiss"
-          className="p-1 text-muted-foreground hover:text-destructive transition-colors shrink-0 focus-ring"
+          className="p-0.5 text-muted-foreground hover:text-destructive transition-colors shrink-0 focus-ring"
           onClick={handleDismiss}
           aria-label="Dismiss export results"
         >
@@ -168,7 +168,7 @@ function ExportResultsPanel() {
 
             return (
               <div key={`${result.formatId}-${String(result.timestamp)}`} data-testid={`export-result-${String(index)}`}>
-                <div className="flex items-center gap-2 px-3 py-2 group">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 group">
                   {/* Expand/collapse for file details */}
                   <button
                     data-testid={`export-result-toggle-${String(index)}`}
@@ -187,7 +187,7 @@ function ExportResultsPanel() {
                     ) : (
                       <AlertCircle className="w-3.5 h-3.5 shrink-0 text-destructive" />
                     )}
-                    <span className="text-xs font-medium text-foreground truncate">
+                    <span className="text-[11px] font-medium text-foreground truncate">
                       {result.formatLabel}
                     </span>
                     <span className="text-[10px] font-mono text-muted-foreground/60 shrink-0">
@@ -215,7 +215,7 @@ function ExportResultsPanel() {
 
                 {/* Expanded file list */}
                 {isExpanded && result.files.length > 0 && (
-                  <div className="px-3 pb-2 pl-10">
+                  <div className="px-2.5 pb-1.5 pl-8.5">
                     {result.files.map((file) => (
                       <div
                         key={file.name}

@@ -28,8 +28,8 @@ const mockAddOutputLog = vi.fn();
 // inside `useActionExecutor` sees whatever state was prepared.
 // ---------------------------------------------------------------------------
 
-let mockNodes: import('@xyflow/react').Node[] = [];
-let mockEdges: import('@xyflow/react').Edge[] = [];
+let mockNodes: import('@/lib/graph-types').GraphNode[] = [];
+let mockEdges: import('@/lib/graph-types').GraphEdge[] = [];
 let mockBom: import('@/lib/project-context').BomItem[] = [];
 let mockIssues: import('@/lib/project-context').ValidationIssue[] = [];
 
@@ -60,6 +60,10 @@ vi.mock('@/lib/contexts/architecture-context', () => ({
     focusNodeId: null,
     lastAITurnSnapshot: null,
   }),
+}));
+
+vi.mock('@/lib/contexts/project-id-context', () => ({
+  useProjectId: () => 1,
 }));
 
 vi.mock('@/lib/contexts/bom-context', () => ({
@@ -196,7 +200,7 @@ describe('useActionExecutor', () => {
 
     // setNodes should be called once with an array containing the new node
     expect(mockSetNodes).toHaveBeenCalledOnce();
-    const nodesArg = mockSetNodes.mock.calls[0][0] as import('@xyflow/react').Node[];
+    const nodesArg = mockSetNodes.mock.calls[0][0] as import('@/lib/graph-types').GraphNode[];
     expect(nodesArg).toHaveLength(1);
     expect(nodesArg[0].data.label).toBe('ESP32');
     expect(nodesArg[0].data.type).toBe('mcu');
@@ -243,13 +247,13 @@ describe('useActionExecutor', () => {
 
     // setNodes should receive only the surviving node
     expect(mockSetNodes).toHaveBeenCalledOnce();
-    const remainingNodes = mockSetNodes.mock.calls[0][0] as import('@xyflow/react').Node[];
+    const remainingNodes = mockSetNodes.mock.calls[0][0] as import('@/lib/graph-types').GraphNode[];
     expect(remainingNodes).toHaveLength(1);
     expect(remainingNodes[0].data.label).toBe('Sensor');
 
     // Connected edges should also be removed
     expect(mockSetEdges).toHaveBeenCalledOnce();
-    const remainingEdges = mockSetEdges.mock.calls[0][0] as import('@xyflow/react').Edge[];
+    const remainingEdges = mockSetEdges.mock.calls[0][0] as import('@/lib/graph-types').GraphEdge[];
     expect(remainingEdges).toHaveLength(0);
 
     expect(mockAddToHistory).toHaveBeenCalled();
@@ -532,7 +536,7 @@ describe('useActionExecutor', () => {
 
     // Both nodes should appear in the single setNodes call (accumulated)
     expect(mockSetNodes).toHaveBeenCalledOnce();
-    const nodesArg = mockSetNodes.mock.calls[0][0] as import('@xyflow/react').Node[];
+    const nodesArg = mockSetNodes.mock.calls[0][0] as import('@/lib/graph-types').GraphNode[];
     expect(nodesArg).toHaveLength(2);
     expect(nodesArg[0].data.label).toBe('ESP32');
     expect(nodesArg[1].data.label).toBe('BME280');

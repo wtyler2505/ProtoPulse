@@ -1,6 +1,7 @@
 import type { PartState, PartMeta, ViewData, PartViews } from '@shared/component-types';
 import type { ComponentPart } from '@shared/schema';
 import type { ComplianceFinding } from '@/lib/standards-compliance';
+import type { PrecheckResult } from '@/lib/export-precheck';
 import { DRC_EXPLANATIONS } from '@shared/drc-engine';
 
 /** Brief explanations for validation rule categories (UX-043: "why this rule matters" tooltips).
@@ -58,6 +59,8 @@ export type CompIssue = { id: string; severity: string; message: string; suggest
 export type ERCIssue = { id: string; severity: string; message: string; ruleType: string };
 export type DRCIssue = { id: string; severity: string; message: string; ruleType: string; view: string; componentId: string };
 export type VirtualRow =
+  | { type: 'safety_gate_header'; count: number }
+  | { type: 'safety_gate'; issue: PrecheckResult }
   | { type: 'arch'; issue: ArchIssue }
   | { type: 'section_header'; count: number }
   | { type: 'drc_header'; count: number }

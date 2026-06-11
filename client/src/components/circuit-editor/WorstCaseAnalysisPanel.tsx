@@ -2,6 +2,7 @@ import { useState, useSyncExternalStore, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -118,10 +119,9 @@ function AddParameterForm({ onAdd }: { onAdd: (p: WCAParameter) => void }) {
       <div className="grid grid-cols-3 gap-2">
         <div>
           <Label htmlFor="wca-param-nominal" className="text-xs text-muted-foreground">Nominal</Label>
-          <Input
+          <NumberInput
             id="wca-param-nominal"
             data-testid="wca-param-nominal"
-            type="number"
             value={form.nominal}
             onChange={(e) => { setForm((f) => ({ ...f, nominal: e.target.value })); }}
             placeholder="10000"
@@ -132,15 +132,15 @@ function AddParameterForm({ onAdd }: { onAdd: (p: WCAParameter) => void }) {
           <Label htmlFor="wca-param-tolerance" className="text-xs text-muted-foreground">
             Tolerance{form.toleranceType === 'percentage' ? ' (%)' : ''}
           </Label>
-          <Input
+          <NumberInput
             id="wca-param-tolerance"
             data-testid="wca-param-tolerance"
-            type="number"
             value={form.tolerance}
             onChange={(e) => { setForm((f) => ({ ...f, tolerance: e.target.value })); }}
             placeholder={form.toleranceType === 'percentage' ? '5' : '500'}
             className="h-7 text-xs"
-            min="0"
+            min={0}
+            max={form.toleranceType === 'percentage' ? 100 : 1_000_000}
           />
         </div>
         <div>

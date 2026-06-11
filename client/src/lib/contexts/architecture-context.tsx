@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, useRef, useCallback, useMemo } from 'react';
-import { Node, Edge } from '@xyflow/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { toast } from '@/hooks/use-toast';
 import type { ViewMode } from '@/lib/project-context';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { projectMutationKeys, projectQueryKeys } from '@/lib/query-keys';
 
@@ -40,26 +40,26 @@ interface EdgeData {
 }
 
 interface ArchitectureState {
-  nodes: Node[];
-  edges: Edge[];
+  nodes: GraphNode[];
+  edges: GraphEdge[];
   hasResolvedInitialGraph: boolean;
-  setNodes: (nodes: Node[]) => void;
-  setEdges: (edges: Edge[]) => void;
+  setNodes: (nodes: GraphNode[]) => void;
+  setEdges: (edges: GraphEdge[]) => void;
 
   selectedNodeId: string | null;
   setSelectedNodeId: (id: string | null) => void;
   focusNodeId: string | null;
   focusNode: (nodeId: string) => void;
 
-  undoStack: Array<{ nodes: Node[]; edges: Edge[] }>;
-  redoStack: Array<{ nodes: Node[]; edges: Edge[] }>;
+  undoStack: Array<{ nodes: GraphNode[]; edges: GraphEdge[] }>;
+  redoStack: Array<{ nodes: GraphNode[]; edges: GraphEdge[] }>;
   pushUndoState: () => void;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
 
-  lastAITurnSnapshot: { nodes: Node[]; edges: Edge[] } | null;
+  lastAITurnSnapshot: { nodes: GraphNode[]; edges: GraphEdge[] } | null;
   captureSnapshot: () => void;
   getChangeDiff: () => string;
 
@@ -90,7 +90,7 @@ export function ArchitectureProvider({
   const nodesQuery = useQuery({
     queryKey: nodesQueryKey,
     enabled: seeded,
-    select: (response: { data: NodeApiResponse[]; total: number }) => response.data.map((n): Node => ({
+    select: (response: { data: NodeApiResponse[]; total: number }) => response.data.map((n): GraphNode => ({
       id: n.nodeId,
       type: 'custom',
       position: { x: n.positionX, y: n.positionY },
@@ -101,7 +101,7 @@ export function ArchitectureProvider({
   const edgesQuery = useQuery({
     queryKey: edgesQueryKey,
     enabled: seeded,
-    select: (response: { data: EdgeApiResponse[]; total: number }) => response.data.map((e): Edge => ({
+    select: (response: { data: EdgeApiResponse[]; total: number }) => response.data.map((e): GraphEdge => ({
       id: e.edgeId,
       source: e.source,
       target: e.target,
@@ -120,7 +120,7 @@ export function ArchitectureProvider({
   // --- Mutations ---
   const saveNodesMutation = useMutation({
     mutationKey: projectMutationKeys.nodes(projectId),
-    mutationFn: async (nodes: Node[]) => {
+    mutationFn: async (nodes: GraphNode[]) => {
       const body = nodes.map(node => ({
         nodeId: node.id,
         nodeType: node.data.type,
@@ -143,7 +143,7 @@ export function ArchitectureProvider({
 
   const saveEdgesMutation = useMutation({
     mutationKey: projectMutationKeys.edges(projectId),
-    mutationFn: async (edges: Edge[]) => {
+    mutationFn: async (edges: GraphEdge[]) => {
       const body = edges.map(edge => {
         const edgeData = edge.data as EdgeData | undefined;
         return {
@@ -171,7 +171,7 @@ export function ArchitectureProvider({
     },
   });
 
-  const setNodes = useCallback((newNodes: Node[]) => {
+  const setNodes = useCallback((newNodes: GraphNode[]) => {
     // Optimistic cache update so consumers see new data immediately,
     // then persist to server.  On success the invalidation refetches
     // the authoritative data; on error the query reverts.
@@ -190,7 +190,7 @@ export function ArchitectureProvider({
     saveNodesMutation.mutate(newNodes);
   }, [nodesQueryKey, queryClient, saveNodesMutation]);
 
-  const setEdges = useCallback((newEdges: Edge[]) => {
+  const setEdges = useCallback((newEdges: GraphEdge[]) => {
     const mapped = newEdges.map(edge => {
       const ed = edge.data as EdgeData | undefined;
       return {
@@ -225,8 +225,8 @@ export function ArchitectureProvider({
   }, [setActiveView]);
 
   // --- Undo/Redo ---
-  const [undoStack, setUndoStack] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
-  const [redoStack, setRedoStack] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+  const [undoStack, setUndoStack] = useState<Array<{ nodes: GraphNode[]; edges: GraphEdge[] }>>([]);
+  const [redoStack, setRedoStack] = useState<Array<{ nodes: GraphNode[]; edges: GraphEdge[] }>>([]);
 
   const pushUndoState = useCallback(() => {
     const currentNodes = nodesQuery.data ?? [];
@@ -258,7 +258,7 @@ export function ArchitectureProvider({
   }, [redoStack, nodesQuery.data, edgesQuery.data, setNodes, setEdges]);
 
   // --- Snapshot & diff ---
-  const snapshotRef = useRef<{ nodes: Node[]; edges: Edge[] } | null>(null);
+  const snapshotRef = useRef<{ nodes: GraphNode[]; edges: GraphEdge[] } | null>(null);
 
   const captureSnapshot = useCallback(() => {
     snapshotRef.current = { nodes: nodesQuery.data ?? [], edges: edgesQuery.data ?? [] };

@@ -16,6 +16,7 @@ import {
   Sparkles,
   Clock,
   Trash2,
+  Box,
 } from 'lucide-react';
 import AddToBomPrompt from '@/components/ui/AddToBomPrompt';
 import { shouldPromptBomAdd, mapCommunityPartToBom } from '@/lib/community-bom-bridge';
@@ -46,6 +47,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useCommunityLibrary } from '@/lib/community-library';
+import { useProjectId } from '@/lib/contexts/project-id-context';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { publishViewer3DBridgeTarget } from '@/lib/viewer-3d-bridge';
 import type {
   CommunityComponent,
   ComponentType,
@@ -131,12 +135,12 @@ const ComponentCard = memo(function ComponentCard({ component, onClick }: Compon
       aria-label={`Open details for ${component.name}`}
       onClick={() => { onClick(component); }}
       className={cn(
-        'w-full text-left rounded-lg border bg-card/60 border-border/50 hover:border-primary/30',
+        'w-full text-left rounded-md border bg-card/60 border-border/50 hover:border-primary/30',
         'transition-colors cursor-pointer',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
       )}
     >
-      <div className="p-3 space-y-2">
+      <div className="space-y-1.5 p-2.5">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div data-testid={`component-name-${component.id}`} className="text-sm font-semibold truncate">
@@ -211,12 +215,14 @@ interface ComponentDetailProps {
   component: CommunityComponent;
   onDownload: (id: string) => void;
   onRate: (componentId: string, rating: number) => void;
+  onViewIn3D: (component: CommunityComponent) => void;
 }
 
 const ComponentDetail = memo(function ComponentDetail({
   component,
   onDownload,
   onRate,
+  onViewIn3D,
 }: ComponentDetailProps) {
   const typeInfo = TYPE_LABELS[component.type];
 
@@ -254,6 +260,17 @@ const ComponentDetail = memo(function ComponentDetail({
             <Download className="w-4 h-4 mr-2" />
             Download Component
           </Button>
+
+          {component.type === '3d-model' && (
+            <Button
+              data-testid="detail-view-3d-btn"
+              variant="outline"
+              onClick={() => { onViewIn3D(component); }}
+            >
+              <Box className="w-4 h-4 mr-2" />
+              View in 3D
+            </Button>
+          )}
 
           <Separator />
 
@@ -436,6 +453,8 @@ const CollectionsPanel = memo(function CollectionsPanel({ collections, onCreate,
 // ---------------------------------------------------------------------------
 
 export default function CommunityView() {
+  const projectId = useProjectId();
+  const { setActiveView } = useProjectMeta();
   const {
     components,
     search,
@@ -498,54 +517,71 @@ export default function CommunityView() {
     rateComponent(componentId, 'local-user', rating);
   }, [rateComponent]);
 
+  const handleViewIn3D = useCallback((component: CommunityComponent) => {
+    const format = typeof component.data.format === 'string' ? component.data.format : undefined;
+    publishViewer3DBridgeTarget({
+      sourceView: 'community',
+      projectId,
+      sourceId: component.id,
+      title: component.name,
+      subtitle: component.description,
+      sourceName: component.author.name,
+      sourceTrustScore: component.author.reputation,
+      trustTier: component.author.id === 'system' ? 'system-seed' : 'community',
+      verificationLevel: 'community-only',
+      verificationStatus: 'candidate',
+      readyNow: component.type === '3d-model' && component.compatibility.includes('protopulse'),
+      modelFormat: format,
+      modelKind: component.type,
+    });
+    setActiveView('viewer_3d');
+  }, [projectId, setActiveView]);
+
   const handleCreateCollection = useCallback((name: string, description: string) => {
     createCollection({ name, description });
   }, [createCollection]);
 
   return (
-    <div data-testid="community-view" className="flex flex-col h-full gap-4 p-4">
+    <div data-testid="community-view" className="flex h-full flex-col gap-2 p-2.5">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-1.5">
         <div className="flex items-center gap-2">
-          <Globe className="w-5 h-5 text-primary" />
-          <h2 data-testid="community-title" className="text-lg font-semibold">Community Library</h2>
-          <Badge data-testid="community-count" variant="secondary">
+          <Globe className="h-3.5 w-3.5 text-primary" />
+          <h2 data-testid="community-title" className="text-[13px] font-semibold">Community Library</h2>
+          <Badge data-testid="community-count" variant="secondary" className="h-4 text-[10px]">
             {stats.totalComponents} components
           </Badge>
         </div>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground">
           <span data-testid="community-downloads">{stats.totalDownloads} downloads</span>
           <span data-testid="community-authors">{stats.totalAuthors} authors</span>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-        <TabsList data-testid="community-tabs">
-          <TabsTrigger data-testid="tab-browse" value="browse">
-            <Search className="w-3 h-3 mr-1" />
+        <TabsList data-testid="community-tabs" className="h-6">
+          <TabsTrigger className="h-5.5 px-1.5 text-[10px]" data-testid="tab-browse" value="browse">
             Browse
           </TabsTrigger>
-          <TabsTrigger data-testid="tab-featured" value="featured">
-            <Sparkles className="w-3 h-3 mr-1" />
+          <TabsTrigger className="h-5.5 px-1.5 text-[10px]" data-testid="tab-featured" value="featured">
             Featured
           </TabsTrigger>
-          <TabsTrigger data-testid="tab-collections" value="collections">
-            <FolderOpen className="w-3 h-3 mr-1" />
+          <TabsTrigger className="h-5.5 px-1.5 text-[10px]" data-testid="tab-collections" value="collections">
             Collections
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="browse" className="flex-1 flex flex-col gap-3 min-h-0 mt-3">
+        <TabsContent value="browse" className="mt-1.5 flex min-h-0 flex-1 flex-col gap-1.5">
           {/* Search + filters */}
           <div data-testid="community-filters" className="flex items-center gap-2 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
                 data-testid="community-search"
                 placeholder="Search components..."
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); }}
-                className="pl-8 h-9"
+                className="h-8.5 pl-9 text-xs"
               />
             </div>
 
@@ -553,7 +589,7 @@ export default function CommunityView() {
               value={typeFilter}
               onValueChange={(v) => { setTypeFilter(v as ComponentType | '__all__'); }}
             >
-              <SelectTrigger data-testid="community-type-filter" className="w-36 h-9 text-xs" aria-label="Filter community components by type">
+              <SelectTrigger data-testid="community-type-filter" className="h-8.5 w-36 text-xs" aria-label="Filter community components by type">
                 <SelectValue placeholder="All types" />
               </SelectTrigger>
               <SelectContent>
@@ -565,7 +601,7 @@ export default function CommunityView() {
             </Select>
 
             <Select value={sortBy} onValueChange={(v) => { setSortBy(v as SortOption); }}>
-              <SelectTrigger data-testid="community-sort" className="w-36 h-9 text-xs" aria-label="Sort community components">
+              <SelectTrigger data-testid="community-sort" className="h-8.5 w-36 text-xs" aria-label="Sort community components">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -578,15 +614,15 @@ export default function CommunityView() {
 
           {/* Results */}
           <ScrollArea className="flex-1">
-            <div data-testid="community-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div data-testid="community-grid" className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
               {searchResults.components.map((comp) => (
                 <ComponentCard key={comp.id} component={comp} onClick={setSelectedComponent} />
               ))}
             </div>
             {searchResults.components.length === 0 && (
-              <div data-testid="community-empty" className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <Package className="w-8 h-8 mb-2 opacity-40" />
-                <p className="text-sm">No components found matching your search.</p>
+              <div data-testid="community-empty" className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                <Package className="mb-2 h-7 w-7 opacity-40" />
+                <p className="text-xs">No components found matching your search.</p>
               </div>
             )}
             {searchResults.totalPages > 1 && (
@@ -597,16 +633,16 @@ export default function CommunityView() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="featured" className="flex-1 flex flex-col gap-4 min-h-0 mt-3">
+        <TabsContent value="featured" className="mt-2 flex min-h-0 flex-1 flex-col gap-1.5">
           <ScrollArea className="flex-1">
             {/* Featured */}
             {featured.length > 0 && (
-              <div className="space-y-2 mb-6">
+              <div className="mb-4 space-y-1.5">
                 <h3 data-testid="featured-heading" className="text-sm font-semibold flex items-center gap-1">
                   <Sparkles className="w-4 h-4 text-amber-400" />
                   Featured
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
                   {featured.map((comp) => (
                     <ComponentCard key={comp.id} component={comp} onClick={setSelectedComponent} />
                   ))}
@@ -616,12 +652,12 @@ export default function CommunityView() {
 
             {/* Trending */}
             {trending.length > 0 && (
-              <div className="space-y-2 mb-6">
+              <div className="mb-4 space-y-1.5">
                 <h3 data-testid="trending-heading" className="text-sm font-semibold flex items-center gap-1">
                   <TrendingUp className="w-4 h-4 text-green-400" />
                   Trending
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
                   {trending.map((comp) => (
                     <ComponentCard key={comp.id} component={comp} onClick={setSelectedComponent} />
                   ))}
@@ -631,12 +667,12 @@ export default function CommunityView() {
 
             {/* New Arrivals */}
             {newArrivals.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <h3 data-testid="new-arrivals-heading" className="text-sm font-semibold flex items-center gap-1">
                   <Clock className="w-4 h-4 text-blue-400" />
                   New Arrivals
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
                   {newArrivals.map((comp) => (
                     <ComponentCard key={comp.id} component={comp} onClick={setSelectedComponent} />
                   ))}
@@ -646,7 +682,7 @@ export default function CommunityView() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="collections" className="flex-1 min-h-0 mt-3">
+        <TabsContent value="collections" className="mt-2 flex-1 min-h-0">
           <ScrollArea className="h-full">
             <CollectionsPanel
               collections={collections}
@@ -697,6 +733,7 @@ export default function CommunityView() {
                 component={selectedComponent}
                 onDownload={handleDownload}
                 onRate={handleRate}
+                onViewIn3D={handleViewIn3D}
               />
             </>
           )}

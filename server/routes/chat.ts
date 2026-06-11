@@ -4,6 +4,7 @@ import { fromZodError } from 'zod-validation-error/v3';
 import { storage } from '../storage';
 import { insertChatMessageSchema } from '@shared/schema';
 import { processAIMessage, streamAIMessage, categorizeError, routeToModel } from '../ai';
+import { streamOpenAIAgentMessage } from '../ai-openai-agents';
 import { getApiKey, validateSession } from '../auth';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema, HttpError } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
@@ -241,6 +242,22 @@ const aiRequestSchema = z.object({
   // Phase 4: Vision/multimodal — optional image attachment
   imageBase64: z.string().max(10_000_000).optional(),
   imageMimeType: z.enum(['image/jpeg', 'image/png', 'image/gif', 'image/webp']).optional(),
+});
+
+const openAiStreamRequestSchema = z.object({
+  message: z.string().min(1).max(32000),
+  provider: z.enum(['openai']),
+  model: z.string().min(1).max(200),
+  apiKey: z.string().max(500).optional().default(''),
+  projectId: z.number(),
+  activeView: z.string().optional(),
+  schematicSheets: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
+  activeSheetId: z.string().optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  customSystemPrompt: z.string().max(10000).optional(),
+  selectedNodeId: z.string().nullable().optional(),
+  changeDiff: z.string().max(50000).optional(),
+  routingStrategy: z.enum(['user', 'auto', 'quality', 'speed', 'cost']).optional(),
 });
 
 async function buildAppStateFromProject(
@@ -736,6 +753,163 @@ export function registerChatRoutes(app: Express): void {
                 }
               : undefined,
             userId: req.userId,
+          },
+          async (event) => {
+            if (!closed) {
+              await writeWithBackpressure(`data: ${JSON.stringify(event)}\n\n`);
+            }
+          },
+          abortController.signal,
+        );
+        cleanup();
+        if (!closed) {
+          closed = true;
+          res.end();
+        }
+      } catch (error: unknown) {
+        cleanup();
+        if (!closed) {
+          closed = true;
+          const { userMessage } = categorizeError(error);
+          res.write(`data: ${JSON.stringify({ type: 'error', message: userMessage })}\n\n`);
+          res.end();
+        }
+      }
+    }),
+  );
+
+  // --- OpenAI Agents SDK streaming lane (parallel path, phase 1) ---
+  app.post(
+    '/api/chat/ai/openai/stream',
+    streamOriginGuard,
+    payloadLimit(10 * 1024 * 1024),
+    streamBodySizeGuard,
+    streamRateLimiter,
+    streamConcurrencyGuard,
+    asyncHandler(async (req, res) => {
+      const parsed = openAiStreamRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
+      }
+
+      const ownerCheckSessionId = req.headers['x-session-id'] as string | undefined;
+      if (!ownerCheckSessionId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      const ownerSession = await validateSession(ownerCheckSessionId);
+      if (!ownerSession) {
+        return res.status(401).json({ message: 'Invalid or expired session' });
+      }
+      const ownerCheckProject = await storage.getProject(parsed.data.projectId);
+      if (!ownerCheckProject) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      if (ownerCheckProject.ownerId !== null && ownerCheckProject.ownerId !== ownerSession.userId) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+
+      const { message, provider, model, apiKey: clientApiKey } = parsed.data;
+      const pid = parsed.data.projectId;
+      const routingStrategy = parsed.data.routingStrategy || 'user';
+
+      let resolvedModel = model;
+      if (routingStrategy !== 'user') {
+        const routed = routeToModel({
+          strategy: routingStrategy,
+          provider,
+          userModel: model,
+          messageLength: message.length,
+          hasImage: false,
+          appState: { activeView: parsed.data.activeView || 'dashboard', nodes: [], bom: [] },
+          message,
+        });
+        resolvedModel = routed.model;
+      }
+
+      let apiKeyToUse = clientApiKey || '';
+      if (req.userId) {
+        const storedKey = await getApiKey(req.userId!, provider);
+        if (storedKey) {
+          apiKeyToUse = storedKey;
+        }
+      }
+
+      const sessionId = req.headers['x-session-id'] as string;
+      activeStreams.add(sessionId);
+
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders();
+
+      const abortController = new AbortController();
+      let closed = false;
+
+      const cleanup = () => {
+        activeStreams.delete(sessionId);
+        clearTimeout(streamTimeout);
+        clearTimeout(absoluteTimeout);
+        clearInterval(heartbeatInterval);
+      };
+
+      const STREAM_TIMEOUT_MS = Number(process.env.STREAM_TIMEOUT_MS) || 120_000;
+      let streamTimeout: ReturnType<typeof setTimeout> | undefined;
+      const resetStreamTimeout = () => {
+        if (streamTimeout !== undefined) {
+          clearTimeout(streamTimeout);
+        }
+        streamTimeout = setTimeout(() => {
+          if (!closed) {
+            closed = true;
+            cleanup();
+            res.write(`data: ${JSON.stringify({ type: 'error', message: `Stream timed out after ${STREAM_TIMEOUT_MS / 1000} seconds of inactivity` })}\n\n`);
+            res.end();
+          }
+        }, STREAM_TIMEOUT_MS);
+      };
+      resetStreamTimeout();
+
+      const absoluteTimeout = setTimeout(() => {
+        if (!closed) {
+          closed = true;
+          abortController.abort();
+          cleanup();
+          res.write(`data: ${JSON.stringify({ type: 'error', message: `Stream exceeded maximum duration of ${ABSOLUTE_STREAM_TIMEOUT_MS / 1000} seconds` })}\n\n`);
+          res.end();
+        }
+      }, ABSOLUTE_STREAM_TIMEOUT_MS);
+
+      const HEARTBEAT_INTERVAL_MS = 15_000;
+      const heartbeatInterval = setInterval(() => {
+        if (!closed) {
+          res.write(':heartbeat\n\n');
+        }
+      }, HEARTBEAT_INTERVAL_MS);
+
+      req.on('close', () => {
+        closed = true;
+        abortController.abort();
+        cleanup();
+      });
+
+      const writeWithBackpressure = async (data: string): Promise<void> => {
+        if (closed) return;
+        const ok = res.write(data);
+        resetStreamTimeout();
+        if (ok) return;
+        await new Promise<void>((resolve) => {
+          res.once('drain', resolve);
+        });
+      };
+
+      try {
+        await streamOpenAIAgentMessage(
+          {
+            message,
+            model: resolvedModel,
+            apiKey: apiKeyToUse,
+            customSystemPrompt: parsed.data.customSystemPrompt,
           },
           async (event) => {
             if (!closed) {

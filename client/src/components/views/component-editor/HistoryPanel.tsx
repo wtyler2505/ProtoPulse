@@ -52,8 +52,10 @@ export default function HistoryPanel() {
 
   return (
     <div
-      className="w-56 border-l border-border bg-card flex flex-col"
+      className="flex min-h-0 w-56 min-w-44 max-w-80 shrink-0 resize-x flex-col overflow-hidden border-l border-border bg-card"
       data-testid="history-panel"
+      data-resizable="true"
+      data-resize-axis="horizontal"
     >
       <div className="px-3 py-2 border-b border-border flex items-center justify-between">
         <span className="text-xs font-medium text-foreground">History</span>
@@ -67,7 +69,7 @@ export default function HistoryPanel() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto" data-testid="history-list">
+      <div className="min-h-0 flex-1 overflow-y-auto" data-testid="history-list">
         {totalCount === 0 ? (
           <div className="p-4 text-center text-xs text-muted-foreground" data-testid="text-no-history">
             No history

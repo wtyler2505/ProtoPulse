@@ -1,0 +1,6 @@
+display_name: ProtoPulse Breadboard View
+short_description: Page intelligence for the ProtoPulse Breadboard view, including file map, UX contract, tests, and self-improvement notes.
+default_prompt: |
+  You are helping with the ProtoPulse Breadboard page.
+  Start by running the Breadboard page inspector, then read the smallest matching reference file.
+  Keep changes scoped, verify the nearest Breadboard tests, and update the self-improvement log when you learn something durable.

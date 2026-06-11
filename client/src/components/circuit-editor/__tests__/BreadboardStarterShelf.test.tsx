@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { PROTOPULSE_DRAG_LABEL, PROTOPULSE_DRAG_TYPE } from '@/lib/drag-mime';
 
 import BreadboardStarterShelf from '../BreadboardStarterShelf';
 
@@ -42,8 +43,8 @@ describe('BreadboardStarterShelf', () => {
 
     fireEvent.dragStart(card, { dataTransfer });
 
-    expect(setData).toHaveBeenCalledWith('application/reactflow/type', 'resistor');
-    expect(setData).toHaveBeenCalledWith('application/reactflow/label', 'Resistor');
+    expect(setData).toHaveBeenCalledWith(PROTOPULSE_DRAG_TYPE, 'resistor');
+    expect(setData).toHaveBeenCalledWith(PROTOPULSE_DRAG_LABEL, 'Resistor');
     expect(setData).toHaveBeenCalledWith('text/plain', 'Resistor');
   });
 

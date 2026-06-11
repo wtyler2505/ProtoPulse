@@ -21,7 +21,7 @@ vi.stubGlobal('crypto', {
 });
 
 const store: Record<string, string> = {};
-vi.stubGlobal('localStorage', {
+const localStorageMock = {
   getItem: vi.fn((key: string) => store[key] ?? null),
   setItem: vi.fn((key: string, val: string) => {
     store[key] = val;
@@ -34,13 +34,26 @@ vi.stubGlobal('localStorage', {
       delete store[k];
     }
   }),
+};
+
+vi.stubGlobal('localStorage', localStorageMock);
+Object.defineProperty(globalThis, 'localStorage', {
+  value: localStorageMock,
+  configurable: true,
 });
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'localStorage', {
+    value: localStorageMock,
+    configurable: true,
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 
 let BoardViewer3D: typeof import('../board-viewer-3d').BoardViewer3D;
+let localStorageSetItemSpy: typeof localStorageMock.setItem;
 
 beforeEach(async () => {
   // Reset state
@@ -48,7 +61,13 @@ beforeEach(async () => {
   for (const k of Object.keys(store)) {
     delete store[k];
   }
+  window.localStorage.clear();
   vi.clearAllMocks();
+  // The module-level stub (above) replaces `localStorage` with `localStorageMock`,
+  // a plain object whose `setItem` is its own `vi.fn` — it never routes through
+  // `Storage.prototype`. Assert against the actual function the module calls.
+  localStorageSetItemSpy = localStorageMock.setItem;
+  localStorageSetItemSpy.mockClear();
 
   // Re-import to get clean module
   const mod = await import('../board-viewer-3d');
@@ -254,6 +273,22 @@ describe('Component CRUD', () => {
     expect(comp.pins).toHaveLength(2);
     expect(comp.pins[0].id).toBeDefined();
     expect(comp.pins[0].type).toBe('through-hole');
+  });
+
+  it('should preserve caller-provided pin ids for telemetry overlays', () => {
+    const viewer = BoardViewer3D.getInstance();
+    const comp = viewer.addComponent({
+      refDes: 'U1',
+      package: 'DIP-8',
+      position: { x: 0, y: 0, z: 0 },
+      pins: [
+        { id: 'D2', position: { x: 0, y: 0 }, diameter: 0.5, type: 'through-hole' },
+        { id: 'GND', position: { x: 2.54, y: 0 }, diameter: 0.5, type: 'through-hole' },
+      ],
+    });
+
+    expect(comp.pins.map((pin) => pin.id)).toEqual(['D2', 'GND']);
+    expect(viewer.getComponent(comp.id)?.pins.map((pin) => pin.id)).toEqual(['D2', 'GND']);
   });
 
   it('should add component with label', () => {
@@ -912,7 +947,7 @@ describe('localStorage Persistence', () => {
   it('should save to localStorage on mutation', () => {
     const viewer = BoardViewer3D.getInstance();
     viewer.setBoard({ width: 42, height: 42, thickness: 1.0, cornerRadius: 0 });
-    expect(localStorage.setItem).toHaveBeenCalledWith(
+    expect(localStorageSetItemSpy).toHaveBeenCalledWith(
       'protopulse-board-viewer-3d',
       expect.any(String),
     );
@@ -945,7 +980,8 @@ describe('localStorage Persistence', () => {
   });
 
   it('should handle corrupt localStorage data gracefully', () => {
-    store['protopulse-board-viewer-3d'] = 'not valid json{{';
+    window.localStorage.setItem('protopulse-board-viewer-3d', 'not valid json{{');
+    localStorageSetItemSpy.mockClear();
 
     BoardViewer3D.resetForTesting();
 
@@ -1116,6 +1152,7 @@ describe('Edge Cases', () => {
     for (const k of Object.keys(store)) {
       delete store[k];
     }
+    window.localStorage.clear();
 
     BoardViewer3D.resetForTesting();
     const viewer2 = BoardViewer3D.getInstance();

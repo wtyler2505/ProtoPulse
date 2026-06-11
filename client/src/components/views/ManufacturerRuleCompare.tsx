@@ -149,10 +149,10 @@ function ManufacturerRuleCompareInner({ currentRules, onApplyRules }: Manufactur
   return (
     <div
       data-testid="manufacturer-rule-compare-section"
-      className="bg-card/40 border border-border backdrop-blur-xl shadow-xl p-4 flex flex-col gap-3"
+      className="bg-card/40 border border-border backdrop-blur-xl shadow-xl p-4.5 flex flex-col gap-3.5"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <Factory className="w-4 h-4 text-primary" />
           Manufacturer Rule Compare
@@ -163,7 +163,7 @@ function ManufacturerRuleCompareInner({ currentRules, onApplyRules }: Manufactur
               data-testid="apply-manufacturer-rules"
               variant="outline"
               size="sm"
-              className="h-7 text-xs border-primary text-primary hover:bg-primary/10"
+              className="h-8 text-xs border-primary text-primary hover:bg-primary/10"
               onClick={handleApply}
             >
               <ArrowDown className="w-3 h-3 mr-1" />
@@ -174,12 +174,12 @@ function ManufacturerRuleCompareInner({ currentRules, onApplyRules }: Manufactur
       </div>
 
       {/* Manufacturer Selector */}
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex-shrink-0">
+      <div className="flex items-center gap-2.5">
+        <span className="text-[11px] text-muted-foreground font-semibold flex-shrink-0">
           Compare with:
         </span>
         <Select value={selectedMfg} onValueChange={setSelectedMfg}>
-          <SelectTrigger data-testid="mfg-select" className="h-7 text-xs flex-1 max-w-[200px]">
+          <SelectTrigger data-testid="mfg-select" className="h-8 text-xs flex-1 max-w-[220px]" aria-label="Select manufacturer for rule comparison">
             <SelectValue placeholder="Select manufacturer..." />
           </SelectTrigger>
           <SelectContent>
@@ -204,7 +204,7 @@ function ManufacturerRuleCompareInner({ currentRules, onApplyRules }: Manufactur
       {selectedMfg && diffs.length > 0 && (
         <>
           {/* Summary bar */}
-          <div className="flex items-center gap-3 text-[11px]" data-testid="mfg-comparison-summary">
+          <div className="flex flex-wrap items-center gap-3 text-[11px]" data-testid="mfg-comparison-summary">
             <div className="flex items-center gap-1 text-emerald-500">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>{summary.stricter} stricter</span>
@@ -225,7 +225,7 @@ function ManufacturerRuleCompareInner({ currentRules, onApplyRules }: Manufactur
           <button
             data-testid="mfg-diff-toggle"
             onClick={() => { setExpanded(!expanded); }}
-            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors self-start"
+            className="text-[11px] text-muted-foreground hover:text-foreground transition-colors self-start"
           >
             {expanded ? 'Collapse details' : 'Expand details'}
           </button>

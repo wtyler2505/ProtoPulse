@@ -111,6 +111,7 @@ describe("Storage bucket classifier (Phase 3 Task 3.2 — R4 retro Wave 3)", () 
   });
 
   it("classifies window-event names as 'event-name-not-storage' (NOT a localStorage bucket)", () => {
+    expect(classifyStorageKey("protopulse:chat-draft")).toBe("event-name-not-storage");
     expect(classifyStorageKey("protopulse:chat-send")).toBe("event-name-not-storage");
     expect(classifyStorageKey("protopulse:run-drc")).toBe("event-name-not-storage");
   });

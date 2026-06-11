@@ -11,6 +11,7 @@ import {
   Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/number-input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useProjectId } from '@/lib/project-context';
@@ -428,13 +429,13 @@ export function PcbOrderTrackerPanel() {
               <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="pcb-quantity">
                 Quantity
               </label>
-              <input
+              <NumberInput
                 id="pcb-quantity"
-                type="number"
                 min={1}
+                max={999_999}
                 value={newOrder.quantity}
                 onChange={(e) => { setNewOrder((v) => ({ ...v, quantity: Math.max(1, Number(e.target.value)) })); }}
-                className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
+                className="!w-full !h-auto !rounded-none !border !border-border !bg-card/80 !px-2 !py-1.5 !text-sm !text-foreground !shadow-none"
                 data-testid="input-pcb-quantity"
               />
             </div>
@@ -456,13 +457,13 @@ export function PcbOrderTrackerPanel() {
               <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="pcb-delivery-days">
                 Est. Delivery (days)
               </label>
-              <input
+              <NumberInput
                 id="pcb-delivery-days"
-                type="number"
                 min={0}
+                max={365}
                 value={newOrder.estimatedDeliveryDays}
                 onChange={(e) => { setNewOrder((v) => ({ ...v, estimatedDeliveryDays: Math.max(0, Number(e.target.value)) })); }}
-                className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
+                className="!w-full !h-auto !rounded-none !border !border-border !bg-card/80 !px-2 !py-1.5 !text-sm !text-foreground !shadow-none"
                 data-testid="input-pcb-delivery-days"
               />
             </div>

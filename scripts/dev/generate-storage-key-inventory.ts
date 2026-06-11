@@ -46,8 +46,17 @@ interface InventoryEntry {
 // Window CustomEvent names found via rg — NOT localStorage keys.
 // ───────────────────────────────────────────────────────────────────────────
 const WINDOW_EVENT_NAMES: ReadonlySet<string> = new Set([
+  'protopulse:breadboard-view-in-3d',
+  'protopulse:chat-draft',
   'protopulse:chat-send',
+  'protopulse:digital-twin-repair',
   'protopulse:open-chat-panel',
+  'protopulse:pending-digital-twin-repair',
+  'protopulse:pending-view-in-3d',
+  'protopulse:radial-ai-last-command-changed',
+  'protopulse:radial-command',
+  'protopulse:radial-command-preview',
+  'protopulse:radial-telemetry',
   'protopulse:navigate-knowledge',
   'protopulse:schematic-focus-parts-panel',
   'protopulse:schematic-focus-power-panel',
@@ -56,8 +65,11 @@ const WINDOW_EVENT_NAMES: ReadonlySet<string> = new Set([
   'protopulse:focus-component-search',
   'protopulse:place-component-instance',
   'protopulse:view-onboarding',
+  'protopulse:view-in-3d',
   'protopulse:export',
   'protopulse:bom-snapshot-cost',
+  'protopulse:jit-skill-run',
+  'protopulse:jit-skill-updated',
   // R4.5 fix #2: Wave 5 introduced this CustomEvent in handle-project-open-outcome.ts:49.
   'protopulse:project-open-prompt-replace',
   'protopulse:open-project-from-file',
@@ -72,6 +84,7 @@ const IGNORED_LITERALS: ReadonlySet<string> = new Set([
   'protopulse_staging',    // same
   'protopulse-power',      // drag MIME substring
   'protopulse-architecture-bundle', // ArchitectureView payload type, not localStorage
+  'protopulse_gold',       // component trust-level literal, not storage
 ]);
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -84,6 +97,8 @@ const CURATED: Record<string, { bucket: StorageBucket; sensitive: boolean }> = {
   'protopulse-ai-api-key':                       { bucket: 'session-auth', sensitive: true },
   'protopulse-ai-api-key-gemini':                { bucket: 'session-auth', sensitive: true },
   'protopulse-ai-api-key-gemini-scratch':        { bucket: 'session-auth', sensitive: true },
+  'protopulse-ai-api-key-openai':                { bucket: 'session-auth', sensitive: true },
+  'protopulse-ai-api-key-openai-scratch':        { bucket: 'session-auth', sensitive: true },
   'protopulse-google-workspace-token':           { bucket: 'session-auth', sensitive: true },
   'protopulse-google-workspace-token-scratch':   { bucket: 'session-auth', sensitive: true },
   'protopulse:public-api:keys':                  { bucket: 'session-auth', sensitive: true },
@@ -123,6 +138,8 @@ const CURATED: Record<string, { bucket: StorageBucket; sensitive: boolean }> = {
   'protopulse-hidden-projects':                  { bucket: 'user-prefs', sensitive: false },
   'protopulse-mobile-review-config':             { bucket: 'user-prefs', sensitive: false },
   'protopulse-ratsnest-filter':                  { bucket: 'user-prefs', sensitive: false },
+  'protopulse-radial-preferences-v1':            { bucket: 'user-prefs', sensitive: false },
+  'protopulse-migration:user-settings-store-v1': { bucket: 'user-prefs', sensitive: false },
 
   // ─── project-data (project-scoped state) ────────────────────────────────
   // Unprefixed legacy asset keys + legacy sessionId
@@ -179,6 +196,8 @@ const CURATED: Record<string, { bucket: StorageBucket; sensitive: boolean }> = {
   'protopulse-deployment-profiles':              { bucket: 'project-data', sensitive: false },
   'protopulse-dfm-checker':                      { bucket: 'project-data', sensitive: false },
   'protopulse-healing-config':                   { bucket: 'project-data', sensitive: false },
+  'protopulse-migration:kanban-state-store-v1':  { bucket: 'project-data', sensitive: false },
+  'protopulse-migration:design-variables-store-v1': { bucket: 'project-data', sensitive: false },
 
   // ─── history-cache (time-bound retention) ───────────────────────────────
   'protopulse-memory-history':                   { bucket: 'history-cache', sensitive: false },

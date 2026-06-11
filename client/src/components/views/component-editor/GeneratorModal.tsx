@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
@@ -198,11 +199,11 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
           {(packageType === 'dip' || packageType === 'soic' || packageType === 'qfp') && (
             <div className="space-y-2">
               <Label htmlFor="pin-count">Pin Count</Label>
-              <Input
+              <NumberInput
                 id="pin-count"
                 data-testid="input-pin-count"
-                type="number"
                 min={packageType === 'qfp' ? 4 : 2}
+                max={500}
                 step={packageType === 'qfp' ? 4 : 2}
                 value={pinCount}
                 onChange={(e) => setPinCount(Math.max(2, parseInt(e.target.value) || 2))}
@@ -213,11 +214,11 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
           {(packageType === 'dip' || packageType === 'soic' || packageType === 'qfp' || packageType === 'header') && (
             <div className="space-y-2">
               <Label htmlFor="pitch">Pitch (mm)</Label>
-              <Input
+              <NumberInput
                 id="pitch"
                 data-testid="input-pitch"
-                type="number"
                 min={0.1}
+                max={10}
                 step={0.01}
                 value={round2(pitch)}
                 onChange={(e) => setPitch(round2(Math.max(0.1, parseFloat(e.target.value) || 0.1)))}
@@ -228,11 +229,11 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
           {packageType === 'dip' && (
             <div className="space-y-2">
               <Label htmlFor="row-spacing">Row Spacing (mm)</Label>
-              <Input
+              <NumberInput
                 id="row-spacing"
                 data-testid="input-row-spacing"
-                type="number"
                 min={1}
+                max={100}
                 step={0.01}
                 value={round2(bodyWidth)}
                 onChange={(e) => setBodyWidth(Math.max(1, parseFloat(e.target.value) || 1))}
@@ -243,11 +244,11 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
           {packageType === 'qfp' && (
             <div className="space-y-2">
               <Label htmlFor="body-size">Body Size (mm)</Label>
-              <Input
+              <NumberInput
                 id="body-size"
                 data-testid="input-body-size"
-                type="number"
                 min={1}
+                max={100}
                 step={0.1}
                 value={bodySize}
                 onChange={(e) => setBodySize(Math.max(1, parseFloat(e.target.value) || 1))}
@@ -259,22 +260,22 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
             <>
               <div className="space-y-2">
                 <Label htmlFor="cols">Columns</Label>
-                <Input
+                <NumberInput
                   id="cols"
                   data-testid="input-cols"
-                  type="number"
                   min={1}
+                  max={100}
                   value={cols}
                   onChange={(e) => setCols(Math.max(1, parseInt(e.target.value) || 1))}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="rows">Rows</Label>
-                <Input
+                <NumberInput
                   id="rows"
                   data-testid="input-rows"
-                  type="number"
                   min={1}
+                  max={100}
                   value={rows}
                   onChange={(e) => setRows(Math.max(1, parseInt(e.target.value) || 1))}
                 />

@@ -10,7 +10,7 @@ import {
   EdgeLabelRenderer,
   type EdgeProps,
   type Edge,
-} from '@xyflow/react';
+} from '@/lib/xyflow-compat';
 import type { NetType } from '@shared/circuit-types';
 import { useSimulation } from '@/lib/contexts/simulation-context';
 import { formatSIValue } from '@/lib/simulation/visual-state';
@@ -30,7 +30,7 @@ export interface NetEdgeData {
   netId?: number;
   /** BL-0489: Callback to rename the net via inline editing */
   onNetNameChange?: (netId: number, newName: string) => void;
-  [key: string]: unknown; // Required by @xyflow/react — all edge data types must be indexable
+  [key: string]: unknown; // Required by canvas edge contracts — edge data types must be indexable
 }
 
 const SchematicNetEdge = memo(function SchematicNetEdge({

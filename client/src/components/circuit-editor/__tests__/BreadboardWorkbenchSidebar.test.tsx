@@ -65,7 +65,9 @@ function baseProps() {
 describe('BreadboardWorkbenchSidebar', () => {
   it('renders root aside container', () => {
     renderWithProviders(<BreadboardWorkbenchSidebar {...baseProps()} />);
-    expect(screen.getByTestId('breadboard-workbench')).toBeInTheDocument();
+    const workbench = screen.getByRole('complementary', { name: /breadboard workbench sidebar/i });
+    expect(workbench).toBeInTheDocument();
+    expect(workbench).toHaveAttribute('tabindex', '0');
   });
 
   it('renders stat chips reflecting totals from benchSummary', () => {

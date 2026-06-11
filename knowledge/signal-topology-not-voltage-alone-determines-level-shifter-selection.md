@@ -34,6 +34,7 @@ Beginners approach level shifting as a voltage-matching problem: "my MCU is 3.3V
 - **SPI MISO in bidirectional SPI with >1MHz clock:** TXS0108E. BSS138's body-diode path is the bottleneck — see [[bss138-switching-speed-caps-at-400khz-making-it-unsuitable-for-fast-spi-and-high-speed-push-pull-signals]].
 - **UART (unidirectional per wire, push-pull, <1MHz):** voltage divider for TX→RX, direct connection or buffer for RX→TX. Doesn't need a full shifter.
 - **NeoPixel data (unidirectional, push-pull, strict timing at 800kHz):** 74HCT125 or 74HCT245. BSS138 edge rates corrupt timing; TXS0108E auto-detect adds jitter.
+- **BLDC controller control signals (unidirectional, push-pull, 1-20kHz PWM):** TXS0108E. For signals like EL (PWM), Z/F, CT, and STOP on a ZS-X11H, BSS138 edge rates fail the tight controller sampling window despite being under 400kHz. The TXS0108E active one-shot drives clean edges for precise PWM control.
 - **BLDC controller Hall outputs (bidirectional, push-pull, low-kHz commutation, 5V→3.3V):** TXS0108E. Controllers buffer raw Hall signals into push-pull outputs — see [[bldc-controller-hall-sensor-outputs-are-push-pull-digital-making-txs-class-shifters-the-correct-bridge-to-3v3-mcus]]. BSS138 degrades push-pull edges; 74HCT buffer is unidirectional and loses closed-loop capability.
 - **I2S (bidirectional continuous clock, push-pull, 1-3MHz):** none — see [[i2s-timing-requirements-make-level-shifting-a-non-solution-for-voltage-incompatible-mcus]]. Must use voltage-native peripherals.
 

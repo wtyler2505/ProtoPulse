@@ -46,12 +46,12 @@ export function validateMessageInput(
 }
 
 // ---------------------------------------------------------------------------
-// buildChatRequestBody — construct the JSON payload sent to /api/chat/ai/stream.
+// buildChatRequestBody — construct the JSON payload sent to the selected stream endpoint.
 // Mirrors exactly the shape the previous inline code produced, including the
 // BL-0003 rule that server-stored keys mean we do NOT ship the raw key.
 // ---------------------------------------------------------------------------
 export interface ChatRequestSnapshot {
-  aiProvider: 'gemini';
+  aiProvider: 'gemini' | 'openai';
   aiModel: string;
   aiApiKey: string;
   aiTemperature: number;

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BomItem, ValidationIssue } from '@/lib/project-context';
-import type { Edge, Node } from '@xyflow/react';
+import type { GraphEdge, GraphNode } from '@/lib/graph-types';
 
 let mockBom: BomItem[] = [
   {
@@ -28,7 +28,7 @@ let mockIssues: ValidationIssue[] = [
   },
 ];
 
-let mockNodes: Node[] = [
+let mockNodes: GraphNode[] = [
   {
     id: 'n-1',
     type: 'mcu',
@@ -40,7 +40,7 @@ let mockNodes: Node[] = [
   },
 ];
 
-let mockEdges: Edge[] = [
+let mockEdges: GraphEdge[] = [
   {
     id: 'e-1',
     source: 'n-1',

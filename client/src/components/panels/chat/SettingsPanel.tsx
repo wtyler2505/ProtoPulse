@@ -13,8 +13,8 @@ interface AIModel {
 }
 
 interface SettingsPanelProps {
-  aiProvider: 'gemini';
-  setAiProvider: (provider: 'gemini') => void;
+  aiProvider: 'gemini' | 'openai';
+  setAiProvider: (provider: 'gemini' | 'openai') => void;
   aiModel: string;
   setAiModel: (model: string) => void;
   aiApiKey: string;
@@ -103,7 +103,22 @@ function SettingsPanel({
         </div>
       )}
 
-      
+      <div>
+        <label htmlFor="settings-provider" className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Provider</label>
+        <div className="relative">
+          <select
+            id="settings-provider"
+            data-testid="provider-select"
+            value={aiProvider}
+            onChange={(e) => setAiProvider(e.target.value as 'gemini' | 'openai')}
+            className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-8 appearance-none focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+          >
+            <option value="gemini" className="bg-background text-foreground">Google Gemini</option>
+            <option value="openai" className="bg-background text-foreground">OpenAI</option>
+          </select>
+          <ChevronDown className="w-4 h-4 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
+      </div>
 
       <div>
         <label htmlFor="settings-model" className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Model</label>
@@ -115,7 +130,7 @@ function SettingsPanel({
             onChange={(e) => setAiModel(e.target.value)}
             className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-8 appearance-none focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50"
           >
-            {AI_MODELS.gemini.map((m: AIModel) => (
+            {AI_MODELS[aiProvider].map((m: AIModel) => (
               <option key={m.id} value={m.id} className="bg-background text-foreground">{m.label}</option>
             ))}
           </select>
@@ -223,7 +238,14 @@ function SettingsPanel({
         )}
         <p className="text-[10px] text-muted-foreground/60 mt-1.5">
           Need a key?{' '}
-          <a href="https://aistudio.google.dev/apikeys" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline hover:text-white">aistudio.google.dev/apikeys</a>
+          <a
+            href={aiProvider === 'openai' ? 'https://platform.openai.com/api-keys' : 'https://aistudio.google.dev/apikeys'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary/70 underline hover:text-white"
+          >
+            {aiProvider === 'openai' ? 'platform.openai.com/api-keys' : 'aistudio.google.dev/apikeys'}
+          </a>
         </p>
         <p className="text-[11px] text-amber-500 font-medium mt-1">
           Key is stored in browser localStorage (unencrypted).

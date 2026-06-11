@@ -34,6 +34,7 @@ import {
   type StreamAccumulator,
   type StreamEvent,
 } from './chat/lib/handleSendHelpers';
+import { buildJitSkillChatMessage } from './chat/lib/jitSkillEvent';
 import MessageBubble from './chat/MessageBubble';
 import SettingsPanel from './chat/SettingsPanel';
 import ChatHeader from './chat/ChatHeader';
@@ -65,6 +66,7 @@ import { ACTION_LABELS } from './chat/constants';
 import SafetyConfirmDialog from './SafetyConfirmDialog';
 import { buildChatActionTrustReceipt } from '@/lib/trust-receipts';
 import { logger } from '@/lib/logger';
+import { RADIAL_AI_CHAT_DRAFT_EVENT } from '@/lib/radial-ai-commands';
 
 /** Maximum number of SSE reconnection attempts on network failure. */
 const SSE_MAX_RETRIES = 3;
@@ -159,45 +161,45 @@ const MessageList = memo(function MessageList({
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto p-4 relative" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto p-2 relative" ref={scrollRef}>
         {filteredMessages.length === 0 && !chatSearch && (
-          <div className="flex flex-col items-center justify-center h-full text-center p-4">
-            <Bot className="w-10 h-10 mb-4 text-primary/50" />
+          <div className="flex flex-col items-center justify-center h-full text-center p-2">
+            <Bot className="w-8 h-8 mb-3 text-primary/50" />
             <p className="text-sm font-medium mb-1">ProtoPulse AI Assistant</p>
-            <p className="text-xs text-muted-foreground mb-6 max-w-[250px]">
+            <p className="text-xs text-muted-foreground mb-3 max-w-[240px]">
               Describe what you want to build, or choose a template below to get started.
             </p>
             
-            <div className="grid grid-cols-1 gap-2 w-full max-w-[280px]">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1 text-left">Design & Architecture</div>
+            <div className="grid grid-cols-1 gap-1.5 w-full max-w-[270px]">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-0.5 text-left">Design & Architecture</div>
               <button
                 onClick={() => handleSendSuggestion('Generate a complete architecture for a new IoT sensor node.')}
-                className="px-3 py-2 bg-muted/20 border border-border/50 text-xs text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-2"
+                className="px-2 py-1.5 bg-muted/20 border border-border/50 text-xs text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
                 Generate new architecture
               </button>
               
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-3 mb-1 text-left">Review & Optimization</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-2.5 mb-0.5 text-left">Review & Optimization</div>
               <button
                 onClick={() => handleSendSuggestion('Analyze my current BOM and suggest cost cuts without sacrificing quality.')}
-                className="px-3 py-2 bg-muted/20 border border-border/50 text-xs text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-2"
+                className="px-2 py-1.5 bg-muted/20 border border-border/50 text-xs text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                 Find BOM cost cuts
               </button>
               <button
                 onClick={() => handleSendSuggestion('Review my schematic for missing decoupling capacitors or floating pins.')}
-                className="px-3 py-2 bg-muted/20 border border-border/50 text-xs text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-2"
+                className="px-2 py-1.5 bg-muted/20 border border-border/50 text-xs text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                 Review schematic errors
               </button>
 
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-3 mb-1 text-left">Testing & Validation</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-2.5 mb-0.5 text-left">Testing & Validation</div>
               <button
                 onClick={() => handleSendSuggestion('Generate a comprehensive test plan for this board.')}
-                className="px-3 py-2 bg-muted/20 border border-border/50 text-xs text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-2"
+                className="px-2 py-1.5 bg-muted/20 border border-border/50 text-xs text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
                 Generate test plan
@@ -207,7 +209,7 @@ const MessageList = memo(function MessageList({
         )}
 
         {chatSearch && filteredMessages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center p-6 opacity-50">
+          <div className="flex flex-col items-center justify-center h-full text-center p-4 opacity-50">
             <Search className="w-8 h-8 mb-3 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">No messages matching &quot;{chatSearch}&quot;</p>
           </div>
@@ -262,9 +264,9 @@ const MessageList = memo(function MessageList({
           onClick={scrollToBottom}
           data-testid="scroll-to-bottom"
           aria-label="Scroll to bottom"
-          className="absolute bottom-32 right-6 w-8 h-8 bg-primary/20 border border-primary/40 text-primary flex items-center justify-center hover:bg-primary/30 transition-colors z-10 shadow-lg"
+          className="absolute bottom-22 right-4 w-7 h-7 bg-primary/20 border border-primary/40 text-primary flex items-center justify-center hover:bg-primary/30 transition-colors z-10 shadow-lg"
         >
-          <ArrowDown className="w-4 h-4" />
+          <ArrowDown className="w-3.5 h-3.5" />
         </button>
       )}
     </>
@@ -493,7 +495,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const sendStateRef = useRef<{
     input: string;
     aiApiKey: string;
-    aiProvider: 'gemini';
+    aiProvider: 'gemini' | 'openai';
     aiModel: string;
     aiTemperature: number;
     customSystemPrompt: string;
@@ -662,9 +664,13 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       );
 
       // --- Fetch with exponential-backoff retry on network errors ----------
+      const streamEndpoint = s.aiProvider === 'openai'
+        ? '/api/chat/ai/openai/stream'
+        : '/api/chat/ai/stream';
+
       const fetchWithRetry = async (retries = 0): Promise<Response> => {
         try {
-          return await fetch('/api/chat/ai/stream', {
+          return await fetch(streamEndpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -853,6 +859,46 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
   useEffect(() => {
     const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string }>).detail;
+      const draft = detail?.message;
+      if (!draft || draft.trim().length === 0) {
+        return;
+      }
+
+      setInput(draft);
+      setShowDesignAgent(false);
+
+      const focusDraft = () => {
+        resizeTextarea();
+        textareaRef.current?.focus();
+        textareaRef.current?.setSelectionRange(draft.length, draft.length);
+      };
+
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(focusDraft);
+      } else {
+        setTimeout(focusDraft, 0);
+      }
+    };
+
+    window.addEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, handler);
+    return () => window.removeEventListener(RADIAL_AI_CHAT_DRAFT_EVENT, handler);
+  }, [resizeTextarea, setInput, setShowDesignAgent]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ command?: string; ruleType?: string; violationId?: string }>).detail;
+      const message = buildJitSkillChatMessage(detail);
+      if (message) {
+        void handleSend(message);
+      }
+    };
+    window.addEventListener('protopulse:jit-skill-run', handler);
+    return () => window.removeEventListener('protopulse:jit-skill-run', handler);
+  }, [handleSend]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ designAgent?: boolean; prompt?: string }>).detail;
       if (detail?.designAgent) {
         setShowDesignAgent(true);
@@ -917,7 +963,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       suggestions.push('Project Summary', 'Show Help');
     }
 
-    return suggestions.slice(0, 3);
+    return [...new Set(suggestions)].slice(0, 3);
   }, [messages, nodes]);
 
   const acceptPendingActions = useCallback(() => {
@@ -978,7 +1024,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     if (!aiApiKey) return true;
     // Sentinel '********' means server has the real key — always valid
     if (aiApiKey === '********' || aiApiKey === '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022') return true;
-    if (aiProvider === 'gemini') return aiApiKey.length >= 20;
+    if (aiProvider === 'gemini' || aiProvider === 'openai') return aiApiKey.length >= 20;
     return true;
   }, [aiApiKey, aiProvider]);
 
@@ -992,11 +1038,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         className="hidden lg:flex flex-col items-center w-10 h-full bg-card/60 backdrop-blur-xl border-l border-border shrink-0 cursor-pointer transition-all duration-300"
         onClick={onToggleCollapse}
       >
-        <div className="h-14 flex items-center justify-center border-b border-border w-full">
-          <Sparkles className="w-4 h-4 text-primary" />
+        <div className="h-11 flex items-center justify-center border-b border-border w-full">
+          <Sparkles className="w-3.5 h-3.5 text-primary" />
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground" style={VERTICAL_TEXT_STYLE}>
+          <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground" style={VERTICAL_TEXT_STYLE}>
             AI Assistant
           </span>
         </div>
@@ -1033,13 +1079,13 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           />
 
           {/* Design Agent / Chat tab switcher */}
-          <div className="flex border-b border-border text-xs shrink-0">
+          <div className="flex border-b border-border text-[11px] shrink-0">
             <button
               data-testid="chat-tab-chat"
               type="button"
               onClick={() => setShowDesignAgent(false)}
               className={cn(
-                'flex-1 py-1.5 text-center transition-colors',
+                'flex-1 py-1 text-center transition-colors',
                 !showDesignAgent ? 'text-primary border-b border-primary' : 'text-muted-foreground hover:text-foreground',
               )}
             >
@@ -1050,11 +1096,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
               type="button"
               onClick={() => setShowDesignAgent(true)}
               className={cn(
-                'flex-1 py-1.5 text-center transition-colors flex items-center justify-center gap-1',
+                'flex-1 py-1 text-center transition-colors flex items-center justify-center gap-1',
                 showDesignAgent ? 'text-primary border-b border-primary' : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              <Bot className="w-3 h-3" />
+              <Bot className="w-2.5 h-2.5" />
               Design Agent
             </button>
           </div>
@@ -1110,7 +1156,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
           {/* Settings slide-over — overlays messages instead of replacing them */}
           {showSettings && (
-            <div className="absolute inset-0 top-14 z-20 flex flex-col">
+            <div className="absolute inset-0 top-12 z-20 flex flex-col">
               <div
                 className="absolute inset-0 bg-background/60 backdrop-blur-sm"
                 onClick={() => setShowSettings(false)}

@@ -29,7 +29,7 @@ function CircuitSelectorDropdown({ className }: { className?: string }) {
   if (isLoading) {
     return (
       <div
-        className={cn('flex items-center gap-2 text-[10px] text-muted-foreground/60', className)}
+        className={cn('flex items-center gap-1.5 text-[10px] text-muted-foreground/60', className)}
         data-testid="circuit-selector-loading"
       >
         <CircuitBoard className="w-3.5 h-3.5 animate-pulse" />
@@ -41,7 +41,7 @@ function CircuitSelectorDropdown({ className }: { className?: string }) {
   if (!circuits || circuits.length === 0) {
     return (
       <div
-        className={cn('flex items-center gap-2 text-[10px] text-muted-foreground/50', className)}
+        className={cn('flex items-center gap-1.5 text-[10px] text-muted-foreground/50', className)}
         data-testid="circuit-selector-empty"
       >
         <CircuitBoard className="w-3.5 h-3.5" />
@@ -54,7 +54,7 @@ function CircuitSelectorDropdown({ className }: { className?: string }) {
   if (circuits.length === 1) {
     return (
       <div
-        className={cn('flex items-center gap-2 text-[10px] text-muted-foreground', className)}
+        className={cn('flex items-center gap-1.5 text-[10px] text-muted-foreground', className)}
         data-testid="circuit-selector-single"
       >
         <CircuitBoard className="w-3.5 h-3.5 text-primary/70" />
@@ -64,7 +64,7 @@ function CircuitSelectorDropdown({ className }: { className?: string }) {
   }
 
   return (
-    <div className={cn('flex items-center gap-2', className)} data-testid="circuit-selector">
+    <div className={cn('flex items-center gap-1.5', className)} data-testid="circuit-selector">
       <CircuitBoard className="w-3.5 h-3.5 text-primary/70 shrink-0" />
       <Select
         value={selected ? String(selected.circuitId) : undefined}
@@ -77,7 +77,7 @@ function CircuitSelectorDropdown({ className }: { className?: string }) {
         }}
       >
         <SelectTrigger
-          className="h-7 text-[11px] bg-muted/30 border-border/50 px-2 py-0"
+          className="h-6 text-[10px] bg-muted/30 border-border/50 px-1.5 py-0"
           data-testid="circuit-selector-trigger"
           aria-label="Select circuit for export"
         >

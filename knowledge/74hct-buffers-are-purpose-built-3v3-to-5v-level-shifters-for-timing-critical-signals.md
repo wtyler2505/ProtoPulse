@@ -13,10 +13,16 @@ verified: false
 
 The 74HCT logic family (HCT = High-speed CMOS with TTL-compatible inputs) has a key property: the logic HIGH threshold is ~1.4V (TTL-compatible), far below the standard CMOS threshold of ~2.5V at 5V supply. This means 3.3V logic outputs are comfortably recognized as HIGH.
 
-**Why this matters for WS2812B + ESP32:**
+**Use Case 1: WS2812B NeoPixels + ESP32**
 - The WS2812B data spec requires logic HIGH > 0.7 * VDD = 3.5V when powered at 5V.
 - The ESP32 outputs 3.3V, which is below this threshold.
-- A 74HCT125 (single channel) or 74HCT245 (8 channels) placed between the ESP32 output and the NeoPixel DIN converts 3.3V logic to clean 5V logic, meeting the WS2812B spec.
+- A 74HCT125 (single channel) or 74HCT245 (8 channels) placed between the ESP32 output and the NeoPixel DIN converts 3.3V logic to clean 5V logic, meeting the WS2812B spec. The WS2812B data line is strictly unidirectional (MCU → LED), making the 74HCT the correct choice by design.
+
+**Use Case 2: ZS-X11H Motor Control Signals + ESP32**
+- The ZS-X11H BLDC controller expects 5V TTL logic for its control inputs (EL/PWM, Z/F, CT, STOP).
+- A 74HCT245 provides the cleanest level shifting for these unidirectional signals (especially the fast PWM speed signal).
+- The required control wiring is: `ESP32 GPIO → 74HCT245 input (A side) → 74HCT245 output (B side) → ZS-X11H` with `VCC = 5V`, `DIR = HIGH` (A→B direction), and `OE = LOW` (outputs enabled).
+- **Sizing Guidance:** An 8-channel 74HCT245 is overkill for just 4 signals, making a TXS0108E a common choice for a single motor setup despite being bidirectional. However, when scaling up to multiple motors, the 74HCT245 becomes the most efficient and robust choice.
 
 **Comparison with other level shifters in the inventory:**
 | Shifter | Direction | Speed | NeoPixel Suitability |

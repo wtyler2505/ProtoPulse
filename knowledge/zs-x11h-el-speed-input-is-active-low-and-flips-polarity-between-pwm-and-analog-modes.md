@@ -25,6 +25,8 @@ The three reference points of this mapping make the relationship unambiguous:
 
 The ready-to-use wrapper hides the inversion from the rest of the firmware so application code can think in normal "0=stop, 255=full" terms:
 
+### Arduino Implementation
+
 ```cpp
 // PIN_SPEED is connected to ZS-X11H EL (active-LOW PWM)
 void setMotorSpeed(int desiredSpeed) {
@@ -34,13 +36,31 @@ void setMotorSpeed(int desiredSpeed) {
 }
 ```
 
+### ESP32 Implementation
+
+Because the ESP32 lacks `analogWrite`, it uses the LEDC peripheral. The same inversion pattern applies, but with explicit channel initialization. Notice the safe boot initialization (`ledcWrite(PWM_CHANNEL, 255)`) which forces the motor stopped before enabling the STOP pin.
+
+```cpp
+// Setup:
+ledcSetup(PWM_CHANNEL, 1000, 8); // 1kHz, 8-bit resolution
+ledcAttachPin(PIN_SPEED, PWM_CHANNEL);
+// Safe initialization: force constant HIGH (0% drive) = stopped
+ledcWrite(PWM_CHANNEL, 255);
+
+// Wrapper:
+void setMotorSpeed(int desiredSpeed) {
+  // Invert for active-LOW EL input
+  ledcWrite(PWM_CHANNEL, 255 - constrain(desiredSpeed, 0, 255));
+}
+```
+
 Using this wrapper throughout the codebase means the inversion lives in exactly one place; any future firmware that wants to read like a normal-polarity motor controller just calls `setMotorSpeed(0..255)` and is isolated from the ZS-X11H quirk.
 
 **Second trap: analogWrite(255) is NOT stop.** Because Arduino's `analogWrite(pin, 255)` outputs a constant LOW (not a 100% duty cycle HIGH), the controller reads it as "always active" and runs at full speed. And `analogWrite(pin, 0)` outputs a constant HIGH, which the controller reads as "never active" and stops. This is a subtle platform interaction where the Arduino PWM implementation and the controller's active-LOW logic conspire to produce behavior opposite to what the code appears to say.
 
 **Third trap: analog mode inverts the convention.** If you feed a DC voltage (0-5V) to EL instead of PWM, the mapping is normal: 0V = stop, 5V = full speed. This is the opposite of PWM mode's LOW=fast convention. A beginner who learns the analog behavior and then switches to PWM (or vice versa) will get the motor running at full speed unexpectedly.
 
-**The safe startup pattern:** Always set EL to constant HIGH (`analogWrite(EL_PIN, 0)` or `digitalWrite(EL_PIN, HIGH)`) before enabling the controller via the STOP pin. Then ramp the inverted PWM value down gradually from 255 toward 0. Never leave EL floating -- it has no pull-up, and a floating input on an active-LOW system means the motor may default to full speed.
+**The safe startup pattern:** Always set EL to constant HIGH (`analogWrite(EL_PIN, 0)` or `digitalWrite(EL_PIN, HIGH)`) before enabling the controller via the STOP pin. Then ramp the inverted PWM value down gradually from 255 toward 0. [[el-pin-floating-at-mcu-boot-defaults-the-motor-to-full-speed-so-explicit-high-initialization-is-mandatory-before-stop-is-enabled|Never leave EL floating]] -- it has no pull-up, and a floating input on an active-LOW system means the motor may default to full speed.
 
 **ProtoPulse implication:** When the bench coach detects a ZS-X11H in the schematic connected to an Arduino PWM pin, it should: (1) warn about the active-LOW convention, (2) auto-generate the inversion wrapper, and (3) flag if the code uses raw `analogWrite` without inversion. This is exactly the kind of mistake that since [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]], the AI should catch before the motor spins unexpectedly.
 
@@ -49,6 +69,7 @@ Using this wrapper throughout the codebase means the inversion lives in exactly 
 Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
 
 Relevant Notes:
+- [[el-pin-floating-at-mcu-boot-defaults-the-motor-to-full-speed-so-explicit-high-initialization-is-mandatory-before-stop-is-enabled]] -- explicit boot-time mitigation for the floating EL hazard
 - [[bldc-stop-active-low-brake-active-high]] -- the STOP/BRAKE polarity traps on the same controller family
 - [[each-actuator-type-requires-a-fundamentally-different-control-signal-paradigm]] -- BLDC PWM is not the same as DC motor PWM, and this active-LOW convention makes it even more alien
 - [[hall-sensor-wiring-order-matters-for-bldc]] -- another wiring trap where wrong connections produce unexpected motor behavior

@@ -1,0 +1,2389 @@
+## Baseline Metrics
+
+| Metric | Value |
+|--------|-------|
+| Total files | 5679 |
+| Total LOC | 1379248 |
+| Languages | Markdown, TypeScript, JSON, Shell, Plain Text, JavaScript, CSS, TOML, Python, HTML, Rust, SQL, YAML, SVG |
+| Avg complexity | N/A |
+| Test files | N/A |
+| COCOMO estimate | N/A |
+| Git commits (30d) | N/A |
+| Open issues | N/A |
+| Contributors | N/A |
+# Phase 1: Current State Inventory -- ProtoPulse
+
+> Generated: 2026-02-28 | Refined: 2026-02-28 (cross-phase integration)
+
+## Executive Summary
+
+ProtoPulse is a browser-based AI-assisted EDA (Electronic Design Automation) platform with 250 TypeScript source files totaling 57,265 LOC across client (39,163 LOC) and server (18,750 LOC). It features 10 workspace views, 115 REST API endpoints, 78 AI-callable tools, 17 database tables, 12 export generators, a dual AI provider system (Anthropic + Gemini), and a SPICE simulation engine. The platform is substantially built but has notable gaps in real-time collaboration, multi-project support, and actual hardware integration (e.g., live stock checking, ECAD import).
+
+### Key Cross-Phase Findings (integrated from Phases 2-5)
+
+- **12 god files >1000 lines** resist safe modification — features in these files carry compounding risk (see God File Map below)
+- **ai-tools.ts** (1,677 LOC) is the second-largest file in the codebase — adding more AI tools here is impractical. See TD-09.
+- **parseLocalIntent.ts** has CCN=102 — the local AI mode feature has extreme complexity for its size (294 lines)
+- **ShapeCanvas.tsx** has aggregate CCN=381 across 6 functions >CCN 20 — the highest complexity component in the codebase
+- **Dual export system** has active overlap — monolith serves AI tools, modular system serves circuit routes
+- **ProjectProvider** has been split into 8 domain contexts, but the architecture-context alone exposes 27+ state values with 6 useState hooks — re-render storms persist within domains. See TD-07.
+- **ALL procurement data is AI-simulated** — zero real supplier APIs integrated, making the procurement tab a demonstration feature only. See EN-13 recalibration.
+
+---
+
+## Feature Inventory
+
+### Architecture / Block Diagram Editor
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| Node-based block diagram editor | **Mature** | `client/src/components/views/ArchitectureView.tsx`, `@xyflow/react` with ReactFlow, Background, Controls, MiniMap, useNodesState, useEdgesState, useReactFlow, useViewport | Full xyflow integration with custom node types, minimap, controls |
+| Custom node rendering | **Functional** | `client/src/components/views/CustomNode.tsx` | Custom block diagram nodes with Handle/Position |
+| Edge connections with metadata | **Functional** | `shared/schema.ts:51-68` - signalType, voltage, busWidth, netName fields | Rich edge metadata for signal characterization |
+| Auto-layout algorithms | **Functional** | AI tool `auto_layout` supports hierarchical, grid, circular, force layouts | AI-driven, not a native graph layout engine |
+| Architecture-to-circuit expansion | **Functional** | AI tool `expand_architecture_to_circuit` | Bridges block diagram to schematic |
+| Subcircuit templates | **Functional** | AI tool `add_subcircuit`, `SUBCIRCUIT_TEMPLATES` in `useActionExecutor.ts:1299 LOC` | Template-based circuit insertion. **Note: useActionExecutor is a god file (1,299 LOC)** |
+| Clipboard (copy JSON/summary) | **Functional** | AI tools `copy_architecture_json`, `copy_architecture_summary` | AI-mediated clipboard, not native Ctrl+C |
+
+### Schematic Capture (Phase 10)
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| Schematic canvas with React Flow | **Functional** | `client/src/components/circuit-editor/SchematicCanvas.tsx`, `SchematicView.tsx` | Full schematic editor with custom nodes |
+| Component instance placement | **Functional** | `ComponentPlacer.tsx`, `SchematicInstanceNode.tsx` | Drag-and-place components |
+| Net drawing tool | **Functional** | `NetDrawingTool.tsx`, `SchematicNetEdge.tsx` | Wire/net drawing with custom edge rendering |
+| Power symbol palette | **Functional** | `PowerSymbolPalette.tsx`, `SchematicPowerNode.tsx` | VCC, GND, etc. |
+| Net labels | **Functional** | `SchematicNetLabelNode.tsx`, AI tool `add_net_label` | Named net labels |
+| No-connect markers | **Functional** | `SchematicNoConnectNode.tsx`, AI tool `place_no_connect` | X markers for unconnected pins |
+| Multi-sheet schematic | **Functional** | AI tools `create_sheet`, `rename_sheet`, `move_to_sheet`, `switch_schematic_sheet` | Sheet management via AI |
+| Hierarchical sheets | **Partial** | `HierarchicalSheetPanel.tsx` | UI exists but limited to panel view |
+| ERC (Electrical Rules Check) | **Functional** | `ERCPanel.tsx`, `ERCOverlay.tsx`, `erc-engine.ts` (client), AI tool `run_erc` | Client-side ERC engine with overlay visualization |
+| Wire routing engine | **Functional** | `client/src/lib/circuit-editor/wire-router.ts` | Automated wire routing |
+| Schematic toolbar | **Functional** | `SchematicToolbar.tsx`, `ToolButton.tsx` | Tool selection UI |
+
+### Breadboard View
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| Virtual breadboard | **Functional** | `client/src/components/circuit-editor/BreadboardView.tsx` | Breadboard wiring visualization |
+| Breadboard model | **Functional** | `client/src/lib/circuit-editor/breadboard-model.ts` | Bus strip logic, row/column mapping |
+| Breadboard wire placement | **Functional** | AI tool `place_breadboard_wire` | AI-assisted wiring |
+
+### PCB Layout View
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| PCB layout editor | **Partial** | `client/src/components/circuit-editor/PCBLayoutView.tsx` | Component placement with front/back sides. **Phase 4: CCN=135 — 9x danger threshold. Blocks all PCB feature development.** |
+| PCB trace drawing | **Partial** | AI tool `draw_pcb_trace` | AI-driven, no manual interactive routing |
+| Auto-route | **Stub** | AI tool `auto_route` | Tool registered but actual autorouter TBD |
+
+### Component Editor (Custom Part Design)
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| Shape canvas with SVG rendering | **Functional but fragile** | `ShapeCanvas.tsx` (1,275 LOC), snap guides, ruler overlay, shape templates | Full visual editor with DRC overlays. **Phase 4: aggregate CCN=381, 6 functions >CCN 20 — highest complexity component in codebase. God file.** |
+| Pin table editor | **Functional** | `PinTable.tsx` | Pin number, name, type, side editing |
+| Component inspector | **Functional** | `ComponentInspector.tsx` | Metadata and property editing |
+| DRC panel (component-level) | **Functional** | `DRCPanel.tsx`, `client/src/lib/component-editor/drc.ts` | Component-level design rule checks |
+| Snap engine | **Functional** | `snap-engine.ts` with test coverage | Grid/object snapping |
+| Constraint solver | **Functional** | `constraint-solver.ts`, `constraint-inference.ts` with tests | Geometric constraint system |
+| Diff engine (version comparison) | **Functional** | `diff-engine.ts`, `DiffPreview.tsx` with tests | Visual diff between part versions |
+| Shape templates | **Functional** | `shape-templates.ts` — `SHAPE_TEMPLATES` array | Pre-built shapes for rapid design |
+| AI-powered part generation | **Functional** | `GeneratorModal.tsx`, `server/component-ai.ts:generatePartFromDescription` | Generate parts from text description |
+| AI-powered part modification | **Functional** | `ModifyModal.tsx`, `server/component-ai.ts:modifyPartWithAI` | AI modifies existing parts |
+| Datasheet extraction | **Functional** | `DatasheetExtractModal.tsx`, `server/component-ai.ts:extractMetadataFromDatasheet` | Extract specs from datasheet text |
+| Pin extraction from photo | **Functional** | `PinExtractModal.tsx`, `server/component-ai.ts:extractPinsFromPhoto` | Vision-based pin extraction |
+| Component validation | **Functional** | `ValidationModal.tsx`, `validation.ts`, AI tool `validate_component` | Part-level validation |
+| Layer panel | **Functional** | `LayerPanel.tsx` | View layer management |
+| History panel (undo/redo) | **Functional** | `HistoryPanel.tsx` | Component edit history |
+| Ruler overlay / measurement | **Functional** | `RulerOverlay.tsx` | Distance measurement tool |
+
+### Component Library
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| Library browser | **Functional** | `ComponentLibraryBrowser.tsx` | Search, filter, browse library |
+| Library CRUD | **Functional** | Routes: `GET/POST /api/component-library`, `DELETE /api/component-library/:id` | Full server-side library management |
+| Fork from library | **Functional** | `POST /api/component-library/:id/fork`, AI tool `fork_library_component` | Fork components into project |
+| Component export (FZPZ) | **Functional** | `server/component-export.ts:exportToFzpz` | Fritzing-compatible export |
+| Component import (FZPZ) | **Functional** | `server/component-export.ts:importFromFzpz` via JSZip | Import Fritzing parts |
+| SVG to shapes parser | **Functional** | `server/svg-parser.ts:parseSvgToShapes` (572 LOC) | Import SVG artwork as component shapes |
+
+### Bill of Materials (BOM) / Procurement
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| BOM table with CRUD | **Mature** | `ProcurementView.tsx` — add, edit, delete, search, inline editing | Full inline-edit workflow |
+| Drag-and-drop BOM reorder | **Functional** | `@dnd-kit/sortable` integration in ProcurementView | Persistent sort order via localStorage |
+| BOM CSV export | **Functional** | Client-side `handleExportCSV` + server `generateGenericBomCsv` | Direct download |
+| Supplier-specific BOM export | **Functional** | `generateJlcpcbBom`, `generateMouserBom`, `generateDigikeyBom` | JLCPCB, Mouser, Digi-Key formats |
+| BOM cost optimization | **Functional** | Settings panel: batch size, max cost target, in-stock filter, preferred suppliers | UI-side settings, AI `optimize_bom` tool |
+| BOM settings persistence | **Functional** | localStorage with `STORAGE_KEYS` constants | Persists across sessions |
+| Pricing lookup | **AI-simulated only** | AI tool `pricing_lookup` — AI-generated, not live API | **No real supplier API integration — ALL data is fabricated by AI. See EN-13 P0 recalibration.** |
+| Alternative suggestion | **AI-simulated only** | AI tool `suggest_alternatives` — AI-generated | **No real cross-reference DB — alternatives are hallucinated** |
+| Lead time checking | **AI-simulated only** | AI tool `check_lead_times` — AI-generated | **No real supplier API — lead times are fictional** |
+
+### Validation / Design Rule Checking
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| Validation issue management | **Functional** | `ValidationView.tsx` — severity filters, search, issue list | Error/warning/info categories |
+| DRC engine (shared) | **Functional** | `shared/drc-engine.ts` (424 LOC) — `runDRC`, `getDefaultDRCRules` | Shared client/server DRC engine |
+| DRC gate for exports | **Functional** | `server/export/drc-gate.ts` with tests | Block exports on DRC failures |
+| Power budget analysis | **Partial** | AI tool `power_budget_analysis` | AI-computed, no circuit simulation |
+| Voltage domain check | **Partial** | AI tool `voltage_domain_check` | AI-computed |
+| DFM check | **Partial** | AI tool `dfm_check` | AI-computed |
+| Thermal analysis | **Partial** | AI tool `thermal_analysis` | AI-computed |
+| Auto-fix validation | **Partial** | AI tool `auto_fix_validation` | AI suggests fixes |
+
+### Simulation (Phase 13)
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| SPICE netlist generation | **Functional** | `client/src/lib/simulation/spice-generator.ts` (607 LOC) + `server/export/spice-exporter.ts` | Client and server-side SPICE generation |
+| Circuit solver (DC/AC/transient) | **Functional** | `client/src/lib/simulation/circuit-solver.ts` (666 LOC) | Browser-side MNA solver |
+| Waveform viewer | **Functional** | `client/src/components/simulation/WaveformViewer.tsx` (1,453 LOC) | Visualization of simulation results. **God file — highest LOC in client.** |
+| Probe overlay | **Functional** | `client/src/components/simulation/ProbeOverlay.tsx` | Click-to-probe on schematic |
+| Simulation panel | **Functional** | `SimulationPanel.tsx` (938 LOC) | Full simulation control UI. Near god-file territory. |
+| Server-side simulation engine | **Functional** | `server/simulation.ts` (705 LOC) | Server-side SPICE simulation |
+| Simulation results persistence | **Functional** | DB table `simulation_results`, storage methods | Results stored with circuit ID |
+
+### Export System (Phase 6)
+
+The export system exists as **two parallel implementations** with active overlap:
+
+**Monolith (`server/export-generators.ts`, 1,209 LOC)** — consumed by `ai-tools.ts` for AI tool execution:
+- `generateGenericBomCsv`, `generateJlcpcbBom`, `generateMouserBom`, `generateDigikeyBom`
+- `generateKicadSch`, `generateKicadNetlist`
+- `generateSpiceNetlist`, `generateCsvNetlist`
+- `generateGerber`, `generatePickAndPlace`, `generateEagleSch`
+- `generateDesignReportMd`
+
+**Modular system (`server/export/`, 11 files, ~3,200 LOC total)** — consumed by `circuit-routes.ts` for REST endpoints:
+- `gerber-generator.ts` (1,085 LOC) — `generateGerber` + per-layer functions
+- `kicad-exporter.ts` (1,247 LOC) — schematic + PCB + project bundle
+- `eagle-exporter.ts` (1,150 LOC) — schematic + board + project bundle
+- `spice-exporter.ts` — `exportSpiceNetlist`
+- `netlist-generator.ts` — SPICE, KiCad, CSV netlists
+- `bom-exporter.ts` — JLCPCB, Mouser, Digi-Key, generic BOM
+- `pick-place-generator.ts`, `drill-generator.ts`, `pdf-generator.ts`, `drc-gate.ts`, `fzz-handler.ts`
+
+**Overlap**: BOM, Gerber, KiCad, Eagle, SPICE, CSV netlist, and pick-and-place generators exist in BOTH systems with different function signatures and implementations. The modular versions are more complete (e.g., modular KiCad adds PCB + project file, modular Eagle adds board file). The monolith is NOT dead code — it is actively imported by `ai-tools.ts`. This directly feeds TD-10 (complete the decomposition).
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| Gerber export | **Functional** | Both systems | Modular version more complete (per-layer functions) |
+| KiCad schematic export | **Functional** | Both systems | Modular adds PCB + project bundle |
+| KiCad netlist export | **Functional** | Both systems | Available in both monolith and modular |
+| Eagle schematic export | **Functional** | Both systems | Modular adds board + project bundle |
+| SPICE netlist export | **Functional** | Both systems | Different implementations |
+| CSV netlist export | **Functional** | Both systems | Available in both |
+| Pick-and-place export | **Functional** | Both systems | Available in both |
+| Drill file generation | **Functional** | Modular only | `server/export/drill-generator.ts` |
+| Design report (Markdown) | **Functional** | Monolith only | `generateDesignReportMd` |
+| PDF generation | **Partial** | Modular only | `server/export/pdf-generator.ts` |
+| Fritzing project export | **Functional** | Separate (`component-export.ts`) | AI tool `export_fritzing_project` |
+| Gerber preview | **Partial** | AI tool `preview_gerber` | Generates preview, not full Gerber viewer |
+
+### AI Chat System
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| Streaming AI chat (SSE) | **Mature** | `server/routes.ts:1193` — `/api/chat/ai/stream`, `server/ai.ts` 1083 LOC | Full SSE streaming with tool use loop |
+| Non-streaming AI chat | **Functional** | `server/routes.ts:1137` — `/api/chat/ai` | Fallback non-stream endpoint |
+| Dual AI provider (Anthropic + Gemini) | **Mature** | `server/ai.ts` — `callAnthropic`, `getGeminiClient`, LRU client cache | Claude + Gemini with LRU caching |
+| Multi-model routing | **Functional** | `routeToModel` in ai.ts — user/auto/quality/speed/cost strategies | 5 routing strategies, 3 model tiers per provider |
+| 78 registered AI tools | **Mature** | `server/ai-tools.ts` (1,677 LOC) — `ToolRegistry` with Zod validation | Architecture, circuit, component, BOM, validation, export, project, navigation. **Second-largest file in codebase — adding more tools is impractical (TD-09).** |
+| Native tool use (Anthropic) | **Functional** | `toAnthropicTools()` converter, multi-turn tool loop (max 10 turns) | Anthropic function calling |
+| Gemini function declarations | **Functional** | `GeminiFunctionDeclaration` format converter | Gemini native function calling |
+| Action executor (client-side) | **Mature** | `useActionExecutor.ts` (1,299 LOC) — 48+ case handlers | Client dispatches AI actions to contexts. **God file — monolithic switch statement.** |
+| Local intent parsing | **Stub/Fragile** | `parseLocalIntent.ts` (294 LOC, CCN=102) | **Phase 4: extreme cyclomatic complexity. 102 CCN in 294 lines = nearly every line is a branch. Organic growth without architectural planning. Local AI mode is a key feature locked behind an unmaintainable parser.** |
+| Multimodal (image analysis) | **Functional** | `ImageContent` in ai.ts, `analyze_image` action | Base64 image upload + vision |
+| Chat settings (per-user) | **Functional** | `userChatSettings` DB table, `useChatSettings.ts` hook, server endpoints | Provider, model, temperature, custom system prompt, routing strategy |
+| Quick actions bar | **Functional** | `QuickActionsBar.tsx` | Pre-built action shortcuts |
+| Follow-up suggestions | **Functional** | `FollowUpSuggestions.tsx` | Contextual follow-up prompts |
+| Action accept/reject UI | **Functional** | `pendingActions`, `onAcceptActions`, `onRejectActions` in MessageBubble | User confirms AI actions before execution |
+| Chat search | **Functional** | `ChatSearchBar.tsx` | Search through chat history |
+| Streaming indicator | **Functional** | `StreamingIndicator.tsx` with cancel | Real-time generation indicator |
+| Token info display | **Functional** | `tokenInfo` prop in MessageBubble | Token usage transparency |
+| AI action logging | **Functional** | `aiActions` DB table, `POST /api/ai-actions`, `GET /api/ai-actions/by-message/:id` | Persistent action audit trail |
+| Error categorization | **Functional** | `categorizeError` in ai.ts — AUTH_FAILED, RATE_LIMITED, TIMEOUT, MODEL_ERROR, etc. | User-friendly error messages |
+| Secret redaction | **Functional** | `redactSecrets` in ai.ts | Strips API keys from error messages |
+| Prompt caching (LRU) | **Functional** | `promptCache` LRU in ai.ts | Per-session cached system prompts |
+| Request deduplication | **Functional** | `activeRequests` Map in ai.ts | Prevents duplicate concurrent requests |
+
+### Circuit AI (Phase 10+)
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| AI circuit generation | **Functional** | `POST /api/circuits/:id/ai/generate` in circuit-ai.ts | Generate circuits from description |
+| AI circuit review | **Functional** | `POST /api/circuits/:id/ai/review` | AI reviews existing circuits |
+| AI circuit analysis | **Functional** | `POST /api/circuits/:id/ai/analyze` | Analyze circuit characteristics |
+| AI datasheet search | **Functional** | AI tool `search_datasheet` | Find datasheets for components |
+
+### Authentication & Authorization
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| User registration | **Functional** | `POST /api/auth/register`, scrypt password hashing | Username + password |
+| User login | **Functional** | `POST /api/auth/login`, session creation | Session-based auth |
+| Session management | **Functional** | `X-Session-Id` header, 7-day expiry, `validateSession` | Header-based sessions (not cookies) |
+| API key encryption | **Functional** | AES-256-GCM encryption in `auth.ts` | Secure storage of provider API keys |
+| API key management | **Functional** | `GET/POST/DELETE /api/settings/api-keys` | Per-user AI provider key management |
+| Rate limiting | **Functional** | `express-rate-limit` in `server/index.ts` | API rate limiting middleware |
+
+### Project Management
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| Project CRUD | **Functional** | Full REST: `GET/POST/PATCH/DELETE /api/projects` | Create, read, update, soft-delete |
+| Project settings panel | **Functional** | `ProjectSettingsPanel.tsx` in sidebar | Name, description editing |
+| History tracking | **Functional** | `history_items` table, `HistoryList.tsx` | Action audit trail |
+| Component tree | **Functional** | `ComponentTree.tsx` in sidebar | Hierarchical node navigation |
+| Asset manager | **Functional** | `AssetManager.tsx` (238 LOC) with `AssetGrid.tsx`, `AssetSearch.tsx` | Drag-to-canvas component picker |
+| Seed data | **Functional** | `POST /api/seed` endpoint | Demo project seeding |
+
+### Output / Logging
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| Output view | **Functional** | `OutputView.tsx` | Build logs and system messages |
+| Output context (client-side) | **Functional** | `output-context.tsx` — `OutputLogEntry` array | In-memory log accumulation |
+
+### UI Infrastructure
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| 40+ shadcn/ui primitives | **Mature** | `client/src/components/ui/` — 59 files, 5485 LOC | Full design system |
+| Dark theme | **Mature** | `next-themes` + ThemeToggle, Tailwind v4 dark mode | System/dark/light toggle |
+| Keyboard shortcuts | **Functional** | `KeyboardShortcutsModal.tsx`, shortcuts in ArchitectureView, SchematicCanvas, ComponentEditorView, ChatPanel | Ctrl+Z, Ctrl+Y, Delete, etc. |
+| Resizable panels | **Functional** | Sidebar + ChatPanel with ResizeHandle, width persistence | Drag-to-resize, collapse/expand |
+| Scrollable tab bar | **Functional** | `ScrollableTabBar` in ProjectWorkspace with fade gradients | Overflow handling for many tabs |
+| Toast notifications | **Functional** | `use-toast.ts` hook + toast UI | User feedback system |
+| Styled tooltips | **Functional** | `StyledTooltip` component | Consistent tooltip styling |
+| Responsive layout | **Partial** | Flex-based 3-panel layout, `use-mobile.tsx` hook | Basic responsive but optimized for desktop |
+| Markdown rendering | **Functional** | `react-markdown` + `remark-gfm` in MessageBubble | AI response rendering |
+
+### Server Infrastructure
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| Express 5 with middleware stack | **Mature** | `server/index.ts` — helmet, compression, rate limit, JSON/URL parsing, CORS, error handler | Production-ready middleware |
+| PostgreSQL with Drizzle ORM | **Mature** | 17 tables in `shared/schema.ts`, full CRUD in `storage.ts` | Comprehensive data layer |
+| In-memory cache layer | **Functional** | `server/cache.ts` (52 LOC), prefix-based invalidation | Simple but effective |
+| LRU client cache | **Functional** | `server/lib/lru-cache.ts` | For AI provider clients |
+| Request metrics | **Functional** | `server/metrics.ts` — `recordRequest`, `getMetrics` | Basic request tracking |
+| Structured logging | **Functional** | `server/logger.ts` (40 LOC) | Centralized logging |
+| Payload size limits | **Functional** | `payloadLimit` helper in routes.ts, per-route limits | DoS protection |
+| Static file serving | **Functional** | `server/static.ts` — `serveStatic` | SPA fallback |
+| API documentation | **Functional** | `server/api-docs.ts`, `GET /api/docs` | Self-documenting API |
+| Health check | **Functional** | `GET /api/health` | Uptime monitoring |
+| Admin purge | **Functional** | `DELETE /api/admin/purge` | Data cleanup |
+| Vite dev middleware | **Functional** | `server/vite.ts` | HMR integration in development |
+
+### Missing / Not Implemented
+
+| Feature | Maturity | Evidence | Notes |
+|---------|----------|----------|-------|
+| Real-time collaboration | **Missing** | No WebSocket/CRDT implementation found | Single-user only |
+| Multi-project support | **Missing** | `PROJECT_ID = 1` hardcoded in client context | Known tech debt per CLAUDE.md |
+| Real supplier API integration | **Missing** | AI tools simulate pricing/stock/lead times | No Octopart, Mouser, Digi-Key APIs |
+| ECAD file import (KiCad, Eagle) | **Missing** | Only exports exist, no import parsers for KiCad/Eagle | FZPZ import only |
+| Version control / branching | **Missing** | No git-like design versioning | Single linear history |
+| PCB autorouter | **Stub** | AI tool `auto_route` registered but no actual routing engine | Would need Freerouter or custom implementation |
+| Net-aware PCB DRC | **Missing** | DRC exists for components but not PCB-level net clearance | Component DRC only |
+| Parametric component search | **Partial** | AI tool `parametric_search` but AI-generated, no real parametric DB | Would need Octopart/Nexar API |
+| IBIS/SPICE model import | **Missing** | SPICE generation exists but no model file import | Browser simulation only |
+| Undo/redo stack (native) | **Partial** | AI tools `undo`/`redo` exist but actual stack is view-dependent | Not a unified undo system |
+| PWA / offline support | **Missing** | No service worker, no manifest | Online-only |
+| i18n / localization | **Missing** | All strings hardcoded in English | English only |
+
+---
+
+## God File Map
+
+Phase 4 identified 12 files exceeding 1,000 lines. This table maps which features live in these oversized files:
+
+| File | LOC | Features Hosted | Risk Level |
+|------|-----|-----------------|------------|
+| `server/circuit-routes.ts` | 1,757 | 46 circuit REST endpoints, Gerber/Eagle export triggers, simulation endpoints | HIGH — most routes, highest LOC |
+| `server/ai-tools.ts` | 1,677 | All 78 AI tool definitions + Zod schemas + execution logic | HIGH — adding tools is impractical (TD-09) |
+| `WaveformViewer.tsx` | 1,453 | All simulation visualization, waveform rendering, probe display | MEDIUM — specialized, low churn |
+| `server/routes.ts` | 1,329 | 69 core REST endpoints (projects, BOM, validation, chat, auth, settings) | HIGH — most-changed server file |
+| `useActionExecutor.ts` | 1,299 | All 48+ AI action type handlers, subcircuit templates | HIGH — monolithic switch, error handling inconsistent |
+| `ShapeCanvas.tsx` | 1,275 | SVG shape rendering, snap guides, DRC overlays, ruler, shape editing | CRITICAL — CCN=381 aggregate, 6 functions >20 |
+| `kicad-exporter.ts` | 1,247 | KiCad schematic + PCB + project file generation | MEDIUM — specialized export |
+| `export-generators.ts` | 1,209 | 12 legacy export generators (BOM, KiCad, Gerber, Eagle, SPICE, CSV, etc.) | HIGH — dead-walking monolith, still imported by ai-tools |
+| `eagle-exporter.ts` | 1,150 | Eagle schematic + board + project generation | MEDIUM — specialized export |
+| `gerber-generator.ts` | 1,085 | Gerber layer generation (copper, silkscreen, soldermask, paste, outline) | MEDIUM — specialized export |
+| `server/ai.ts` | 1,083 | AI provider integration, streaming, prompt building, tool loop | HIGH — critical path, O(n) prompt scaling |
+| `server/storage.ts` | 1,062 | All database CRUD operations, cache layer | MEDIUM — stable but large |
+
+---
+
+## Data Flow Map
+
+```
+User Interaction
+       |
+       v
++------------------+
+| React Components |  (views, panels, sidebar)
+| ArchitectureView |
+| SchematicView    |
+| ProcurementView  |
+| ChatPanel        |
++------------------+
+       |
+       v
++------------------+     +-----------------------+
+| React Contexts   | <-> | TanStack React Query  |
+| architecture-ctx |     | QueryClient           |
+|   (365 LOC,      |     | Mutations + Cache     |
+|    6 useState,    |     +-----------------------+
+|    27+ values)    |             |
+| bom-context      |             v
+| chat-context     |     +-----------------------+
+| validation-ctx   |     | apiRequest()          |
+| history-context  |     | fetch() to /api/*     |
+| project-meta-ctx |     +-----------------------+
+| output-context   |
++------------------+             |
+                                 v
+                         +-----------------------+
+                         | Express 5 Server      |
+                         | routes.ts (69 routes) |
+                         | circuit-routes.ts     |
+                         |   (46 routes)         |
+                         | circuit-ai.ts (3 AI)  |
+                         +-----------------------+
+                           |         |         |
+                           v         v         v
+                  +----------+ +----------+ +---------+
+                  | storage  | | ai.ts    | | export  |
+                  | .ts      | | +tools   | | DUAL:   |
+                  | (CRUD)   | | (78)     | | monolith|
+                  +----------+ +----------+ | +modular|
+                       |            |       +---------+
+                       v            v
+                  +----------+ +------------------+
+                  |PostgreSQL| |Anthropic / Gemini|
+                  |17 tables | |API (streaming)   |
+                  +----------+ +------------------+
+```
+
+### State Flow Detail
+
+1. **User action** (click, type, drag) in a view component
+2. **Context dispatch** via React context hook (e.g., `useArchitecture().addNode()`)
+3. **React Query mutation** fires `apiRequest()` to the server
+4. **Server validates** request via Zod schema
+5. **Storage layer** executes PostgreSQL query via Drizzle ORM
+6. **Cache invalidation** clears relevant prefix-matched cache entries
+7. **Response** returns to client
+8. **Query invalidation** triggers React Query refetch
+9. **UI re-renders** with new data
+
+### AI Chat Flow
+
+1. **User message** sent to ChatPanel
+2. **ChatPanel** calls `POST /api/chat/ai/stream` (or non-stream variant)
+3. **Server** builds system prompt with full project state (nodes, edges, BOM, validation, chat history, component parts, circuit designs, history)
+4. **routeToModel** selects AI model based on strategy
+5. **AI provider** called with native tool use (Anthropic) or function declarations (Gemini)
+6. **Multi-turn tool loop** (up to 10 turns): AI calls tools, server executes them, results fed back
+7. **SSE events** streamed to client: text chunks, tool calls, tool results, done event with actions
+8. **Client action executor** processes actions: updates architecture, BOM, validation, etc. via context hooks
+9. **User confirmation** for destructive actions via accept/reject UI
+
+---
+
+## Integration Points
+
+| Integration | Type | Status | Location |
+|-------------|------|--------|----------|
+| Anthropic Claude API | AI Provider | **Active** | `server/ai.ts`, `@anthropic-ai/sdk` |
+| Google Gemini API | AI Provider | **Active** | `server/ai.ts`, `@google/generative-ai` |
+| PostgreSQL | Database | **Active** | `server/db.ts`, `drizzle-orm` + `pg` |
+| Digi-Key (BOM supplier) | External | **AI-simulated** | Supplier in BOM items, no live API. Data is fabricated. |
+| Mouser (BOM supplier) | External | **AI-simulated** | Supplier in BOM items, no live API. Data is fabricated. |
+| LCSC/JLCPCB (BOM supplier) | External | **AI-simulated** | BOM export format exists, no live API. Data is fabricated. |
+| Fritzing (component format) | File Format | **Active** | `server/component-export.ts` — FZPZ import/export |
+| KiCad (export) | File Format | **Active** | `server/export/kicad-exporter.ts` — schematic + PCB + netlist + project |
+| Eagle (export) | File Format | **Active** | `server/export/eagle-exporter.ts` — schematic + board + project |
+| Gerber (export) | File Format | **Active** | `server/export/gerber-generator.ts` |
+| SPICE (export + sim) | File Format | **Active** | `server/export/spice-exporter.ts` + `client sim engine` |
+| Excellon drill | File Format | **Active** | `server/export/drill-generator.ts` |
+
+---
+
+## Navigation & Entry Points
+
+### Client Routing
+
+| Route | Component | Purpose |
+|-------|-----------|---------|
+| `/` | Redirect to `/projects/1` | Default entry |
+| `/projects/:projectId` | `ProjectWorkspace` | Main workspace |
+| `*` (404) | `NotFound` | Error page |
+
+### Workspace Views (10 tabs)
+
+| View | Tab Key | Component | Purpose |
+|------|---------|-----------|---------|
+| Output | `output` | `OutputView` | Build logs, system messages |
+| Architecture | `architecture` | `ArchitectureView` | Block diagram editor |
+| Component Editor | `component_editor` | `ComponentEditorView` | Custom part design |
+| Schematic | `schematic` | `SchematicView` | Circuit schematic capture |
+| Breadboard | `breadboard` | `BreadboardView` | Virtual breadboard |
+| PCB | `pcb` | `PCBLayoutView` | PCB layout |
+| Procurement | `procurement` | `ProcurementView` | BOM management |
+| Validation | `validation` | `ValidationView` | Design rule checks |
+| Simulation | `simulation` | `SimulationPanel` | SPICE simulation |
+| Project Explorer | `project_explorer` | (via Sidebar) | Project settings |
+
+### Sidebar Sections
+
+- **SidebarHeader** — Project name, collapse toggle
+- **ComponentTree** — Hierarchical node browser from architecture
+- **HistoryList** — Recent action history
+- **ProjectSettingsPanel** — Name, description, project type
+
+### Chat Panel
+
+- **ChatHeader** — Model info, settings toggle
+- **MessageBubble** — AI responses with action accept/reject
+- **MessageInput** — Text input with image upload
+- **QuickActionsBar** — Pre-built action shortcuts
+- **SettingsPanel** — Provider, model, temperature, custom prompt, routing strategy
+- **ChatSearchBar** — Search through conversation
+
+---
+
+## Module Breakdown
+
+| Module | Files | LOC (code) | Purpose |
+|--------|-------|------------|---------|
+| `client/src/components/views/` | 25 | 7,968 | View components (Architecture, Schematic, Procurement, Validation, Output, ComponentEditor) |
+| `client/src/components/ui/` | 59 | 5,485 | shadcn/ui design system primitives |
+| `client/src/components/panels/` | 22 | 4,542 | ChatPanel, AssetManager, chat subcomponents |
+| `client/src/components/circuit-editor/` | 20 | 4,427 | Schematic canvas, net drawing, ERC, PCB, breadboard |
+| `client/src/components/simulation/` | 3 | 2,552 | Simulation panel, waveform viewer, probe overlay |
+| `client/src/components/layout/` | 7 | 1,052 | Sidebar, header, component tree, settings |
+| `client/src/lib/` (contexts, hooks, utils) | 49 | 9,161 | State management, contexts, circuit/component editor engines |
+| `client/src/hooks/` | 4 | 421 | Custom hooks (toast, mobile, chat settings, synced flow) |
+| `client/src/pages/` | 2 | 513 | ProjectWorkspace, NotFound |
+| `server/` (excl. tests, exports) | ~20 | 14,749 | API routes, AI, storage, auth, middleware |
+| `server/export/` | 11 | ~3,200 | Modular export generators (Gerber, KiCad, Eagle, SPICE, etc.) |
+| `server/export-generators.ts` | 1 | 1,209 | Legacy monolith export generators (still active via ai-tools.ts) |
+| `server/__tests__/` | 15 | 4,001 | Server test suite |
+| `shared/` | 4 | 1,064 | Schema, types, DRC engine |
+| **Total** | **250** | **57,265** | |
+
+---
+
+## Developer Intent Signals
+
+Only 2 TODO markers found in source code (excluding backup files):
+
+| Location | TODO | Implication |
+|----------|------|-------------|
+| `server/circuit-routes.ts` | `boardWidth: 50, // TODO: get from circuit settings` | PCB board dimensions are hardcoded — need to be configurable |
+| `ChatPanel.tsx.bak` (backup) | `// TODO: Migrate API key storage to server-side` | Already resolved — server-side API key endpoints exist |
+
+### Implicit Signals from Code Structure
+
+- **Monolithic `project-context.tsx`** acknowledged as tech debt in CLAUDE.md — has been partially refactored into 8 separate contexts (architecture, bom, chat, history, output, validation, project-meta, project-id). However, the architecture-context alone is 365 LOC with 6 useState hooks and exposes 27+ values — the re-render problem has been distributed, not eliminated. See TD-07.
+- **PROJECT_ID = 1 hardcoding** noted in CLAUDE.md as blocking multi-project
+- **Deprecated endpoints** (`/api/bom/:id`, `/api/validation/:id`) still present alongside proper project-scoped endpoints
+- **Export generators dual system**: `export-generators.ts` (1,209 LOC monolith) coexists with `server/export/` directory (11 files, ~3,200 LOC). Both are actively used — monolith by ai-tools.ts, modular by circuit-routes.ts. See TD-10.
+- **parseLocalIntent.ts** (294 LOC, CCN=102) — local AI mode is a key user-facing feature built on an unmaintainable decision tree that grew organically
+
+---
+
+## Quantitative Summary
+
+| Metric | Value |
+|--------|-------|
+| Total source files (TS/TSX) | 250 |
+| Total LOC (code only) | 57,265 |
+| Total LOC (with blanks/comments) | 68,748 |
+| Client-side LOC | ~39,163 |
+| Server-side LOC | ~18,750 |
+| Shared LOC | ~1,064 |
+| Database tables | 17 |
+| REST API endpoints | 115 |
+| AI-callable tools | 78 (in a single 1,677-LOC file — TD-09) |
+| Export generators | 12 (monolith) + expanded modular (7 overlap, 4 modular-only) |
+| React components (default exports) | 55 |
+| React contexts | 8 |
+| Custom hooks | 4 |
+| Test files | 37 (19 client + 15 server + 2 shared + test-setup) |
+| Production dependencies | 74 |
+| Dev dependencies | 16 |
+| Workspace views | 10 |
+| Complexity (cyclomatic) | 9,667 total |
+| God files (>1000 LOC) | 12 |
+| Functions with CCN >20 | 6 (in ShapeCanvas alone) + PCBLayoutView (135) + parseLocalIntent (102) |
+| COCOMO cost estimate | $1,893,995 |
+| Estimated schedule | 17.53 months |
+# Phase 1 Checklist -- Enhancements (EN-)
+
+> Priority: P0 (critical) -> P3 (nice-to-have)
+> Effort: S (hours) / M (days) / L (weeks) / XL (months)
+> Items marked with [RECALIBRATED] were adjusted based on cross-phase analysis.
+
+## Architecture & Core
+
+- [ ] EN-01: Remove PROJECT_ID = 1 hardcoding; enable multi-project routing and context | Effort: L | Priority: P0
+  - Cross-ref: TD-02, FG-02, UI-02 — all 5 phases independently flag this as critical
+- [ ] EN-02: Implement real-time collaboration via WebSocket/CRDT for multi-user editing | Effort: XL | Priority: P2
+  - Blocked by: TD-02, TD-03, TD-07 (three XL prerequisites)
+- [ ] EN-03: Build unified undo/redo stack across all views (currently fragmented per-view) | Effort: L | Priority: P1
+- [ ] EN-04: Make PCB board dimensions configurable (TODO in circuit-routes.ts — currently hardcoded 50x50) | Effort: S | Priority: P1
+- [ ] EN-05: Remove deprecated endpoints `/api/bom/:id` and `/api/validation/:id` and update all callers | Effort: S | Priority: P2
+- [ ] EN-06: Complete export-generators.ts monolith decomposition into server/export/ modules | Effort: M | Priority: P2
+  - Cross-ref: TD-10. Current state: monolith (1,209 LOC) is imported by ai-tools.ts for all 78 AI tools. Modular system (11 files, ~3,200 LOC) is imported by circuit-routes.ts. 7 generators overlap between both systems with different signatures. Must update ai-tools.ts imports to point to modular system, then delete monolith.
+
+## Circuit Design / Schematic
+
+- [ ] EN-07: Implement actual PCB auto-router (currently stub AI tool with no routing engine) | Effort: XL | Priority: P1
+  - Blocked by: TD-01 (PCBLayoutView CCN=135 must be refactored first)
+- [ ] EN-08: Add net-aware PCB-level DRC (clearance, trace width, via rules — currently only component-level DRC) | Effort: L | Priority: P1
+- [ ] EN-09: Add interactive manual PCB trace routing (currently AI-only via `draw_pcb_trace`) | Effort: L | Priority: P1
+  - Blocked by: TD-01 (PCBLayoutView CCN=135)
+- [ ] EN-10: Import KiCad/Eagle/Altium project files (currently export-only for KiCad/Eagle) | Effort: L | Priority: P1
+  - [RECALIBRATED] from Phase 2 FG-22 promotion. Phase 3 "Critical dead-end" for professional engineers. Architecturally clean — not blocked by debt.
+- [ ] EN-11: Import IBIS/SPICE model files for simulation (currently generates SPICE but cannot import models) | Effort: M | Priority: P2
+- [ ] EN-12: Add hierarchical schematic sheet navigation with port connections (currently basic panel) | Effort: M | Priority: P2
+
+## BOM / Procurement
+
+- [ ] EN-13: Integrate real supplier APIs (Octopart/Nexar, Mouser, Digi-Key) for live pricing, stock, lead times | Effort: L | Priority: **P0** [RECALIBRATED]
+  - **Promoted from P1 to P0.** Cross-phase evidence: Phase 1 found ALL three procurement tools (`pricing_lookup`, `suggest_alternatives`, `check_lead_times`) return AI-fabricated data. Phase 2 FG-23 confirms. The entire procurement tab — BOM cost optimization, in-stock filtering, preferred supplier ranking, lead time display — operates on simulated data with zero real-world value. Users making purchasing decisions based on this data would get wrong prices, wrong stock levels, and wrong lead times. This is not "Partial" — it is actively misleading.
+- [ ] EN-14: Add parametric component search via real component database (currently AI-simulated) | Effort: L | Priority: P1
+- [ ] EN-15: BOM diff/comparison between project versions | Effort: M | Priority: P2
+- [ ] EN-16: Automated alternate part cross-referencing with real equivalence databases | Effort: L | Priority: P2
+
+## AI System
+
+- [ ] EN-17: Optimize AI system prompt size — currently rebuilds full project state on every request (scales poorly) | Effort: M | Priority: P1
+  - Cross-ref: TD-11. Prompt scales O(n) — ~50KB context for 100-node project. Blocks efficient multi-model routing (IN-07).
+- [ ] EN-18: Add AI conversation branching/forking (explore multiple design paths) | Effort: M | Priority: P2
+- [ ] EN-19: Add AI context window management — truncate old messages or summarize to stay within token limits | Effort: M | Priority: P1
+- [ ] EN-20: Split ai-tools.ts (1,677 LOC — second-largest file) into domain-specific tool modules | Effort: M | Priority: P1
+  - Cross-ref: TD-09. Current file hosts ALL 78 tool definitions + Zod schemas + execution logic + all imports from export-generators.ts monolith. Adding more tools is impractical at this size. Proposed split: architecture-tools, circuit-tools, component-tools, bom-tools, validation-tools, export-tools, project-tools, navigation-tools.
+- [ ] EN-21: Refactor parseLocalIntent.ts (294 LOC, CCN=102) — the local AI mode intent parser | Effort: M | Priority: P1
+  - Phase 4 finding. 102 cyclomatic complexity in 294 lines means nearly every line is a branch. Local AI mode is a key feature (allows AI without API calls) trapped in an unmaintainable decision tree. Must refactor to pattern-based or registry-based approach before expanding local mode capabilities.
+
+## Testing & Quality
+
+- [ ] EN-22: Add integration tests for storage layer (currently only unit tests for exporters/engines) | Effort: M | Priority: P1
+- [ ] EN-23: Add E2E tests for critical user flows (create project, add components, run AI chat, export) | Effort: L | Priority: P1
+- [ ] EN-24: Add test coverage for all 78 AI tools (currently tested: exporters only, not tool execution) | Effort: L | Priority: P1
+
+## UX / Frontend
+
+- [ ] EN-25: Add PWA support with service worker for offline access to project data | Effort: M | Priority: P3
+- [ ] EN-26: Add i18n/localization framework | Effort: L | Priority: P3
+- [ ] EN-27: Improve responsive layout for tablet-sized screens (currently desktop-optimized) | Effort: M | Priority: P2
+- [ ] EN-28: Add native clipboard support (Ctrl+C/V) for architecture nodes (currently AI-mediated only) | Effort: S | Priority: P2
+- [ ] EN-29: Add dark/light theme persistence and system preference detection (partially implemented via next-themes) | Effort: S | Priority: P3
+- [ ] EN-30: Refactor ShapeCanvas.tsx (1,275 LOC, aggregate CCN=381, 6 functions >CCN 20) | Effort: L | Priority: P0
+  - Cross-ref: TD-04. Highest complexity component in the entire codebase. Adding DRC visualization (UI-11) or any new features here without refactoring first will create catastrophic complexity. Hosts: SVG shape rendering, snap guides, DRC overlays, ruler overlay, shape editing — all in one file.
+
+## Simulation
+
+- [ ] EN-31: Add frequency-domain analysis visualization (Bode plots) to waveform viewer | Effort: M | Priority: P2
+- [ ] EN-32: Support component model libraries (standard resistor/capacitor/transistor SPICE models) | Effort: M | Priority: P1
+- [ ] EN-33: Add Monte Carlo simulation for tolerance analysis | Effort: L | Priority: P2
+
+## Security & Operations
+
+- [ ] EN-34: Add session refresh/rotation mechanism (currently 7-day fixed expiry, no refresh) | Effort: S | Priority: P2
+- [ ] EN-35: Add request logging/audit trail beyond basic metrics (currently minimal `recordRequest`) | Effort: M | Priority: P2
+- [ ] EN-36: Add database migration strategy (currently using `db:push` which is destructive) | Effort: M | Priority: P1
+  - Cross-ref: TD-03. Blocks version history (IN-06) and safe production deployment with real user data.
+
+---
+
+## Summary by Priority
+
+| Priority | Count | Items |
+|----------|-------|-------|
+| **P0** | 3 | EN-01 (multi-project), EN-13 (supplier APIs), EN-30 (ShapeCanvas refactor) |
+| **P1** | 16 | EN-03, EN-04, EN-07, EN-08, EN-09, EN-10, EN-14, EN-17, EN-19, EN-20, EN-21, EN-22, EN-23, EN-24, EN-32, EN-36 |
+| **P2** | 13 | EN-02, EN-05, EN-06, EN-11, EN-12, EN-15, EN-16, EN-18, EN-27, EN-28, EN-31, EN-34, EN-35 |
+| **P3** | 4 | EN-25, EN-26, EN-29, EN-33 |
+
+### Cross-Phase Priority Recalibrations Applied
+
+| Item | Original Priority | New Priority | Justification |
+|------|-------------------|-------------|---------------|
+| EN-13 (supplier APIs) | P1 | **P0** | ALL procurement data is AI-fabricated. The procurement tab actively misleads users with fake prices, stock levels, and lead times. Zero real-world value. |
+| EN-30 (ShapeCanvas) | *new item* | **P0** | Phase 4 CCN=381 finding. Highest complexity in codebase. Must refactor before any feature additions. |
+| EN-20 (split ai-tools) | *new item* | **P1** | Phase 4 found 1,677 LOC — second-largest file. Scaling the AI tool count is blocked. |
+| EN-21 (parseLocalIntent) | *new item* | **P1** | Phase 4 CCN=102. Key feature (local AI mode) locked behind unmaintainable parser. |
+# Phase 2: Competitive Gap Analysis -- ProtoPulse
+
+> Generated: 2026-02-28
+> Refined: 2026-02-28 (cross-phase calibration)
+> Competitors analyzed: KiCad, Altium Designer, EasyEDA, Fritzing, Eagle/Fusion Electronics, OrCAD, Flux.ai
+
+## Executive Summary
+
+ProtoPulse occupies a unique niche as a **browser-based, AI-first EDA platform** focused on system-level architecture design, BOM management, and AI-assisted validation. Its closest competitors in approach are **Flux.ai** (browser-based + AI) and **EasyEDA** (browser-based + manufacturing integration). However, ProtoPulse currently lacks several table-stakes EDA features that competitors offer, most critically: **actual PCB layout with copper routing, a 3D board viewer, production-quality Gerber/ODB++ export, autorouting, and real-time multi-user collaboration**. Its strongest competitive advantages are the **78-action AI chat system with native tool use, dual AI provider support (Claude + Gemini), architecture-first design philosophy, and integrated DRC/ERC/simulation pipeline** -- capabilities that most traditional EDA tools either lack entirely or are just beginning to add.
+
+**Cross-phase refinements applied**: AI tool count corrected to 78 (from 53 in CLAUDE.md; Phase 1 inventory found 25 additional tools from circuit-routes additions). Priority recalibrations for FG-22 (design import, P2->P1) and FG-23 (real supplier APIs, P2->P1) based on Phase 1/3 evidence. Feasibility prerequisites added based on Phase 4 technical debt findings. Flux.ai deep-dive added as primary competitive threat. AI scaling limitations noted from Phase 4 analysis.
+
+---
+
+## Gap Matrix
+
+### Legend
+- **Y** = Feature fully present and mature
+- **P** = Feature partially implemented or limited
+- **N** = Feature absent
+- Classification column rates ProtoPulse vs the competitive landscape
+
+### Core EDA Capabilities
+
+| Feature | ProtoPulse | KiCad | Altium | EasyEDA | Fritzing | Eagle | OrCAD | Flux.ai | Classification |
+|---------|-----------|-------|--------|---------|----------|-------|-------|---------|----------------|
+| Schematic capture (symbol placement, wiring) | P (circuit-level via SchematicView) | Y | Y | Y | Y | Y | Y | Y | **Weak** |
+| Architecture block diagrams | Y (@xyflow/react with 78 AI actions) | N | N | N | N | N | N | N | **Strong** |
+| PCB layout (copper routing, layer stack) | P (PCBLayoutView exists but limited) | Y | Y | Y | P | Y | Y | Y | **Missing** |
+| Breadboard view | Y (BreadboardView with grid model) | N | N | N | Y | N | N | N | **Strong** |
+| Autorouter | N | P (via FreeRouting) | Y | Y (EasyEDA Pro) | Y (basic) | Y | Y | P | **Missing** |
+| Push-and-shove interactive router | N | Y | Y | Y (Pro) | N | N | Y | N | **Missing** |
+| Differential pair routing | N | Y | Y | Y (Pro) | N | Y | Y | N | **Missing** |
+| Multi-layer PCB support | N | Y (32+ layers) | Y (unlimited) | Y (up to 32) | P (2 layers) | Y | Y | Y | **Missing** |
+| Design Rule Check (DRC) | Y (spatial grid + 6 rule types) | Y (comprehensive) | Y (comprehensive) | Y | P | Y | Y | Y | **Partial** |
+| Electrical Rule Check (ERC) | Y (pin type classification, net analysis) | Y | Y | Y | N | Y | Y | Y | **Partial** |
+| SPICE simulation | Y (client MNA + ngspice server fallback) | Y (ngspice integrated) | Y (built-in) | Y (ngspice) | P (basic simulator) | Y | Y (PSpice) | P | **Partial** |
+| 3D board viewer | N | Y (raytracer) | Y (real-time) | Y (Pro) | N | Y (via Fusion) | Y | Y | **Missing** |
+| ECAD-MCAD integration | N | P (STEP export) | Y (MCAD CoDesigner) | N | N | Y (Fusion 360) | Y | N | **Missing** |
+| Hierarchical schematic sheets | Y (create_sheet, move_to_sheet AI actions) | Y | Y | Y (Pro) | N | Y | Y | Y | **Partial** |
+
+### Component & Library Management
+
+| Feature | ProtoPulse | KiCad | Altium | EasyEDA | Fritzing | Eagle | OrCAD | Flux.ai | Classification |
+|---------|-----------|-------|--------|---------|----------|-------|-------|---------|----------------|
+| Component library (built-in) | P (componentLibrary table, community) | Y (extensive official) | Y (Manufacturer Content) | Y (millions via LCSC) | P (limited) | Y (1M+) | Y (1.6B via Live BOM) | Y (750K+) | **Weak** |
+| Custom part editor | Y (full: shapes, connectors, views) | Y | Y | Y | Y | Y | Y | Y | **Partial** |
+| FZPZ import/export | Y (server/component-export.ts) | N | N | N | Y (native) | N | N | N | **Strong** |
+| Real-time pricing/stock | P (stock field in BOM, AI pricing_lookup -- **all data is AI-simulated, no real APIs**) | N (via plugins) | Y (Octopart) | Y (LCSC integrated) | N | N | Y (Live BOM) | Y (live pricing + availability) | **Weak** |
+| Parametric search | Y (AI parametric_search action) | P (symbol filters) | Y | Y | N | P | Y (extensive) | Y (750K+ filterable) | **Partial** |
+| Datasheet linking | Y (datasheetUrl in PartMeta) | Y | Y | Y | P | Y | Y | Y (datasheet-aware AI) | **Strong** |
+| Component versioning | Y (version field in componentParts) | P | Y | N | N | N | Y | N | **Partial** |
+
+### BOM & Procurement
+
+| Feature | ProtoPulse | KiCad | Altium | EasyEDA | Fritzing | Eagle | OrCAD | Flux.ai | Classification |
+|---------|-----------|-------|--------|---------|----------|-------|-------|---------|----------------|
+| BOM management | Y (full CRUD, status tracking) | Y (basic export) | Y (ActiveBOM) | Y (JLCPCB BOM) | P | Y | Y (Live BOM) | Y | **Strong** |
+| BOM export (CSV) | Y (multiple formats: generic, JLCPCB, Mouser, Digi-Key) | Y | Y | Y | Y | Y | Y | Y | **Strong** |
+| Supplier-specific BOM | Y (JLCPCB, Mouser, Digi-Key generators) | N | P | Y (JLCPCB) | N | N | Y | P | **Strong** |
+| Lead time tracking | Y (leadTime field, check_lead_times AI action -- **simulated data**) | N | Y | P | N | N | Y | Y (live data) | **Weak** |
+| BOM optimization | Y (optimize_bom AI action) | N | P | N | N | N | P | Y (passive consolidation) | **Partial** |
+| Alternative part suggestions | Y (suggest_alternatives AI action) | N | Y | N | N | N | Y | Y | **Strong** |
+
+### AI & Automation
+
+| Feature | ProtoPulse | KiCad | Altium | EasyEDA | Fritzing | Eagle | OrCAD | Flux.ai | Classification |
+|---------|-----------|-------|--------|---------|----------|-------|-------|---------|----------------|
+| AI chat assistant | Y (78 action types, SSE streaming) | N | N | N | N | N | N | Y (Copilot, ACU-metered) | **Strong** |
+| AI architecture generation | Y (generate_architecture action) | N | N | N | N | N | N | Y (block diagram via Copilot) | **Strong** |
+| AI-powered validation | Y (auto_fix_validation, dfm_check, thermal_analysis) | N | P (automated DRC) | N | N | N | P | Y (Find Issues shortcut) | **Strong** |
+| Natural language design | Y (78 in-app action types via chat) | N | N | N | N | N | N | Y (text-to-circuit, Copilot Shortcuts) | **Partial** |
+| Multi-model routing | Y (Claude + Gemini, 5 routing strategies) | N | N | N | N | N | N | N | **Strong** |
+| Native tool use (function calling) | Y (Anthropic + Gemini tool APIs) | N | N | N | N | N | N | Y (Library, Calculator, Code Interpreter tools) | **Strong** |
+| AI action audit log | Y (aiActions table) | N | N | N | N | N | N | N | **Strong** |
+| Power budget analysis (AI) | Y (power_budget_analysis action) | N | P (PDN Analyzer) | N | N | N | Y (power integrity) | N | **Partial** |
+| Voltage domain check (AI) | Y (voltage_domain_check action) | N | P | N | N | N | P | N | **Partial** |
+| AI-learned user preferences | N | N | N | N | N | N | N | Y (Copilot Knowledge) | **Missing** |
+| AI FMEA report generation | N | N | N | N | N | N | N | Y (Copilot Shortcut) | **Missing** |
+| AI test plan generation | N | N | N | N | N | N | N | Y (Copilot Shortcut) | **Missing** |
+| AI component comparison tables | N | N | N | N | N | N | N | Y (Copilot Shortcut) | **Missing** |
+
+### Export & Manufacturing
+
+| Feature | ProtoPulse | KiCad | Altium | EasyEDA | Fritzing | Eagle | OrCAD | Flux.ai | Classification |
+|---------|-----------|-------|--------|---------|----------|-------|-------|---------|----------------|
+| Gerber export | P (generator exists but no real PCB data) | Y | Y | Y | Y | Y | Y | Y | **Weak** |
+| ODB++ export | N | Y | Y | N | N | N | Y | N | **Missing** |
+| IPC-2581 export | N | Y | Y | N | N | N | Y | N | **Missing** |
+| KiCad netlist export | Y (kicad-exporter.ts) | Y (native) | Y | Y (import) | N | Y (import) | Y | N | **Partial** |
+| SPICE netlist export | Y (spice-exporter.ts) | Y | Y | Y | N | Y | Y (PSpice native) | N | **Strong** |
+| Pick-and-place export | Y (pick-place-generator.ts) | Y | Y | Y | N | Y | Y | Y | **Partial** |
+| Drill file export | Y (drill-generator.ts) | Y | Y | Y | Y | Y | Y | Y | **Partial** |
+| Eagle format export | Y (eagle-exporter.ts) | Y (import) | Y (import) | Y (import) | N | Y (native) | Y (import) | N | **Partial** |
+| PDF export | Y (pdf-generator.ts) | Y | Y | Y | Y | Y | Y | Y | **Partial** |
+| Design report | Y (generateDesignReportMd) | N | Y | N | N | N | P | N | **Strong** |
+| One-click PCB ordering | N | N | N | Y (JLCPCB native) | Y (Fritzing Fab) | N | N | Y | **Missing** |
+| **Design import (KiCad/Altium/Eagle)** | **N (FZPZ only)** | Y (native) | Y (import) | Y (multi-format) | Y (FZPZ native) | Y (native) | Y (import) | **Y (KiCad + Altium + Cadence)** | **Missing** |
+
+### Collaboration & Platform
+
+| Feature | ProtoPulse | KiCad | Altium | EasyEDA | Fritzing | Eagle | OrCAD | Flux.ai | Classification |
+|---------|-----------|-------|--------|---------|----------|-------|-------|---------|----------------|
+| Browser-based (no install) | Y | N (desktop) | N (desktop) | Y | N (desktop) | N (desktop) | N (desktop) | Y | **Strong** |
+| Real-time multi-user editing | N | N | Y (Altium 365) | P | N | N | P (OrCAD X Cloud) | Y (up to 20 editors) | **Missing** |
+| Version control / history | Y (historyItems table) | P (Git-friendly files) | Y (Altium 365) | P | N | N | Y (OrCAD X Cloud) | Y | **Partial** |
+| Design review / commenting | N | N | Y (Altium 365) | P | N | N | Y | Y | **Missing** |
+| Offline mode | N (server-dependent) | Y (native desktop) | Y (native desktop) | Y (Pro only) | Y (native desktop) | Y (native desktop) | Y (native desktop) | N | **Missing** |
+| User authentication | Y (session-based, encrypted API keys) | N/A | Y | Y | N/A | Y | Y | Y | **Strong** |
+| Project management | Y (projects table, soft deletes) | P (project files) | Y | Y | P | P | Y | Y | **Partial** |
+| Multi-project support | N (PROJECT_ID = 1 hardcoded) | Y | Y | Y | Y | Y | Y | Y (unlimited with Pro) | **Missing** |
+
+### Simulation & Analysis
+
+| Feature | ProtoPulse | KiCad | Altium | EasyEDA | Fritzing | Eagle | OrCAD | Flux.ai | Classification |
+|---------|-----------|-------|--------|---------|----------|-------|-------|---------|----------------|
+| DC operating point | Y (MNA solver) | Y | Y | Y | P | Y | Y | P | **Partial** |
+| Transient analysis | Y (Backward Euler RC/RL) | Y | Y | Y | P | Y | Y | N | **Partial** |
+| AC analysis | N (SPICE export only) | Y | Y | Y | N | Y | Y (PSpice) | N | **Missing** |
+| DC sweep | Y (basic) | Y | Y | Y | N | Y | Y | N | **Partial** |
+| Monte Carlo / statistical | N | N | P | N | N | N | Y (PSpice) | N | **Missing** |
+| Signal integrity analysis | N | P (plugin) | Y | N | N | P | Y | N | **Missing** |
+| Thermal analysis | P (AI-driven, not physics-based) | N | Y (plugin) | N | N | N | Y | N | **Weak** |
+| Power integrity / PDN | P (AI power_budget_analysis) | N | Y (PDN Analyzer) | N | N | N | Y | N | **Weak** |
+
+---
+
+## Top 10 Missing Features
+
+| Rank | Feature | Which Competitors Have It | User Impact | Impl. Complexity | Prerequisites (Phase 4) |
+|------|---------|---------------------------|-------------|-------------------|------------------------|
+| 1 | **Production-quality PCB layout with copper routing** | KiCad, Altium, EasyEDA, Eagle, OrCAD, Flux.ai | Critical -- engineers cannot go from design to manufacturing without this; single biggest reason to choose a competitor | XL (months) | **BLOCKED: PCBLayoutView CCN=135 must be refactored first (TD-01)** |
+| 2 | **3D board viewer** | KiCad (raytracer), Altium (real-time), EasyEDA Pro, Eagle (Fusion), OrCAD, Flux.ai | High -- mechanical fit verification, stakeholder review, documentation; expected by all professional users | L (weeks) | Clean -- additive work |
+| 3 | **Autorouter / interactive router** | KiCad (FreeRouting), Altium, EasyEDA Pro, Eagle, OrCAD, Flux.ai | High -- manual routing of complex boards is impractical; essential for productivity | XL (months) | Depends on FG-01 (needs real PCB layout first) |
+| 4 | **Design import (KiCad/Altium/Eagle)** | All 7 competitors (Flux.ai imports KiCad + Altium + Cadence) | **Critical** -- professional engineers will not adopt a tool they cannot import existing designs into; Phase 3 rated this a "critical dead-end" | L (weeks) | Clean -- existing export infrastructure provides patterns; additive work not blocked by debt |
+| 5 | **Real supplier APIs for BOM pricing/stock** | Altium (Octopart), EasyEDA (LCSC), OrCAD (Live BOM 1.6B parts), Flux.ai (live pricing) | **Critical** -- Phase 1 confirmed ALL procurement data is AI-simulated; pricing, stock, lead times shown to users are fabricated; undermines trust in entire procurement feature | M (days) | Clean -- additive API integration work |
+| 6 | **Multi-project support** | All 7 competitors | High -- hardcoded PROJECT_ID = 1 blocks any real-world use beyond single-project prototyping | M (days) | Clean -- schema + context changes |
+| 7 | **Real-time multi-user collaboration** | Altium 365, Flux.ai (20 editors), OrCAD X Cloud; EasyEDA (partial) | High -- hardware teams are 2-5 people; collaboration is a workflow blocker without it | XL (months) | **BLOCKED: Requires PROJECT_ID=1 removal (TD-02) + DB migrations (TD-03) + context split (TD-07)** |
+| 8 | **One-click PCB ordering / fab house integration** | EasyEDA (JLCPCB), Fritzing (Fritzing Fab), Flux.ai | Medium-High -- reduces friction from design to physical board; strong differentiator for hobbyist/startup personas | M (days) | Depends on FG-01 (needs real PCB data to submit) |
+| 9 | **ODB++ / IPC-2581 export** | KiCad, Altium, OrCAD | Medium-High -- modern manufacturing requires these; Gerber alone is increasingly insufficient for complex boards | M (days) | **Partially blocked: dual export system (TD-10) should be resolved first** |
+| 10 | **Component library with 10K+ parts** | EasyEDA (millions), KiCad (official), OrCAD (1.6B), Flux.ai (750K+) | High -- designers won't manually create every part | L (weeks) | **Partially blocked: ai-tools.ts (1,677 lines, TD-09) must split before adding AI-powered library tools** |
+
+---
+
+## Competitive Advantages
+
+| Advantage | Evidence | Moat Durability | Scaling Caveat (Phase 4) |
+|-----------|----------|-----------------|--------------------------|
+| **78-action AI chat system with native tool use** | `server/ai.ts`: 78 AIAction types (25 more than documented), `server/ai-tools.ts`: full tool registry with Zod validation, SSE streaming, dual Anthropic+Gemini support | **High** -- Flux.ai has Copilot with ~12 capabilities (Library, Calculator, Code Interpreter, 8 Shortcuts); ProtoPulse has 6x the action breadth with audit logging | AI prompt rebuilds full project state per request -- O(n) scaling. A 100-node project sends ~50KB context per AI call. This will degrade response quality and increase latency/cost as projects grow. Flux.ai likely has the same challenge but has had more time to optimize. |
+| **Architecture-first design approach** | `ArchitectureView.tsx` + @xyflow/react block diagrams; unique to ProtoPulse among all analyzed competitors | **High** -- traditional EDA starts at schematic; architecture-first is a novel workflow none replicate. Flux.ai can generate Mermaid block diagrams via Copilot but it's a documentation feature, not a first-class design canvas. | None -- architecturally clean |
+| **Multi-model AI routing (5 strategies)** | `ai.ts`: RoutingStrategy = 'user' | 'auto' | 'quality' | 'speed' | 'cost'; MODEL_TIERS for both providers | **Medium** -- first-mover advantage; competitors will eventually add multi-model but ProtoPulse has head start | Effectiveness limited by O(n) prompt size -- model routing savings are offset by large context windows |
+| **Dual AI provider (Claude + Gemini)** | `ai.ts` imports both `@anthropic-ai/sdk` and `@google/genai`; full model tier mapping | **Medium** -- vendor diversification; Flux.ai uses ACU-metered AI (likely single provider) | None |
+| **Supplier-specific BOM export (4 formats)** | `export-generators.ts`: Generic CSV, JLCPCB, Mouser, Digi-Key specific formats | **Medium** -- OrCAD has Live BOM but not multi-supplier export; unique value for procurement | **Undermined by simulated data**: exports are formatted correctly but the underlying pricing/stock data is AI-generated, not from real APIs. Fixing FG-23 would make this advantage real. |
+| **AI action audit log** | `aiActions` table in schema: tracks every tool execution with parameters and results | **Medium** -- compliance/traceability for regulated industries; no competitor has this | None |
+| **Browser-native with zero install** | Full SPA with Express backend; competes with EasyEDA and Flux.ai but adds AI capabilities they lack (EasyEDA) or matches (Flux.ai) | **Low** -- EasyEDA and Flux.ai also browser-based; advantage is in combination with AI | None |
+| **FZPZ import/export compatibility** | `server/component-export.ts`: importFromFzpz, exportToFzpz; interoperability with Fritzing ecosystem | **Low** -- niche but valuable for Fritzing users migrating to a more capable tool | None |
+| **Integrated breadboard + schematic + PCB views** | `BreadboardView.tsx`, `SchematicCanvas.tsx`, `PCBLayoutView.tsx` -- Fritzing-like breadboard + professional schematic | **Medium** -- only Fritzing has breadboard view among competitors; ProtoPulse adds schematic on top | None |
+
+---
+
+## Flux.ai Deep Dive -- Primary Competitive Threat
+
+### Why Flux.ai Is the #1 Threat
+
+Flux.ai occupies the **exact same niche** as ProtoPulse: browser-based, AI-first, targeting modern hardware teams. It is the only competitor that matches ProtoPulse on both the "browser-native" and "AI-powered" axes. Every other competitor is either desktop-only (KiCad, Altium, Eagle, OrCAD, Fritzing) or browser-based without AI (EasyEDA).
+
+### Head-to-Head Comparison
+
+| Dimension | ProtoPulse | Flux.ai | Winner |
+|-----------|-----------|---------|--------|
+| **AI action breadth** | 78 action types covering architecture, BOM, validation, export, simulation | ~12 capabilities (Library, Calculator, Code Interpreter, 8 Copilot Shortcuts) | **ProtoPulse** (6x more actions) |
+| **AI architecture** | Dual-provider (Claude + Gemini), 5 routing strategies, audit log | Single-provider (likely Anthropic based on ACU naming), ACU-metered | **ProtoPulse** (more flexible) |
+| **AI context awareness** | Full project state rebuilt per request (O(n) scaling) | Full project context including datasheets, design rules, user preferences (Copilot Knowledge) | **Flux.ai** (more mature context, learns preferences) |
+| **Component library** | Small (user-created + community) | 750K+ parts with datasheets and specs | **Flux.ai** (750x larger) |
+| **PCB layout maturity** | Stub (PCBLayoutView exists but minimal) | Full PCB design with AI-assisted routing, curved elbows, DRC | **Flux.ai** (production-ready) |
+| **Design import** | FZPZ only | KiCad, Altium, Cadence project import | **Flux.ai** (professional formats) |
+| **Collaboration** | None (single-user, PROJECT_ID=1) | Real-time multi-user (up to 20 editors on Pro) | **Flux.ai** (production-ready) |
+| **Architecture diagrams** | First-class @xyflow/react canvas with AI generation | Mermaid block diagram generation (documentation, not design) | **ProtoPulse** (unique differentiator) |
+| **Breadboard view** | Full breadboard with grid model | None | **ProtoPulse** (unique) |
+| **BOM export formats** | 4 supplier-specific formats (JLCPCB, Mouser, Digi-Key, generic) | Standard export | **ProtoPulse** |
+| **Pricing data** | AI-simulated (fabricated) | Live pricing and availability from real APIs | **Flux.ai** (real data) |
+| **Simulation** | MNA solver + ngspice fallback (DC, transient, DC sweep) | Minimal (Calculator tool for budgets) | **ProtoPulse** |
+| **SPICE export** | Yes (spice-exporter.ts) | No | **ProtoPulse** |
+| **Pricing** | Self-hosted (free to run) | $20-$158/month per editor; ACU credits for AI | **ProtoPulse** (cost advantage) |
+| **FMEA / test planning** | Not implemented | Copilot Shortcuts for FMEA and test plans | **Flux.ai** |
+| **User preference learning** | Not implemented | Copilot Knowledge (learns design principles, part preferences, style guidelines) | **Flux.ai** |
+
+### Strategic Assessment
+
+**Where ProtoPulse leads:**
+- AI action breadth (78 vs ~12) with audit trail
+- Architecture-first workflow (unique, no competitor has this)
+- Multi-model AI (Claude + Gemini with routing strategies)
+- Simulation capabilities (MNA, ngspice, SPICE export)
+- Breadboard view (only Fritzing otherwise has this)
+- Self-hosted/free (Flux charges $20-$158/month per editor)
+- BOM export diversity (4 supplier formats)
+
+**Where Flux.ai leads:**
+- PCB design maturity (full routing vs stub)
+- Component library (750K+ vs small)
+- Real-time collaboration (20 editors vs single-user)
+- Design import (KiCad/Altium/Cadence vs FZPZ only)
+- Real supplier data (live pricing vs simulated)
+- User preference learning (Copilot Knowledge)
+- FMEA and test plan generation
+- Platform maturity (funded startup with dedicated team)
+
+**The critical gap:** Flux.ai is a **complete EDA tool** that also has AI. ProtoPulse is an **AI-first tool** that lacks essential EDA features. For ProtoPulse to compete, it must close the EDA feature gaps (PCB layout, component library, design import) while maintaining its AI advantage. If ProtoPulse only improves AI while neglecting core EDA, Flux.ai will eventually match or exceed the AI capabilities while already having the EDA foundation.
+
+**The strategic opportunity:** Flux.ai charges $20-$158/month per editor, with AI metered by ACU credits. ProtoPulse is self-hosted and free. If ProtoPulse can reach "good enough" EDA parity (not matching Altium, but matching the Flux.ai tier), the pricing advantage becomes decisive for cost-sensitive teams, indie hardware makers, and educational institutions.
+
+---
+
+## Market Positioning
+
+### Differentiation Opportunities
+
+These are areas where ProtoPulse can carve out unique positioning that no competitor currently occupies:
+
+1. **AI-Native EDA Platform** -- Position as the first EDA tool where AI is not a bolt-on feature but the primary interaction model. The 78-action system, multi-model routing, and architecture generation are genuinely novel. Flux.ai is the closest competitor but its Copilot has ~12 capabilities vs ProtoPulse's 78. **Caveat**: this advantage erodes over time as Flux.ai expands Copilot. The window to establish dominance is finite.
+
+2. **Architecture-to-Board Workflow** -- No competitor starts from system-level architecture block diagrams. This is a genuine gap in the market. Hardware startups typically use draw.io or Figma for architecture, then manually re-enter into EDA. ProtoPulse can own the "architecture-first" workflow. Flux.ai can generate Mermaid diagrams but they are documentation artifacts, not interactive design canvases.
+
+3. **AI-Powered Procurement Intelligence** -- The combination of AI BOM optimization, alternative part suggestions, supplier-specific export, and lead time checking is stronger than any competitor in breadth. **However**: this advantage is currently hollow because all procurement data is AI-simulated. Connecting to real supplier APIs (FG-23) would transform this from a demo feature to a genuine competitive advantage.
+
+4. **Regulated Industry Compliance via AI Audit Trail** -- The aiActions table creates a complete audit trail of every AI-driven design change. For aerospace, medical, and automotive electronics (where traceability is mandated by IEC 62304, DO-254, etc.), this is a unique selling point no competitor offers.
+
+5. **Education & Maker Bridge** -- The breadboard view + AI assistant creates a unique "learning to professional" bridge. Fritzing is the education tool but lacks AI and professional features. KiCad is professional but intimidating for beginners. ProtoPulse can be both. The self-hosted/free model makes it accessible to educational institutions that cannot afford Flux.ai's per-seat pricing.
+
+### Parity Requirements
+
+These are table-stakes features where ProtoPulse **must** match competitors to avoid churn:
+
+| Requirement | Why It's Table-Stakes | Nearest Competitor Benchmark | Prerequisites (Phase 4) |
+|-------------|----------------------|------------------------------|-------------------------|
+| Production-quality PCB layout | Cannot manufacture boards without it | KiCad (free), EasyEDA (free) | TD-01: Refactor PCBLayoutView (CCN=135) |
+| Design import (KiCad/Altium/Eagle) | Engineers won't re-enter existing designs from scratch | Flux.ai (KiCad + Altium + Cadence import) | None -- additive work |
+| Real supplier APIs for pricing/stock | Simulated data destroys user trust | Flux.ai (live), OrCAD (1.6B parts), EasyEDA (LCSC) | None -- additive API work |
+| Multi-project support | Single-project is a demo, not a tool | All competitors | None -- schema + context changes |
+| 3D board viewer | Expected by every professional user | KiCad (free, raytracing) | None -- additive work |
+| Component library with 10K+ parts | Designers won't manually create every part | Flux.ai (750K+), EasyEDA (millions), KiCad (official library) | TD-09: Split ai-tools.ts (1,677 lines) |
+| Gerber export from real PCB data | Current generator has no actual board data to export | All competitors | Depends on FG-01 (PCB layout) |
+
+---
+
+## Competitor Profiles
+
+### KiCad
+- **Strengths**: Free and open-source; full PCB design flow (schematic -> PCB -> Gerber/ODB++/IPC-2581); 3D viewer with raytracer; SPICE simulation (ngspice); huge community; Git-friendly file formats; KiCad 9 adds Zone Manager, embedded elements, via tenting control; v10 RC1 released Feb 2026
+- **Weaknesses**: Desktop-only (no browser); no AI assistance; no real-time collaboration; steep learning curve for beginners; no built-in autorouter (FreeRouting external); no native BOM management; community-dependent support
+- **Pricing model**: Completely free (open-source, GPL)
+- **Target audience**: Professional engineers, advanced hobbyists, education
+- **Key differentiator**: The gold standard for free, professional-grade PCB design
+
+### Altium Designer
+- **Strengths**: Industry-leading interactive router (push-and-shove, any-angle); ECAD-MCAD CoDesigner with SOLIDWORKS/Creo/Inventor/NX; Altium 365 cloud collaboration; ActiveBOM with Octopart integration; comprehensive DRC/ERC; signal integrity; PDN Analyzer; reusable design blocks; SPICE simulation
+- **Weaknesses**: Very expensive ($1,495-$4,500/year); Windows-only; steep learning curve; vendor lock-in; no free tier
+- **Pricing model**: Subscription $1,495-$4,500/year; perpetual license available with ~$1,750-$1,995/year maintenance
+- **Target audience**: Professional engineering teams, enterprise, aerospace/defense/automotive
+- **Key differentiator**: The most complete professional EDA suite with best-in-class routing and MCAD integration
+
+### EasyEDA
+- **Strengths**: Browser-based (Standard) with WebGL Pro version; tight JLCPCB/LCSC integration; millions of components; free to use; one-click PCB ordering; ngspice simulation; import from Altium/KiCad/Eagle/LTspice; supports 5,000+ components and 10,000+ pads; offline mode (Pro)
+- **Weaknesses**: Standard version uses legacy SVG engine (laggy on large boards); component library biased toward LCSC stock; limited simulation compared to OrCAD/Altium; no AI assistance; vendor lock-in to JLCPCB ecosystem; limited collaboration beyond sharing
+- **Pricing model**: Free (Standard); Free to try (Pro); JLCPCB monetizes through PCB orders
+- **Target audience**: Hobbyists, students, cost-sensitive professionals, anyone using JLCPCB
+- **Key differentiator**: Seamless browser-to-PCB-fabrication pipeline with JLCPCB
+
+### Fritzing
+- **Strengths**: Iconic breadboard view for prototyping/documentation; beginner-friendly; Arduino/maker ecosystem; open-source; breadboard -> schematic -> PCB flow; basic simulator (v1.0.0+); community part libraries (Adafruit, DFRobot)
+- **Weaknesses**: Very limited for professional use; small built-in library; no advanced routing; 2-layer PCB only; no SPICE simulation; slow development pace; limited export formats; no collaboration; desktop-only
+- **Pricing model**: ~$9 (one-time download); open-source
+- **Target audience**: Beginners, Arduino/maker community, educators
+- **Key differentiator**: The de facto tool for documenting breadboard prototypes
+
+### Eagle / Fusion Electronics
+- **Strengths**: 1M+ component library; SPICE simulator; modular design blocks; real-time schematic-PCB sync; Fusion 360 3D integration; DRC; autorouter; well-documented; large legacy user base
+- **Weaknesses**: Being discontinued by Autodesk after June 2026; migrating to Fusion Electronics; uncertain long-term future; requires Fusion subscription; no free standalone tier anymore; no AI features
+- **Pricing model**: Included with Autodesk Fusion subscription ($70-$165/month); no standalone option
+- **Target audience**: Professional engineers already in Autodesk ecosystem; legacy Eagle users
+- **Key differentiator**: Tight MCAD integration via Fusion 360 (but sunset creates uncertainty)
+
+### OrCAD
+- **Strengths**: Industry-proven PSpice simulator (DC, AC, transient, Monte Carlo, worst-case, noise); OrCAD X modernization with cloud features; Live BOM with 1.6B parts from 3,600 suppliers; constraint-driven routing; signal integrity; rigid-flex support; OrCAD X Presto for quick-turn; Cadence ecosystem (upgrade path to Allegro)
+- **Weaknesses**: Expensive (~$1,280+/year); complex licensing; steep learning curve; Windows-centric; no AI features; no browser access; intimidating for beginners
+- **Pricing model**: Subscription starting ~$1,280/year; perpetual licenses available with maintenance fees
+- **Target audience**: Professional engineers, enterprises needing PSpice and signal integrity
+- **Key differentiator**: Best-in-class mixed-signal simulation (PSpice) and component sourcing (Live BOM)
+
+### Flux.ai
+- **Strengths**: Browser-based with real-time collaboration (up to 20 editors on Pro); AI Copilot with Library Tool (750K+ parts), Calculator Tool, Code Interpreter, and 8 Copilot Shortcuts (FMEA, test plans, component comparison, issue finder, block diagrams, passive consolidation, pin listing, onboarding); Copilot Knowledge learns user preferences (design principles, part selection, style guidelines); natural language circuit design (text-to-circuit); live pricing and availability data; KiCad + Altium + Cadence project import; curved trace elbows with per-net control; version control; modern UX; growing fast; backed by significant funding
+- **Weaknesses**: Relatively new (less mature than KiCad/Altium); expensive ($20-$158/month per editor); AI metered by ACU credits (can be limiting); smaller component library than EasyEDA/OrCAD (750K vs millions/billions); less proven for complex/high-speed designs; no SPICE simulation; no architecture-first workflow; no breadboard view; no multi-model AI routing
+- **Pricing model**: Free trial (14 days); Starter $20/month ($16/month annual); Pro $142/month ($112/month annual) per editor; Teams $158/month ($120/month annual) per editor; Enterprise custom
+- **Target audience**: Modern hardware teams, startups, engineers wanting AI assistance
+- **Key differentiator**: The most mature AI-integrated PCB design tool with real-time collaboration and live supply chain data
+
+---
+
+## Competitive Landscape Summary
+
+### Market Segments
+
+| Segment | Leader | ProtoPulse Position |
+|---------|--------|-------------------|
+| Enterprise / high-reliability | Altium, OrCAD | Not competitive (missing PCB layout, signal integrity) |
+| Professional / mid-market | KiCad, Altium | Not competitive yet (missing PCB layout, 3D viewer) |
+| Browser-based / cloud | EasyEDA, Flux.ai | Competitive on AI; weak on PCB features and design import |
+| Education / maker | Fritzing, KiCad | Strong potential (breadboard + AI assistant + free) |
+| AI-assisted design | Flux.ai | Direct competitor; stronger on action breadth and simulation, weaker on PCB maturity and component library |
+| Architecture-first design | **Nobody** | **Uncontested leader** |
+
+### Threat Assessment
+
+| Competitor | Threat Level | Rationale |
+|------------|-------------|-----------|
+| Flux.ai | **Critical** | Same niche (browser + AI); more mature PCB features; 750K+ component library; real-time collab for 20 editors; live supplier data; KiCad/Altium/Cadence import; growing fast with funding; direct feature overlap on every dimension except architecture diagrams and simulation |
+| EasyEDA | **Medium** | Free browser-based PCB with JLCPCB integration; massive user base; could add AI |
+| KiCad | **Medium** | Free and comprehensive; dominant in open-source; no AI but community plugins could emerge |
+| Altium | **Low** | Different market segment (enterprise, $$$); unlikely to compete on price/accessibility |
+| OrCAD | **Low** | Enterprise tool; no browser/AI; different market |
+| Fritzing | **Low** | Stagnating; limited features; ProtoPulse breadboard view is already competitive |
+| Eagle | **Low** | Being sunset in 2026; declining relevance |
+
+---
+
+## Research Methodology
+
+- **Primary research**: WebSearch for each competitor's feature pages, pricing, changelogs, and reviews (2025-2026); Flux.ai deep-dive via blog posts, pricing page, and Copilot documentation
+- **Codebase evidence**: Direct examination of ProtoPulse source files (schema.ts, ai.ts, routes.ts, component-types.ts, circuit-types.ts, simulation.ts, export-generators.ts, all view components) to verify feature classifications
+- **Cross-phase validation**: Phase 1 (current state inventory), Phase 3 (UX friction), Phase 4 (technical debt/complexity metrics) used to calibrate priorities and add feasibility context
+- **Classification rigor**: Every "Strong" or "Missing" classification is backed by either codebase evidence (for ProtoPulse) or verified competitor documentation. Features marked "unverified" are noted.
+- **Date of research**: 2026-02-28
+
+### Sources
+
+- [Flux.ai - Design PCBs with AI](https://www.flux.ai/)
+- [Flux Copilot: Under the Hood](https://www.flux.ai/p/blog/flux-copilot-under-the-hood)
+- [Flux Pricing](https://www.flux.ai/p/pricing)
+- [8 New AI Capabilities for Faster PCB Design](https://www.flux.ai/p/blog/8-new-ai-capabilities-for-faster-pcb-design)
+- [Design Circuits with Natural Language: Copilot Upgrade](https://www.flux.ai/p/blog/design-circuits-with-natural-language-copilot-upgrade)
+- [Flux Upgrade Graduates AI Assistant to AI Circuit Co-Designer](https://www.allaboutcircuits.com/news/flux-upgrade-graduates-ai-assistant-ai-circuit-co-designer/)
+- [AI Assistance Inside Every ECAD Tool: What PCB Designers Can Do in 2026](https://www.flux.ai/p/blog/ai-assistance-inside-every-ecad-tools)
+- [FluxAI Review 2026](https://aichief.com/ai-business-tools/fluxai/)
+# Phase 2 Checklist -- Feature Gaps (FG-)
+
+> Priority: P0 (critical) -> P3 (nice-to-have)
+> Effort: S (hours) / M (days) / L (weeks) / XL (months)
+> Generated: 2026-02-28
+> Refined: 2026-02-28 (cross-phase calibration)
+
+## P0 -- Critical Parity (without these, users will not adopt)
+
+- [ ] FG-01: Implement production-quality PCB layout with copper routing, layer stack management, and trace editing (PCBLayoutView.tsx exists as shell -- needs full routing engine) | Effort: XL | Priority: P0 | **Prerequisite: TD-01 (refactor PCBLayoutView, CCN=135) -- MUST complete before feature work**
+- [ ] FG-02: Add multi-project support -- remove hardcoded PROJECT_ID = 1 from project-context.tsx; add project picker, project CRUD in UI | Effort: M | Priority: P0 | Prerequisites: None -- clean schema + context changes
+- [ ] FG-03: Implement 3D board viewer for PCB mechanical fit verification and visual inspection (WebGL or Three.js based) | Effort: L | Priority: P0 | Prerequisites: None -- additive work
+- [ ] FG-04: Build or integrate autorouter for PCB layout (evaluate FreeRouting WASM port, Topological router, or custom A* with DRC) | Effort: XL | Priority: P0 | Prerequisites: FG-01 (needs real PCB layout first)
+- [ ] FG-05: Expand built-in component library to 10K+ parts with symbols, footprints, and 3D models (currently relies on user-created parts and AI suggestions; Flux.ai has 750K+, EasyEDA has millions) | Effort: L | Priority: P0 | **Prerequisite: TD-09 (split ai-tools.ts, 1,677 lines) -- adding library AI tools to current monolith is impractical**
+
+## P1 -- High-Impact Gaps (significant competitive disadvantage)
+
+- [ ] FG-06: Add real-time multi-user collaboration with cursors, live edits, and conflict resolution (WebSocket-based, similar to Flux.ai's 20-editor support / Altium 365) | Effort: XL | Priority: P1 | **BLOCKED by 3 prerequisites: TD-02 (remove PROJECT_ID=1), TD-03 (DB migrations), TD-07 (split ProjectProvider) -- all must complete first**
+- [ ] FG-07: Connect Gerber export to actual PCB layout data (current gerber-generator.ts generates from schema but has no real copper/layer data) | Effort: L | Priority: P1 | **Partially blocked: TD-10 (complete export decomposition) recommended first; also depends on FG-01 (PCB layout)**
+- [ ] FG-08: Implement ODB++ export format for modern PCB manufacturing (single-file alternative to Gerber) | Effort: M | Priority: P1 | **Partially blocked: TD-10 (dual export system) should be resolved first**
+- [ ] FG-09: Implement IPC-2581 export format (XML-based, consolidates all manufacturing data) | Effort: M | Priority: P1 | **Partially blocked: TD-10 (dual export system) should be resolved first**
+- [ ] FG-10: Add one-click PCB ordering integration (JLCPCB, PCBWay, OSHPark APIs; generate manufacturing files and submit order from UI) | Effort: M | Priority: P1 | Prerequisites: FG-01 (needs real PCB data to submit)
+- [ ] FG-11: Implement push-and-shove interactive routing for PCB layout (essential for productive manual routing) | Effort: XL | Priority: P1 | Prerequisites: FG-01 (needs real PCB layout first)
+- [ ] FG-12: Add design review and commenting system (threaded comments on nodes/nets/components; @mentions; resolve/unresolve workflow) | Effort: L | Priority: P1 | Prerequisites: None -- additive work
+- [ ] FG-13: Implement AC small-signal analysis in circuit solver (currently limited to DC and transient; code comment notes this gap explicitly) | Effort: L | Priority: P1 | Prerequisites: None -- additive work on existing simulation engine
+- [ ] FG-22: Add import support for KiCad, Altium, and Eagle project files (currently only FZPZ import; Flux.ai imports KiCad + Altium + Cadence) | Effort: L | Priority: **P1** (promoted from P2) | Prerequisites: None -- existing export infrastructure provides patterns; **architecturally clean, additive work not blocked by debt** | **Rationale: Phase 3 documents this as "Critical dead-end" for professional engineers. Phase 1 confirms only FZPZ import exists. No professional engineer will adopt a tool they cannot import existing designs into.**
+- [ ] FG-23: Implement real-time component pricing/stock from distributor APIs (Octopart, Digi-Key, Mouser) beyond AI-powered lookup | Effort: M | Priority: **P1** (promoted from P2) | Prerequisites: None -- additive API integration work | **Rationale: Phase 1 confirmed ALL procurement data is AI-simulated. The BOM pricing, stock levels, and lead times shown to users are completely fabricated. This undermines trust in the entire procurement feature. Flux.ai and OrCAD Live BOM both use real supplier data.**
+
+## P2 -- Medium-Impact Gaps (nice-to-have for professional users)
+
+- [ ] FG-14: Add differential pair routing support in PCB layout | Effort: L | Priority: P2 | Prerequisites: FG-01, FG-11 (needs PCB layout + routing engine)
+- [ ] FG-15: Implement multi-layer PCB support (currently no layer stack management; competitors support 32+ layers) | Effort: L | Priority: P2 | Prerequisites: FG-01 (needs PCB layout foundation)
+- [ ] FG-16: Add ECAD-MCAD integration (STEP export of board + components for mechanical CAD import) | Effort: L | Priority: P2 | Prerequisites: FG-01 (needs real board geometry)
+- [ ] FG-17: Implement offline mode / progressive web app for resilience when server is unavailable | Effort: L | Priority: P2 | Prerequisites: Architectural -- significant rework of server-dependent SPA
+- [ ] FG-18: Add signal integrity analysis (impedance calculation, crosstalk estimation, eye diagrams) for high-speed designs | Effort: XL | Priority: P2 | Prerequisites: FG-01, FG-15 (needs multi-layer PCB with real trace data)
+- [ ] FG-19: Expand DRC rule coverage to match KiCad/Altium (currently 6 rule types: min-clearance, min-trace-width, courtyard-overlap, pin-spacing, pad-size, silk-overlap; missing: annular ring, thermal relief, trace-to-edge, via-in-pad, solder mask expansion) | Effort: M | Priority: P2 | Prerequisites: None -- additive to existing DRC engine
+- [ ] FG-20: Add Monte Carlo / statistical simulation analysis for component tolerance modeling | Effort: L | Priority: P2 | Prerequisites: None -- additive to simulation engine
+- [ ] FG-21: Implement nonlinear device models in circuit solver (diodes, BJTs, MOSFETs -- currently noted as limitation in circuit-solver.ts) | Effort: XL | Priority: P2 | Prerequisites: None -- additive to simulation engine
+- [ ] FG-33: Add AI-learned user preferences (design principles, part selection preferences, style guidelines) -- Flux.ai's Copilot Knowledge feature | Effort: M | Priority: P2 | Prerequisites: None -- additive to AI system
+- [ ] FG-34: Implement FMEA (Failure Mode and Effects Analysis) report generation -- Flux.ai Copilot Shortcut | Effort: M | Priority: P2 | Prerequisites: None -- additive AI action
+- [ ] FG-35: Add AI test plan generation for board validation -- Flux.ai Copilot Shortcut | Effort: S | Priority: P2 | Prerequisites: None -- additive AI action
+- [ ] FG-36: Add AI component comparison tables -- Flux.ai Copilot Shortcut | Effort: S | Priority: P2 | Prerequisites: None -- additive AI action
+
+## P3 -- Nice-to-Have (differentiators or long-term features)
+
+- [ ] FG-24: Add rigid-flex PCB design support | Effort: XL | Priority: P3
+- [ ] FG-25: Implement power integrity / PDN analysis with physics-based modeling (currently AI-driven power_budget_analysis only) | Effort: XL | Priority: P3
+- [ ] FG-26: Add design reuse blocks / snippets (save and reuse schematic + PCB fragments like Altium's design blocks) | Effort: M | Priority: P3
+- [ ] FG-27: Implement thermal analysis with physics-based simulation (currently AI-driven only) | Effort: XL | Priority: P3
+- [ ] FG-28: Add component lifecycle / obsolescence tracking (like OrCAD Live BOM's lifecycle risk indicators) | Effort: M | Priority: P3
+- [ ] FG-29: Implement netlist comparison / ECO (Engineering Change Order) workflow for tracking design changes | Effort: L | Priority: P3
+- [ ] FG-30: Add board stackup editor for multi-layer PCB impedance planning | Effort: M | Priority: P3
+- [ ] FG-31: Implement copper pour / zone fill for ground planes and power planes | Effort: L | Priority: P3
+- [ ] FG-32: Add manufacturing DFM check integration with fab house APIs (beyond AI dfm_check action) | Effort: M | Priority: P3
+
+---
+
+## Summary Statistics
+
+| Priority | Count | Effort Breakdown |
+|----------|-------|-----------------|
+| P0 | 5 | 2 XL, 2 L, 1 M |
+| P1 | 10 | 2 XL, 4 L, 4 M |
+| P2 | 12 | 3 XL, 4 L, 3 M, 2 S |
+| P3 | 9 | 4 XL, 2 L, 3 M |
+| **Total** | **36** | **11 XL, 12 L, 11 M, 2 S** |
+
+## Feasibility Assessment (Phase 4 Integration)
+
+### Quick Wins (clean architecture, additive work, no blockers)
+
+| Gap | Effort | Why It's Quick |
+|-----|--------|---------------|
+| FG-22 (design import) | L | Export infrastructure provides patterns; additive work |
+| FG-23 (real supplier APIs) | M | Standard API integration; no architectural dependencies |
+| FG-12 (design review/commenting) | L | Additive feature; no existing code to refactor |
+| FG-13 (AC analysis) | L | Builds on existing MNA solver; additive |
+| FG-33-36 (Flux.ai parity AI features) | S-M | Additive AI actions using existing tool infrastructure |
+
+### Requires Prerequisite Refactoring (blocked or partially blocked)
+
+| Gap | Effort | Prerequisite | Why Blocked |
+|-----|--------|-------------|-------------|
+| FG-01 (PCB layout) | XL | **TD-01** (PCBLayoutView CCN=135) | Any new features added to the 135-CCN component will compound the complexity crisis |
+| FG-05 (component library) | L | **TD-09** (ai-tools.ts 1,677 lines) | Library AI tools would bloat already-oversized tool file |
+| FG-06 (collaboration) | XL | **TD-02 + TD-03 + TD-07** | Needs multi-project + migrations + split context before CRDTs |
+| FG-07/08/09 (export improvements) | M-L | **TD-10** (dual export system) | Old monolith + new modules both active; improvements touch both |
+
+### Dependency Chains (must be implemented in order)
+
+```
+TD-01 (refactor PCBLayoutView) → FG-01 (PCB layout) → FG-04 (autorouter) → FG-11 (push-and-shove)
+                                                      → FG-07 (real Gerber) → FG-10 (PCB ordering)
+                                                      → FG-14 (diff pairs) + FG-15 (multi-layer)
+                                                      → FG-03 (3D viewer, can proceed in parallel)
+
+TD-02 + TD-03 + TD-07 → FG-06 (collaboration) → FG-12 (design review, can proceed independently)
+
+TD-09 (split ai-tools) → FG-05 (component library) → FG-33-36 (AI feature parity)
+
+TD-10 (export decomposition) → FG-07/08/09 (export improvements) → FG-10 (PCB ordering)
+```
+
+## Cross-Phase Connections
+
+- FG-01 (PCB layout) and FG-03 (3D viewer) are foundational -- many other gaps (FG-04, FG-07-09, FG-11, FG-14-15, FG-31) depend on having a real PCB layout engine. **Phase 4 adds: PCBLayoutView CCN=135 must be refactored before any of this work begins.**
+- FG-02 (multi-project) will appear as a UX friction issue in Phase 3 (UX analysis). All 5 phases independently flag PROJECT_ID=1 as critical.
+- FG-06 (collaboration) will appear as an architecture gap in Phase 4 (no WebSocket infrastructure exists). **Phase 4 adds: 3 XL prerequisites (TD-02, TD-03, TD-07) must complete first.**
+- FG-05 (component library) connects to Phase 4 architecture decisions about data sourcing and storage. **Phase 4 adds: ai-tools.ts (1,677 lines) must split into modules before scaling the tool count.**
+- FG-17 (offline mode) connects to Phase 5 technical debt (server-dependent SPA)
+- FG-22 (design import) promoted to P1 -- Phase 3 rates this as "Critical dead-end" for professional engineer persona
+- FG-23 (real supplier APIs) promoted to P1 -- Phase 1 confirmed all procurement data is fabricated
+- FG-33-36 are new gaps identified from Flux.ai deep-dive -- features Flux.ai has that ProtoPulse lacks in the AI domain (user preference learning, FMEA, test plans, component comparison)
+# Phase 3: UX & Workflow Evaluation -- ProtoPulse
+
+> Generated: 2026-02-28
+> Refined: 2026-02-28 (cross-phase integration with Phases 1, 4, 5)
+> Personas evaluated: Hobbyist maker, Professional electrical engineer, Hardware startup founder
+
+## Accessibility Scorecard
+
+| Metric | Count | Assessment |
+|--------|-------|------------|
+| aria-* attributes | 120 across 41 files | Moderate -- most come from shadcn/ui primitives, not custom components |
+| role= attributes | 35 across 20 files | Low -- only structural roles (tablist, tabpanel), missing landmark roles on many interactive regions |
+| tabIndex usage | 13 across 10 files | Very low -- most custom interactive elements (canvas tools, context menus, tree items) lack explicit tab ordering |
+| alt= on images | 6 across 4 files | Adequate for current image count (dynamic images only, no static images in app) |
+| Keyboard shortcut handlers | 62 across 23 files | Good -- extensive shortcuts across views (Architecture, Schematic, Component Editor, Breadboard, PCB) |
+| Loading/skeleton states | 85 across 21 files | Good -- Suspense fallbacks with skeleton UIs, per-view loading indicators |
+| Error toast/notification patterns | 24 across 12 files | Moderate -- toast system exists but not all error paths surface user feedback |
+| data-testid coverage | 587 across 67 files | Excellent -- very high test hook coverage |
+| Focus-visible indicators | 61 across 33 files | Moderate -- present on major controls but missing from many custom buttons |
+| `<form>` elements | 0 | Zero -- all input handling is imperative (no native form submission, no FormData) |
+| `<label>` associations | 43 across 12 files | Low -- many inputs (sidebar search, chat input, log filter) lack associated labels |
+| Skip links | 2 | Present -- "Skip to main content" and "Skip to AI assistant" |
+| **Overall grade** | | **C+** |
+
+**Assessment rationale:** The app has a strong foundation from shadcn/ui (Radix primitives provide base-level accessibility). However, custom-built interactive surfaces (canvas tools, drag-drop, context menus, tree views) largely bypass these primitives and lack equivalent accessibility support. Zero `<form>` elements means no native form validation, no `Enter` to submit behavior, and no assistive technology form mode. The keyboard shortcut system is impressive for an EDA tool but undiscoverable without the `?` modal.
+
+**Zero-form cross-reference (Phase 4/5):** Phase 4 found `@hookform/resolvers` installed but unused -- a dependency for a feature that does not exist. Meanwhile Phase 5 proposes IN-12 (command palette via `cmdk`, which is also already installed but unused) as a keyboard-first interaction pattern that could bypass the form problem entirely for power users. The combination of zero forms, an unused form library, and an unused command palette library points to abandoned or never-started form infrastructure.
+
+---
+
+## Performance-Caused Friction (Phase 4 Root Causes)
+
+Phase 4's complexity and performance analysis reveals that several UX friction points documented below are **symptoms of architectural problems**, not simply missing features. Fixing the UX without addressing the root cause will compound existing tech debt.
+
+| UX Symptom | Root Cause (Phase 4) | Tech Debt Ref | Implication |
+|------------|---------------------|---------------|-------------|
+| Tab switching feels sluggish | ProjectProvider monolith (40+ values in one context) causes re-render storms -- ANY state change triggers ALL consuming components to re-render | TD-07 | Cannot fix with UI optimization alone; must split context into domain-specific providers first |
+| AI actions cause visible UI jank | Same re-render storm -- AI action execution updates state, which cascades through the monolith | TD-07 | Action execution should only re-render the affected view, not the entire app |
+| PCB trace routing has no DRC feedback (UI-11) | PCBLayoutView has CCN=135 (9x danger threshold) -- adding ANY feature to this component compounds an already unmaintainable file | TD-01 | Must refactor PCBLayoutView before adding DRC visualization; otherwise the file becomes even more resistant to change |
+| Local mode behavior is confusing (UI-09) | `parseLocalIntent` has CCN=102 -- a 208-line decision tree that grew organically without architectural planning | TD-05 | The parser needs decomposition before local mode capabilities can be clearly communicated; the logic itself is too tangled to document |
+| AI actions sometimes fail silently | `useActionExecutor` is 1,299 lines with inconsistent error handling across 53+ action types | TD-06 | No systematic error handling per action type; some actions swallow errors, others surface generic messages |
+| DRC visualization needed in Component Editor | ShapeCanvas has aggregate CCN=381 (6 functions with CCN>20) -- the highest complexity in the entire codebase | TD-04 | Adding DRC overlays here without decomposition will create catastrophic complexity |
+
+**Refactor-first prerequisite list:** Before fixing these UX issues, the corresponding tech debt items MUST be addressed:
+- UI-11 (DRC visualization) needs TD-01 (PCBLayoutView refactor) AND TD-04 (ShapeCanvas decomposition)
+- UI-09 (Local vs API mode clarity) needs TD-05 (parseLocalIntent refactor)
+- General UI sluggishness needs TD-07 (ProjectProvider split)
+- AI error handling needs TD-06 (useActionExecutor split)
+
+---
+
+## Orphaned Features (Phase 1 Inventory Cross-Reference)
+
+Phase 1's state inventory identified features that exist server-side or in AI tool registrations but have no user-facing path. These are not "missing features" -- they are **built features with no UI affordance**.
+
+| Feature | Where It Exists | What's Missing | Impact |
+|---------|----------------|----------------|--------|
+| FZPZ component import | Server-side endpoint in routes.ts | No file picker, no import button, no drag-drop for .fzpz files anywhere in the UI | Professional engineers cannot import Fritzing parts despite the capability being implemented |
+| `copy_architecture_json` / `copy_architecture_summary` | Registered AI tools (Phase 1 inventory) | No native Ctrl+C support for architecture nodes; clipboard operations are AI-mediated only | Users must ask the AI to copy their own design data -- unintuitive and undiscoverable |
+| `start_tutorial` | Registered AI action type in constants.ts | Action is registered but the handler is unimplemented -- triggering it does nothing | "Show Help" in chat references tutorial capability that doesn't work; a broken promise in the UI |
+| 12 export generators | Server-side: KiCad, SPICE, Gerber, Eagle, Fritzing, BOM CSV, pick-and-place, design report, etc. | All 12 are only accessible via AI chat commands; no export button, no export panel, no file picker | Users who don't know the right AI command cannot access exports they need for manufacturing |
+
+---
+
+## Persona 1: Hobbyist Maker
+
+**Profile:** Weekend builder, Arduino/Raspberry Pi projects. Familiar with Fritzing/Tinkercad. Low tolerance for complexity, wants visual feedback, prefers learning by doing. May not own a paid EDA license.
+
+### Workflow: Onboarding / First-Time Experience
+
+| Step | What Happens | Friction |
+|------|-------------|----------|
+| 1. Open app | Auto-redirected to `/projects/1` | **High friction**: No signup, no login, no project creation. User lands directly in someone else's project (hardcoded PROJECT_ID=1). No welcome screen, no tutorial, no explanation of what ProtoPulse is. |
+| 2. See workspace | 3-panel layout: sidebar + tabbed views + collapsed chat | **Medium friction**: Architecture tab is active by default but canvas is empty. Empty state message says "Ask Chat to generate a system architecture or drag components from the Asset Library" -- good guidance. |
+| 3. Try "Generate Architecture" | Button in empty state triggers AI chat | **High friction**: Without an API key, falls back to local command parsing with `parseLocalIntent`. The local "Generate Architecture" produces a generic response but does add nodes via action system. However, user gets no clear indication they need an API key for full AI features. |
+| 4. Explore tabs | Click through Architecture, Schematic, Breadboard, PCB, etc. | **Medium friction**: 8 tabs across the top is overwhelming for a hobbyist. No progressive disclosure -- all views are visible whether relevant or not. Schematic view shows "No Circuit Designs" empty state with clear CTAs. |
+| 5. Try chat | Open AI assistant panel | **Low friction**: Empty state has three suggestion buttons ("Generate Architecture", "Project Summary", "Show Help"). Quick actions bar provides discoverable entry points. Status line clearly shows "Local Mode (No API Key) -- Configure in Settings". |
+| 6. Settings | Click gear or "Configure in Settings" link | **Low friction**: Settings panel slides over messages, API key input is prominent. Provider/model selection is clear. |
+
+**Key friction points:**
+| Issue | Severity | Location | Impact |
+|-------|----------|----------|--------|
+| No onboarding flow / welcome screen | Critical | App.tsx, ProjectWorkspace.tsx | First-time users have no context about what ProtoPulse does or how to start |
+| Hardcoded PROJECT_ID=1 | Critical | project-context.tsx | No project creation, no project selection -- user cannot start fresh |
+| No indication of AI vs Local mode capabilities | High | ChatPanel.tsx:200-217 | User doesn't know what local mode can/cannot do vs. API-powered mode. **Root cause:** parseLocalIntent CCN=102 (TD-05) makes the local mode behavior itself inconsistent and hard to document. |
+| 8 tabs visible at once overwhelms beginners | Medium | ProjectWorkspace.tsx:234-244 | Hobbyists don't need PCB/Schematic/Validation on day one |
+| No interactive tutorial or guided tour | High | App-wide | Fritzing has guided examples; ProtoPulse throws users into a blank canvas. The `start_tutorial` AI action is registered but unimplemented -- a broken promise. |
+
+### Workflow: Core Daily Loop (Design a simple LED circuit)
+
+| Step | What Happens | Friction |
+|------|-------------|----------|
+| 1. Create architecture | Ask AI or use asset library | **Low**: Asset manager has categories (MCU, Sensors, Power, etc.) with drag-drop. Good. |
+| 2. Connect components | Draw edges in ReactFlow | **Low**: Click-drag from node handle to node handle. Standard pattern. |
+| 3. Add BOM items | Switch to Procurement tab | **Medium**: No automatic BOM generation from architecture nodes. User must manually add items or ask AI. |
+| 4. Validate design | Switch to Validation tab | **Low**: "Run Full Validation" button is prominent. Results categorized by severity. |
+| 5. Export | Switch to Output tab | **Medium**: Output tab is a console log, not an export UI. Exports happen through AI commands ("Export BOM CSV") or individual view features. No unified export panel. |
+
+### Workflow: Advanced Usage
+
+**Hobbyist advanced = sharing and iterations.**
+
+| Step | What Happens | Friction |
+|------|-------------|----------|
+| Share design | No share feature exists | **Critical dead-end**: No export to image, no shareable URL, no project export/import (except through AI chat commands for specific formats). |
+| Version comparison | History list in sidebar shows actions | **Low**: History is append-only activity log. No branching, no diff view, no "restore to this point" for hobbyist. |
+| Component library | Browse community parts | **Dead-end**: Component library browser exists but only shows project-local parts. No community library, no Fritzing part import UI (server supports FZPZ but no UI affordance -- see Orphaned Features). |
+
+### Workflow: Error Recovery
+
+| Step | What Happens | Friction |
+|------|-------------|----------|
+| Undo mistake | Ctrl+Z in Architecture view | **Low**: Undo/redo works via pushUndoState pattern. Good. |
+| AI request fails | Error message in chat | **Medium**: Error shows as red message bubble but generic "Failed to communicate with AI. Check your settings." No specific guidance on what to check. **Root cause:** useActionExecutor (1,299 lines, TD-06) has inconsistent error handling across 53+ action types. |
+| Browser crash | Reload page | **High**: All state depends on server. If server is down, entire app is non-functional. No offline mode, no local state persistence. |
+| ErrorBoundary catches error | "Something went wrong" + Try Again button | **Low**: ErrorBoundary per view means one view crashing doesn't kill others. Good isolation. |
+
+---
+
+## Persona 2: Professional Electrical Engineer
+
+**Profile:** Uses KiCad/Altium daily. Expects professional-grade schematic capture, DRC, netlist export. Keyboard-driven workflow. High standards for precision, reliability, and data integrity. Works on multi-sheet designs with 100+ components.
+
+### Workflow: Onboarding
+
+| Step | What Happens | Friction |
+|------|-------------|----------|
+| 1. Evaluate tool | Land on workspace | **High friction**: No feature overview, no documentation accessible from UI. Professional needs to know: Does it support multi-sheet schematics? What DRC rules? What export formats? All discoverable only through exploration. |
+| 2. Import existing design | Look for import | **Critical dead-end**: No KiCad import, no EAGLE import, no netlist import from UI. Server has FZPZ import but no UI affordance for it (see Orphaned Features). Professional has no way to migrate existing work. |
+| 3. Check precision tools | Snap grid, measurement | **Medium**: Snap-to-grid exists (20x20). Component editor has measurement tool. But no coordinate display, no explicit grid spacing selector in Architecture view. |
+
+### Workflow: Core Daily Loop (Schematic capture for a sensor board)
+
+| Step | What Happens | Friction |
+|------|-------------|----------|
+| 1. Create schematic | Schematic view, place components | **Medium**: Component placer exists with search. ERC panel available. But component library is limited to project-local parts. No standard symbol library (74xx, passives, connectors). |
+| 2. Draw nets | Wire drawing tool with W key | **Low**: Net drawing tool with snapping. Keyboard shortcut documented. |
+| 3. Name nets | Assign net labels | **Medium**: Net labels exist but naming is done through AI actions or manual entry. No inline net naming while drawing. |
+| 4. Run ERC | Electrical Rules Check | **Low**: ERC panel with configurable rules. Violations highlighted on canvas with overlays. Good. |
+| 5. Generate netlist | Export for PCB | **Medium**: Export panel exists in schematic view. KiCad netlist export available through AI commands. But no visual netlist preview. |
+| 6. PCB layout | Switch to PCB tab | **Medium**: PCB layout view has footprint placement, trace routing, layer management. But no design rule constraints visible. No clearance indicators during routing. **Root cause:** PCBLayoutView CCN=135 (TD-01) means the component is too complex to safely add DRC visualization -- the file is essentially unmaintainable in its current state. |
+
+### Workflow: Advanced (Multi-sheet hierarchical design)
+
+| Step | What Happens | Friction |
+|------|-------------|----------|
+| 1. Create sheets | Hierarchical sheet panel | **Low**: HierarchicalSheetPanel component exists with sheet management. Good. |
+| 2. Cross-sheet references | Connect between sheets | **Medium**: Sheet panel exists but cross-referencing behavior unclear from code. |
+| 3. Simulation | SPICE simulation | **Medium**: SimulationPanel exists with waveform viewer. Probe overlay for measurement. But unclear if SPICE netlist generation is complete. |
+
+### Key Friction Points
+
+| Issue | Severity | Location | Impact | Phase 4 Blocker |
+|-------|----------|----------|--------|-----------------|
+| No standard component/symbol library | Critical | ComponentPlacer, SchematicCanvas | Professional cannot work without 74xx, passives, IC libraries | Scaling the library requires TD-09 (split ai-tools.ts) first |
+| No import from KiCad/EAGLE/Altium | Critical | Server exports exist but no imports | Cannot evaluate tool with existing designs | Architecturally clean -- not blocked by debt |
+| No coordinate/measurement readout on canvas | High | ArchitectureView, SchematicView | Precision work requires knowing exact positions | -- |
+| No design rule constraints during PCB routing | High | PCBLayoutView | Traces routed without clearance feedback | **Blocked by TD-01** (CCN=135) |
+| No net class assignment | High | SchematicCanvas | Power nets vs signal nets need different width/clearance rules | -- |
+| API key stored client-side in component state | High | ChatPanel.tsx:55 | Professional would flag this as security concern -- key lost on refresh, visible in devtools | -- |
+
+---
+
+## Persona 3: Hardware Startup Founder
+
+**Profile:** Manages a small team. Needs project overview, cost tracking, procurement, collaboration, and export for manufacturing. Values speed, AI assistance, and team workflow. Budget-conscious but willing to pay for productivity.
+
+### Workflow: Onboarding
+
+| Step | What Happens | Friction |
+|------|-------------|----------|
+| 1. Create new project | No project creation UI | **Critical**: Founder needs to create projects for different products. Hardcoded PROJECT_ID=1 is a complete blocker for multi-project workflow. |
+| 2. Invite team members | No collaboration features | **Critical dead-end**: No user management visible in UI. Auth exists server-side but no team/org concept. No sharing. |
+| 3. Understand AI capabilities | Explore chat | **Medium**: Quick actions and "Show Help" provide some guidance. But no feature comparison or pricing model for AI usage. |
+
+### Workflow: Core Daily Loop (Review project status and costs)
+
+| Step | What Happens | Friction |
+|------|-------------|----------|
+| 1. Check BOM cost | Procurement view | **Low**: Total cost display, per-item costing, supplier links. Optimization goals (Cost/Speed/Quality). Good for cost tracking. |
+| 2. Run validation | Validation view | **Low**: Full validation with severity categorization. Clear pass/fail visual indicators. |
+| 3. Export for review | Export design artifacts | **Medium**: Exports available via AI commands (KiCad, SPICE, Gerber, BOM CSV, Eagle, Fritzing). But no "Export All" button. No design report generator in UI (exists as AI action). |
+| 4. Track changes | History in sidebar | **Medium**: History list shows timestamped actions. But no filtering, no "changes since last review," no export of changelog. |
+
+### Workflow: Advanced (Prepare for manufacturing)
+
+| Step | What Happens | Friction |
+|------|-------------|----------|
+| 1. Generate Gerber files | AI command "Export Gerber" | **High friction**: Manufacturing output should be a first-class UI feature, not an AI command. No Gerber preview in UI (exists as AI action). |
+| 2. Generate pick-and-place | AI command | **Same issue**: Manufacturing files are AI-command-only. |
+| 3. Generate design report | AI command "Export Design Report" | **Medium**: Report generation exists but only through chat. No direct button in Output view. |
+| 4. Cost optimization | Ask AI to "Optimize BOM" | **Low**: AI can suggest alternative parts and optimize costs. Good AI integration here. |
+
+### Workflow: Collaboration
+
+| Step | What Happens | Friction |
+|------|-------------|----------|
+| 1. Share with teammate | No feature | **Critical dead-end**: No multi-user support, no sharing, no commenting, no role-based access. |
+| 2. Review teammate's changes | No feature | **Critical dead-end**: Single-user app with no collaboration awareness. |
+| 3. Export for external review | Chat export to .txt | **Low**: Chat export exists. But no design export for non-technical reviewers (no PDF, no image). |
+
+### Key Friction Points
+
+| Issue | Severity | Location | Impact |
+|-------|----------|----------|--------|
+| No multi-project support | Critical | project-context.tsx | Cannot manage multiple products |
+| No collaboration / team features | Critical | App-wide | Startup founder cannot work with team |
+| Manufacturing exports buried in AI chat | High | ChatPanel, AI actions | Critical manufacturing files should be in Output/Export UI |
+| No design report PDF export | High | OutputView | Cannot share professional reports with investors/manufacturers |
+| No project import/export | High | App-wide | Cannot backup, migrate, or share projects as files |
+| No cost tracking over time | Medium | ProcurementView | Cannot see how BOM cost changed over design iterations |
+
+---
+
+## Cross-Persona Issues
+
+These issues affect ALL personas regardless of skill level:
+
+### 1. No Onboarding or First-Time Experience (Critical)
+Every persona lands on a pre-existing project with no introduction. There is no:
+- Welcome screen explaining ProtoPulse
+- Project creation flow
+- Interactive tutorial or guided tour
+- Feature discovery mechanism beyond "?" keyboard shortcut
+
+**Evidence:** Zero files match "onboarding|tutorial|walkthrough|welcome|getting started" in meaningful UI contexts. The only onboarding-related code is `start_tutorial` as an AI action type in constants.ts, which is registered but **unimplemented** -- the handler does nothing. Phase 5 proposes IN-10 to fill this gap with proper interactive tutorials.
+
+### 2. Hardcoded Single-Project Limitation (Critical)
+`PROJECT_ID = 1` is hardcoded. While `App.tsx` routes to `/projects/:projectId`, there is no project list, no project creation UI, and invalid IDs redirect to `/projects/1`.
+
+**Evidence:** `App.tsx:14` redirects root to `/projects/1`. `ProjectWorkspace.tsx:523` redirects invalid IDs to `/projects/1`.
+
+### 3. No Collaboration (Critical)
+Auth exists server-side (sessions, API keys, users table) but there is no user-facing login UI, no team management, no real-time sync, no commenting.
+
+**Evidence:** Zero files match collaboration-related UI patterns (invite, share, team, multi-user). WebSocket/real-time sync is absent.
+
+### 4. Manufacturing Exports Only via AI Chat (High)
+
+Export capabilities are extensive (KiCad, SPICE, Gerber, Eagle, Fritzing, BOM CSV, pick-and-place, design report) but ALL are triggered through AI chat commands rather than a dedicated export UI.
+
+**Evidence:** `constants.ts` lists export actions (export_kicad, export_spice, export_gerber, etc.) as AI action types. ExportPanel.tsx exists in the schematic editor but is limited. No unified export manager view.
+
+**Cross-phase refinement (Phase 1 + Phase 4):** The export friction is deeper than "missing UI." Phase 1 discovered a **dual export system**: an old monolithic `export-generators.ts` (1,209 lines) coexists with newer `server/export/` modules. Phase 4 confirms both are active (TD-10). This means:
+1. There is no single source of truth for export logic
+2. Any export UI built today would need to wire up to two competing backend systems
+3. The export decomposition (TD-10) should be completed BEFORE building a unified export panel (UI-06)
+
+The proper fix path is: TD-10 (complete export decomposition) -> UI-06 (build unified export panel) -> FG-07/08/09 (export improvements).
+
+### 5. Zero `<form>` Elements (Medium-High)
+All user input is handled through raw `onChange` handlers on inputs/textareas. This means:
+- No native form validation
+- No `required` attribute enforcement
+- No browser autofill support
+- No assistive technology form mode
+- No `Enter` to submit on form fields (only chat textarea handles Enter)
+
+**Evidence:** `rg '<form' client/src/ --glob '*.tsx'` returns zero matches.
+
+**Cross-phase context (Phase 4 + Phase 5):**
+- Phase 4 found `@hookform/resolvers` installed as a dependency but **completely unused** -- a form library for an app with zero forms. This should be removed as dead dependency weight.
+- Phase 5 proposes IN-12 (command palette via `cmdk`) as a keyboard-first alternative. The `cmdk` package is already installed but also unused. For power users (professional engineers, keyboard-driven workflows), a command palette could bypass the need for traditional forms entirely for many operations (setting values, selecting options, triggering actions).
+- The strategic choice: either invest in proper `<form>` elements (with react-hook-form or just native forms), or lean into the command palette pattern for power users and use forms only where truly needed (settings, API key input). Both the form library and command palette library are already installed -- neither is being used.
+
+### 6. API Key Management is Fragile (High)
+API key is stored in React component state (`const [aiApiKey, setAiApiKey] = useState('')`), which means:
+- Lost on page refresh
+- Not persisted to localStorage or server
+- Visible in React DevTools
+- Must be re-entered every session
+
+**Evidence:** `ChatPanel.tsx:55` - `const [aiApiKey, setAiApiKey] = useState('');`
+
+### 7. Error Messages Are Generic (Medium)
+Most catch blocks produce generic "Failed to communicate with AI" or "Something went wrong" messages. No error codes, no specific recovery guidance, no link to documentation.
+
+**Evidence:** 18 catch blocks across 10 client files. Only 12 files use toast for user notification. ErrorBoundary shows generic fallback.
+
+**Root cause (Phase 4):** `useActionExecutor` at 1,299 lines (TD-06) handles all 53+ AI action types in a single monolith. Error handling is inconsistent -- some actions have detailed error messages, others swallow errors entirely. Splitting the action executor into per-domain handlers (TD-06) would enable consistent, specific error messages per action category.
+
+---
+
+## Quick Wins
+
+| # | Improvement | Effort | Impact | Files to Change |
+|---|-------------|--------|--------|-----------------|
+| 1 | Add a welcome/empty-state overlay when project has zero nodes AND zero chat messages | S (hours) | High | ProjectWorkspace.tsx or ArchitectureView.tsx |
+| 2 | Persist API key to localStorage (with clear security disclaimer) | S (hours) | High | ChatPanel.tsx, useChatSettings.ts |
+| 3 | Add `aria-label` to all unlabeled inputs (sidebar search, log filter, chat input) | S (hours) | Medium | Sidebar.tsx, OutputView.tsx, MessageInput.tsx |
+| 4 | Add a dedicated "Export" button/dropdown in the header bar with all available export formats | M (days) | High | ProjectWorkspace.tsx + new ExportDropdown component. **Note:** Should wire to the newer `server/export/` modules, not the old monolith. |
+| 5 | Show "Local Mode" limitations explicitly (list what works vs. what needs API key) | S (hours) | Medium | ChatPanel.tsx empty state |
+| 6 | Add focus-visible outlines to all custom toolbar/tool buttons (Architecture, Schematic, PCB) | S (hours) | Medium | ArchitectureView.tsx, SchematicToolbar.tsx, BreadboardView.tsx, PCBLayoutView.tsx |
+| 7 | Progressive disclosure: hide advanced tabs (PCB, Simulation) until user has content in prerequisite views | M (days) | High | ProjectWorkspace.tsx |
+| 8 | Add coordinate readout to canvas views (mouse position in grid units) | S (hours) | Medium | ArchitectureView.tsx, SchematicCanvas.tsx |
+| 9 | Wrap input groups in `<form>` elements with proper `<label>` associations | M (days) | Medium | SettingsPanel.tsx, ProcurementView.tsx, ProjectSettingsPanel.tsx |
+| 10 | Add "What's new" or feature discovery tooltip on first visit using localStorage flag | S (hours) | Medium | ProjectWorkspace.tsx |
+| 11 | Activate `cmdk` command palette (already installed, zero usage) with basic actions | M (days) | High | New CommandPalette component + ProjectWorkspace.tsx. Provides keyboard-first alternative that bypasses zero-form problem for power users. |
+| 12 | Remove `@hookform/resolvers` from dependencies (unused, zero forms exist) | S (minutes) | Low | package.json |
+
+---
+
+## Information Architecture Assessment
+
+### Navigation Structure
+
+```
+/ --> Redirect to /projects/1
+/projects/:id --> ProjectWorkspace (3-panel layout)
+  |-- Sidebar (left)
+  |     |-- Project Explorer (component tree, search)
+  |     |-- History (activity log)
+  |     |-- Settings (project name, description, stats)
+  |
+  |-- Main Content (center, tabbed)
+  |     |-- Architecture (ReactFlow canvas + asset manager)
+  |     |-- Schematic (circuit editor + component placer + ERC)
+  |     |-- Breadboard (virtual breadboard)
+  |     |-- PCB (footprint placement + trace routing)
+  |     |-- Component Editor (SVG shape editor + DRC)
+  |     |-- Procurement (BOM table + cost tracking)
+  |     |-- Validation (DRC results)
+  |     |-- Output (console log)
+  |
+  |-- Chat Panel (right)
+        |-- AI chat with 53 action types
+        |-- Settings (API key, model, temperature)
+        |-- Search
+        |-- Quick actions bar
+```
+
+**Strengths:**
+- 3-panel layout is standard for professional tools (VS Code, KiCad, Altium pattern)
+- Tab-based view switching is familiar and scalable
+- Chat panel as persistent assistant is well-positioned
+- Responsive design collapses sidebar at 1024px, chat at 768px
+- Mobile bottom nav with primary/secondary tab split is thoughtful
+- Scrollable tab bar with fade gradients handles overflow well
+
+**Weaknesses:**
+- No breadcrumb or path indicator showing where user is in the workflow
+- No "dashboard" or "home" view for project overview
+- Output tab is misnamed -- it's a console log, not output artifacts
+- No visual workflow progression (e.g., Architecture -> Schematic -> PCB -> Manufacturing)
+- Tab order doesn't clearly communicate the intended design flow
+- "Project Explorer" in sidebar only shows architecture nodes, not a full project tree (no schematics, no PCB designs in tree)
+- Tab switching perceived as sluggish due to ProjectProvider re-render storms (TD-07)
+
+### Discoverability
+
+| Feature | Discoverable? | How |
+|---------|--------------|-----|
+| Keyboard shortcuts | Low | Only via `?` key -- no menu item, no onboarding hint |
+| AI capabilities | Medium | Quick actions bar + empty chat suggestions |
+| Context menus | Low | Right-click only -- no hint that context menus exist |
+| Export formats | Very Low | Only through AI chat or specific view panels. 12 export formats exist but none are surfaced in any menu or button. |
+| Undo/redo | Medium | Standard Ctrl+Z works but no toolbar buttons |
+| Drag-drop from asset library | Medium | Asset library panel is visible but drag hint is text-only |
+| Voice input | High | Mic button visible in chat input |
+| Image upload | High | Image button visible in chat input |
+| Theme toggle | High | Visible in header bar |
+| FZPZ import | None | Server-side only, no UI affordance whatsoever |
+| Clipboard operations | None | AI-mediated only via `copy_architecture_json` / `copy_architecture_summary` tools |
+| Command palette | None | `cmdk` installed but not activated -- zero usage |
+
+### Information Density
+
+The app successfully manages density through:
+- Collapsible panels (sidebar, chat)
+- Resizable panels (drag handles)
+- Scrollable tab bar
+- Context menus for less-common actions
+- Tooltips on all icon buttons
+
+But struggles with:
+- Too many tabs visible at once for new users
+- Procurement view has high density (BOM table + settings + filters + actions) without clear visual hierarchy
+- Validation view mixes component DRC, circuit ERC, and architecture validation in a single list
+# Phase 3 Checklist -- UX Issues (UI-)
+
+> Priority: P0 (critical) -> P3 (nice-to-have)
+> Effort: S (hours) / M (days) / L (weeks) / XL (months)
+> Refined: 2026-02-28 (cross-phase integration with Phases 1, 4, 5)
+
+## P0 -- Critical (Users will abandon the tool)
+
+- [ ] UI-01: Add onboarding / welcome flow for first-time users (empty project detection, feature overview, guided first steps). Note: `start_tutorial` AI action exists but is unimplemented (orphaned feature). | Effort: M | Priority: P0
+- [ ] UI-02: Add project creation UI and project list/selector (remove hardcoded PROJECT_ID=1) | Effort: L | Priority: P0
+- [ ] UI-03: Add collaboration features -- multi-user support, sharing, commenting, role-based access | Effort: XL | Priority: P0
+- [ ] UI-04: Add design import from KiCad/EAGLE/Altium (at minimum KiCad netlist import). Note: FZPZ import exists server-side but has no UI affordance (orphaned feature -- add UI for it as part of this work). | Effort: L | Priority: P0
+- [ ] UI-05: Add standard component/symbol library (74xx, passives, connectors, common ICs) for schematic capture. **Prerequisite: TD-09** (split ai-tools.ts) -- adding library tools to a 1,677-line file is impractical. | Effort: L | Priority: P0
+
+## P1 -- High (Significant friction, users will work around or complain)
+
+- [ ] UI-06: Create dedicated Export panel/dropdown in header with all available export formats (Gerber, KiCad, SPICE, BOM CSV, Eagle, Fritzing, design report) instead of AI-chat-only. **Prerequisite: TD-10** (complete export decomposition) -- dual export backend (old monolith `export-generators.ts` 1,209 LOC + new `server/export/` modules) must be unified first or the UI will need to wire to two competing systems. | Effort: M | Priority: P1
+- [ ] UI-07: Persist AI API key to localStorage or server-side encrypted storage (currently lost on page refresh) | Effort: S | Priority: P1
+- [ ] UI-08: Add login/signup UI to surface existing server-side auth (sessions, users table exist but no UI) | Effort: M | Priority: P1
+- [ ] UI-09: Show explicit "Local Mode" capability list vs "API Mode" capabilities in chat empty state. **Prerequisite: TD-05** (refactor parseLocalIntent CCN=102) -- the local mode parser is a 208-line decision tree; the behavior itself is too tangled to clearly document without refactoring the logic first. | Effort: S | Priority: P1
+- [ ] UI-10: Add coordinate readout / mouse position indicator on all canvas views (Architecture, Schematic, PCB) | Effort: S | Priority: P1
+- [ ] UI-11: Add design rule constraint visualization during PCB trace routing (clearance indicators, DRC real-time feedback). **Prerequisite: TD-01** (refactor PCBLayoutView CCN=135) AND **TD-04** (decompose ShapeCanvas CCN=381) -- adding DRC visualization to these files in their current state will compound already-extreme complexity. | Effort: L | Priority: P1
+- [ ] UI-12: Add project export/import as file (backup, migration, sharing) | Effort: M | Priority: P1
+- [ ] UI-13: Improve error messages with specific guidance: which setting to check, what format is expected, link to docs. **Enabled by: TD-06** (split useActionExecutor 1,299 lines) -- per-domain action handlers would allow consistent, specific error messages per action category instead of generic catch-all messages. | Effort: M | Priority: P1
+- [ ] UI-14: Add net class assignment and management UI in Schematic view (power vs signal, custom width/clearance rules) | Effort: L | Priority: P1
+
+## P2 -- Medium (Noticeable UX gap, impacts daily workflow)
+
+- [ ] UI-15: Add `aria-label` to all unlabeled inputs (sidebar search, log filter, settings inputs) | Effort: S | Priority: P2
+- [ ] UI-16: Wrap input groups in `<form>` elements with proper `<label>` associations for assistive technology. **Cross-ref:** `@hookform/resolvers` is installed but unused (remove it or use it). Phase 5 IN-12 proposes `cmdk` command palette as keyboard-first alternative that partially bypasses this need for power users. | Effort: M | Priority: P2
+- [ ] UI-17: Add focus-visible outlines to all custom interactive elements (toolbar buttons, tree items, canvas tools) | Effort: S | Priority: P2
+- [ ] UI-18: Implement progressive disclosure -- hide advanced tabs (PCB, Simulation, Breadboard) until prerequisite content exists | Effort: M | Priority: P2
+- [ ] UI-19: Add breadcrumb / workflow progression indicator showing design stage (Architecture -> Schematic -> PCB -> Manufacturing) | Effort: M | Priority: P2
+- [ ] UI-20: Rename "Output" tab to "Console" or add separate "Artifacts" tab for exported files and reports | Effort: S | Priority: P2
+- [ ] UI-21: Add cost tracking over time in Procurement view (BOM cost history graph across design iterations) | Effort: M | Priority: P2
+- [ ] UI-22: Add undo/redo toolbar buttons (not just keyboard shortcuts) for discoverability | Effort: S | Priority: P2
+- [ ] UI-23: Add context menu hint / tooltip on first right-click in canvas views | Effort: S | Priority: P2
+- [ ] UI-24: Add "Keyboard Shortcuts" link/button in toolbar (currently only accessible via `?` key) | Effort: S | Priority: P2
+- [ ] UI-25: Add PDF design report export for sharing with non-technical stakeholders | Effort: M | Priority: P2
+- [ ] UI-26: Add project overview / dashboard view showing nodes count, BOM cost, validation status, last modified | Effort: M | Priority: P2
+- [ ] UI-27: Expand Project Explorer sidebar tree to include schematics, PCB designs, and component library entries (not just architecture nodes) | Effort: M | Priority: P2
+- [ ] UI-28: Activate `cmdk` command palette (already installed, zero usage) with basic actions (navigate views, trigger exports, search components). Provides keyboard-first alternative that bypasses zero-form problem for power users. | Effort: M | Priority: P2
+- [ ] UI-29: Add native clipboard support for architecture nodes (Ctrl+C/V) -- currently clipboard operations are AI-mediated only via `copy_architecture_json`/`copy_architecture_summary` tools (orphaned features). | Effort: M | Priority: P2
+
+## P3 -- Nice-to-Have (Polish and delight)
+
+- [ ] UI-30: Add interactive tutorial / guided walkthrough for each view (Architecture, Schematic, Procurement). Wire to or replace the orphaned `start_tutorial` AI action. | Effort: L | Priority: P3
+- [ ] UI-31: Add drag-drop visual hint (ghost preview) when dragging components from asset library | Effort: S | Priority: P3
+- [ ] UI-32: Add "What's New" or feature changelog accessible from UI | Effort: S | Priority: P3
+- [ ] UI-33: Add animation/transition when switching between views (slide or fade) | Effort: S | Priority: P3
+- [ ] UI-34: Add offline mode with local state persistence for basic editing without server | Effort: XL | Priority: P3
+- [ ] UI-35: Add BOM comparison between design versions | Effort: M | Priority: P3
+- [ ] UI-36: Add community component library browser with search and import | Effort: L | Priority: P3
+- [ ] UI-37: Add theme customization beyond light/dark (EDA users often prefer specific color schemes for schematics) | Effort: M | Priority: P3
+- [ ] UI-38: Add WCAG contrast ratio audit on custom color choices (edge colors, node colors, validation severity colors) | Effort: S | Priority: P3
+- [ ] UI-39: Add high-contrast mode for accessibility | Effort: M | Priority: P3
+- [ ] UI-40: Remove `@hookform/resolvers` from dependencies (installed but completely unused -- zero `<form>` elements exist in the app) | Effort: S | Priority: P3
+
+## Update 2026-05-17 (rest-express)
+
+- [ ] UI-41: Audit the 10 newly introduced `<form>` elements for proper label associations and submit behaviors to ensure assistive tech compliance. | Effort: S | Priority: P1
+- [ ] UI-42: Consolidate the 1562 lines of keyboard shortcut logic into the `cmdk` command palette for discoverability and conflict prevention. | Effort: M | Priority: P2
+
+## Dependency Map (Refactor-Before-Feature)
+
+These tech debt items from Phase 4 are **prerequisites** for specific UX items above:
+
+| UX Item | Blocked By | Why |
+|---------|-----------|-----|
+| UI-05 (component library) | TD-09 (split ai-tools.ts) | Adding library tools to a 1,677-line file is impractical |
+| UI-06 (export panel) | TD-10 (complete export decomposition) | Dual backend export system must be unified first |
+| UI-09 (local mode clarity) | TD-05 (refactor parseLocalIntent) | CCN=102 decision tree too tangled to document clearly |
+| UI-11 (DRC visualization) | TD-01 (PCBLayoutView refactor) + TD-04 (ShapeCanvas decomp) | CCN=135 and CCN=381 -- adding features compounds extreme complexity |
+| UI-13 (better error messages) | TD-06 (split useActionExecutor) | 1,299-line monolith has inconsistent error handling per action type |
+| General UI responsiveness | TD-07 (split ProjectProvider) | 40+ values in one context causes re-render storms on any state change |# Phase 4: Technical Debt & Architecture
+
+> Generated 2026-02-28 | ProtoPulse — Browser-based AI-assisted EDA platform
+> Stack: React 19 + TypeScript + Vite + Tailwind v4 + shadcn/ui + @xyflow/react | Express 5 + PostgreSQL + Drizzle ORM
+
+## Executive Summary
+
+ProtoPulse has **catastrophic complexity hotspots** — three functions exceed CCN 100 (industry danger threshold is 15). The codebase has 12 "god files" exceeding 1,000 lines, a test:source ratio of 35% (adequate for a startup but below industry standard of 80%+), and 8 possibly-unused dependencies adding dead weight. The single most impactful architectural debt item is the monolithic `ProjectProvider` context that funnels 40+ state values through a single React context, making re-rendering expensive and testing near-impossible.
+
+**Risk rating: HIGH** — The complexity in PCBLayoutView (CCN=135), ShapeCanvas (CCN=107), and parseLocalIntent (CCN=102) represents a 3-alarm fire. These functions are virtually untestable and will be the source of most production bugs.
+
+---
+
+## Complexity Hotspots
+
+### Critical (CCN > 50) — Immediate refactoring required
+
+| Rank | Function | File | CCN | NLOC | Risk |
+|------|----------|------|-----|------|------|
+| 1 | (anonymous) | `client/src/components/circuit-editor/PCBLayoutView.tsx:156` | **135** | 389 | **CRITICAL** — 9x danger threshold |
+| 2 | (anonymous) | `client/src/components/views/component-editor/ShapeCanvas.tsx:927` | **107** | 209 | **CRITICAL** — 7x danger threshold |
+| 3 | parseLocalIntent | `client/src/components/panels/chat/parseLocalIntent.ts:54` | **102** | 208 | **CRITICAL** — 7x danger threshold |
+| 4 | (anonymous) | `client/src/components/views/component-editor/ShapeCanvas.tsx:765` | **67** | 54 | HIGH |
+| 5 | (anonymous) | `server/component-ai.ts` | **56** | — | HIGH |
+| 6 | (anonymous) | `client/src/components/views/component-editor/ShapeCanvas.tsx:688` | **55** | 76 | HIGH |
+| 7 | renderAssetCard | `client/src/components/panels/asset-manager/AssetGrid.tsx:116` | **51** | 267 | HIGH |
+
+### Dangerous (CCN 30-50) — Refactoring recommended
+
+| Rank | Function | File | CCN | NLOC |
+|------|----------|------|-----|------|
+| 8 | (anonymous) | `ShapeCanvas.tsx:858` | 49 | 61 |
+| 9 | (anonymous) | `ValidationView.tsx:351` | 47 | 157 |
+| 10 | (anonymous) | `BreadboardView.tsx:372` | 45 | 147 |
+| 11 | (anonymous) | `ShapeCanvas.tsx:603` | 45 | 80 |
+| 12 | resolvePad | `server/export/gerber-generator.ts` | 39 | — |
+| 13 | runDrcGate | `server/drc-gate.ts` | 39 | — |
+| 14 | (anonymous) | `ComponentInspector.tsx:110` | 39 | 97 |
+| 15 | (anonymous) | `ComponentTree.tsx:83` | 37 | 55 |
+| 16 | getAttr | `server/svg-parser.ts` | 35 | — |
+| 17 | (anonymous) | `ProbeOverlay.tsx:512` | 35 | 50 |
+| 18 | (anonymous) | `DatasheetExtractModal.tsx:90` | 35 | 62 |
+| 19 | (anonymous) | `ShapeCanvas.tsx:491` | 35 | 83 |
+| 20 | generateGerber | `server/export-generators.ts` | 34 | — |
+
+### Warning (CCN 15-30)
+
+Additional 20+ functions exceed the CCN=15 warning threshold. Notable:
+- `SimulationPanel.tsx:485` (CCN=31), `BreadboardView.tsx:222` (CCN=29), `ArchitectureView.tsx:219` (CCN=29), `ArchitectureView.tsx:286` (CCN=29)
+- `ComponentEditorView.tsx` has **4 functions** with CCN 20-29 — the entire component is a complexity hotspot
+- `ProjectWorkspace.tsx:38` ResizeHandle (CCN=23, 295 NLOC) — layout logic embedded in component
+
+### ShapeCanvas Analysis
+
+`ShapeCanvas.tsx` deserves special attention: it contains **6 separate functions with CCN > 20**, accumulating to **CCN 381 across the file**. This is the highest aggregate complexity of any file in the codebase. The component handles too many responsibilities: shape rendering, hit testing, drag operations, snap guides, path editing, and canvas transformations. It needs decomposition into at least 4 focused modules.
+
+---
+
+## Largest Files (God Files)
+
+12 files exceed 1,000 lines — a significant architectural smell indicating monolithic components that resist testing and modification.
+
+| File | Lines | Category | Risk |
+|------|-------|----------|------|
+| `server/circuit-routes.ts` | 1,757 | API routes | XL — route file should be split by domain |
+| `server/ai-tools.ts` | 1,677 | AI tool definitions | XL — 78 tools in one file |
+| `client/src/components/simulation/WaveformViewer.tsx` | 1,453 | UI component | L — complex but domain-specific |
+| `server/routes.ts` | 1,329 | API routes | L — 50+ endpoints, needs splitting |
+| `client/src/components/panels/chat/hooks/useActionExecutor.ts` | 1,299 | Hook | XL — 53 action types in one switch |
+| `client/src/components/views/component-editor/ShapeCanvas.tsx` | 1,275 | UI component | **XL — highest aggregate CCN** |
+| `server/export/kicad-exporter.ts` | 1,247 | Exporter | M — domain-specific complexity |
+| `server/export-generators.ts` | 1,209 | Exporter (legacy) | L — deprecated monolith, new modules exist |
+| `server/export/eagle-exporter.ts` | 1,150 | Exporter | M — domain-specific complexity |
+| `server/export/gerber-generator.ts` | 1,085 | Exporter | M — domain-specific complexity |
+| `server/ai.ts` | 1,083 | AI system | L — prompt builder + streaming |
+| `server/storage.ts` | 1,062 | Data layer | L — single storage class for all entities |
+
+**Pattern:** Server-side god files are mostly domain-specific (exporters) where high line count is somewhat justified. Client-side god files (ShapeCanvas, useActionExecutor, WaveformViewer) are monolithic components that need decomposition.
+
+---
+
+## Code Smell Summary
+
+| Smell | Count | Severity | Notes |
+|-------|-------|----------|-------|
+| `any` type usage | **74** | Medium | Type safety erosion — each `any` is a gap in TypeScript's protection |
+| `as any` assertions | **19** | High | Explicit type system bypass — often hides real type errors |
+| `@ts-ignore` / `@ts-expect-error` | 0 | Clean | No suppressed errors |
+| `console.log/warn/error` | **17** | Low | Should use structured logging in production |
+| `TODO/FIXME/HACK/XXX` | 1 | Clean | Minimal dead code markers (unusually low — may indicate TODOs are being tracked elsewhere) |
+
+### Type Safety Assessment
+
+74 `any` usages across 213 source files = **0.35 per file average**. This is moderate but not alarming. The 19 `as any` casts are more concerning — each represents a deliberate decision to bypass type checking, often masking real type mismatches. Zero `@ts-ignore` is excellent discipline.
+
+---
+
+## Security Findings
+
+| Finding | Count | Severity | Recommendation |
+|---------|-------|----------|----------------|
+| `eval()` usage | 0 | Clean | No code injection risk |
+| `dangerouslySetInnerHTML` | 1 | Medium | Audit the single usage — ensure input is sanitized |
+| `.innerHTML` assignment | 1 | Medium | Same concern as dangerouslySetInnerHTML — verify no user input flows here |
+| `http://` URLs (non-HTTPS) | 8 | Low | Audit — may be localhost dev URLs or API references. Production must be HTTPS-only |
+| Hardcoded secrets | 0 | Clean | API keys use AES-256-GCM encryption (verified in `server/auth.ts`) |
+
+**Overall Security Posture: GOOD** — No critical vulnerabilities detected. The auth model uses scrypt hashing + AES-256-GCM encrypted API keys. The two innerHTML/dangerouslySetInnerHTML usages need individual audit to confirm no user-controlled data flows into them.
+
+---
+
+## Test Health
+
+| Metric | Value | Assessment |
+|--------|-------|------------|
+| Source files | 213 | — |
+| Test files | 75 | — |
+| Test:Source ratio | **35.2%** | Below industry standard (80%+) but acceptable for startup pace |
+| Skipped tests | 6 | Low — no major test rot |
+| Test infrastructure | Vitest + 5 test suites | Present but thin |
+| E2E tests | 0 | **Missing** — no end-to-end coverage |
+| Integration tests | Minimal | Only exporters have integration tests |
+
+### Coverage Gaps
+
+- **Zero E2E tests** — critical user flows (create project → add components → AI chat → export) have no automated verification
+- **AI tools untested** — 78 tools with zero test coverage for tool execution logic
+- **Frontend components untested** — only layout and panel tests exist; no tests for ShapeCanvas, PCBLayoutView, or BreadboardView (the three highest-complexity components)
+- **Storage layer** — only `storage.test.ts` exists; no tests for cache invalidation, soft deletes, or concurrent access
+
+---
+
+## Dependency Health
+
+| Metric | Value |
+|--------|-------|
+| Total dependencies | 96 (74 prod + 22 dev) |
+| Possibly unused | **8** |
+| Outdated (major) | 3 (@hookform/resolvers 3→5, drizzle-orm 0.39→0.45, date-fns 3→4) |
+| Outdated (minor/patch) | 12+ |
+
+### Possibly Unused Dependencies
+
+| Package | Installed | Evidence |
+|---------|-----------|----------|
+| `@google/generative-ai` | Yes | No direct import found — may use dynamic import or server-only |
+| `@hookform/resolvers` | Yes | No forms exist in the app (Phase 3 confirmed: 0 `<form>` elements) |
+| `framer-motion` | Yes | Only used for Suspense fallbacks — massively underutilized |
+| `tailwindcss-animate` | Yes | Likely replaced by `tw-animate-css` |
+| `tw-animate-css` | Yes | May duplicate `tailwindcss-animate` |
+| `@jridgewell/trace-mapping` | Yes | Build tool dependency — may be transitive |
+| `@types/compression` | Yes | Types without compression usage |
+| `dotenv` | Yes | May be loaded via `-r dotenv/config` flag |
+
+**Note:** `framer-motion` (37KB gzipped) is installed but only used for basic fade transitions. This adds significant bundle weight for minimal value. Either lean into it (micro-interactions, layout animations, gesture handling) or remove it.
+
+---
+
+## Architecture Gaps
+
+### 1. Performance
+
+**Monolithic ProjectProvider Context**
+- `project-context.tsx` provides 40+ state values through a single React context
+- ANY state change triggers re-renders in ALL consuming components
+- This is the single biggest performance bottleneck for the UI
+- **Update from Phase 1 refinement:** ProjectProvider has been partially refactored into 8 separate contexts (architecture, bom, chat, history, output, validation, project-meta, project-id). However, `architecture-context` alone is 365 LOC with 6 useState hooks exposing 27+ values. The re-render problem has been **distributed, not eliminated**. Each domain context still triggers re-renders across all its consumers.
+- **Impact:** Every AI action that updates nodes/edges/BOM causes the entire workspace to re-render
+
+**AI System Prompt Rebuild**
+- `server/ai.ts` rebuilds the full project state (all nodes, edges, BOM, validation, chat history) on every AI request
+- Scales O(n) with project size — a project with 100 nodes sends ~50KB of context per request
+- **Impact:** Token costs scale linearly, response latency increases with project size
+
+**No Code Splitting**
+- All views loaded eagerly despite `React.lazy()` being available
+- Simulation engine, PCB layout, and component editor loaded even when user is on Architecture tab
+- **Impact:** Initial bundle includes ~300KB of code the user may never use in a session
+
+### 2. Scalability
+
+**PROJECT_ID = 1 Hardcoded**
+- Single most referenced debt item across ALL analysis phases
+- Blocks: multi-project, collaboration, proper auth, data isolation
+- Every query assumes project 1 — no routing, no context switching
+- **Impact:** Cannot ship to production with real users
+
+**No Database Migrations**
+- Using `db:push` (destructive schema sync) instead of proper migrations
+- Any schema change risks data loss in production
+- No rollback capability, no migration history
+- **Impact:** Database changes are one-way and destructive
+
+**Dual Export System**
+- Legacy `export-generators.ts` (1,209 lines) coexists with new `server/export/` modules
+- Both systems are active — unclear which is canonical
+- **Impact:** Bug fixes need to be applied to both systems; developer confusion
+
+### 3. Code Quality
+
+**useActionExecutor Monolith**
+- 1,299 lines handling 53 AI action types in what is likely a massive switch/if-else chain
+- Each action type has its own logic for parsing, executing, and error handling
+- **Impact:** Adding a new action type requires modifying a 1,300-line file; high merge conflict risk
+
+**Fragmented Undo/Redo**
+- Each view (Architecture, Schematic, PCB, Component Editor) has its own undo stack
+- No unified history — undoing in one view doesn't affect related changes in another
+- **Impact:** Users lose changes when switching views; confusing mental model
+
+**Anonymous Functions Dominate Complexity**
+- 15 of top 20 complexity hotspots are anonymous functions (unnamed arrow functions in components)
+- Makes stack traces, profiling, and debugging significantly harder
+- **Impact:** When PCBLayoutView crashes at CCN=135, the error says "(anonymous)" — useless for debugging
+
+### 4. Developer Experience
+
+**No CI/CD Pipeline**
+- No GitHub Actions workflows detected
+- No automated testing on PR
+- No automated deployment
+- **Impact:** Every change requires manual testing and deployment
+
+**Minimal Documentation**
+- 1 TODO across 213 source files — either everything is well-documented or nothing is tracked
+- No JSDoc on any of the 78 AI tools
+- No architecture decision records (ADRs)
+- **Impact:** Onboarding a new developer requires tribal knowledge
+
+---
+
+## Ticking Time Bombs
+
+These debt items **WILL** cause production issues if not addressed before launch:
+
+### 1. PCBLayoutView CCN=135 (Severity: CRITICAL)
+A single function with 135 cyclomatic complexity paths and 389 lines. This is **9x the danger threshold**. It is statistically certain to contain undetected bugs. Any modification has a high probability of introducing regressions. This function alone likely accounts for most PCB-related bug reports.
+
+### 2. PROJECT_ID = 1 (Severity: CRITICAL)
+Cannot launch to production with this. Every user would share the same project. No data isolation, no auth scoping, no collaboration model.
+
+### 3. No Database Migrations (Severity: HIGH)
+The first production schema change will be a catastrophe. `db:push` drops and recreates tables. Any data loss in production is unrecoverable without manual backups.
+
+### 4. useActionExecutor (Severity: HIGH)
+53 action types in 1,299 lines. Adding action type 54 means touching a file that 28 commits have modified in the last 90 days (ChatPanel.tsx, which delegates to this hook). Merge conflicts are near-certain in a multi-developer environment.
+
+### 5. AI Prompt Scaling (Severity: MEDIUM-HIGH)
+Full project state rebuild per request works for demo projects. A real engineering project with 200+ nodes and weeks of chat history will hit token limits, causing silent truncation and degraded AI responses.
+
+---
+
+## Git Churn Analysis
+
+High-churn files indicate areas of active development and potential instability:
+
+| File | Changes (90d) | Concern |
+|------|---------------|---------|
+| `server/routes.ts` | 31 | God file getting bigger — needs domain splitting |
+| `ChatPanel.tsx` | 28 | Frequent UI changes — stabilization needed |
+| `project-context.tsx` | 22 | Core state file — every feature touches this |
+| `ProcurementView.tsx` | 17 | Active feature development |
+| `ArchitectureView.tsx` | 17 | Active feature development |
+| `ProjectWorkspace.tsx` | 16 | Layout changes ripple everywhere |
+| `Sidebar.tsx` | 16 | Navigation evolution |
+| `storage.ts` | 15 | Growing — needs interface segregation |
+| `schema.ts` | 14 | Schema still evolving — risky without migrations |
+| `server/index.ts` | 14 | Server bootstrap — should be stable |
+
+**Correlation: High churn + high complexity = HIGH RISK.** The intersection of high-churn and high-complexity files reveals the riskiest code:
+- `ShapeCanvas.tsx` (CCN=381 aggregate, 11 changes) — complex AND evolving
+- `routes.ts` (1,329 lines, 31 changes) — large AND frequently modified
+- `ComponentEditorView.tsx` (989 lines, 14 changes, 4 functions with CCN>20) — complex AND churning
+
+---
+
+## Cross-Phase Implications
+
+### Feature Gaps Blocked by Debt (⑥ Gaps → Debt)
+
+| Feature Gap | Blocking Debt | Why Blocked |
+|-------------|---------------|-------------|
+| FG-01 (PCB layout) | **TD-01** (PCBLayoutView CCN=135) | Any new PCB feature added to this component compounds the complexity crisis. Must refactor first. |
+| FG-05 (component library) | **TD-09** (ai-tools.ts 1,677 lines) | Adding standard component tools to a 1,677-line file is impractical. Must split into modules first. |
+| FG-06 (collaboration) | **TD-02 + TD-03 + TD-07** | Collab requires multi-project (TD-02), migrations (TD-03), and split context (TD-07). Three XL prerequisites. |
+| FG-07/08/09 (export improvements) | **TD-10** (dual export system) | Both old monolith and new modules are active. Must complete decomposition before adding features. |
+| FG-22 (design import) | *Not blocked* | Clean architecture — additive work. Export patterns exist to follow. |
+
+### UX Friction Caused by Debt (⑧ UX → Debt)
+
+| UX Issue | Root Cause Debt | Mechanism |
+|----------|----------------|-----------|
+| UI sluggishness on tab switch | **TD-07** (monolithic context) | ANY state change re-renders ALL consumers. Tab data loading triggers full workspace re-render. |
+| AI actions cause visible freeze | **TD-07** (monolithic context) | AI action updates nodes/edges/BOM simultaneously, causing cascade re-render of every component. |
+| Local mode confusion (UI-09) | **TD-05** (parseLocalIntent CCN=102) | The 208-line decision tree grew organically. Behavior is unpredictable because the code is unmaintainable. |
+| AI actions fail silently | **TD-06** (useActionExecutor 1,299 lines) | Error handling is inconsistent across 53 action types in one monolithic switch. |
+| DRC feedback impossible (UI-11) | **TD-04** (ShapeCanvas CCN=381) | Adding real-time DRC to a component with 6 functions >CCN 20 would create catastrophic complexity. |
+
+### Innovations Enabled/Blocked by Debt (⑩ Debt → Innovation)
+
+| Innovation | Enabling/Blocking Debt | Relationship |
+|------------|----------------------|--------------|
+| IN-01 (AI Design Agent) | **TD-06** (split useActionExecutor) | ENABLES — Registry-based actions allow multi-step AI composition. |
+| IN-02 (Real-Time Collab) | **TD-02 + TD-03 + TD-07** | BLOCKED — CRDTs need domain-specific contexts to sync independently. |
+| IN-03 (WASM SPICE) | **TD-24** (code splitting) | ENABLES — Lazy-loading defers WASM binary until simulation tab opens. |
+| IN-04 (Component Suggestion) | **TD-09** (split ai-tools.ts) | BLOCKED — Can't add suggestion tools to 1,677-line monolith. |
+| IN-06 (Visual Diff) | **TD-03** (DB migrations) | BLOCKED — Version history requires schema-versioned snapshots. |
+| IN-07 (Multi-Model Routing) | **TD-11** (optimize AI prompt) | ENABLES — Selective context makes per-model routing efficient. |
+
+---
+
+## Raw Tool Outputs
+
+### Lizard — Server/Shared Top Warnings
+```
+server/component-ai.ts: anonymous CCN=56
+server/export/gerber-generator.ts: resolvePad CCN=39
+server/drc-gate.ts: runDrcGate CCN=39
+server/svg-parser.ts: getAttr CCN=35
+server/export-generators.ts: generateGerber CCN=34
+```
+
+### Lizard — Client Components Top Warnings
+```
+PCBLayoutView.tsx:156: anonymous — 389 NLOC, 135 CCN
+ShapeCanvas.tsx:927: anonymous — 209 NLOC, 107 CCN
+parseLocalIntent.ts:54: parseLocalIntent — 208 NLOC, 102 CCN
+ShapeCanvas.tsx:765: anonymous — 54 NLOC, 67 CCN
+ShapeCanvas.tsx:688: anonymous — 76 NLOC, 55 CCN
+AssetGrid.tsx:116: renderAssetCard — 267 NLOC, 51 CCN
+ShapeCanvas.tsx:858: anonymous — 61 NLOC, 49 CCN
+ValidationView.tsx:351: anonymous — 157 NLOC, 47 CCN
+BreadboardView.tsx:372: anonymous — 147 NLOC, 45 CCN
+ShapeCanvas.tsx:603: anonymous — 80 NLOC, 45 CCN
+```
+
+### SCC — God Files (>1000 lines)
+```
+1757 server/circuit-routes.ts
+1677 server/ai-tools.ts
+1453 client/src/components/simulation/WaveformViewer.tsx
+1329 server/routes.ts
+1299 client/src/components/panels/chat/hooks/useActionExecutor.ts
+1275 client/src/components/views/component-editor/ShapeCanvas.tsx
+1247 server/export/kicad-exporter.ts
+1209 server/export-generators.ts
+1150 server/export/eagle-exporter.ts
+1085 server/export/gerber-generator.ts
+1083 server/ai.ts
+1062 server/storage.ts
+```
+
+### Code Smell Counts
+```
+'any' type usage:        74
+'as any' assertions:     19
+@ts-ignore:              0
+console.log/warn/error:  17
+TODO/FIXME/HACK/XXX:     1
+```
+
+### Security Scan
+```
+eval():                  0
+dangerouslySetInnerHTML: 1
+innerHTML:               1
+http:// URLs:            8
+```
+
+### Test Health
+```
+Source files: 213
+Test files:  75
+Ratio:       35.2%
+Skipped:     6
+```
+
+### Dependencies
+```
+Production:  74
+Development: 22
+Total:       96
+Possibly unused: 8
+```
+# Phase 4 Checklist -- Tech Debt (TD-) & Enhancements (EN-)
+
+> Priority: P0 (critical) -> P3 (nice-to-have)
+> Effort: S (hours) / M (days) / L (weeks) / XL (months)
+
+## P0 -- Critical (Blocks Production Launch)
+
+- [ ] TD-01: Decompose PCBLayoutView anonymous function (CCN=135, 389 NLOC) into focused modules: layout engine, component placement, routing visualization, interaction handlers | Effort: L | Priority: P0
+- [ ] TD-02: Remove PROJECT_ID=1 hardcoding in project-context.tsx; implement multi-project routing, context switching, and data isolation | Effort: L | Priority: P0
+- [ ] TD-03: Implement database migration system (replace db:push with Drizzle Kit migrations: generate, run, rollback) | Effort: M | Priority: P0
+- [ ] TD-04: Decompose ShapeCanvas.tsx (CCN=381 aggregate, 1275 lines, 6 functions >CCN 20) into: ShapeRenderer, HitTester, DragManager, SnapGuideEngine, PathEditor, CanvasTransforms | Effort: L | Priority: P0
+
+## P1 -- High (Significant Technical Risk)
+
+- [ ] TD-05: Decompose parseLocalIntent (CCN=102, 208 NLOC) using strategy pattern — one handler per intent type instead of monolithic if/switch chain | Effort: M | Priority: P1
+- [ ] TD-06: Split useActionExecutor.ts (1299 lines, 53 action types) into action-type modules with a registry pattern | Effort: L | Priority: P1
+- [ ] TD-07: Split ProjectProvider monolithic context (40+ state values) into domain-specific contexts: NodesContext, BOMContext, ChatContext, ValidationContext | Effort: L | Priority: P1
+- [ ] TD-08: Split server/routes.ts (1329 lines, 50+ endpoints) into domain routers: project-routes, bom-routes, validation-routes, export-routes, auth-routes | Effort: M | Priority: P1
+- [ ] TD-09: Split server/ai-tools.ts (1677 lines, 78 tools) into tool category modules with a tool registry | Effort: M | Priority: P1
+- [ ] TD-10: Complete export-generators.ts (1209 lines) monolith decomposition — migrate remaining generators to server/export/ modules, then delete the monolith | Effort: M | Priority: P1
+- [ ] TD-11: Optimize AI system prompt to send only relevant context (changed nodes, active view data) instead of full project state per request | Effort: M | Priority: P1
+- [ ] TD-12: Add CI/CD pipeline — GitHub Actions for: lint, typecheck, test, build on every PR | Effort: M | Priority: P1
+- [ ] TD-13: Reduce `any` type usage (74 occurrences) — target <10 across codebase with proper type definitions | Effort: M | Priority: P1
+- [ ] TD-14: Eliminate `as any` casts (19 occurrences) — replace with proper generics, type guards, or interface extensions | Effort: S | Priority: P1
+- [ ] TD-15: Name all anonymous functions in high-complexity components for debuggable stack traces | Effort: S | Priority: P1
+
+## P2 -- Medium (Impacts Developer Velocity)
+
+- [ ] TD-16: Split circuit-routes.ts (1757 lines) into focused route files by EDA domain | Effort: M | Priority: P2
+- [ ] TD-17: Decompose component-ai.ts (CCN=56) — extract prompt building, response parsing, and tool dispatch into separate modules | Effort: M | Priority: P2
+- [ ] TD-18: Decompose gerber-generator.ts resolvePad (CCN=39) — extract pad shape resolution into a lookup table | Effort: S | Priority: P2
+- [ ] TD-19: Decompose drc-gate.ts runDrcGate (CCN=39) — extract rule evaluation into individual rule functions | Effort: S | Priority: P2
+- [ ] TD-20: Audit and remove possibly-unused dependencies: @hookform/resolvers, tailwindcss-animate, tw-animate-css, @types/compression | Effort: S | Priority: P2
+- [ ] TD-21: Audit dangerouslySetInnerHTML usage (1 occurrence) — verify no user-controlled data flows into it | Effort: S | Priority: P2
+- [ ] TD-22: Audit innerHTML assignment (1 occurrence) — same security concern as TD-21 | Effort: S | Priority: P2
+- [ ] TD-23: Replace console.log/warn/error (17 occurrences) with structured logging via Winston (already available server-side) | Effort: S | Priority: P2
+- [ ] TD-24: Add code splitting with React.lazy() — defer loading Simulation, PCB, Component Editor views until accessed | Effort: M | Priority: P2
+- [ ] TD-25: Build unified undo/redo stack across all views (currently fragmented per-view with no cross-view coordination) | Effort: L | Priority: P2
+- [ ] TD-26: Either leverage framer-motion fully (micro-interactions, gestures) or remove it to save ~37KB gzipped bundle size | Effort: S | Priority: P2
+- [ ] TD-27: Update major outdated dependencies: @hookform/resolvers 3→5, drizzle-orm 0.39→0.45, date-fns 3→4 | Effort: M | Priority: P2
+
+## P3 -- Nice-to-Have (Polish)
+
+- [ ] TD-28: Reduce overall file count >500 lines — target maximum 800 lines per file via decomposition | Effort: L | Priority: P3
+- [ ] TD-29: Add JSDoc documentation to all 78 AI tools for discoverability and maintenance | Effort: M | Priority: P3
+- [ ] TD-30: Create Architecture Decision Records (ADRs) for key choices: dual AI providers, Express over Next.js, monolithic context | Effort: S | Priority: P3
+- [ ] TD-31: Audit http:// URLs (8 occurrences) — ensure all production URLs use HTTPS | Effort: S | Priority: P3
+- [ ] TD-32: Resolve skipped tests (6 occurrences) — either fix or remove | Effort: S | Priority: P3
+- [ ] TD-33: Remove deprecated endpoints `/api/bom/:id` and `/api/validation/:id` and update all callers | Effort: S | Priority: P3
+
+## Test Coverage Enhancement (EN-)
+
+- [ ] EN-01: Add E2E tests for critical user flows: create project → add components → AI chat → export | Effort: L | Priority: P1
+- [ ] EN-02: Add integration tests for storage layer: cache invalidation, soft deletes, concurrent access | Effort: M | Priority: P1
+- [ ] EN-03: Add test coverage for AI tool execution (78 tools, currently 0 tested for execution logic) | Effort: L | Priority: P1
+- [ ] EN-04: Add component tests for high-complexity UI: PCBLayoutView, ShapeCanvas, BreadboardView | Effort: L | Priority: P1
+- [ ] EN-05: Add snapshot tests for export generators (KiCad, Eagle, Gerber, SPICE) to prevent regression | Effort: M | Priority: P2
+
+## Priority Summary
+
+| Priority | Count | Category |
+|----------|-------|----------|
+| P0 | 4 | TD-01, TD-02, TD-03, TD-04 |
+| P1 | 15 | TD-05 through TD-15, EN-01 through EN-04 |
+| P2 | 13 | TD-16 through TD-27, EN-05 |
+| P3 | 6 | TD-28 through TD-33 |
+| **Total** | **38** | |
+# Phase 5: Feature Innovation
+
+## Innovation Proposals (Ranked by Impact x Feasibility)
+
+### IN-01: Generative "Circuits-as-Code" (TypeScript EDA)
+- **What**: Expose the underlying `@tscircuit` infrastructure to allow engineers to define schematics, components, and layouts using declarative TypeScript (React-like) syntax alongside the visual canvas.
+- **Why**: Hardware engineers increasingly write scripts to automate layout. Software engineers entering hardware prefer code. This bridges the gap, allowing AI to directly write and refactor circuit code that instantly updates the visual canvas.
+- **How**: Surface an integrated code editor (Monaco) next to the Architecture/Schematic views. AI assistant generates `@tscircuit` React code instead of just manipulating JSON nodes. 
+- **Effort**: M
+- **Priority**: P0 (game-changer)
+- **Competitive moat**: Extremely high. No major competitor (including Flux.ai) has a first-class declarative code representation for the entire board that syncs two-way with the visual canvas.
+- **Personas served**: Professional electrical engineer, Hardware startup founder
+
+### IN-02: Multimodal Datasheet Ingestion Agent
+- **What**: Allow users to drag-and-drop a manufacturer's PDF datasheet into the chat to instantly generate a standard component symbol, footprint, and SPICE model.
+- **Why**: ProtoPulse lacks a massive 10K+ component library (a critical gap identified in Phase 2). Manually creating components is tedious. 
+- **How**: Utilize Gemini 2.5 Vision / Document Processing capabilities to parse the PDF, extract pinout tables, physical dimensions, and electrical characteristics, and output a validated component JSON.
+- **Effort**: M
+- **Priority**: P0 (game-changer)
+- **Competitive moat**: High. Solves the "cold start" library problem that plagues new EDA tools through cutting-edge multimodal AI, bypassing the need for a manually curated 1.6B part database.
+- **Personas served**: All personas
+
+### IN-03: Supply Chain-Aware AI Architecture Generation
+- **What**: The AI architecture generator checks live stock and pricing via Octopart/Mouser/LCSC APIs *before* recommending parts for a block diagram.
+- **Why**: Currently, pricing/stock data is AI-simulated (fabricated). Startups waste weeks designing around chips that are out of stock.
+- **How**: Integrate real supplier APIs. When the AI proposes an architecture, it injects API data to ensure the BOM is cost-optimized and highly available.
+- **Effort**: M
+- **Priority**: P1
+- **Competitive moat**: Medium. Flux.ai has live pricing, but linking it directly to the *initial AI architecture generation phase* ensures the design is inherently manufacturable.
+- **Personas served**: Hardware startup founder, Professional electrical engineer
+
+### IN-04: Natural Language Design Rule Constraints (DRC)
+- **What**: Let users define complex spatial and electrical constraints in plain English. e.g., "Keep the USB 2.0 differential pair matched to 90 ohms and away from the switching regulator."
+- **Why**: Traditional DRC interfaces are complex tables. AI can translate intent into strict mathematical boundaries for the PCB Layout view.
+- **How**: Use the AI to parse natural language into a JSON array of DRC rules (clearance, length matching, impedance) that the spatial grid engine enforces.
+- **Effort**: M
+- **Priority**: P1
+- **Competitive moat**: High. Lowering the barrier to advanced PCB constraints makes professional features accessible to makers and startups.
+- **Personas served**: Hobbyist maker, Hardware startup founder
+
+### IN-05: Real-time, Local-First Multiplayer Collaboration (CRDTs)
+- **What**: Implement real-time multi-user editing for schematics and architecture diagrams that works even offline, syncing when reconnected.
+- **Why**: Hardware design is a team sport. ProtoPulse currently is single-user. Flux.ai supports 20 editors but requires the cloud.
+- **How**: Integrate Yjs or Automerge CRDTs (Conflict-free Replicated Data Types) with `@xyflow/react` and local IndexedDB state.
+- **Effort**: XL
+- **Priority**: P1
+- **Competitive moat**: Very High. True offline-capable, local-first collaboration beats Flux.ai's cloud-dependent model and appeals to IP-sensitive professionals.
+- **Personas served**: Professional electrical engineer, Hardware startup founder
+
+### IN-06: 3D Digital Twin Viewer with AR Export
+- **What**: A fully interactive 3D board viewer that can export to GLTF/USDZ for viewing the PCB in Augmented Reality on a smartphone.
+- **Why**: Essential for mechanical fit testing. AR export allows makers to visualize how the board fits into a 3D-printed enclosure on their actual desk.
+- **How**: Use React Three Fiber to render the PCB stackup and component STEP files in 3D. Add a button to generate a QR code for mobile AR view.
+- **Effort**: L
+- **Priority**: P2
+- **Competitive moat**: Medium. Standard 3D viewers are table-stakes, but AR export is a highly shareable, viral feature that competitors lack.
+- **Personas served**: Hobbyist maker, Hardware startup founder
+
+### IN-07: AI FMEA & Compliance Report Generator
+- **What**: A one-click generation of Failure Mode and Effects Analysis (FMEA) and test plan documentation based on the current architecture and components.
+- **Why**: Startups and pros spend weeks writing compliance docs. Flux.ai offers this via Copilot Shortcuts.
+- **How**: Pass the entire project state and component metadata to Claude/Gemini with a prompt to identify single points of failure, thermal risks, and recommended test points.
+- **Effort**: S
+- **Priority**: P2
+- **Competitive moat**: Low to replicate, but extremely high business value for users.
+- **Personas served**: Hardware startup founder, Professional electrical engineer
+
+### IN-08: "Shift-Left" Background Thermal/SI Heuristics
+- **What**: A background AI agent that periodically analyzes the architecture and schematic to flag potential thermal hotspots or signal integrity issues *before* layout begins.
+- **Why**: Typically, these analyses happen post-layout, which is too late and causes expensive rework.
+- **How**: Use the AI to review high-power nets and high-speed components, highlighting problematic nodes in red on the `@xyflow/react` canvas.
+- **Effort**: M
+- **Priority**: P2
+- **Competitive moat**: High. Proactive, architecture-level heuristic analysis doesn't exist in traditional tools.
+- **Personas served**: Professional electrical engineer
+
+### IN-09: Smart Breadboard-to-PCB Autorouter
+- **What**: An educational workflow that automatically translates a breadboard prototype directly into a beginner-friendly PCB layout (thick traces, 1 or 2 layers, large clearances).
+- **Why**: Bridges the gap for hobbyists moving from Arduino breadboards to their first manufactured PCB.
+- **How**: Use the existing BreadboardView netlist to seed a simplified autorouter optimized for home etching or CNC milling (e.g., Voronoi routing).
+- **Effort**: L
+- **Priority**: P3 (nice-to-have)
+- **Competitive moat**: Medium. Fritzing does this poorly; doing it well with AI assistance would capture the entire educational market.
+- **Personas served**: Hobbyist maker
+
+### IN-10: Command Palette (Keyboard-First EDA)
+- **What**: A global, context-aware command palette (accessible via `Cmd+K`) for rapid navigation, tool switching, net assignment, and AI prompting.
+- **Why**: Phase 3 found zero native forms and an imperative UI. Power users demand keyboard-driven workflows.
+- **How**: Integrate `cmdk` (often bundled with shadcn/ui). Connect it to the 78 existing AI actions and view-switching logic.
+- **Effort**: S
+- **Priority**: P1
+- **Competitive moat**: Medium. Modernizes the UX dramatically, making it feel like Linear or VS Code for hardware.
+- **Personas served**: Professional electrical engineer
+
+## Moonshot Section
+
+### Zero-Shot Board Generation
+"I need a flight controller for a quadcopter" -> Full architecture, schematic, and proposed PCB layout generated in 5 minutes. The ultimate manifestation of the AI-first philosophy, eliminating the blank canvas problem entirely.
+
+### Auto-Fabrication Pipeline (Zero-Touch Manufacturing)
+Direct API integration with JLCPCB/PCBWay where clicking "Manufacture" auto-generates all Gerber, Drill, and Pick & Place files, runs an AI-powered DFM pre-check to automatically fix overlapping silkscreens or trace widths, and places the order directly.
+
+### Hardware-in-the-Loop Simulation Sync
+Integration with a desktop oscilloscope/logic analyzer (via WebUSB or a local companion app) to compare real-world hardware readings against the browser's SPICE simulation in real-time, highlighting discrepancies.
+
+## Integration Opportunities
+
+- **`@tscircuit` ecosystem**: Already listed in `package.json` (`@tscircuit/schematic-match-adapt`, etc.). This is a massive "cheap innovation" opportunity. Exposing this allows for "Circuits-as-Code" (IN-01) with almost zero foundation building required.
+- **`@xyflow/react` (React Flow)**: Highly extensible. Can be easily augmented to support collaborative cursors (IN-05) and real-time visual heuristic warnings (IN-08).
+- **React 19 Server Actions & Concurrent Features**: Can be leveraged to run heavy SPICE simulations or Octopart API searches asynchronously without blocking the UI, significantly improving perceived performance (alleviating the sluggishness noted in Phase 3).
+- **Gemini Multimodal / Vision**: Using the existing Gemini SDK integration to parse screenshots of schematics or PDF datasheets (IN-02) is a very low-effort, high-impact innovation that requires no new external dependencies.
+
+## Research Links
+
+- WebSearch query on EDA trends (2025/2026): Highlighted the shift from "drawing tools" to "intelligent design environments", Cloud-native collaboration (Google Docs-ification), and Shift-Left simulation.
+- Altium Designer Trends: Focus on AI constraints and deep MCAD/simulation integration.
+- Flux.ai Features: Copilot assistant, community-driven parts, and live pricing. ProtoPulse can leapfrog by integrating API pricing directly into the generative phase, rather than just as a post-design check.
+- EasyEDA Evolution: Direct manufacturing feedback from JLCPCB. ProtoPulse's "Auto-Fabrication Pipeline" moonshot builds on this concept.
+- `@tscircuit` Documentation: Explored via package.json inspection, leading to the IN-01 proposal.
+# Phase 5: Innovation Checklist
+
+## Innovations (IN-)
+
+- [ ] IN-01: Generative "Circuits-as-Code" (TypeScript EDA) | Effort: M | Priority: P0
+- [ ] IN-02: Multimodal Datasheet Ingestion Agent | Effort: M | Priority: P0
+- [ ] IN-03: Supply Chain-Aware AI Architecture Generation | Effort: M | Priority: P1
+- [ ] IN-04: Natural Language Design Rule Constraints (DRC) | Effort: M | Priority: P1
+- [ ] IN-05: Real-time, Local-First Multiplayer Collaboration (CRDTs) | Effort: XL | Priority: P1
+- [ ] IN-06: 3D Digital Twin Viewer with AR Export | Effort: L | Priority: P2
+- [ ] IN-07: AI FMEA & Compliance Report Generator | Effort: S | Priority: P2
+- [ ] IN-08: "Shift-Left" Background Thermal/SI Heuristics | Effort: M | Priority: P2
+- [ ] IN-09: Smart Breadboard-to-PCB Autorouter | Effort: L | Priority: P3
+- [ ] IN-10: Command Palette (Keyboard-First EDA) | Effort: S | Priority: P1
+# Cross-Phase Analysis Notes
+
+> Lead orchestrator analysis — Round 2 (all 5 phases complete, pre-refinement)
+> Updated: 2026-02-28
+
+## Cross-Reference Connections Identified
+
+### ① State → Gaps: Feature Completeness
+- Phase 1 rates PCB layout as **Partial/Stub** (auto-route is stub, trace routing is AI-only, board dims hardcoded). Phase 2 rates PCB as **Missing** vs competitors. Combined: PCB is the single biggest capability gap.
+- Phase 1 finds 78 AI tools but BOM pricing/stock/lead-times are all **AI-simulated** (no real supplier APIs). Phase 2 confirms FG-23 (real supplier APIs) as P2 gap. **Priority recalibration: FG-23 should be P1** given Phase 1 evidence that the entire procurement feature set relies on simulated data.
+- Phase 1 finds export system has 12 generators but no import for any format except FZPZ. Phase 2 confirms FG-22 (import support) as P2. Phase 3 documents this as "Critical dead-end" for professional engineers. **Priority recalibration: FG-22 should be P1.**
+- Phase 1 notes simulation engine lacks frequency-domain, Monte Carlo, and SPICE model import. Phase 2 rates simulation as **Partial**. EN-28/29/30 + FG-13/20/21 form a coherent simulation improvement bundle.
+
+### ② State → UX: Orphaned Features
+- Phase 1 inventories 78 AI tools but Phase 3 finds manufacturing exports (Gerber, KiCad, Eagle, etc.) are ONLY accessible via chat commands — no dedicated UI buttons. These are features that exist but are practically orphaned from non-AI-savvy users.
+- Phase 1 finds `copy_architecture_json` and `copy_architecture_summary` AI tools exist but Phase 3 notes no native Ctrl+C/V support for nodes. The clipboard is AI-mediated only.
+- Phase 1 finds FZPZ import exists server-side but Phase 3 documents professional engineer workflow: "No KiCad import, no EAGLE import, no netlist import **from UI**. Server has FZPZ import but no UI affordance for it." Server capability with no UI = orphaned feature.
+- Phase 1 finds `start_tutorial` registered as AI action but Phase 3 notes "No interactive tutorial or guided tour." The tool exists but is unimplemented. Phase 5 proposes IN-10 to fill this gap.
+
+### ③ State → Debt: Architecture vs Reality
+- Phase 1 documents the `ProjectProvider` as a monolithic context with 40+ state values. Phase 4 quantifies the impact: ANY state change triggers re-renders in ALL consuming components. TD-07 proposes splitting into domain-specific contexts.
+- Phase 1 inventories 78 AI tools in a single file. Phase 4 measures `ai-tools.ts` at 1,677 lines — the second-largest file in the codebase. TD-09 proposes splitting into tool category modules.
+- Phase 1 notes dual export system (old monolith + new modules). Phase 4 confirms both are active with `export-generators.ts` at 1,209 lines. TD-10 proposes completing the decomposition.
+- Phase 1 documents the AI system prompt rebuild pattern. Phase 4 quantifies it as O(n) scaling — a project with 100 nodes sends ~50KB context per request. TD-11 proposes sending only relevant context.
+- Phase 1 finds 115 REST endpoints across `routes.ts` (1,329 lines) and `circuit-routes.ts` (1,757 lines). Phase 4 flags these as the #1 and #4 largest server files. TD-08 and TD-16 propose domain splitting.
+
+### ④ State → Innovation: Untapped Infrastructure
+- Phase 5 identified 8 "Integration Opportunities" from already-installed but unused dependencies:
+  - `cmdk` (command palette) — installed, zero usage found. IN-12/INT-01 proposes using it.
+  - `framer-motion` — installed, only used for Suspense fallbacks. Phase 4 confirms it adds ~37KB gzipped for minimal value. TD-26 says: use it or lose it.
+  - `@tanstack/react-virtual` — NOT installed but @tanstack/react-query is, suggesting familiarity
+  - Anthropic extended thinking — SDK supports it, not used. INT-06 proposes using it.
+  - Anthropic batch API — available, not used. INT-07 proposes using it.
+  - `@hookform/resolvers` — Phase 4 finds it possibly unused AND Phase 3 confirms 0 `<form>` elements. **Remove it.**
+
+### ⑤ Gaps → UX: Competitive UX Patterns
+- **FG-02 (multi-project) ↔ UI-02 ↔ TD-02**: ALL THREE phases independently flag PROJECT_ID=1 as critical. Phase 3 documents the exact onboarding friction, Phase 4 quantifies it as blocking production launch.
+- **FG-06 (collaboration) ↔ UI-03**: Phase 2 notes Altium 365 + Flux.ai have real-time collab. Phase 3 traces "Share design" workflow as a "Critical dead-end" for hobbyist persona.
+- **FG-05 (component library) ↔ UI-05**: Phase 2 rates ProtoPulse "Weak" on component library. Phase 3 documents professional engineer hitting a dead-end: "No standard symbol library (74xx, passives, connectors)."
+- EasyEDA's one-click JLCPCB ordering (FG-10) is a UX pattern that directly resolves the Phase 3 "Export" workflow friction where Output tab is "a console log, not an export UI."
+
+### ⑥ Gaps → Debt: Feasibility Assessment
+- **FG-01 (PCB layout) is BLOCKED by TD-01**: PCBLayoutView has CCN=135 — any new PCB features added to this component will compound the complexity crisis. **Must refactor before adding features.** This makes TD-01 a higher priority than FG-01 itself.
+- **FG-05 (component library) needs TD-09 first**: The component library would add more AI tools to the already-1,677-line ai-tools.ts. Must split into modules before scaling the tool count.
+- **FG-06 (collaboration) needs TD-02 + TD-03 first**: Real-time collaboration requires multi-project support (TD-02) and proper migrations (TD-03) before Yjs CRDTs can be added. These are prerequisites, not nice-to-haves.
+- **FG-07/08/09 (export improvements) partially blocked by TD-10**: Dual export system means improvements need to touch both old monolith AND new modules. Complete the decomposition first.
+- **FG-22 (design import) is architecturally clean**: The existing export infrastructure provides patterns to follow. Import is additive work, not blocked by debt.
+
+### ⑦ Gaps → Innovation: Beyond Parity
+- **FG-01 (PCB layout) vs IN-01 (AI design agent)**: Rather than copying KiCad's manual PCB workflow, ProtoPulse should leverage IN-01 to offer AI-assisted PCB routing — leapfrog rather than copy.
+- **FG-06 (collaboration) → IN-02**: Phase 5 proposes Yjs CRDTs for real-time collaboration, which solves FG-06 while adding features no competitor has (AI-aware collaborative editing).
+- **FG-10 (PCB ordering) → IN-05**: Phase 5 expands FG-10 from basic ordering to DFM pre-check + instant pricing + order tracking.
+
+### ⑧ UX → Debt: Performance-Caused Friction
+- **ShapeCanvas CCN=381 ↔ UI-11 (DRC visualization)**: Phase 3 wants real-time DRC feedback during PCB trace routing. Phase 4 shows ShapeCanvas has 6 functions with CCN>20. Adding DRC visualization to this component without refactoring will create catastrophic complexity. **TD-04 must precede UI-11.**
+- **ProjectProvider monolith ↔ general UI sluggishness**: Phase 3 notes UI friction across multiple views. Phase 4 identifies the root cause: ANY state change in the monolithic ProjectProvider triggers re-renders in ALL consuming components. This is why switching tabs feels slow and why AI actions cause visible UI jank. **TD-07 is the single most impactful performance fix.**
+- **parseLocalIntent CCN=102 ↔ UI-09 (Local vs API mode)**: Phase 3 flags confusion about "Local Mode" vs "API Mode" capabilities. Phase 4 reveals the local intent parser is a 208-line, 102-CCN monster. Adding clarity to this feature requires refactoring the parser first. **TD-05 enables UI-09.**
+- **useActionExecutor 1,299 lines ↔ AI action reliability**: Phase 3 notes AI actions sometimes fail silently. Phase 4 finds the action executor is a massive monolith where error handling per action type is inconsistent. **TD-06 enables better error handling per action type.**
+
+### ⑨ UX → Innovation: Workflow Automation
+- Phase 3 traces 5-step BOM workflow (manual add → AI-only). Phase 5 proposes IN-04 (intelligent component suggestion) that would automate this.
+- Phase 3 flags "8 tabs visible at once overwhelms beginners." Phase 5 proposes IN-10 (interactive tutorials) and UI-18 (progressive disclosure) to solve this.
+- Phase 3 identifies zero `<form>` elements. IN-12 (command palette via cmdk) offers keyboard-first alternative that bypasses form issues.
+
+### ⑩ Debt → Innovation: Architecture Enables/Blocks
+- **TD-07 (split ProjectProvider) ENABLES IN-02 (real-time collab)**: Yjs CRDTs need to sync specific data types (nodes, edges, BOM) independently. A monolithic context makes this impossible. TD-07 creates the domain-specific contexts that CRDTs can wrap.
+- **TD-06 (split useActionExecutor) ENABLES IN-01 (AI design agent)**: The AI design agent will need to execute multiple actions in sequence (create components → wire them → validate → layout). A registry-based action system makes this composable. The current monolith doesn't support action composition.
+- **TD-11 (optimize AI prompt) ENABLES IN-07 (multi-model routing)**: Sending only relevant context per request makes model routing viable — different models get different context windows. Full project state per request wastes tokens regardless of model.
+- **TD-03 (DB migrations) BLOCKS IN-06 (visual diff/version history)**: Version history requires storing schema-versioned snapshots. Without migrations, there's no guarantee schema compatibility between versions. TD-03 is a prerequisite.
+- **TD-24 (code splitting) ENABLES IN-03 (WASM SPICE)**: The ngspice WASM binary is large. Without code splitting, it would be loaded for every user on every page load. Code splitting defers it until the simulation tab is opened.
+- **TD-09 (split ai-tools) ENABLES IN-04 (intelligent component suggestion)**: The suggestion engine needs its own tool category. Adding it to a 1,677-line file is impractical.
+
+## Recurring Themes (3+ phases agree)
+
+| Theme | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Phase 5 |
+|-------|---------|---------|---------|---------|---------|
+| PROJECT_ID=1 must die | Hardcoded in project-context.tsx | FG-02 (P0) | UI-02 (P0) | TD-02 (P0) | IN-02 prerequisite |
+| Collaboration is table-stakes | No WebSocket infra | FG-06 (P1) | UI-03 (P0) | Needs TD-02+TD-03 first | IN-02 (P0) |
+| Component library too thin | 78 tools but no standard library | FG-05 (P0) | UI-05 (P0) | ai-tools.ts must split first | IN-04 supplements |
+| Export UX is scattered | 12 generators, dual system | FG-10, FG-07-09 | UI-06 (P1), UI-12 (P1) | TD-10 (complete decomposition) | IN-05 (P1) |
+| AI is the moat — lean in | 78 tools, "Strong" across all | "Strong" across all AI features | Local vs API mode unclear (UI-09) | Prompt scales O(n) | IN-01 (P0), IN-07 (P1) |
+| Onboarding doesn't exist | No welcome flow | Implied by missing imports | UI-01 (P0), UI-28 (P3) | No CI/CD = no staging for testing | IN-10 (P2) |
+| PCB is the weakest domain | Partial/Stub maturity | FG-01/03/04/11/14/15 (P0-P2) | UI-11 (P1) | **CCN=135 in PCBLayoutView** | IN-01 can leapfrog |
+| No real supplier data | All BOM data AI-simulated | FG-23 (P2) | Procurement tab shows simulated data | — | IN-05/08 address this |
+| Testing coverage thin | — | Not addressed | Not addressed | **35% test:source ratio, 0 E2E** | Not addressed |
+| AI prompt scales poorly | Rebuilds full state O(n) | Not addressed | Not addressed | TD-11 (P1) | EN-17 (P1), EN-19 (P1) |
+| God files resist change | ai-tools.ts 1677, routes.ts 1329 | — | — | **12 files >1000 lines** | — |
+| ShapeCanvas is a complexity bomb | — | — | DRC visualization needed there | **CCN=381 aggregate, 6 warnings** | — |
+
+## Impact Chains
+
+### Chain 1: PCB Complexity → Feature Paralysis → Competitive Gap
+```
+PCBLayoutView CCN=135 (TD-01)
+  → Developers cannot safely modify PCB code
+  → PCB auto-router stays as stub (FG-01 blocked)
+  → Manual trace routing stays AI-only (EN-09 blocked)
+  → Users can't do basic PCB design
+  → ProtoPulse rated "Missing" for PCB vs every competitor
+  → Professional engineers reject the tool
+```
+
+### Chain 2: PROJECT_ID=1 → Single-User → No Business Model
+```
+PROJECT_ID=1 hardcoded (TD-02)
+  → No multi-project support (FG-02 blocked)
+  → No user isolation (security risk)
+  → No collaboration possible (FG-06 blocked, IN-02 blocked)
+  → Cannot onboard multiple users
+  → No viable business model (can't charge per-user or per-project)
+```
+
+### Chain 3: Monolithic Context → Re-render Storm → UI Jank
+```
+ProjectProvider has 40+ state values (TD-07)
+  → Any state change triggers all consumers to re-render
+  → AI actions cause visible UI freeze during state update
+  → Tab switching feels sluggish
+  → Users perceive the app as slow
+  → User retention drops
+```
+
+### Chain 4: No Migrations → Schema Fragility → Feature Velocity
+```
+db:push instead of migrations (TD-03)
+  → Schema changes are destructive and one-way
+  → Developers fear changing the schema
+  → New features requiring schema changes get delayed
+  → Version history (IN-06) is impossible without schema versioning
+  → Cannot safely deploy to production with real user data
+```
+
+### Chain 5: AI Prompt O(n) → Token Cost Explosion → Model Routing Impossible
+```
+Full project state in every AI request (TD-11)
+  → Token cost scales linearly with project size
+  → Large projects hit token limits, causing silent truncation
+  → AI responses degrade for active users (the most valuable ones)
+  → Multi-model routing (IN-07) wastes tokens on every model
+  → Cannot use cheaper models for simple tasks (context too large)
+```
+
+## Risk Heatmap
+
+| Module | Complexity | Change Freq (90d) | User Exposure | Risk |
+|--------|-----------|-------------------|---------------|------|
+| PCBLayoutView | **EXTREME (135)** | Low (0) | All personas | **CRITICAL** — untouchable |
+| ShapeCanvas | **EXTREME (381 agg)** | High (11) | Comp editor users | **CRITICAL** — complex AND churning |
+| routes.ts | High (1,329 lines) | **Very High (31)** | All personas | **HIGH** — large AND most-changed |
+| ChatPanel.tsx | Medium | **Very High (28)** | All personas | **HIGH** — most-changed UI file |
+| project-context.tsx | High (40+ values) | **High (22)** | All personas | **HIGH** — monolith, frequently changed |
+| parseLocalIntent | **EXTREME (102)** | Low | AI users | HIGH — complexity bomb |
+| useActionExecutor | High (1,299 lines) | Medium | AI users | HIGH — monolith |
+| storage.ts | Medium (1,062 lines) | Medium (15) | All (data layer) | MEDIUM |
+| schema.ts | Low | Medium (14) | All (data model) | **MEDIUM-HIGH** — no migrations |
+| ai-tools.ts | High (1,677 lines) | Low | AI users | MEDIUM — large but stable |
+
+## Priority Recalibration (Cross-Phase Evidence)
+
+### Promotions (↑ priority)
+| Item | Original | New | Reason |
+|------|----------|-----|--------|
+| FG-22 (design import) | P2 | **P1** | Phase 3: "Critical dead-end" for professional engineers |
+| FG-23 (real supplier APIs) | P2 | **P1** | Phase 1: ALL procurement data is simulated — no real value |
+| TD-01 (PCBLayoutView refactor) | — | **P0** | CCN=135 blocks ALL PCB feature work (Chain 1) |
+| TD-04 (ShapeCanvas decomp) | — | **P0** | CCN=381 aggregate, 6 functions >CCN 20, highest complexity in codebase |
+| EN-01 (E2E tests) | P1 | **P0 candidate** | 0 E2E tests, 35% test ratio, zero coverage for highest-complexity components |
+
+### Demotions (↓ priority)
+| Item | Original | New | Reason |
+|------|----------|-----|--------|
+| IN-02 (real-time collab) | P0 | **P1** | Blocked by TD-02, TD-03, TD-07 — three XL prerequisites |
+| IN-13 (offline PWA) | P2 | **P3** | Requires XL effort, no user demand signal, architectural prerequisites |
+| UI-32 (offline mode) | P3 | **P3 (confirm)** | Same as IN-13 — XL effort, no demand |
+
+### Bundle Opportunities (implement together)
+| Bundle | Items | Why Together |
+|--------|-------|-------------|
+| **PCB Unblock** | TD-01 → FG-01 + EN-09 + UI-11 | Refactor PCBLayoutView, then add features to the clean code |
+| **Multi-Project** | TD-02 + FG-02 + UI-02 + UI-08 | Remove hardcoded ID, add project routing, add project UI, add auth UI |
+| **Export Cleanup** | TD-10 → UI-06 + FG-07/08/09 | Complete export decomposition, then add export UI panel |
+| **AI Optimization** | TD-11 + EN-17 + EN-19 → IN-07 | Optimize prompt, add context management, then enable model routing |
+| **Action System** | TD-06 → TD-09 → IN-01 | Split action executor, split tool registry, then build AI design agent |
+| **Schema Safety** | TD-03 → IN-06 | Add migrations, then build version history on stable schema layer |
+| **Component Library** | TD-09 → FG-05 + UI-05 + IN-04 | Split tool file, add standard library, then add intelligent suggestions |
+
+## Recommended Execution Roadmap
+
+### Sprint 1 (Weeks 1-2): Foundation — Unblock Everything Else
+| Item | What | Why First |
+|------|------|-----------|
+| TD-02 | Remove PROJECT_ID=1 | Blocks multi-project, collab, auth, production deployment |
+| TD-03 | Database migrations | Blocks safe schema changes, version history |
+| TD-12 | CI/CD pipeline | Every subsequent sprint needs automated testing |
+| TD-15 | Name anonymous functions | 10-minute effort, immediately improves debugging for all other work |
+
+### Sprint 2 (Weeks 3-4): Complexity Bombs — Refactor Before Features
+| Item | What | Why Now |
+|------|------|---------|
+| TD-01 | PCBLayoutView decomposition | Unblocks FG-01, EN-07, EN-09, UI-11 |
+| TD-04 | ShapeCanvas decomposition | Unblocks component editor features, DRC visualization |
+| TD-05 | parseLocalIntent refactor | Unblocks UI-09 (local mode clarity) |
+| TD-07 | Split ProjectProvider | Fixes UI sluggishness, enables IN-02 (CRDTs) |
+
+### Sprint 3 (Weeks 5-6): AI System — Core Competitive Advantage
+| Item | What | Why Now |
+|------|------|---------|
+| TD-06 | Split useActionExecutor | Unblocks IN-01 (AI design agent), improves action reliability |
+| TD-09 | Split ai-tools.ts | Unblocks IN-04 (component suggestions), allows tool scaling |
+| TD-11 | Optimize AI prompt | Fixes token cost scaling, enables IN-07 (multi-model routing) |
+| EN-13 | Real supplier APIs | Makes procurement tab useful (currently all data is fabricated) |
+
+### Sprint 4 (Weeks 7-8): Export & Import — Professional Workflow
+| Item | What | Why Now |
+|------|------|---------|
+| TD-10 | Complete export decomposition | Clean foundation for import/export features |
+| FG-22/EN-10 | Design import (KiCad/Eagle) | Critical for professional adoption |
+| UI-06 | Export panel UI | Surface 12 existing export formats in a proper UI |
+| UI-01 | Onboarding flow | First-time user experience |
+
+### Sprint 5 (Weeks 9-10): Innovation Quick Wins
+| Item | What | Why Now |
+|------|------|---------|
+| IN-12/INT-01 | Command palette (cmdk) | Already installed, zero dependencies. 1-2 days. |
+| INT-06 | Extended thinking | 1-2 lines in ai.ts. Immediate AI quality improvement. |
+| INT-08 | @dnd-kit component drag-drop | Already installed. Natural interaction pattern. |
+| IN-14 | DRC rule templates | Data-only, no architecture changes. |
+| IN-15 | BOM cross-highlighting | Event-driven, no new deps. |
+
+### Sprint 6+ (Weeks 11+): Major Features
+| Item | What | Prerequisites |
+|------|------|---------------|
+| IN-01 | AI design agent | TD-06 (action system) |
+| IN-02 | Real-time collaboration | TD-02, TD-03, TD-07 (all done by Sprint 2) |
+| IN-03 | WASM SPICE simulator | TD-24 (code splitting) |
+| FG-05 | Standard component library | TD-09 (tool module split) |
+| IN-07 | Multi-model AI routing | TD-11 (prompt optimization) |
+
+## Duplicate Detection (for synthesis deduplication)
+
+These items appear in multiple phase checklists with different IDs. Synthesis should keep the most detailed version:
+
+| Phase 1 ID | Phase 4 ID | Topic | Keep |
+|-----------|-----------|-------|------|
+| EN-01 | TD-02 | PROJECT_ID=1 removal | TD-02 (has cross-refs) |
+| EN-06 | TD-10 | Export monolith decomposition | EN-06 (has import details) |
+| EN-17 | TD-11 | AI prompt optimization | Either (both detailed) |
+| EN-20 | TD-09 | ai-tools.ts split | EN-20 (has split proposal) |
+| EN-30 | TD-04 | ShapeCanvas decomposition | TD-04 (has module list) |
+| EN-36 | TD-03 | Database migrations | TD-03 (P0 vs P1) |
+| EN-22 | EN-02 (P4) | Storage integration tests | Merge |
+| EN-23 | EN-01 (P4) | E2E tests | Merge |
+| EN-24 | EN-03 (P4) | AI tool tests | Merge |
+| EN-03 | TD-25 | Unified undo/redo | EN-03 (Phase 1 context) |
+| EN-05 | TD-33 | Deprecated endpoints | Merge |
+
+## Phase-Specific Unique Insights
+
+### Phase 1 (not surfaced by other phases)
+- **78 AI tools** is far more than the "53 action types" documented in CLAUDE.md — the inventory revealed 25 additional tools from circuit-routes additions
+- **Dual export system**: old monolith `export-generators.ts` (1209 LOC) coexists with new `server/export/` modules
+- **Fragmented undo/redo**: each view has its own undo stack, no unified history
+
+### Phase 4 (not surfaced by other phases)
+- **PCBLayoutView CCN=135** — 9x the danger threshold. The single most alarming finding in the entire analysis.
+- **ShapeCanvas aggregate CCN=381** — 6 separate high-complexity functions in one file. Not just one bad function — the entire file is a complexity bomb.
+- **parseLocalIntent CCN=102** — The local AI intent parser is a 208-line decision tree. This suggests the local mode feature grew organically without architectural planning.
+- **8 possibly-unused dependencies** including `@hookform/resolvers` (hook form with zero forms!) and dual animation packages (`tailwindcss-animate` + `tw-animate-css`)
+- **12 god files >1000 lines** — a structural indicator that the codebase has outgrown its initial architecture
+- **0 E2E tests** — the highest-complexity components (PCBLayoutView, ShapeCanvas, BreadboardView) have zero test coverage

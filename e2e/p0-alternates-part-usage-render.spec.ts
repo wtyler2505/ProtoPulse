@@ -10,7 +10,8 @@
  * Strategy:
  *  - Use the authenticated storage state (`e2e/.auth-state.json`) established by
  *    `auth.setup.ts`. This is the standard pattern in this repo (see tab-route-matrix.spec.ts).
- *  - Navigate directly to `/projects/1/part_alternates` and `/projects/1/part_usage`.
+ *  - Navigate directly to the setup-created project for `/part_alternates`
+ *    and `/part_usage`.
  *  - Assert the landmark card is visible (`[data-testid="alternates-browser"]` /
  *    `[data-testid="usage-browser"]`) AND the error fallback is NOT visible
  *    (`[data-testid="alternates-browser-error"]` / `[data-testid="usage-browser-error"]`).
@@ -19,12 +20,13 @@
  * fixture in playwright.config.ts handles this automatically).
  */
 import { test, expect } from '@playwright/test';
+import { getSetupProjectPath } from './e2e-project';
 
 test.use({ storageState: 'e2e/.auth-state.json' });
 
 test.describe('P0: Alternates + Part Usage tabs render (E2E-481/482)', () => {
   test('part_alternates view loads without erroring (E2E-481)', async ({ page }) => {
-    await page.goto('/projects/1/part_alternates');
+    await page.goto(getSetupProjectPath('part_alternates'));
 
     // Workspace shell should mount
     await page.waitForSelector('[data-testid="workspace-main"]', { timeout: 15_000 });
@@ -39,7 +41,7 @@ test.describe('P0: Alternates + Part Usage tabs render (E2E-481/482)', () => {
   });
 
   test('part_usage view loads without erroring (E2E-482)', async ({ page }) => {
-    await page.goto('/projects/1/part_usage');
+    await page.goto(getSetupProjectPath('part_usage'));
 
     await page.waitForSelector('[data-testid="workspace-main"]', { timeout: 15_000 });
 

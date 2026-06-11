@@ -105,18 +105,18 @@ const ArticleCard = memo(function ArticleCard({ article, onClick }: ArticleCardP
       data-testid={`article-card-${article.id}`}
       aria-label={`Open article: ${article.title}`}
       onClick={() => { onClick(article.id); }}
-      className="rounded-xl"
+      className="rounded-md"
     >
     <Card
       className="bg-card/60 border-border/50 hover:border-primary/30 transition-colors cursor-pointer"
     >
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-1.5">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-sm font-semibold leading-tight">{article.title}</CardTitle>
           <DifficultyBadge level={article.difficulty} />
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-1.5">
         <div className="flex items-center gap-1.5">
           <Badge data-testid={`article-category-${article.id}`} variant="secondary" className="text-xs">
             <Layers className="w-3 h-3 mr-1" />
@@ -140,7 +140,7 @@ const ArticleCard = memo(function ArticleCard({ article, onClick }: ArticleCardP
         )}
         {/* TODO(plan-13-wave-1): swap `topic={article.category}` for `slug={article.vaultMoc}` once the data layer adds a vaultMoc field per article. Plan 13 declares a CI assertion requiring this. */}
         <div
-          className="pt-1.5 border-t border-border/30"
+          className="border-t border-border/30 pt-1"
           onClick={(e) => { e.stopPropagation(); }}
         >
           <VaultHoverCard topic={article.category}>
@@ -379,7 +379,7 @@ export default function KnowledgeView() {
   // Article detail view
   if (selectedArticle) {
     return (
-      <div data-testid="knowledge-view" className="flex flex-col h-full p-4">
+      <div data-testid="knowledge-view" className="flex h-full flex-col p-2.5">
         <ArticleDetailView
           article={selectedArticle}
           relatedArticles={relatedArticles}
@@ -392,24 +392,24 @@ export default function KnowledgeView() {
 
   // Browse view
   return (
-    <div data-testid="knowledge-view" className="flex flex-col h-full gap-4 p-4">
+    <div data-testid="knowledge-view" className="flex h-full flex-col gap-2 p-2.5">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <BookMarked className="w-5 h-5 text-primary" />
-        <h2 data-testid="knowledge-title" className="text-lg font-semibold">Electronics Knowledge Hub</h2>
-        <Badge data-testid="knowledge-count" variant="secondary">{articleCount} articles</Badge>
+      <div className="flex items-center gap-1.5">
+        <BookMarked className="h-3.5 w-3.5 text-primary" />
+        <h2 data-testid="knowledge-title" className="text-[13px] font-semibold">Electronics Knowledge Hub</h2>
+        <Badge data-testid="knowledge-count" variant="secondary" className="h-4 text-[10px]">{articleCount} articles</Badge>
       </div>
 
       {/* Search + Filters */}
-      <div data-testid="knowledge-filters" className="flex items-center gap-2 flex-wrap">
+      <div data-testid="knowledge-filters" className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             data-testid="knowledge-search"
             placeholder="Search articles..."
             value={query}
             onChange={(e) => { setQuery(e.target.value); }}
-            className="pl-8 h-9"
+            className="h-8.5 pl-9 text-xs"
           />
         </div>
 
@@ -417,7 +417,7 @@ export default function KnowledgeView() {
           value={categoryFilter}
           onValueChange={(v) => { setCategoryFilter(v as ArticleCategory | '__all__'); }}
         >
-          <SelectTrigger data-testid="knowledge-category-filter" className="w-44 h-9 text-xs" aria-label="Filter articles by category">
+          <SelectTrigger data-testid="knowledge-category-filter" className="h-8.5 w-40 text-xs" aria-label="Filter articles by category">
             <SelectValue placeholder="All categories" />
           </SelectTrigger>
           <SelectContent>
@@ -434,7 +434,7 @@ export default function KnowledgeView() {
           value={difficultyFilter}
           onValueChange={(v) => { setDifficultyFilter(v as DifficultyLevel | '__all__'); }}
         >
-          <SelectTrigger data-testid="knowledge-difficulty-filter" className="w-36 h-9 text-xs" aria-label="Filter articles by difficulty">
+          <SelectTrigger data-testid="knowledge-difficulty-filter" className="h-8.5 w-32 text-xs" aria-label="Filter articles by difficulty">
             <SelectValue placeholder="All levels" />
           </SelectTrigger>
           <SelectContent>
@@ -448,15 +448,15 @@ export default function KnowledgeView() {
 
       {/* Article grid */}
       <ScrollArea className="flex-1">
-        <div data-testid="knowledge-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div data-testid="knowledge-grid" className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
           {filteredArticles.map((article) => (
             <ArticleCard key={article.id} article={article} onClick={handleArticleClick} />
           ))}
         </div>
         {filteredArticles.length === 0 && (
-          <div data-testid="knowledge-empty" className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Search className="w-8 h-8 mb-2" />
-            <p className="text-sm">No articles found matching your search.</p>
+          <div data-testid="knowledge-empty" className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+            <Search className="mb-2 h-7 w-7" />
+            <p className="text-xs">No articles found matching your search.</p>
           </div>
         )}
       </ScrollArea>

@@ -67,17 +67,17 @@ function ExportPrecheckPanel({
 
   return (
     <div
-      className="border border-border/50 bg-card/40 backdrop-blur p-3 flex flex-col gap-3"
+      className="border border-border/50 bg-card/40 backdrop-blur p-2.5 flex flex-col gap-2"
       data-testid="export-precheck-panel"
     >
       {/* Header */}
-      <div className="flex items-center gap-2" data-testid="precheck-header">
+      <div className="flex items-center gap-1.5" data-testid="precheck-header">
         {allPassed ? (
-          <ShieldCheck className="w-4 h-4 text-green-400 shrink-0" />
+          <ShieldCheck className="w-3.5 h-3.5 text-green-400 shrink-0" />
         ) : (
-          <ShieldAlert className={cn('w-4 h-4 shrink-0', failCount > 0 ? 'text-destructive' : 'text-amber-400')} />
+          <ShieldAlert className={cn('w-3.5 h-3.5 shrink-0', failCount > 0 ? 'text-destructive' : 'text-amber-400')} />
         )}
-        <span className="text-xs font-medium text-foreground flex-1">
+        <span className="text-[11px] font-medium text-foreground flex-1">
           Pre-check: {formatLabel}
         </span>
         <span
@@ -89,18 +89,18 @@ function ExportPrecheckPanel({
       </div>
 
       {/* Checklist */}
-      <ul className="flex flex-col gap-1.5" data-testid="precheck-checklist">
+      <ul className="flex flex-col gap-1" data-testid="precheck-checklist">
         {precheck.checks.map((chk, idx) => {
           const cfg = STATUS_CONFIG[chk.status];
           const Icon = cfg.icon;
           return (
             <li
               key={`${chk.name}-${idx}`}
-              className="flex items-start gap-2 text-[11px] leading-tight"
+              className="flex items-start gap-1.5 text-[10px] leading-tight"
               data-testid={`precheck-item-${chk.name.toLowerCase().replace(/\s+/g, '-')}`}
             >
               <Icon
-                className={cn('w-3.5 h-3.5 shrink-0 mt-px', cfg.className)}
+                className={cn('w-3 h-3 shrink-0 mt-px', cfg.className)}
                 aria-label={cfg.label}
               />
               <div className="min-w-0 flex-1">
@@ -115,7 +115,7 @@ function ExportPrecheckPanel({
       {/* Blocker / warning counts */}
       {(failCount > 0 || warnCount > 0) && (
         <div
-          className="flex items-center gap-3 text-[10px] font-mono text-muted-foreground pt-1 border-t border-border/30"
+          className="flex items-center gap-3 text-[10px] font-mono text-muted-foreground pt-0.5 border-t border-border/30"
           data-testid="precheck-counts"
         >
           {failCount > 0 && (
@@ -132,9 +132,9 @@ function ExportPrecheckPanel({
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-2 pt-1">
+      <div className="flex items-center gap-1.5 pt-0.5">
         <button
-          className="text-[11px] px-3 py-1.5 bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus-ring"
+          className="text-[10px] px-2.5 py-1 bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus-ring"
           onClick={onClose}
           data-testid="precheck-close"
         >
@@ -142,7 +142,7 @@ function ExportPrecheckPanel({
         </button>
         {canExportAnyway && (
           <button
-            className="text-[11px] px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 transition-colors focus-ring ml-auto"
+            className="text-[10px] px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 transition-colors focus-ring ml-auto"
             onClick={onExportAnyway}
             data-testid="precheck-export-anyway"
           >

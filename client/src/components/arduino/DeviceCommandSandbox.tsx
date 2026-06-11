@@ -99,6 +99,7 @@ export default function DeviceCommandSandbox({
               className="px-2 py-1 text-[11px] text-primary hover:bg-primary/20 transition-colors font-medium flex items-center gap-1.5 disabled:opacity-50"
               onClick={() => onSendCommand(cmd.payload)}
               title={cmd.payload}
+              aria-label={`Send safe command: ${cmd.name}`}
             >
               <Play className="w-3 h-3" />
               {cmd.name}
@@ -106,6 +107,7 @@ export default function DeviceCommandSandbox({
             <button
               className="px-1.5 py-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
               onClick={() => handleDelete(cmd.id)}
+              aria-label={`Delete safe command: ${cmd.name}`}
             >
               <Trash2 className="w-3 h-3" />
             </button>

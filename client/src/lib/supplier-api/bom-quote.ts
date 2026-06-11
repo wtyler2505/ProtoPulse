@@ -10,6 +10,27 @@ import type { SupplierApiManager } from './manager';
 import { searchPart } from './search';
 import type { BomPricingResult, BomQuote, SearchOptions } from './types';
 
+function estimateFallbackBestPrice(
+  offers: BomPricingResult['allOffers'],
+  quantity: number,
+  currency: BomQuote['currency'],
+): BomPricingResult['bestPrice'] {
+  const pricedOffer = offers.find((offer) => offer.pricing.length > 0 && offer.pricing[0].unitPrice > 0);
+  if (!pricedOffer) {
+    return null;
+  }
+
+  const baselineTier = pricedOffer.pricing[0];
+  const convertedUnitPrice = convertCurrency(baselineTier.unitPrice, baselineTier.currency, currency);
+  return {
+    distributor: pricedOffer.distributorId,
+    unitPrice: convertedUnitPrice,
+    totalPrice: convertedUnitPrice * quantity,
+    sku: pricedOffer.sku,
+    isMock: true,
+  };
+}
+
 /** Quote an entire BOM — find best prices, stock status, and warnings per line item. */
 export function quoteBom(
   mgr: SupplierApiManager,
@@ -29,6 +50,7 @@ export function quoteBom(
         allOffers: [],
         inStock: false,
         warnings: [`Part "${item.mpn}" not found in any distributor`],
+        isMock: true,
       };
     }
 
@@ -75,9 +97,22 @@ export function quoteBom(
           unitPrice: convertedPrice,
           totalPrice,
           sku: offer.sku,
+          isMock: false,
         };
       }
     });
+
+    let itemIsMock = false;
+    if (!bestPrice) {
+      const fallback = estimateFallbackBestPrice(filteredOffers, item.quantity, currency);
+      if (fallback) {
+        bestPrice = fallback;
+        warnings.push('Live tier pricing unavailable; using estimated fallback pricing');
+      } else {
+        warnings.push('No pricing data available from suppliers');
+      }
+      itemIsMock = true;
+    }
 
     return {
       mpn: item.mpn,
@@ -86,12 +121,14 @@ export function quoteBom(
       allOffers: filteredOffers,
       inStock: hasStock,
       warnings,
+      isMock: itemIsMock || Boolean(bestPrice?.isMock),
     };
   });
 
   const totalCost = bomItems.reduce((sum, item) => sum + (item.bestPrice?.totalPrice ?? 0), 0);
   const itemsFound = bomItems.filter((item) => item.bestPrice !== null).length;
   const itemsMissing = bomItems.length - itemsFound;
+  const containsMockData = bomItems.some((item) => item.isMock || Boolean(item.bestPrice?.isMock));
 
   return {
     items: bomItems,
@@ -100,5 +137,6 @@ export function quoteBom(
     itemsFound,
     itemsMissing,
     timestamp: Date.now(),
+    containsMockData,
   };
 }

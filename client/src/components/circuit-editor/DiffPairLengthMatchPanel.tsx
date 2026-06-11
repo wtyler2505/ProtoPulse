@@ -10,7 +10,7 @@ import {
   Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -254,10 +254,10 @@ export const DiffPairLengthMatchPanel = memo(function DiffPairLengthMatchPanel({
           <div className="grid grid-cols-3 gap-2">
             <div>
               <Label className="text-[10px] text-muted-foreground">Target {'\u0394'} (mm)</Label>
-              <Input
-                type="number"
+              <NumberInput
                 step={0.01}
                 min={0}
+                max={100}
                 value={targetDelta}
                 onChange={(e) => {
                   setTargetDelta(parseFloat(e.target.value) || 0);
@@ -268,10 +268,10 @@ export const DiffPairLengthMatchPanel = memo(function DiffPairLengthMatchPanel({
             </div>
             <div>
               <Label className="text-[10px] text-muted-foreground">Max Amplitude (mm)</Label>
-              <Input
-                type="number"
+              <NumberInput
                 step={0.1}
                 min={0.1}
+                max={100}
                 value={maxAmplitude}
                 onChange={(e) => {
                   setMaxAmplitude(parseFloat(e.target.value) || 0.1);
@@ -282,10 +282,10 @@ export const DiffPairLengthMatchPanel = memo(function DiffPairLengthMatchPanel({
             </div>
             <div>
               <Label className="text-[10px] text-muted-foreground">Spacing (mm)</Label>
-              <Input
-                type="number"
+              <NumberInput
                 step={0.1}
                 min={0.1}
+                max={100}
                 value={spacing}
                 onChange={(e) => {
                   setSpacing(parseFloat(e.target.value) || 0.1);

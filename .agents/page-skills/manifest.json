@@ -1,0 +1,637 @@
+{
+  "schemaVersion": 1,
+  "description": "ProtoPulse page/view skill coverage manifest. Every ViewMode must appear here so missing page intelligence cannot be forgotten.",
+  "entries": [
+    {
+      "viewId": "architecture",
+      "label": "Architecture",
+      "tier": 1,
+      "skillName": "pp-view-architecture",
+      "skillPath": ".agents/skills/pp-view-architecture/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/ArchitectureView.tsx",
+        "client/src/components/views/architecture/**",
+        "client/src/lib/contexts/architecture-context.tsx"
+      ],
+      "testGlobs": [
+        "client/src/components/views/__tests__/ArchitectureView.test.tsx",
+        "client/src/lib/contexts/__tests__/architecture-context.test.tsx"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Architecture page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "schematic",
+      "label": "Schematic",
+      "tier": 1,
+      "skillName": "pp-view-schematic",
+      "skillPath": ".agents/skills/pp-view-schematic/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/SchematicView.tsx",
+        "client/src/components/circuit-editor/Schematic*.tsx",
+        "client/src/components/circuit-editor/schematic/**"
+      ],
+      "testGlobs": [
+        "client/src/components/views/__tests__/SchematicView.test.tsx",
+        "client/src/components/circuit-editor/__tests__/Schematic*.test.tsx"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Schematic page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "breadboard",
+      "label": "Breadboard",
+      "tier": 1,
+      "skillName": "pp-view-breadboard",
+      "skillPath": ".agents/skills/pp-view-breadboard/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/circuit-editor/BreadboardView.tsx",
+        "client/src/components/circuit-editor/breadboard-*",
+        "client/src/components/circuit-editor/useBreadboardCoachPlan.ts"
+      ],
+      "testGlobs": [
+        "client/src/components/circuit-editor/__tests__/Breadboard*.test.tsx"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Link to breadboard-lab and keep page-level UI entrypoints clear."
+    },
+    {
+      "viewId": "pcb",
+      "label": "PCB",
+      "tier": 1,
+      "skillName": "pp-view-pcb",
+      "skillPath": ".agents/skills/pp-view-pcb/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/circuit-editor/PCBLayoutView.tsx",
+        "client/src/components/views/pcb-layout/**",
+        "client/src/lib/tscircuit-*.ts"
+      ],
+      "testGlobs": [
+        "client/src/lib/__tests__/tscircuit-*.test.ts",
+        "client/src/components/circuit-editor/__tests__/TSCircuit*.test.tsx"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep PCB page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "validation",
+      "label": "Validation",
+      "tier": 1,
+      "skillName": "pp-view-validation",
+      "skillPath": ".agents/skills/pp-view-validation/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/ValidationView.tsx",
+        "client/src/components/views/validation/**",
+        "client/src/lib/export-validation.ts"
+      ],
+      "testGlobs": [
+        "client/src/components/views/__tests__/ValidationView.test.tsx",
+        "client/src/lib/__tests__/export-validation.test.ts"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Validation page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "procurement",
+      "label": "Procurement",
+      "tier": 1,
+      "skillName": "pp-view-procurement",
+      "skillPath": ".agents/skills/pp-view-procurement/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/ProcurementView.tsx",
+        "client/src/components/views/procurement/**",
+        "client/src/lib/supplier-api/**"
+      ],
+      "testGlobs": [
+        "client/src/components/views/__tests__/procurement-sub-components.test.tsx",
+        "client/src/lib/__tests__/supplier-api.test.ts"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Procurement page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "ai_chat",
+      "label": "AI Chat",
+      "tier": 1,
+      "skillName": "pp-view-ai-chat",
+      "skillPath": ".agents/skills/pp-view-ai-chat/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/panels/ChatPanel.tsx",
+        "client/src/components/panels/chat/**",
+        "client/src/hooks/useChatSettings.ts"
+      ],
+      "testGlobs": [
+        "client/src/components/panels/chat/**/*.test.tsx",
+        "client/src/components/panels/chat/**/*.test.ts"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep AI Chat page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "uiux_design",
+      "label": "UI/UX + DESIGN",
+      "tier": 1,
+      "skillName": "pp-view-uiux-design",
+      "skillPath": ".agents/skills/pp-view-uiux-design/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "DESIGN.md",
+        "client/src/index.css",
+        "client/src/components/ui/**",
+        "client/src/pages/workspace/**"
+      ],
+      "testGlobs": [
+        "client/src/__tests__/a11y.test.tsx",
+        "client/src/components/ui/**/*.test.tsx",
+        "client/src/pages/workspace/**/*.test.tsx"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Track design tokens, spacing, visual density, accessibility, and workspace polish."
+    },
+    {
+      "viewId": "left_sidebar",
+      "label": "Left Sidebar",
+      "tier": 1,
+      "skillName": "pp-view-left-sidebar",
+      "skillPath": ".agents/skills/pp-view-left-sidebar/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/layout/Sidebar.tsx",
+        "client/src/components/layout/sidebar/**"
+      ],
+      "testGlobs": [
+        "client/src/components/layout/__tests__/Sidebar.test.tsx",
+        "client/src/components/layout/sidebar/**/*.test.tsx"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Track project navigation, project settings, component tree, and sidebar density."
+    },
+    {
+      "viewId": "right_sidebar",
+      "label": "Right Sidebar",
+      "tier": 1,
+      "skillName": "pp-view-right-sidebar",
+      "skillPath": ".agents/skills/pp-view-right-sidebar/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/panels/ChatPanel.tsx",
+        "client/src/components/panels/ActivityFeedPanel.tsx",
+        "client/src/pages/ProjectWorkspace.tsx"
+      ],
+      "testGlobs": [
+        "client/src/components/panels/**/*.test.tsx",
+        "client/src/pages/workspace/__tests__/WorkspaceHeader.test.tsx"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Right Sidebar page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "dashboard",
+      "label": "Dashboard",
+      "tier": 2,
+      "skillName": "pp-view-dashboard",
+      "skillPath": ".agents/skills/pp-view-dashboard/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/DashboardView.tsx"
+      ],
+      "testGlobs": [
+        "client/src/components/views/__tests__/DashboardView.validation.test.tsx"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Dashboard page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "component_editor",
+      "label": "Component Editor",
+      "tier": 2,
+      "skillName": "pp-view-component-editor",
+      "skillPath": ".agents/skills/pp-view-component-editor/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/ComponentEditorView.tsx",
+        "client/src/components/views/component-editor/**"
+      ],
+      "testGlobs": [
+        "client/src/components/views/__tests__/ComponentEditorAutoSave.test.tsx",
+        "client/src/components/views/component-editor/__tests__/*.test.tsx",
+        "client/src/components/views/component-editor/__tests__/*.test.ts",
+        "client/src/lib/component-editor/__tests__/*.test.ts"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Component Editor page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "output",
+      "label": "Exports",
+      "tier": 2,
+      "skillName": "pp-view-exports",
+      "skillPath": ".agents/skills/pp-view-exports/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/panels/ExportPanel.tsx",
+        "client/src/lib/export-*.ts"
+      ],
+      "testGlobs": [
+        "client/src/lib/__tests__/export-*.test.ts"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Exports page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "arduino",
+      "label": "Arduino",
+      "tier": 2,
+      "skillName": "pp-view-arduino",
+      "skillPath": ".agents/skills/pp-view-arduino/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/ArduinoWorkbenchView.tsx",
+        "client/src/components/views/arduino/**"
+      ],
+      "testGlobs": [
+        "client/src/components/views/arduino/**/*.test.tsx"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Arduino page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "circuit_code",
+      "label": "Circuit Code",
+      "tier": 2,
+      "skillName": "pp-view-circuit-code",
+      "skillPath": ".agents/skills/pp-view-circuit-code/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/CircuitCodeView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Circuit Code page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "simulation",
+      "label": "Simulation",
+      "tier": 2,
+      "skillName": "pp-view-simulation",
+      "skillPath": ".agents/skills/pp-view-simulation/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/simulation/**"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Simulation page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "calculators",
+      "label": "Calculators",
+      "tier": 3,
+      "skillName": "pp-view-calculators",
+      "skillPath": ".agents/skills/pp-view-calculators/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/CalculatorsView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Calculators page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "generative_design",
+      "label": "Generative",
+      "tier": 2,
+      "skillName": "pp-view-generative",
+      "skillPath": ".agents/skills/pp-view-generative/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/GenerativeDesignView.tsx",
+        "client/src/lib/generative-design/**"
+      ],
+      "testGlobs": [
+        "client/src/components/views/__tests__/GenerativeDesignView.test.tsx",
+        "client/src/lib/generative-design/__tests__/generative-adopt.test.ts",
+        "client/src/lib/generative-design/__tests__/*.test.ts"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Generative page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "serial_monitor",
+      "label": "Serial Monitor",
+      "tier": 2,
+      "skillName": "pp-view-serial-monitor",
+      "skillPath": ".agents/skills/pp-view-serial-monitor/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/panels/SerialMonitorPanel.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Serial Monitor page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "digital_twin",
+      "label": "Digital Twin",
+      "tier": 2,
+      "skillName": "pp-view-digital-twin",
+      "skillPath": ".agents/skills/pp-view-digital-twin/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/DigitalTwinView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Digital Twin page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "storage",
+      "label": "Inventory",
+      "tier": 2,
+      "skillName": "pp-view-inventory",
+      "skillPath": ".agents/skills/pp-view-inventory/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/StorageManagerPanel.tsx"
+      ],
+      "testGlobs": [
+        "client/src/components/views/__tests__/storage-manager.test.tsx"
+      ],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Inventory page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "ordering",
+      "label": "Order PCB",
+      "tier": 2,
+      "skillName": "pp-view-order-pcb",
+      "skillPath": ".agents/skills/pp-view-order-pcb/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/PcbOrderingView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Order PCB page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "lifecycle",
+      "label": "Lifecycle",
+      "tier": 3,
+      "skillName": "pp-view-lifecycle",
+      "skillPath": ".agents/skills/pp-view-lifecycle/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/LifecycleDashboard.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Lifecycle page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "starter_circuits",
+      "label": "Starter Circuits",
+      "tier": 3,
+      "skillName": "pp-view-starter-circuits",
+      "skillPath": ".agents/skills/pp-view-starter-circuits/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/StarterCircuitsPanel.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Starter Circuits page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "design_patterns",
+      "label": "Patterns",
+      "tier": 3,
+      "skillName": "pp-view-patterns",
+      "skillPath": ".agents/skills/pp-view-patterns/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/DesignPatternsView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Patterns page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "kanban",
+      "label": "Tasks",
+      "tier": 3,
+      "skillName": "pp-view-tasks",
+      "skillPath": ".agents/skills/pp-view-tasks/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/KanbanView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Tasks page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "comments",
+      "label": "Comments",
+      "tier": 3,
+      "skillName": "pp-view-comments",
+      "skillPath": ".agents/skills/pp-view-comments/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/panels/CommentsPanel.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Comments page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "design_history",
+      "label": "History",
+      "tier": 3,
+      "skillName": "pp-view-history",
+      "skillPath": ".agents/skills/pp-view-history/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/DesignHistoryView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep History page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "knowledge",
+      "label": "Learn",
+      "tier": 3,
+      "skillName": "pp-view-learn",
+      "skillPath": ".agents/skills/pp-view-learn/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/KnowledgeView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Learn page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "community",
+      "label": "Community",
+      "tier": 3,
+      "skillName": "pp-view-community",
+      "skillPath": ".agents/skills/pp-view-community/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/CommunityView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Community page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "project_explorer",
+      "label": "Project Explorer",
+      "tier": 3,
+      "skillName": "pp-view-project-explorer",
+      "skillPath": ".agents/skills/pp-view-project-explorer/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/layout/sidebar/ProjectExplorer.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Project Explorer page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "viewer_3d",
+      "label": "3D View",
+      "tier": 3,
+      "skillName": "pp-view-3d",
+      "skillPath": ".agents/skills/pp-view-3d/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/BoardViewer3DView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep 3D View page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "audit_trail",
+      "label": "Audit Trail",
+      "tier": 3,
+      "skillName": "pp-view-audit-trail",
+      "skillPath": ".agents/skills/pp-view-audit-trail/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/AuditTrailView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Audit Trail page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "labs",
+      "label": "Labs",
+      "tier": 3,
+      "skillName": "pp-view-labs",
+      "skillPath": ".agents/skills/pp-view-labs/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/panels/LabTemplatePanel.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Labs page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "supply_chain",
+      "label": "Supply Chain",
+      "tier": 3,
+      "skillName": "pp-view-supply-chain",
+      "skillPath": ".agents/skills/pp-view-supply-chain/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/SupplyChainAlertsPanel.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Supply Chain page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "bom_templates",
+      "label": "BOM Templates",
+      "tier": 3,
+      "skillName": "pp-view-bom-templates",
+      "skillPath": ".agents/skills/pp-view-bom-templates/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/BomTemplatesPanel.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep BOM Templates page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "personal_inventory",
+      "label": "My Parts",
+      "tier": 3,
+      "skillName": "pp-view-my-parts",
+      "skillPath": ".agents/skills/pp-view-my-parts/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/PersonalInventoryPanel.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep My Parts page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "part_alternates",
+      "label": "Alternates",
+      "tier": 3,
+      "skillName": "pp-view-alternates",
+      "skillPath": ".agents/skills/pp-view-alternates/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/PartAlternatesBrowserView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Alternates page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "part_usage",
+      "label": "Part Usage",
+      "tier": 3,
+      "skillName": "pp-view-part-usage",
+      "skillPath": ".agents/skills/pp-view-part-usage/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/PartUsageBrowserView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Part Usage page map, UX contract, tests, and gotchas current."
+    },
+    {
+      "viewId": "vault_browser",
+      "label": "Vault",
+      "tier": 3,
+      "skillName": "pp-view-vault",
+      "skillPath": ".agents/skills/pp-view-vault/SKILL.md",
+      "status": "active",
+      "sourceGlobs": [
+        "client/src/components/views/VaultBrowserView.tsx"
+      ],
+      "testGlobs": [],
+      "lastSynced": "2026-05-18T01:46:36.897Z",
+      "nextAction": "Keep Vault page map, UX contract, tests, and gotchas current."
+    }
+  ]
+}

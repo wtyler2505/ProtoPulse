@@ -3,6 +3,7 @@ import { Camera, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 
 export interface QuickIntakeItem {
   partName: string;
@@ -59,6 +60,7 @@ export default function BreadboardQuickIntake({ onAdd, onScan, scanResult }: Bre
     >
       <div className="flex items-center gap-2">
         <Input
+          aria-label="Quick add part name"
           placeholder="Part name"
           value={partName}
           onChange={(e) => { setPartName(e.target.value); }}
@@ -77,16 +79,18 @@ export default function BreadboardQuickIntake({ onAdd, onScan, scanResult }: Bre
         </Button>
       </div>
       <div className="flex items-center gap-2">
-        <Input
+        <NumberInput
           data-testid="quick-intake-quantity"
-          type="number"
+          aria-label="Quick add quantity"
           min={1}
+          max={9999}
           value={quantity}
           onChange={(e) => { setQuantity(Math.max(0, Number(e.target.value))); }}
           className="h-8 w-20 text-xs"
         />
         <Input
           data-testid="quick-intake-storage"
+          aria-label="Quick add storage location"
           placeholder="Storage location"
           value={storageLocation}
           onChange={(e) => { setStorageLocation(e.target.value); }}

@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, useEffect } from 'react';
-import { useReactFlow, useViewport } from '@xyflow/react';
+import { useReactFlow, useViewport } from '@/lib/xyflow-compat';
 
 // ---------------------------------------------------------------------------
 // Types

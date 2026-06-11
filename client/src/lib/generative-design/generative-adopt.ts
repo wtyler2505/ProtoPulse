@@ -9,7 +9,7 @@
  * @module generative-design/generative-adopt
  */
 
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import type { CircuitIR, IRComponent, IRNet } from '@/lib/circuit-dsl/circuit-ir';
 import type { CandidateEntry } from './generative-engine';
 import type { FitnessResult } from './fitness-scorer';
@@ -114,7 +114,7 @@ export interface ExportPayload {
  * Accepts empty arrays and returns an IR with zero components — consumers of
  * `compareCandidateWithCurrent` already handle the empty case.
  */
-export function architectureToCurrentIR(nodes: Node[], edges: Edge[]): CircuitIR {
+export function architectureToCurrentIR(nodes: GraphNode[], edges: GraphEdge[]): CircuitIR {
   // Map node id -> list of net names connected to it (from edges).
   const nodeNets = new Map<string, string[]>();
   for (const e of edges) {

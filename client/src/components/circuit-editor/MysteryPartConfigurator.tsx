@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -338,10 +339,9 @@ export function MysteryPartConfigurator({
               {/* Pin count */}
               <div className="space-y-1.5">
                 <Label htmlFor="mystery-pin-count">Pin Count ({MYSTERY_PART_MIN_PINS}-{MYSTERY_PART_MAX_PINS})</Label>
-                <Input
+                <NumberInput
                   id="mystery-pin-count"
                   data-testid="mystery-pin-count"
-                  type="number"
                   min={MYSTERY_PART_MIN_PINS}
                   max={MYSTERY_PART_MAX_PINS}
                   value={pinCountInput}
@@ -378,10 +378,9 @@ export function MysteryPartConfigurator({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="mystery-body-width">Body Width</Label>
-                  <Input
+                  <NumberInput
                     id="mystery-body-width"
                     data-testid="mystery-body-width"
-                    type="number"
                     min={1}
                     max={20}
                     value={config.bodyWidth}
@@ -390,10 +389,9 @@ export function MysteryPartConfigurator({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="mystery-body-height">Body Height</Label>
-                  <Input
+                  <NumberInput
                     id="mystery-body-height"
                     data-testid="mystery-body-height"
-                    type="number"
                     min={1}
                     max={20}
                     value={config.bodyHeight}

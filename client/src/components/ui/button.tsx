@@ -19,26 +19,21 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-           // @replit: no hover, and add primary border
            // E2E-1014: `active:brightness-90` adds tactile press feedback.
            "bg-primary text-primary-foreground border border-primary-border active:brightness-90",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm border-destructive-border active:brightness-90",
         outline:
-          // @replit Shows the background color of whatever card / sidebar / accent background it is inside of.
-          // Inherits the current text color. Uses shadow-xs. no shadow on active
-          // No hover state
+          // Shows the background color of whatever card, sidebar, or accent surface it sits on.
+          // Inherits current text color and drops the shadow on active press.
           // E2E-1014: keep the shadow-drop active cue plus a subtle bg tint.
           " border [border-color:var(--button-outline)] shadow-xs active:shadow-none active:bg-muted/60 ",
         secondary:
-          // @replit border, no hover, no shadow, secondary border.
           "border bg-secondary text-secondary-foreground border border-secondary-border active:brightness-90",
-        // @replit no hover, transparent border
         ghost: "border border-transparent active:bg-muted/60",
         link: "text-primary underline-offset-4 hover:underline active:opacity-70",
       },
       size: {
-        // @replit changed sizes
         default: "min-h-9 px-4 py-2",
         sm: "min-h-8 rounded-md px-3 text-xs",
         lg: "min-h-10 rounded-md px-8",

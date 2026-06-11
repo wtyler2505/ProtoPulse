@@ -107,7 +107,7 @@ function SectionView({ section, visibleTypes, baselineName, currentName }: Secti
       {/* Section header */}
       <button
         data-testid={`diff-section-toggle-${section.id}`}
-        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+        className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
         onClick={() => setExpanded((prev) => !prev)}
         aria-expanded={expanded}
         aria-label={`${expanded ? 'Collapse' : 'Expand'} ${section.label}`}
@@ -139,10 +139,10 @@ function SectionView({ section, visibleTypes, baselineName, currentName }: Secti
         <div className="border-t border-border/30">
           {/* Column headers */}
           <div className="grid grid-cols-2 divide-x divide-border/30 bg-muted/20">
-            <div className="px-3 py-1.5 text-[10px] font-mono text-muted-foreground/70 truncate" data-testid={`diff-header-baseline-${section.id}`}>
+            <div className="px-2.5 py-1 text-[10px] font-mono text-muted-foreground/70 truncate" data-testid={`diff-header-baseline-${section.id}`}>
               {baselineName}
             </div>
-            <div className="px-3 py-1.5 text-[10px] font-mono text-muted-foreground/70 truncate" data-testid={`diff-header-current-${section.id}`}>
+            <div className="px-2.5 py-1 text-[10px] font-mono text-muted-foreground/70 truncate" data-testid={`diff-header-current-${section.id}`}>
               {currentName}
             </div>
           </div>
@@ -174,7 +174,7 @@ function SectionView({ section, visibleTypes, baselineName, currentName }: Secti
       )}
 
       {expanded && filteredRows.length === 0 && (
-        <div className="border-t border-border/30 px-3 py-3 text-[10px] text-muted-foreground/50 text-center">
+        <div className="border-t border-border/30 px-2.5 py-2 text-[10px] text-muted-foreground/50 text-center">
           {section.rows.length === 0 ? 'No elements in this section' : 'No rows match the active filters'}
         </div>
       )}
@@ -190,7 +190,7 @@ function DiffRowLeft({ row, columns }: { row: DiffRow; columns: string[] }) {
   if (row.changeType === 'added') {
     // No baseline for added rows — show placeholder
     return (
-      <div className="px-3 py-2 min-h-[44px] flex items-center text-[10px] text-muted-foreground/30 italic bg-green-400/5" data-testid={`diff-row-left-${row.key}`}>
+      <div className="px-2.5 py-1.5 min-h-[40px] flex items-center text-[10px] text-muted-foreground/30 italic bg-green-400/5" data-testid={`diff-row-left-${row.key}`}>
         (not in baseline)
       </div>
     );
@@ -202,7 +202,7 @@ function DiffRowLeft({ row, columns }: { row: DiffRow; columns: string[] }) {
   return (
     <div
       className={cn(
-        'px-3 py-2 min-h-[44px]',
+        'px-2.5 py-1.5 min-h-[40px]',
         isRemoved && 'bg-red-400/10',
         isModified && 'bg-amber-400/5',
       )}
@@ -212,7 +212,7 @@ function DiffRowLeft({ row, columns }: { row: DiffRow; columns: string[] }) {
         <span className={cn('shrink-0', changeTypeColor(row.changeType))}>
           <ChangeIcon type={row.changeType} />
         </span>
-        <span className="text-[11px] font-medium text-foreground truncate">{row.label}</span>
+        <span className="text-[10px] font-medium text-foreground truncate">{row.label}</span>
       </div>
       {row.baselineFields && (
         <div className="flex flex-wrap gap-x-3 gap-y-0.5">
@@ -235,7 +235,7 @@ function DiffRowRight({ row, columns }: { row: DiffRow; columns: string[] }) {
   if (row.changeType === 'removed') {
     // No current for removed rows — show placeholder
     return (
-      <div className="px-3 py-2 min-h-[44px] flex items-center text-[10px] text-muted-foreground/30 italic bg-red-400/5" data-testid={`diff-row-right-${row.key}`}>
+      <div className="px-2.5 py-1.5 min-h-[40px] flex items-center text-[10px] text-muted-foreground/30 italic bg-red-400/5" data-testid={`diff-row-right-${row.key}`}>
         (removed)
       </div>
     );
@@ -247,7 +247,7 @@ function DiffRowRight({ row, columns }: { row: DiffRow; columns: string[] }) {
   return (
     <div
       className={cn(
-        'px-3 py-2 min-h-[44px]',
+        'px-2.5 py-1.5 min-h-[40px]',
         isAdded && 'bg-green-400/10',
         isModified && 'bg-amber-400/5',
       )}
@@ -257,7 +257,7 @@ function DiffRowRight({ row, columns }: { row: DiffRow; columns: string[] }) {
         <span className={cn('shrink-0', changeTypeColor(row.changeType))}>
           <ChangeIcon type={row.changeType} />
         </span>
-        <span className="text-[11px] font-medium text-foreground truncate">{row.label}</span>
+        <span className="text-[10px] font-medium text-foreground truncate">{row.label}</span>
       </div>
       {row.currentFields && (
         <div className="flex flex-wrap gap-x-3 gap-y-0.5">
@@ -308,18 +308,18 @@ function DesignDiffPanel({ result, baselineName, currentName, onClose }: DesignD
 
   return (
     <div
-      className="h-full w-full bg-background/80 backdrop-blur p-4 overflow-auto flex flex-col gap-3"
+      className="h-full w-full bg-background/80 backdrop-blur p-3 overflow-auto flex flex-col gap-2.5"
       data-testid="design-diff-panel"
     >
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-white/10">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between pb-2 border-b border-white/10">
+        <div className="flex items-center gap-1.5">
           <GitCompareArrows className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-display font-bold text-foreground tracking-wide">DESIGN DIFF</h2>
+          <h2 className="text-xs font-display font-bold text-foreground tracking-wide">DESIGN DIFF</h2>
         </div>
         <button
           data-testid="diff-close-button"
-          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+          className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
           onClick={onClose}
           aria-label="Close design diff"
         >
@@ -338,7 +338,7 @@ function DesignDiffPanel({ result, baselineName, currentName, onClose }: DesignD
       </div>
 
       {/* Filter toggles */}
-      <div className="flex items-center gap-1.5" data-testid="diff-filters">
+      <div className="flex items-center gap-1" data-testid="diff-filters">
         {CHANGE_TYPES.map((type) => {
           const active = visibleTypes.has(type);
           return (
@@ -346,7 +346,7 @@ function DesignDiffPanel({ result, baselineName, currentName, onClose }: DesignD
               key={type}
               data-testid={`diff-filter-${type}`}
               className={cn(
-                'flex items-center gap-1 px-2 py-1 text-[10px] font-medium border rounded-sm transition-colors',
+                'flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium border rounded-sm transition-colors',
                 active ? changeTypeColor(type) + ' border-current' : 'text-muted-foreground/40 border-border/30',
               )}
               onClick={() => toggleType(type)}

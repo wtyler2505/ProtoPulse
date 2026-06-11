@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
@@ -259,16 +259,19 @@ vi.mock('@/components/panels/chat/MessageInput', () => ({
     onSend,
     isGenerating: isGen,
     onOpenSettings,
+    textareaRef,
   }: {
     input: string;
     onInputChange: (v: string) => void;
     onSend: () => void;
     isGenerating: boolean;
     onOpenSettings?: () => void;
+    textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   }) => (
     <div data-testid="message-input">
       <textarea
         data-testid="chat-input"
+        ref={textareaRef}
         value={input}
         onChange={(e) => onInputChange(e.target.value)}
         onKeyDown={(e) => {
@@ -303,6 +306,7 @@ vi.mock('@/components/panels/chat/SettingsPanel', () => ({
 // -------------------------------------------------------------------
 
 import ChatPanel from '@/components/panels/ChatPanel';
+import { RADIAL_AI_CHAT_DRAFT_EVENT } from '@/lib/radial-ai-commands';
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -379,6 +383,24 @@ describe('ChatPanel', () => {
     expect(mockSetIsGenerating).toHaveBeenCalledWith(true);
   });
 
+  it('drafts a radial AI prompt into the input without sending', async () => {
+    renderChatPanel();
+
+    window.dispatchEvent(
+      new CustomEvent(RADIAL_AI_CHAT_DRAFT_EVENT, {
+        detail: {
+          message: 'Review this selected footprint before routing.',
+          source: 'radial-ai',
+        },
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('chat-input')).toHaveValue('Review this selected footprint before routing.');
+    });
+    expect(mockSetIsGenerating).not.toHaveBeenCalledWith(true);
+  });
+
   it('renders message bubbles when messages exist', () => {
     mockMessages = [
       { id: 'msg-1', role: 'user', content: 'Hi there', timestamp: Date.now() },
@@ -389,6 +411,21 @@ describe('ChatPanel', () => {
     expect(screen.getByTestId('message-msg-2')).toBeDefined();
     expect(screen.getByText('Hi there')).toBeDefined();
     expect(screen.getByText('Hello!')).toBeDefined();
+  });
+
+  it('deduplicates generated follow-up suggestions before rendering chips', () => {
+    mockMessages = [
+      {
+        id: 'msg-1',
+        role: 'assistant',
+        content: 'Generated architecture component added to the canvas.',
+        timestamp: Date.now(),
+      },
+    ];
+
+    renderChatPanel();
+
+    expect(screen.getAllByTestId('suggestion-run-validation')).toHaveLength(1);
   });
 
   it('shows streaming indicator when isGenerating is true', () => {

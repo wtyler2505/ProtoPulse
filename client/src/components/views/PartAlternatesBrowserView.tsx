@@ -4,9 +4,16 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ArrowRightLeft, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 import { useAlternatesBrowse, type AlternatesBrowseRow } from '@/lib/parts/use-alternates-browse';
 import { usePartAlternates } from '@/lib/parts/use-part-alternates';
+import {
+  alternateTrustKind,
+  describeAlternateMatchReason,
+  describeAlternateTradeoff,
+  formatAlternateMatchScore,
+  formatAlternateTrustLabel,
+} from '@/lib/parts/alternate-trust';
 
 function AlternateGroupRow({ row }: { row: AlternatesBrowseRow }) {
   const [expanded, setExpanded] = useState(false);
@@ -18,7 +25,7 @@ function AlternateGroupRow({ row }: { row: AlternatesBrowseRow }) {
         <button
           type="button"
           data-testid={`alt-group-${row.part.id}`}
-          className="w-full flex items-center justify-between gap-3 rounded-md border border-border/40 bg-muted/30 px-3 py-2.5 text-left hover:bg-accent/50 transition-colors"
+          className="flex w-full items-center justify-between gap-3 rounded-md border border-border/40 bg-muted/30 px-3 py-2.5 text-left transition-colors hover:bg-accent/50"
         >
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {expanded ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
@@ -35,8 +42,14 @@ function AlternateGroupRow({ row }: { row: AlternatesBrowseRow }) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <span data-testid={`alt-source-trust-${row.part.id}`}>
+              <TrustBadge
+                kind={alternateTrustKind(row.part.trustLevel)}
+                label={formatAlternateTrustLabel(row.part.trustLevel)}
+              />
+            </span>
             {row.part.category && (
-              <Badge variant="outline" className="text-[10px]">{row.part.category}</Badge>
+              <Badge variant="outline" className="text-[11px]">{row.part.category}</Badge>
             )}
             <Badge variant="secondary" data-testid={`alt-count-${row.part.id}`}>
               {row.alternateCount} {row.alternateCount === 1 ? 'alternate' : 'alternates'}
@@ -45,7 +58,7 @@ function AlternateGroupRow({ row }: { row: AlternatesBrowseRow }) {
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="ml-6 mt-1 space-y-1 mb-2">
+        <div className="mb-2 ml-5 mt-1 space-y-1">
           {isLoading ? (
             <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -56,15 +69,34 @@ function AlternateGroupRow({ row }: { row: AlternatesBrowseRow }) {
               <div
                 key={alt.id}
                 data-testid={`alt-item-${alt.id}`}
-                className="flex items-center justify-between rounded-md border border-border/20 bg-background/50 px-3 py-1.5"
+                className="grid gap-2 rounded-md border border-border/20 bg-background/50 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto]"
               >
                 <div className="min-w-0">
-                  <span className="text-sm text-foreground">{alt.title}</span>
-                  {alt.mpn && <span className="ml-2 text-xs text-muted-foreground font-mono">{alt.mpn}</span>}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">{alt.title}</span>
+                    {alt.mpn && <span className="text-xs text-muted-foreground font-mono">{alt.mpn}</span>}
+                  </div>
+                  <p className="mt-1 text-[11px] leading-4 text-muted-foreground" data-testid={`alt-reason-${alt.id}`}>
+                    {describeAlternateMatchReason(alt)}
+                  </p>
+                  <p className="text-[11px] leading-4 text-muted-foreground" data-testid={`alt-tradeoff-${alt.id}`}>
+                    {describeAlternateTradeoff(alt)}
+                  </p>
                 </div>
-                {alt.manufacturer && (
-                  <span className="text-xs text-muted-foreground shrink-0">{alt.manufacturer}</span>
-                )}
+                <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+                  <Badge variant="outline" data-testid={`alt-match-${alt.id}`} className="text-[10px]">
+                    {formatAlternateMatchScore(alt.matchScore)}
+                  </Badge>
+                  <span data-testid={`alt-trust-${alt.id}`}>
+                    <TrustBadge
+                      kind={alternateTrustKind(alt.trustLevel)}
+                      label={formatAlternateTrustLabel(alt.trustLevel)}
+                    />
+                  </span>
+                  {alt.manufacturer && (
+                    <span className="text-xs text-muted-foreground shrink-0">{alt.manufacturer}</span>
+                  )}
+                </div>
               </div>
             ))
           ) : (
@@ -103,16 +135,16 @@ export default function PartAlternatesBrowserView() {
   const rows = data ?? [];
 
   return (
-    <Card data-testid="alternates-browser" className="h-full flex flex-col">
-      <CardHeader className="pb-2 shrink-0">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <ArrowRightLeft className="h-4 w-4" />
+    <Card data-testid="alternates-browser" className="flex h-full flex-col">
+      <CardHeader className="shrink-0 pb-2 pt-3">
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          <ArrowRightLeft className="h-3.5 w-3.5" />
           Part Alternates
-          <Badge variant="secondary" data-testid="alternates-browser-count">
+          <Badge variant="secondary" className="h-4.5 text-[11px]" data-testid="alternates-browser-count">
             {rows.length} {rows.length === 1 ? 'part' : 'parts'} with alternates
           </Badge>
         </CardTitle>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
           Browse all parts with defined substitutes. Expand a part to see its equivalents.
         </p>
       </CardHeader>
@@ -123,7 +155,7 @@ export default function PartAlternatesBrowserView() {
           </p>
         ) : (
           <ScrollArea className="h-full">
-            <div className="space-y-1.5 pr-2" data-testid="alternates-browser-list">
+            <div className="space-y-1 pr-2" data-testid="alternates-browser-list">
               {rows.map((row) => <AlternateGroupRow key={row.part.id} row={row} />)}
             </div>
           </ScrollArea>

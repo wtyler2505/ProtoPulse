@@ -1,0 +1,20 @@
+{
+  "tasks": [
+    {
+      "id": "firmware-hid-mega",
+      "role": "firmware-writer",
+      "claimedFiles": ["src/ai/swarms/firmware-writer.ts"],
+      "prompt": "Draft Arduino Mega 2560 HID firmware after pin ownership is verified.",
+      "requiresHardwareFacts": ["logic_voltage", "pinout"],
+      "verifiedHardwareFacts": ["logic_voltage", "pinout"]
+    },
+    {
+      "id": "constraint-check-mega",
+      "role": "constraint-checker",
+      "claimedFiles": ["src/hardware/fact-gate.ts"],
+      "prompt": "Check that Arduino Mega 2560 hardware facts are verified before compile.",
+      "requiresHardwareFacts": ["logic_voltage"],
+      "verifiedHardwareFacts": ["logic_voltage"]
+    }
+  ]
+}

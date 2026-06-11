@@ -50,6 +50,7 @@ vi.mock('@/lib/circuit-dsl/ir-to-schematic', () => ({
 const mockSetNodes = vi.fn();
 const mockSetEdges = vi.fn();
 const mockPushUndoState = vi.fn();
+const mockSetActiveView = vi.fn();
 
 let mockArchitectureNodes: Array<{ id: string; type: string; position: { x: number; y: number }; data: Record<string, unknown> }> = [];
 let mockArchitectureEdges: Array<{ id: string; source: string; target: string; label?: string }> = [];
@@ -84,15 +85,33 @@ vi.mock('@/lib/contexts/architecture-context', () => ({
   }),
 }));
 
+vi.mock('@/lib/contexts/project-meta-context', () => ({
+  useProjectMeta: () => ({
+    activeView: 'generative_design',
+    setActiveView: mockSetActiveView,
+    projectName: 'Test Project',
+    setProjectName: vi.fn(),
+    projectDescription: '',
+    setProjectDescription: vi.fn(),
+    schematicSheets: [],
+    activeSheetId: 'top',
+    setActiveSheetId: vi.fn(),
+    isLoading: false,
+    projectNotFound: false,
+  }),
+}));
+
 // ---------------------------------------------------------------------------
 // Import under test (AFTER mocks)
 // ---------------------------------------------------------------------------
 
 import GenerativeDesignView from '../GenerativeDesignView';
+import { readViewer3DBridgeTarget } from '@/lib/viewer-3d-bridge';
 
 describe('GenerativeDesignView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.sessionStorage.clear();
     mockArchitectureNodes = [];
     mockArchitectureEdges = [];
     mockHookReturn = {
@@ -327,5 +346,45 @@ describe('GenerativeDesignView', () => {
     expect(panel.textContent).toContain('added');
     // Bug fingerprint: R1 (from the old defaultBaseCircuit stub) must NOT appear.
     expect(panel.textContent).not.toContain('R1');
+  });
+
+  it('hands a candidate into the 3D viewer with provenance context', () => {
+    mockHookReturn.results = [
+      {
+        generation: 0,
+        bestFitness: 0.91,
+        averageFitness: 0.8,
+        candidates: [
+          {
+            id: 'cand-3d',
+            ir: {
+              meta: { name: 'Boost converter candidate' },
+              components: [
+                { id: 'u1', refdes: 'U1', partId: 'controller' },
+                { id: 'l1', refdes: 'L1', partId: 'inductor' },
+              ],
+            },
+            fitness: { overall: 0.91, breakdown: {} },
+          },
+        ],
+      },
+    ];
+
+    render(<GenerativeDesignView />);
+    fireEvent.click(screen.getByTestId('view-3d-button-cand-3d'));
+
+    expect(mockSetActiveView).toHaveBeenCalledWith('viewer_3d');
+    expect(readViewer3DBridgeTarget()).toMatchObject({
+      sourceView: 'generative',
+      sourceId: 'cand-3d',
+      refDes: 'U1',
+      title: 'Boost converter candidate',
+      sourceName: 'Generative design engine',
+      trustTier: 'ai-generated',
+      componentCount: 2,
+      generatedFrom: 'generative-design',
+      fitnessScore: 0.91,
+      readyNow: false,
+    });
   });
 });

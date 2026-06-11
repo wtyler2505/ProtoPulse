@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -518,12 +519,12 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
               <Label htmlFor="nc-trace-width" className="text-[10px] text-muted-foreground">
                 Trace Width (mm)
               </Label>
-              <Input
+              <NumberInput
                 id="nc-trace-width"
                 data-testid="input-trace-width"
-                type="number"
                 step={0.05}
                 min={0.01}
+                max={10}
                 value={formData.traceWidth}
                 onChange={(e) => updateFormField('traceWidth', parseFloat(e.target.value) || 0)}
                 className="h-7 text-xs"
@@ -535,12 +536,12 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
               <Label htmlFor="nc-clearance" className="text-[10px] text-muted-foreground">
                 Clearance (mm)
               </Label>
-              <Input
+              <NumberInput
                 id="nc-clearance"
                 data-testid="input-clearance"
-                type="number"
                 step={0.05}
                 min={0.01}
+                max={10}
                 value={formData.clearance}
                 onChange={(e) => updateFormField('clearance', parseFloat(e.target.value) || 0)}
                 className="h-7 text-xs"
@@ -552,12 +553,12 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
               <Label htmlFor="nc-via-diameter" className="text-[10px] text-muted-foreground">
                 Via Diameter (mm)
               </Label>
-              <Input
+              <NumberInput
                 id="nc-via-diameter"
                 data-testid="input-via-diameter"
-                type="number"
                 step={0.1}
                 min={0.1}
+                max={10}
                 value={formData.viaDiameter}
                 onChange={(e) => updateFormField('viaDiameter', parseFloat(e.target.value) || 0)}
                 className="h-7 text-xs"

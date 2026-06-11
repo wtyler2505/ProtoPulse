@@ -1,7 +1,7 @@
 ---
 description: "Holding CT/BRAKE active after the motor stops shorts stationary motor phases through the low-side MOSFETs with no back-EMF to limit current -- brief braking pulses are safe but sustained hold risks thermal damage to the controller"
 type: claim
-source: "docs/parts/riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md"
+source: "docs/parts/wiring-zs-x11h-to-arduino-mega-for-single-motor-control.md"
 confidence: proven
 topics:
   - "[[actuators]]"
@@ -10,7 +10,16 @@ topics:
 
 # dynamic brake must be pulsed not held because stationary phase shorting overheats MOSFETs
 
-When the ZS-X11H's CT (brake) input is activated, the controller shorts all three motor phases together through the low-side MOSFETs. While the motor is spinning, this creates back-EMF braking -- the motor's own rotation generates current that opposes motion, decelerating the motor. The braking force is proportional to speed: strongest at high RPM, weakening as the motor slows. This is the intended use case.
+When the ZS-X11H's CT (brake) input is activated, the controller shorts all three motor phases together through the low-side MOSFETs. This is an **electrical/regenerative brake**, not a mechanical lock. 
+
+The brake operates based on this state mapping:
+
+| CT State | Action | Current Flow | Notes |
+|---------|--------|-------------|-------|
+| HIGH (float) | Normal operation | Through motor phases | Default state |
+| LOW | Active braking | Motor back-EMF through low-side MOSFETs | Braking force proportional to speed |
+
+While the motor is spinning, this creates back-EMF braking -- the motor's own rotation generates current that opposes motion, decelerating the motor. The braking force is proportional to speed: strongest at high RPM, weakening as the motor slows. This is the intended use case.
 
 However, once the motor has stopped or nearly stopped, there is no back-EMF to oppose current flow. The shorted phase windings become a low-resistance path from the supply through the MOSFETs. Without the motor's rotational energy being converted to heat in the windings (useful braking), the energy comes instead from the power supply and dissipates as heat in the MOSFETs themselves. On a controller with no thermal protection (which the ZS-X11H lacks), this sustained current draw can overheat and destroy the FETs.
 
@@ -26,7 +35,7 @@ This is distinct from the STOP function, which simply de-energizes the phases an
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
+Source: [[wiring-zs-x11h-to-arduino-mega-for-single-motor-control]]
 
 Relevant Notes:
 - [[bldc-stop-active-low-brake-active-high]] -- the existing note on STOP vs BRAKE logic levels, which this note extends with the thermal failure mode

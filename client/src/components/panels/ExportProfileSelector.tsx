@@ -39,12 +39,12 @@ function ExportProfileSelector({ onExportProfile, exportingFormats }: ExportProf
   );
 
   return (
-    <div data-testid="export-profile-selector" className="flex flex-col gap-2">
+    <div data-testid="export-profile-selector" className="flex flex-col gap-1.5">
       <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
         Quick Export Profiles
       </span>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-1.5">
         {BUILT_IN_PROFILES.map((profile) => {
           const Icon = ICON_MAP[profile.iconHint];
           const isExporting =
@@ -56,7 +56,7 @@ function ExportProfileSelector({ onExportProfile, exportingFormats }: ExportProf
               key={profile.id}
               data-testid={`export-profile-${profile.id}`}
               className={cn(
-                'flex flex-col items-start gap-1.5 p-2.5 border border-border/50 bg-card/30 backdrop-blur',
+                'flex flex-col items-start gap-1 p-2 border border-border/50 bg-card/30 backdrop-blur',
                 'hover:bg-muted/30 hover:border-primary/30 transition-colors text-left focus-ring',
                 isExporting && 'opacity-70 pointer-events-none',
               )}
@@ -64,16 +64,16 @@ function ExportProfileSelector({ onExportProfile, exportingFormats }: ExportProf
               disabled={isExporting}
               aria-label={`Export ${profile.label} profile`}
             >
-              <div className="flex items-center gap-1.5 w-full">
+              <div className="flex items-center gap-1 w-full">
                 <Icon className="w-3.5 h-3.5 text-primary/70 shrink-0" />
-                <span className="text-xs font-medium text-foreground truncate">{profile.label}</span>
+                <span className="text-[11px] font-medium text-foreground truncate">{profile.label}</span>
               </div>
 
               <p className="text-[10px] text-muted-foreground/70 leading-tight line-clamp-2">
                 {profile.description}
               </p>
 
-              <div className="flex items-center gap-1 mt-auto pt-1 text-[10px] text-primary/80 font-medium">
+              <div className="flex items-center gap-1 mt-auto pt-0.5 text-[10px] text-primary/80 font-medium">
                 {isExporting ? (
                   <>
                     <Loader2 className="w-3 h-3 animate-spin" />

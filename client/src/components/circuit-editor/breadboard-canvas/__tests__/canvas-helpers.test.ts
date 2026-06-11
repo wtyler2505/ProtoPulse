@@ -13,9 +13,16 @@ import { describe, it, expect } from 'vitest';
 import {
   buildAutoPlacementTemplate,
   buildPlacementForDrop,
+  buildProjectDropInstanceDraft,
+  buildStarterDropInstanceDraft,
   findAutoPlacement,
+  getCanvasBenchInstances,
   getDropTypeFromPart,
+  hasBreadboardDropPayloadType,
   isDipLikeType,
+  readProjectPartDropData,
+  readStarterDropData,
+  resolveBoardDropPlacement,
   WIRE_COLORS,
 } from '../canvas-helpers';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
@@ -50,6 +57,18 @@ function makePart(overrides: Partial<ComponentPart> = {}): ComponentPart {
   } as ComponentPart;
 }
 
+const dragMimeTypes = {
+  projectPart: 'application/x-protopulse-part',
+  starterType: 'application/x-protopulse-node-type',
+  starterLabel: 'application/x-protopulse-node-label',
+} as const;
+
+function makeDataTransfer(values: Record<string, string>) {
+  return {
+    getData: (type: string) => values[type] ?? '',
+  };
+}
+
 describe('isDipLikeType', () => {
   it('accepts ic / mcu / microcontroller (case-insensitive)', () => {
     expect(isDipLikeType('ic')).toBe(true);
@@ -63,6 +82,81 @@ describe('isDipLikeType', () => {
     expect(isDipLikeType('led')).toBe(false);
     expect(isDipLikeType('capacitor')).toBe(false);
     expect(isDipLikeType('')).toBe(false);
+  });
+});
+
+describe('drag payload parsing', () => {
+  it('detects project and starter drag payload types', () => {
+    expect(hasBreadboardDropPayloadType({
+      includes: (type: string) => type === dragMimeTypes.projectPart,
+    }, dragMimeTypes)).toBe(true);
+
+    expect(hasBreadboardDropPayloadType({
+      includes: (type: string) => type === dragMimeTypes.starterType,
+    }, dragMimeTypes)).toBe(true);
+
+    expect(hasBreadboardDropPayloadType({
+      includes: () => false,
+    }, dragMimeTypes)).toBe(false);
+  });
+
+  it('reads valid project-part payloads', () => {
+    const dataTransfer = makeDataTransfer({
+      [dragMimeTypes.projectPart]: JSON.stringify({ partId: 42 }),
+    });
+
+    expect(readProjectPartDropData(dataTransfer, dragMimeTypes.projectPart)).toEqual({ partId: 42 });
+  });
+
+  it('rejects missing, invalid JSON, and invalid project-part payloads', () => {
+    expect(readProjectPartDropData(makeDataTransfer({}), dragMimeTypes.projectPart)).toBeNull();
+    expect(readProjectPartDropData(makeDataTransfer({
+      [dragMimeTypes.projectPart]: '{nope',
+    }), dragMimeTypes.projectPart)).toBeNull();
+    expect(readProjectPartDropData(makeDataTransfer({
+      [dragMimeTypes.projectPart]: JSON.stringify({ partId: '42' }),
+    }), dragMimeTypes.projectPart)).toBeNull();
+  });
+
+  it('reads starter node payloads', () => {
+    const dataTransfer = makeDataTransfer({
+      [dragMimeTypes.starterType]: 'resistor',
+      [dragMimeTypes.starterLabel]: 'Resistor',
+    });
+
+    expect(readStarterDropData(dataTransfer, dragMimeTypes)).toEqual({
+      nodeType: 'resistor',
+      label: 'Resistor',
+    });
+  });
+
+  it('rejects starter payloads without a node type', () => {
+    expect(readStarterDropData(makeDataTransfer({
+      [dragMimeTypes.starterLabel]: 'Resistor',
+    }), dragMimeTypes)).toBeNull();
+  });
+});
+
+describe('getCanvasBenchInstances', () => {
+  it('returns only instances with bench placement', () => {
+    const bench = makeInstance({ id: 1, benchX: 10, benchY: 20 });
+    const board = makeInstance({ id: 2, breadboardX: 40, breadboardY: 60 });
+    const staged = makeInstance({ id: 3 });
+    const conflicting = makeInstance({
+      id: 4,
+      benchX: 70,
+      benchY: 80,
+      breadboardX: 90,
+      breadboardY: 100,
+    });
+
+    expect(getCanvasBenchInstances([bench, board, staged, conflicting]).map((instance) => instance.id))
+      .toEqual([1]);
+  });
+
+  it('handles missing instance lists', () => {
+    expect(getCanvasBenchInstances(undefined)).toEqual([]);
+    expect(getCanvasBenchInstances(null)).toEqual([]);
   });
 });
 
@@ -173,6 +267,48 @@ describe('buildPlacementForDrop', () => {
   });
 });
 
+describe('resolveBoardDropPlacement', () => {
+  it('returns placement and snapped pixel for a valid terminal drop', () => {
+    const result = resolveBoardDropPlacement({
+      coord: { type: 'terminal', col: 'b', row: 5 },
+      type: 'resistor',
+      pinCount: 2,
+      existingPlacements: [],
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.placement).toMatchObject({
+      startCol: 'b',
+      startRow: 5,
+      rowSpan: 1,
+      crossesChannel: false,
+    });
+    expect(result?.snapPx).toEqual({ x: 40, y: 90 });
+  });
+
+  it('rejects non-terminal coordinates', () => {
+    expect(resolveBoardDropPlacement({
+      coord: { type: 'rail', rail: 'left_pos', index: 0 },
+      type: 'resistor',
+      pinCount: 2,
+      existingPlacements: [],
+    })).toBeNull();
+  });
+
+  it('rejects placements that collide with existing board parts', () => {
+    const result = resolveBoardDropPlacement({
+      coord: { type: 'terminal', col: 'c', row: 8 },
+      type: 'resistor',
+      pinCount: 2,
+      existingPlacements: [
+        { refDes: 'R1', startCol: 'c', startRow: 8, rowSpan: 1, crossesChannel: false },
+      ],
+    });
+
+    expect(result).toBeNull();
+  });
+});
+
 describe('getDropTypeFromPart', () => {
   it('prefers meta.type', () => {
     const part = makePart({ meta: { type: 'resistor', family: 'passive' } });
@@ -196,6 +332,85 @@ describe('getDropTypeFromPart', () => {
 
   it('returns fallback for undefined part', () => {
     expect(getDropTypeFromPart(undefined, 'capacitor')).toBe('capacitor');
+  });
+});
+
+describe('drop instance drafts', () => {
+  it('builds project bench drops with bench coordinates and project provenance', () => {
+    const draft = buildProjectDropInstanceDraft({
+      circuitId: 7,
+      partId: 42,
+      referenceDesignator: 'J1',
+      placementMode: 'bench',
+      pixel: { x: 128, y: 256 },
+      label: 'Wide module',
+      type: 'module',
+    });
+
+    expect(draft).toMatchObject({
+      circuitId: 7,
+      partId: 42,
+      referenceDesignator: 'J1',
+      benchX: 128,
+      benchY: 256,
+      properties: {
+        breadboardProvenance: 'project',
+        label: 'Wide module',
+        type: 'module',
+      },
+    });
+    expect('breadboardX' in draft).toBe(false);
+    expect('breadboardY' in draft).toBe(false);
+  });
+
+  it('builds project board drops with breadboard coordinates and project provenance', () => {
+    const draft = buildProjectDropInstanceDraft({
+      circuitId: 7,
+      partId: 42,
+      referenceDesignator: 'R4',
+      placementMode: 'board',
+      pixel: { x: 80, y: 120 },
+      label: '10k resistor',
+      type: 'resistor',
+    });
+
+    expect(draft).toMatchObject({
+      circuitId: 7,
+      partId: 42,
+      referenceDesignator: 'R4',
+      breadboardX: 80,
+      breadboardY: 120,
+      properties: {
+        breadboardProvenance: 'project',
+        label: '10k resistor',
+        type: 'resistor',
+      },
+    });
+    expect('benchX' in draft).toBe(false);
+    expect('benchY' in draft).toBe(false);
+  });
+
+  it('builds starter board drops with null part id and starter provenance', () => {
+    const draft = buildStarterDropInstanceDraft({
+      circuitId: 9,
+      referenceDesignator: 'L1',
+      pixel: { x: 44, y: 88 },
+      type: 'led',
+      label: '',
+    });
+
+    expect(draft).toMatchObject({
+      circuitId: 9,
+      partId: null,
+      referenceDesignator: 'L1',
+      breadboardX: 44,
+      breadboardY: 88,
+      properties: {
+        breadboardProvenance: 'starter',
+        label: 'led',
+        type: 'led',
+      },
+    });
   });
 });
 

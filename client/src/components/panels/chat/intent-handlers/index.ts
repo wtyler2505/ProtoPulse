@@ -15,6 +15,7 @@ import { addBomHandler, removeBomHandler, exportBomHandler, optimizeBomHandler }
 import { runValidationHandler, fixIssuesHandler } from './validation';
 import { renameProjectHandler, updateDescriptionHandler } from './project';
 import { projectInfoHandler, helpHandler, clearChatHandler } from './queries';
+import { runJitSkillCommandHandler } from './commands';
 import {
   componentFallbackHandler,
   bomFallbackHandler,
@@ -42,6 +43,8 @@ export type { IntentHandler, IntentContext, ParsedIntent } from './types';
  *  9. Domain-specific fallbacks: component, bom, memory, power, antenna, sensor
  */
 export const intentHandlers: readonly IntentHandler[] = [
+  // 0. Explicit slash commands
+  runJitSkillCommandHandler,
   // 1. Navigation
   navigationHandler,
   // 2. Architecture

@@ -3,7 +3,9 @@ import { ArrowUpDown, ArrowUp, ArrowDown, Trophy, ExternalLink, Package, AlertTr
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Badge } from '@/components/ui/badge';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 import { cn } from '@/lib/utils';
 import {
   buildComparison,
@@ -198,10 +200,10 @@ export function SupplierDrawer({ open, onOpenChange, initialMpn }: SupplierDrawe
             <label htmlFor="comparison-quantity" className="text-xs text-muted-foreground whitespace-nowrap">
               Quantity:
             </label>
-            <Input
+            <NumberInput
               id="comparison-quantity"
-              type="number"
               min={1}
+              max={999_999}
               value={quantity}
               onChange={(e) => handleQuantityChange(Number(e.target.value))}
               className="w-24"
@@ -240,9 +242,12 @@ export function SupplierDrawer({ open, onOpenChange, initialMpn }: SupplierDrawe
           data-testid="comparison-mock-disclaimer"
         >
           <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-500 mt-0.5" />
-          <p className="text-[11px] text-muted-foreground">
-            Pricing data is simulated for demonstration. Connect live supplier APIs in Settings for real data.
-          </p>
+          <div className="flex items-start gap-2">
+            <TrustBadge kind="estimated" className="mt-0.5" />
+            <p className="text-[11px] text-muted-foreground">
+              Pricing data is simulated for demonstration. Connect live supplier APIs in Settings for real data.
+            </p>
+          </div>
         </div>
 
         {/* Not found state */}

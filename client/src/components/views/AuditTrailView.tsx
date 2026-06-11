@@ -65,6 +65,21 @@ const ALL_ENTITY_TYPES: AuditEntityType[] = [
 
 const ALL_ACTIONS: AuditAction[] = ['create', 'update', 'delete', 'restore', 'export', 'import'];
 
+function dateRangeFromInputs(start: string, end: string): AuditFilters['dateRange'] | undefined {
+  if (!start || !end) return undefined;
+
+  const startDate = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T23:59:59`);
+  if (!Number.isFinite(startDate.getTime()) || !Number.isFinite(endDate.getTime())) {
+    return undefined;
+  }
+
+  return {
+    start: startDate.toISOString(),
+    end: endDate.toISOString(),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Action icon helper
 // ---------------------------------------------------------------------------
@@ -163,7 +178,7 @@ function AuditEntryRow({ entry }: { entry: AuditEntry }) {
     <div className="border-b border-border/50 last:border-b-0" data-testid={`audit-entry-${entry.id}`}>
       <button
         type="button"
-        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+        className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-muted/30"
         onClick={toggleExpand}
         disabled={!hasDiffs}
         data-testid={`audit-entry-toggle-${entry.id}`}
@@ -181,17 +196,17 @@ function AuditEntryRow({ entry }: { entry: AuditEntry }) {
 
         <ActionIcon action={entry.action} />
 
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-foreground">{entry.entityLabel ?? entry.entityId}</span>
-            <Badge variant={actionBadgeVariant(entry.action)} className="text-xs">
+            <span className="text-[13px] font-medium text-foreground">{entry.entityLabel ?? entry.entityId}</span>
+            <Badge variant={actionBadgeVariant(entry.action)} className="h-5 text-[11px]">
               {actionLabel(entry.action)}
             </Badge>
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="h-5 text-[11px]">
               {entityTypeLabel(entry.entityType)}
             </Badge>
           </div>
-          <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+          <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
             <Clock className="h-3 w-3" />
             <span>{formattedTime}</span>
             <span>by {entry.userName}</span>
@@ -205,7 +220,7 @@ function AuditEntryRow({ entry }: { entry: AuditEntry }) {
       </button>
 
       {expanded && hasDiffs && (
-        <div className="px-4 pb-3 pl-14" data-testid={`audit-entry-diff-${entry.id}`}>
+        <div className="px-3 pb-2 pl-12" data-testid={`audit-entry-diff-${entry.id}`}>
           <DiffDisplay diffs={diffs} />
           {entry.metadata && Object.keys(entry.metadata).length > 0 && (
             <div className="mt-2 text-xs text-muted-foreground">
@@ -245,11 +260,9 @@ export default function AuditTrailView() {
     if (actionFilter !== 'all') {
       f.action = actionFilter as AuditAction;
     }
-    if (dateStart && dateEnd) {
-      f.dateRange = {
-        start: new Date(dateStart).toISOString(),
-        end: new Date(`${dateEnd}T23:59:59`).toISOString(),
-      };
+    const dateRange = dateRangeFromInputs(dateStart, dateEnd);
+    if (dateRange) {
+      f.dateRange = dateRange;
     }
     return f;
   }, [search, entityTypeFilter, actionFilter, dateStart, dateEnd]);
@@ -278,12 +291,12 @@ export default function AuditTrailView() {
   }, [filteredEntries]);
 
   return (
-    <div className="flex flex-col h-full" data-testid="audit-trail-view">
-      <Card className="flex flex-col flex-1 overflow-hidden border-border/50">
-        <CardHeader className="shrink-0 pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Clock className="h-5 w-5 text-cyan-400" />
+    <div className="flex h-full min-h-0 flex-col" data-testid="audit-trail-view">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border-border/50">
+        <CardHeader className="shrink-0 pb-2.5 pt-3">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Clock className="h-3.5 w-3.5 text-cyan-400" />
               Audit Trail
             </CardTitle>
             <Button
@@ -292,6 +305,7 @@ export default function AuditTrailView() {
               onClick={handleExportCSV}
               disabled={filteredEntries.length === 0}
               data-testid="audit-export-csv"
+              className="h-8.5 px-3 text-xs"
             >
               <Download className="h-4 w-4 mr-1" />
               Export CSV
@@ -299,24 +313,24 @@ export default function AuditTrailView() {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-wrap items-end gap-3 mt-3" data-testid="audit-filters">
+          <div className="mt-2.5 flex flex-wrap items-end gap-2.5" data-testid="audit-filters">
             {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <div className="relative min-w-[200px] flex-1">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search entries..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                 }}
-                className="pl-9 h-9"
+                className="h-9 pl-9 text-xs"
                 data-testid="audit-search-input"
               />
             </div>
 
             {/* Entity type filter */}
             <Select value={entityTypeFilter} onValueChange={setEntityTypeFilter}>
-              <SelectTrigger className="w-[180px] h-9" data-testid="audit-entity-type-filter" aria-label="Filter audit entries by entity type">
+              <SelectTrigger className="h-9 w-[176px] text-xs" data-testid="audit-entity-type-filter" aria-label="Filter audit entries by entity type">
                 <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
                 <SelectValue placeholder="Entity type" />
               </SelectTrigger>
@@ -332,7 +346,7 @@ export default function AuditTrailView() {
 
             {/* Action filter */}
             <Select value={actionFilter} onValueChange={setActionFilter}>
-              <SelectTrigger className="w-[150px] h-9" data-testid="audit-action-filter" aria-label="Filter audit entries by action">
+              <SelectTrigger className="h-9 w-[152px] text-xs" data-testid="audit-action-filter" aria-label="Filter audit entries by action">
                 <SelectValue placeholder="Action" />
               </SelectTrigger>
               <SelectContent>
@@ -348,23 +362,29 @@ export default function AuditTrailView() {
             {/* Date range */}
             <div className="flex items-center gap-1.5">
               <Input
-                type="date"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
+                placeholder="YYYY-MM-DD"
                 value={dateStart}
                 onChange={(e) => {
                   setDateStart(e.target.value);
                 }}
-                className="h-9 w-[140px] text-xs"
+                className="h-9 w-[136px] text-xs"
                 data-testid="audit-date-start"
                 aria-label="Start date"
               />
               <span className="text-xs text-muted-foreground">to</span>
               <Input
-                type="date"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
+                placeholder="YYYY-MM-DD"
                 value={dateEnd}
                 onChange={(e) => {
                   setDateEnd(e.target.value);
                 }}
-                className="h-9 w-[140px] text-xs"
+                className="h-9 w-[136px] text-xs"
                 data-testid="audit-date-end"
                 aria-label="End date"
               />
@@ -372,7 +392,7 @@ export default function AuditTrailView() {
 
             {/* Clear filters */}
             {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} data-testid="audit-clear-filters">
+              <Button variant="ghost" size="sm" onClick={clearFilters} data-testid="audit-clear-filters" className="h-8.5 px-3 text-xs">
                 <X className="h-4 w-4 mr-1" />
                 Clear
               </Button>
@@ -380,7 +400,7 @@ export default function AuditTrailView() {
           </div>
 
           {/* Results count */}
-          <div className="text-xs text-muted-foreground mt-2" data-testid="audit-result-count">
+          <div className="mt-0.5 text-[11px] text-muted-foreground" data-testid="audit-result-count">
             {filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}
             {hasActiveFilters && ` (filtered from ${ENTRIES.length})`}
           </div>

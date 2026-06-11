@@ -1,0 +1,108 @@
+{
+  "createdAt": "2026-06-04T18:18:25.868Z",
+  "status": "ok",
+  "captureCount": 11,
+  "bytes": 1136556,
+  "rows": [
+    {
+      "name": "01-desktop-architecture-canvas",
+      "file": "01-desktop-architecture-canvas.png",
+      "kind": "page",
+      "viewport": "desktop",
+      "bytes": 195675,
+      "note": "Architecture canvas before radial open."
+    },
+    {
+      "name": "02-desktop-canvas-radial-menu",
+      "file": "02-desktop-canvas-radial-menu.png",
+      "kind": "element",
+      "viewport": "desktop",
+      "bytes": 85502,
+      "width": 404,
+      "height": 404,
+      "note": "Canvas wheel with hover preview."
+    },
+    {
+      "name": "03-desktop-canvas-radial-context",
+      "file": "03-desktop-canvas-radial-context.png",
+      "kind": "page",
+      "viewport": "desktop",
+      "bytes": 245427,
+      "note": "Full workspace with radial wheel open."
+    },
+    {
+      "name": "04-desktop-customizer-expanded",
+      "file": "04-desktop-customizer-expanded.png",
+      "kind": "element",
+      "viewport": "desktop",
+      "bytes": 50957,
+      "width": 368,
+      "height": 512,
+      "note": "Desktop customizer expanded."
+    },
+    {
+      "name": "05-desktop-delete-confirm",
+      "file": "05-desktop-delete-confirm.png",
+      "kind": "element",
+      "viewport": "desktop",
+      "bytes": 60262,
+      "width": 404,
+      "height": 404,
+      "note": "Destructive command confirm state."
+    },
+    {
+      "name": "06-desktop-inspector-radial-launch",
+      "file": "06-desktop-inspector-radial-launch.png",
+      "kind": "page",
+      "viewport": "desktop",
+      "bytes": 155391,
+      "note": "Inspector-targeted radial wheel while inspector remains open."
+    },
+    {
+      "name": "07-desktop-undo-toast",
+      "file": "07-desktop-undo-toast.png",
+      "kind": "page",
+      "viewport": "desktop",
+      "bytes": 112092,
+      "note": "Undo toast after destructive radial delete."
+    },
+    {
+      "name": "08-desktop-node-restored-after-undo",
+      "file": "08-desktop-node-restored-after-undo.png",
+      "kind": "page",
+      "viewport": "desktop",
+      "bytes": 112259,
+      "note": "Deleted node restored from Undo."
+    },
+    {
+      "name": "09-compact-scaled-radial-menu",
+      "file": "09-compact-scaled-radial-menu.png",
+      "kind": "element",
+      "viewport": "compact",
+      "bytes": 63984,
+      "width": 336,
+      "height": 336,
+      "note": "Scaled wheel on compact viewport."
+    },
+    {
+      "name": "10-compact-customizer-expanded",
+      "file": "10-compact-customizer-expanded.png",
+      "kind": "element",
+      "viewport": "compact",
+      "bytes": 46648,
+      "width": 344,
+      "height": 504,
+      "note": "Compact customizer sheet expanded."
+    },
+    {
+      "name": "11-compact-customizer-collapsed",
+      "file": "11-compact-customizer-collapsed.png",
+      "kind": "element",
+      "viewport": "compact",
+      "bytes": 8359,
+      "width": 344,
+      "height": 71,
+      "note": "Compact customizer collapsed strip."
+    }
+  ]
+}

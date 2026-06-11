@@ -5,6 +5,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import { Bot, User, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2, Wrench, XCircle, GitBranch, Settings2, Play, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import TrustReceiptCard from '@/components/ui/TrustReceiptCard';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import ConfidenceBadge from '@/components/ui/ConfidenceBadge';
 import ActionPreviewList from './ActionPreviewList';
@@ -103,19 +104,19 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
 
   return (
     <div className={cn(
-      "flex gap-3 text-sm animate-in fade-in slide-in-from-bottom-2 duration-300 group/msg",
+      "flex gap-2 text-sm animate-in fade-in slide-in-from-bottom-2 duration-300 group/msg",
       msg.role === 'user' ? "flex-row-reverse" : "flex-row"
     )}>
       <div className={cn(
-        "w-8 h-8 flex items-center justify-center shrink-0 border shadow-sm",
+        "w-6.5 h-6.5 flex items-center justify-center shrink-0 border shadow-sm",
         msg.role === 'user' ? "bg-muted text-foreground border-border" : "bg-primary/10 text-primary border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]"
       )}>
-        {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+        {msg.role === 'user' ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
       </div>
 
-      <div className="flex flex-col gap-1 max-w-[85%]">
+      <div className="flex flex-col gap-1 max-w-[88%]">
         <div className={cn(
-          "p-3 leading-relaxed shadow-sm relative",
+          "p-2 leading-relaxed shadow-sm relative",
           msg.role === 'user'
             ? "bg-primary text-primary-foreground"
             : msg.isError
@@ -158,6 +159,9 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
             >
               {tokenInfo.input + tokenInfo.output} tokens · ~${tokenInfo.cost.toFixed(4)}
               {tokenInfo.estimated ? ' (estimated)' : ''}
+              <span className="inline-flex align-middle ml-1.5" data-testid="token-info-trust">
+                <TrustBadge kind={tokenInfo.estimated ? 'estimated' : 'verified'} />
+              </span>
             </div>
           )}
           {msg.isError && msg.isKeyError && onOpenSettings && (

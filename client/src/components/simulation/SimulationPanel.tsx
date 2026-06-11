@@ -64,9 +64,23 @@ import type {
   SimulationRun,
   ApiSimulationResponse,
 } from './simulation-types';
+import { RADIAL_COMMAND_EVENT, type RadialCommandEventDetail } from '@/lib/radial-menu-actions';
 
 // Re-export for consumers that import parseValueWithUnit from this file
 export { parseValueWithUnit } from './simulation-types';
+
+function downloadSimulationJson(filename: string, payload: unknown): void {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  URL.revokeObjectURL(url);
+  a.remove();
+}
 
 // ---------------------------------------------------------------------------
 // Lazy-loaded WaveformViewer — only pulled in when results need graphing
@@ -561,6 +575,38 @@ export default function SimulationPanel() {
     }
   }, [projectId, toast]);
 
+  const handleAddRadialProbe = useCallback((targetLabel?: string) => {
+    const name = targetLabel?.trim() || `Probe ${probes.length + 1}`;
+    const newProbe: Probe = {
+      id: crypto.randomUUID(),
+      name,
+      type: 'voltage',
+      nodeOrComponent: targetLabel?.trim() ?? '',
+    };
+    setProbes((prev) => [...prev, newProbe]);
+    toast({ title: 'Probe added', description: `${name} is ready in the simulation probe list.` });
+  }, [probes.length, toast]);
+
+  const handleExportSimulationResults = useCallback(() => {
+    if (!results) {
+      toast({
+        variant: 'destructive',
+        title: 'No simulation results yet',
+        description: 'Run a simulation before exporting waveform data.',
+      });
+      return;
+    }
+
+    downloadSimulationJson(`simulation-${projectId}-${Date.now()}.json`, {
+      projectId,
+      exportedAt: new Date().toISOString(),
+      analysisType,
+      probes,
+      result: results,
+    });
+    toast({ title: 'Simulation exported', description: 'Results JSON downloaded from the radial menu.' });
+  }, [analysisType, probes, projectId, results, toast]);
+
   // ---------------------------
   // Load a historical result
   // ---------------------------
@@ -589,6 +635,70 @@ export default function SimulationPanel() {
     toast({ title: 'History Cleared', description: 'All simulation results have been removed.' });
   }, [toast]);
 
+  const handleRadialCommand = useCallback((detail: RadialCommandEventDetail): boolean => {
+    if (detail.source !== 'radial-menu' || detail.context.view !== 'simulation') {
+      return false;
+    }
+
+    switch (detail.commandId) {
+      case 'add_probe':
+        handleAddRadialProbe(detail.context.targetLabel);
+        return true;
+      case 'run_simulation':
+        handleRunWithComplexityCheck();
+        return true;
+      case 'compare_waveform':
+        if (resultHistory.length > 1) {
+          loadHistoryEntry(resultHistory[0]);
+          toast({ title: 'Waveform comparison ready', description: `${resultHistory.length} saved runs are available in history.` });
+        } else {
+          toast({ title: 'Need another run', description: 'Run at least two simulations to compare waveforms.' });
+        }
+        return true;
+      case 'sweep_simulation':
+        setDCSweepParams((prev) => ({
+          ...prev,
+          source: prev.source || circuitSources[0] || '',
+        }));
+        handleSimPlayStart('dcsweep');
+        toast({ title: 'DC sweep queued', description: 'Simulation type switched to DC Sweep.' });
+        return true;
+      case 'simulation_settings':
+        document.querySelector('[data-testid="section-parameters"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        toast({ title: 'Simulation settings', description: 'Parameters are centered for editing.' });
+        return true;
+      case 'export_waveform':
+        handleExportSimulationResults();
+        return true;
+      default:
+        return false;
+    }
+  }, [
+    circuitSources,
+    handleAddRadialProbe,
+    handleExportSimulationResults,
+    handleRunWithComplexityCheck,
+    handleSimPlayStart,
+    loadHistoryEntry,
+    resultHistory,
+    toast,
+  ]);
+
+  useEffect(() => {
+    const handleCommandEvent = (event: Event) => {
+      const detail = (event as CustomEvent<RadialCommandEventDetail>).detail;
+      if (!detail) {
+        return;
+      }
+      if (handleRadialCommand(detail)) {
+        detail.handled = true;
+      }
+    };
+
+    window.addEventListener(RADIAL_COMMAND_EVENT, handleCommandEvent);
+    return () => window.removeEventListener(RADIAL_COMMAND_EVENT, handleCommandEvent);
+  }, [handleRadialCommand]);
+
   // ---------------------------
   // Run button color
   // ---------------------------
@@ -606,19 +716,19 @@ export default function SimulationPanel() {
   // Render
   // ---------------------------
   return (
-    <div className="h-full flex flex-col bg-background/50 overflow-hidden" data-testid="simulation-panel">
+    <div className="flex h-full flex-col overflow-hidden bg-background/50" data-testid="simulation-panel">
       {/* Header */}
-      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
+      <div className="shrink-0 flex flex-col justify-between gap-3 px-3.5 pt-3.5 pb-3 md:flex-row md:items-center md:px-5 md:pt-4.5">
         <div>
-          <h2 className="text-xl md:text-2xl font-display font-bold flex items-center gap-3">
-            <Activity className="w-7 h-7 text-primary" />
+          <h2 className="flex items-center gap-2 text-lg font-display font-bold md:text-xl">
+            <Activity className="h-5 w-5 text-primary" />
             Circuit Simulation
           </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="mt-1 text-xs text-muted-foreground">
             Configure and run SPICE-based circuit analysis
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* BL-0620: SimPlayButton — hero CTA with auto-detection */}
           <SimPlayButton
             isRunning={isRunning}
@@ -632,7 +742,7 @@ export default function SimulationPanel() {
             type="button"
             data-testid="export-spice"
             onClick={handleExportSpice}
-            className="h-8 px-3 flex items-center gap-1.5 text-xs border border-border bg-background text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+            className="flex h-8.5 items-center gap-1.5 border border-border bg-background px-3 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
           >
             <Download className="w-3.5 h-3.5" />
             Export SPICE
@@ -650,9 +760,9 @@ export default function SimulationPanel() {
       </div>
 
       {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-6">
-        <div className="max-w-4xl mx-auto flex flex-col gap-0 bg-card/40 border border-border backdrop-blur-xl shadow-xl">
-          <div className="px-4 pt-4 md:px-6 md:pt-6">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3.5 pb-5 md:px-5">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-0 border border-border bg-card/40 shadow-xl backdrop-blur-xl">
+          <div className="px-3.5 pt-3.5 md:px-5 md:pt-5">
             <ReleaseConfidenceCard
               result={releaseConfidence}
               title="Simulation Readiness Confidence"
@@ -660,7 +770,7 @@ export default function SimulationPanel() {
             />
           </div>
 
-          <div className="px-4 pt-4 md:px-6">
+          <div className="px-3.5 pt-3.5 md:px-5">
             <TrustReceiptCard
               receipt={simulationReceipt}
               data-testid="trust-receipt-simulation"
@@ -669,7 +779,7 @@ export default function SimulationPanel() {
 
           {/* ------- Analysis Type Selector ------- */}
           <CollapsibleSection title="Analysis Type" testId="section-analysis-type">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {ANALYSIS_TYPES.map((at) => {
                 const Icon = at.icon;
                 const active = analysisType === at.id;
@@ -684,16 +794,16 @@ export default function SimulationPanel() {
                     }}
                     disabled={isRunning}
                     className={cn(
-                      'flex flex-col items-center gap-1.5 p-3 border transition-all text-center',
+                      'flex min-h-[102px] flex-col items-center gap-2 p-3.5 border transition-all text-center',
                       'disabled:opacity-50 disabled:cursor-not-allowed',
                       active
                         ? 'border-primary bg-primary/10 text-primary shadow-[0_0_10px_rgba(6,182,212,0.15)]'
                         : 'border-border bg-background hover:bg-muted/30 text-muted-foreground hover:text-foreground',
                     )}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span className="text-xs font-medium">{at.label}</span>
-                    <span className="text-[10px] leading-tight opacity-70 hidden sm:block">
+                    <Icon className="h-5 w-5" />
+                    <span className="text-xs font-semibold">{at.label}</span>
+                    <span className="hidden text-[10px] leading-tight opacity-70 sm:block">
                       {at.description}
                     </span>
                   </button>
@@ -738,7 +848,7 @@ export default function SimulationPanel() {
 
           {/* ------- Corner Analysis (BL-0120) ------- */}
           <CollapsibleSection title="Corner Analysis" testId="section-corners" defaultOpen={false}>
-            <div className="space-y-4">
+            <div className="space-y-4.5">
               <div className="flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
                   <span className="text-[11px] font-bold text-foreground uppercase tracking-tight">Enable Corner Analysis</span>
@@ -775,7 +885,7 @@ export default function SimulationPanel() {
           </CollapsibleSection>
 
           {/* ------- Run Button ------- */}
-          <div className="flex items-center gap-3 px-4 py-4 border-b border-border/50">
+          <div className="flex flex-wrap items-center gap-2.5 border-b border-border/50 px-3.5 py-3.5 md:px-5">
             {isRunning ? (
               <button
                 type="button"
@@ -783,7 +893,7 @@ export default function SimulationPanel() {
                 onClick={handleStop}
                 disabled={isStopping}
                 className={cn(
-                  'h-9 px-6 flex items-center gap-2 text-sm font-medium transition-all',
+                  'flex h-9 items-center gap-2 px-4 text-xs font-medium transition-all',
                   isStopping
                     ? 'bg-muted text-muted-foreground cursor-wait'
                     : 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
@@ -820,7 +930,7 @@ export default function SimulationPanel() {
               </div>
             )}
             {error && !isRunning && (
-              <span className="text-xs text-destructive">{error}</span>
+              <span className="min-w-0 flex-1 text-xs text-destructive">{error}</span>
             )}
           </div>
 

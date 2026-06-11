@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   SupplierApiManager,
   useSupplierApi,
@@ -16,24 +16,19 @@ import type {
 
 vi.stubGlobal('crypto', { randomUUID: vi.fn(() => `uuid-${Math.random().toString(36).slice(2, 10)}`) });
 
-const store: Record<string, string> = {};
-vi.stubGlobal('localStorage', {
-  getItem: vi.fn((key: string) => store[key] ?? null),
-  setItem: vi.fn((key: string, val: string) => { store[key] = val; }),
-  removeItem: vi.fn((key: string) => { delete store[key]; }),
-  clear: vi.fn(() => { for (const k of Object.keys(store)) { delete store[k]; } }),
-});
-
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 
 beforeEach(() => {
-  SupplierApiManager.resetForTesting();
-  for (const k of Object.keys(store)) {
-    delete store[k];
-  }
   vi.clearAllMocks();
+  window.localStorage.clear();
+  SupplierApiManager.resetForTesting();
+});
+
+afterEach(() => {
+  window.localStorage.clear();
+  SupplierApiManager.resetForTesting();
 });
 
 // ---------------------------------------------------------------------------
@@ -417,6 +412,27 @@ describe('SupplierApiManager — quoteBom', () => {
     expect(quote.itemsFound).toBe(0);
     expect(quote.itemsMissing).toBe(0);
   });
+
+  it('should mark live-priced lines as non-mock', () => {
+    const api = SupplierApiManager.getInstance();
+    const quote = api.quoteBom([{ mpn: 'LM7805', quantity: 10 }]);
+
+    const item = quote.items[0];
+    expect(item.bestPrice).not.toBeNull();
+    expect(item.bestPrice?.isMock).toBe(false);
+    expect(item.isMock).toBe(false);
+    expect(quote.containsMockData).toBe(false);
+  });
+
+  it('should mark missing lines as mock and bubble quote-level mock flag', () => {
+    const api = SupplierApiManager.getInstance();
+    const quote = api.quoteBom([{ mpn: 'NONEXISTENT-XYZ', quantity: 1 }]);
+
+    const item = quote.items[0];
+    expect(item.bestPrice).toBeNull();
+    expect(item.isMock).toBe(true);
+    expect(quote.containsMockData).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -745,10 +761,8 @@ describe('SupplierApiManager — Persistence', () => {
   it('should persist to localStorage on state change', () => {
     const api = SupplierApiManager.getInstance();
     api.setCurrency('GBP');
-    expect(localStorage.setItem).toHaveBeenCalledWith(
-      'protopulse-supplier-api',
-      expect.any(String),
-    );
+    const persisted = JSON.parse(window.localStorage.getItem('protopulse-supplier-api') ?? '{}') as { currency?: string };
+    expect(persisted.currency).toBe('GBP');
   });
 
   it('should restore state from localStorage', () => {
@@ -759,7 +773,7 @@ describe('SupplierApiManager — Persistence', () => {
       cacheExpiryMs: 30000,
       stockAlerts: [{ mpn: 'NE555', threshold: 100 }],
     };
-    store['protopulse-supplier-api'] = JSON.stringify(state);
+    window.localStorage.setItem('protopulse-supplier-api', JSON.stringify(state));
 
     SupplierApiManager.resetForTesting();
     const api = SupplierApiManager.getInstance();
@@ -772,7 +786,7 @@ describe('SupplierApiManager — Persistence', () => {
   });
 
   it('should handle corrupt localStorage data gracefully', () => {
-    store['protopulse-supplier-api'] = 'corrupt{{{data';
+    window.localStorage.setItem('protopulse-supplier-api', 'corrupt{{{data');
     SupplierApiManager.resetForTesting();
     const api = SupplierApiManager.getInstance();
     // Should fall back to defaults

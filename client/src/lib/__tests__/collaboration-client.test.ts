@@ -450,7 +450,11 @@ describe('CollaborationClient', () => {
       expect(ws.sent).toHaveLength(1);
       const parsed = JSON.parse(ws.sent[0]) as CollabMessage;
       expect(parsed.type).toBe('state-update');
-      expect(parsed.payload.operations).toEqual(ops);
+      // BL-0879: outgoing ops are stamped with the client's known baseline
+      // Lamport (`maxSeenLamport`, 0 before any broadcast has been received).
+      expect(parsed.payload.operations).toEqual(
+        ops.map((op) => ({ ...op, baseTimestamp: 0 })),
+      );
     });
 
     it('should emit state-update from server', () => {
@@ -463,6 +467,39 @@ describe('CollaborationClient', () => {
       const ops = [{ op: 'delete' as const, path: ['nodes'], key: 'abc' }];
       getLastWs().simulateMessage(makeMsg('state-update', { operations: ops }, 3));
       expect(updates).toHaveLength(1);
+    });
+
+    it('BL-0879: advances maxSeenLamport from broadcast ops and stamps it as baseTimestamp', () => {
+      const client = createClient();
+      client.connect();
+      const ws = getLastWs();
+      ws.simulateOpen();
+
+      // Receive two broadcast ops carrying server-assigned Lamport timestamps;
+      // the client must track the highest one seen.
+      ws.simulateMessage(makeMsg('state-update', {
+        operations: [
+          { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'a' }, timestamp: 3, clientId: 9 },
+          { op: 'update', path: ['nodes'], key: 'n2', value: { label: 'b' }, timestamp: 7, clientId: 9 },
+        ],
+      }, 9));
+
+      // A later out-of-order broadcast with a lower timestamp must NOT regress.
+      ws.simulateMessage(makeMsg('state-update', {
+        operations: [
+          { op: 'update', path: ['nodes'], key: 'n3', value: { label: 'c' }, timestamp: 5, clientId: 9 },
+        ],
+      }, 9));
+
+      const sentBefore = ws.sent.length;
+      client.sendStateUpdate([{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' } }]);
+
+      const parsed = JSON.parse(ws.sent[sentBefore]) as CollabMessage;
+      const outgoing = parsed.payload.operations as Array<Record<string, unknown>>;
+      expect(outgoing).toHaveLength(1);
+      // Baseline must equal the highest observed server Lamport (7), not the
+      // last-received (5) — proving the counter is a running max, not last-write.
+      expect(outgoing[0].baseTimestamp).toBe(7);
     });
   });
 

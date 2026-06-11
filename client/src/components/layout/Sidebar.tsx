@@ -17,12 +17,11 @@ import {
   useValidation,
 } from '@/lib/project-context';
 import type { BomItem, ProjectHistoryItem, ValidationIssue, ViewMode } from '@/lib/project-context';
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import { cn } from '@/lib/utils';
 import {
   Layers,
   Settings,
-  FolderOpen,
   Search,
   Pencil,
   Loader2,
@@ -35,6 +34,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { InteractiveCard } from '@/components/ui/interactive-card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import FeatureMaturityBadge from '@/components/ui/FeatureMaturityBadge';
 import { useToast } from '@/hooks/use-toast';
@@ -74,7 +74,7 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
 }
 
-export default function Sidebar({ isOpen, onClose, collapsed = false, width = 256, onToggleCollapse }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, collapsed = false, width = 280, onToggleCollapse }: SidebarProps) {
   const { activeView, setActiveView, projectName, projectDescription, setProjectName, setProjectDescription } = useProjectMeta();
   const { nodes, edges, setNodes, selectedNodeId, focusNode } = useArchitecture();
   const { bom } = useBom();
@@ -120,18 +120,18 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
           <Link
             href="/projects"
             data-testid="sidebar-back-to-projects"
-            className="w-full h-8 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors border-b border-sidebar-border/50"
+            className="w-full h-7 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors border-b border-sidebar-border/50"
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
             <ChevronLeft className="w-4 h-4" />
           </Link>
         </StyledTooltip>
-        <div className="h-10 flex items-center justify-center border-b border-sidebar-border w-full shrink-0">
-          <div className="w-7 h-7 bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
-            <Layers className="w-4 h-4 text-primary" />
+        <div className="h-9 flex items-center justify-center border-b border-sidebar-border w-full shrink-0">
+          <div className="w-6 h-6 bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
+            <Layers className="w-3.5 h-3.5 text-primary" />
           </div>
         </div>
-        <div className="flex-1 flex flex-col items-center py-3 gap-1 overflow-y-auto no-scrollbar">
+        <div className="flex-1 flex flex-col items-center py-2.5 gap-0.5 overflow-y-auto no-scrollbar">
           {SIDEBAR_GROUPS.map((group) => {
             const items = getNavItemsForGroup(group).filter(
               (item) => isViewVisible(item.view) && (alwaysVisibleIds.has(item.view) || hasDesignContent),
@@ -144,7 +144,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
                 <StyledTooltip content={group.label} side="right">
                   <button
                     data-testid={`sidebar-group-toggle-${group.id}`}
-                    className="w-8 h-5 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-colors mt-1"
+                    className="w-8 h-5.5 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-colors mt-1"
                     onClick={(e) => { e.stopPropagation(); toggleGroup(group.id); }}
                   >
                     <GroupIcon className="w-3 h-3" />
@@ -177,7 +177,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
                           setActiveView(item.view);
                         }}
                       >
-                        <item.icon className="w-4 h-4" />
+                        <item.icon className="w-3.5 h-3.5" />
                       </button>
                     </StyledTooltip>
                   );
@@ -186,7 +186,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
             );
           })}
         </div>
-        <div className="pb-3 shrink-0">
+        <div className="pb-2.5 shrink-0">
           <StyledTooltip content="Open project settings" side="right">
               <button
                 data-testid="sidebar-icon-settings"
@@ -273,11 +273,11 @@ interface SidebarContentProps {
   projectName: string;
   projectDescription: string;
   addOutputLog: (log: string) => void;
-  nodes: Node[];
-  edges: Edge[];
+  nodes: GraphNode[];
+  edges: GraphEdge[];
   bom: BomItem[];
   issues: ValidationIssue[];
-  setNodes: (nodes: Node[]) => void;
+  setNodes: (nodes: GraphNode[]) => void;
   selectedNodeId: string | null;
   focusNode: (nodeId: string) => void;
   setProjectName: (name: string) => void;
@@ -345,21 +345,20 @@ function SidebarContent({
       <Link
         href="/projects"
         data-testid="sidebar-back-to-projects-expanded"
-        className="flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors border-b border-sidebar-border/50"
+        className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/25 transition-colors border-b border-sidebar-border/50"
       >
         <ChevronLeft className="w-3.5 h-3.5" />
         <span>Back to Projects</span>
       </Link>
-      <div className="flex-1 overflow-y-auto py-2">
-        <div className="mb-6">
-          <div className="px-4 py-2 flex items-center justify-between group cursor-pointer hover:bg-muted/30">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <FolderOpen className="w-3 h-3" />
+      <div className="flex-1 overflow-y-auto py-0.5">
+        <div className="mb-2">
+          <div className="px-2.5 py-1 flex items-center justify-between group cursor-pointer hover:bg-muted/25 rounded-sm">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.08em] flex items-center gap-2">
               Project Explorer
             </span>
           </div>
 
-          <div className="px-4 py-1.5">
+          <div className="px-2.5 py-0.5">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
               <input
@@ -369,13 +368,13 @@ function SidebarContent({
                 aria-label="Search blocks"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-7 pr-2 py-1.5 text-xs bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:border-primary/50 focus-visible:bg-muted/60 transition-colors focus-ring"
+                className="h-7.5 w-full pl-6.5 pr-2 text-[11px] bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:border-primary/50 focus-visible:bg-muted/60 transition-colors focus-ring"
               />
             </div>
           </div>
 
-          <div className="mt-2 space-y-0.5">
-            <div className="px-4 py-1.5 flex items-center gap-2 text-foreground font-medium group">
+          <div className="mt-1 space-y-0.5">
+            <div className="px-2.5 py-0.5 flex items-center gap-1.5 text-foreground font-medium group">
               <div className="w-1.5 h-1.5 bg-primary shadow-[0_0_5px_var(--color-primary)]"></div>
               {editingName ? (
                 <input
@@ -390,12 +389,13 @@ function SidebarContent({
                     if (e.key === 'Escape') cancelInlineName();
                   }}
                   onBlur={saveInlineName}
-                  className="flex-1 min-w-0 text-sm bg-muted/30 border border-primary/50 px-1.5 py-0.5 text-foreground focus-visible:outline-none focus-ring"
+                  className="flex-1 min-w-0 text-sm bg-muted/30 border border-primary/50 px-1.5 py-0 text-foreground focus-visible:outline-none focus-ring"
                 />
               ) : (
                 <span
                   data-testid="inline-edit-name"
-                  className="truncate cursor-pointer flex items-center gap-1.5"
+                  className="truncate cursor-pointer flex flex-1 min-w-0 items-center gap-1.5"
+                  title={projectName}
                   onDoubleClick={() => { setEditNameValue(projectName); setEditingName(true); }}
                 >
                   {projectName}
@@ -421,7 +421,7 @@ function SidebarContent({
         </div>
 
         {/* Grouped view navigation */}
-        <div className="mb-4">
+        <div className="mb-2">
           {SIDEBAR_GROUPS.map((group) => {
             const items = getNavItemsForGroup(group).filter(
               (item) => isViewVisible(item.view) && (alwaysVisibleIds.has(item.view) || hasDesignContent),
@@ -435,7 +435,7 @@ function SidebarContent({
                   aria-expanded={!isGroupCollapsed}
                   aria-label={isGroupCollapsed ? `Expand ${group.label}` : `Collapse ${group.label}`}
                   data-testid={`sidebar-group-header-${group.id}`}
-                  className="px-4 py-1.5 flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                  className="px-2.5 py-1 flex items-center gap-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded-sm transition-colors"
                   onClick={() => toggleGroup(group.id)}
                 >
                   {isGroupCollapsed
@@ -443,10 +443,10 @@ function SidebarContent({
                     : <ChevronDown className="w-3 h-3 shrink-0" />
                   }
                   <GroupIcon className="w-3 h-3 shrink-0" />
-                  <span className="text-xs font-semibold uppercase tracking-wider">{group.label}</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">{group.label}</span>
                 </InteractiveCard>
                 {!isGroupCollapsed && (
-                  <div className="space-y-0.5">
+                  <div className="space-y-0">
                     {items.map((item) => {
                       const maturity = getViewFeatureMaturity(item.view);
                       return (
@@ -454,14 +454,13 @@ function SidebarContent({
                           key={item.view}
                           data-testid={`sidebar-nav-${item.view}`}
                           className={cn(
-                            'w-full px-4 pl-10 py-1 flex items-center gap-2 text-xs transition-colors',
+                            'w-full px-2.5 pl-7 py-1 flex items-center gap-1 text-[11px] leading-5 transition-colors border-l-2 border-transparent',
                             activeView === item.view
-                              ? 'text-primary bg-primary/10'
+                              ? 'text-primary bg-primary/12 border-primary/70'
                               : 'text-muted-foreground hover:text-foreground hover:bg-muted/30',
                           )}
                           onClick={() => setActiveView(item.view)}
                         >
-                          <item.icon className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate flex-1 text-left">{getLabel(item.label)}</span>
                           {maturity && (
                             <FeatureMaturityBadge
@@ -583,95 +582,30 @@ function SaveStatusIndicator() {
   return (
     <div
       data-testid="project-health-indicator"
-      className="px-4 py-2.5 border-t border-sidebar-border space-y-1.5"
+      className="border-t border-sidebar-border/80 bg-sidebar/10 px-2 py-1"
     >
-      <div className="flex items-center gap-1.5 text-[10px] text-foreground">
+      <div className="flex min-h-6 items-center gap-1.5 text-[11px] text-foreground">
         <span
           data-testid="project-health-badge"
           className={cn(
-            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium',
+            'inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
             getProjectHealthToneClasses(health.tone),
           )}
         >
-          <StatusIcon className={cn('w-3 h-3', health.isSaving && 'animate-spin')} />
+          <StatusIcon className={cn('h-2.5 w-2.5', health.isSaving && 'animate-spin')} />
           <span>{health.badgeLabel}</span>
         </span>
-        <span data-testid="project-health-summary" className="truncate">
+        <span data-testid="project-health-summary" className="truncate leading-tight">
           {health.summary}
         </span>
       </div>
-      <p data-testid="project-health-detail" className="pl-[18px] text-[10px] leading-relaxed text-muted-foreground">
-        {health.detail}
-      </p>
-      <div className="pl-[18px] flex flex-wrap gap-1">
-        {health.facts.map((fact) => (
-          <span
-            key={fact.id}
-            data-testid={`project-health-fact-${fact.id}`}
-            className={cn(
-              'inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
-              getProjectHealthFactClasses(fact.tone),
-            )}
-          >
-            {fact.label}
-          </span>
-        ))}
-      </div>
-      <div
-        data-testid="hardware-status-indicator"
-        className="pl-[18px] mt-2 space-y-1.5"
-      >
-        <div className="flex items-center gap-1.5 text-[10px] text-foreground">
-          <span
-            data-testid="hardware-status-badge"
-            className={cn(
-              'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium',
-              getHardwareWorkspaceToneClasses(hardwareStatus.tone),
-            )}
-          >
-            <span>{hardwareStatus.badgeLabel}</span>
-          </span>
-          <span data-testid="hardware-status-summary" className="truncate">
-            {hardwareStatus.summary}
-          </span>
-        </div>
-        <p data-testid="hardware-status-detail" className="text-[10px] leading-relaxed text-muted-foreground">
-          {hardwareStatus.detail}
-        </p>
-        <div className="flex flex-wrap gap-1">
-          {hardwareStatus.facts.map((fact) => (
-            <span
-              key={fact.id}
-              data-testid={`hardware-status-fact-${fact.id}`}
-              className={cn(
-                'inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
-                getHardwareWorkspaceFactClasses(fact.tone),
-              )}
-            >
-              {fact.label}
-            </span>
-          ))}
-        </div>
-        <div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            data-testid="hardware-status-action"
-            className="h-7 px-2 text-[10px] font-medium text-primary hover:text-primary"
-            onClick={() => setActiveView(hardwareStatus.actionView)}
-          >
-            {hardwareStatus.actionLabel}
-          </Button>
-        </div>
-      </div>
-      <div className="pl-[18px]">
+      <div className="flex items-center gap-1.5 pl-[14px]">
         <Button
           type="button"
           variant="ghost"
           size="sm"
           data-testid="project-health-action"
-          className="h-7 px-2 text-[10px] font-medium text-primary hover:text-primary"
+          className="h-6 px-1.5 text-[11px] font-medium text-primary hover:text-primary"
           disabled={createRestorePointMutation.isPending}
           onClick={() => {
             if (health.actionMode === 'createSnapshot') {
@@ -684,6 +618,88 @@ function SaveStatusIndicator() {
         >
           {createRestorePointMutation.isPending ? 'Saving restore point...' : health.actionLabel}
         </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              data-testid="project-health-details-toggle"
+              className="text-[11px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Details
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            side="top"
+            align="start"
+            className="max-h-[min(420px,calc(100vh-96px))] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain p-3"
+          >
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-foreground">Project health</p>
+              <p data-testid="project-health-detail" className="text-[11px] leading-snug text-muted-foreground/90">
+                {health.detail}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {health.facts.map((fact) => (
+                  <span
+                    key={fact.id}
+                    data-testid={`project-health-fact-${fact.id}`}
+                    className={cn(
+                      'inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
+                      getProjectHealthFactClasses(fact.tone),
+                    )}
+                  >
+                    {fact.label}
+                  </span>
+                ))}
+              </div>
+              <div data-testid="hardware-status-indicator" className="space-y-1.5 border-t border-border/40 pt-2">
+                <div className="flex items-center gap-1.5 text-[11px] text-foreground">
+                  <span
+                    data-testid="hardware-status-badge"
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
+                      getHardwareWorkspaceToneClasses(hardwareStatus.tone),
+                    )}
+                  >
+                    <span>{hardwareStatus.badgeLabel}</span>
+                  </span>
+                  <span data-testid="hardware-status-summary" className="truncate">
+                    {hardwareStatus.summary}
+                  </span>
+                </div>
+                <p data-testid="hardware-status-detail" className="text-[11px] leading-snug text-muted-foreground">
+                  {hardwareStatus.detail}
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {hardwareStatus.facts.map((fact) => (
+                    <span
+                      key={fact.id}
+                      data-testid={`hardware-status-fact-${fact.id}`}
+                      className={cn(
+                        'inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
+                        getHardwareWorkspaceFactClasses(fact.tone),
+                      )}
+                    >
+                      {fact.label}
+                    </span>
+                  ))}
+                </div>
+                <div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    data-testid="hardware-status-action"
+                    className="h-6 px-1.5 text-[11px] font-medium text-primary hover:text-primary"
+                    onClick={() => setActiveView(hardwareStatus.actionView)}
+                  >
+                    {hardwareStatus.actionLabel}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

@@ -13,8 +13,8 @@ import {
   type Node,
   type Edge,
   type Connection,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
+} from '@/lib/xyflow-compat';
+import '@/lib/xyflow-style';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import {
@@ -39,6 +39,7 @@ import type { AnnotationNodeData } from './SchematicAnnotationNode';
 import NetDrawingTool from './NetDrawingTool';
 import type { NetDrawingResult } from './NetDrawingTool';
 import SchematicToolbar from './SchematicToolbar';
+import HardwareInspectionPanel from './HardwareInspectionPanel';
 import NetBrowserPanel from './NetBrowserPanel';
 import ComponentReplacementDialog from './ComponentReplacementDialog';
 import AlternatePartsPopover from './AlternatePartsPopover';
@@ -47,7 +48,7 @@ import type { SchematicTool, CircuitSettings, SchematicAnnotation, ERCViolation 
 import { DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-types';
 import type { HierarchicalPortRow } from '@shared/schema';
 import type { Connector } from '@shared/component-types';
-import { CircuitBoard, Plus, Cable, Zap, ClipboardPaste, CheckSquare, ShieldAlert, ArrowRightLeft, Network } from 'lucide-react';
+import { CircuitBoard, Network } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import ERCOverlay from './ERCOverlay';
@@ -64,9 +65,22 @@ import {
   ContextMenu,
   ContextMenuTrigger,
   ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
 } from '@/components/ui/context-menu';
+import RadialCommandLinearMenu from '@/components/ui/RadialCommandLinearMenu';
+import {
+  getLinearActionsForContext,
+  RADIAL_COMMAND_EVENT,
+  RADIAL_COMMAND_PREVIEW_EVENT,
+  type MenuContext,
+  type RadialCommandEventDetail,
+  type RadialCommandPreviewEventDetail,
+} from '@/lib/radial-menu-actions';
+import {
+  getRadialAiDeliveryVerb,
+  getRadialAiPromptDelivery,
+  runRadialAiCommand,
+  type RadialAiPromptDelivery,
+} from '@/lib/radial-ai-commands';
 
 // Extracted sub-modules
 import {
@@ -83,18 +97,116 @@ import { useSchematicClipboard } from './schematic/use-clipboard';
 import { useSchematicDragDrop } from './schematic/use-drag-drop';
 import { useSchematicKeyboardShortcuts } from './schematic/use-keyboard-shortcuts';
 import { useSchematicContextMenu } from './schematic/use-context-menu';
+import type { SchematicCanvasProps } from './schematic/canvas-contract';
 
 // ---------------------------------------------------------------------------
 // Inner canvas (requires ReactFlowProvider ancestor)
 // ---------------------------------------------------------------------------
 
-interface SchematicCanvasInnerProps {
-  circuitId: number;
-  ercViolations?: ERCViolation[];
-  highlightedViolationId?: string | null;
-  onEnterSheet?: (id: number) => void;
+interface SchematicCanvasInnerProps extends SchematicCanvasProps {
   /** Optional collaboration client for presence cursors (BL-0525). */
   collaborationClient?: CollaborationClient | null;
+}
+
+interface SchematicRadialAdapterPreview {
+  commandId: string;
+  flow: { x: number; y: number };
+  screen: { x: number; y: number };
+  targetLabel: string;
+  targetBounds?: SchematicRadialPreviewBounds;
+}
+
+interface SchematicRadialPreviewBounds {
+  kind: 'node';
+  targetId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const SCHEMATIC_PREVIEW_NODE_PADDING = { x: 12, y: 14 };
+
+function positiveFiniteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function getSchematicNodePreviewSize(node: Node): { width: number; height: number } {
+  const sizedNode = node as Node & {
+    width?: number;
+    height?: number;
+    measured?: { width?: number; height?: number };
+  };
+  const measuredWidth = positiveFiniteNumber(sizedNode.width) ?? positiveFiniteNumber(sizedNode.measured?.width);
+  const measuredHeight = positiveFiniteNumber(sizedNode.height) ?? positiveFiniteNumber(sizedNode.measured?.height);
+  if (measuredWidth != null && measuredHeight != null) {
+    return { width: measuredWidth, height: measuredHeight };
+  }
+
+  if (node.type === 'schematic-instance') {
+    const data = node.data as Partial<InstanceNodeData> | undefined;
+    const pinRows = Math.max(1, Math.ceil((data?.connectors?.length ?? 2) / 2));
+    return { width: 132, height: Math.max(58, pinRows * 20 + 18) };
+  }
+  if (node.type === 'schematic-sheet') {
+    return { width: 190, height: 104 };
+  }
+  if (node.type === 'schematic-annotation') {
+    return { width: 176, height: 82 };
+  }
+  if (node.type === 'schematic-net-label') {
+    return { width: 92, height: 34 };
+  }
+  return { width: 52, height: 52 };
+}
+
+function getSchematicTargetNodeCandidates(context: MenuContext): string[] {
+  const candidates = new Set<string>();
+  const addCandidate = (value: unknown) => {
+    if (value == null) { return; }
+    const text = String(value).trim();
+    if (!text) { return; }
+    candidates.add(text);
+    const numericId = Number(text);
+    if (Number.isFinite(numericId)) {
+      candidates.add(`instance-${String(numericId)}`);
+    }
+  };
+
+  addCandidate(context.targetId);
+  if (context.target === 'node') {
+    addCandidate(context.targetId);
+  }
+  return [...candidates];
+}
+
+function buildSchematicRadialPreviewBounds(
+  context: MenuContext,
+  pointerFlow: { x: number; y: number },
+  pointerScreen: { x: number; y: number },
+  nodes: Node[],
+): SchematicRadialPreviewBounds | undefined {
+  const candidates = getSchematicTargetNodeCandidates(context);
+  if (candidates.length === 0) {
+    return undefined;
+  }
+
+  const targetNode = nodes.find((node) => !node.hidden && candidates.includes(node.id));
+  if (!targetNode) {
+    return undefined;
+  }
+
+  const size = getSchematicNodePreviewSize(targetNode);
+  const left = pointerScreen.x + (targetNode.position.x - pointerFlow.x) - SCHEMATIC_PREVIEW_NODE_PADDING.x;
+  const top = pointerScreen.y + (targetNode.position.y - pointerFlow.y) - SCHEMATIC_PREVIEW_NODE_PADDING.y;
+  return {
+    kind: 'node',
+    targetId: targetNode.id,
+    x: Math.round(left),
+    y: Math.round(top),
+    width: Math.round(size.width + SCHEMATIC_PREVIEW_NODE_PADDING.x * 2),
+    height: Math.round(size.height + SCHEMATIC_PREVIEW_NODE_PADDING.y * 2),
+  };
 }
 
 /**
@@ -218,6 +330,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   // BL-0105: Replacement dialog state
   const [isReplacementOpen, setIsReplacementOpen] = useState(false);
   const [showNetBrowser, setShowNetBrowser] = useState(false);
+  const [hardwareInspectionOpen, setHardwareInspectionOpen] = useState(false);
   const [replacementInstance, setReplacementInstance] = useState<import('@shared/schema').CircuitInstanceRow | null>(null);
   const [replacementPart, setReplacementPart] = useState<import('@shared/schema').ComponentPart | null>(null);
 
@@ -239,6 +352,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   const isDragging = useRef(false);
 
   const reactFlowInstance = useReactFlow();
+  const [radialAdapterPreview, setRadialAdapterPreview] = useState<SchematicRadialAdapterPreview | null>(null);
 
   // Read circuit design settings
   const settings = useMemo<CircuitSettings>(() => ({
@@ -773,6 +887,203 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   // Stable toolbar callbacks
   const handleToggleSnap = useCallback(() => setSnapEnabled((s) => !s), []);
   const handleToggleGridVisible = useCallback(() => setGridVisible((v) => !v), []);
+  const selectedSchematicInstanceCount = useMemo(
+    () => localNodes.filter((node) => node.selected && node.type === 'schematic-instance').length,
+    [localNodes],
+  );
+  const schematicLinearContext = useMemo<MenuContext>(() => {
+    const selectedInstance = localNodes.find((node) => node.selected && node.type === 'schematic-instance');
+    const data = selectedInstance?.data as Partial<InstanceNodeData> | undefined;
+    return {
+      view: 'schematic',
+      target: selectedInstance ? 'node' : 'canvas',
+      targetId: selectedInstance?.id,
+      targetLabel: data?.referenceDesignator ?? selectedInstance?.id,
+    };
+  }, [localNodes]);
+  const schematicLinearActions = useMemo(
+    () => getLinearActionsForContext(schematicLinearContext),
+    [schematicLinearContext],
+  );
+  const disabledLinearCommands = useMemo(
+    () => new Set(selectedSchematicInstanceCount === 1 ? [] : ['replace_component', 'add_decoupling']),
+    [selectedSchematicInstanceCount],
+  );
+  const disabledLinearReasons = useMemo(
+    () => ({
+      replace_component: 'Select one schematic component first.',
+      add_decoupling: 'Select one schematic component first.',
+    }),
+    [],
+  );
+
+  const handleAiSchematicReview = useCallback((
+    context: MenuContext,
+    delivery: RadialAiPromptDelivery = 'draft',
+  ): void => {
+    const targetNode = context.targetId
+      ? localNodes.find((node) => node.id === context.targetId || node.id === `instance-${context.targetId}`)
+      : localNodes.find((node) => node.selected);
+    const targetData = targetNode?.data as Record<string, unknown> | undefined;
+    const targetLabel =
+      context.targetLabel ??
+      (typeof targetData?.referenceDesignator === 'string' ? targetData.referenceDesignator : undefined) ??
+      targetNode?.id;
+    const deliveryVerb = getRadialAiDeliveryVerb(delivery);
+    const formatNode = (node: Node): string => {
+      const data = node.data as Record<string, unknown> | undefined;
+      const ref = typeof data?.referenceDesignator === 'string' ? data.referenceDesignator : node.id;
+      const label = typeof data?.label === 'string' ? data.label : undefined;
+      return `${ref}${label ? ` (${label})` : ''} [${node.type ?? 'node'}] at x=${String(Math.round(node.position.x))}, y=${String(Math.round(node.position.y))}`;
+    };
+    const sections = [
+      {
+        title: 'Visible schematic nodes',
+        lines: localNodes.slice(0, 10).map(formatNode),
+      },
+      {
+        title: 'Known nets',
+        lines: (nets ?? []).slice(0, 10).map((net) => `${net.name ?? `net-${String(net.id)}`} id=${String(net.id)}`),
+      },
+      {
+        title: 'Visible schematic connections',
+        lines: localEdges
+          .slice(0, 8)
+          .map((edge) => `${edge.source}${edge.sourceHandle ? `.${edge.sourceHandle}` : ''} -> ${edge.target}${edge.targetHandle ? `.${edge.targetHandle}` : ''}`),
+      },
+      {
+        title: 'ERC context',
+        lines: (ercViolations ?? [])
+          .slice(0, 6)
+          .map((violation) => `${violation.severity}: ${violation.ruleType} - ${violation.message}`),
+      },
+    ].filter((section) => section.lines.length > 0);
+
+    runRadialAiCommand({
+      intent: 'review_schematic',
+      intro:
+        'Review this schematic context like a practical electronics design reviewer. Focus on ERC risks, missing nets, confusing symbols, power integrity, bypassing, and the next safest fix.',
+      summary: `Schematic review: ${String(instances?.length ?? 0)} symbol(s), ${String(nets?.length ?? 0)} net(s), ${String(localEdges.length)} visible connection(s), ${String(ercViolations?.length ?? 0)} ERC issue(s).`,
+      historyLabel: targetLabel ? `Schematic review: ${targetLabel}` : 'Schematic review',
+      context,
+      delivery,
+      targetDetails: [
+        `Circuit: ${circuitDesign?.name ?? `Circuit ${String(circuitId)}`}`,
+        targetNode ? `Target: ${formatNode(targetNode)}` : 'Target: schematic canvas',
+      ],
+      sections,
+      finalInstruction:
+        'Give Tyler a concise schematic review with exact next actions. Call out what to inspect manually before trusting the result.',
+    });
+    toastRef.current({
+      title: `AI Schematic Review ${deliveryVerb}`,
+      description: targetLabel
+        ? `${deliveryVerb} ${targetLabel} schematic prompt ${delivery === 'send-now' ? 'to' : 'in'} AI chat.`
+        : `${deliveryVerb} schematic prompt ${delivery === 'send-now' ? 'to' : 'in'} AI chat.`,
+    });
+  }, [circuitDesign?.name, circuitId, ercViolations, instances?.length, localEdges, localNodes, nets]);
+
+  const handleSchematicCommand = useCallback((
+    commandId: string,
+    context: MenuContext = schematicLinearContext,
+    delivery: RadialAiPromptDelivery = 'draft',
+  ): boolean => {
+    switch (commandId) {
+      case 'ai_schematic_review':
+        handleAiSchematicReview(context, delivery);
+        return true;
+      case 'add_component':
+        handleCtxAddComponent();
+        return true;
+      case 'add_wire':
+        handleCtxAddWire();
+        return true;
+      case 'add_power':
+        handleCtxAddPower();
+        return true;
+      case 'run_erc':
+        handleCtxRunErc();
+        return true;
+      case 'select_all':
+        handleCtxSelectAll();
+        return true;
+      case 'paste':
+        void triggerPaste();
+        return true;
+      case 'fit_view':
+        handleFitView();
+        return true;
+      case 'toggle_grid':
+        handleToggleGridVisible();
+        return true;
+      case 'replace_component':
+        if (selectedSchematicInstanceCount !== 1) { return false; }
+        handleCtxReplaceComponent();
+        return true;
+      case 'add_decoupling':
+        if (selectedSchematicInstanceCount !== 1) { return false; }
+        handleCtxAddDecoupling();
+        return true;
+      default:
+        return false;
+    }
+  }, [
+    handleCtxAddComponent,
+    handleCtxAddDecoupling,
+    handleCtxAddPower,
+    handleCtxAddWire,
+    handleCtxReplaceComponent,
+    handleCtxRunErc,
+    handleCtxSelectAll,
+    handleAiSchematicReview,
+    handleFitView,
+    schematicLinearContext,
+    handleToggleGridVisible,
+    selectedSchematicInstanceCount,
+    triggerPaste,
+  ]);
+
+  useEffect(() => {
+    const handleRadialCommand = (event: Event) => {
+      if (!(event instanceof CustomEvent)) { return; }
+      const detail = event.detail as RadialCommandEventDetail | undefined;
+      if (!detail || detail.context.view !== 'schematic') { return; }
+
+      if (handleSchematicCommand(detail.commandId, detail.context, getRadialAiPromptDelivery(detail))) {
+        detail.handled = true;
+      }
+    };
+
+    window.addEventListener(RADIAL_COMMAND_EVENT, handleRadialCommand);
+    return () => window.removeEventListener(RADIAL_COMMAND_EVENT, handleRadialCommand);
+  }, [handleSchematicCommand]);
+
+  useEffect(() => {
+    const handleRadialPreview = (event: Event) => {
+      if (!(event instanceof CustomEvent)) { return; }
+      const detail = event.detail as RadialCommandPreviewEventDetail | undefined;
+      if (!detail || detail.phase === 'clear' || detail.context?.view !== 'schematic') {
+        setRadialAdapterPreview(null);
+        return;
+      }
+      if (!detail.commandId || !detail.context.pointer) {
+        setRadialAdapterPreview(null);
+        return;
+      }
+
+      const flow = reactFlowInstance.screenToFlowPosition(detail.context.pointer);
+      setRadialAdapterPreview({
+        commandId: detail.commandId,
+        flow,
+        screen: detail.context.pointer,
+        targetLabel: detail.context.targetLabel ?? detail.context.target,
+        targetBounds: buildSchematicRadialPreviewBounds(detail.context, flow, detail.context.pointer, localNodes),
+      });
+    };
+
+    window.addEventListener(RADIAL_COMMAND_PREVIEW_EVENT, handleRadialPreview);
+    return () => window.removeEventListener(RADIAL_COMMAND_PREVIEW_EVENT, handleRadialPreview);
+  }, [localNodes, reactFlowInstance]);
 
   // Stable ReactFlow props
   const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
@@ -796,6 +1107,12 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         onAngleConstraintChange={setAngleConstraint}
         onFitView={handleFitView}
         onOpenShortcuts={handleOpenShortcuts}
+        onOpenHardwareInspection={() => setHardwareInspectionOpen(true)}
+      />
+      <HardwareInspectionPanel
+        open={hardwareInspectionOpen}
+        onOpenChange={setHardwareInspectionOpen}
+        projectId={projectId}
       />
       <StyledTooltip content="Net Browser (N)" side="bottom">
         <button
@@ -851,6 +1168,10 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         fitView
         className="bg-transparent"
         colorMode="dark"
+        // Keep workspace scrolling available while cursor is over the canvas.
+        // React Flow defaults this to true, which can make the surrounding
+        // workspace feel "stuck" when users try to wheel-scroll the page.
+        preventScrolling={false}
         snapToGrid={snapEnabled}
         snapGrid={snapGridTuple}
         panOnDrag={activeTool === 'pan'}
@@ -877,6 +1198,101 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         gridSize={gridSize}
         onNetCreated={onNetDrawn}
       />
+
+      {radialAdapterPreview && (() => {
+        const targetBounds = radialAdapterPreview.targetBounds;
+        const targetPreview = targetBounds != null
+          && (radialAdapterPreview.commandId === 'delete' || radialAdapterPreview.commandId === 'replace_component');
+        const previewWidth = targetBounds?.width ?? 224;
+        const previewHeight = targetBounds?.height ?? 112;
+        const targetStroke = radialAdapterPreview.commandId === 'delete' ? 'rgb(252 165 165)' : 'rgb(251 191 36)';
+        const targetFill = radialAdapterPreview.commandId === 'delete'
+          ? 'rgba(248,113,113,0.14)'
+          : 'rgba(251,191,36,0.14)';
+
+        return (
+          <div
+            data-testid="schematic-radial-adapter-preview"
+            data-command-id={radialAdapterPreview.commandId}
+            data-flow-x={Math.round(radialAdapterPreview.flow.x)}
+            data-flow-y={Math.round(radialAdapterPreview.flow.y)}
+            data-target-kind={targetBounds?.kind ?? 'pointer'}
+            data-target-id={targetBounds?.targetId}
+            data-target-width={targetBounds ? Math.round(targetBounds.width) : undefined}
+            data-target-height={targetBounds ? Math.round(targetBounds.height) : undefined}
+            className={cn(
+              'pointer-events-none fixed z-[9996]',
+              targetPreview ? '' : 'h-28 w-56 -translate-x-1/2 -translate-y-1/2',
+            )}
+            style={targetPreview && targetBounds
+              ? { left: targetBounds.x, top: targetBounds.y, width: targetBounds.width, height: targetBounds.height }
+              : { left: radialAdapterPreview.screen.x, top: radialAdapterPreview.screen.y }}
+          >
+            <svg className="h-full w-full overflow-visible" aria-hidden="true">
+              {targetPreview ? (
+                <g data-testid="schematic-radial-target-outline">
+                  <rect
+                    x={2}
+                    y={2}
+                    width={Math.max(24, previewWidth - 4)}
+                    height={Math.max(24, previewHeight - 4)}
+                    rx={8}
+                    fill={targetFill}
+                    stroke={targetStroke}
+                    strokeWidth={2.5}
+                    strokeDasharray="8 6"
+                  />
+                  {radialAdapterPreview.commandId === 'delete' ? (
+                    <path
+                      d={`M${String(Math.max(14, previewWidth * 0.25))} ${String(Math.max(14, previewHeight * 0.28))} L${String(Math.max(24, previewWidth * 0.75))} ${String(Math.max(24, previewHeight * 0.72))} M${String(Math.max(24, previewWidth * 0.75))} ${String(Math.max(14, previewHeight * 0.28))} L${String(Math.max(14, previewWidth * 0.25))} ${String(Math.max(24, previewHeight * 0.72))}`}
+                      stroke={targetStroke}
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                    />
+                  ) : (
+                    <path
+                      d={`M${String(Math.max(16, previewWidth * 0.24))} ${String(previewHeight * 0.52)} H${String(Math.max(34, previewWidth * 0.68))} m-14 -12 14 12 -14 12`}
+                      stroke={targetStroke}
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                    />
+                  )}
+                </g>
+              ) : radialAdapterPreview.commandId === 'add_wire' ? (
+                <g>
+                  <line x1={28} y1={76} x2={198} y2={32} stroke="rgb(103 232 249)" strokeWidth={3} strokeLinecap="round" strokeDasharray="8 7" />
+                  <circle cx={28} cy={76} r={8} fill="rgba(34,211,238,0.16)" stroke="rgb(103 232 249)" strokeWidth={2} />
+                  <circle cx={198} cy={32} r={11} fill="rgba(34,211,238,0.12)" stroke="rgb(103 232 249)" strokeWidth={2} />
+                </g>
+              ) : radialAdapterPreview.commandId === 'delete' ? (
+                <g>
+                  <rect x={58} y={24} width={92} height={62} rx={8} fill="rgba(248,113,113,0.14)" stroke="rgb(252 165 165)" strokeWidth={2.5} strokeDasharray="8 6" />
+                  <path d="M76 38 L132 72 M132 38 L76 72" stroke="rgb(252 165 165)" strokeWidth={3} strokeLinecap="round" />
+                </g>
+              ) : (
+                <g>
+                  <rect x={62} y={24} width={84} height={58} rx={8} fill="rgba(52,211,153,0.14)" stroke="rgb(110 231 183)" strokeWidth={2.5} strokeDasharray="8 6" />
+                  <path d="M104 38 V68 M89 53 H119" stroke="rgb(110 231 183)" strokeWidth={4} strokeLinecap="round" />
+                </g>
+              )}
+            </svg>
+            <div
+              className={cn(
+                'absolute rounded border bg-background/85 px-2 py-1 text-[10px] font-semibold text-cyan-50 shadow-lg backdrop-blur',
+                targetPreview ? 'left-0 top-full mt-1 border-amber-300/35' : 'left-10 top-20 border-cyan-300/35',
+              )}
+            >
+              {radialAdapterPreview.commandId === 'add_wire'
+                ? 'Wire anchor'
+                : radialAdapterPreview.commandId === 'replace_component'
+                  ? `Replace ${radialAdapterPreview.targetLabel}`
+                  : radialAdapterPreview.targetLabel}
+            </div>
+          </div>
+        );
+      })()}
 
       {ercViolations && ercViolations.length > 0 && (
         <ERCOverlay
@@ -935,9 +1351,9 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
       {selectedNetName && (
         <div
           data-testid="selected-net-pill"
-          className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-primary/20 border border-primary/40 px-3 py-1.5 rounded-full backdrop-blur-sm"
+          className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-primary/20 border border-primary/40 px-2.5 py-1 rounded-md backdrop-blur-sm"
         >
-          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
           <span className="text-xs font-medium text-primary">
             Net: {selectedNetName}
           </span>
@@ -960,7 +1376,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
           {ercViolations.slice(0, 3).map((v) => (
             <div
               key={v.id}
-              className="flex items-center gap-1.5 bg-destructive/15 border border-destructive/30 px-2 py-1 rounded text-[10px] text-destructive backdrop-blur-sm"
+              className="flex items-center gap-1.5 bg-destructive/15 border border-destructive/30 px-2 py-1 rounded-md text-[10px] text-destructive backdrop-blur-sm"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
               <span className="truncate">{v.message}</span>
@@ -996,52 +1412,13 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
       )}
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
-        <ContextMenuItem data-testid="ctx-add-component" onSelect={handleCtxAddComponent}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Component
-        </ContextMenuItem>
-        <ContextMenuItem data-testid="ctx-add-wire" onSelect={handleCtxAddWire}>
-          <Cable className="w-4 h-4 mr-2" />
-          Add Wire
-          <span className="ml-auto text-muted-foreground text-[10px]">W</span>
-        </ContextMenuItem>
-        <ContextMenuItem data-testid="ctx-add-power" onSelect={handleCtxAddPower}>
-          <Zap className="w-4 h-4 mr-2" />
-          Add Power Symbol
-        </ContextMenuItem>
-        <ContextMenuItem
-          data-testid="ctx-replace-component"
-          onSelect={handleCtxReplaceComponent}
-          disabled={reactFlowInstance.getNodes().filter(n => n.selected && n.type === 'schematic-instance').length !== 1}
-        >
-          <ArrowRightLeft className="w-4 h-4 mr-2" />
-          Replace Component
-        </ContextMenuItem>
-        <ContextMenuItem
-          data-testid="ctx-add-decoupling"
-          onSelect={handleCtxAddDecoupling}
-          disabled={reactFlowInstance.getNodes().filter(n => n.selected && n.type === 'schematic-instance').length !== 1}
-        >
-          <Zap className="w-4 h-4 mr-2" />
-          Add Decoupling Caps
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem data-testid="ctx-paste" onSelect={triggerPaste}>
-          <ClipboardPaste className="w-4 h-4 mr-2" />
-          Paste
-          <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+V</span>
-        </ContextMenuItem>
-        <ContextMenuItem data-testid="ctx-select-all" onSelect={handleCtxSelectAll}>
-          <CheckSquare className="w-4 h-4 mr-2" />
-          Select All
-          <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+A</span>
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem data-testid="ctx-run-erc" onSelect={handleCtxRunErc}>
-          <ShieldAlert className="w-4 h-4 mr-2" />
-          Run ERC
-        </ContextMenuItem>
+      <ContextMenuContent className="min-w-[15rem] border-border bg-card/90 backdrop-blur-xl">
+        <RadialCommandLinearMenu
+          items={schematicLinearActions}
+          disabledCommandIds={disabledLinearCommands}
+          disabledReasons={disabledLinearReasons}
+          onSelect={handleSchematicCommand}
+        />
       </ContextMenuContent>
     </ContextMenu>
     </div>

@@ -9,7 +9,7 @@
  */
 
 import { memo, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { useViewport } from '@xyflow/react';
+import { useViewport } from '@/lib/xyflow-compat';
 import {
   wireRerouterManager,
   hitTestSegment,

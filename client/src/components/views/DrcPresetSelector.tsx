@@ -86,6 +86,7 @@ function DrcPresetSelectorInner({ activePreset, onApply }: DrcPresetSelectorProp
           <SelectTrigger
             className="h-7 w-[200px] text-xs"
             data-testid="drc-preset-dropdown"
+            aria-label="Select DRC preset"
           >
             <SelectValue placeholder="Select preset..." />
           </SelectTrigger>

@@ -28,6 +28,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { runExportPrecheck, type ExportPrecheck } from '@/lib/export-precheck';
+import type { ProjectExportData } from '@/lib/export-validation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -61,6 +63,7 @@ import type { ComponentLifecycle } from '@shared/schema';
 type LifecycleStatus = 'active' | 'nrnd' | 'eol' | 'obsolete' | 'unknown';
 
 const LIFECYCLE_STATUSES: LifecycleStatus[] = ['active', 'nrnd', 'eol', 'obsolete', 'unknown'];
+const SESSION_KEY = 'protopulse-session-id';
 
 const STATUS_CONFIG: Record<LifecycleStatus, { label: string; color: string; bgColor: string; borderColor: string; icon: typeof ShieldCheck }> = {
   active: { label: 'Active', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20', icon: ShieldCheck },
@@ -96,6 +99,25 @@ const EMPTY_FORM: FormState = {
   notes: '',
 };
 
+function readHasSession(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  try {
+    return Boolean(window.localStorage.getItem(SESSION_KEY));
+  } catch {
+    return false;
+  }
+}
+
+function normalizeLifecycleStatus(status: string): LifecycleStatus {
+  return LIFECYCLE_STATUSES.includes(status as LifecycleStatus) ? status as LifecycleStatus : 'unknown';
+}
+
+function hasKnownAlternate(entry: ComponentLifecycle): boolean {
+  return Boolean(entry.alternatePartNumbers?.split(',').some((partNumber) => partNumber.trim().length > 0));
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -130,15 +152,15 @@ const StatusCard = memo(function StatusCard({
       data-testid={`card-status-${status}`}
       className={cn('border', config.borderColor, 'bg-card/60 backdrop-blur-sm')}
     >
-      <CardContent className="p-4 flex items-center gap-3">
-        <div className={cn('p-2 rounded-md', config.bgColor)}>
-          <config.icon className={cn('w-5 h-5', config.color)} />
+      <CardContent className="flex items-center gap-2.5 p-3">
+        <div className={cn('rounded-sm p-1.5', config.bgColor)}>
+          <config.icon className={cn('h-4 w-4', config.color)} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-muted-foreground font-medium">{config.label}</p>
-          <p className={cn('text-2xl font-bold tabular-nums', config.color)}>{count}</p>
+          <p className="text-[11px] font-medium text-muted-foreground">{config.label}</p>
+          <p className={cn('text-xl font-bold tabular-nums', config.color)}>{count}</p>
         </div>
-        <span className="text-xs text-muted-foreground tabular-nums">{pct}%</span>
+        <span className="text-[11px] tabular-nums text-muted-foreground">{pct}%</span>
       </CardContent>
     </Card>
   );
@@ -165,14 +187,81 @@ const RiskBanner = memo(function RiskBanner({
   return (
     <div
       data-testid="risk-alert-banner"
-      className="flex items-center gap-3 p-3 rounded-lg border border-orange-500/30 bg-orange-500/5 text-orange-300"
+      className="flex items-center gap-2.5 rounded-md border border-orange-500/30 bg-orange-500/5 p-2.5 text-orange-300"
     >
-      <AlertTriangle className="w-5 h-5 shrink-0 text-orange-400" />
-      <p className="text-sm">
+      <AlertTriangle className="h-4 w-4 shrink-0 text-orange-400" />
+      <p className="text-xs">
         <span className="font-semibold">{total} component{total !== 1 ? 's' : ''} require attention:</span>{' '}
         {parts.join(', ')}
       </p>
     </div>
+  );
+});
+
+const LifecycleReleaseGate = memo(function LifecycleReleaseGate({ precheck }: { precheck: ExportPrecheck }) {
+  const blockers = precheck.checks.filter((check) => check.status === 'fail');
+  const warnings = precheck.checks.filter((check) => check.status === 'warn');
+  const passes = precheck.checks.length - blockers.length - warnings.length;
+  const Icon = blockers.length > 0 ? XCircle : warnings.length > 0 ? AlertTriangle : ShieldCheck;
+  const statusLabel = blockers.length > 0 ? 'Blocked' : warnings.length > 0 ? 'Review' : 'Ready';
+
+  return (
+    <section
+      id="lifecycle-release-gate"
+      data-testid="lifecycle-release-gate"
+      aria-labelledby="lifecycle-release-gate-title"
+      aria-live="polite"
+      className={cn(
+        'rounded-md border p-3 text-sm',
+        blockers.length > 0
+          ? 'border-destructive/40 bg-destructive/10'
+          : warnings.length > 0
+            ? 'border-amber-500/40 bg-amber-500/10'
+            : 'border-green-500/30 bg-green-500/10',
+      )}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-2">
+          <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="min-w-0">
+            <h3 id="lifecycle-release-gate-title" className="text-sm font-semibold">Lifecycle Release Gate</h3>
+            <p id="lifecycle-release-gate-summary" data-testid="lifecycle-gate-summary" className="text-xs text-muted-foreground">
+              {passes} passed, {warnings.length} warning{warnings.length === 1 ? '' : 's'}, {blockers.length} blocker{blockers.length === 1 ? '' : 's'}
+            </p>
+          </div>
+        </div>
+        <Badge
+          data-testid="lifecycle-gate-status"
+          variant={blockers.length > 0 ? 'destructive' : 'outline'}
+          className={cn(
+            warnings.length > 0 && blockers.length === 0 && 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+            blockers.length === 0 && warnings.length === 0 && 'border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300',
+          )}
+        >
+          {statusLabel}
+        </Badge>
+      </div>
+
+      {blockers.length > 0 && (
+        <ul className="mt-2 space-y-1" data-testid="lifecycle-gate-blockers">
+          {blockers.map((check) => (
+            <li key={`${check.name}-${check.message}`} className="text-xs text-destructive" data-testid="lifecycle-gate-blocker">
+              <span className="font-medium">{check.name}:</span> {check.message}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {warnings.length > 0 && (
+        <ul className="mt-2 space-y-1" data-testid="lifecycle-gate-warnings">
+          {warnings.map((check) => (
+            <li key={`${check.name}-${check.message}`} className="text-xs text-amber-700 dark:text-amber-300" data-testid="lifecycle-gate-warning">
+              <span className="font-medium">{check.name}:</span> {check.message}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 });
 
@@ -310,6 +399,53 @@ export default function LifecycleDashboard() {
     return result;
   }, [entries, statusFilter, searchQuery, sortField, sortDir]);
 
+  const lifecycleReviewData = useMemo<ProjectExportData>(() => {
+    let eolPartCount = 0;
+    let obsoletePartCount = 0;
+    let nrndPartCount = 0;
+    let lifecycleNoAlternateCount = 0;
+
+    for (const entry of entries) {
+      const status = normalizeLifecycleStatus(entry.lifecycleStatus);
+      if (status === 'eol') {
+        eolPartCount++;
+      }
+      if (status === 'obsolete') {
+        obsoletePartCount++;
+      }
+      if (status === 'nrnd') {
+        nrndPartCount++;
+      }
+      if ((status === 'eol' || status === 'obsolete') && !hasKnownAlternate(entry)) {
+        lifecycleNoAlternateCount++;
+      }
+    }
+
+    return {
+      projectName: 'Lifecycle Review',
+      hasSession: readHasSession(),
+      architectureNodeCount: 0,
+      hasCircuitInstances: false,
+      hasPcbLayout: false,
+      bomItemCount: entries.length,
+      bomItemsWithPartNumber: entries.filter((entry) => entry.partNumber.trim().length > 0).length,
+      hasCircuitSource: false,
+      hasCircuitComponent: entries.length > 0,
+      hasBoardProfile: true,
+      bomItemsWithFailureData: 0,
+      eolPartCount,
+      obsoletePartCount,
+      nrndPartCount,
+      lifecycleNoAlternateCount,
+    };
+  }, [entries]);
+
+  const lifecyclePrecheck = useMemo(
+    () => runExportPrecheck('lifecycle-review', lifecycleReviewData),
+    [lifecycleReviewData],
+  );
+  const hasLifecycleBlockers = lifecyclePrecheck.blockers.length > 0;
+
   // Handlers
   const toggleSort = useCallback((field: SortField) => {
     setSortField((prev) => {
@@ -371,6 +507,14 @@ export default function LifecycleDashboard() {
       toast({ variant: 'destructive', title: 'No Data', description: 'There are no lifecycle entries to export.' });
       return;
     }
+    if (hasLifecycleBlockers) {
+      toast({
+        variant: 'destructive',
+        title: 'Export Blocked',
+        description: lifecyclePrecheck.blockers[0] ?? 'Resolve lifecycle release blockers before exporting.',
+      });
+      return;
+    }
     const headers = ['Part Number', 'Manufacturer', 'Status', 'Alternate Part Numbers', 'Data Source', 'Notes', 'Last Updated'];
     const rows = entries.map((e) => [
       e.partNumber,
@@ -390,7 +534,7 @@ export default function LifecycleDashboard() {
     link.click();
     URL.revokeObjectURL(url);
     toast({ title: 'CSV Exported', description: `Exported ${entries.length} entries.` });
-  }, [entries, toast]);
+  }, [entries, hasLifecycleBlockers, lifecyclePrecheck.blockers, toast]);
 
   const toggleExpanded = useCallback((id: number) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -443,16 +587,16 @@ export default function LifecycleDashboard() {
   }
 
   return (
-    <div data-testid="lifecycle-dashboard" className="h-full p-3 md:p-6 bg-background/50 flex flex-col items-center overflow-auto">
-      <div className="w-full max-w-6xl space-y-6">
+    <div data-testid="lifecycle-dashboard" className="flex h-full flex-col items-center overflow-auto bg-background/50 p-3 md:p-4">
+      <div className="w-full max-w-6xl space-y-4">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col justify-between gap-2.5 md:flex-row md:items-center">
           <div>
-            <h2 className="text-xl md:text-2xl font-display font-bold flex items-center gap-3">
-              <Activity className="w-7 h-7 text-primary" />
+            <h2 className="flex items-center gap-2 text-lg font-display font-bold md:text-xl">
+              <Activity className="h-5 w-5 text-primary" />
               Component Lifecycle
             </h2>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               Track lifecycle status and supply chain risk for {entries.length} component{entries.length !== 1 ? 's' : ''}.
             </p>
           </div>
@@ -462,7 +606,8 @@ export default function LifecycleDashboard() {
               variant="outline"
               size="sm"
               onClick={exportCsv}
-              disabled={entries.length === 0}
+              disabled={entries.length === 0 || hasLifecycleBlockers}
+              aria-describedby="lifecycle-release-gate-summary"
             >
               <Download className="w-4 h-4 mr-1.5" />
               Export CSV
@@ -479,7 +624,7 @@ export default function LifecycleDashboard() {
         </div>
 
         {/* Status Summary Cards */}
-        <div data-testid="status-summary" className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div data-testid="status-summary" className="grid grid-cols-2 gap-2.5 md:grid-cols-5">
           {LIFECYCLE_STATUSES.map((s) => (
             <StatusCard key={s} status={s} count={statusCounts[s]} total={entries.length} />
           ))}
@@ -488,23 +633,25 @@ export default function LifecycleDashboard() {
         {/* Risk Alert Banner */}
         <RiskBanner eolCount={statusCounts.eol} obsoleteCount={statusCounts.obsolete} />
 
+        <LifecycleReleaseGate precheck={lifecyclePrecheck} />
+
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="flex flex-col items-stretch gap-2.5 sm:flex-row sm:items-center">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               data-testid="input-search"
               placeholder="Search part number or manufacturer..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="h-9 pl-9 text-xs"
             />
           </div>
           <Select
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v as LifecycleStatus | 'all')}
           >
-            <SelectTrigger data-testid="select-status-filter" className="w-full sm:w-[180px]">
+            <SelectTrigger data-testid="select-status-filter" className="h-9 w-full text-xs sm:w-[184px]" aria-label="Filter lifecycle entries by status">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -519,7 +666,7 @@ export default function LifecycleDashboard() {
         </div>
 
         {/* Component Table */}
-        <div className="border border-border rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
+        <div className="overflow-hidden rounded-md border border-border bg-card/40 backdrop-blur-sm">
           {filteredAndSorted.length === 0 ? (
             <div data-testid="empty-state-lifecycle" className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <ShieldCheck className="w-12 h-12 mb-3 text-emerald-500/20" />
@@ -548,47 +695,47 @@ export default function LifecycleDashboard() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/10 hover:bg-muted/10">
-                  <TableHead>
+                  <TableHead className="h-10 py-2">
                     <button
                       data-testid="sort-partNumber"
                       onClick={() => toggleSort('partNumber')}
-                      className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider hover:text-foreground transition-colors"
+                      className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                     >
                       Part Number
                       {renderSortIcon('partNumber')}
                     </button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead className="h-10 py-2">
                     <button
                       data-testid="sort-manufacturer"
                       onClick={() => toggleSort('manufacturer')}
-                      className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider hover:text-foreground transition-colors"
+                      className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                     >
                       Manufacturer
                       {renderSortIcon('manufacturer')}
                     </button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead className="h-10 py-2">
                     <button
                       data-testid="sort-lifecycleStatus"
                       onClick={() => toggleSort('lifecycleStatus')}
-                      className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider hover:text-foreground transition-colors"
+                      className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                     >
                       Status
                       {renderSortIcon('lifecycleStatus')}
                     </button>
                   </TableHead>
-                  <TableHead className="hidden md:table-cell">
-                    <span className="text-xs font-semibold uppercase tracking-wider">Alternates</span>
+                  <TableHead className="hidden h-10 py-2 md:table-cell">
+                    <span className="text-xs font-semibold text-muted-foreground">Alternates</span>
                   </TableHead>
-                  <TableHead className="hidden lg:table-cell">
-                    <span className="text-xs font-semibold uppercase tracking-wider">Data Source</span>
+                  <TableHead className="hidden h-10 py-2 lg:table-cell">
+                    <span className="text-xs font-semibold text-muted-foreground">Data Source</span>
                   </TableHead>
-                  <TableHead>
+                  <TableHead className="h-10 py-2">
                     <button
                       data-testid="sort-updatedAt"
                       onClick={() => toggleSort('updatedAt')}
-                      className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider hover:text-foreground transition-colors"
+                      className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                     >
                       Last Updated
                       {renderSortIcon('updatedAt')}
@@ -751,16 +898,16 @@ const LifecycleRow = memo(function LifecycleRow({
         className="cursor-pointer"
         onClick={() => onToggle(entry.id)}
       >
-        <TableCell className="font-mono text-sm font-medium text-foreground">
+        <TableCell className="py-2 font-mono text-xs font-medium text-foreground">
           {entry.partNumber}
         </TableCell>
-        <TableCell className="text-sm text-muted-foreground">
+        <TableCell className="py-2 text-xs text-muted-foreground">
           {entry.manufacturer ?? '-'}
         </TableCell>
-        <TableCell>
+        <TableCell className="py-2">
           <StatusBadge status={entry.lifecycleStatus} />
         </TableCell>
-        <TableCell className="hidden md:table-cell text-xs text-muted-foreground font-mono">
+        <TableCell className="hidden py-2 text-xs font-mono text-muted-foreground md:table-cell">
           {alternates.length > 0 ? (
             <span title={alternates.join(', ')}>
               {alternates.length} alternate{alternates.length !== 1 ? 's' : ''}
@@ -769,13 +916,13 @@ const LifecycleRow = memo(function LifecycleRow({
             '-'
           )}
         </TableCell>
-        <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+        <TableCell className="hidden py-2 text-xs text-muted-foreground lg:table-cell">
           {entry.dataSource ?? '-'}
         </TableCell>
-        <TableCell className="text-xs text-muted-foreground tabular-nums">
+        <TableCell className="py-2 text-xs tabular-nums text-muted-foreground">
           {entry.updatedAt ? format(new Date(entry.updatedAt), 'MMM d, yyyy') : '-'}
         </TableCell>
-        <TableCell>
+        <TableCell className="py-2">
           <div className="flex items-center gap-1">
             <button
               data-testid={`button-edit-${entry.id}`}
@@ -811,18 +958,18 @@ const LifecycleRow = memo(function LifecycleRow({
       </TableRow>
       {isExpanded && (
         <TableRow data-testid={`row-lifecycle-expanded-${entry.id}`} className="bg-muted/5 hover:bg-muted/5">
-          <TableCell colSpan={7} className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <TableCell colSpan={7} className="p-3">
+            <div className="grid grid-cols-1 gap-3 text-xs md:grid-cols-2">
               {alternates.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                  <p className="mb-1 text-[11px] font-semibold text-muted-foreground">
                     Alternate Part Numbers
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1">
                     {alternates.map((alt) => (
                       <span
                         key={alt}
-                        className="px-2 py-0.5 text-xs font-mono bg-primary/10 text-primary border border-primary/20 rounded-sm"
+                        className="rounded-sm border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] text-primary"
                       >
                         {alt}
                       </span>
@@ -832,19 +979,19 @@ const LifecycleRow = memo(function LifecycleRow({
               )}
               {entry.notes && (
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Notes</p>
+                  <p className="mb-1 text-[11px] font-semibold text-muted-foreground">Notes</p>
                   <p className="text-muted-foreground whitespace-pre-wrap">{entry.notes}</p>
                 </div>
               )}
               {entry.dataSource && (
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Data Source</p>
+                  <p className="mb-1 text-[11px] font-semibold text-muted-foreground">Data Source</p>
                   <p className="text-muted-foreground">{entry.dataSource}</p>
                 </div>
               )}
               {entry.updatedAt && (
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Last Updated</p>
+                  <p className="mb-1 text-[11px] font-semibold text-muted-foreground">Last Updated</p>
                   <p className="text-muted-foreground">{format(new Date(entry.updatedAt), 'PPpp')}</p>
                 </div>
               )}

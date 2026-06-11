@@ -44,7 +44,7 @@ describe('workspace-reducer persistence', () => {
     expect(createInitialWorkspaceState(99)).toMatchObject({
       sidebarCollapsed: false,
       chatCollapsed: false,
-      sidebarWidth: 256,
+      sidebarWidth: 280,
       chatWidth: 350,
     });
   });
@@ -76,7 +76,7 @@ describe('workspaceReducer', () => {
     chatOpen: false,
     sidebarCollapsed: false,
     chatCollapsed: false,
-    sidebarWidth: 256,
+    sidebarWidth: 280,
     chatWidth: 350,
     shortcutsOpen: false,
     moreMenuOpen: false,

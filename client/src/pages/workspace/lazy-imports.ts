@@ -1,8 +1,47 @@
 import { lazy } from 'react';
+import type { ComponentType } from 'react';
+
+const LAZY_RETRY_DELAY_MS = 500;
+const LAZY_RETRY_ATTEMPTS = 8;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableLazyImportError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes('Failed to fetch dynamically imported module') ||
+    message.includes('Importing a module script failed') ||
+    message.includes('Outdated Optimize Dep')
+  );
+}
+
+function lazyWithRetry<TProps = Record<string, unknown>>(
+  loader: () => Promise<{ default: ComponentType<TProps> }>,
+  attempts = LAZY_RETRY_ATTEMPTS,
+): ReturnType<typeof lazy<ComponentType<TProps>>> {
+  return lazy(async () => {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        return await loader();
+      } catch (error) {
+        lastError = error;
+        const retryable = isRetryableLazyImportError(error);
+        if (!retryable || attempt >= attempts) {
+          throw error;
+        }
+        await sleep(LAZY_RETRY_DELAY_MS * attempt);
+      }
+    }
+    throw lastError;
+  });
+}
 
 // ─── Lazy-loaded view & panel components ───────────────────────────────────
-export const Sidebar = lazy(() => import('@/components/layout/Sidebar'));
-export const ChatPanel = lazy(() => import('@/components/panels/ChatPanel'));
+export const Sidebar = lazyWithRetry(() => import('@/components/layout/Sidebar'));
+export const ChatPanel = lazyWithRetry(() => import('@/components/panels/ChatPanel'));
 export const DashboardView = lazy(() => import('@/components/views/DashboardView'));
 export const ArchitectureView = lazy(() => import('@/components/views/ArchitectureView'));
 export const ComponentEditorView = lazy(() => import('@/components/views/ComponentEditorView'));
@@ -107,6 +146,11 @@ const prefetchQueue: Array<() => Promise<unknown>> = [
 let prefetchStarted = false;
 
 export function startPrefetch() {
+  // Dev stability first: broad idle prefetch can trigger a burst of dynamic
+  // imports while Vite is still reconciling dep-optimizer state.
+  if (import.meta.env.DEV) {
+    return;
+  }
   if (prefetchStarted) { return; }
   prefetchStarted = true;
 

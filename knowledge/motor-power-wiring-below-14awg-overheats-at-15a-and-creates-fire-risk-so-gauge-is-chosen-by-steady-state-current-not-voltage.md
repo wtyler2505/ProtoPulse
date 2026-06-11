@@ -41,7 +41,7 @@ The beginner mistake the source names explicitly is running a full hoverboard-mo
 Source: [[wiring-zs-x11h-to-arduino-mega-for-single-motor-control]]
 
 Relevant Notes:
-- [[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]] — wire ampacity is the ceiling of the four-number hierarchy
+- [[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]] — wire ampacity is the ceiling of the four-number hierarchy and contains the full gauge reference table
 - [[anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc]] — fuse class selection that matches the main-bus wire gauge
 - [[four-motor-bldc-systems-exceed-standard-hoverboard-bms-ratings-requiring-firmware-current-limiting]] — where 4x motor current drives the main-bus ampacity requirement
 

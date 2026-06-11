@@ -138,6 +138,8 @@ export default function ArduinoFileExplorer({
                     key={file.id}
                     onClick={() => onSelectFile(file.relativePath)}
                     data-testid={`file-item-${file.id}`}
+                    data-file-id={file.relativePath}
+                    data-file-label={file.relativePath}
                     className={cn(
                       'w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors',
                       activeFilePath === file.relativePath

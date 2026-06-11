@@ -11,7 +11,7 @@
  */
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import type { Node, NodeProps } from '@xyflow/react';
+import type { Node, NodeProps } from '@/lib/xyflow-compat';
 import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import type { Node, Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from '@/lib/graph-types';
 import { nodeData, edgeData } from '../../chat-types';
 import type { GenComponent, GenConnection } from '../../chat-types';
 import type { ActionHandler } from './types';
@@ -143,7 +143,7 @@ const LAYOUT_TYPE_ORDER: Record<string, number> = {
 // ---------------------------------------------------------------------------
 
 const addNode: ActionHandler = (action, ctx) => {
-  const newNode: Node = {
+  const newNode: GraphNode = {
     id: crypto.randomUUID(),
     type: 'custom' as const,
     position: {
@@ -267,7 +267,7 @@ const connectNodes: ActionHandler = (action, ctx) => {
     (n) => nodeData(n).label.toLowerCase().includes(action.targetLabel!.toLowerCase()),
   );
   if (sourceNode && targetNode) {
-    const newEdge: Edge = {
+  const newEdge: GraphEdge = {
       id: crypto.randomUUID(),
       source: sourceNode.id,
       target: targetNode.id,
@@ -363,7 +363,7 @@ const generateArchitecture: ActionHandler = (action, ctx) => {
 const autoLayout: ActionHandler = (action, ctx) => {
   if (ctx.state.currentNodes.length === 0) { return; }
   const layoutType = action.layout || 'hierarchical';
-  let arranged: Node[];
+  let arranged: GraphNode[];
 
   if (layoutType === 'grid') {
     const cols = Math.ceil(Math.sqrt(ctx.state.currentNodes.length));

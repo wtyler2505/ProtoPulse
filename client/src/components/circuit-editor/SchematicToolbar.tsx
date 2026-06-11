@@ -13,6 +13,7 @@ import {
   Magnet,
   Eye,
   Type,
+  Camera,
 } from 'lucide-react';
 import type { SchematicTool } from '@shared/circuit-types';
 import { cn } from '@/lib/utils';
@@ -36,6 +37,7 @@ interface SchematicToolbarProps {
   canUndo?: boolean;
   canRedo?: boolean;
   onOpenShortcuts?: () => void;
+  onOpenHardwareInspection?: () => void;
 }
 
 /**
@@ -91,10 +93,11 @@ const SchematicToolbar = memo(function SchematicToolbar({
   canUndo = false,
   canRedo = false,
   onOpenShortcuts,
+  onOpenHardwareInspection,
 }: SchematicToolbarProps) {
   return (
     <div
-      className="absolute top-3 left-60 z-10 flex items-center gap-1 bg-card/80 backdrop-blur-xl border border-border p-1 shadow-lg"
+      className="absolute top-2 left-52 z-10 flex items-center gap-0.5 bg-card/75 backdrop-blur-xl border border-border/80 p-0.5 shadow-lg"
       data-testid="schematic-toolbar"
     >
       {tools.map((tool) => {
@@ -115,29 +118,29 @@ const SchematicToolbar = memo(function SchematicToolbar({
               data-testid={`schematic-tool-${tool.id}`}
               aria-label={tool.label}
               className={cn(
-                'p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
+                'p-0.5 rounded-sm hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors',
                 isActive && 'bg-primary/20 text-primary border border-primary/40',
               )}
               onClick={handleClick}
             >
-              <tool.icon className="w-5 h-5" />
+              <tool.icon className="w-3.5 h-3.5" />
             </button>
           </StyledTooltip>
         );
       })}
-      <div className="w-px h-5 bg-border mx-0.5" />
+      <div className="w-px h-3.5 bg-border/80 mx-0.5" />
       <StyledTooltip content="Undo (Ctrl+Z)" side="bottom">
         <button
           data-testid="button-undo"
           disabled={!canUndo}
           aria-label="Undo (Ctrl+Z)"
           className={cn(
-            'p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
+            'p-0.5 rounded-sm hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors',
             !canUndo && 'opacity-40 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground',
           )}
           onClick={onUndo}
         >
-          <Undo2 className="w-5 h-5" />
+          <Undo2 className="w-3.5 h-3.5" />
         </button>
       </StyledTooltip>
       <StyledTooltip content="Redo (Ctrl+Shift+Z)" side="bottom">
@@ -146,15 +149,15 @@ const SchematicToolbar = memo(function SchematicToolbar({
           disabled={!canRedo}
           aria-label="Redo (Ctrl+Shift+Z)"
           className={cn(
-            'p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
+            'p-0.5 rounded-sm hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors',
             !canRedo && 'opacity-40 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground',
           )}
           onClick={onRedo}
         >
-          <Redo2 className="w-5 h-5" />
+          <Redo2 className="w-3.5 h-3.5" />
         </button>
       </StyledTooltip>
-      <div className="w-px h-5 bg-border mx-0.5" />
+      <div className="w-px h-3.5 bg-border/80 mx-0.5" />
 
       {/* Snap / Grid / Angle compact strip (UX-037) */}
       <StyledTooltip content="Snap to grid (G)" side="bottom">
@@ -162,12 +165,12 @@ const SchematicToolbar = memo(function SchematicToolbar({
           data-testid="schematic-tool-snap"
           aria-label="Toggle snap to grid"
           className={cn(
-            'p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
+            'p-0.5 rounded-sm hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors',
             snapEnabled && 'bg-primary/20 text-primary border border-primary/40',
           )}
           onClick={onToggleSnap}
         >
-          <Magnet className="w-5 h-5" />
+          <Magnet className="w-3.5 h-3.5" />
         </button>
       </StyledTooltip>
       <StyledTooltip content="Toggle grid visibility" side="bottom">
@@ -175,12 +178,12 @@ const SchematicToolbar = memo(function SchematicToolbar({
           data-testid="schematic-tool-grid-visible"
           aria-label="Toggle grid visibility"
           className={cn(
-            'p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
+            'p-0.5 rounded-sm hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors',
             gridVisible && 'bg-primary/20 text-primary border border-primary/40',
           )}
           onClick={onToggleGridVisible}
         >
-          <Grid3x3 className="w-5 h-5" />
+          <Grid3x3 className="w-3.5 h-3.5" />
         </button>
       </StyledTooltip>
       {onAngleConstraintChange && (
@@ -200,9 +203,9 @@ const SchematicToolbar = memo(function SchematicToolbar({
               value="free"
               aria-label="Free angle routing"
               data-testid="angle-free"
-              className="px-1.5 py-1 text-xs"
+              className="px-1.5 py-0.5 text-[11px]"
             >
-              <Eye className="w-4 h-4" />
+              <Eye className="w-3.5 h-3.5" />
             </ToggleGroupItem>
           </StyledTooltip>
           <StyledTooltip content="45 degree" side="bottom">
@@ -210,7 +213,7 @@ const SchematicToolbar = memo(function SchematicToolbar({
               value="45"
               aria-label="45 degree angle constraint"
               data-testid="angle-45"
-              className="px-1.5 py-1 text-xs font-mono"
+              className="px-1.5 py-0.5 text-[11px] font-mono"
             >
               45
             </ToggleGroupItem>
@@ -220,7 +223,7 @@ const SchematicToolbar = memo(function SchematicToolbar({
               value="90"
               aria-label="90 degree angle constraint"
               data-testid="angle-90"
-              className="px-1.5 py-1 text-xs font-mono"
+              className="px-1.5 py-0.5 text-[11px] font-mono"
             >
               90
             </ToggleGroupItem>
@@ -228,26 +231,37 @@ const SchematicToolbar = memo(function SchematicToolbar({
         </ToggleGroup>
       )}
 
-      <div className="w-px h-5 bg-border mx-0.5" />
+      <div className="w-px h-3.5 bg-border/80 mx-0.5" />
       <StyledTooltip content="Fit view (F)" side="bottom">
         <button
           data-testid="schematic-tool-fit"
           aria-label="Fit view"
-          className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+          className="p-0.5 rounded-sm hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
           onClick={onFitView}
         >
-          <Maximize className="w-5 h-5" />
+          <Maximize className="w-3.5 h-3.5" />
         </button>
       </StyledTooltip>
-      <div className="w-px h-5 bg-border mx-0.5" />
+      <div className="w-px h-3.5 bg-border/80 mx-0.5" />
+      <StyledTooltip content="Hardware Inspection" side="bottom">
+        <button
+          data-testid="button-open-hardware-inspection"
+          aria-label="Hardware Inspection"
+          className="p-0.5 rounded-sm hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+          onClick={onOpenHardwareInspection}
+        >
+          <Camera className="w-3.5 h-3.5" />
+        </button>
+      </StyledTooltip>
+      <div className="w-px h-3.5 bg-border/80 mx-0.5" />
       <StyledTooltip content="Keyboard Shortcuts (?)" side="bottom">
         <button
           data-testid="button-keyboard-shortcuts"
           aria-label="Keyboard Shortcuts"
-          className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+          className="p-0.5 rounded-sm hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
           onClick={onOpenShortcuts}
         >
-          <Keyboard className="w-5 h-5" />
+          <Keyboard className="w-3.5 h-3.5" />
         </button>
       </StyledTooltip>
     </div>

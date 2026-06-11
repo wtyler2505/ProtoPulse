@@ -146,12 +146,12 @@ export default function DesignHistoryView() {
 
   return (
     <div data-testid="design-history-view" className="h-full overflow-auto">
-      <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <div className="mx-auto max-w-5xl space-y-3 p-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Layers className="w-5 h-5 text-primary" />
-            <h2 data-testid="design-history-title" className="text-lg font-semibold text-foreground">
+            <Layers className="h-3.5 w-3.5 text-primary" />
+            <h2 data-testid="design-history-title" className="text-[13px] font-semibold text-foreground">
               Design Version History
             </h2>
             <Badge variant="secondary" data-testid="snapshot-count-badge">
@@ -171,13 +171,13 @@ export default function DesignHistoryView() {
         {/* Snapshot list */}
         {snapshots.length === 0 ? (
           <Card data-testid="empty-snapshots">
-            <CardContent className="py-12 flex flex-col items-center gap-3 text-muted-foreground">
+            <CardContent className="flex flex-col items-center gap-3 py-10 text-muted-foreground">
               <Clock className="w-10 h-10 opacity-50" />
               <p className="text-sm">No snapshots yet. Save one to start tracking changes.</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {snapshots.map((snapshot) => (
               <Card
                 key={snapshot.id}
@@ -187,10 +187,10 @@ export default function DesignHistoryView() {
                   diffResult?.snapshot.id === snapshot.id && 'border-primary/50 bg-primary/5',
                 )}
               >
-                <CardHeader className="py-3 px-4">
+                <CardHeader className="px-2.5 py-1.5">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-sm font-medium truncate" data-testid={`snapshot-name-${snapshot.id}`}>
+                      <CardTitle className="truncate text-[13px] font-medium" data-testid={`snapshot-name-${snapshot.id}`}>
                         {snapshot.name}
                       </CardTitle>
                       {snapshot.description && (
@@ -198,18 +198,18 @@ export default function DesignHistoryView() {
                           {snapshot.description}
                         </CardDescription>
                       )}
-                      <p className="text-xs text-muted-foreground mt-1" data-testid={`snapshot-date-${snapshot.id}`}>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground" data-testid={`snapshot-date-${snapshot.id}`}>
                         {format(new Date(snapshot.createdAt), 'MMM d, yyyy h:mm a')}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 ml-4 shrink-0">
+                    <div className="ml-3 flex shrink-0 items-center gap-1.5">
                       <Button
                         variant="outline"
                         size="sm"
                         data-testid={`btn-compare-${snapshot.id}`}
                         onClick={() => void handleCompare(snapshot.id)}
                         disabled={diffLoading === snapshot.id}
-                        className="gap-1.5"
+                        className="h-7 gap-1.5 text-[11px]"
                       >
                         <GitCompareArrows className="w-3.5 h-3.5" />
                         {diffLoading === snapshot.id ? 'Comparing...' : 'Compare to Current'}
@@ -324,13 +324,13 @@ function DiffDisplay({ result }: { result: DiffResponse }) {
   }
 
   return (
-    <Card data-testid="diff-results">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
+      <Card data-testid="diff-results">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <GitCompareArrows className="w-4 h-4 text-primary" />
           Diff: &quot;{snapshot.name}&quot; vs Current
         </CardTitle>
-        <div className="flex items-center gap-3 mt-2">
+        <div className="mt-1.5 flex items-center gap-2">
           {summary.nodesAdded > 0 && (
             <Badge variant="outline" className="text-emerald-400 border-emerald-400/30" data-testid="diff-badge-nodes-added">
               <Plus className="w-3 h-3 mr-1" />{summary.nodesAdded} node{summary.nodesAdded !== 1 ? 's' : ''} added
@@ -367,8 +367,8 @@ function DiffDisplay({ result }: { result: DiffResponse }) {
         <ScrollArea className="max-h-[500px]">
           {/* Node changes */}
           {diff.nodes.length > 0 && (
-            <div className="mb-4">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            <div className="mb-3">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Node Changes
               </h4>
               <Table data-testid="diff-table-nodes">
@@ -392,7 +392,7 @@ function DiffDisplay({ result }: { result: DiffResponse }) {
           {/* Edge changes */}
           {diff.edges.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Edge Changes
               </h4>
               <Table data-testid="diff-table-edges">

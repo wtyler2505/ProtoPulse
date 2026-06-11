@@ -2,7 +2,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { metaImagesPlugin } from "./vite-plugin-meta-images";
 
 export default defineConfig({
@@ -11,39 +10,8 @@ export default defineConfig({
   base: "./",
   plugins: [
     react(),
-    // Filter out errors that originate from user browser extensions
-    // (Grammarly, LanguageTool, Microsoft Editor, etc.) rather than our code.
-    runtimeErrorOverlay({
-      filter: (error) => {
-        const message = error.message ?? "";
-        const stack = error.stack ?? "";
-        const extensionSignals = [
-          "mce-autosize-textarea",
-          "A listener indicated an asynchronous response",
-          "message channel closed before a response",
-          "webcomponents-ce.js",
-          "overlay_bundle.js",
-          "chrome-extension://",
-          "moz-extension://",
-        ];
-        return !extensionSignals.some(
-          (signal) => message.includes(signal) || stack.includes(signal),
-        );
-      },
-    }),
     tailwindcss(),
     metaImagesPlugin(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer(),
-          ),
-          await import("@replit/vite-plugin-dev-banner").then((m) =>
-            m.devBanner(),
-          ),
-        ]
-      : []),
   ],
   resolve: {
     alias: {
@@ -60,12 +28,10 @@ export default defineConfig({
         "radix-slot-fixed.tsx",
       ),
     },
-  },
-  optimizeDeps: {
-    // Force re-bundling so any cached pre-bundled chunks that still contain
-    // the original composeRefs path get rebuilt against the alias.
-    force: true,
-    exclude: ["@radix-ui/react-slot"],
+    // CRITICAL for 3D View: ensure a SINGLE `three` instance across manual imports
+    // and @react-three/fiber + drei. Without this we get the "Multiple instances of Three.js"
+    // warning, broken materials, double Clock, and massive performance cliffs in the R3F overlay.
+    dedupe: ['three'],
   },
   css: {
     postcss: {
@@ -77,6 +43,11 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     sourcemap: 'hidden',
+    // ProtoPulse intentionally ships heavy CAD/workbench surfaces (Schematic/tldraw,
+    // Three/R3F, CodeMirror, React DOM) behind lazy routes. Keep a real budget above
+    // the current largest route chunk instead of treating Vite's 500 kB app default
+    // as a false-positive warning for this hardware design workspace.
+    chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
         manualChunks(id: string) {

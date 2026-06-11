@@ -730,16 +730,16 @@ export class PartsStorage {
   // part_alternates (equivalence graph)
   // -------------------------------------------------------------------------
 
-  async getAlternates(partId: string): Promise<Part[]> {
+  async getAlternates(partId: string): Promise<Array<Part & { matchScore: number }>> {
     try {
       // Walk the alternates table and join with parts to return the alt rows directly.
       const result = await this.db
-        .select({ alt: parts })
+        .select({ alt: parts, matchScore: partAlternates.matchScore })
         .from(partAlternates)
         .innerJoin(parts, eq(parts.id, partAlternates.altPartId))
         .where(and(eq(partAlternates.partId, partId), isNull(parts.deletedAt)))
         .orderBy(desc(partAlternates.matchScore));
-      return result.map((row) => row.alt);
+      return result.map((row) => ({ ...row.alt, matchScore: row.matchScore }));
     } catch (e) {
       throw new StorageError('getAlternates', `parts_alternates/${partId}`, e);
     }

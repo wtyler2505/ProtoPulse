@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -158,9 +158,8 @@ export function RotationInputPanel({
             Angle
           </Label>
           <div className="flex items-center gap-1.5">
-            <Input
+            <NumberInput
               id="rotation-angle-input"
-              type="number"
               min={0}
               max={359}
               value={Math.round(angle)}

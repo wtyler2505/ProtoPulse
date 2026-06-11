@@ -18,6 +18,14 @@ import {
 import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { downloadBlob } from '@/lib/csv';
+import { RADIAL_COMMAND_EVENT, type RadialCommandEventDetail } from '@/lib/radial-menu-actions';
+import {
+  getRadialAiDeliveryVerb,
+  getRadialAiPromptDelivery,
+  runRadialAiCommand,
+  type RadialAiPromptSection,
+} from '@/lib/radial-ai-commands';
 import { parseCompileOutput } from '@/lib/arduino/cli-error-parser';
 import CodeEditor from '@/components/views/circuit-code/CodeEditor';
 import { formatArduinoCode } from '@/lib/arduino/code-formatter';
@@ -54,17 +62,36 @@ function toStarterSketchFilename(title: string): string {
   return `${base || 'Starter_Circuit'}.ino`;
 }
 
+const RADIAL_ARDUINO_SNIPPET = `// Radial quick helper
+void radialLog(const char* label) {
+  Serial.print("[radial] ");
+  Serial.println(label);
+}
+`;
+
+function insertRadialArduinoSnippet(source: string): string {
+  if (source.includes('radialLog(')) {
+    return source;
+  }
+
+  return `${source.trimEnd()}\n\n${RADIAL_ARDUINO_SNIPPET}`;
+}
+
+function getFileDownloadName(path: string): string {
+  return path.split('/').filter(Boolean).pop() ?? 'sketch.ino';
+}
+
 export default function ArduinoWorkbenchView() {
   const _projectId = useProjectId();
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const {
     health,
     workspace,
-    files,
-    jobs,
-    profiles,
-    installedLibraries,
-    installedCores,
+    files = [],
+    jobs = [],
+    profiles = [],
+    installedLibraries = [],
+    installedCores = [],
     isHealthLoading,
     isFilesLoading,
     isLibrariesLoading,
@@ -122,7 +149,7 @@ export default function ArduinoWorkbenchView() {
   const [isCheckingUploadTarget, setIsCheckingUploadTarget] = useState(false);
 
   // Selected profile id
-  const defaultProfile = useMemo(() => profiles.find(p => p.isDefault) ?? profiles[0], [profiles]);
+  const defaultProfile = useMemo(() => profiles.find((p) => p.isDefault) ?? profiles[0], [profiles]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
   useEffect(() => {
     if (defaultProfile && !selectedProfileId) {
@@ -131,7 +158,7 @@ export default function ArduinoWorkbenchView() {
   }, [defaultProfile, selectedProfileId]);
 
   const selectedProfile = useMemo(
-    () => profiles.find(p => String(p.id) === selectedProfileId),
+    () => profiles.find((p) => String(p.id) === selectedProfileId),
     [profiles, selectedProfileId],
   );
 
@@ -169,15 +196,9 @@ export default function ArduinoWorkbenchView() {
     };
   }, [health?.status, listBoards, selectedProfile?.fqbn, selectedProfile?.port]);
 
-  const activeFile = useMemo(
-    () => files.find(f => f.relativePath === activeFilePath),
-    [files, activeFilePath],
-  );
+  const activeFile = useMemo(() => files.find((f) => f.relativePath === activeFilePath), [files, activeFilePath]);
 
-  const activeJob = useMemo(
-    () => jobs.find(j => j.status === 'running' || j.status === 'pending'),
-    [jobs],
-  );
+  const activeJob = useMemo(() => jobs.find((j) => j.status === 'running' || j.status === 'pending'), [jobs]);
 
   const uploadTargetAssessment = useMemo(
     () => assessArduinoUploadTarget({ detectedBoards, isChecking: isCheckingUploadTarget, selectedProfile }),
@@ -185,7 +206,7 @@ export default function ArduinoWorkbenchView() {
   );
 
   const lastCompletedCompile = useMemo(
-    () => jobs.find(j => j.status === 'completed' && j.jobType === 'compile'),
+    () => jobs.find((j) => j.status === 'completed' && j.jobType === 'compile'),
     [jobs],
   );
 
@@ -198,11 +219,15 @@ export default function ArduinoWorkbenchView() {
 
   const schematicPinData = useMemo(() => {
     if (!circuitInstances || !circuitNets || !componentParts) {
-      return { mappedInstances: [] as InstanceInfo[], mappedNets: [] as NetInfo[], schematicPinConstants: [] as PinConstant[] };
+      return {
+        mappedInstances: [] as InstanceInfo[],
+        mappedNets: [] as NetInfo[],
+        schematicPinConstants: [] as PinConstant[],
+      };
     }
 
-    const mappedInstances: InstanceInfo[] = circuitInstances.map(inst => {
-      const part = componentParts.find(p => p.id === inst.partId);
+    const mappedInstances: InstanceInfo[] = circuitInstances.map((inst) => {
+      const part = componentParts.find((p) => p.id === inst.partId);
       const connectors = (part?.connectors ?? []) as Array<{ name?: string; padType?: string; padWidth?: number }>;
 
       const mappedPins = connectors.map((c) => ({
@@ -220,13 +245,17 @@ export default function ArduinoWorkbenchView() {
       };
     });
 
-    const mappedNets: NetInfo[] = circuitNets.map(n => ({
+    const mappedNets: NetInfo[] = circuitNets.map((n) => ({
       id: String(n.id),
       name: n.name,
     }));
 
     const schematicPinConstants = generatePinConstants(mappedNets, mappedInstances, {
-      boardType: selectedProfile?.fqbn.includes('mega') ? 'mega' : (selectedProfile?.fqbn.includes('nano') ? 'nano' : 'uno'),
+      boardType: selectedProfile?.fqbn.includes('mega')
+        ? 'mega'
+        : selectedProfile?.fqbn.includes('nano')
+          ? 'nano'
+          : 'uno',
       includeComments: false,
       groupByCategory: false,
     });
@@ -317,8 +346,8 @@ export default function ArduinoWorkbenchView() {
           if (data.stderr) {
             const parsed = parseCompileOutput(data.stderr);
             const fileErrors = parsed.diagnostics
-              .filter(d => d.file.endsWith(activeFile.relativePath) || d.file === activeFile.relativePath)
-              .map(d => ({
+              .filter((d) => d.file.endsWith(activeFile.relativePath) || d.file === activeFile.relativePath)
+              .map((d) => ({
                 line: d.line,
                 message: `${d.severity}: ${d.message}${d.hint ? `\nHint: ${d.hint}` : ''}`,
               }));
@@ -388,7 +417,11 @@ export default function ArduinoWorkbenchView() {
       await compileJob({ fqbn: selectedProfile.fqbn, sketchPath: workspace.activeSketchPath ?? '.' });
       toast({ title: 'Compilation started' });
     } catch (e: unknown) {
-      toast({ variant: 'destructive', title: 'Compile failed', description: e instanceof Error ? e.message : String(e) });
+      toast({
+        variant: 'destructive',
+        title: 'Compile failed',
+        description: e instanceof Error ? e.message : String(e),
+      });
     }
   }, [workspace, selectedProfile, isDirty, handleSave, compileJob, toast]);
 
@@ -402,7 +435,10 @@ export default function ArduinoWorkbenchView() {
       return;
     }
     if (isCheckingUploadTarget) {
-      toast({ title: 'Checking board identity', description: 'Wait for ProtoPulse to confirm the connected device before uploading.' });
+      toast({
+        title: 'Checking board identity',
+        description: 'Wait for ProtoPulse to confirm the connected device before uploading.',
+      });
       return;
     }
     if (uploadTargetAssessment.shouldBlockUpload) {
@@ -410,7 +446,9 @@ export default function ArduinoWorkbenchView() {
       toast({
         variant: 'destructive',
         title: 'Upload blocked',
-        description: uploadTargetAssessment.blockerReason ?? 'ProtoPulse could not verify that the selected board and port match the connected hardware.',
+        description:
+          uploadTargetAssessment.blockerReason ??
+          'ProtoPulse could not verify that the selected board and port match the connected hardware.',
       });
       return;
     }
@@ -418,12 +456,29 @@ export default function ArduinoWorkbenchView() {
       await handleSave();
     }
     try {
-      await uploadJob({ fqbn: selectedProfile.fqbn, port: selectedProfile.port, sketchPath: workspace.activeSketchPath ?? '.' });
+      await uploadJob({
+        fqbn: selectedProfile.fqbn,
+        port: selectedProfile.port,
+        sketchPath: workspace.activeSketchPath ?? '.',
+      });
       toast({ title: 'Upload started' });
     } catch (e: unknown) {
-      toast({ variant: 'destructive', title: 'Upload failed', description: e instanceof Error ? e.message : String(e) });
+      toast({
+        variant: 'destructive',
+        title: 'Upload failed',
+        description: e instanceof Error ? e.message : String(e),
+      });
     }
-  }, [workspace, selectedProfile, isCheckingUploadTarget, uploadTargetAssessment, isDirty, handleSave, uploadJob, toast]);
+  }, [
+    workspace,
+    selectedProfile,
+    isCheckingUploadTarget,
+    uploadTargetAssessment,
+    isDirty,
+    handleSave,
+    uploadJob,
+    toast,
+  ]);
 
   const handleCancelJob = useCallback(async () => {
     if (!activeJob) {
@@ -433,31 +488,82 @@ export default function ArduinoWorkbenchView() {
       await cancelJob(activeJob.id);
       toast({ title: 'Job cancelled' });
     } catch (e: unknown) {
-      toast({ variant: 'destructive', title: 'Cancel failed', description: e instanceof Error ? e.message : String(e) });
+      toast({
+        variant: 'destructive',
+        title: 'Cancel failed',
+        description: e instanceof Error ? e.message : String(e),
+      });
     }
   }, [activeJob, cancelJob, toast]);
 
-  const handleDownloadArtifact = useCallback(async (jobId: number) => {
-    try {
-      await downloadArtifact(jobId);
-      toast({ title: 'Download started' });
-    } catch (e: unknown) {
-      toast({ variant: 'destructive', title: 'Download failed', description: e instanceof Error ? e.message : String(e) });
-    }
-  }, [downloadArtifact, toast]);
-
-  const handleProfileChange = useCallback(async (id: string) => {
-    setSelectedProfileId(id);
-    const prev = profiles.find(p => p.isDefault);
-    if (prev && String(prev.id) !== id) {
+  const handleDownloadArtifact = useCallback(
+    async (jobId: number) => {
       try {
-        await updateProfile(prev.id, { isDefault: false });
-        await updateProfile(Number(id), { isDefault: true });
-      } catch {
-        // non-critical -- local state already updated
+        await downloadArtifact(jobId);
+        toast({ title: 'Download started' });
+      } catch (e: unknown) {
+        toast({
+          variant: 'destructive',
+          title: 'Download failed',
+          description: e instanceof Error ? e.message : String(e),
+        });
       }
+    },
+    [downloadArtifact, toast],
+  );
+
+  const handleInsertRadialSnippet = useCallback(() => {
+    if (!activeFilePath) {
+      setNewFileName('radial_helpers.ino');
+      setNewFileDialogOpen(true);
+      toast({ title: 'Choose a sketch file', description: 'Create or select a file, then insert the radial helper.' });
+      return;
     }
-  }, [profiles, updateProfile]);
+
+    const nextCode = insertRadialArduinoSnippet(code);
+    setCode(nextCode);
+    setIsDirty(true);
+    toast({
+      title: 'Firmware snippet inserted',
+      description: 'Serial radialLog helper was added to the active sketch.',
+    });
+  }, [activeFilePath, code, toast]);
+
+  const handleExportFirmwareSource = useCallback(() => {
+    if (lastCompletedCompile) {
+      void handleDownloadArtifact(lastCompletedCompile.id);
+      return;
+    }
+
+    if (!activeFilePath || !code.trim()) {
+      toast({
+        title: 'Nothing to export',
+        description: 'Select a sketch file or compile firmware first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+    void downloadBlob(blob, getFileDownloadName(activeFilePath));
+    toast({ title: 'Firmware source exported', description: `${getFileDownloadName(activeFilePath)} was downloaded.` });
+  }, [activeFilePath, code, handleDownloadArtifact, lastCompletedCompile, toast]);
+
+  const handleProfileChange = useCallback(
+    async (id: string) => {
+      setSelectedProfileId(id);
+      const prev = profiles.find((p) => p.isDefault);
+      if (prev && String(prev.id) !== id) {
+        try {
+          await updateProfile(prev.id, { isDefault: false });
+          await updateProfile(Number(id), { isDefault: true });
+        } catch {
+          // non-critical -- local state already updated
+        }
+      }
+    },
+    [profiles, updateProfile],
+  );
 
   const handleOpenNewFileDialog = useCallback(() => {
     setNewFileName('');
@@ -475,22 +581,33 @@ export default function ArduinoWorkbenchView() {
       setActiveFilePath(name);
       toast({ title: 'File created', description: name });
     } catch (e: unknown) {
-      toast({ variant: 'destructive', title: 'Creation failed', description: e instanceof Error ? e.message : String(e) });
+      toast({
+        variant: 'destructive',
+        title: 'Creation failed',
+        description: e instanceof Error ? e.message : String(e),
+      });
     }
   }, [newFileName, createFile, toast]);
 
-  const handleLoadExample = useCallback(async (exCode: string, title: string) => {
-    const filename = `${title.replace(/\s+/g, '_')}.ino`;
-    try {
-      await createFile(filename, exCode);
-      setActiveFilePath(filename);
-      setShowExamples(false);
-      setShowExampleLibrary(false);
-      toast({ title: 'Example loaded', description: filename });
-    } catch (e: unknown) {
-      toast({ variant: 'destructive', title: 'Failed to load example', description: e instanceof Error ? e.message : String(e) });
-    }
-  }, [createFile, toast]);
+  const handleLoadExample = useCallback(
+    async (exCode: string, title: string) => {
+      const filename = `${title.replace(/\s+/g, '_')}.ino`;
+      try {
+        await createFile(filename, exCode);
+        setActiveFilePath(filename);
+        setShowExamples(false);
+        setShowExampleLibrary(false);
+        toast({ title: 'Example loaded', description: filename });
+      } catch (e: unknown) {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to load example',
+          description: e instanceof Error ? e.message : String(e),
+        });
+      }
+    },
+    [createFile, toast],
+  );
 
   const handleClearConsole = useCallback(() => setConsoleLogs([]), []);
 
@@ -512,6 +629,97 @@ export default function ArduinoWorkbenchView() {
     toast({ title: 'Code formatted', description: desc });
   }, [activeFilePath, code, toast]);
 
+  const handleAiFirmwareReview = useCallback(
+    (detail: RadialCommandEventDetail) => {
+      const delivery = getRadialAiPromptDelivery(detail);
+      const deliveryVerb = getRadialAiDeliveryVerb(delivery);
+      const codePreview = code.split('\n').slice(0, 40);
+      const sections: RadialAiPromptSection[] = [
+        {
+          title: 'Arduino workbench state',
+          lines: [
+            `Active file: ${activeFilePath ?? 'none'}`,
+            `Workspace sketch: ${workspace?.activeSketchPath ?? 'not set'}`,
+            `Health: ${health?.status ?? 'unknown'}`,
+            `Active job: ${activeJob ? `${activeJob.jobType} ${activeJob.status}` : 'none'}`,
+            `Profiles: ${String(profiles.length)}`,
+          ],
+        },
+        {
+          title: 'Selected profile',
+          lines: selectedProfile
+            ? [
+                `Name: ${selectedProfile.name}`,
+                `FQBN: ${selectedProfile.fqbn}`,
+                `Port: ${selectedProfile.port || 'not set'}`,
+                `Upload preflight: ${
+                  uploadTargetAssessment.shouldBlockUpload
+                    ? (uploadTargetAssessment.blockerReason ?? 'blocked')
+                    : uploadTargetAssessment.portSafetyLabel
+                }`,
+              ]
+            : ['No build profile is selected.'],
+        },
+        {
+          title: 'Schematic pin context',
+          lines: [
+            `Mapped instances: ${String(schematicPinData.mappedInstances.length)}`,
+            `Mapped nets: ${String(schematicPinData.mappedNets.length)}`,
+            `Generated pin constants: ${String(schematicPinData.schematicPinConstants.length)}`,
+          ],
+        },
+        {
+          title: 'Code preview',
+          lines: codePreview.length > 0 ? codePreview : ['No source code is loaded.'],
+        },
+      ];
+
+      runRadialAiCommand({
+        intent: 'firmware_review',
+        intro:
+          'Review this Arduino firmware workspace like a cautious embedded bench partner. Focus on compile/upload readiness, board/profile safety, pin mapping, and the next lowest-risk hardware step.',
+        summary: `Arduino firmware review: ${activeFilePath ?? 'no active file'}, ${String(profiles.length)} profiles, ${String(schematicPinData.schematicPinConstants.length)} generated pin constants.`,
+        historyLabel: `Arduino firmware review: ${activeFilePath ?? 'workspace'}`,
+        context: detail.context,
+        delivery,
+        targetDetails: [
+          `Project id: ${String(_projectId)}`,
+          `Selected profile: ${selectedProfile?.name ?? 'none'}`,
+          `Upload safety: ${
+            uploadTargetAssessment.shouldBlockUpload
+              ? (uploadTargetAssessment.blockerReason ?? 'blocked')
+              : uploadTargetAssessment.portSafetyLabel
+          }`,
+        ],
+        sections,
+        finalInstruction:
+          'Give Tyler a compact firmware action plan: what is safe to compile now, what blocks upload, what pins or libraries to verify, and the next bench-safe move.',
+      });
+      toast({
+        title: `AI Firmware Review ${deliveryVerb}`,
+        description:
+          delivery === 'send-now'
+            ? 'Sent Arduino firmware review to AI chat.'
+            : 'Drafted Arduino firmware review in AI chat.',
+      });
+    },
+    [
+      _projectId,
+      activeFilePath,
+      activeJob,
+      code,
+      health?.status,
+      profiles.length,
+      schematicPinData.mappedInstances.length,
+      schematicPinData.mappedNets.length,
+      schematicPinData.schematicPinConstants.length,
+      selectedProfile,
+      toast,
+      uploadTargetAssessment,
+      workspace?.activeSketchPath,
+    ],
+  );
+
   // Ctrl+T keyboard shortcut for format
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -526,9 +734,68 @@ export default function ArduinoWorkbenchView() {
     };
   }, [handleFormat]);
 
+  const handleRadialCommand = useCallback(
+    (detail: RadialCommandEventDetail): boolean => {
+      if (detail.source !== 'radial-menu' || detail.context.view !== 'firmware') {
+        return false;
+      }
+
+      switch (detail.commandId) {
+        case 'add_firmware_snippet':
+          handleInsertRadialSnippet();
+          return true;
+        case 'ai_firmware_review':
+          handleAiFirmwareReview(detail);
+          return true;
+        case 'format_firmware':
+          handleFormat();
+          return true;
+        case 'open_firmware_review':
+          setBottomTab('pins');
+          toast({
+            title: 'Firmware pin review',
+            description: 'Generated schematic pin constants are open for review.',
+          });
+          return true;
+        case 'compile_firmware':
+          void handleCompile();
+          return true;
+        case 'open_firmware_console':
+          setBottomTab('console');
+          toast({ title: 'Firmware console', description: 'Compile and upload output is open.' });
+          return true;
+        case 'firmware_settings':
+          setProfileDialogOpen(true);
+          toast({ title: 'Firmware settings', description: 'Board profile and port settings are open.' });
+          return true;
+        case 'export_firmware':
+          handleExportFirmwareSource();
+          return true;
+        default:
+          return false;
+      }
+    },
+    [handleAiFirmwareReview, handleCompile, handleExportFirmwareSource, handleFormat, handleInsertRadialSnippet, toast],
+  );
+
+  useEffect(() => {
+    const handleCommandEvent = (event: Event) => {
+      const detail = (event as CustomEvent<RadialCommandEventDetail>).detail;
+      if (!detail) {
+        return;
+      }
+      if (handleRadialCommand(detail)) {
+        detail.handled = true;
+      }
+    };
+
+    window.addEventListener(RADIAL_COMMAND_EVENT, handleCommandEvent);
+    return () => window.removeEventListener(RADIAL_COMMAND_EVENT, handleCommandEvent);
+  }, [handleRadialCommand]);
+
   // Translate compile errors from job logs and link to knowledge hub articles
   const translatedErrors: LinkedError[] = useMemo(() => {
-    const failedJob = jobs.find(j => j.status === 'failed' && j.log);
+    const failedJob = jobs.find((j) => j.status === 'failed' && j.log);
     if (!failedJob?.log) {
       return [];
     }
@@ -537,9 +804,7 @@ export default function ArduinoWorkbenchView() {
 
   // Track flash progress from active upload job log
   useEffect(() => {
-    const uploadJob_ = jobs.find(
-      (j) => j.jobType === 'upload' && (j.status === 'running' || j.status === 'pending'),
-    );
+    const uploadJob_ = jobs.find((j) => j.jobType === 'upload' && (j.status === 'running' || j.status === 'pending'));
 
     if (!uploadJob_) {
       const finishedUpload = jobs.find(
@@ -564,10 +829,7 @@ export default function ArduinoWorkbenchView() {
               title: 'Upload successful!',
               description: `Firmware flashed to ${selectedProfile.port}.`,
               action: (
-                <ToastAction
-                  altText="Open Serial Monitor"
-                  onClick={() => setBottomTab('serial')}
-                >
+                <ToastAction altText="Open Serial Monitor" onClick={() => setBottomTab('serial')}>
                   Monitor
                 </ToastAction>
               ),
@@ -659,7 +921,7 @@ export default function ArduinoWorkbenchView() {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-background">
+    <div className="flex h-full flex-col overflow-hidden bg-background" data-testid="arduino-workbench-view">
       <ArduinoToolbar
         health={health}
         isHealthLoading={isHealthLoading}
@@ -681,7 +943,9 @@ export default function ArduinoWorkbenchView() {
         uploadBlockedReason={
           isCheckingUploadTarget
             ? 'Checking the connected board before upload.'
-            : (uploadTargetAssessment.shouldBlockUpload ? uploadTargetAssessment.blockerReason : null)
+            : uploadTargetAssessment.shouldBlockUpload
+              ? uploadTargetAssessment.blockerReason
+              : null
         }
         onCancelJob={handleCancelJob}
         lastCompletedCompile={lastCompletedCompile}
@@ -693,11 +957,7 @@ export default function ArduinoWorkbenchView() {
         projectId={_projectId}
       />
 
-      <TrustReceiptCard
-        receipt={readinessReceipt}
-        className="mx-3 mt-3"
-        data-testid="trust-receipt-arduino"
-      />
+      <TrustReceiptCard receipt={readinessReceipt} className="mx-2.5 mt-2.5" data-testid="trust-receipt-arduino" />
 
       <div className="flex-1 flex overflow-hidden">
         <ArduinoFileExplorer
@@ -720,15 +980,15 @@ export default function ArduinoWorkbenchView() {
           {activeFilePath ? (
             <>
               {/* Tab bar */}
-              <div className="flex items-center justify-between border-b border-white/5 px-2 py-1 bg-card/30 shrink-0">
+              <div className="flex shrink-0 items-center justify-between border-b border-white/5 bg-card/30 px-2 py-0.5">
                 <div className="flex items-center gap-px overflow-x-auto no-scrollbar">
-                  <div className="px-3 py-1.5 text-[11px] font-medium text-primary border-b border-primary bg-primary/5 whitespace-nowrap flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 whitespace-nowrap border-b border-primary bg-primary/5 px-2.5 py-1 text-[10px] font-medium text-primary">
                     {activeFilePath}
                     {isDirty && <span className="w-1.5 h-1.5 rounded-full bg-primary" title="Unsaved changes" />}
                   </div>
                 </div>
                 {activeFile && (
-                  <span className="text-[9px] text-muted-foreground px-2 tabular-nums">
+                  <span className="px-1.5 text-[9px] tabular-nums text-muted-foreground">
                     {(activeFile.sizeBytes / 1024).toFixed(1)} KB · {editorLanguage.toUpperCase()}
                   </span>
                 )}
@@ -803,13 +1063,21 @@ export default function ArduinoWorkbenchView() {
             autoFocus
             placeholder="e.g. settings.h or helpers.cpp"
             value={newFileName}
-            onChange={e => setNewFileName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') void handleCreateFile(); }}
+            onChange={(e) => setNewFileName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void handleCreateFile();
+            }}
             data-testid="input-arduino-new-file-name"
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNewFileDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => void handleCreateFile()} disabled={!newFileName.trim()} data-testid="button-arduino-confirm-new-file">
+            <Button variant="outline" onClick={() => setNewFileDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void handleCreateFile()}
+              disabled={!newFileName.trim()}
+              data-testid="button-arduino-confirm-new-file"
+            >
               Create
             </Button>
           </DialogFooter>

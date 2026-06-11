@@ -7,7 +7,7 @@ import { useApiKeyStatus } from '@/hooks/useApiKeyStatus';
 interface ApiKeySetupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  aiProvider: 'gemini';
+  aiProvider: 'gemini' | 'openai';
   onApiKeySet: (key: string) => void;
 }
 
@@ -18,6 +18,13 @@ const PROVIDER_CONFIG = {
     urlLabel: 'aistudio.google.dev',
     placeholder: 'Enter your API key...',
     instructions: 'Sign in to Google AI Studio and create a new API key.',
+  },
+  openai: {
+    name: 'OpenAI',
+    url: 'https://platform.openai.com/api-keys',
+    urlLabel: 'platform.openai.com',
+    placeholder: 'Enter your OpenAI API key...',
+    instructions: 'Sign in to OpenAI and create a new API key.',
   },
 } as const;
 
@@ -90,7 +97,7 @@ export default function ApiKeySetupDialog({ open, onOpenChange, aiProvider, onAp
                 ProtoPulse uses AI to help you design circuits, generate architectures, optimize BOMs, and more. You need an API key from your AI provider to enable these features.
               </p>
               <p className="text-xs text-muted-foreground/60">
-                Your key stays in your browser and is sent directly to the AI provider. ProtoPulse never stores or logs your key on our servers.
+                Your key is stored encrypted server-side when signed in. ProtoPulse never logs your raw key.
               </p>
               <button
                 data-testid="setup-get-started"

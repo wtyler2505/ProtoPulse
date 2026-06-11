@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -80,11 +81,10 @@ export function AddItemDialog({ open, onOpenChange, newItem, onNewItemChange, on
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="add-quantity">Quantity</Label>
-              <Input
+              <NumberInput
                 id="add-quantity"
-                type="number"
-                min="1"
-                max="999999"
+                min={1}
+                max={999_999}
                 value={newItem.quantity}
                 onChange={(e) => onNewItemChange(prev => ({ ...prev, quantity: Math.max(1, parseInt(e.target.value) || 1) }))}
                 data-testid="input-add-quantity"
@@ -92,12 +92,11 @@ export function AddItemDialog({ open, onOpenChange, newItem, onNewItemChange, on
             </div>
             <div className="grid gap-2">
               <Label htmlFor="add-unit-price">Unit Price ($)</Label>
-              <Input
+              <NumberInput
                 id="add-unit-price"
-                type="number"
-                min="0"
-                max="99999.99"
-                step="0.01"
+                min={0}
+                max={99_999.99}
+                step={0.01}
                 value={newItem.unitPrice}
                 onChange={(e) => onNewItemChange(prev => ({ ...prev, unitPrice: Math.max(0, parseFloat(e.target.value) || 0) }))}
                 data-testid="input-add-unit-price"

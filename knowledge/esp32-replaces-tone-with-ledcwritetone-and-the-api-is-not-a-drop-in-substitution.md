@@ -32,7 +32,17 @@ ledcWriteTone(channel, frequency);          // generate tone
 
 4. **Resolution parameter:** `ledcSetup()` requires a bit resolution (typically 8) that affects available frequencies. This concept doesn't exist in the AVR tone API.
 
-**Why this matters beyond buzzers:** The `ledcWriteTone()` / `ledcWrite()` pattern applies to ALL ESP32 PWM -- servos, LED dimming, motor control. Any AVR sketch using `analogWrite()` hits the same portability wall. The buzzer case is just the most visible because `tone()` is a named function that produces an immediate "function not found" compile error, while `analogWrite()` is actually shimmed on some ESP32 board packages, masking the LEDC requirement.
+**Why this matters beyond buzzers (e.g. Motor Control):** The `ledcWriteTone()` / `ledcWrite()` pattern applies to ALL ESP32 PWM -- servos, LED dimming, motor control. Any AVR sketch using `analogWrite()` hits the same portability wall. The buzzer case is just the most visible because `tone()` is a named function that produces an immediate "function not found" compile error, while `analogWrite()` is actually shimmed on some ESP32 board packages. However, relying on the shim can be unreliable for precise motor control where frequency needs to be explicitly known.
+
+Instead of `analogWrite()`, motor PWM on ESP32 is explicitly configured and driven via the same LEDC API:
+
+```cpp
+ledcSetup(PWM_CHANNEL, 1000, 8);    // 1kHz, 8-bit resolution for motor control
+ledcAttachPin(PIN_SPEED, PWM_CHANNEL);
+ledcWrite(PWM_CHANNEL, duty);       // 0-255 duty, replacing analogWrite()
+```
+
+Notice that `1kHz` is a standard frequency appropriate for DC motor controllers (like the ZS-X11H), distinct from the variable audio frequencies used by a buzzer.
 
 **ProtoPulse implications:** The firmware scaffold generator should detect the target MCU and emit the correct tone API. When generating code for ESP32 + passive buzzer, emit LEDC boilerplate, not `tone()`. The bench coach should warn users porting Uno sketches to ESP32 that all `tone()` / `noTone()` calls need rewriting.
 

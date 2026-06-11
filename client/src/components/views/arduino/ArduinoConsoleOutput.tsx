@@ -51,8 +51,8 @@ export default function ArduinoConsoleOutput({
           <div key={job.id} className="border-l-2 border-border pl-2 py-1 mb-2 bg-white/5 rounded-r-sm">
             <div className="flex items-center gap-2 mb-1">
               <HistoryIcon className="w-3 h-3 text-muted-foreground" />
-              <span className="font-bold text-[9px] uppercase">{job.jobType}</span>
-              <span className="text-[9px] opacity-50">{new Date(job.createdAt).toLocaleTimeString()}</span>
+              <span className="font-bold text-[10px] uppercase">{job.jobType}</span>
+              <span className="text-[10px] opacity-60">{new Date(job.createdAt).toLocaleTimeString()}</span>
               <div className="flex-1" />
               {job.status === 'completed' && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
               {job.status === 'failed' && <XCircle className="w-3 h-3 text-destructive" />}
@@ -62,7 +62,7 @@ export default function ArduinoConsoleOutput({
               {/* Per-job action buttons */}
               {(job.status === 'running' || job.status === 'pending') && (
                 <button
-                  className="text-[9px] text-destructive hover:text-destructive/80 px-1"
+                  className="text-[10px] text-destructive hover:text-destructive/80 px-1"
                   onClick={() => onCancelJob(job.id)}
                   data-testid={`button-cancel-job-${job.id}`}
                   title="Cancel this job"
@@ -72,7 +72,7 @@ export default function ArduinoConsoleOutput({
               )}
               {job.status === 'completed' && job.jobType === 'compile' && (
                 <button
-                  className="text-[9px] text-primary hover:text-primary/80 px-1"
+                  className="text-[10px] text-primary hover:text-primary/80 px-1"
                   onClick={() => onDownloadArtifact(job.id)}
                   data-testid={`button-download-artifact-${job.id}`}
                   title="Download compiled binary"
@@ -88,7 +88,7 @@ export default function ArduinoConsoleOutput({
               {job.summary}
             </p>
             {job.log && (
-              <pre className="mt-1 text-[9px] opacity-60 overflow-x-auto whitespace-pre-wrap max-h-24 font-mono leading-relaxed border-t border-white/5 pt-1">
+              <pre className="mt-1 text-[10px] opacity-60 overflow-x-auto whitespace-pre-wrap max-h-24 font-mono leading-relaxed border-t border-white/5 pt-1">
                 {job.log}
               </pre>
             )}
@@ -99,7 +99,7 @@ export default function ArduinoConsoleOutput({
           <div className="border-l-2 border-destructive/50 pl-2 py-1.5 mb-2 bg-destructive/5 rounded-r-sm" data-testid="translated-errors-panel">
             <div className="flex items-center gap-1.5 mb-1.5">
               <AlertCircle className="w-3 h-3 text-destructive" />
-              <span className="text-[9px] font-bold uppercase tracking-wider text-destructive">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-destructive">
                 {translatedErrors.length} Issue{translatedErrors.length !== 1 ? 's' : ''} Explained
               </span>
             </div>
@@ -114,7 +114,7 @@ export default function ArduinoConsoleOutput({
                     <Badge
                       variant="outline"
                       className={cn(
-                        'h-3.5 px-1 text-[7px] shrink-0 mt-0.5',
+                        'h-4 px-1 text-[9px] shrink-0 mt-0.5',
                         t.severity === 'error' && 'border-destructive/30 text-destructive bg-destructive/10',
                         t.severity === 'warning' && 'border-amber-500/30 text-amber-500 bg-amber-500/10',
                         t.severity === 'note' && 'border-blue-500/30 text-blue-500 bg-blue-500/10',
@@ -126,7 +126,7 @@ export default function ArduinoConsoleOutput({
                       <p className="text-foreground/90">{t.translated}</p>
                       <p className="text-primary/80 mt-0.5">{t.suggestion}</p>
                       {t.file && t.lineNumber && (
-                        <span className="text-[8px] text-muted-foreground mt-0.5 block font-mono">
+                        <span className="text-[9px] text-muted-foreground mt-0.5 block font-mono">
                           {t.file}:{t.lineNumber}
                         </span>
                       )}
@@ -140,7 +140,7 @@ export default function ArduinoConsoleOutput({
                               <button
                                 key={kl.articleId}
                                 type="button"
-                                className="text-[8px] text-cyan-400 hover:text-cyan-300 underline underline-offset-2 decoration-cyan-400/30 hover:decoration-cyan-300/50 transition-colors"
+                                className="text-[9px] text-cyan-400 hover:text-cyan-300 underline underline-offset-2 decoration-cyan-400/30 hover:decoration-cyan-300/50 transition-colors"
                                 data-testid={`knowledge-link-${kl.articleId}`}
                                 onClick={() => {
                                   window.dispatchEvent(

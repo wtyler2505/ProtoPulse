@@ -1,0 +1,30 @@
+{
+  "project_name": "rest-express",
+  "tech_stack": "React 19.2.0 Express Drizzle ORM PostgreSQL Vite Tailwind Vitest Tauri (Desktop)",
+  "domain": "EDA",
+  "project_root": "/home/wtyler/Projects/ProtoPulse",
+  "key_files": [
+    "CODEX_DONE.md",
+    "CODEX_HANDOFF.md"
+  ],
+  "competitors": [
+    "KiCad",
+    "Altium Designer",
+    "EasyEDA",
+    "Fritzing",
+    "Eagle",
+    "OrCAD",
+    "Flux.ai"
+  ],
+  "personas": [
+    "Hobbyist maker",
+    "Professional electrical engineer",
+    "Hardware startup founder"
+  ],
+  "date": "2026-05-17",
+  "baseline": {
+    "loc": 1394645,
+    "files": 5712,
+    "languages": "Markdown, TypeScript, JSON, Shell, Plain Text, JavaScript, CSS, Python, TOML, HTML, Rust, SQL, YAML, SVG"
+  }
+}

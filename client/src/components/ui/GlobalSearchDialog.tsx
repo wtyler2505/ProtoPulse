@@ -16,7 +16,7 @@ import { useBom } from '@/lib/contexts/bom-context';
 import { useHistory } from '@/lib/contexts/history-context';
 import { STANDARD_LIBRARY_COMPONENTS } from '@shared/standard-library';
 import type { ViewMode } from '@/lib/project-context';
-import type { Node } from '@xyflow/react';
+import type { GraphNode } from '@/lib/graph-types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -64,7 +64,7 @@ const MAX_RESULTS_PER_CATEGORY = 5;
 // Helpers
 // ---------------------------------------------------------------------------
 
-function buildArchitectureResults(nodes: Node[]): SearchResult[] {
+function buildArchitectureResults(nodes: GraphNode[]): SearchResult[] {
   return nodes.map((node) => ({
     id: `arch-${node.id}`,
     label: String(node.data?.label ?? node.id),

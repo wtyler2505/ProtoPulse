@@ -146,6 +146,33 @@ describe('validateExportPreflight', () => {
       const result = validateExportPreflight('gerber', makeProjectData());
       expect(result.canExport).toBe(true);
     });
+
+    it('blocks when AI-generated instances are still unverified', () => {
+      const result = validateExportPreflight('gerber', makeProjectData({
+        aiGeneratedCircuitInstanceCount: 2,
+        unverifiedAiGeneratedCircuitInstanceCount: 1,
+      }));
+      expect(result.canExport).toBe(false);
+      expect(result.errors.some((e) => e.includes('AI-generated'))).toBe(true);
+    });
+  });
+
+  describe('tscircuit-gerber', () => {
+    it('is available with an explicit partial-mapping warning', () => {
+      const result = validateExportPreflight('tscircuit-gerber', makeProjectData());
+      expect(result.canExport).toBe(true);
+      expect(result.warnings.some((w) => w.includes('supported project components and net segments'))).toBe(true);
+    });
+
+    it('blocks without PCB layout or circuit instances', () => {
+      const result = validateExportPreflight('tscircuit-gerber', makeProjectData({
+        hasPcbLayout: false,
+        hasCircuitInstances: false,
+      }));
+      expect(result.canExport).toBe(false);
+      expect(result.errors.some((e) => e.includes('tscircuit Gerber requires board placement'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('needs placed components and nets'))).toBe(true);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -169,6 +196,42 @@ describe('validateExportPreflight', () => {
       const result = validateExportPreflight('fab-package', makeProjectData());
       expect(result.canExport).toBe(true);
     });
+
+    it('blocks fabrication package export when AI-generated instances are still unverified', () => {
+      const result = validateExportPreflight('fab-package', makeProjectData({
+        aiGeneratedCircuitInstanceCount: 2,
+        unverifiedAiGeneratedCircuitInstanceCount: 1,
+      }));
+      expect(result.canExport).toBe(false);
+      expect(result.errors.some((e) => e.includes('AI-generated'))).toBe(true);
+      expect(result.suggestions.some((s) => s.includes('exact-part'))).toBe(true);
+    });
+
+    it('warns when placed parts are not all exact-part verified', () => {
+      const result = validateExportPreflight('fab-package', makeProjectData({
+        placedPartCount: 4,
+        verifiedExactPartCount: 2,
+      }));
+      expect(result.canExport).toBe(true);
+      expect(result.warnings.some((w) => w.includes('exact-part verified'))).toBe(true);
+    });
+
+    it('blocks fabrication package export when red breadboard health is unresolved', () => {
+      const result = validateExportPreflight('fab-package', makeProjectData({
+        redBreadboardHealthCount: 1,
+      }));
+      expect(result.canExport).toBe(false);
+      expect(result.errors.some((e) => e.includes('breadboard-health'))).toBe(true);
+    });
+
+    it('blocks fabrication package export for lifecycle risk without alternates', () => {
+      const result = validateExportPreflight('fab-package', makeProjectData({
+        eolPartCount: 1,
+        lifecycleNoAlternateCount: 1,
+      }));
+      expect(result.canExport).toBe(false);
+      expect(result.errors.some((e) => e.includes('without a known alternate'))).toBe(true);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -184,6 +247,14 @@ describe('validateExportPreflight', () => {
     it('passes with valid data', () => {
       const result = validateExportPreflight('pick-place', makeProjectData());
       expect(result.canExport).toBe(true);
+    });
+
+    it('warns when inventory confidence is estimated', () => {
+      const result = validateExportPreflight('pick-place', makeProjectData({
+        estimatedInventoryLineCount: 2,
+      }));
+      expect(result.canExport).toBe(true);
+      expect(result.warnings.some((w) => w.includes('estimated or unknown confidence'))).toBe(true);
     });
   });
 
@@ -341,6 +412,12 @@ describe('validateExportPreflight', () => {
     it('passes with valid data', () => {
       expect(validateExportPreflight('odb-plus-plus', makeProjectData()).canExport).toBe(true);
     });
+
+    it('blocks unresolved breadboard health before fabrication exchange export', () => {
+      const result = validateExportPreflight('odb-plus-plus', makeProjectData({ redBreadboardHealthCount: 1 }));
+      expect(result.canExport).toBe(false);
+      expect(result.errors.some((e) => e.includes('breadboard-health'))).toBe(true);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -356,6 +433,28 @@ describe('validateExportPreflight', () => {
     it('passes with valid data', () => {
       expect(validateExportPreflight('ipc2581', makeProjectData()).canExport).toBe(true);
     });
+
+    it('warns when upstream inventory confidence is estimated', () => {
+      const result = validateExportPreflight('ipc2581', makeProjectData({ estimatedInventoryLineCount: 1 }));
+      expect(result.canExport).toBe(true);
+      expect(result.warnings.some((w) => w.includes('estimated or unknown confidence'))).toBe(true);
+    });
+  });
+
+  describe('etchable-pcb', () => {
+    it('errors when no PCB layout', () => {
+      const result = validateExportPreflight('etchable-pcb', makeProjectData({ hasPcbLayout: false }));
+      expect(result.canExport).toBe(false);
+      expect(result.errors.some((e) => e.includes('etchable PCB'))).toBe(true);
+    });
+
+    it('blocks lifecycle risk without alternates', () => {
+      const result = validateExportPreflight('etchable-pcb', makeProjectData({
+        obsoletePartCount: 1,
+      }));
+      expect(result.canExport).toBe(false);
+      expect(result.errors.some((e) => e.includes('obsolete part'))).toBe(true);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -370,6 +469,16 @@ describe('validateExportPreflight', () => {
 
     it('passes with valid data', () => {
       expect(validateExportPreflight('step', makeProjectData()).canExport).toBe(true);
+    });
+
+    it('warns when verified mechanical models are missing from placed parts', () => {
+      const result = validateExportPreflight('step', makeProjectData({
+        placedPartCount: 3,
+        verifiedExactPartCount: 3,
+        verifiedMechanicalModelCount: 1,
+      }));
+      expect(result.canExport).toBe(true);
+      expect(result.warnings.some((w) => w.includes('verified mechanical'))).toBe(true);
     });
   });
 
@@ -458,6 +567,7 @@ describe('validateExportPreflight', () => {
       expect(formats).toContain('spice');
       expect(formats).toContain('fab-package');
       expect(formats).toContain('gerber');
+      expect(formats).toContain('tscircuit-gerber');
       expect(formats).toContain('bom-csv');
       expect(formats).toContain('pdf');
       expect(formats).toContain('fmea');
