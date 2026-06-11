@@ -2,6 +2,33 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — board outline in the core
+
+### Added
+- **set_board_outline** (singleton; null clears) through the full
+  graph closure: apply deep-copies, inverse restores the previous
+  polygon (or the no-outline state), diff gains
+  pcbView.outlineChanged, merge replays theirs-only outline changes
+  (ours wins when both touched it), JSON round-trips, invariants
+  check integer coordinates. The 100%-branch gate on the core held.
+- **Gerber Edge.Cuts** (`exportEdgeCuts`): the outline as a Profile
+  layer stroked at 0.1mm (the KiCad convention fabs expect); returns
+  null when the design has no outline — an honest absence, not an
+  empty file. Existing golden fixtures have no outline and stay
+  byte-identical.
+
+### Honest cuts (substrate-first, like buses+sheets)
+- No outline drawing tool, renderer display, or DRC copper-to-edge
+  check yet — listed on the ROADMAP; panelization now has its
+  prerequisite.
+
+### Verified
+- 6 graph closure tests (set/reshape/clear, inverse round-trip both
+  ways, diff both directions, merge set/clear/ours-wins, JSON,
+  invariants) + 1 export test (null absence, Profile header, closed
+  stroke, byte determinism). Full test:packages green; goldens
+  untouched; eslint 0 errors.
+
 ## 2026-06-11 — cascading shove
 
 ### Added

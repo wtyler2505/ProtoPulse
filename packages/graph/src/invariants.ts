@@ -264,6 +264,12 @@ export function validateGraph(graph: DesignGraph, opts: InvariantOpts = {}): Inv
       });
     }
   }
+  if (graph.pcb.outline?.some((v) => !Number.isInteger(v.x) || !Number.isInteger(v.y))) {
+    out.push({
+      code: 'non_integer_coordinate',
+      message: 'board outline has non-integer coordinates',
+    });
+  }
 
   return out;
 }

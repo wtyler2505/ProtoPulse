@@ -190,6 +190,10 @@ export interface PcbView {
   traces: Map<Uuid, Trace>;
   vias: Map<Uuid, Via>;
   zones: Map<Uuid, Zone>;
+  /** Board outline (Edge.Cuts), integer nm, ≥3 vertices, implicitly
+   *  closed. Absent until set — a design without an outline is a
+   *  schematic-stage truth, not an error. */
+  outline?: Vec[];
 }
 
 export interface DesignGraph {

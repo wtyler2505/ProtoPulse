@@ -201,3 +201,31 @@ export function exportGerberLayer(
   lines.push('M02*');
   return lines.join('\n') + '\n';
 }
+
+/**
+ * Board outline (Edge.Cuts) as a Gerber profile layer: the closed
+ * outline stroked with a thin 0.1mm aperture — the KiCad convention
+ * fabs expect. Returns null when the design has no outline yet (an
+ * honest absence, not an empty file).
+ */
+export function exportEdgeCuts(graph: DesignGraph, opts: { date: string }): string | null {
+  const outline = graph.pcb.outline;
+  if (!outline || outline.length < 3) return null;
+  const lines: string[] = [
+    '%TF.GenerationSoftware,ProtoPulse,export,0.1.0*%',
+    `%TF.CreationDate,${opts.date}*%`,
+    '%TF.FileFunction,Profile,NP*%',
+    '%FSLAX46Y46*%',
+    '%MOMM*%',
+    'G01*',
+    '%LPD*%',
+    '%ADD10C,0.100000*%',
+    'D10*',
+  ];
+  const [first, ...rest] = outline;
+  if (!first) return null;
+  lines.push(`${xy(first)}D02*`);
+  for (const p of rest) lines.push(`${xy(p)}D01*`);
+  lines.push(`${xy(first)}D01*`, 'M02*');
+  return lines.join('\n') + '\n';
+}

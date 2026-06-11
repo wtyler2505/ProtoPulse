@@ -361,6 +361,12 @@ export function applyOp(graph: DesignGraph, op: OpBody): ApplyResult {
       return ok();
     }
 
+    case 'set_board_outline': {
+      if (op.outline === null) delete graph.pcb.outline;
+      else graph.pcb.outline = op.outline.map((v) => ({ ...v }));
+      return ok();
+    }
+
     case 'create_bus': {
       if (graph.buses.has(op.id)) return fail(`bus ${op.id} already exists`);
       graph.buses.set(op.id, { id: op.id, name: op.name, kind: op.busKind, memberNets: [] });

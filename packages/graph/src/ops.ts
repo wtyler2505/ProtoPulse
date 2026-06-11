@@ -210,6 +210,13 @@ const zPlaceZone = z.object({
 });
 const zRemoveZone = z.object({ kind: z.literal('remove_zone'), id: zUuid });
 
+/** Set or clear the board outline (null clears). Singleton — the board
+ *  has ONE outline; the op is its own patch. */
+const zSetBoardOutline = z.object({
+  kind: z.literal('set_board_outline'),
+  outline: z.array(zVec).min(3).nullable(),
+});
+
 // ── Buses & sheets (Vol II A.5; remove ops added for inverse closure) ─
 
 const zBusKind = z.enum(['SPI', 'I2C', 'UART', 'USB', 'CAN', 'PWR', 'GPIO', 'custom']);
@@ -289,6 +296,7 @@ export type OpBody =
   | z.infer<typeof zRemoveVia>
   | z.infer<typeof zPlaceZone>
   | z.infer<typeof zRemoveZone>
+  | z.infer<typeof zSetBoardOutline>
   | z.infer<typeof zCreateBus>
   | z.infer<typeof zRemoveBus>
   | z.infer<typeof zAssignToBus>
@@ -337,6 +345,7 @@ export const opBodySchema: z.ZodType<OpBody> = z.union([
     zRemoveVia,
     zPlaceZone,
     zRemoveZone,
+    zSetBoardOutline,
     zCreateBus,
     zRemoveBus,
     zAssignToBus,
