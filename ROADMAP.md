@@ -87,7 +87,11 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       whole substrate. Structure lands in the session as one undoable
       batch with meta {agent: 'architect'}
 - [ ] The Buyer (still needs sourcing substrate)
-- [ ] Concepts wiki growth toward the 88-article seed list
+- [x] Concepts wiki COMPLETE at 88/88 (final PCB tranche landed
+      2026-06-11): all nine categories of the Vol III §2 seed list.
+      DRC codes now deep-link to real PCB articles (trace-width,
+      annular-rings, zones) instead of fundamentals placeholders, via
+      the new optional drcCodes frontmatter field
 - [ ] Review deck versioning + community-extensible review rules
 
 ## v0.4 — The Board 🔨

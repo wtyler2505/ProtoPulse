@@ -5,13 +5,13 @@ import type { CodeInfo } from '@protopulse/erc';
  * ERC — the error message IS the curriculum's index (Vol III §2.2).
  */
 export const DRC_CODES: Record<string, CodeInfo> = {
-  'DRC-TRACE-WIDTH': { title: 'Trace below minimum width', conceptSlug: 'power-and-heat' },
+  'DRC-TRACE-WIDTH': { title: 'Trace below minimum width', conceptSlug: 'trace-width-vs-current' },
   'DRC-CLEARANCE': { title: 'Copper clearance violation', conceptSlug: 'tolerance-stacking' },
-  'DRC-ANNULAR': { title: 'Annular ring too thin', conceptSlug: 'tolerance-stacking' },
-  'DRC-DRILL': { title: 'Drill below the fab minimum', conceptSlug: 'tolerance-stacking' },
+  'DRC-ANNULAR': { title: 'Annular ring too thin', conceptSlug: 'annular-rings' },
+  'DRC-DRILL': { title: 'Drill below the fab minimum', conceptSlug: 'annular-rings' },
   'DRC-UNROUTED': { title: 'Unrouted net', conceptSlug: 'series-vs-parallel' },
-  'DRC-ZONE-OVERLAP': { title: 'Different-net zones overlap', conceptSlug: 'tolerance-stacking' },
-  'DRC-ZONE-ISOLATED': { title: 'Zone pours an isolated island', conceptSlug: 'series-vs-parallel' },
+  'DRC-ZONE-OVERLAP': { title: 'Different-net zones overlap', conceptSlug: 'zones-and-thermal-reliefs' },
+  'DRC-ZONE-ISOLATED': { title: 'Zone pours an isolated island', conceptSlug: 'zones-and-thermal-reliefs' },
   'DRC-UNSUPPORTED-ROTATION': {
     title: 'Unsupported footprint rotation',
     conceptSlug: 'reading-a-datasheet',

@@ -40,6 +40,8 @@ export const ConceptFrontmatterSchema = z.object({
   title: z.string().min(1),
   /** ERC codes that link to this article; may be empty. */
   ercCodes: z.array(z.string().min(1)),
+  /** DRC codes that link to this article; PCB articles only, optional. */
+  drcCodes: z.array(z.string().min(1)).optional(),
 });
 
 export type ConceptFrontmatter = z.infer<typeof ConceptFrontmatterSchema>;

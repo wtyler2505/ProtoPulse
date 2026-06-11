@@ -1,3 +1,4 @@
+import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -289,16 +290,25 @@ describe('findings contract', () => {
     expect([...sevs].sort((a, b) => (a === b ? 0 : a === 'error' ? -1 : 1))).toEqual(sevs);
   });
 
-  it('every DRC code maps to an existing concept article', () => {
+  it('every DRC code maps to an existing concept article, and every drcCodes frontmatter entry is a real DRC code', () => {
     const repoRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '../../..');
-    const slugs = new Set(
-      loadConceptDir(resolve(repoRoot, 'content/concepts/fundamentals')).map((c) => c.frontmatter.slug),
-    );
+    const conceptsRoot = resolve(repoRoot, 'content/concepts');
+    const concepts = readdirSync(conceptsRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .flatMap((entry) => loadConceptDir(resolve(conceptsRoot, entry.name)));
+    const slugs = new Set(concepts.map((c) => c.frontmatter.slug));
     expect(conceptFor('DRC-UNROUTED')?.conceptSlug).toBe('series-vs-parallel');
     expect(conceptFor('DRC-NOPE')).toBeUndefined();
     for (const [code, info] of Object.entries(DRC_CODES)) {
       expect(code).toMatch(/^DRC-/);
       expect(slugs.has(info.conceptSlug), `${code} → ${info.conceptSlug}`).toBe(true);
+    }
+    // The reverse direction: articles may only claim DRC codes that exist.
+    // (Lives here, not in @protopulse/content — content can't depend on drc.)
+    for (const concept of concepts) {
+      for (const code of concept.frontmatter.drcCodes ?? []) {
+        expect(DRC_CODES[code], `${concept.frontmatter.slug} references ${code}`).toBeDefined();
+      }
     }
   });
 });

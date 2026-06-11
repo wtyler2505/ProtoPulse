@@ -54,11 +54,12 @@ describe('concept seed articles', () => {
       'digital-mcu',
       'fundamentals',
       'passives',
+      'pcb',
       'power',
       'practice',
       'semiconductors',
     ]);
-    expect(concepts.length).toBeGreaterThanOrEqual(76);
+    expect(concepts.length).toBeGreaterThanOrEqual(88);
   });
 
   it('contains every specced M1 slug', () => {
@@ -170,6 +171,26 @@ describe('concept seed articles', () => {
       'soldering-driven-footprint-choices',
       'esd-handling-truth-vs-ritual',
       'how-to-ask-a-good-debugging-question',
+    ];
+    for (const slug of expected) {
+      expect(slugs.has(slug), slug).toBe(true);
+    }
+  });
+
+  it('contains every PCB block slug — the seed list is complete at 88', () => {
+    const expected = [
+      'return-paths',
+      'loop-area',
+      'trace-width-vs-current',
+      'vias-thermal-and-signal',
+      'zones-and-thermal-reliefs',
+      'courtyards',
+      'annular-rings',
+      'silk-discipline',
+      'stackup-basics',
+      'diff-pairs-at-hobby-scale',
+      'acid-traps',
+      'panelization',
     ];
     for (const slug of expected) {
       expect(slugs.has(slug), slug).toBe(true);
