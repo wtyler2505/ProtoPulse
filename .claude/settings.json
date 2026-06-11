@@ -266,16 +266,6 @@
         ]
       }
     ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "A subagent just finished. Check whether it completed its assigned task. If the subagent produced code changes: did it leave TypeScript errors or test failures? Are its file changes consistent with codebase patterns? If the subagent was read-only (exploration, research, analysis): did it actually return findings or just a trivial non-response? Flag work that is incomplete or trivially empty. Do not flag 'missing verification' when the subagent's task type doesn't warrant those checks."
-          }
-        ]
-      }
-    ],
     "TaskCompleted": [
       {
         "hooks": [
