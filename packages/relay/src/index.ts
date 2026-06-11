@@ -17,4 +17,5 @@ export {
   type ClientMessage,
   type ServerMessage,
 } from './protocol.js';
-export { createRelayServer, type RelayServer } from './server.js';
+export { createRelayServer, type RelayOpts, type RelayServer } from './server.js';
+export { createFileStorage, type RoomStorage } from './storage.js';

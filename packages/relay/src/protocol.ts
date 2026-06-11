@@ -32,6 +32,8 @@ export const clientMessageSchema = z.discriminatedUnion('kind', [
     kind: z.literal('join'),
     v: z.literal(PROTOCOL_VERSION),
     room: roomSchema,
+    /** Shared-secret auth; required when the relay was started with one. */
+    token: z.string().max(256).optional(),
     /** The client's current log — the relay unions it into the room. */
     envelopes: envelopesSchema,
   }),

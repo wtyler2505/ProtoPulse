@@ -83,6 +83,7 @@ export class SyncClient {
   private unsubscribe: (() => void) | null = null;
   private seen = new Set<string>();
   private designId: string | null = null;
+  private token: string | undefined;
   private info: SyncInfo = { ...OFF };
   private attempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -101,10 +102,11 @@ export class SyncClient {
     this.onChange(this.info);
   }
 
-  connect(url: string, room: string): void {
+  connect(url: string, room: string, token?: string): void {
     this.disconnect();
     this.wantLive = true;
     this.attempts = 0;
+    this.token = token !== undefined && token !== '' ? token : undefined;
     this.update({ ...OFF, status: 'connecting', url, room });
     this.designId = this.session.getState().designId;
     this.start();
@@ -127,7 +129,15 @@ export class SyncClient {
     socket.addEventListener('open', () => {
       const envelopes = this.localEnvelopes();
       for (const env of envelopes) this.seen.add(key(env));
-      socket.send(JSON.stringify({ kind: 'join', v: PROTOCOL_VERSION, room, envelopes }));
+      socket.send(
+        JSON.stringify({
+          kind: 'join',
+          v: PROTOCOL_VERSION,
+          room,
+          ...(this.token !== undefined ? { token: this.token } : {}),
+          envelopes,
+        }),
+      );
       this.attempts = 0;
       this.update({ status: 'on', sent: this.info.sent + envelopes.length });
       this.unsubscribe ??= this.session.subscribe(() => {
@@ -152,6 +162,10 @@ export class SyncClient {
       } else if (msg.kind === 'peers') {
         this.update({ peers: msg.count });
       } else {
+        // Relay-level errors (bad token, malformed frame) mean a retry
+        // would just fail the same way — stop instead of loop.
+        this.wantLive = false;
+        this.teardown();
         this.update({ status: 'error', error: msg.message });
       }
     });
@@ -235,7 +249,7 @@ export class SyncClient {
 // ── App-wide store ───────────────────────────────────────────────────
 
 export interface SyncUiState extends SyncInfo {
-  connect: (url: string, room: string) => void;
+  connect: (url: string, room: string, token?: string) => void;
   disconnect: () => void;
 }
 
@@ -245,8 +259,8 @@ export const useSync = create<SyncUiState>()((set) => {
   });
   return {
     ...OFF,
-    connect: (url, room) => {
-      client.connect(url, room);
+    connect: (url, room, token) => {
+      client.connect(url, room, token);
     },
     disconnect: () => {
       client.disconnect();

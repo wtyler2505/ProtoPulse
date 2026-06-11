@@ -15,6 +15,7 @@ export function SyncPanel() {
   const sync = useSync();
   const [url, setUrl] = useState(sync.url);
   const [room, setRoom] = useState('');
+  const [token, setToken] = useState('');
 
   const effectiveRoom = room.trim() === '' ? designId : room.trim();
   const live =
@@ -49,6 +50,19 @@ export function SyncPanel() {
           placeholder={designId}
         />
       </label>
+      <label className="sim-field">
+        <span className="sim-field-label">token</span>
+        <input
+          type="password"
+          value={token}
+          disabled={live}
+          onChange={(e) => {
+            setToken(e.target.value);
+          }}
+          placeholder="only if the relay requires one"
+          aria-label="relay token"
+        />
+      </label>
 
       {live ? (
         <button type="button" onClick={sync.disconnect}>
@@ -59,7 +73,7 @@ export function SyncPanel() {
           type="button"
           className="primary-button"
           onClick={() => {
-            sync.connect(url.trim() === '' ? DEFAULT_RELAY_URL : url.trim(), effectiveRoom);
+            sync.connect(url.trim() === '' ? DEFAULT_RELAY_URL : url.trim(), effectiveRoom, token.trim());
           }}
         >
           Connect
@@ -83,9 +97,11 @@ export function SyncPanel() {
       </div>
 
       <p className="muted">
-        Honest notes: the <strong>main</strong> branch syncs (other branches stay local); rooms
-        live in relay memory — every editor keeps its own copy, the relay only carries. Dropped
-        connections rejoin automatically with backoff; edits made offline union back in.
+        Honest notes: the <strong>main</strong> branch syncs (other branches stay local). Every
+        editor keeps its own copy — the relay only carries; with <code>PP_RELAY_DATA</code> set it
+        also remembers rooms across restarts, and with <code>PP_RELAY_TOKEN</code> set it requires
+        the token above. Dropped connections rejoin automatically with backoff; edits made
+        offline union back in.
       </p>
     </div>
   );
