@@ -6,6 +6,7 @@ import { pcbViewOf } from '@protopulse/renderer';
 import { CanvasHost } from './editor/CanvasHost.js';
 import { deleteSelectionOps } from './editor/tools.js';
 import { AnalystPanel } from './panels/AnalystPanel.js';
+import { ArchitectPanel } from './panels/ArchitectPanel.js';
 import { BranchPanel } from './panels/BranchPanel.js';
 import { ConceptViewer } from './panels/ConceptViewer.js';
 import { CosimPanel } from './panels/CosimPanel.js';
@@ -47,6 +48,7 @@ const SCHEMATIC_TABS: { id: TabId; label: string }[] = [
   { id: 'cosim', label: 'Co-sim' },
   { id: 'analyst', label: 'Analyst' },
   { id: 'router', label: 'Router' },
+  { id: 'architect', label: 'Architect' },
   { id: 'puzzle', label: 'Puzzles' },
   { id: 'professor', label: 'Professor' },
 ];
@@ -310,6 +312,7 @@ function SidePanel() {
       {activeTab === 'cosim' && <CosimPanel />}
       {activeTab === 'analyst' && <AnalystPanel />}
       {activeTab === 'router' && <RouterPanel />}
+      {activeTab === 'architect' && <ArchitectPanel />}
       {activeTab === 'puzzle' && <PuzzlePanel />}
       {activeTab === 'professor' && <ProfessorPanel />}
     </aside>

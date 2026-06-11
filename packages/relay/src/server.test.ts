@@ -152,7 +152,7 @@ describe('relay server', () => {
     b.send({ kind: 'ops', room: 'dup', envelopes: [env('bob', 1, 'R2')] });
     await a.waitFor('ops', (m) => m.envelopes.some((e) => e.actor === 'bob'));
     const opsToA = a.received.filter((m) => m.kind === 'ops');
-    expect(opsToA.flatMap((m) => (m.kind === 'ops' ? m.envelopes : []))).toHaveLength(1);
+    expect(opsToA.flatMap((m) => m.envelopes)).toHaveLength(1);
     a.close();
     b.close();
   });

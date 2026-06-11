@@ -79,8 +79,14 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       full closure incl. GC/merge_nets maintenance, bidirectional
       bus-membership invariants, sheet-parent cycle detection. The
       Architect's substrate exists; UI surfaces are a later slice
-- [ ] The Architect (now unblocked: buses+sheets ✓) / Buyer (still
-      needs sourcing substrate)
+- [x] The Architect (landed 2026-06-11) — fifth crew member on the
+      shared agent loop: read_structure / create_bus / create_sheet /
+      move_components, resolving nets and components by NAME. The
+      purest assembly job yet: its tools need zero host hooks — buses
+      and sheets are graph entities, so the loop's working copy is the
+      whole substrate. Structure lands in the session as one undoable
+      batch with meta {agent: 'architect'}
+- [ ] The Buyer (still needs sourcing substrate)
 - [ ] Concepts wiki growth toward the 88-article seed list
 - [ ] Review deck versioning + community-extensible review rules
 
