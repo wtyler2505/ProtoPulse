@@ -301,7 +301,18 @@ manufacturing pipeline (Vol II §H).
       DIFFERENT base is unsyncable and stays local (advisory note,
       not an error). Room storage records went branch-aware; old
       bare-envelope files load as main
-- [ ] Community library with provenance tiers
+- [x] Part packs — the community library's foundation (landed
+      2026-06-11): `pp-part-pack` JSON format in @protopulse/parts —
+      full Part records behind the complete part schema, each pack
+      confined to its own namespace (`core:` cannot be shadowed),
+      provenance tiers declared per part. The palette loads packs
+      from file (all-or-nothing on collision, reason shown), persists
+      them in localStorage across sessions, shows the tier in every
+      part's tooltip, and forgets packs on request. Honest cut: no
+      registry/hosting/sharing — that's the product decision; the
+      format means a pack can already travel as a file
+- [ ] Community library: registry/sharing (product decision — needs
+      Tyler: where packs live, who can publish, moderation)
 - [ ] Manufacturing pipeline (Vol II §H)
 
 ## Migration milestone — legacy retirement (between v0.6 and v0.7) ⬜

@@ -5,3 +5,10 @@
 export * from './types.js';
 export { PartDb, seedPartDb } from './db.js';
 export { SEED_PARTS } from './seed/index.js';
+export {
+  loadPackInto,
+  parsePartPack,
+  PART_PACK_FORMAT,
+  partPackSchema,
+  type PartPack,
+} from './pack.js';

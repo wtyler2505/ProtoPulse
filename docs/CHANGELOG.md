@@ -2,6 +2,35 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — part packs: the community library's foundation
+
+### Added
+- **`pp-part-pack` format** (@protopulse/parts): a versioned JSON
+  file of full Part records, validated by the complete part schema
+  (pin closure, 1.27 mm grid, footprint pad references). Structural
+  trust rules: every part lives in the pack's own namespace — the
+  `core:` seed namespace cannot be shadowed or extended — and
+  provenance tiers are declared per part with the note saying who
+  verified what. `loadPackInto` is all-or-nothing: any collision
+  refuses the whole pack with the reason.
+- **Palette pack loading** (@protopulse/app): "Load part pack…"
+  reads a pack file, adds its parts to the palette (tier shown in
+  every tooltip), persists the pack in localStorage so it's back
+  next session, lists loaded packs, and forgets them on request
+  (parts stay until reload — stated in the UI). Startup load
+  failures surface in the palette, never silently.
+
+### Honest cut
+- No registry, hosting, or sharing — that's a product decision
+  (where packs live, who publishes, moderation). The format is the
+  engineering half: a pack already travels as a file.
+
+### Verified
+- 4 pack tests (parse+load, namespace rules incl. core-shadowing
+  refusal, duplicate/collision all-or-nothing, full part-schema
+  enforcement) and a browser pass: load → part in palette → place it
+  (ops advance) → reload → still there, pack row listed.
+
 ## 2026-06-11 — legacy → .ppx importer (migration milestone, gate 1)
 
 ### Added
