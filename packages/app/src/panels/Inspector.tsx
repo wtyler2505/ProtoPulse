@@ -8,7 +8,7 @@ import { actorLabel, blameFor } from '../state/blame.js';
 import { getGraph, partDb, useSession } from '../state/session.js';
 import { useUi } from '../state/ui.js';
 
-import type { Component, Net } from '@protopulse/graph';
+import type { Component, Net, Zone } from '@protopulse/graph';
 
 /**
  * Selection details: ref, part, value, DNP, the nets it touches, and
@@ -204,6 +204,66 @@ function ComponentInspector({ component }: { component: Component }) {
   );
 }
 
+/** A selected copper zone: net, layer, and the pad connect style.
+ *  Switching style re-places the zone as ONE undoable batch (zones
+ *  have no patch op — remove + place under the same id, the house
+ *  pattern for geometry edits). */
+function ZoneInspector({ zone }: { zone: Zone }) {
+  const graph = getGraph(useSession.getState());
+  const netName = graph.nets.get(zone.netId)?.name ?? zone.netId;
+  const connect = zone.connect ?? 'solid';
+  const setConnect = (next: 'solid' | 'thermal') => {
+    if (next === connect) return;
+    useSession.getState().dispatch(
+      [
+        {
+          kind: 'batch',
+          label: `zone ${next} connect`,
+          ops: [
+            { kind: 'remove_zone', id: zone.id },
+            {
+              kind: 'place_zone',
+              id: zone.id,
+              netId: zone.netId,
+              layerId: zone.layerId,
+              outline: zone.outline.map((v) => ({ ...v })),
+              ...(zone.clearanceNm !== undefined ? { clearanceNm: zone.clearanceNm } : {}),
+              ...(next === 'thermal' ? { connect: next } : {}),
+            },
+          ],
+        },
+      ],
+      `zone ${next} connect`,
+    );
+  };
+  return (
+    <div>
+      <h3 className="panel-subtitle">Zone</h3>
+      <p>
+        Net <strong>{netName}</strong> on {zone.layerId} · {zone.outline.length} corners
+      </p>
+      <p className="muted">
+        Pad connect — thermal adds 4-spoke reliefs around same-net pads so joints stay
+        solderable; vias stay solid either way.
+      </p>
+      <div className="trace-mode-row">
+        {(['solid', 'thermal'] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            className={connect === mode ? 'chip chip-active' : 'chip'}
+            aria-pressed={connect === mode}
+            onClick={() => { setConnect(mode); }}
+          >
+            {mode}
+          </button>
+        ))}
+      </div>
+      <BlameSection entityId={zone.id} />
+    </div>
+  );
+}
+
 export function Inspector() {
   const opsVersion = useSession((s) => s.opsVersion);
   const branch = useSession((s) => s.branch);
@@ -215,6 +275,7 @@ export function Inspector() {
   const componentId = [...selection].find((id) => graph.components.has(id));
   const component = componentId ? graph.components.get(componentId) : undefined;
   const selectedNet = [...selection].map((id) => graph.nets.get(id)).find((n) => n !== undefined);
+  const selectedZone = [...selection].map((id) => graph.pcb.zones.get(id)).find((z) => z !== undefined);
 
   return (
     <div className="panel-body">
@@ -228,6 +289,8 @@ export function Inspector() {
           </ul>
           <BlameSection entityId={selectedNet.id} />
         </div>
+      ) : selectedZone ? (
+        <ZoneInspector zone={selectedZone} />
       ) : (
         <p className="muted">Select a symbol or wire to inspect it.</p>
       )}

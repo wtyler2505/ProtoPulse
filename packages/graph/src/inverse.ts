@@ -308,6 +308,7 @@ function placeZoneOp(zone: Zone): OpBody {
     layerId: zone.layerId,
     outline: zone.outline.map((v) => ({ ...v })),
     ...(zone.clearanceNm !== undefined ? { clearanceNm: zone.clearanceNm } : {}),
+    ...(zone.connect !== undefined ? { connect: zone.connect } : {}),
   };
 }
 

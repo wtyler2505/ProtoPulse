@@ -56,6 +56,8 @@ export type ObstacleShape =
 export interface Obstacle {
   /** Provenance label ("trace t1", "R1:1", "via v1") for messages/tests. */
   label: string;
+  /** What copper this is — pours treat same-net pads specially (thermals). */
+  kind: 'trace' | 'via' | 'pad';
   /** Net the copper belongs to; null = floating pad (still an obstacle). */
   netId: Uuid | null;
   /** Exact copper shape — the narrow-phase clearance check. */
@@ -172,8 +174,9 @@ export function makeObstacle(
   netId: Uuid | null,
   shape: ObstacleShape,
   inflateNm: number,
+  kind: 'trace' | 'via' | 'pad' = 'pad',
 ): Obstacle {
-  return { label, netId, shape, hull: hullOf(shape, inflateNm) };
+  return { label, kind, netId, shape, hull: hullOf(shape, inflateNm) };
 }
 
 /** Build an ObstacleSet from explicit obstacles (tests build sets by hand). */
@@ -214,9 +217,14 @@ export function buildObstacleSet(
   const inflateNm = clearanceNm + Math.ceil(widthNm / 2);
   const obstacles: Obstacle[] = [];
 
-  const push = (label: string, obstacleNet: Uuid | null, shape: ObstacleShape): void => {
+  const push = (
+    label: string,
+    obstacleNet: Uuid | null,
+    shape: ObstacleShape,
+    kind: 'trace' | 'via' | 'pad',
+  ): void => {
     if (netId !== undefined && obstacleNet === netId) return; // same-net copper
-    obstacles.push(makeObstacle(label, obstacleNet, shape, inflateNm));
+    obstacles.push(makeObstacle(label, obstacleNet, shape, inflateNm, kind));
   };
 
   for (const trace of [...graph.pcb.traces.values()].sort((a, b) => (a.id < b.id ? -1 : 1))) {
@@ -225,23 +233,23 @@ export function buildObstacleSet(
       const a = trace.path[i];
       const b = trace.path[i + 1];
       if (!a || !b) continue;
-      push(`trace ${trace.id}`, trace.netId, {
-        kind: 'capsule',
-        a: { ...a },
-        b: { ...b },
-        r: trace.widthNm / 2,
-      });
+      push(
+        `trace ${trace.id}`,
+        trace.netId,
+        { kind: 'capsule', a: { ...a }, b: { ...b }, r: trace.widthNm / 2 },
+        'trace',
+      );
     }
   }
 
   for (const via of [...graph.pcb.vias.values()].sort((a, b) => (a.id < b.id ? -1 : 1))) {
     if (!via.span.includes(layerId)) continue;
-    push(`via ${via.id}`, via.netId, {
-      kind: 'capsule',
-      a: { ...via.at },
-      b: { ...via.at },
-      r: via.padNm / 2,
-    });
+    push(
+      `via ${via.id}`,
+      via.netId,
+      { kind: 'capsule', a: { ...via.at }, b: { ...via.at }, r: via.padNm / 2 },
+      'via',
+    );
   }
 
   for (const componentId of [...graph.pcb.placements.keys()].sort()) {
@@ -262,7 +270,7 @@ export function buildObstacleSet(
         pad.shape === 'circle'
           ? { kind: 'capsule', a: at, b: at, r: pad.wNm / 2 }
           : { kind: 'rect', rect: { at, wNm, hNm } };
-      push(`${comp.ref}:${pad.pinKey}`, netOfPort(graph, `${componentId}:${pad.pinKey}`)?.id ?? null, shape);
+      push(`${comp.ref}:${pad.pinKey}`, netOfPort(graph, `${componentId}:${pad.pinKey}`)?.id ?? null, shape, 'pad');
     }
   }
 

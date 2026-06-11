@@ -167,6 +167,9 @@ export interface Zone {
   outline: Vec[];
   /** Pour clearance override; consumers default to the deck's. */
   clearanceNm?: Nm;
+  /** How same-net pads join the pour; absent means 'solid'. Thermal =
+   *  annular gap bridged by 4 orthogonal spokes (vias stay solid). */
+  connect?: 'solid' | 'thermal';
 }
 
 export interface Annotation {

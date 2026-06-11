@@ -19,7 +19,7 @@ Pour clearance should be at or above the fab's minimum — JLCPCB's 2-layer deck
 
 ## See it
 
-ProtoPulse's PCB editor pours copper zones with configurable clearance, and the DRC catches the two classic zone bugs: overlapping zones on different nets (DRC-ZONE-OVERLAP) and islands connected to nothing (DRC-ZONE-ISOLATED). Honest limit: zones are solid-connect today — thermal reliefs aren't implemented yet, so every pad in a pour gets the full heat-sink connection. Pour a ground zone, thread traces through it, and watch where islands form; that exercise is real even without spokes.
+ProtoPulse's PCB editor pours copper zones with configurable clearance, and the DRC catches the two classic zone bugs: overlapping zones on different nets (DRC-ZONE-OVERLAP) and islands connected to nothing (DRC-ZONE-ISOLATED). Select a zone and the Inspector offers the pad connect style: solid, or thermal — four orthogonal spokes bridging an annular gap around every same-net pad, exactly the geometry in "The numbers". Honest limits: spokes are a fixed width (roughly 0.4mm), and same-net vias stay solid-connect. Pour a ground zone, toggle it thermal, and zoom into a pad: the four corner notches are the relief.
 
 ## Go deeper
 

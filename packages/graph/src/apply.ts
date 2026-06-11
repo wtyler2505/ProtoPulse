@@ -350,6 +350,7 @@ export function applyOp(graph: DesignGraph, op: OpBody): ApplyResult {
         layerId: op.layerId,
         outline: op.outline.map((v) => ({ ...v })),
         ...(op.clearanceNm !== undefined ? { clearanceNm: op.clearanceNm } : {}),
+        ...(op.connect !== undefined ? { connect: op.connect } : {}),
       });
       return ok();
     }
