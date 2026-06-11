@@ -2,6 +2,36 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — deferred-cuts sweep 2: mouse-bites + fab/panel UI
+
+### Added
+- **Mouse-bite separation** (@protopulse/export panelizeGraph):
+  `separation: 'v-cut' | 'mouse-bites'` — copies part by a routed
+  channel (`gapNm`, default 2mm) bridged by tabs (`tabWidthNm`,
+  default 5mm; two per copy edge at 25%/75%) with 0.5mm perforations
+  at 0.75mm pitch along BOTH edges of every channel, rails included.
+  Per-piece outlines come back as `edgeSegments` for Edge.Cuts and
+  bite centers as `bites` for the drill file. The v-cut path is
+  byte-identical to before.
+- **Excellon extraHoles** (@protopulse/export): exportExcellon grows
+  an optional extra-holes parameter for the perforations. Honest
+  note: they join the one drill file — KiCad would split PTH/NPTH
+  into two files. Default stays byte-identical (golden-safe).
+- **Fab outputs + Panelize UI** (@protopulse/app Export tab): one
+  button downloads the board's fab set (F/B copper gerbers,
+  Edge.Cuts, Excellon drill, pick-and-place CSV); the Panelize
+  section (rows/cols/rail/separation/gap/tab) downloads the same
+  set for the panel. Engine refusals surface verbatim in the status
+  bar. Browser-verified: refusal without an outline, then a 2×2
+  mouse-bite panel downloading 5 files whose drill contains exactly
+  the engine's 224 perforations (32 tabs × 7 holes).
+
+### Honest cuts
+- Edge.Cuts for mouse-bite panels is outline-overlay style (outer
+  rect + per-piece rects + bite drills), not a kikit-style routed
+  contour polygon. No panel fiducials (unchanged; the graph can't
+  hold bare copper and fabs add their own).
+
 ## 2026-06-11 — deferred-cuts sweep 1: EEPROM + watchdog, per-core ADC, deck picker
 
 ### Added

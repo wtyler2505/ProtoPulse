@@ -2,8 +2,9 @@ import { materialize, validateGraph } from '@protopulse/graph';
 import { seedPartDb } from '@protopulse/parts';
 import { describe, expect, it } from 'vitest';
 
+import { exportExcellon } from './excellon.js';
 import { exportEdgeCuts, exportGerberLayer } from './gerber.js';
-import { panelizeGraph } from './panel.js';
+import { BITE_DRILL_NM, BITE_PITCH_NM, panelizeGraph } from './panel.js';
 import { exportPickPlace } from './pick-place.js';
 
 import type { OpBody } from '@protopulse/graph';
@@ -137,5 +138,114 @@ describe('panelizeGraph', () => {
     if (again.ok) {
       expect(exportGerberLayer(again.graph, parts, 'F.Cu', { date: DATE })).toBe(four);
     }
+  });
+});
+
+describe('panelizeGraph — mouse-bites', () => {
+  const GAP = 2 * MM;
+  const TAB = 5 * MM;
+  /** Holes per tab at the default 5mm width / 0.75mm pitch. */
+  const HOLES_PER_TAB = Math.floor(TAB / BITE_PITCH_NM) + 1;
+
+  it('copies separate by the routed channel; v-cut output stays empty', () => {
+    const result = panelizeGraph(graphOf(boardOps()), {
+      rows: 2,
+      cols: 2,
+      railNm: 0,
+      separation: 'mouse-bites',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.vCuts).toEqual([]);
+    // Copy 4 (row 1, col 1) offsets by board + gap in both axes.
+    expect(result.graph.pcb.placements.get('r1~P4')?.at).toEqual({
+      x: 10 * MM + 20 * MM + GAP,
+      y: 6 * MM + 12 * MM + GAP,
+    });
+    // Panel outline spans the copies plus the internal channels.
+    expect(result.graph.pcb.outline).toEqual([
+      { x: 0, y: 0 },
+      { x: 40 * MM + GAP, y: 0 },
+      { x: 40 * MM + GAP, y: 24 * MM + GAP },
+      { x: 0, y: 24 * MM + GAP },
+    ]);
+    expect(validateGraph(result.graph)).toEqual([]);
+  });
+
+  it('bites run along BOTH edges of every channel, two tabs per copy edge', () => {
+    const result = panelizeGraph(graphOf(boardOps()), {
+      rows: 2,
+      cols: 2,
+      railNm: 0,
+      separation: 'mouse-bites',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // 1 vertical channel × 2 rows + 1 horizontal channel × 2 cols,
+    // each bridged copy edge gets 2 tabs × both channel edges.
+    const tabs = (1 * 2 + 1 * 2) * 2 * 2;
+    expect(result.bites).toHaveLength(tabs * HOLES_PER_TAB);
+    // Every bite center sits exactly on a piece edge line.
+    const edgeXs = new Set([20 * MM, 20 * MM + GAP]);
+    const edgeYs = new Set([12 * MM, 12 * MM + GAP]);
+    for (const b of result.bites) {
+      expect(edgeXs.has(b.x) || edgeYs.has(b.y)).toBe(true);
+    }
+    // Per-piece outlines: 4 copies × 4 edges.
+    expect(result.edgeSegments).toHaveLength(16);
+  });
+
+  it('rails get their own strips, tabs, and bites', () => {
+    const result = panelizeGraph(graphOf(boardOps()), {
+      rows: 1,
+      cols: 2,
+      railNm: 5 * MM,
+      separation: 'mouse-bites',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Outline: rails + their channels above and below the single row.
+    expect(result.graph.pcb.outline).toEqual([
+      { x: 0, y: -(5 * MM + GAP) },
+      { x: 40 * MM + GAP, y: -(5 * MM + GAP) },
+      { x: 40 * MM + GAP, y: 12 * MM + 5 * MM + GAP },
+      { x: 0, y: 12 * MM + 5 * MM + GAP },
+    ]);
+    // Pieces: 2 copies + 2 rails = 4 rects of 4 edges.
+    expect(result.edgeSegments).toHaveLength(16);
+    // Channels: 1 vertical (1 row) + 2 rail channels (2 cols each);
+    // tabs: (1×2 + 2×2×... ) — vertical: 2 tabs × 2 edges; rails:
+    // 2 channels × 2 cols × 2 tabs × 2 edges.
+    const tabs = 1 * 2 * 2 + 2 * 2 * 2 * 2;
+    expect(result.bites).toHaveLength(tabs * HOLES_PER_TAB);
+  });
+
+  it('bites flow into the drill file as extra holes; default output is untouched', () => {
+    const single = graphOf(boardOps());
+    const result = panelizeGraph(single, {
+      rows: 1,
+      cols: 2,
+      railNm: 0,
+      separation: 'mouse-bites',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const plain = exportExcellon(result.graph, parts, { date: DATE });
+    const withBites = exportExcellon(
+      result.graph,
+      parts,
+      { date: DATE },
+      result.bites.map((at) => ({ at, drillNm: BITE_DRILL_NM })),
+    );
+    // The bite tool joins the table and each hole lands once.
+    expect(withBites).toContain('C0.500');
+    expect(plain).not.toContain('C0.500');
+    const holeLines = (s: string) => (s.match(/^X.*Y.*$/gm) ?? []).length;
+    expect(holeLines(withBites)).toBe(holeLines(plain) + result.bites.length);
+
+    // Edge.Cuts: outline + per-piece edges ride the extra-segments param.
+    const edges = exportEdgeCuts(result.graph, { date: DATE }, result.edgeSegments);
+    expect((edges?.match(/D02\*/g) ?? []).length).toBe(1 + result.edgeSegments.length);
   });
 });
