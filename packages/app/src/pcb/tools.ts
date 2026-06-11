@@ -655,7 +655,7 @@ export class PcbZoneTool {
   pointerDown(pt: Vec, env: PcbToolEnv): PcbToolResult {
     if (this.netId === null) {
       const pad = findPadAt(env.graph, env.view, env.parts, pt);
-      if (pad === null || pad.netId === null) {
+      if (!pad?.netId) {
         return { status: 'Zones pour for a net — start by clicking a pad on that net (GND, usually).' };
       }
       this.netId = pad.netId;
