@@ -19,6 +19,7 @@
     "@protopulse/export": "*",
     "@protopulse/graph": "*",
     "@protopulse/parts": "*",
+    "@protopulse/relay": "*",
     "@protopulse/renderer": "*",
     "@protopulse/route": "*",
     "@protopulse/sim": "*",

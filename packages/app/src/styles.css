@@ -637,6 +637,49 @@ input:not([type]) {
   border-color: var(--accent);
 }
 
+/* ── Sync ── */
+
+.sync-status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 0;
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #5a6a85;
+}
+
+.sync-off .sync-dot {
+  background: #5a6a85;
+}
+
+.sync-connecting .sync-dot {
+  background: var(--warn);
+}
+
+.sync-on .sync-dot {
+  background: var(--good);
+}
+
+.sync-on {
+  color: var(--good);
+}
+
+.sync-error .sync-dot,
+.sync-error {
+  color: var(--bad);
+}
+
+.sync-error .sync-dot {
+  background: var(--bad);
+}
+
 /* ── Sim ghost legend ── */
 
 .ghost-legend {

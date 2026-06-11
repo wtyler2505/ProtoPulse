@@ -1217,6 +1217,7 @@ Then open `http://localhost:5174` (the main app stays on port 5000).
 - **ERC panel** — electrical rule checks with one-click **Apply Fix** for some findings (e.g., a missing pull-up resistor), and each finding links to a short concept article that explains *why* it matters.
 - **Export** — KiCad netlist, CSV BOM, and a single-file design bundle.
 - **Share links** — *Copy share link* puts your entire design (history and branches included) into a compressed URL. No account, no upload, no server: send the link any way you like, and it opens in the other person's editor. Opening a link never silently replaces your own work — you're asked first.
+- **Live sync** — the Sync tab connects your editor to a relay room (`npm run -w @protopulse/relay dev` starts one locally). Everyone in the room sees everyone's edits within a second, with no merge dialogs — the design's operation log makes simultaneous edits combine deterministically. Your undo only undoes *your* edits.
 - **The Draftsman** — an AI assistant panel that can place and wire components for you. It uses your own Anthropic API key, asks before doing anything destructive, and explains what it's doing as it goes.
 
 ### A look at the Lab and Co-sim

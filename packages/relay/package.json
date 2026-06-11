@@ -1,0 +1,21 @@
+{
+  "name": "@protopulse/relay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The sync relay (v0.6 first server piece): a tiny in-memory WebSocket room server that unions op-log envelopes and broadcasts them. The op-log is CRDT-shaped — same envelope set means same graph — so the relay never resolves anything, it only carries.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx src/main.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@protopulse/graph": "*",
+    "ws": "^8.19.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
+  }
+}

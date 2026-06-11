@@ -21,6 +21,7 @@ import { PcbTray } from './panels/PcbTray.js';
 import { ProfessorPanel } from './panels/ProfessorPanel.js';
 import { ReviewPanel } from './panels/ReviewPanel.js';
 import { SimPanel } from './panels/SimPanel.js';
+import { SyncPanel } from './panels/SyncPanel.js';
 import { withSpringBack } from './pcb/springback.js';
 import { pcbDeleteSelectionOps } from './pcb/tools.js';
 import { asOpBodies, DEFAULT_TRACE_WIDTH_NM } from './pcb/types.js';
@@ -36,6 +37,7 @@ const SCHEMATIC_TABS: { id: TabId; label: string }[] = [
   { id: 'review', label: 'Review' },
   { id: 'branches', label: 'Branches' },
   { id: 'history', label: 'History' },
+  { id: 'sync', label: 'Sync' },
   { id: 'export', label: 'Export' },
   { id: 'draftsman', label: 'Draftsman' },
   { id: 'sim', label: 'Sim' },
@@ -288,6 +290,7 @@ function SidePanel() {
       {activeTab === 'drc' && <DrcPanel />}
       {activeTab === 'branches' && <BranchPanel />}
       {activeTab === 'history' && <HistoryPanel />}
+      {activeTab === 'sync' && <SyncPanel />}
       {activeTab === 'export' && <ExportPanel />}
       {activeTab === 'draftsman' && <DraftsmanPanel />}
       {activeTab === 'sim' && <SimPanel />}
