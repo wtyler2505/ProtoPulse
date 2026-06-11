@@ -2,6 +2,37 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — review decks + community rules: v0.3 complete
+
+### Added
+- **Versioned review decks**: runReview accepts a named deck that
+  enables/disables checks and overrides severities (a deck states its
+  DEVIATIONS — absent checks run at defaults). Reports now pin the
+  deck name + rev ('builtin' when none). ReviewDeckSchema lives in
+  @protopulse/content; content/review-decks/protopulse-standard.json
+  is the no-deviation house deck and the template community decks
+  copy.
+- **Community-extensible rules**: extraChecks — pure functions over
+  the public graph/parts types whose findings join the report as
+  first-class citizens, configurable by the deck exactly like
+  built-ins.
+
+### Honest cut
+- The ReviewPanel still runs the builtin deck; a deck-picker UI is
+  later work.
+
+### Milestone
+- **v0.3 (The Crew) is COMPLETE**: six crew members, design review as
+  a versioned artifact, three teaching depths, buses+sheets, and the
+  88-article wiki.
+
+### Verified
+- 2 new review tests (deck disable + severity override + deck/rev
+  pinning; a community no-electrolytics rule joins, sorts, and is
+  deck-silenceable) + 1 content test (the standard deck parses and
+  lists every built-in). Full test:packages green; full-tree eslint
+  0 errors.
+
 ## 2026-06-11 — the Buyer: the crew is complete (6/6)
 
 ### Added

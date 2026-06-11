@@ -19,6 +19,8 @@ export interface ReviewFinding extends Finding {
 
 export interface ReviewReport {
   tool: 'protopulse-review';
+  /** Deck name; 'builtin' when no deck was supplied. */
+  deck: string;
   deckRev: string;
   /** Injected by the caller — the report itself stays deterministic. */
   date: string;

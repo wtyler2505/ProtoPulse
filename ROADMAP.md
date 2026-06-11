@@ -102,7 +102,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       DRC codes now deep-link to real PCB articles (trace-width,
       annular-rings, zones) instead of fundamentals placeholders, via
       the new optional drcCodes frontmatter field
-- [ ] Review deck versioning + community-extensible review rules
+- [x] Review deck versioning + community-extensible review rules
+      (landed 2026-06-11): runReview takes a named, versioned deck
+      (enable/disable checks, severity overrides — a deck states its
+      deviations) and extraChecks (pure functions over public types;
+      the deck configures them exactly like built-ins). Reports pin
+      deck name + rev; content/review-decks/protopulse-standard.json
+      is the copyable template. Honest cut: the ReviewPanel still runs
+      the builtin deck — a deck picker UI is later work.
+      v0.3 IS COMPLETE.
 
 ## v0.4 — The Board 🔨
 

@@ -312,32 +312,78 @@ function checkDnpPower(ctx: ReviewCtx): ReviewFinding[] {
 
 // ── Entry point ──────────────────────────────────────────────────────
 
-const CHECKS: ((ctx: ReviewCtx) => ReviewFinding[])[] = [
-  checkErc,
-  checkDecoupling,
-  checkPowerTree,
-  checkUnverifiedParts,
-  checkSinglePinIcs,
-  checkDnpPower,
+const CHECKS: { id: string; run: (ctx: ReviewCtx) => ReviewFinding[] }[] = [
+  { id: 'erc', run: checkErc },
+  { id: 'decoupling', run: checkDecoupling },
+  { id: 'power-tree', run: checkPowerTree },
+  { id: 'unverified-parts', run: checkUnverifiedParts },
+  { id: 'single-pin-ics', run: checkSinglePinIcs },
+  { id: 'dnp-power', run: checkDnpPower },
 ];
+
+/** The built-in check ids, in run order — what a deck can configure. */
+export const REVIEW_CHECK_IDS = CHECKS.map((c) => c.id);
+
+/** Per-check deck configuration. Absent check ids run with defaults —
+ *  a deck only states its deviations. */
+export interface ReviewCheckConfig {
+  enabled?: boolean;
+  /** Force every finding from this check to one severity. */
+  severity?: 'error' | 'warn' | 'info';
+}
+
+/** A versioned review deck (structural — @protopulse/content owns the
+ *  JSON schema; anything matching this shape works). */
+export interface ReviewDeckLike {
+  deck: string;
+  rev: string;
+  checks: Record<string, ReviewCheckConfig>;
+}
+
+/** A community rule: a PURE function over the public graph/parts
+ *  types. Its findings join the report under the given id, sort with
+ *  everything else, and the deck configures it exactly like a
+ *  built-in — extension rules are first-class citizens. */
+export interface ExtraCheck {
+  id: string;
+  run: (graph: DesignGraph, parts: PartDb) => Omit<ReviewFinding, 'check'>[];
+}
 
 export interface ReviewOptions {
   /** Injected so identical designs review byte-identically across days. */
   date: string;
   designId?: string;
   branch?: string;
+  /** Deck controlling which checks run and severity overrides; absent =
+   *  every built-in at its native severity, deck name 'builtin'. */
+  deck?: ReviewDeckLike;
+  /** Community rules appended to the run. */
+  extraChecks?: ExtraCheck[];
 }
 
 export function runReview(graph: DesignGraph, parts: PartDb, opts: ReviewOptions): ReviewReport {
   const ctx = buildCtx(graph, parts);
   const findings: ReviewFinding[] = [];
-  for (const check of CHECKS) findings.push(...check(ctx));
+  const absorb = (id: string, produced: ReviewFinding[]): void => {
+    const config = opts.deck?.checks[id] ?? {};
+    if (config.enabled === false) return;
+    const severity = config.severity;
+    findings.push(...(severity !== undefined ? produced.map((f) => ({ ...f, severity })) : produced));
+  };
+  for (const check of CHECKS) absorb(check.id, check.run(ctx));
+  for (const extra of opts.extraChecks ?? []) {
+    absorb(
+      extra.id,
+      extra.run(graph, parts).map((f): ReviewFinding => ({ ...f, check: extra.id })),
+    );
+  }
   findings.sort(compareReviewFindings);
   const counts = { error: 0, warn: 0, info: 0 };
   for (const f of findings) counts[f.severity] += 1;
   return {
     tool: 'protopulse-review',
-    deckRev: DECK_REV,
+    deck: opts.deck?.deck ?? 'builtin',
+    deckRev: opts.deck?.rev ?? DECK_REV,
     date: opts.date,
     ...(opts.designId !== undefined ? { designId: opts.designId } : {}),
     ...(opts.branch !== undefined ? { branch: opts.branch } : {}),

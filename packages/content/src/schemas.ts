@@ -30,6 +30,25 @@ export const DeckSchema = z.object({
 export type Deck = z.infer<typeof DeckSchema>;
 export type DeckRules = z.infer<typeof deckRulesSchema>;
 
+// ── Review decks ─────────────────────────────────────────────────────
+
+/** A versioned review deck: which checks run, with what severity. A
+ *  deck states DEVIATIONS — absent checks run at their defaults. */
+export const ReviewDeckSchema = z.object({
+  deck: z.string().min(1),
+  rev: z.string().min(1),
+  note: z.string().min(1).optional(),
+  checks: z.record(
+    z.string().min(1),
+    z.object({
+      enabled: z.boolean().optional(),
+      severity: z.enum(['error', 'warn', 'info']).optional(),
+    }),
+  ),
+});
+
+export type ReviewDeck = z.infer<typeof ReviewDeckSchema>;
+
 // ── Sourcing catalogs ────────────────────────────────────────────────
 
 /** One vendor offer for a seed part. No prices BY DESIGN — a static
