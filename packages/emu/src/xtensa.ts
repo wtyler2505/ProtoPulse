@@ -1,12 +1,14 @@
 /**
  * Xtensa LX7 interpreter — the deliberately small subset the ESP32-S3
- * core executes: the 24-bit core instructions of the call0 ABI. No
- * register windows (ENTRY/CALL8/RETW throw), no 16-bit density forms,
- * no interrupts, no special registers. Every unimplemented encoding
+ * core executes: the 24-bit core instructions of the call0 ABI plus
+ * the 16-bit code-density forms (slice 2 — GCC emits .N forms densely,
+ * so density support is the first step toward running compiler
+ * output). No register windows (ENTRY/CALL8/RETW/RETW.N throw), no
+ * interrupts, no special registers. Every unimplemented encoding
  * throws with its address and bytes — this core refuses loudly rather
  * than guessing. Encodings + semantics verified against the Espressif
- * ISA overview and the ida-xtensa2 tables (see
- * inbox/2026-06-11-esp32s3-emulator-core-verification.md).
+ * ISA overview, the full Cadence ISA RM, and the ida-xtensa2 tables
+ * (see inbox/2026-06-11-esp32s3-emulator-core-verification.md).
  */
 
 export interface XtensaBus {
@@ -37,6 +39,71 @@ export class XtensaCpu {
     const pc = this.pc;
     const b0 = this.bus.read(pc, 1);
     const b1 = this.bus.read(pc + 1, 1);
+    const ar = this.ar;
+
+    // op0 8..13 are the 16-bit code-density formats (Cadence ISA RM).
+    const op0lo = b0 & 0xf;
+    if (op0lo >= 0x8 && op0lo <= 0xd) {
+      const w = b0 | (b1 << 8);
+      const nt = (w >> 4) & 0xf;
+      const ns = (w >> 8) & 0xf;
+      const nr = (w >> 12) & 0xf;
+      let next = pc + 2;
+      const badN = (): never => {
+        throw new Error(
+          `unimplemented Xtensa instruction at 0x${pc.toString(16)}: ` +
+            `${b0.toString(16).padStart(2, '0')} ${b1.toString(16).padStart(2, '0')} ` +
+            `(density form outside the supported set — windowed forms are refused)`,
+        );
+      };
+      switch (op0lo) {
+        case 0x8: // L32I.N at, as, imm4<<2
+          ar[nt] = this.bus.read((((ar[ns] ?? 0) >>> 0) + (nr << 2)) >>> 0, 4) | 0;
+          break;
+        case 0x9: // S32I.N
+          this.bus.write((((ar[ns] ?? 0) >>> 0) + (nr << 2)) >>> 0, 4, (ar[nt] ?? 0) >>> 0);
+          break;
+        case 0xa: // ADD.N ar, as, at
+          ar[nr] = ((ar[ns] ?? 0) + (ar[nt] ?? 0)) | 0;
+          break;
+        case 0xb: // ADDI.N ar, as, (t=0 → −1, else t)
+          ar[nr] = ((ar[ns] ?? 0) + (nt === 0 ? -1 : nt)) | 0;
+          break;
+        case 0xc: {
+          if ((w & 0x80) === 0) {
+            // MOVI.N as, −32..95 — imm7 = bits[6:4]‖bits[15:12], sign
+            // bit = AND of imm7's two top bits (RM: asymmetric range).
+            const imm7 = (((w >> 4) & 0x7) << 4) | nr;
+            ar[ns] = (imm7 & 0x60) === 0x60 ? imm7 - 128 : imm7;
+          } else {
+            // RI6: BEQZ.N / BNEZ.N — imm6 zero-extended, forward only.
+            const imm6 = (((w >> 4) & 0x3) << 4) | nr;
+            const v = ar[ns] ?? 0;
+            const taken = (w & 0x40) === 0 ? v === 0 : v !== 0;
+            if (taken) next = pc + imm6 + 4;
+          }
+          break;
+        }
+        case 0xd: {
+          if (nr === 0x0) {
+            ar[nt] = ar[ns] ?? 0; // MOV.N at, as
+          } else if (nr === 0xf && nt === 0x0) {
+            next = ar[0] ?? 0; // RET.N
+          } else if (nr === 0xf && nt === 0x3) {
+            // NOP.N
+          } else {
+            badN(); // RETW.N (windowed), ILL.N, BREAK.N…
+          }
+          break;
+        }
+        default:
+          badN();
+      }
+      this.pc = next >>> 0;
+      this.cycles++;
+      return;
+    }
+
     const b2 = this.bus.read(pc + 2, 1);
     const word = b0 | (b1 << 8) | (b2 << 16);
 
@@ -45,7 +112,6 @@ export class XtensaCpu {
     const s = (word >> 8) & 0xf;
     const r = (word >> 12) & 0xf;
     const imm8 = (word >> 16) & 0xff;
-    const ar = this.ar;
     let next = pc + 3;
 
     const bad = (): never => {

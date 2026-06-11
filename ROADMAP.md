@@ -283,9 +283,21 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       1 instr = 1 cycle, no 16-bit density forms or register windows
       (ESP-IDF app images will NOT run), no interrupts, no ADC (the
       co-sim panel offers no channels), no bootloader
-- [ ] ESP32 core, next slices: code-density (16-bit) instructions,
-      windowed ABI, interrupts, more peripherals — toward running
-      real ESP-IDF-built firmware (a long road, walked openly)
+- [x] ESP32-S3 core slice 2 — code-density instructions (landed
+      2026-06-11): the 16-bit .N forms GCC emits densely (MOV.N,
+      MOVI.N with its asymmetric −32..95 encoding, ADD.N, ADDI.N
+      with the t=0→−1 rule, L32I.N/S32I.N, BEQZ.N/BNEZ.N
+      zero-extended forward-only, RET.N/NOP.N), settled against the
+      full Cadence ISA RM where the Espressif overview's text
+      extraction garbled operand order and signedness (addendum in
+      the inbox note). The assembler grew narrow builders, true
+      mixed-width layout, and index-based *_TO control-flow
+      placeholders — hand-counted branch offsets are how today's two
+      assembler bugs happened, so the layout engine resolves targets
+      now. RETW.N (windowed) refuses loudly
+- [ ] ESP32 core, next slices: windowed ABI (ENTRY/CALL8/RETW),
+      interrupts, more peripherals — toward running real
+      ESP-IDF-built firmware (a long road, walked openly)
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 

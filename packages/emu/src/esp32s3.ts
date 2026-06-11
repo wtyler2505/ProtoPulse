@@ -22,10 +22,11 @@ import type { DigitalLevel, McuCore, McuState, McuStepResult, PinEvent } from '.
  * Honest cuts, stated plainly: SINGLE core (the S3 has two);
  * 1 instruction = 1 cycle at 240 MHz (no memory-wait or cache
  * modeling); one 480 KB SRAM window mapped at both its instruction-bus
- * and data-bus addresses (no SRAM0/cache regions); 24-bit call0-ABI
- * instruction subset only (no 16-bit density forms, no register
- * windows — real ESP-IDF firmware images will NOT run); no interrupts,
- * no ADC (the co-sim panel refuses ADC bindings for this core), no
+ * and data-bus addresses (no SRAM0/cache regions); call0-ABI
+ * instruction subset — 24-bit core forms plus the 16-bit code-density
+ * forms (slice 2), but no register windows (ENTRY/CALL8/RETW refuse),
+ * so real ESP-IDF firmware images will NOT run yet; no interrupts, no
+ * ADC (the co-sim panel refuses ADC bindings for this core), no
  * bootloader. Loading Intel-HEX refuses with a message — raw images
  * only.
  */

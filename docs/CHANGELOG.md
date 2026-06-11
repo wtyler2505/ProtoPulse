@@ -2,6 +2,35 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — ESP32-S3 slice 2: code-density instructions
+
+### Added
+- **16-bit .N forms in the interpreter** (@protopulse/emu): MOV.N,
+  MOVI.N (asymmetric −32..95, sign = AND of the top two immediate
+  bits), ADD.N, ADDI.N (t=0 encodes −1), L32I.N/S32I.N (imm4<<2),
+  BEQZ.N/BNEZ.N (zero-extended, forward-only), RET.N, NOP.N — the
+  forms GCC emits densely, i.e. the first prerequisite for ever
+  running compiler output. RETW.N and ILL.N refuse loudly.
+- **Mixed-width assembly** (xtensa-asm.ts): narrow builders carry
+  their width through a two-pass layout, and control flow gained
+  index-based placeholders (J_TO/BEQ_TO/BNEZ_TO/BEQZ_N_TO/…)
+  resolved against the real byte layout — hand-counted offsets are
+  how this morning's two assembler bugs happened, so the layout
+  engine owns targets now. BR() remains valid for uniform 24-bit
+  code.
+
+### Verification
+- Four details the Espressif overview PDF's text extraction garbled
+  (MOV.N operand order, BEQZ.N signedness, ADDI.N's −1 rule, MOVI.N's
+  range rule) were settled against the full Cadence ISA RM —
+  addendum in inbox/2026-06-11-esp32s3-emulator-core-verification.md.
+- 6 new tests: narrow byte fixtures (RET.N = 0d f0, NOP.N = 3d f0),
+  the MOV.N direction probe (would print 42 instead of 7 if
+  transposed), MOVI.N at both range ends, ADDI.N −1 + narrow
+  load/store round-trip, BEQZ.N jumping the trap, a mixed-width
+  zero-jitter blink, RET.N subroutines + the RETW.N refusal.
+  102 emu tests green.
+
 ## 2026-06-11 — ESP32-S3 core v0: the from-scratch emulator epic begins
 
 ### Added
