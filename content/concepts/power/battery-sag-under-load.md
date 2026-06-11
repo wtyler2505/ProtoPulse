@@ -14,7 +14,7 @@ You measure the battery with a meter: 4.1V, practically full. You reconnect it, 
 
 ## The numbers
 
-The simple model is exact as far as it goes: V_loaded = V_oc − I × R_internal. The catch is R_internal, which depends on chemistry, state of charge, age, and temperature — order of magnitude, hedged: small lithium cells run tens to hundreds of milliohms; alkaline AAs start around a few tenths of an ohm and climb steeply as they deplete, which is why "nearly dead" alkalines still read 1.4V unloaded. Pull an amp through half an ohm and your "4.1V" pack delivers 3.6V; the datasheet's discharge curves at multiple loads and temperatures are the honest version of this article.
+The simple model is exact as far as it goes: V_loaded = V_oc − I × R_internal. The catch is R_internal, which depends on chemistry, state of charge, age, and temperature — order of magnitude, hedged: small lithium cells run tens to hundreds of milliohms; alkaline AAs start around a few tenths of an ohm and climb steeply as they deplete, which is why "nearly dead" alkalines can still read ~1.2–1.3V unloaded while collapsing under any real load. Pull an amp through half an ohm and your "4.1V" pack delivers 3.6V; the datasheet's discharge curves at multiple loads and temperatures are the honest version of this article.
 
 ## See it
 

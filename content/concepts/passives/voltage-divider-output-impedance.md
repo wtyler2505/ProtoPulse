@@ -14,11 +14,11 @@ You divide 12V down to 6V with two 10k resistors, connect "6V" to something that
 
 ## The numbers
 
-Output impedance is R1∥R2 = R1·R2/(R1+R2), exactly — two 10k resistors give 5k. The working rule, with its limit stated: a load at least ten times the output impedance sags the output by under about 10%; for measurement-grade accuracy you want a much larger ratio or a buffer. For ADCs, many microcontroller datasheets recommend keeping source impedance around 10kΩ or less — the exact figure varies by chip and sample time, so check yours — or parking a capacitor (100nF is a common choice) directly on the ADC pin to act as a local charge reservoir. The divider also burns standing current, Vin²/(R1+R2): the eternal tradeoff is stiffness against battery drain.
+Output impedance is R1∥R2 = R1·R2/(R1+R2), exactly — two 10k resistors give 5k. The working rule, with its limit stated: a load at least ten times the output impedance sags the output by under about 10%; for measurement-grade accuracy you want a much larger ratio or a buffer. For ADCs, many microcontroller datasheets recommend keeping source impedance around 10kΩ or less — the exact figure varies by chip and sample time, so check yours — or parking a capacitor (100nF is a common choice) directly on the ADC pin to act as a local charge reservoir. The divider also burns standing power, Vin²/(R1+R2): the eternal tradeoff is stiffness against battery drain.
 
 ## See it
 
-Build the 10k/10k divider on 12V in the sim: 6.0V open. Hang a 10k load on the output and watch it drop to 4.0V — exactly what the three-resistor math predicts. Re-run with a 1k/1k divider and the same load: 5.45V. Stiffer source, smaller lie.
+Build the 10k/10k divider on 12V in the sim: 6.0V open. Hang a 10k load on the output and watch it drop to 4.0V — exactly what the three-resistor math predicts. Re-run with a 1k/1k divider and the same load: about 5.7V. Stiffer source, smaller lie.
 
 ## Go deeper
 
