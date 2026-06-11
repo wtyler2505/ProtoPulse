@@ -2,6 +2,27 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — cascading shove
+
+### Added
+- **Cascading shove** (@protopulse/route): when a shove victim's
+  detour is cornered (its endpoints swallowed by merged obstacle
+  hulls), shovable traces overlapping its corridor AABB are recruited
+  into the victim set and the whole plan re-runs — sequential
+  cumulative planning keeps every round mutually consistent by
+  construction. Rounds capped at MAX_CASCADE_ROUNDS=4; corridors that
+  stay blocked after the cap refuse honestly. Stated trade-off: the
+  corridor heuristic can over-shove a neighbor that didn't strictly
+  need to move — safe churn, undone by spring-back.
+
+### Verified
+- New test: a victim walled into a channel between two long traces (a
+  short crossing trace hits ONLY the victim) recruits both walls;
+  all three reroute and the final configuration is verified mutually
+  clear path-by-path. The single-level "nowhere to go" refusal test
+  still blocks (endpoints inside the shover's own hull — no cascade
+  can fix that). Full test:packages green; eslint 0 errors.
+
 ## 2026-06-11 — sim worker streaming: v0.2 complete
 
 ### Added

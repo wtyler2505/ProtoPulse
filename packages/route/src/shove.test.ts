@@ -189,6 +189,66 @@ describe('planShove', () => {
     }
   });
 
+  it('cascades: a victim walled into a channel recruits the walls, all reroute, all clear', () => {
+    // The victim runs down a channel between two long same-net walls
+    // (every static gap legal). A short new trace crosses ONLY the
+    // victim — but the victim's detour hull merges with both walls'
+    // hulls into one giant union that contains its endpoints, so
+    // single-level shove would refuse. Cascading recruits the walls;
+    // all three reroute and the result is mutually clear.
+    const graph = graphOf([
+      ...crossingBoard(),
+      { kind: 'connect', port: 'ra:2', newNetId: 'nw' },
+      ...(['wa', 'wb'] as const).map((id, i): OpBody => ({
+        kind: 'route_trace',
+        id,
+        netId: 'nw',
+        layerId: LAYER,
+        widthNm: 250_000,
+        path: [
+          { x: -8 * MM, y: (i === 0 ? 1 : -1) * 700_000 },
+          { x: 8 * MM, y: (i === 0 ? 1 : -1) * 700_000 },
+        ],
+      })),
+    ]);
+    const shortCross: Vec[] = [
+      { x: 0, y: -500_000 },
+      { x: 0, y: 500_000 },
+    ];
+    const result = planShove(shortCross, graph, parts, OPTS);
+    expect(result.kind).toBe('shove');
+    if (result.kind !== 'shove') return;
+    const ids = result.reroutes.map((r) => r.traceId).sort();
+    expect(ids).toEqual(['victim', 'wa', 'wb']);
+
+    // The final configuration is mutually clear: apply every reroute,
+    // commit the new trace, and re-check each path against the rest.
+    const traces = new Map(graph.pcb.traces);
+    for (const r of result.reroutes) {
+      const old = traces.get(r.traceId);
+      if (old) traces.set(r.traceId, { ...old, path: r.path });
+    }
+    traces.set('NEW', { id: 'NEW', netId: OPTS.netId, layerId: LAYER, widthNm: WIDTH, path: shortCross });
+    const after: DesignGraph = { ...graph, pcb: { ...graph.pcb, traces } };
+    expect(
+      pathIsLegal(shortCross, after, parts, { ...OPTS, ignoreTraceId: 'NEW' }),
+    ).toBe(true);
+    for (const r of result.reroutes) {
+      const t = traces.get(r.traceId);
+      if (!t) continue;
+      expect(
+        pathIsLegal(r.path, after, parts, {
+          layerId: LAYER,
+          clearanceNm: CLEARANCE,
+          widthNm: t.widthNm,
+          netId: t.netId,
+          ignoreTraceId: r.traceId,
+        }),
+        r.traceId,
+      ).toBe(true);
+    }
+  });
+
   it('blocks when a victim has nowhere to go', () => {
     // A short victim whose ENDPOINTS sit inside the new trace's
     // clearance hull: every possible reroute starts in violation, so
