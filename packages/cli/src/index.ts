@@ -5,6 +5,7 @@ import { exportBomCsv, exportKicadNetlist } from '@protopulse/export';
 import { seedPartDb } from '@protopulse/parts';
 import { Command } from 'commander';
 
+import { badgeSvg } from './badge.js';
 import { loadDesign } from './load.js';
 
 import type {Finding} from '@protopulse/erc';
@@ -38,8 +39,9 @@ program
   .option('--branch <name>', 'branch to check (default: design head)')
   .option('--format <fmt>', 'pretty | json', 'pretty')
   .option('--fail-on <severity>', 'error | warn', 'error')
+  .option('--badge <file>', 'write a shields-style SVG badge of the result')
   .description('materialize the design, validate invariants, run ERC')
-  .action((designPath: string, opts: { branch?: string; format: string; failOn: string }) => {
+  .action((designPath: string, opts: { branch?: string; format: string; failOn: string; badge?: string }) => {
     const { designId, branch, result } = loadDesign(designPath, opts.branch);
     const findings = runErc(result.graph, seedPartDb());
     const report: CheckReport = {
@@ -66,6 +68,18 @@ program
       }
       const { error, warn } = report.counts;
       process.stdout.write(`${String(error)} error(s), ${String(warn)} warning(s)\n`);
+    }
+
+    if (opts.badge !== undefined) {
+      // The badge always reflects the truth — including on failing exits.
+      writeFileSync(
+        opts.badge,
+        badgeSvg({
+          errors: report.counts.error,
+          warnings: report.counts.warn,
+          corrupt: report.invariantViolations.length > 0,
+        }),
+      );
     }
 
     if (report.invariantViolations.length > 0) process.exitCode = 2;

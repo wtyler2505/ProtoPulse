@@ -117,3 +117,39 @@ describe('protopulse export', () => {
     expect(run(['export', cleanBundle]).status).toBe(2);
   });
 });
+
+describe('protopulse check --badge', () => {
+  it('writes a green badge for a clean design', () => {
+    const out = join(tmp, 'clean.svg');
+    const { status } = run(['check', cleanBundle, '--badge', out]);
+    expect(status).toBe(0);
+    const svg = readFileSync(out, 'utf8');
+    expect(svg).toContain('ERC clean');
+    expect(svg).toContain('#4c1');
+  });
+
+  it('writes a truthful red badge even when the check fails the build', () => {
+    // A floating input: one component, one connected pin, one floating.
+    const bad = join(tmp, 'bad.ppx.json');
+    // Reuse the fixture wrapper but with a minimal failing op-log.
+    const ops = [
+      { kind: 'add_component', id: 'u9', ref: 'U9', partId: 'core:ne555', partRev: 1 },
+      { kind: 'connect', port: 'u9:2', newNetId: 'n-x' },
+    ].map((op, i) => ({ actor: 'badge-test', lamport: i + 1, ts: 0, op }));
+    writeFileSync(
+      bad,
+      JSON.stringify({
+        ...(JSON.parse(readFileSync(cleanBundle, 'utf8')) as object),
+        designId: 'badge-bad',
+        branches: [{ name: 'main', base: { branch: null, opCount: 0 }, ops }],
+        head: 'main',
+      }),
+    );
+    const out = join(tmp, 'bad.svg');
+    const { status } = run(['check', bad, '--badge', out]);
+    expect(status).toBe(1); // the build still fails…
+    const svg = readFileSync(out, 'utf8');
+    expect(svg).toContain('error'); // …and the badge tells the truth
+    expect(svg).toContain('#e05d44');
+  });
+});

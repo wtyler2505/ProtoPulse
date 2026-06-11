@@ -46,6 +46,11 @@ got any more good creative/innovative ideas?").
    canvas text overlay positioning.
 6. **CI circuit badges** — `protopulse check --badge` emits a
    shields-style SVG (ERC clean / N errors) for hardware repo READMEs.
+   ✅ SHIPPED 2026-06-11 — `packages/cli/src/badge.ts` (deterministic
+   SVG, green/amber/red incl. corrupt-log state, custom label), wired
+   as `check --badge <file>`; the badge writes even on failing exits
+   so it always tells the truth. Real artifact for the 555 fixture at
+   docs/badges/, embedded in packages/README.
    CI-for-circuits becomes visible.
 7. **Failure puzzle #1 shippable now** — a broken design + instruments +
    "annotate the root cause" checker (Vol III catalog); everything it

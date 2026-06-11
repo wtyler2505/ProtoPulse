@@ -2,6 +2,18 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — CI circuit badges
+
+### Added
+- `protopulse check --badge <file>`: a shields-style SVG of the check
+  result — green "ERC clean", amber "clean · N warnings", red
+  "N errors" or "corrupt log". Deterministic by construction (flat
+  per-char text metrics, no timestamps) and honest by design: the
+  badge writes even when the same run fails the pipeline, so a
+  hardware repo's README always shows the truth. Real artifact for the
+  555 fixture committed at docs/badges/ and embedded in
+  packages/README.
+
 ## 2026-06-11 — the sync relay: real-time collaboration
 
 ### Added

@@ -48,8 +48,8 @@ describe('deck seed', () => {
 
 describe('concept seed articles', () => {
   it('loads the full wiki across its category directories', () => {
-    expect(categoryDirs).toEqual(['fundamentals', 'passives', 'semiconductors']);
-    expect(concepts.length).toBeGreaterThanOrEqual(33);
+    expect(categoryDirs).toEqual(['digital-mcu', 'fundamentals', 'passives', 'power', 'semiconductors']);
+    expect(concepts.length).toBeGreaterThanOrEqual(51);
   });
 
   it('contains every specced M1 slug', () => {
@@ -94,6 +94,32 @@ describe('concept seed articles', () => {
       'gate-charge-and-switching-loss',
       'body-diode',
       'thermal-runaway',
+    ];
+    for (const slug of expected) {
+      expect(slugs.has(slug), slug).toBe(true);
+    }
+  });
+
+  it('contains every Power and Digital & MCU block slug', () => {
+    const expected = [
+      'linear-regulator-dropout',
+      'local-decoupling',
+      'bulk-capacitance',
+      'power-budgeting',
+      'buck-topology-intuition',
+      'boost-topology-intuition',
+      'ripple-and-how-to-measure-it',
+      'reverse-polarity-protection',
+      'inrush-limiting',
+      'brownout-and-por',
+      'battery-sag-under-load',
+      'fusing-and-ptc',
+      'debouncing',
+      'interrupts-vs-polling',
+      'boot-strap-pins',
+      'reset-circuits',
+      'crystal-loading-caps',
+      'brown-out-detectors',
     ];
     for (const slug of expected) {
       expect(slugs.has(slug), slug).toBe(true);
