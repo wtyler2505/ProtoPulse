@@ -159,7 +159,13 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       lives in the Inspector as one undoable batch. Honest cuts: fixed
       spoke width (0.4mm), same-net vias stay solid-connect. Goldens
       untouched — solid is still the default
-- [ ] Panelization; cascading shove
+- [x] Cascading shove (landed 2026-06-11): when a victim's detour is
+      cornered, shovable traces in its corridor join the victim set and
+      the WHOLE plan re-runs — every round stays mutually consistent by
+      construction, capped at MAX_CASCADE_ROUNDS. The corridor
+      heuristic can over-shove a neighbor that didn't strictly need to
+      move — safe churn, and spring-back undoes it
+- [ ] Panelization
 
 ## v0.5 — The Bridge 🔨
 
