@@ -2,6 +2,36 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — AVR timers 1/2, SPI, TWI
+
+### Added
+- **Timers 1 and 2** wired into Atmega328pCore: avr8js models drive
+  OC1A/OC2A/… through the already-wired GPIO ports, so CTC/PWM
+  waveforms land in the cycle-stamped pin-event stream like any edge.
+- **SPI master** against a host byte handler (setSpiHandler): each
+  master transfer hands MOSI to the host and clocks the reply back
+  into SPDR; avr8js still charges the configured clock cycles so SPIF
+  timing stays honest. No handler = the bus floats 0xFF, like real
+  disconnected MISO.
+- **TWI master** against a host bus handler (setTwiHandler):
+  start/connect/write/read/stop route synchronously with host acks;
+  no handler = every address NACKs — an empty bus, never a hang. Both
+  handlers survive reset(), like the ADC sampler: bench wiring, not
+  machine state.
+
+### Honest gaps (stated in the core header)
+- EEPROM and watchdog remain unwired; SPI/TWI slave mode is not
+  modeled (the host is always the far end).
+
+### Verified
+- 6 tests, all real hand-assembled firmware: timer1 CTC toggles B1
+  every exactly 100 cycles and timer2 toggles B3 every 50 (zero
+  jitter asserted); an SPI transfer round-trips MOSI 0x42 → host →
+  MISO 0xA5 → SPDR → UART; the floating-bus case reads 0xFF; a full
+  TWI write transaction logs start → connect(0x50,W) → write(0x42) →
+  stop with acks; the empty-bus case completes instead of wedging.
+  Full test:packages green; eslint 0 errors.
+
 ## 2026-06-11 — panelization: v0.4 complete
 
 ### Added

@@ -2,6 +2,8 @@ import {
   ADCMuxInputType,
   AVRADC,
   AVRIOPort,
+  AVRSPI,
+  AVRTWI,
   AVRTimer,
   AVRUSART,
   CPU,
@@ -11,7 +13,11 @@ import {
   portBConfig,
   portCConfig,
   portDConfig,
+  spiConfig,
   timer0Config,
+  timer1Config,
+  timer2Config,
+  twiConfig,
   usart0Config,
 } from 'avr8js';
 import { z } from 'zod';
@@ -31,13 +37,16 @@ import type {
 /**
  * ATmega328P @ 16 MHz (the Arduino Uno brain) on avr8js.
  *
- * Wired peripherals: timer0, GPIO ports B/C/D, USART0, and the ADC
- * (avr8js AVRADC with the voltage source replaced by a host sampler —
- * see the ADC block in buildCore for register-level semantics and
- * honest gaps). Other honest gaps — timer1/timer2, SPI, TWI, EEPROM
- * and watchdog are NOT wired. Firmware touching unwired peripherals
- * reads/writes plain RAM bytes, so it won't crash, but those
- * peripherals do nothing.
+ * Wired peripherals: timers 0/1/2 (PWM and CTC drive their OC pins
+ * through the GPIO ports, so waveforms land in the pin-event stream),
+ * GPIO ports B/C/D, USART0, SPI (master mode against a host byte
+ * handler — see setSpiHandler), TWI (master mode against a host bus
+ * handler — see setTwiHandler), and the ADC (avr8js AVRADC with the
+ * voltage source replaced by a host sampler — see the ADC block in
+ * buildCore). Honest gaps: EEPROM and the watchdog are NOT wired;
+ * SPI/TWI slave mode is not modeled (the host is always the far end).
+ * Firmware touching unwired peripherals reads/writes plain RAM bytes,
+ * so it won't crash, but those peripherals do nothing.
  */
 
 const CLOCK_HZ = 16_000_000;
@@ -65,7 +74,26 @@ interface CoreParts {
   ports: Record<PortLetter, AVRIOPort>;
   usart: AVRUSART;
   timer0: AVRTimer;
+  timer1: AVRTimer;
+  timer2: AVRTimer;
+  spi: AVRSPI;
+  twi: AVRTWI;
   adc: AVRADC;
+}
+
+/** Host side of the TWI bus — the slave(s) the master firmware talks
+ *  to. Synchronous and honest: ack booleans and read bytes come back
+ *  immediately (bus stretching is not modeled). */
+export interface TwiHostHandler {
+  /** Address phase: return true to ACK (slave present). */
+  connect(addr: number, write: boolean): boolean;
+  /** Master wrote a byte: return true to ACK. */
+  write(value: number): boolean;
+  /** Master reads a byte; `ack` is the master's planned response. */
+  read(ack: boolean): number;
+  /** Bus events, for logging/asserting. */
+  start?(repeated: boolean): void;
+  stop?(): void;
 }
 
 export interface Atmega328pOptions {
@@ -89,6 +117,8 @@ export class Atmega328pCore implements McuCore {
   private txBuffer: number[] = [];
   private adcReads: AdcReadRequest[] = [];
   private adcSampler: AdcSampler | undefined;
+  private spiHandler: ((mosiByte: number) => number) | undefined;
+  private twiHandler: TwiHostHandler | undefined;
 
   constructor(options: Atmega328pOptions = {}) {
     const aVcc = options.aVccVolts ?? 5;
@@ -154,6 +184,21 @@ export class Atmega328pCore implements McuCore {
     this.adcSampler = fn;
   }
 
+  /**
+   * Install the SPI far end: called once per master-mode byte with the
+   * MOSI value; returns the MISO byte. The transfer completes after the
+   * configured SPI clock cycles (avr8js models the timing; we supply
+   * the data). Survives reset(), like the ADC sampler — bench wiring.
+   */
+  setSpiHandler(fn: (mosiByte: number) => number): void {
+    this.spiHandler = fn;
+  }
+
+  /** Install the TWI far end (see TwiHostHandler). Survives reset(). */
+  setTwiHandler(handler: TwiHostHandler): void {
+    this.twiHandler = handler;
+  }
+
   /** ADC conversions completed since the last drain (honesty readout). */
   drainAdcReads(): AdcReadRequest[] {
     const out = this.adcReads;
@@ -210,6 +255,8 @@ export class Atmega328pCore implements McuCore {
 
     const cpu = new CPU(progMem, SRAM_BYTES);
     const timer0 = new AVRTimer(cpu, timer0Config);
+    const timer1 = new AVRTimer(cpu, timer1Config);
+    const timer2 = new AVRTimer(cpu, timer2Config);
     const ports: Record<PortLetter, AVRIOPort> = {
       B: new AVRIOPort(cpu, portBConfig),
       C: new AVRIOPort(cpu, portCConfig),
@@ -218,6 +265,38 @@ export class Atmega328pCore implements McuCore {
     const usart = new AVRUSART(cpu, usart0Config, CLOCK_HZ);
     usart.onByteTransmit = (value) => {
       this.txBuffer.push(value & 0xff);
+    };
+
+    // SPI master: the host handler IS the slave. The reply is supplied
+    // synchronously; avr8js still charges the configured clock cycles
+    // before SPIF sets, so firmware timing stays honest.
+    const spi = new AVRSPI(cpu, spiConfig, CLOCK_HZ);
+    spi.onByte = (value) => {
+      const reply = this.spiHandler ? this.spiHandler(value & 0xff) & 0xff : 0xff;
+      spi.completeTransfer(reply);
+    };
+
+    // TWI master: bus events route to the host handler; an absent
+    // handler NACKs every address — an empty bus, not a hang.
+    const twi = new AVRTWI(cpu, twiConfig, CLOCK_HZ);
+    twi.eventHandler = {
+      start: (repeated: boolean) => {
+        this.twiHandler?.start?.(repeated);
+        twi.completeStart();
+      },
+      stop: () => {
+        this.twiHandler?.stop?.();
+        twi.completeStop();
+      },
+      connectToSlave: (addr: number, write: boolean) => {
+        twi.completeConnect(this.twiHandler?.connect(addr, write) ?? false);
+      },
+      writeByte: (value: number) => {
+        twi.completeWrite(this.twiHandler?.write(value & 0xff) ?? false);
+      },
+      readByte: (ack: boolean) => {
+        twi.completeRead(this.twiHandler ? this.twiHandler.read(ack) & 0xff : 0xff);
+      },
     };
 
     /**
@@ -301,7 +380,7 @@ export class Atmega328pCore implements McuCore {
       });
     }
 
-    return { cpu, ports, usart, timer0, adc };
+    return { cpu, ports, usart, timer0, timer1, timer2, spi, twi, adc };
   }
 }
 
