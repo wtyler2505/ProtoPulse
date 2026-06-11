@@ -1,0 +1,92 @@
+{
+  "catalog": "jlc-assembly-seed",
+  "rev": "2026-06",
+  "vendor": "jlcpcb",
+  "note": "Hand-verified snapshot (sources: inbox/2026-06-11-jlc-lcsc-sourcing-seed.md). LCSC numbers and basic/extended class as of the rev date — classification and stock DRIFT; verify at order time. No prices by design: this catalog never pretends to know what parts cost today. Offer packages may differ from a design's footprint (e.g. 0603 offer vs 0805 footprint) — the Buyer surfaces the mismatch.",
+  "entries": [
+    {
+      "partId": "core:resistor",
+      "value": "10k",
+      "lcsc": "C25804",
+      "mpn": "0603WAF1002T5E",
+      "mfr": "UNI-ROYAL",
+      "package": "0603",
+      "class": "basic",
+      "description": "10kΩ ±1% 0.1W thick film chip resistor"
+    },
+    {
+      "partId": "core:resistor",
+      "value": "1k",
+      "lcsc": "C21190",
+      "mpn": "0603WAF1001T5E",
+      "mfr": "UNI-ROYAL",
+      "package": "0603",
+      "class": "basic",
+      "description": "1kΩ ±1% 0.1W thick film chip resistor"
+    },
+    {
+      "partId": "core:capacitor",
+      "value": "100n",
+      "lcsc": "C14663",
+      "mpn": "CC0603KRX7R9BB104",
+      "mfr": "YAGEO",
+      "package": "0603",
+      "class": "basic",
+      "description": "100nF ±10% 50V X7R MLCC"
+    },
+    {
+      "partId": "core:led",
+      "lcsc": "C2286",
+      "mpn": "KT-0603R",
+      "mfr": "Hubei KENTO",
+      "package": "0603",
+      "class": "basic",
+      "description": "Red LED, 1.8–2.4V forward, 20mA"
+    },
+    {
+      "partId": "core:1n4148",
+      "lcsc": "C2128",
+      "mpn": "1N4148WS",
+      "mfr": "JSCJ",
+      "package": "SOD-323",
+      "class": "basic",
+      "description": "Small-signal switching diode"
+    },
+    {
+      "partId": "core:2n3904",
+      "lcsc": "C20526",
+      "mpn": "MMBT3904",
+      "mfr": "JSCJ",
+      "package": "SOT-23",
+      "class": "basic",
+      "description": "NPN transistor, 40V 200mA (SMD 2N3904)"
+    },
+    {
+      "partId": "core:ne555",
+      "lcsc": "C7593",
+      "mpn": "NE555DR",
+      "mfr": "Texas Instruments",
+      "package": "SOIC-8",
+      "class": "extended",
+      "description": "555 timer (class assumed extended; verify)"
+    },
+    {
+      "partId": "core:bat54s",
+      "lcsc": "C47546",
+      "mpn": "BAT54S,215",
+      "mfr": "Nexperia",
+      "package": "SOT-23",
+      "class": "extended",
+      "description": "Dual series Schottky (class assumed extended; verify)"
+    },
+    {
+      "partId": "core:nmos-ao3400",
+      "lcsc": "C20917",
+      "mpn": "AO3400A",
+      "mfr": "AOS",
+      "package": "SOT-23",
+      "class": "basic",
+      "description": "N-MOSFET 30V 5.7A, logic level"
+    }
+  ]
+}

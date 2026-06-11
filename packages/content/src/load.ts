@@ -4,15 +4,16 @@ import { join } from 'node:path';
 import { load as parseYaml } from 'js-yaml';
 
 import {
+  CatalogSchema,
   ConceptFrontmatterSchema,
   DeckSchema,
   TrackStepSchema
-  
-  
-  
+
+
+
 } from './schemas.js';
 
-import type {ConceptArticle, Deck, TrackStep} from './schemas.js';
+import type {ConceptArticle, Deck, SourcingCatalog, TrackStep} from './schemas.js';
 
 /**
  * Loaders. The parse* functions are pure (string in, validated value
@@ -50,10 +51,24 @@ export function parseTrackStep(yaml: string): TrackStep {
   return TrackStepSchema.parse(parseYaml(yaml));
 }
 
+export function parseCatalog(json: string): SourcingCatalog {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch (err) {
+    throw new Error(`catalog is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  return CatalogSchema.parse(raw);
+}
+
 // ── Node-only fs helpers ─────────────────────────────────────────────
 
 export function loadDeckFile(path: string): Deck {
   return parseDeck(readFileSync(path, 'utf8'));
+}
+
+export function loadCatalogFile(path: string): SourcingCatalog {
+  return parseCatalog(readFileSync(path, 'utf8'));
 }
 
 export function loadConceptDir(dir: string): ConceptArticle[] {

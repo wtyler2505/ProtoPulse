@@ -1219,7 +1219,7 @@ Then open `http://localhost:5174` (the main app stays on port 5000).
 - **Share links** — *Copy share link* puts your entire design (history and branches included) into a compressed URL. No account, no upload, no server: send the link any way you like, and it opens in the other person's editor. Opening a link never silently replaces your own work — you're asked first.
 - **Live sync** — the Sync tab connects your editor to a relay room (`npm run -w @protopulse/relay dev` starts one locally). Everyone in the room sees everyone's edits within a second, with no merge dialogs — the design's operation log makes simultaneous edits combine deterministically. Your undo only undoes *your* edits.
 - **The Draftsman** — an AI assistant panel that can place and wire components for you. It uses your own Anthropic API key, asks before doing anything destructive, and explains what it's doing as it goes.
-- **The rest of the AI crew** — separate tabs for the **Analyst** (runs real simulations and reads the plots), the **Professor** (explains any finding from the concepts wiki), the **Router** (routes the board walk-first, shove when cornered, and won't call it done until DRC agrees), and the **Architect** (groups related nets onto named buses and organizes components into hierarchical sheets with explicit interface ports). Each one works on a private copy and lands its changes as a single undoable batch, signed with its name in the design's history.
+- **The rest of the AI crew** — separate tabs for the **Analyst** (runs real simulations and reads the plots), the **Professor** (explains any finding from the concepts wiki), the **Router** (routes the board walk-first, shove when cornered, and won't call it done until DRC agrees), the **Architect** (groups related nets onto named buses and organizes components into hierarchical sheets with explicit interface ports), and the **Buyer** (assigns verified vendor part numbers from a date-stamped catalog snapshot, prefers no-setup-fee basic parts, and never invents prices or stock). Each one works on a private copy and lands its changes as a single undoable batch, signed with its name in the design's history.
 
 ### A look at the Lab and Co-sim
 
@@ -1247,7 +1247,7 @@ The editor has a full PCB mode (toggle in the toolbar): place footprints from th
 
 ### What's coming
 
-The new editor grows in stages. Still ahead: panelization on the board side, sync-relay hardening (persistence and auth), the Buyer (the crew member that needs a sourcing substrate first), WebSerial flashing of real boards, and community/fab features. The full current status always lives in [ROADMAP.md](../ROADMAP.md).
+The new editor grows in stages. Still ahead: panelization on the board side, syncing branches other than main, live vendor sourcing for the Buyer, WebSerial flashing of real boards, and community/fab features. The full current status always lives in [ROADMAP.md](../ROADMAP.md).
 
 ---
 

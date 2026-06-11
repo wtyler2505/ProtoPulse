@@ -30,6 +30,36 @@ export const DeckSchema = z.object({
 export type Deck = z.infer<typeof DeckSchema>;
 export type DeckRules = z.infer<typeof deckRulesSchema>;
 
+// ── Sourcing catalogs ────────────────────────────────────────────────
+
+/** One vendor offer for a seed part. No prices BY DESIGN — a static
+ *  catalog that quoted prices would be lying within a week. */
+export const CatalogEntrySchema = z.object({
+  partId: z.string().min(1),
+  /** Component value this offer covers (e.g. "10k"); absent = any. */
+  value: z.string().min(1).optional(),
+  /** Vendor part number (LCSC code for jlcpcb). */
+  lcsc: z.string().min(1),
+  mpn: z.string().min(1),
+  mfr: z.string().min(1),
+  package: z.string().min(1),
+  /** JLC assembly class at the rev date — basic parts have no per-reel
+   *  setup fee. Classification drifts; the catalog note says so. */
+  class: z.enum(['basic', 'extended']),
+  description: z.string().min(1),
+});
+
+export const CatalogSchema = z.object({
+  catalog: z.string().min(1),
+  rev: z.string().min(1),
+  vendor: z.string().min(1),
+  note: z.string().min(1),
+  entries: z.array(CatalogEntrySchema).min(1),
+});
+
+export type CatalogEntry = z.infer<typeof CatalogEntrySchema>;
+export type SourcingCatalog = z.infer<typeof CatalogSchema>;
+
 // ── Concept articles ─────────────────────────────────────────────────
 
 export const ConceptFrontmatterSchema = z.object({
