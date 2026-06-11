@@ -2,6 +2,42 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — panelization: v0.4 complete
+
+### Added
+- **panelizeGraph** (@protopulse/export): the panel is a TRANSFORMED
+  GRAPH — rows×cols copies with `~P<n>`-suffixed ids/refs/nets,
+  offset copper, optional top/bottom rails, and the panel rectangle
+  as the outline. Because the output is a plain DesignGraph, every
+  existing exporter (gerber, excellon, pick-and-place) and even DRC
+  work on the panel unchanged — panelization adds geometry, not a
+  second export pipeline. V-cut scores come back alongside and ride
+  the Edge.Cuts emitter (exportEdgeCuts grew an extra-segments
+  parameter).
+- Refusals are honest: no outline, non-rectangular outline, or a
+  pointless 1×1 each come back with a reason.
+
+### Honest cuts
+- Rectangular axis-aligned outlines only (a V-cut is a straight
+  full-panel score); V-cut separation only (mouse-bites are a later
+  slice); no panel fiducials (the graph can't represent bare copper —
+  pads come from parts — and fabs like JLC add their own on request);
+  engine-level only, no panel UI yet.
+
+### Milestone
+- **v0.4 (The Board) is COMPLETE**: PCB ops, footprints, DRC, the
+  trace/via/zone/outline tools, walkaround + shove + spring-back +
+  cascading shove, thermal reliefs, Gerber/Excellon/PnP goldens,
+  Edge.Cuts, the copper-to-edge check, and panelization.
+
+### Verified
+- 4 tests: refusal trio; 2×3 replication (counts, offsets, distinct
+  ids, panel outline, V-cut count, graph invariants HOLD on the
+  panel); rails extend the outline with joint V-cuts; the panel flows
+  through the existing exporters (4× pad flashes, suffixed refs in
+  PnP, outline+V-cut strokes in Edge.Cuts, byte determinism). Full
+  test:packages green; eslint 0 errors; goldens untouched.
+
 ## 2026-06-11 — outline UI + the copper-to-edge check
 
 ### Added
