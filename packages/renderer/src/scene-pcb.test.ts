@@ -101,6 +101,7 @@ function mockGraph(opts: {
     components,
     nets: new Map(),
     buses: new Map(),
+    sheets: new Map(),
     constraints: new Map(),
     schematic: { placements: new Map(), wires: new Map() },
     pcb,

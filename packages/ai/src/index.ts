@@ -50,6 +50,8 @@ export {
 export { runProfessor, type ProfessorResult, type RunProfessorOptions } from './professor.js';
 export { createRouterRegistry, ROUTER_TOOLS } from './tools/router.js';
 export { runRouter, type RouterResult, type RunRouterOptions } from './router.js';
+export { createArchitectRegistry, ARCHITECT_TOOLS } from './tools/architect.js';
+export { runArchitect, type ArchitectResult, type RunArchitectOptions } from './architect.js';
 export {
   type PinnedDrcDigestFinding,
   type PinnedDrcFn,

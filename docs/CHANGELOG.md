@@ -2,6 +2,36 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — the Architect: fifth crew member
+
+### Added
+- **The Architect** (`@protopulse/ai`): organizes designs on the shared
+  agent loop — read_structure (sheet tree + buses + unbussed nets +
+  root components), create_bus (named bus over nets BY NAME, whole-call
+  failure on unknowns), create_sheet (add_sheet + interface ports +
+  component moves in one call, parents resolved by name), and
+  move_components (onto a sheet or back to the root). Unlike the
+  Analyst (injected sim) and the Router (injected routing stack), its
+  tools need NO host hooks — buses and sheets are graph entities, so
+  the agent loop's working copy is the whole substrate. The purest
+  proof yet of "once the substrate exists, a crew member is an
+  assembly job".
+- **Architect tab** in the editor: same live-chat shape as the
+  Analyst/Router; structure lands in the session as one undoable batch
+  with meta {agent: 'architect'} — blameable and syncable like any
+  edit.
+
+### Fixed
+- Renderer scene tests: the hand-rolled mock graph lacked the `sheets`
+  map the buses+sheets diff now iterates — 8 latent failures on main,
+  green again.
+
+### Verified
+- 6 new AI tests (tool registry + FakeProvider end-to-end story:
+  read → bus POWER → sheet PSU with interface → verify on the working
+  copy; confirm-gate honored). 116 AI / 99 renderer / 383 app tests
+  green; typecheck + lint clean; tab browser-verified.
+
 ## 2026-06-11 — buses + sheets in the graph core; wiki at 76/88
 
 ### Added
