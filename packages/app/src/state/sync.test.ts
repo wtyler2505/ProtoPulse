@@ -149,3 +149,68 @@ describe('sync (two editors, one relay)', () => {
     expect(a.info()?.error).toContain('ws://localhost:1');
   });
 });
+
+describe('sync resilience', () => {
+  it('relay death → reconnecting; relay revival → rejoin and union of offline edits', async () => {
+    server = await createRelayServer();
+    const port = server.port;
+    const url = `ws://localhost:${String(port)}`;
+
+    const mk = () => {
+      const store = createSessionStore();
+      let info: SyncInfo | null = null;
+      const client = new SyncClient(store, (i) => { info = i; }, undefined, 25);
+      return { store, client, info: () => info };
+    };
+    const a = mk();
+    const b = mk();
+    a.client.connect(url, 'resil');
+    b.client.connect(url, 'resil');
+    await until(() => a.info()?.status === 'on' && b.info()?.status === 'on', 'both online');
+
+    // The relay dies.
+    await server.close();
+    server = null;
+    await until(() => a.info()?.status === 'reconnecting', 'A noticed');
+    await until(() => b.info()?.status === 'reconnecting', 'B noticed');
+
+    // Both keep editing offline.
+    a.store.getState().dispatch(placeResistor('ra', 'R1'), 'A offline edit');
+    b.store.getState().dispatch(placeResistor('rb', 'R2', 10 * G), 'B offline edit');
+
+    // The relay comes back on the same port (empty rooms — clients refill it).
+    server = await createRelayServer({ port });
+    await until(() => a.info()?.status === 'on' && b.info()?.status === 'on', 'both rejoined', 10_000);
+
+    // Offline edits union both ways.
+    await until(
+      () =>
+        getGraph(a.store.getState()).components.has('rb') &&
+        getGraph(b.store.getState()).components.has('ra'),
+      'offline edits converged',
+      10_000,
+    );
+
+    a.client.disconnect();
+    b.client.disconnect();
+    expect(a.info()?.status).toBe('off');
+  });
+
+  it('manual disconnect during reconnecting cancels the retry loop', async () => {
+    server = await createRelayServer();
+    const url = `ws://localhost:${String(server.port)}`;
+    const store = createSessionStore();
+    let info: SyncInfo | null = null;
+    const client = new SyncClient(store, (i) => { info = i; }, undefined, 25);
+    client.connect(url, 'cancel');
+    await until(() => info?.status === 'on', 'online');
+    await server.close();
+    server = null;
+    await until(() => info?.status === 'reconnecting', 'reconnecting');
+    client.disconnect();
+    expect(info?.status).toBe('off');
+    // Stays off — no zombie timer flips it back.
+    await new Promise((r) => setTimeout(r, 200));
+    expect(info?.status).toBe('off');
+  });
+});

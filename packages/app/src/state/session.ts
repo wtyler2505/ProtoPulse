@@ -38,12 +38,26 @@ export const partDb: PartDb = seedPartDb();
 
 const ACTOR_KEY = 'pp-actor';
 
+/** Actor identity lives in sessionStorage: unique PER TAB (two tabs of
+ *  one browser are two actors — per-actor lamports stay collision-free
+ *  under sync), stable across that tab's reloads. A legacy localStorage
+ *  actor id is migrated once so a single-tab user keeps their history's
+ *  identity. */
 function loadActorId(): string {
   try {
-    const existing = globalThis.localStorage.getItem(ACTOR_KEY);
+    const existing = globalThis.sessionStorage.getItem(ACTOR_KEY);
     if (existing) return existing;
-    const id = newUuid();
-    globalThis.localStorage.setItem(ACTOR_KEY, id);
+    // First load in this tab: adopt the old device-wide id if present
+    // (and retire it so the NEXT tab mints its own), else mint fresh.
+    let id: string | null = null;
+    try {
+      id = globalThis.localStorage.getItem(ACTOR_KEY);
+      if (id !== null) globalThis.localStorage.removeItem(ACTOR_KEY);
+    } catch {
+      // localStorage unavailable — sessionStorage may still work
+    }
+    id ??= newUuid();
+    globalThis.sessionStorage.setItem(ACTOR_KEY, id);
     return id;
   } catch {
     // node / privacy mode — ephemeral actor
