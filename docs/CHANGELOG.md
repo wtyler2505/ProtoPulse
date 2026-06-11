@@ -2,6 +2,34 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — ESP32-S3 slice 7: SAR ADC1 oneshot + co-sim channels
+
+### Added
+- **SAR ADC1 oneshot** (@protopulse/emu): the SENS_SAR_MEAS1_CTRL2
+  register dance (base 0x60008800 + 0xC) that esp-idf's
+  adc_oneshot_ll and Arduino's analogRead perform — one-hot channel
+  select in SAR1_EN_PAD [30:19], the MEAS1_START_SAR (bit 17) 0→1
+  pulse starting a conversion, MEAS1_DONE_SAR (bit 16) poll, 12-bit
+  result in MEAS1_DATA_SAR. Every field position from sens_reg.h,
+  the flow from adc_ll.h.
+- **Co-sim ADC surface**: the ESP32-S3 core now implements
+  setAdcSampler/drainAdcReads (the McuCore contract), quantizing
+  clamp(round(volts / 3.3 × 4095), 0, 4095); the sampler survives
+  reset as bench wiring. The app's core registry gains ADC1's
+  channels 0–9 (= GPIO1–10 per adc_channel.h) — the ESP32-S3 was the
+  only core without analog channels in the co-sim panel.
+
+### Verified (+2 tests, emu suite at 119 green)
+- An analogRead-style conversion round-trips: channel 3 sampled at
+  1.65 V → firmware txes 2048 over UART; drainAdcReads logs exactly
+  one read on channel 3 (and draining drains).
+- Without a sampler, conversions read 0 V and still log.
+
+### Honest cuts
+- Conversions complete instantly (no SAR clock timing); attenuation
+  is not modeled (3.3 V full scale); no ADC2, no APB_SARADC DMA
+  mode. Next: TIMG, flash-cache mapping.
+
 ## 2026-06-11 — ESP32-S3 slice 6: peripheral interrupts through the matrix
 
 ### Added

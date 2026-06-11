@@ -50,6 +50,8 @@ import {
   S32I_N,
   SLLI,
   SR,
+  SRAI,
+  SRLI,
   SUB,
   WSR,
 } from './xtensa-asm.js';
@@ -725,6 +727,55 @@ describe('Esp32s3Core — peripheral interrupt lines through the matrix (slice 6
     c.uartWrite(0x55); // the line must re-assert for a second byte
     c.step(100);
     expect([...c.drainUart()]).toEqual([0x55]);
+  });
+});
+
+describe('Esp32s3Core — SAR ADC1 oneshot (slice 7)', () => {
+  const SENS = 0x60008800;
+  // SENS_SAR_MEAS1_CTRL2: EN_PAD_FORCE (bit 31) | START_FORCE (bit
+  // 18) | channel 3 one-hot in SAR1_EN_PAD ([30:19]) — exactly what
+  // adc_oneshot_ll writes — then the START_SAR (bit 17) 0→1 pulse.
+  const CTRL_CH3 = (0x80000000 | (1 << 18) | (1 << (19 + 3))) >>> 0;
+  const CTRL_CH3_START = (CTRL_CH3 | (1 << 17)) >>> 0;
+
+  const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, SENS, CTRL_CH3, CTRL_CH3_START, 0xfff], [
+    L32R(2, 0), // a2 = UART
+    L32R(3, 1), // a3 = SENS
+    L32R(4, 2),
+    S32I(4, 3, 0x0c), // start low (the adc_ll pulse's first half)
+    L32R(4, 3),
+    S32I(4, 3, 0x0c), // start 0→1 — the conversion runs
+    L32I(5, 3, 0x0c), // poll MEAS1_DONE_SAR (bit 16)
+    SRAI(6, 5, 16), // SRLI tops out at 15; the AND below drops sign fill
+    MOVI(7, 1),
+    AND(6, 6, 7),
+    BEQZ(6, BR(-5)),
+    L32R(7, 4), // 0xfff — MEAS1_DATA_SAR is the low 12 bits
+    AND(5, 5, 7),
+    S32I(5, 2, 0x00), // tx data & 0xff
+    SRLI(5, 5, 8),
+    S32I(5, 2, 0x00), // tx data >> 8
+    J(BR(-1)),
+  ]);
+
+  it('an analogRead-style conversion round-trips through the sampler', () => {
+    const c = core(image);
+    c.setAdcSampler((channel) => (channel === 3 ? 1.65 : 0));
+    c.step(120);
+    // round(1.65 / 3.3 × 4095) = 2048 → bytes [0x00, 0x08].
+    expect([...c.drainUart()]).toEqual([0x00, 0x08]);
+    const reads = c.drainAdcReads();
+    expect(reads.length).toBe(1);
+    expect(reads[0]?.channel).toBe(3);
+    expect(reads[0]?.cycle).toBeGreaterThan(0);
+    expect(c.drainAdcReads()).toEqual([]); // drained means drained
+  });
+
+  it('without a sampler every conversion reads 0 V — and still logs', () => {
+    const c = core(image);
+    c.step(120);
+    expect([...c.drainUart()]).toEqual([0, 0]);
+    expect(c.drainAdcReads().map((r) => r.channel)).toEqual([3]);
   });
 });
 

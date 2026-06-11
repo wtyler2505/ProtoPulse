@@ -78,12 +78,12 @@ export const CORE_KINDS = {
     adcChannels: [0, 1, 2, 3] as readonly number[],
   },
   // The from-scratch core: raw images and SRAM-resident ESP-IDF app
-  // images (no HEX, no flash cache), GPIO + UART0, no ADC — hence the
-  // empty channel list.
+  // images (no HEX, no flash cache), GPIO + UART0 with interrupt
+  // lines, and SAR ADC1 oneshot — channel n reads GPIO n+1.
   esp32s3: {
     ctor: 'Esp32s3Core',
     label: 'ESP32-S3 (Xtensa LX7, 240 MHz) — raw + .bin app images',
-    adcChannels: [] as readonly number[],
+    adcChannels: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as readonly number[],
   },
 } as const;
 

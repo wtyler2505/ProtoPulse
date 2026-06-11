@@ -223,3 +223,27 @@ accepted and dropped); RXFIFO_FULL is condition-derived, so INT_CLR
 on it has no lasting effect unless the FIFO is drained; level-type
 GPIO STATUS bits re-evaluate on pin/config/W1TC activity rather than
 continuously; TIMG and the other UART instances are not modeled.
+
+## Addendum: SAR ADC1 oneshot (slice 7)
+
+Sources: esp-idf v5.2 `soc/esp32s3/include/soc/sens_reg.h` +
+`hal/esp32s3/include/hal/adc_ll.h` (the flow the oneshot driver and
+analogRead actually perform) + `soc/reg_base.h` + `soc/adc_channel.h`.
+
+- DR_REG_SENS_BASE = 0x60008800; SENS_SAR_MEAS1_CTRL2_REG at +0xC.
+- Fields: MEAS1_DATA_SAR [15:0] (valid width 12 bits, masked 0xFFF by
+  the HAL), MEAS1_DONE_SAR bit 16, MEAS1_START_SAR bit 17,
+  MEAS1_START_FORCE bit 18, SAR1_EN_PAD [30:19] (one-hot — the HAL
+  writes `1 << channel`), SAR1_EN_PAD_FORCE bit 31.
+- Flow (adc_oneshot_ll_*): set both force bits for SW control, write
+  the one-hot channel, pulse MEAS1_START_SAR low→high (the 0→1 edge
+  starts the conversion), poll MEAS1_DONE_SAR, read MEAS1_DATA_SAR.
+- Channel→pin (adc_channel.h): ADC1 channel n = GPIO n+1 (channels
+  0–9 → GPIO1–10); ADC2 channels 0–9 → GPIO11–20.
+
+Emulator cuts: conversions complete instantly (no SAR clock timing);
+attenuation is not modeled — quantization is
+clamp(round(volts / 3.3 × 4095), 0, 4095) like the RP2040 core;
+ADC2 and the APB_SARADC DMA mode are not modeled; the co-sim sampler
+surface (setAdcSampler / drainAdcReads) follows the McuCore contract,
+sampler surviving reset as bench wiring.
