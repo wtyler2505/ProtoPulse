@@ -269,7 +269,7 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       AVR's 0–7), and the panel names the core it borrowed
 - [ ] ESP32 core (no off-the-shelf JS emulator — a build, not a wire-up)
 
-## v0.6 — The World 🔨 *(first slice landed early)*
+## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 
 Sync relay, community library with provenance tiers (Vol III §4),
 manufacturing pipeline (Vol II §H).

@@ -2,6 +2,49 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — documentation overhaul: every living doc audited against the code
+
+### Fixed (stale claims, verified against the repo before correcting)
+- Legacy AI tool count is **113**, not 82 (counted from the
+  `server/ai-tools/` registry) — corrected in README, USER_GUIDE,
+  AI_AGENT_GUIDE.
+- Legacy test suite is **725 files / ~30.5k tests** (verified by
+  running it), not "54 files / 1,553" — README and AI_AGENT_GUIDE now
+  state the real numbers AND the honest caveat (~421 env-dependent
+  failures on main, tracked in ROADMAP).
+- Database schema is **47 tables**, not 27 (counted in
+  `shared/schema.ts`).
+- Engine test count corrected everywhere to **1,340**; "14 concept
+  articles" → the complete 88-article wiki; "17 seed parts" → 18.
+- The repo claimed MIT in three places with a dead LICENSE link —
+  **the MIT LICENSE file now exists**.
+
+### Refreshed
+- **README.md**: engine section rewritten for the v0.1–v0.4-complete
+  reality (full capability table across all 16 packages, crew, fab
+  decks, importer), honest Quality numbers, expanded documentation
+  index, unverifiable legacy progress percentage replaced with a
+  pointer to the backlog ledger.
+- **packages/README.md**: complete 16-package map with dependencies,
+  the op-log thesis paid off in one paragraph, two new house
+  conventions written down (honest cuts stated; hardware facts
+  verified), relay dev command added.
+- **DEVELOPER.md / AI_AGENT_GUIDE.md**: engine sections brought to
+  current truth — all 16 packages, both AI stacks table, real test
+  expectations.
+- **USER_GUIDE.md**: §19 retitled from "Preview" to "The New Editor"
+  (it long outgrew a preview); intro cross-links it.
+- **DESIGN.md**: engine chapter package map and SDF-text reference
+  updated.
+- **tools/golden/README.md**: the `zoned-led` fixture joins the table.
+- **ADR index**: 0012–0016 indexed; ADR-0014's deviation noted as
+  closed (the merge resolver shipped).
+
+### Untouched on principle
+- `docs/vision/` (frozen), `docs/notebooklm.md` (Codex-owned), all
+  point-in-time records (CODEX_*/COLLAB_*/audits/qa-audit/reports),
+  CHANGELOG history below this entry.
+
 ## 2026-06-11 — multi-fab rule decks + fab picker
 
 ### Added

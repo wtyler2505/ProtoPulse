@@ -1,6 +1,6 @@
 # ADR-0014: M1 merge surfaces conflicts as data; resolver UI deferred
 
-**Status:** Accepted
+**Status:** Accepted — deviation since closed: the interactive merge resolver shipped 2026-06-10 (ROADMAP v0.1)
 **Date:** 2026-06-10
 **Deciders:** Tyler (via Milestone 1 plan approval)
 **Deviates from:** Vision Vol II §A.7 (three-pane schematic resolver, per-port decisions)

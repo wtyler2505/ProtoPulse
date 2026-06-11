@@ -83,7 +83,7 @@ Engine monorepo scripts (no database required — see [Section 15](#15-the-engin
 | Script | Description |
 |---|---|
 | `npm run check:packages` | Typecheck every `@protopulse/*` package |
-| `npm run test:packages` | Run all 346 engine tests |
+| `npm run test:packages` | Run all 1,340 engine tests |
 | `npm run -w @protopulse/app dev` | New schematic editor on `http://localhost:5174` |
 | `npm run -w @protopulse/cli build` | Build the CLI → `node packages/cli/dist/protopulse.js` |
 
@@ -1595,7 +1595,7 @@ canonical v0.2–v0.7 roadmap lives in [`ROADMAP.md`](../ROADMAP.md)
 
 ## 15. The Engine Monorepo (packages/)
 
-Milestone 1 of the ground-up redesign. A greenfield npm-workspaces monorepo at `packages/` (`@protopulse/*`) living **alongside** the legacy app — nothing in `client/ server/ shared/` was touched. The legacy app migrates onto the engine in later milestones. The canonical overview is `packages/README.md`; the `.ppx` on-disk format spec is `packages/graph/README.md`.
+The ground-up redesign: a greenfield npm-workspaces monorepo at `packages/` (`@protopulse/*`) living **alongside** the legacy app — nothing in `client/ server/ shared/` is touched by engine work. Four engine stages have shipped complete (v0.1–v0.4) with v0.5/v0.6 most of the way there; `ROADMAP.md` is the canonical, dated record, and the legacy app migrates onto the engine via the checklist-gated migration milestone. The canonical overview (all 16 packages) is `packages/README.md`; the `.ppx` on-disk format spec is `packages/graph/README.md`.
 
 ### The core idea
 
@@ -1606,20 +1606,27 @@ One canonical design graph, many projections. Every mutation is a typed operatio
 | Package | What it is |
 |---|---|
 | `@protopulse/graph` | The core: typed ops, materializer, invariants, branch/diff/merge, `.ppx` stores. **100% branch coverage gate enforced in CI.** |
-| `@protopulse/parts` | Minimal part model — pins with ERC electrical types, 1.27mm-grid symbol geometry, provenance tiers (unverified / community-tested / verified). 17 seed parts; NE555 + BAT54S pin maps datasheet-verified. |
+| `@protopulse/parts` | Minimal part model — pins with ERC electrical types, 1.27mm-grid symbol geometry, provenance tiers (unverified / community-tested / verified). 18 seed parts; NE555, BAT54S, and ESP32-S3-WROOM-1 pin maps datasheet-verified. Plus the `pp-part-pack` community format (namespaced, all-or-nothing loads). |
 | `@protopulse/erc` | 10×10 pin-conflict matrix + net rules (floating inputs, unpowered supplies, single-port nets, open-collector-missing-pull-up with an **executable** fix, current budgets). Every finding code maps to a concepts-wiki article slug. |
-| `@protopulse/export` | Deterministic KiCad legacy-E netlist + CSV BOM. Exports are contracts — `tools/golden/` holds byte-exact golden tests (fixtures: led-resistor, traffic-light-555, probe-input-protection). |
-| `@protopulse/cli` | `protopulse check <design>` / `protopulse export` — headless ERC in CI ("CI for circuits"), exit codes 0/1/2. |
-| `@protopulse/renderer` | WebGL2 retained scene graph, flatbush picking, canvas-glyph-atlas text, nm→px camera with LOD. |
-| `@protopulse/app` | The new schematic editor: place/wire (Manhattan, 4-case connect derivation), undo/redo, branch switcher with green/amber diff overlay, ERC panel with apply-fix + concept links, KiCad/BOM/bundle export, Draftsman panel. |
-| `@protopulse/ai` | Provider-agnostic agent runtime: zod tool registry with scope slices enforced at dispatch, destructive-confirm gating, `explain()` narration, budgeted context assembly. The Draftsman agent has exactly 8 tools. Anthropic adapter (default `claude-sonnet-4-6`, browser-direct with user key). Every applied op carries `meta {agent, rationale}` for op-log blame. |
-| `@protopulse/content` | Schemas + loaders for `content/`: JLCPCB 2-layer DRC rule deck (versioned JSON), 14 concept articles (builder-voiced, ≤600 words), curriculum Track 1 "First Light" steps 01–05 (YAML, machine-checkable `erc: clean` goals). |
+| `@protopulse/export` | Deterministic exports: KiCad legacy-E netlist, CSV BOM, Gerber X2 (+ Edge.Cuts), Excellon drill, pick-and-place, panelization (V-cut or mouse-bites). Exports are contracts — `tools/golden/` holds byte-exact golden tests. |
+| `@protopulse/cli` | `protopulse check <design>` / `protopulse export` / `protopulse import-legacy` — headless ERC in CI ("CI for circuits", exit codes 0/1/2) and the legacy-Postgres → `.ppx` migration path. |
+| `@protopulse/renderer` | WebGL2 retained scene graph, SDF glyph atlas (crisp text at every zoom), dual picking — GPU ID buffer for hover + flatbush R-tree for tolerance/marquee — nm→px camera with LOD. |
+| `@protopulse/app` | The editor: schematic + PCB modes, undo/redo, branches with diff overlay and interactive merge resolver, time-lapse replay, ERC/DRC/Review panels with apply-fix + concept links, sim/co-sim/firmware panels, live sync, fab + panel exports, part packs, and all six crew panels. |
+| `@protopulse/ai` | Provider-agnostic agent runtime: zod tool registry with scope slices enforced at dispatch, destructive-confirm gating, `explain()` narration, budgeted context assembly. The six-member crew — Draftsman (8 tools), Analyst, Professor, Router, Architect, Buyer — each on a scoped slice. Anthropic adapter (default `claude-sonnet-4-6`, browser-direct with user key). Every applied op carries `meta {agent, rationale}` for op-log blame. |
+| `@protopulse/content` | Schemas + loaders for `content/`: fab rule decks (JLC, OSHPark, PCBWay — versioned, web-verified), review decks, the sourcing catalog, the complete 88-article concepts wiki (builder-voiced, ≤600 words), curriculum Track 1 "First Light" (YAML, machine-checkable `erc: clean` goals). |
+| `@protopulse/drc` | Width/clearance/annular/drill/edge/zone checks against the selected fab deck — flatbush broad phase, exact distance math. Every code maps to a concept article. |
+| `@protopulse/route` | Interactive routing engine: walkaround (hull walks), shove with spring-back and cascade, zone pours (martinez clipping, thermal reliefs). |
+| `@protopulse/sim` | Graph→SPICE with model fidelity tiers; ngspice-WASM engine (eecircuit-engine); op/tran/dc/ac/noise, Monte Carlo, parameter stepping, FFT. |
+| `@protopulse/emu` | MCU cores under one `McuCore` contract: ATmega328P on avr8js (timers 0/1/2, UART, ADC, SPI, TWI, EEPROM, watchdog) and RP2040 on rp2040js — each with a hand-assembler test rig running real machine code. |
+| `@protopulse/cosim` | The firmware↔analog loop: GPIO edges as PWL sources into SPICE; solved voltages back through comparator inputs and the ADC; honest from-zero re-solve accounting. |
+| `@protopulse/review` | Design review as an artifact: versioned decks (enable/disable, severity overrides, extraChecks), executable fixes, stored reports with opened/closed deltas. |
+| `@protopulse/relay` | The sync relay: WebSocket rooms that union op-log envelopes across ALL branches; optional token auth and JSONL room persistence. The relay carries, never owns. |
 
 ### Commands
 
 ```bash
 npm run check:packages           # typecheck every package (one program)
-npm run test:packages            # all 346 package tests
+npm run test:packages            # all 1,340 package tests
 npm run -w @protopulse/app dev   # new editor → http://localhost:5174
 npm run -w @protopulse/cli build # then: node packages/cli/dist/protopulse.js check <design>
 ```

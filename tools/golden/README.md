@@ -12,6 +12,7 @@ deterministic by construction.
 |---|---|
 | `led-resistor` | Track 1 step 2: battery → 330Ω → LED, named rails |
 | `routed-led` | `led-resistor` plus a routed PCB: R1 + D1 placed top-side, LED_A net traced on F.Cu pad-to-pad with a via at the midpoint — freezes the fab exports |
+| `zoned-led` | `routed-led` plus a copper zone pour — freezes the Gerber G36/G37 region emission (solid connect, the default) |
 | `traffic-light-555` | Track 1 deliverable shape: NE555 astable driving 3 LED branches |
 | `probe-input-protection` | The Probe's channel input stage: header → 100k series → BAT54S rail clamp (pin 3 midpoint) + TVS, with a current_max constraint carrying its rationale |
 

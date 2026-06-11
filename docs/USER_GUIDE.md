@@ -2,7 +2,7 @@
 
 Welcome to **ProtoPulse** — the all-in-one electronics design tool for makers who learn by building. Whether you're wiring up your first LED circuit or designing a multi-board rover with motor controllers and microcontrollers, ProtoPulse brings everything together in one place so you never have to bounce between TinkerCad, Fritzing, KiCad, and a SPICE simulator.
 
-Architecture block diagrams, circuit schematics, BOM management, design validation, AI-assisted design with 82 tool actions, and 14+ export formats — all in your browser, with an AI that doesn't just answer questions but actually builds circuits alongside you.
+Architecture block diagrams, circuit schematics, BOM management, design validation, AI-assisted design with 113 tool actions, and 14+ export formats — all in your browser, with an AI that doesn't just answer questions but actually builds circuits alongside you. And alongside it all: the redesigned engine's editor, where a six-member AI crew works the same design graph you do (see [Section 19](#19-the-new-editor-the-engine)).
 
 This guide will walk you through every feature in detail so you can get the most out of the platform.
 
@@ -85,7 +85,7 @@ This guide will walk you through every feature in detail so you can get the most
 16. [Tips and Best Practices](#16-tips-and-best-practices)
 17. [Troubleshooting](#17-troubleshooting)
 18. [Glossary](#18-glossary)
-19. [Preview: The New Schematic Editor](#19-preview-the-new-schematic-editor)
+19. [The New Editor (the engine)](#19-the-new-editor-the-engine)
 
 ---
 
@@ -1193,9 +1193,9 @@ If you encounter a problem not listed here, try these general steps:
 
 ---
 
-## 19. Preview: The New Schematic Editor
+## 19. The New Editor (the engine)
 
-ProtoPulse is being rebuilt from the ground up on a new engine, and the first piece you can actually use landed with Milestone 1: a brand-new schematic editor. It runs **alongside** the main app — everything described in this guide keeps working exactly as before.
+ProtoPulse is being rebuilt from the ground up on a new engine, and its editor has grown far past a preview: full schematic capture, a real PCB mode, simulation and firmware co-simulation, branches with merging, live sync, and a six-member AI crew. It runs **alongside** the main app — everything described in this guide keeps working exactly as before. ([ROADMAP.md](../ROADMAP.md) is the dated record of what landed when.)
 
 ### Running it
 
