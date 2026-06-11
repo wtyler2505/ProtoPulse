@@ -267,7 +267,25 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       them); SRAM surviving is faithful. Co-sim ADC channel candidates
       now come from the borrowed core (RP2040 offers ADC0–3, not the
       AVR's 0–7), and the panel names the core it borrowed
-- [ ] ESP32 core (no off-the-shelf JS emulator — a build, not a wire-up)
+- [x] ESP32-S3 core v0 (landed 2026-06-11 — the "a build, not a
+      wire-up" epic's first slice): a FROM-SCRATCH Xtensa LX7
+      interpreter (24-bit call0-ABI subset, ~32 instructions) plus
+      the GPIO matrix (both banks, IO0–IO48, W1TS/W1TC semantics,
+      cycle-stamped pin events) and UART0 (FIFO + STATUS) at the real
+      S3 addresses — every encoding and register verified against the
+      Espressif ISA overview, the ida-xtensa2 disassembler tables,
+      and esp-idf v5.2's own headers (sources in inbox/). Tests are
+      hand-assembled machine code (xtensa-asm.ts, the asm.ts sibling)
+      with byte fixtures pinned against independent disassemblies:
+      zero-jitter blink, input mirror, high-bank pins, UART echo,
+      CALL0/RET subroutines. The Firmware panel loads raw .bin images
+      for it. Honest cuts, stated in the core header: single core,
+      1 instr = 1 cycle, no 16-bit density forms or register windows
+      (ESP-IDF app images will NOT run), no interrupts, no ADC (the
+      co-sim panel offers no channels), no bootloader
+- [ ] ESP32 core, next slices: code-density (16-bit) instructions,
+      windowed ABI, interrupts, more peripherals — toward running
+      real ESP-IDF-built firmware (a long road, walked openly)
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 
