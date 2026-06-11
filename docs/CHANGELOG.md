@@ -2,6 +2,38 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — copper zones, end to end
+
+### Added
+- **Zones/pours in four gated phases.** The graph stores INTENT (an
+  outline polygon for one net on one layer, optional clearance
+  override); the pour — outline minus foreign copper at clearance — is
+  derived everywhere it's needed. place_zone/remove_zone close fully
+  (apply/GC/inverse/diff/merge/invariants/serialize; the coverage gate
+  caught merge_nets not re-pointing zones to the survivor).
+  computePour (@protopulse/route): martinez boolean geometry, integer-
+  nm boundary, square-corner keep-outs (conservative by construction),
+  same-net copper left in the fill — that's how a zone connects.
+- **On screen + in hand**: pours render as dimmed copper UNDER traces/
+  pads (outline-only until the deck clearance loads — never a guess;
+  the scene rebuilds the moment clearance arrives), and the Zone tool
+  draws them (pad click seeds the net, corners snap, first-corner
+  click closes).
+- **DRC**: DRC-ZONE-OVERLAP (different-net zones overlapping pour
+  overlapping copper — a short) and DRC-ZONE-ISOLATED (no same-net
+  copper inside the outline — an island), both wiki-mapped.
+- **Gerber**: zone pours emit as G36/G37 regions, holes via LPC/LPD
+  polarity restored before the dark copper draws on top. Frozen in the
+  new `zoned-led` golden fixture; every pre-zone fixture stayed
+  byte-identical.
+- Honest cuts stated where they live: solid connects (thermal reliefs
+  are a later slice), square-corner keep-outs.
+
+### Verified
+- Pour math by analytic area to the nanometer; 36 DRC tests; golden
+  29/29; browser-verified: the zoned-led pour fills with clearance
+  moats around every piece of foreign copper, and DRC reports clean.
+
 ## 2026-06-11 — failure puzzle #1: the bus that never reads high
 
 ### Added

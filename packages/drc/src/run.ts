@@ -1,6 +1,7 @@
 import { compareFindings } from '@protopulse/erc';
 import { netOfPort } from '@protopulse/graph';
 import Flatbush from 'flatbush';
+import polygonClipping from 'polygon-clipping';
 
 import {
   inflateAabb,
@@ -351,11 +352,102 @@ function ruleUnrouted(ctx: DrcCtx): Finding[] {
 
 // ── Entry point ──────────────────────────────────────────────────────
 
+function orient(a: Vec, b: Vec, c: Vec): number {
+  return Math.sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
+}
+
+/** Proper segment intersection (touching counts). */
+function segsIntersect(a: Vec, b: Vec, c: Vec, d: Vec): boolean {
+  const o1 = orient(a, b, c);
+  const o2 = orient(a, b, d);
+  const o3 = orient(c, d, a);
+  const o4 = orient(c, d, b);
+  return o1 !== o2 && o3 !== o4;
+}
+
+/** Ray-cast point-in-polygon (outline implicitly closed). */
+function pointInPolygon(p: Vec, ring: readonly Vec[]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const a = ring[i];
+    const b = ring[j];
+    if (!a || !b) continue;
+    if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/**
+ * Zones: (1) two zones of DIFFERENT nets overlapping on one layer is an
+ * ERROR — zones do not carve each other (pours treat only traces/vias/
+ * pads as keep-outs), so overlapping outlines pour overlapping copper:
+ * a short at fab. (2) A zone with no same-net pad, via, or trace vertex
+ * inside its outline pours isolated copper — WARN.
+ */
+function ruleZones(ctx: DrcCtx): Finding[] {
+  const out: Finding[] = [];
+  const zones = [...ctx.graph.pcb.zones.values()].sort((a, b) => (a.id < b.id ? -1 : 1));
+
+  for (let i = 0; i < zones.length; i++) {
+    for (let j = i + 1; j < zones.length; j++) {
+      const a = zones[i];
+      const b = zones[j];
+      if (!a || a.layerId !== b?.layerId || a.netId === b.netId) continue;
+      const overlap = polygonClipping.intersection(
+        [[a.outline.map((v) => [v.x, v.y] as [number, number])]],
+        [[b.outline.map((v) => [v.x, v.y] as [number, number])]],
+      );
+      if (overlap.length === 0) continue;
+      out.push({
+        severity: 'error',
+        code: 'DRC-ZONE-OVERLAP',
+        message: `Zones ${a.id} (${ctx.graph.nets.get(a.netId)?.name ?? a.netId}) and ${b.id} (${ctx.graph.nets.get(b.netId)?.name ?? b.netId}) overlap on ${a.layerId} — their pours would short`,
+        anchors: [netAnchor(a.netId), netAnchor(b.netId)],
+      });
+    }
+  }
+
+  for (const zone of zones) {
+    let connected = false;
+    for (const item of ctx.items) {
+      if (item.netId !== zone.netId || !item.layers.includes(zone.layerId)) continue;
+      // Inside by any endpoint/center, or a capsule crossing the outline.
+      const pts =
+        item.shape.kind === 'rect' ? [item.shape.rect.at] : [item.shape.a, item.shape.b];
+      let touches = pts.some((pt) => pointInPolygon(pt, zone.outline));
+      if (!touches && item.shape.kind === 'capsule') {
+        const ring = zone.outline;
+        for (let k = 0; k < ring.length && !touches; k++) {
+          const e0 = ring[k];
+          const e1 = ring[(k + 1) % ring.length];
+          if (e0 && e1 && segsIntersect(item.shape.a, item.shape.b, e0, e1)) touches = true;
+        }
+      }
+      if (touches) {
+        connected = true;
+        break;
+      }
+    }
+    if (!connected) {
+      out.push({
+        severity: 'warn',
+        code: 'DRC-ZONE-ISOLATED',
+        message: `Zone ${zone.id} (${ctx.graph.nets.get(zone.netId)?.name ?? zone.netId}) contains no copper of its own net — it pours an island`,
+        anchors: [netAnchor(zone.netId)],
+      });
+    }
+  }
+  return out;
+}
+
 const RULES: ((ctx: DrcCtx) => Finding[])[] = [
   ruleTraceWidth,
   ruleViaGeometry,
   ruleClearance,
   ruleUnrouted,
+  ruleZones,
 ];
 
 export function runDrc(graph: DesignGraph, parts: PartDb, deck: Deck): Finding[] {

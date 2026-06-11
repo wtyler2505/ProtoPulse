@@ -10,6 +10,8 @@ export const DRC_CODES: Record<string, CodeInfo> = {
   'DRC-ANNULAR': { title: 'Annular ring too thin', conceptSlug: 'tolerance-stacking' },
   'DRC-DRILL': { title: 'Drill below the fab minimum', conceptSlug: 'tolerance-stacking' },
   'DRC-UNROUTED': { title: 'Unrouted net', conceptSlug: 'series-vs-parallel' },
+  'DRC-ZONE-OVERLAP': { title: 'Different-net zones overlap', conceptSlug: 'tolerance-stacking' },
+  'DRC-ZONE-ISOLATED': { title: 'Zone pours an isolated island', conceptSlug: 'series-vs-parallel' },
   'DRC-UNSUPPORTED-ROTATION': {
     title: 'Unsupported footprint rotation',
     conceptSlug: 'reading-a-datasheet',

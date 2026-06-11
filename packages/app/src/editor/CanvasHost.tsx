@@ -113,6 +113,7 @@ export function CanvasHost() {
     let graph: DesignGraph = getGraph(useSession.getState());
     let graphKey = '';
     let lastBranch = useSession.getState().branch;
+    let lastClearance: number | null = isPcb ? routingClearanceNm() : null;
     const scene = isPcb
       ? buildPcbScene(graph, partDb, routingClearanceNm())
       : buildScene(graph, partDb);
@@ -389,6 +390,16 @@ export function CanvasHost() {
       // pcb path falls back to a full rebuild there.
       const session = useSession.getState();
       const replay = session.replayIndex === null ? 'live' : String(session.replayIndex);
+      // The deck clearance arrives asynchronously after the scene is
+      // built — when it lands, zones gain their pours: full rebuild.
+      const clearanceNow = isPcb ? routingClearanceNm() : null;
+      if (isPcb && clearanceNow !== lastClearance) {
+        lastClearance = clearanceNow;
+        rebuildPcbScene(scene, graph, partDb, clearanceNow);
+        pickIndex.rebuild(scene);
+        overlayVersion++;
+      }
+
       const key = `${session.branch}@${String(session.opsVersion)}#${replay}`;
       if (key !== graphKey) {
         const next = getGraph(session);

@@ -302,3 +302,36 @@ describe('findings contract', () => {
     }
   });
 });
+
+describe('runDrc — zones', () => {
+  const SQUARE = (x0: number, y0: number, s: number) => [
+    { x: x0, y: y0 },
+    { x: x0 + s, y: y0 },
+    { x: x0 + s, y: y0 + s },
+    { x: x0, y: y0 + s },
+  ];
+
+  it('overlapping different-net zones on one layer is an error; same net or other layer is fine', () => {
+    const base = [...placedBoard(), routeMid];
+    const zoneA: OpBody = { kind: 'place_zone', id: 'za', netId: 'ng', layerId: 'F.Cu', outline: SQUARE(-2_000_000, -5_000_000, 6_000_000) };
+    const overlapForeign: OpBody = { kind: 'place_zone', id: 'zb', netId: 'nv', layerId: 'F.Cu', outline: SQUARE(0, -3_000_000, 6_000_000) };
+    const overlapOtherLayer: OpBody = { ...overlapForeign, id: 'zc', layerId: 'B.Cu' } as OpBody;
+    const overlapSameNet: OpBody = { ...overlapForeign, id: 'zd', netId: 'ng' } as OpBody;
+
+    // Park the zones away from pads so only the overlap rule speaks…
+    expect(codes([...base, zoneA, overlapForeign])).toContain('DRC-ZONE-OVERLAP');
+    expect(codes([...base, zoneA, overlapOtherLayer])).not.toContain('DRC-ZONE-OVERLAP');
+    expect(codes([...base, zoneA, overlapSameNet])).not.toContain('DRC-ZONE-OVERLAP');
+  });
+
+  it('a zone with no same-net copper inside pours an island — warn; one with copper is quiet', () => {
+    const base = [...placedBoard(), routeMid];
+    // ng has no placed copper at all — a far-away ng zone is an island.
+    const island: OpBody = { kind: 'place_zone', id: 'zi', netId: 'ng', layerId: 'F.Cu', outline: SQUARE(20_000_000, 20_000_000, 5_000_000) };
+    expect(codes([...base, island])).toContain('DRC-ZONE-ISOLATED');
+    // An nm zone covering the mid trace is connected — no island warning.
+    const connected: OpBody = { kind: 'place_zone', id: 'zk', netId: 'nm', layerId: 'F.Cu', outline: SQUARE(2_000_000, -2_000_000, 4_000_000) };
+    const found = codes([...base, connected]);
+    expect(found).not.toContain('DRC-ZONE-ISOLATED');
+  });
+});
