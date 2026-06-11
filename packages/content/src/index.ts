@@ -3,20 +3,26 @@
  * rule decks, concept-wiki articles, and curriculum track steps.
  */
 export {
+  CatalogEntrySchema,
+  CatalogSchema,
   ConceptFrontmatterSchema,
   DeckSchema,
   TrackStepSchema,
   deckRulesSchema,
+  type CatalogEntry,
   type ConceptArticle,
   type ConceptFrontmatter,
   type Deck,
   type DeckRules,
+  type SourcingCatalog,
   type TrackStep,
 } from './schemas.js';
 export {
+  loadCatalogFile,
   loadConceptDir,
   loadDeckFile,
   loadTrackDir,
+  parseCatalog,
   parseConceptFrontmatter,
   parseDeck,
   parseTrackStep,

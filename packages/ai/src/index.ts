@@ -53,6 +53,13 @@ export { runRouter, type RouterResult, type RunRouterOptions } from './router.js
 export { createArchitectRegistry, ARCHITECT_TOOLS } from './tools/architect.js';
 export { runArchitect, type ArchitectResult, type RunArchitectOptions } from './architect.js';
 export {
+  createBuyerRegistry,
+  BUYER_TOOLS,
+  type CatalogLike,
+  type CatalogOfferLike,
+} from './tools/buyer.js';
+export { runBuyer, type BuyerResult, type RunBuyerOptions } from './buyer.js';
+export {
   type PinnedDrcDigestFinding,
   type PinnedDrcFn,
   type PinnedRatsnestFn,

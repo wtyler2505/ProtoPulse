@@ -35,6 +35,7 @@ export type TabId =
   | 'analyst'
   | 'router'
   | 'architect'
+  | 'buyer'
   | 'puzzle'
   | 'professor';
 export type CameraCommand = { kind: 'fit' } | { kind: 'center'; at: Vec };

@@ -86,7 +86,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       and sheets are graph entities, so the loop's working copy is the
       whole substrate. Structure lands in the session as one undoable
       batch with meta {agent: 'architect'}
-- [ ] The Buyer (still needs sourcing substrate)
+- [x] The Buyer (landed 2026-06-11) — SIXTH crew member: the crew is
+      complete. read_bom / find_offers / assign_sourcing /
+      sourcing_report over a rev-stamped catalog snapshot
+      (content/catalog/jlc-assembly-seed.json: 9 hand-web-verified
+      LCSC numbers with basic/extended class, findings in inbox/). No
+      prices or stock BY DESIGN — a static catalog quoting those would
+      be lying within a week; the Buyer reasons in assembly classes
+      and says "verify at order time". Assignments are reviewable ops
+      (fields.lcsc/mpn), one undoable batch, meta {agent: 'buyer'}.
+      Live vendor APIs (the vision's "in stock at JLC right now")
+      remain v0.6+ work on the manufacturing pipeline
 - [x] Concepts wiki COMPLETE at 88/88 (final PCB tranche landed
       2026-06-11): all nine categories of the Vol III §2 seed list.
       DRC codes now deep-link to real PCB articles (trace-width,

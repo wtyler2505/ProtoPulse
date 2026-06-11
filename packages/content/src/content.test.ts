@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { ERC_CODES } from '@protopulse/erc';
 import { describe, expect, it } from 'vitest';
 
-import { loadConceptDir, loadDeckFile, loadTrackDir, parseConceptFrontmatter, parseDeck, parseTrackStep } from './load.js';
+import { loadCatalogFile, loadConceptDir, loadDeckFile, loadTrackDir, parseCatalog, parseConceptFrontmatter, parseDeck, parseTrackStep } from './load.js';
 
 // packages/content/src → repo root.
 const repoRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '../../..');
@@ -43,6 +43,31 @@ describe('deck seed', () => {
   it('rejects decks with missing rule keys', () => {
     expect(() => parseDeck('{"deck":"x","rev":"1","rules":{},"classOverrides":{}}')).toThrow();
     expect(() => parseDeck('not json')).toThrow(/not valid JSON/);
+  });
+});
+
+describe('sourcing catalog seed', () => {
+  it('parses, is rev-stamped, states its honesty note, and quotes no prices', () => {
+    const catalog = loadCatalogFile(resolve(repoRoot, 'content/catalog/jlc-assembly-seed.json'));
+    expect(catalog.vendor).toBe('jlcpcb');
+    expect(catalog.rev).toMatch(/^\d{4}-\d{2}$/);
+    expect(catalog.note).toContain('verify at order time');
+    expect(catalog.entries.length).toBeGreaterThanOrEqual(9);
+    for (const entry of catalog.entries) {
+      expect(entry.lcsc).toMatch(/^C\d+$/);
+      expect(entry.partId).toMatch(/^core:/);
+    }
+    // No prices by design — a static catalog with prices would be lying.
+    // (The note may TALK about prices; the entries must not quote any.)
+    const raw = JSON.stringify(catalog.entries);
+    expect(raw).not.toMatch(/price|usd|\$\d/i);
+  });
+
+  it('rejects catalogs with malformed entries', () => {
+    expect(() => parseCatalog('not json')).toThrow(/not valid JSON/);
+    expect(() =>
+      parseCatalog('{"catalog":"x","rev":"1","vendor":"v","note":"n","entries":[]}'),
+    ).toThrow();
   });
 });
 

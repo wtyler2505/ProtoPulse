@@ -2,6 +2,42 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — the Buyer: the crew is complete (6/6)
+
+### Added
+- **The Buyer** (`@protopulse/ai`): sixth and final crew member from
+  the vision's roster. read_bom (lines grouped by part + canonical
+  value, so 10k ≡ 10K), find_offers (by ref or partId+value),
+  assign_sourcing (writes fields.lcsc/mpn as reviewable ops — the
+  vision's "Buyer-proposed substitutions, each one a reviewable op";
+  guards part/value mismatches and preserves existing fields), and
+  sourcing_report (basic vs extended counts, unsourced refs — numbers
+  about classes, never about money).
+- **Sourcing catalog seed** (`content/catalog/jlc-assembly-seed.json`
+  + CatalogSchema/loaders in @protopulse/content): 9 LCSC part
+  numbers hand-verified against LCSC/JLCPCB product pages this
+  session (findings + sources routed through inbox/ per the
+  verification protocol). NO prices or stock by design — a static
+  catalog quoting those would be lying within a week; the rev stamp
+  and "verify at order time" note say so, and a test enforces that
+  entries stay price-free.
+- **Buyer tab** in the editor: Analyst-pattern live chat; assignments
+  land as one undoable batch with meta {agent: 'buyer'}.
+
+### Honest cuts
+- Live vendor APIs ("in stock at JLC right now") are v0.6+
+  manufacturing-pipeline work; two catalog classes are marked
+  "assumed" pending confirmation; offer packages may differ from the
+  design's generic footprints (0603 offers vs 0805 seeds) and the
+  Buyer is told to surface that, not hide it.
+
+### Verified
+- 6 AI tests (tool guards + FakeProvider story: read → offers →
+  assign to both 10k refs → report sees the working copy; confirm
+  gate) and 2 content tests (real catalog parses, rev-stamped,
+  price-free). Full test:packages green; full-tree eslint 0 errors;
+  Buyer tab browser-verified.
+
 ## 2026-06-11 — Firmware-panel core picker
 
 ### Added
