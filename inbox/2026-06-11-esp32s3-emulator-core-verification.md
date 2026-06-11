@@ -281,3 +281,26 @@ T0 only (no T1, no TIMG1, no watchdogs); APB clock source only (no
 XTAL); UPDATE captures instantly (the update bit always reads 0);
 54-bit wrap handled with float-safe modulo (the ulp at 2^54 is 4 —
 caught by the first test draft when (x%M+M)%M rounded 2 to 0).
+
+## Addendum: flash-cache (IROM/DROM) windows (slice 9)
+
+Sources: esp-idf v5.2 `soc/esp32s3/include/soc/soc.h` +
+`soc/esp32s3/include/soc/ext_mem_defs.h` (two headers, same values):
+
+- SOC_IROM_LOW 0x42000000, SOC_IROM_HIGH 0x44000000 (instruction
+  bus through the cache) = SOC_IRAM0_CACHE_ADDRESS_LOW/HIGH.
+- SOC_DROM_LOW 0x3C000000, SOC_DROM_HIGH 0x3E000000 (data bus
+  through the cache) = SOC_DRAM0_CACHE_ADDRESS_LOW/HIGH.
+- App-image semantics: segments whose load addresses fall in these
+  windows are MAPPED by the second-stage bootloader's MMU setup, not
+  copied to RAM — the vaddr in the segment header is the
+  post-mapping address (this is how esptool/IDF lay out
+  .flash.text/.flash.rodata).
+
+Emulator approach: those segments are served read-only at their
+vaddrs straight from the loaded image — the net effect of the MMU
+mapping plus a fully-warmed cache. Cuts: XIP reads cost 1 cycle like
+everything else (no cache-miss/line timing); the MMU registers are
+not modeled (remapping at runtime is not possible); writes through
+the cache windows refuse; reads inside a window but outside any
+mapped segment refuse loudly.

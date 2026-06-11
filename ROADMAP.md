@@ -373,8 +373,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       autoreload alarm counting 3 with the gptimer re-arm dance, and
       a one-shot alarm firing exactly once. Cuts: T0 only (no
       T1/TIMG1/watchdogs), APB source only
-- [ ] ESP32 core, next slices: flash-cache mapping — toward running
-      real IDF-built firmware (a long road, walked openly)
+- [x] ESP32-S3 core slice 9 — flash-mapped IROM/DROM segments
+      (landed 2026-06-11): app-image segments in the cache windows
+      (IROM 0x42000000–0x44000000, DROM 0x3C000000–0x3E000000, per
+      soc.h/ext_mem_defs.h) are served read-only at their vaddrs —
+      the net effect of the bootloader's MMU setup plus a warmed
+      cache, which is exactly what those segment headers mean
+      (.flash.text/.flash.rodata are mapped, not copied). Proven: an
+      XIP image with NO SRAM segment boots from IROM, reads a const
+      from DROM, and survives reset; cache-window writes and
+      unmapped-window reads refuse loudly. Cuts: 1-cycle XIP reads
+      (no cache-miss timing), no MMU registers (no runtime remap)
+- [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
+      firmware: ROM functions, RTC/eFuse/SYSTEM registers, second
+      core, remaining peripherals — walked openly, slice by slice
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 

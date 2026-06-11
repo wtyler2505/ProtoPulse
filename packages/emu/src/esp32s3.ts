@@ -45,10 +45,15 @@ import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuSt
  * the 80 MHz APB clock with its 16-bit prescaler, UPDATE-latched
  * LO/HI reads, LOAD, and the alarm that hardware auto-disables on
  * fire, exactly the behavior gptimer's ISR re-arms around).
- * Interrupt-driven, analog, and gptimer-style firmware patterns run
- * end-to-end — but there is still no flash cache (flash-mapped image
- * segments refuse), no ADC2/DMA mode, no TIMG0 T1/TIMG1/watchdogs,
- * and no XTAL clock source for the timer (APB only), so real IDF
+ * Flash-mapped app-image segments (slice 9) are served read-only at
+ * their IROM/DROM vaddrs — the net effect of the bootloader's MMU
+ * setup plus a fully-warmed cache (XIP reads cost 1 cycle like
+ * everything else; no cache-miss timing, no MMU registers, no SPI
+ * flash writes). Interrupt-driven, analog, gptimer-style, and
+ * flash-resident firmware patterns run end-to-end — but there are
+ * still no ROM functions, no RTC/eFuse/SYSTEM registers, no second
+ * core, no ADC2/DMA mode, no TIMG0 T1/TIMG1/watchdogs, and no XTAL
+ * clock source for the timer (APB only), so full IDF/FreeRTOS
  * firmware does NOT run yet. Loading Intel-HEX refuses with a
  * message.
  */
@@ -149,6 +154,17 @@ const T0_MASK = 2 ** 54; // the counter is 54 bits wide
 // bit 16, MEAS1_START_SAR bit 17 (a 0→1 edge starts a conversion),
 // MEAS1_START_FORCE bit 18, SAR1_EN_PAD [30:19] (one-hot channel
 // select, written as 1<<channel), SAR1_EN_PAD_FORCE bit 31.
+// Flash-cache-mapped windows (soc.h SOC_IROM/DROM_*, confirmed by
+// ext_mem_defs.h). App-image segments with load addresses here are
+// MAPPED by the bootloader's MMU setup, not copied — the vaddr in
+// the image header IS the post-mapping address. The emulator serves
+// those segments directly at their vaddrs, read-only, which is the
+// net effect of a fully-warmed cache.
+const IROM_LOW = 0x42000000;
+const IROM_HIGH = 0x44000000;
+const DROM_LOW = 0x3c000000;
+const DROM_HIGH = 0x3e000000;
+
 const SENS_BASE = 0x60008800;
 const SENS_SAR_MEAS1_CTRL2 = 0x0c;
 const MEAS1_DONE_SAR = 1 << 16;
@@ -190,6 +206,8 @@ export class Esp32s3Core implements McuCore {
   readonly clockHz = CLOCK_HZ;
 
   private segments: LoadedSegment[] = [];
+  /** Flash-mapped (IROM/DROM) segments — served read-only in place. */
+  private romSegments: LoadedSegment[] = [];
   private entry = IRAM_BASE;
   private sram = new Uint8Array(SRAM_BYTES);
   private cpu: XtensaCpu;
@@ -251,12 +269,14 @@ export class Esp32s3Core implements McuCore {
     if (image.length > 0 && image[0] === ESP_IMAGE_MAGIC) {
       const parsed = this.parseEspImage(image);
       this.segments = parsed.segments;
+      this.romSegments = parsed.romSegments;
       this.entry = parsed.entry;
     } else {
       if (image.length > SRAM_BYTES) {
         throw new Error(`image is ${String(image.length)} bytes; the modeled SRAM window is ${String(SRAM_BYTES)}`);
       }
       this.segments = [{ addr: IRAM_BASE, data: new Uint8Array(image) }];
+      this.romSegments = [];
       this.entry = IRAM_BASE;
     }
     this.reset();
@@ -269,7 +289,7 @@ export class Esp32s3Core implements McuCore {
    * checksum byte — XOR of all segment data seeded 0xEF — sitting as
    * the LAST byte of the 16-byte-aligned image body.
    */
-  private parseEspImage(image: Uint8Array): { segments: LoadedSegment[]; entry: number } {
+  private parseEspImage(image: Uint8Array): { segments: LoadedSegment[]; romSegments: LoadedSegment[]; entry: number } {
     const u32 = (off: number): number =>
       (((image[off] ?? 0) | ((image[off + 1] ?? 0) << 8) | ((image[off + 2] ?? 0) << 16) | ((image[off + 3] ?? 0) << 24)) >>> 0);
     if (image.length < ESP_IMAGE_HEADER_BYTES) {
@@ -285,10 +305,11 @@ export class Esp32s3Core implements McuCore {
       throw new Error(`ESP image declares ${String(segmentCount)} segments; expected 1..${String(ESP_IMAGE_MAX_SEGMENTS)}`);
     }
     const entry = u32(4);
-    if (this.sramIndex(entry) === null) {
-      throw new Error(`ESP image entry point 0x${entry.toString(16)} is outside the modeled SRAM window`);
+    if (this.sramIndex(entry) === null && !(entry >= IROM_LOW && entry < IROM_HIGH)) {
+      throw new Error(`ESP image entry point 0x${entry.toString(16)} is outside the modeled SRAM window and the IROM cache window`);
     }
     const segments: LoadedSegment[] = [];
+    const romSegments: LoadedSegment[] = [];
     let off = ESP_IMAGE_HEADER_BYTES;
     let checksum = ESP_CHECKSUM_SEED;
     for (let i = 0; i < segmentCount; i++) {
@@ -301,14 +322,19 @@ export class Esp32s3Core implements McuCore {
       if (off + len > image.length) {
         throw new Error(`ESP image truncated: segment ${String(i)} declares ${String(len)} bytes but only ${String(image.length - off)} remain`);
       }
-      if (len > 0 && (this.sramIndex(addr) === null || this.sramIndex(addr + len - 1) === null)) {
+      const data = new Uint8Array(image.subarray(off, off + len));
+      const end = addr + Math.max(len, 1) - 1;
+      const inSram = this.sramIndex(addr) !== null && this.sramIndex(end) !== null;
+      const inIrom = addr >= IROM_LOW && end < IROM_HIGH;
+      const inDrom = addr >= DROM_LOW && end < DROM_HIGH;
+      if (len > 0 && inSram) segments.push({ addr, data });
+      else if (len > 0 && (inIrom || inDrom)) romSegments.push({ addr, data });
+      else if (len > 0) {
         throw new Error(
-          `ESP image segment ${String(i)} loads at 0x${addr.toString(16)}..0x${(addr + len).toString(16)} — a flash-mapped or unmapped region; the flash cache is not modeled yet, so only IRAM/DRAM-resident images run`,
+          `ESP image segment ${String(i)} loads at 0x${addr.toString(16)}..0x${(addr + len).toString(16)} — outside the modeled SRAM window and the IROM/DROM cache windows`,
         );
       }
-      const data = new Uint8Array(image.subarray(off, off + len));
       for (const b of data) checksum ^= b;
-      segments.push({ addr, data });
       off += len;
     }
     // The checksum byte is the last byte once (body + 1) is padded to 16.
@@ -320,7 +346,7 @@ export class Esp32s3Core implements McuCore {
     if (stored !== checksum) {
       throw new Error(`ESP image checksum mismatch: stored 0x${stored.toString(16)}, computed 0x${checksum.toString(16)} — corrupted image?`);
     }
-    return { segments, entry };
+    return { segments, romSegments, entry };
   }
 
   step(maxCycles: number): McuStepResult {
@@ -555,12 +581,26 @@ export class Esp32s3Core implements McuCore {
     return null;
   }
 
+  private inCacheWindow(addr: number): boolean {
+    return (addr >= IROM_LOW && addr < IROM_HIGH) || (addr >= DROM_LOW && addr < DROM_HIGH);
+  }
+
   private busRead(addr: number, bytes: 1 | 2 | 4): number {
     const idx = this.sramIndex(addr);
     if (idx !== null) {
       let v = 0;
       for (let i = bytes - 1; i >= 0; i--) v = (v << 8) | (this.sram[idx + i] ?? 0);
       return v >>> 0;
+    }
+    if (this.inCacheWindow(addr)) {
+      for (const seg of this.romSegments) {
+        if (addr >= seg.addr && addr + bytes <= seg.addr + seg.data.length) {
+          let v = 0;
+          for (let i = bytes - 1; i >= 0; i--) v = (v << 8) | (seg.data[addr - seg.addr + i] ?? 0);
+          return v >>> 0;
+        }
+      }
+      throw new Error(`read of unmapped flash-cache address 0x${addr.toString(16)} — only the app image's IROM/DROM segments are mapped`);
     }
     if (addr >= GPIO_BASE && addr < GPIO_BASE + 0x1000) {
       const off = addr - GPIO_BASE;
@@ -632,6 +672,9 @@ export class Esp32s3Core implements McuCore {
     if (idx !== null) {
       for (let i = 0; i < bytes; i++) this.sram[idx + i] = (value >>> (8 * i)) & 0xff;
       return;
+    }
+    if (this.inCacheWindow(addr)) {
+      throw new Error(`write to flash-cache address 0x${addr.toString(16)} — flash is read-only through the cache`);
     }
     if (addr >= GPIO_BASE && addr < GPIO_BASE + 0x1000) {
       const off = addr - GPIO_BASE;
