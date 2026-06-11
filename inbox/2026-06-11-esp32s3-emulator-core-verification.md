@@ -154,3 +154,34 @@ medium/high-priority levels, no XSR/WAITI); PS gates via INTLEVEL +
 EXCM, UM/WOE stored only; reset PS.INTLEVEL = 15 (conservative —
 firmware lowers via RSIL); vectoring costs no cycles; VECBASE
 alignment not enforced.
+
+## Addendum: MOVSP + the ESP-IDF app-image format (slice 5)
+
+MOVSP source: Cadence ISA RM instruction page —
+- Encoding: RRR with op2=0, op1=0, r=1 → `0x001000 | s<<8 | t<<4`.
+- Semantics: "if WindowStart[WindowBase−3..WindowBase−1] = 0 then
+  Exception(AllocaCause) else AR[t] ← AR[s]".
+- The RM's Alloca reference handler's net effect: move the 4-word base
+  save area from [old AR[t] − 16..−4] to [new AR[s] − 16..−4], then
+  perform the move. The emulator does that net effect directly (same
+  magic-handler approach as spill/fill).
+
+App-image format sources:
+1. esp-idf v5.2 `components/bootloader_support/include/esp_app_format.h`:
+   `esp_image_header_t` is 24 bytes — magic 0xE9 @0, segment_count @1,
+   spi_mode/spi_speed+size @2..3, entry_addr u32le @4, chip_id u16le
+   @12 (`ESP_CHIP_ID_ESP32S3 = 0x0009`), hash_appended @23; then
+   segment_count × `esp_image_segment_header_t` (load_addr u32le,
+   data_len u32le) + data; `ESP_IMAGE_MAX_SEGMENTS = 16`.
+2. esptool (master) `loader.py` / image format docs:
+   `ESP_CHECKSUM_MAGIC = 0xEF` — the checksum byte is the XOR of all
+   segment data bytes seeded 0xEF, stored as the LAST byte of the
+   16-byte-aligned image body (pad to 16 counting one checksum byte).
+   If hash_appended = 1, a SHA-256 digest follows (the emulator skips
+   verifying it).
+
+Emulator cuts: only SRAM-resident segments load — flash-mapped
+segments (0x42xxxxxx instruction / 0x3Cxxxxxx data buses) refuse with
+a message because the flash cache is not modeled; the SHA-256 trailer
+is not verified (the XOR checksum is); flash fields (spi_mode/speed/
+size) are ignored.

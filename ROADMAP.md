@@ -325,10 +325,22 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       the SR name map, and PAD_TO (placing handlers at architectural
       offsets). Honest cuts: timer line only, level-1 only, UM/WOE
       stored not acted on, vectoring costs no cycles
-- [ ] ESP32 core, next slices: MOVSP/alloca, peripheral interrupt
-      lines + more peripherals (ADC, TIMG), and an ESP-IDF app-image
-      loader — toward running real IDF-built firmware (a long road,
-      walked openly)
+- [x] ESP32-S3 core slice 5 — MOVSP + the ESP-IDF app-image loader
+      (landed 2026-06-11): MOVSP with the Alloca handler's net effect
+      (callers live → plain sp move; all three WindowStart bits below
+      clear → the 4-word base save area moves with the stack pointer,
+      per the RM's reference handler — both paths proven by tests
+      that hide and restore WindowStart via WSR); and the emulator
+      now boots real esptool-shaped .bin app images — the 24-byte
+      header (magic 0xE9, entry_addr, chip_id) validated against
+      esp-idf's esp_app_format.h, per-segment loading into the SRAM
+      window, the trailing XOR-0xEF checksum verified, and reset()
+      replaying segments from the image's entry point. Wrong-chip,
+      flash-mapped-segment, and corrupted-checksum images refuse
+      with clear messages
+- [ ] ESP32 core, next slices: peripheral interrupt lines + more
+      peripherals (ADC, TIMG) and flash-cache mapping — toward
+      running real IDF-built firmware (a long road, walked openly)
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 

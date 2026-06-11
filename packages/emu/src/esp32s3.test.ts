@@ -34,6 +34,7 @@ import {
   MOV_N,
   MOVI,
   MOVI_N,
+  MOVSP,
   NOP,
   NOP_N,
   PAD_TO,
@@ -572,5 +573,153 @@ describe('Esp32s3Core — exceptions + level-1 interrupts (slice 4)', () => {
     const image = assembleXtensa(ESP32S3_IRAM_BASE, [], [RSR(2, 99), J(BR(-1))]);
     const c = core(image);
     expect(() => c.step(5)).toThrow('unimplemented special register 99');
+  });
+});
+
+describe('Esp32s3Core — MOVSP + ESP-IDF app images (slice 5)', () => {
+  const SCRATCH = 0x3fc88000 + 0x600;
+
+  /**
+   * Build an esptool-shaped app image: 24-byte header (magic 0xE9,
+   * segment count, entry @4, chip_id @12), the segments, and the XOR
+   * checksum (seed 0xEF) as the last byte of the 16-byte-aligned body.
+   */
+  function buildEspImage(
+    entry: number,
+    segs: { addr: number; data: Uint8Array }[],
+    opts: { chipId?: number; corruptChecksum?: boolean } = {},
+  ): Uint8Array {
+    const bytes: number[] = new Array<number>(24).fill(0);
+    bytes[0] = 0xe9;
+    bytes[1] = segs.length;
+    bytes[2] = 0x02; // spi_mode DIO — the loader ignores flash fields
+    for (let i = 0; i < 4; i++) bytes[4 + i] = (entry >>> (8 * i)) & 0xff;
+    const chipId = opts.chipId ?? 9;
+    bytes[12] = chipId & 0xff;
+    bytes[13] = (chipId >> 8) & 0xff;
+    let checksum = 0xef;
+    for (const seg of segs) {
+      for (let i = 0; i < 4; i++) bytes.push((seg.addr >>> (8 * i)) & 0xff);
+      for (let i = 0; i < 4; i++) bytes.push((seg.data.length >>> (8 * i)) & 0xff);
+      for (const b of seg.data) {
+        bytes.push(b);
+        checksum ^= b;
+      }
+    }
+    const total = Math.ceil((bytes.length + 1) / 16) * 16;
+    while (bytes.length < total) bytes.push(0);
+    bytes[total - 1] = opts.corruptChecksum ? checksum ^ 0xff : checksum;
+    return Uint8Array.from(bytes);
+  }
+
+  it('boots a two-segment app image (code → IRAM, data → DRAM) at its entry point', () => {
+    // The code segment deliberately does NOT sit at the IRAM base —
+    // the entry_addr field has to be honored for this to run at all.
+    const codeBase = ESP32S3_IRAM_BASE + 0x100;
+    const code = assembleXtensa(codeBase, [UART, SCRATCH], [
+      L32R(2, 0),
+      L32R(3, 1),
+      L32I(4, 3, 0), // read the data segment's payload
+      S32I(4, 2, 0x00), // tx it
+      J(BR(-1)),
+    ]);
+    const image = buildEspImage(codeBase, [
+      { addr: codeBase, data: code },
+      { addr: SCRATCH, data: Uint8Array.from([0x5a, 0, 0, 0]) },
+    ]);
+    const c = core(image);
+    expect(c.inspect().pc).toBe(codeBase);
+    c.step(30);
+    expect([...c.drainUart()]).toEqual([0x5a]);
+    // reset() reloads every segment and restarts at the entry point.
+    c.reset();
+    c.step(30);
+    expect([...c.drainUart()]).toEqual([0x5a]);
+  });
+
+  it('refuses wrong-chip, flash-mapped, and corrupted images with clear messages', () => {
+    const c = new Esp32s3Core();
+    const seg = { addr: ESP32S3_IRAM_BASE, data: Uint8Array.from([0x0d, 0xf0, 0x00, 0x00]) };
+    expect(() => {
+      c.loadFirmware(buildEspImage(ESP32S3_IRAM_BASE, [seg], { chipId: 0 }));
+    }).toThrow('targets ESP32 (chip_id 0)');
+    expect(() => {
+      c.loadFirmware(buildEspImage(ESP32S3_IRAM_BASE, [{ addr: 0x42000000, data: Uint8Array.from([1, 2, 3, 4]) }]));
+    }).toThrow('flash-mapped or unmapped');
+    expect(() => {
+      c.loadFirmware(buildEspImage(ESP32S3_IRAM_BASE, [seg], { corruptChecksum: true }));
+    }).toThrow('checksum mismatch');
+  });
+
+  it("MOVSP with the caller's frame live is a plain stack-pointer move", () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART], [
+      // crt0:
+      CALLN_TO(2, 4), // call8 fn — idx 4 lands at byte 8 + 12 = 20 ✓
+      J(BR(-1)),
+      NOP(),
+      NOP(),
+      // fn:
+      ENTRY(1, 16),
+      L32R(2, 0), // a2 = UART
+      MOV_N(3, 1), // a3 = old sp
+      MOVI(4, 0x77),
+      ADDI(5, 1, -16),
+      S32I(4, 5, 0), // marker below the OLD sp
+      ADDI(6, 1, -32),
+      MOVSP(1, 6), // caller's frame is live → plain move, NO copy
+      SUB(7, 3, 1),
+      S32I(7, 2, 0x00), // tx 32 — sp really moved
+      ADDI(5, 1, -16),
+      L32I(4, 5, 0),
+      S32I(4, 2, 0x00), // tx 0 — the save area was NOT copied
+      RETW(),
+    ]);
+    const c = core(image);
+    c.step(60);
+    expect([...c.drainUart()]).toEqual([32, 0]);
+  });
+
+  it('MOVSP with the callers hidden performs the Alloca save-area move', () => {
+    // crt0 (wb 0) → call8 main (wb 2) → call8 fn (wb 4): WindowStart
+    // is 0b10101 = 21. fn clears main's bit (WSR 17) so all three WS
+    // bits below it read 0 — the RM's AllocaCause condition — then
+    // MOVSP must move the 4-word base save area to below the new sp.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART], [
+      // crt0:
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4), // [sp−12] ← sp
+      CALLN_TO(2, 4), // call8 main — byte 8 + 12 = 20 ✓
+      J(BR(-1)),
+      // main:
+      ENTRY(1, 32),
+      CALLN_TO(2, 8), // call8 fn — byte 8 + 24 = 32 ✓
+      RETW(),
+      NOP(),
+      // fn:
+      ENTRY(1, 16),
+      L32R(2, 0), // a2 = UART
+      ADDI(4, 1, -16),
+      MOVI(5, 0x11),
+      S32I(5, 4, 0),
+      MOVI(5, 0x44),
+      S32I(5, 4, 12), // markers at [sp−16] and [sp−4]
+      RSR(6, SR.WINDOWSTART),
+      S32I(6, 2, 0x00), // tx 21 — three live frames, as constructed
+      MOVI(7, 17), // keep bits {0,4}: hide main's frame
+      WSR(7, SR.WINDOWSTART),
+      ADDI(8, 1, -32),
+      MOVSP(1, 8), // alloca path: copy [old sp−16..−4] → [new sp−16..−4]
+      ADDI(4, 1, -16),
+      L32I(9, 4, 0),
+      S32I(9, 2, 0x00), // tx 0x11 — moved
+      L32I(9, 4, 12),
+      S32I(9, 2, 0x00), // tx 0x44 — moved
+      MOVI(7, 21), // restore so RETW unwinds without a bogus fill
+      WSR(7, SR.WINDOWSTART),
+      RETW(),
+    ]);
+    const c = core(image);
+    c.step(120);
+    expect([...c.drainUart()]).toEqual([21, 0x11, 0x44]);
   });
 });

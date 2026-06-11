@@ -9,8 +9,11 @@ import type { DigitalLevel, McuCore, McuState, McuStepResult, PinEvent } from '.
  * verified against Espressif's own esp-idf v5.2 headers and the ISA
  * overview (inbox/2026-06-11-esp32s3-emulator-core-verification.md).
  *
- * What it runs: raw hand-assembled call0-ABI machine code (the
- * xtensa-asm.ts rig), loaded at the IRAM base.
+ * What it runs: raw hand-assembled machine code (the xtensa-asm.ts
+ * rig) loaded at the IRAM base, or an esptool-built ESP-IDF app image
+ * (magic 0xE9) whose segments all target the modeled SRAM window —
+ * header, per-segment loading, and the XOR checksum are validated
+ * against esp_app_format.h / esptool (slice 5).
  *
  * Wired peripherals: the GPIO matrix output/input registers
  * (OUT/W1TS/W1TC + the OUT1 bank for GPIO32-48, ENABLE likewise, IN +
@@ -27,12 +30,13 @@ import type { DigitalLevel, McuCore, McuState, McuStepResult, PinEvent } from '.
  * code-density forms (slice 2), the windowed ABI (slice 3 —
  * CALL4/8/12, ENTRY, RETW with magic spill/fill), and exceptions +
  * level-1 interrupts with the CCOUNT/CCOMPARE core timer (slice 4 —
- * RSR/WSR/RSIL/RFE, timer0 on INT6, vectors at VECBASE+0x340), so
- * compiled windowed code with timer-driven control flow runs — but
- * there is still no MOVSP, no peripheral interrupt lines, no ADC, no
- * flash/bootloader, and no ESP-IDF app-image loader, so real IDF
- * firmware does NOT run yet. Loading Intel-HEX refuses with a
- * message — raw images only.
+ * RSR/WSR/RSIL/RFE, timer0 on INT6, vectors at VECBASE+0x340), plus
+ * MOVSP with the Alloca handler's net effect and the ESP-IDF app-image
+ * loader (slice 5), so compiled windowed code with timer-driven
+ * control flow boots from real .bin files — but there is still no
+ * flash cache (flash-mapped image segments refuse), no peripheral
+ * interrupt lines, and no ADC, so real IDF firmware does NOT run yet.
+ * Loading Intel-HEX refuses with a message.
  */
 
 const CLOCK_HZ = 240_000_000;
@@ -64,6 +68,29 @@ const GPIO_IN1 = 0x40;
 const UART_FIFO = 0x00; // RXFIFO_RD_BYTE [7:0]
 const UART_STATUS = 0x1c; // RXFIFO_CNT [9:0], TXFIFO_CNT [25:16]
 
+// ESP-IDF app-image format (esp_app_format.h; checksum from esptool):
+const ESP_IMAGE_MAGIC = 0xe9;
+const ESP_IMAGE_HEADER_BYTES = 24; // esp_image_header_t
+const ESP_IMAGE_MAX_SEGMENTS = 16;
+const ESP_CHECKSUM_SEED = 0xef; // esptool's ESP_CHECKSUM_MAGIC
+const ESP32S3_CHIP_ID = 0x0009; // ESP_CHIP_ID_ESP32S3
+const ESP_CHIP_NAMES: Record<number, string> = {
+  0x0000: 'ESP32',
+  0x0002: 'ESP32-S2',
+  0x0005: 'ESP32-C3',
+  0x0009: 'ESP32-S3',
+  0x000c: 'ESP32-C2',
+  0x000d: 'ESP32-C6',
+  0x0010: 'ESP32-H2',
+  0x0012: 'ESP32-P4',
+};
+
+/** One loadable chunk of firmware: raw images get a single segment. */
+interface LoadedSegment {
+  addr: number;
+  data: Uint8Array;
+}
+
 /** GPIO0-48; bank 0 covers 0-31, bank 1 covers 32-48. */
 const PIN_COUNT = 49;
 
@@ -72,7 +99,8 @@ export const esp32s3PinId = (gpio: number): string => `IO${String(gpio)}`;
 export class Esp32s3Core implements McuCore {
   readonly clockHz = CLOCK_HZ;
 
-  private program = new Uint8Array(0);
+  private segments: LoadedSegment[] = [];
+  private entry = IRAM_BASE;
   private sram = new Uint8Array(SRAM_BYTES);
   private cpu: XtensaCpu;
 
@@ -94,14 +122,82 @@ export class Esp32s3Core implements McuCore {
   loadFirmware(image: Uint8Array | string): void {
     if (typeof image === 'string' || (image.length > 0 && image[0] === 0x3a)) {
       throw new Error(
-        'the ESP32-S3 v0 core loads RAW machine-code images at the IRAM base (use assembleXtensa) — Intel-HEX and ESP-IDF app images are not supported yet',
+        'the ESP32-S3 core loads RAW machine-code images at the IRAM base (use assembleXtensa) or esptool-built ESP-IDF app images (.bin, magic 0xE9) — Intel-HEX is not supported',
       );
     }
-    if (image.length > SRAM_BYTES) {
-      throw new Error(`image is ${String(image.length)} bytes; the modeled SRAM window is ${String(SRAM_BYTES)}`);
+    if (image.length > 0 && image[0] === ESP_IMAGE_MAGIC) {
+      const parsed = this.parseEspImage(image);
+      this.segments = parsed.segments;
+      this.entry = parsed.entry;
+    } else {
+      if (image.length > SRAM_BYTES) {
+        throw new Error(`image is ${String(image.length)} bytes; the modeled SRAM window is ${String(SRAM_BYTES)}`);
+      }
+      this.segments = [{ addr: IRAM_BASE, data: new Uint8Array(image) }];
+      this.entry = IRAM_BASE;
     }
-    this.program = new Uint8Array(image);
     this.reset();
+  }
+
+  /**
+   * Parse an esptool-built app image: 24-byte esp_image_header_t
+   * (magic, segment_count, entry_addr @4, chip_id u16le @12), then
+   * segment_count × (load_addr u32le, data_len u32le, data), then a
+   * checksum byte — XOR of all segment data seeded 0xEF — sitting as
+   * the LAST byte of the 16-byte-aligned image body.
+   */
+  private parseEspImage(image: Uint8Array): { segments: LoadedSegment[]; entry: number } {
+    const u32 = (off: number): number =>
+      (((image[off] ?? 0) | ((image[off + 1] ?? 0) << 8) | ((image[off + 2] ?? 0) << 16) | ((image[off + 3] ?? 0) << 24)) >>> 0);
+    if (image.length < ESP_IMAGE_HEADER_BYTES) {
+      throw new Error(`ESP image truncated: ${String(image.length)} bytes is shorter than the 24-byte header`);
+    }
+    const chipId = (image[12] ?? 0) | ((image[13] ?? 0) << 8);
+    if (chipId !== ESP32S3_CHIP_ID) {
+      const name = ESP_CHIP_NAMES[chipId] ?? 'an unknown chip';
+      throw new Error(`this app image targets ${name} (chip_id ${String(chipId)}); this core emulates the ESP32-S3 (chip_id 9)`);
+    }
+    const segmentCount = image[1] ?? 0;
+    if (segmentCount === 0 || segmentCount > ESP_IMAGE_MAX_SEGMENTS) {
+      throw new Error(`ESP image declares ${String(segmentCount)} segments; expected 1..${String(ESP_IMAGE_MAX_SEGMENTS)}`);
+    }
+    const entry = u32(4);
+    if (this.sramIndex(entry) === null) {
+      throw new Error(`ESP image entry point 0x${entry.toString(16)} is outside the modeled SRAM window`);
+    }
+    const segments: LoadedSegment[] = [];
+    let off = ESP_IMAGE_HEADER_BYTES;
+    let checksum = ESP_CHECKSUM_SEED;
+    for (let i = 0; i < segmentCount; i++) {
+      if (off + 8 > image.length) {
+        throw new Error(`ESP image truncated in segment ${String(i)}'s header`);
+      }
+      const addr = u32(off);
+      const len = u32(off + 4);
+      off += 8;
+      if (off + len > image.length) {
+        throw new Error(`ESP image truncated: segment ${String(i)} declares ${String(len)} bytes but only ${String(image.length - off)} remain`);
+      }
+      if (len > 0 && (this.sramIndex(addr) === null || this.sramIndex(addr + len - 1) === null)) {
+        throw new Error(
+          `ESP image segment ${String(i)} loads at 0x${addr.toString(16)}..0x${(addr + len).toString(16)} — a flash-mapped or unmapped region; the flash cache is not modeled yet, so only IRAM/DRAM-resident images run`,
+        );
+      }
+      const data = new Uint8Array(image.subarray(off, off + len));
+      for (const b of data) checksum ^= b;
+      segments.push({ addr, data });
+      off += len;
+    }
+    // The checksum byte is the last byte once (body + 1) is padded to 16.
+    const checkOff = Math.ceil((off + 1) / 16) * 16 - 1;
+    if (checkOff >= image.length) {
+      throw new Error('ESP image truncated before its checksum byte');
+    }
+    const stored = image[checkOff] ?? -1;
+    if (stored !== checksum) {
+      throw new Error(`ESP image checksum mismatch: stored 0x${stored.toString(16)}, computed 0x${checksum.toString(16)} — corrupted image?`);
+    }
+    return { segments, entry };
   }
 
   step(maxCycles: number): McuStepResult {
@@ -145,7 +241,10 @@ export class Esp32s3Core implements McuCore {
   /** Power-on reset: machine + peripheral state cleared, firmware kept. */
   reset(): void {
     this.sram = new Uint8Array(SRAM_BYTES);
-    this.sram.set(this.program);
+    for (const seg of this.segments) {
+      const idx = this.sramIndex(seg.addr);
+      if (idx !== null) this.sram.set(seg.data, idx);
+    }
     this.out = [0, 0];
     this.enable = [0, 0];
     this.inLevels = [0, 0];
@@ -155,7 +254,7 @@ export class Esp32s3Core implements McuCore {
     this.txBuffer = [];
     this.cpu = new XtensaCpu(this.bus());
     // SP at the top of the DRAM window, like a bare-metal crt0 would.
-    this.cpu.reset(IRAM_BASE, DRAM_BASE + SRAM_BYTES);
+    this.cpu.reset(this.entry, DRAM_BASE + SRAM_BYTES);
   }
 
   private parsePin(pin: string): number {

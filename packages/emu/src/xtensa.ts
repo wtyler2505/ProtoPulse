@@ -20,8 +20,9 @@
  * change visible register values, only memory and WindowStart).
  *
  * Honest cuts: spill/fill and interrupt vectoring cost no extra
- * cycles (1 instruction = 1 cycle everywhere); MOVSP and the
- * handler-only L32E/S32E/RFWO/RFWU are refused; PS holds INTLEVEL +
+ * cycles (1 instruction = 1 cycle everywhere); MOVSP performs the
+ * Alloca handler's net effect directly (save-area move — slice 5);
+ * the handler-only L32E/S32E/RFWO/RFWU are refused; PS holds INTLEVEL +
  * EXCM (gating interrupts) but UM/WOE/RING are stored, not acted on;
  * only the timer line (INT6) exists — no software/external interrupt
  * lines yet; VECBASE alignment is not enforced; only level-1
@@ -299,6 +300,22 @@ export class XtensaCpu {
           const target = this.ra(s);
           this.calln(n, pc);
           next = target;
+        } else if ((word & 0xfff00f) === 0x001000) {
+          // MOVSP at, as — if the caller's registers are NOT in the
+          // register file (all three WindowStart bits below clear),
+          // the RM raises Alloca; the magic net effect is the
+          // handler's: move the 4-word base save area from below the
+          // old SP to below the new one. Then the plain move.
+          const wb = this.windowBase;
+          const callerPresent = this.wsBit(wb - 1) || this.wsBit(wb - 2) || this.wsBit(wb - 3);
+          const newSp = this.ra(s);
+          if (!callerPresent) {
+            const oldSp = this.ra(t) >>> 0;
+            for (let k = 0; k < 4; k++) {
+              this.bus.write(((newSp >>> 0) - 16 + 4 * k) >>> 0, 4, this.bus.read((oldSp - 16 + 4 * k) >>> 0, 4));
+            }
+          }
+          this.wa(t, newSp);
         } else if (word === 0x003000) {
           // RFE: PS.EXCM ← 0; PC ← EPC1
           this.ps &= ~0x10;

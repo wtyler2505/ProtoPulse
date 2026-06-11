@@ -197,6 +197,10 @@ export function ENTRY(s: number, frameBytes: number): number {
 
 export const RETW = (): number => 0x000090;
 
+/** MOVSP at, as — window-checked move (the alloca primitive). */
+export const MOVSP = (t: number, s: number): number =>
+  0x001000 | (reg(s, 's') << 8) | (reg(t, 't') << 4);
+
 // ── Exceptions / interrupts (slice 4) ────────────────────────────────
 
 /** Special-register numbers (Cadence ISA RM §5.3; EXCSAVE1 = 209). */
