@@ -55,3 +55,9 @@ got any more good creative/innovative ideas?").
 7. **Failure puzzle #1 shippable now** — a broken design + instruments +
    "annotate the root cause" checker (Vol III catalog); everything it
    needs (sim, ERC, annotations) already exists.
+   ✅ SHIPPED 2026-06-11 — `slow-rise-11` from the Vol III §1.4 catalog
+   (open-collector bus, pull-up too large vs bus capacitance):
+   content/puzzles/ + PuzzleSchema, Puzzles tab (symptom, instruments,
+   progressive hints, mark-selection-as-root-cause via annotate ops,
+   explanation on solve). Physics-verified in real ngspice: broken bus
+   peaks <2.5V, the 4.7k fix puts it >3.5V. ALL 7 IDEAS NOW SHIPPED.

@@ -1,0 +1,19 @@
+{
+  "id": "slow-rise-11",
+  "title": "The bus that never reads high",
+  "symptom": "An open-collector bus line is released by its driver (the transistor turns off), but the device sampling it 100µs later keeps reading LOW. A scope on BUS shows the line crawling upward and only reaching a valid high after a few milliseconds. The transistor tests fine. The wiring matches the schematic.",
+  "instruments": [
+    "Sim → Transient (try step 1e-6, stop 5e-3) and watch v(bus)",
+    "ERC (it passes — this bug is legal electricity, just wrong values)",
+    "Inspector → click components to read their values"
+  ],
+  "rootCause": {
+    "anchors": ["rpull", "net-bus"],
+    "explanation": "The pull-up has to charge the bus capacitance all by itself: τ = R·C = 100kΩ × 10nF = 1ms, so the line is nowhere near a valid high at 100µs — open-collector buses only rise as fast as their pull-up lets them. Drop the pull-up to ~4.7kΩ (τ ≈ 47µs) and the same transient shows BUS comfortably high in time. The trade: a stronger pull-up burns more current while the bus is held low — that's the real design decision, and it's why 'just copy the pull-up value' fails when bus capacitance changes."
+  },
+  "hints": [
+    "What charges the bus back to high after the transistor lets go? Nothing else is connected to it.",
+    "Estimate the RC time constant of the rise you're seeing in the transient.",
+    "Compare τ = R_pullup × C_bus against the 100µs the sampler gives you."
+  ]
+}

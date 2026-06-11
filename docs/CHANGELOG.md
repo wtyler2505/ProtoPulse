@@ -2,6 +2,29 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — failure puzzle #1: the bus that never reads high
+
+### Added
+- **The failure-puzzle system** (Vol III §1.4): a broken design + a
+  symptom + the instruments; solved when you ANNOTATE the actual
+  root-cause net/component on the schematic — solved-ness is a property
+  of the design's own op-log (annotate ops), not a quiz UI. PuzzleSchema
+  in @protopulse/content, puzzles ship as content/puzzles/<id>/
+  {puzzle.json, design.ppx.json}, Puzzles tab in the editor (symptom,
+  suggested instruments, progressive hints, mark-selection-as-root-
+  cause, explanation revealed on solve; wrong marks stay in history —
+  debugging leaves tracks).
+- **slow-rise-11** from the catalog: an open-collector bus whose 100k
+  pull-up against ~10nF of bus capacitance (τ ≈ 1ms) never reaches a
+  valid high between driver pulses. ERC passes — the bug is legal
+  electricity with wrong values; the transient tells the story.
+
+### Verified
+- The puzzle premise is PHYSICS-TESTED in real ngspice: the broken bus
+  peaks <2.5V in steady state; swapping the pull-up to 4.7k puts it
+  >3.5V. Schema/anchor/ERC/checker tests alongside. Browser-verified
+  end-to-end: load → hint → select R1 on canvas → mark → ✔ solved.
+
 ## 2026-06-11 — the Router: fourth crew member
 
 ### Added

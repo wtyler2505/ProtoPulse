@@ -637,6 +637,38 @@ input:not([type]) {
   border-color: var(--accent);
 }
 
+/* ── Puzzles ── */
+
+.puzzle-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.puzzle-symptom {
+  font-size: 13px;
+  border-left: 3px solid var(--warn);
+  padding-left: 10px;
+}
+
+.puzzle-hint {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.puzzle-solved {
+  border: 1px solid var(--good);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 13px;
+}
+
+.puzzle-solved-banner {
+  color: var(--good);
+  font-weight: 600;
+  margin-top: 0;
+}
+
 /* ── Sync ── */
 
 .sync-status {
