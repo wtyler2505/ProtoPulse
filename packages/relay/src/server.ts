@@ -8,16 +8,20 @@ import {
 } from './protocol.js';
 
 import type { ServerMessage } from './protocol.js';
+import type { RoomStorage } from './storage.js';
 import type { OpEnvelope } from '@protopulse/graph';
 import type { WebSocket } from 'ws';
 
 /**
- * The relay server: rooms of clients sharing one op-log. All state is
+ * The relay server: rooms of clients sharing one op-log. State lives
  * in memory — the relay CARRIES designs, it never owns them (every
  * client keeps its own copy; an empty relay refills from the first
- * client to join). Unknown or malformed frames get an error reply and
- * are otherwise ignored; a misbehaving peer can't corrupt a room
- * because union-by-key is idempotent and ops are schema-validated.
+ * client to join). With `storage` set, rooms also append to disk so a
+ * RESTARTED relay re-seeds before any client rejoins — still a cache,
+ * never the authority. With `token` set, joins must present it.
+ * Unknown or malformed frames get an error reply and are otherwise
+ * ignored; a misbehaving peer can't corrupt a room because
+ * union-by-key is idempotent and ops are schema-validated.
  */
 
 interface Room {
@@ -32,7 +36,15 @@ export interface RelayServer {
   close: () => Promise<void>;
 }
 
-export function createRelayServer(opts: { port?: number } = {}): Promise<RelayServer> {
+export interface RelayOpts {
+  port?: number;
+  /** Shared secret; when set, join messages must carry it. */
+  token?: string;
+  /** Room persistence (createFileStorage); omit for memory-only. */
+  storage?: RoomStorage;
+}
+
+export function createRelayServer(opts: RelayOpts = {}): Promise<RelayServer> {
   const wss = new WebSocketServer({
     port: opts.port ?? 0,
     maxPayload: MAX_MESSAGE_BYTES,
@@ -50,8 +62,9 @@ export function createRelayServer(opts: { port?: number } = {}): Promise<RelaySe
     }
   };
 
-  /** Union envelopes into the room log; returns the genuinely new ones. */
-  const unionInto = (room: Room, envelopes: readonly OpEnvelope[]): OpEnvelope[] => {
+  /** Union envelopes into the room log (and storage); returns the
+   *  genuinely new ones. */
+  const unionInto = (roomName: string, room: Room, envelopes: readonly OpEnvelope[]): OpEnvelope[] => {
     const fresh: OpEnvelope[] = [];
     for (const env of envelopes) {
       const key = envelopeKey(env);
@@ -59,7 +72,21 @@ export function createRelayServer(opts: { port?: number } = {}): Promise<RelaySe
       room.log.set(key, env);
       fresh.push(env);
     }
+    if (fresh.length > 0) opts.storage?.append(roomName, fresh);
     return fresh;
+  };
+
+  /** Get-or-create a room, seeding from storage on first touch. */
+  const roomFor = (name: string): Room => {
+    let room = rooms.get(name);
+    if (!room) {
+      room = { log: new Map(), clients: new Set() };
+      for (const env of opts.storage?.load(name) ?? []) {
+        room.log.set(envelopeKey(env), env);
+      }
+      rooms.set(name, room);
+    }
+    return room;
   };
 
   wss.on('connection', (ws) => {
@@ -82,6 +109,11 @@ export function createRelayServer(opts: { port?: number } = {}): Promise<RelaySe
       }
 
       if (msg.kind === 'join') {
+        if (opts.token !== undefined && msg.token !== opts.token) {
+          send(ws, { kind: 'error', message: 'unauthorized: bad or missing token' });
+          ws.close();
+          return;
+        }
         // Leaving a previous room is implicit — one room per socket.
         const prevName = roomOf.get(ws);
         if (prevName !== undefined) {
@@ -89,12 +121,8 @@ export function createRelayServer(opts: { port?: number } = {}): Promise<RelaySe
           prev?.clients.delete(ws);
           if (prev) broadcast(prev, { kind: 'peers', count: prev.clients.size });
         }
-        let room = rooms.get(msg.room);
-        if (!room) {
-          room = { log: new Map(), clients: new Set() };
-          rooms.set(msg.room, room);
-        }
-        const fresh = unionInto(room, msg.envelopes);
+        const room = roomFor(msg.room);
+        const fresh = unionInto(msg.room, room, msg.envelopes);
         room.clients.add(ws);
         roomOf.set(ws, msg.room);
         // The joiner gets the whole room; everyone else gets the news.
@@ -116,7 +144,7 @@ export function createRelayServer(opts: { port?: number } = {}): Promise<RelaySe
       }
       const room = rooms.get(msg.room);
       if (!room) return;
-      const fresh = unionInto(room, msg.envelopes);
+      const fresh = unionInto(msg.room, room, msg.envelopes);
       if (fresh.length > 0) broadcast(room, { kind: 'ops', envelopes: fresh }, ws);
     });
 

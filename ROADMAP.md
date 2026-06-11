@@ -176,8 +176,14 @@ manufacturing pipeline (Vol II §H).
       editor. Two browsers converge live; materialize's total order IS
       the merge. Honest v1: main branch only, in-memory rooms, one tab
       per design per profile
-- [ ] Sync relay hardening: persistence, auth, reconnect/backoff,
-      branch sync, per-tab actor identity
+- [x] Sync relay hardening, round 2 (landed 2026-06-11): room
+      persistence (append-only JSONL per room via PP_RELAY_DATA — a
+      restarted relay re-seeds before anyone rejoins; still a cache,
+      never the authority) + shared-token auth (PP_RELAY_TOKEN; the
+      Sync panel grew a token field; a rejected client stops cleanly
+      instead of retry-looping). Reconnect/backoff and per-tab actor
+      identity landed earlier
+- [ ] Sync branch sync (non-main branches stay local for now)
 - [ ] Community library with provenance tiers
 - [ ] Manufacturing pipeline (Vol II §H)
 

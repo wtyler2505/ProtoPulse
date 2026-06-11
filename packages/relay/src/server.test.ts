@@ -1,7 +1,12 @@
+import { appendFileSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { materialize } from '@protopulse/graph';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createRelayServer } from './server.js';
+import { createFileStorage } from './storage.js';
 
 import type { ServerMessage } from './protocol.js';
 import type { OpEnvelope } from '@protopulse/graph';
@@ -189,5 +194,61 @@ describe('relay server', () => {
     const snap = await b.waitFor('snapshot');
     expect(snap.envelopes).toHaveLength(1);
     b.close();
+  });
+
+  it('a token-gated relay rejects bad/missing tokens and admits the right one', async () => {
+    server = await createRelayServer({ token: 'sesame' });
+
+    const noToken = new TestClient(server.port);
+    await noToken.open();
+    noToken.send({ kind: 'join', v: 1, room: 'gated', envelopes: [] });
+    await noToken.waitFor('error', (m) => m.message.includes('unauthorized'));
+
+    const wrong = new TestClient(server.port);
+    await wrong.open();
+    wrong.send({ kind: 'join', v: 1, room: 'gated', token: 'guess', envelopes: [] });
+    await wrong.waitFor('error', (m) => m.message.includes('unauthorized'));
+    expect(server.roomCount()).toBe(0); // nothing joined, nothing created
+
+    const right = new TestClient(server.port);
+    await right.open();
+    right.send({ kind: 'join', v: 1, room: 'gated', token: 'sesame', envelopes: [env('alice', 1, 'R1')] });
+    const snap = await right.waitFor('snapshot');
+    expect(snap.envelopes).toHaveLength(1);
+    right.close();
+    noToken.close();
+    wrong.close();
+  });
+
+  it('with file storage, rooms survive a relay RESTART (and corrupt tails are skipped)', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pp-relay-'));
+    server = await createRelayServer({ storage: createFileStorage(dir) });
+    const a = await joined(server.port, 'durable/room', [env('alice', 1, 'R1'), env('alice', 2, 'R2')]);
+    a.close();
+    await server.close();
+    server = null;
+
+    // Simulate a crash mid-append: a partial trailing line (real
+    // appends lead with \n, so the partial stays isolated).
+    const file = join(dir, `${encodeURIComponent('durable/room')}.jsonl`);
+    appendFileSync(file, '\n{"actor":"alice","lamp');
+
+    server = await createRelayServer({ storage: createFileStorage(dir) });
+    const b = await joined(server.port, 'durable/room');
+    const snap = await b.waitFor('snapshot');
+    expect(snap.envelopes.map((e) => e.lamport).sort()).toEqual([1, 2]);
+
+    // New ops keep appending after the reload.
+    b.send({ kind: 'ops', room: 'durable/room', envelopes: [env('bob', 1, 'R3')] });
+    await new Promise((r) => setTimeout(r, 100));
+    b.close();
+    await server.close();
+    server = null;
+
+    server = await createRelayServer({ storage: createFileStorage(dir) });
+    const c = await joined(server.port, 'durable/room');
+    const snap2 = await c.waitFor('snapshot');
+    expect(snap2.envelopes).toHaveLength(3);
+    c.close();
   });
 });

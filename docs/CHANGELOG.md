@@ -2,6 +2,32 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — sync relay round 2: persistence + auth
+
+### Added
+- **Room persistence** (`PP_RELAY_DATA`): rooms append to one JSONL
+  file each (append-only — the write story matches the op-log's
+  accrue-only nature); a restarted relay re-seeds rooms from disk
+  before any client rejoins. Crash-safe by format: appends lead with
+  a newline so a cut-short write isolates as one skippable line — a
+  bug the restart test caught (a partial tail used to swallow the
+  next record). The relay still never owns designs.
+- **Shared-token auth** (`PP_RELAY_TOKEN`): when set, joins must carry
+  the token; rejected joins get an explicit unauthorized error and the
+  socket closes. The Sync panel grew a token field, and the client
+  treats relay-level errors as terminal — no retry storm against a
+  closed door.
+
+### Honest cut
+- Branch sync remains open (ROADMAP): non-main branches stay local.
+
+### Verified
+- 2 new relay tests (token gate incl. no-room-leak on rejection;
+  rooms survive a relay restart with a corrupt-tail file) + 1
+  end-to-end client test against a real token-gated relay (wrong
+  token errors without reconnect-looping; right token syncs). Full
+  test:packages green; full-tree eslint 0 errors.
+
 ## 2026-06-11 — thermal reliefs
 
 ### Added

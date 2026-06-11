@@ -148,6 +148,26 @@ describe('sync (two editors, one relay)', () => {
     await until(() => a.info()?.status === 'error', 'error state');
     expect(a.info()?.error).toContain('ws://localhost:1');
   });
+
+  it('a token-gated relay: wrong token errors WITHOUT a retry loop; the right one syncs', async () => {
+    server = await createRelayServer({ token: 'sesame' });
+    const url = `ws://localhost:${String(server.port)}`;
+
+    const bad = harness();
+    bad.client.connect(url, 'gated', 'wrong');
+    await until(() => bad.info()?.status === 'error', 'rejected');
+    expect(bad.info()?.error).toContain('unauthorized');
+    // The rejection must not turn into a reconnect storm.
+    await new Promise((r) => setTimeout(r, 200));
+    expect(bad.info()?.status).toBe('error');
+
+    const good = harness();
+    good.store.getState().dispatch(placeResistor('ra', 'R1'), 'add R1');
+    good.client.connect(url, 'gated', 'sesame');
+    await until(() => good.info()?.status === 'on', 'admitted');
+    expect(good.info()?.sent).toBeGreaterThan(0);
+    good.client.disconnect();
+  });
 });
 
 describe('sync resilience', () => {
