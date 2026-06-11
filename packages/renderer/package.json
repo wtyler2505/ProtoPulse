@@ -12,6 +12,8 @@
   "dependencies": {
     "@protopulse/graph": "*",
     "@protopulse/parts": "*",
-    "flatbush": "^4.4.0"
+    "flatbush": "^4.4.0",
+    "@protopulse/route": "*",
+    "earcut": "^3.0.0"
   }
 }

@@ -1,10 +1,15 @@
+import { computePour } from '@protopulse/route';
+import earcut from 'earcut';
+
+
 import { SceneGraph } from './scene.js';
 import { boundsOfLines, CIRCLE_SEGMENTS, unionBounds } from './tessellate.js';
 
 import type { RGBA, SceneNode } from './scene.js';
 import type { Bounds, TessText } from './tessellate.js';
-import type { Component, DesignGraph, GraphDelta, Uuid, Vec } from '@protopulse/graph';
+import type { Component, DesignGraph, GraphDelta, Uuid, Vec, Zone } from '@protopulse/graph';
 import type { Part, PartDb } from '@protopulse/parts';
+import type { FootprintSource } from '@protopulse/route';
 
 /**
  * PCB scene support (v0.4) — buildPcbScene/syncPcbScene turn the graph's
@@ -82,6 +87,8 @@ export interface PcbViewLike {
   placements: ReadonlyMap<Uuid, PcbPlacementLike>;
   traces: ReadonlyMap<Uuid, PcbTraceLike>;
   vias: ReadonlyMap<Uuid, PcbViaLike>;
+  /** Optional so pinned-contract mocks predating zones stay valid. */
+  zones?: ReadonlyMap<Uuid, Zone>;
 }
 
 // ── House palette (copper layers) ────────────────────────────────────
@@ -436,7 +443,7 @@ export function pcbViewOf(graph: DesignGraph): PcbViewLike {
   if (!raw || typeof raw !== 'object') {
     return { placements: new Map(), traces: new Map(), vias: new Map() };
   }
-  const view = raw as { placements?: unknown; traces?: unknown; vias?: unknown };
+  const view = raw as { placements?: unknown; traces?: unknown; vias?: unknown; zones?: unknown };
   return {
     placements:
       view.placements instanceof Map
@@ -444,12 +451,72 @@ export function pcbViewOf(graph: DesignGraph): PcbViewLike {
         : new Map<Uuid, PcbPlacementLike>(),
     traces: toIdMap<PcbTraceLike>(view.traces, 'trace'),
     vias: toIdMap<PcbViaLike>(view.vias, 'via'),
+    zones: view.zones instanceof Map ? (view.zones as ReadonlyMap<Uuid, Zone>) : new Map<Uuid, Zone>(),
   };
 }
 
-function buildPcbNodes(graph: DesignGraph, parts: PartDb): SceneNode[] {
+/** Earcut one polygon-with-holes into the flat tris layout. */
+export function polygonTris(outer: readonly Vec[], holes: readonly Vec[][]): number[] {
+  const flat: number[] = [];
+  for (const p of outer) flat.push(p.x, p.y);
+  const holeIdx: number[] = [];
+  for (const h of holes) {
+    holeIdx.push(flat.length / 2);
+    for (const p of h) flat.push(p.x, p.y);
+  }
+  const idx = earcut(flat, holeIdx.length > 0 ? holeIdx : undefined);
+  const tris: number[] = [];
+  for (const i of idx) {
+    const x = flat[2 * i];
+    const y = flat[2 * i + 1];
+    if (x !== undefined && y !== undefined) tris.push(x, y);
+  }
+  return tris;
+}
+
+/**
+ * A zone node: the OUTLINE always draws as lines (the intent); the fill
+ * is the POUR when a clearance is known (deck loaded), else nothing —
+ * an unfilled outline never lies about where copper will be.
+ */
+export function buildZoneNode(
+  zoneId: Uuid,
+  zone: Zone,
+  graph: DesignGraph,
+  parts: PartDb,
+  pourClearanceNm: number | null,
+): SceneNode {
+  const lines: number[] = [];
+  for (let i = 0; i < zone.outline.length; i++) {
+    const a = zone.outline[i];
+    const b = zone.outline[(i + 1) % zone.outline.length];
+    if (a && b) lines.push(a.x, a.y, b.x, b.y);
+  }
+  const tris: number[] = [];
+  if (pourClearanceNm !== null) {
+    const pour = computePour(zone, graph, parts as unknown as FootprintSource, pourClearanceNm);
+    for (const poly of pour.polygons) tris.push(...polygonTris(poly.outer, poly.holes));
+  }
+  const [r, g, b, _a] = layerColor(zone.layerId);
+  const lineArr = Float32Array.from(lines);
+  return {
+    id: zoneId,
+    kind: 'zone',
+    lines: lineArr,
+    // Dimmer than traces so copper detail stays readable on top.
+    ...(tris.length > 0 ? { tris: Float32Array.from(tris) } : {}),
+    texts: [],
+    color: [r * 0.55, g * 0.55, b * 0.55, 1.0],
+    bounds: boundsOfLines(lineArr) ?? { minX: 0, minY: 0, maxX: 0, maxY: 0 },
+  };
+}
+
+function buildPcbNodes(graph: DesignGraph, parts: PartDb, pourClearanceNm: number | null = null): SceneNode[] {
   const view = pcbViewOf(graph);
   const nodes: SceneNode[] = [];
+  for (const [zoneId, zone] of view.zones ?? []) {
+    nodes.push(buildZoneNode(zoneId, zone, graph, parts, pourClearanceNm));
+  }
   for (const [componentId, placement] of view.placements) {
     const component = graph.components.get(componentId);
     if (!component) continue;
@@ -469,9 +536,13 @@ function buildPcbNodes(graph: DesignGraph, parts: PartDb): SceneNode[] {
 }
 
 /** Full PCB scene build from a materialized graph. */
-export function buildPcbScene(graph: DesignGraph, parts: PartDb): SceneGraph {
+export function buildPcbScene(
+  graph: DesignGraph,
+  parts: PartDb,
+  pourClearanceNm: number | null = null,
+): SceneGraph {
   const scene = new SceneGraph();
-  for (const node of buildPcbNodes(graph, parts)) scene.add(node);
+  for (const node of buildPcbNodes(graph, parts, pourClearanceNm)) scene.add(node);
   return scene;
 }
 
@@ -481,8 +552,13 @@ export function buildPcbScene(graph: DesignGraph, parts: PartDb): SceneGraph {
  * other cases where no GraphDelta relates the old graph to the new one;
  * ordinary edits go through syncPcbScene below.
  */
-export function rebuildPcbScene(scene: SceneGraph, graph: DesignGraph, parts: PartDb): void {
-  const fresh = buildPcbNodes(graph, parts);
+export function rebuildPcbScene(
+  scene: SceneGraph,
+  graph: DesignGraph,
+  parts: PartDb,
+  pourClearanceNm: number | null = null,
+): void {
+  const fresh = buildPcbNodes(graph, parts, pourClearanceNm);
   const keep = new Set(fresh.map((n) => n.id));
   for (const id of [...scene.nodes.keys()]) {
     if (!keep.has(id)) scene.remove(id);
@@ -528,8 +604,22 @@ export function syncPcbScene(
   delta: GraphDelta,
   graph: DesignGraph,
   parts: PartDb,
+  pourClearanceNm: number | null = null,
 ): void {
   const view = pcbViewOf(graph);
+
+  // ── Zones ──
+  // Pours depend on EVERY piece of copper on their layer, so any pcb
+  // change at all re-pours every zone (boards are small; honesty over
+  // cleverness). Removed zones leave the scene.
+  const zonesRemoved = new Set<Uuid>(delta.pcbView.zonesRemoved);
+  const zonesAdded = new Set<Uuid>(delta.pcbView.zonesAdded);
+  for (const id of zonesRemoved) {
+    if (!zonesAdded.has(id)) scene.remove(id);
+  }
+  for (const [zoneId, zone] of view.zones ?? []) {
+    scene.update(buildZoneNode(zoneId, zone, graph, parts, pourClearanceNm));
+  }
 
   // ── Footprints ──
   for (const id of delta.pcbView.unplaced) scene.remove(id);

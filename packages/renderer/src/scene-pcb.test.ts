@@ -95,6 +95,7 @@ function mockGraph(opts: {
         placements: new Map(opts.placements ?? []),
         traces: new Map(opts.traces ?? []),
         vias: new Map(opts.vias ?? []),
+        zones: new Map(),
       };
   return {
     components,

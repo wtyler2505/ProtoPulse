@@ -25,6 +25,7 @@ const KIND_RANK: Record<SceneNode['kind'], number> = {
   via: 1,
   wire: 2,
   trace: 2,
+  zone: 3, // everything else wins — zones are huge and easy to hit
 };
 
 /** Kinds whose AABB is mostly empty — require proximity to a segment. */

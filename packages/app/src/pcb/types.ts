@@ -64,7 +64,16 @@ export type PcbOpBody =
       padNm: number;
       span: [PcbLayerId, PcbLayerId];
     }
-  | { kind: 'remove_via'; id: Uuid };
+  | { kind: 'remove_via'; id: Uuid }
+  | {
+      kind: 'place_zone';
+      id: Uuid;
+      netId: Uuid;
+      layerId: PcbLayerId;
+      outline: Vec[];
+      clearanceNm?: number;
+    }
+  | { kind: 'remove_zone'; id: Uuid };
 
 /** The single sanctioned cast from pinned pcb ops to the graph op union. */
 export function asOpBodies(ops: PcbOpBody[]): OpBody[] {
