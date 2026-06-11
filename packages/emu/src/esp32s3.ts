@@ -24,12 +24,15 @@ import type { DigitalLevel, McuCore, McuState, McuStepResult, PinEvent } from '.
  * spill/fill timing); one 480 KB SRAM window mapped at both its
  * instruction-bus and data-bus addresses (no SRAM0/cache regions).
  * The instruction set now spans the 24-bit core forms, the 16-bit
- * code-density forms (slice 2), AND the windowed ABI (slice 3 —
- * CALL4/8/12, ENTRY, RETW with magic spill/fill), so compiled
- * windowed code structure runs — but there are still no interrupts,
- * no MOVSP, no ADC, no flash/bootloader, and no ESP-IDF app-image
- * loader, so real IDF firmware does NOT run yet. Loading Intel-HEX
- * refuses with a message — raw images only.
+ * code-density forms (slice 2), the windowed ABI (slice 3 —
+ * CALL4/8/12, ENTRY, RETW with magic spill/fill), and exceptions +
+ * level-1 interrupts with the CCOUNT/CCOMPARE core timer (slice 4 —
+ * RSR/WSR/RSIL/RFE, timer0 on INT6, vectors at VECBASE+0x340), so
+ * compiled windowed code with timer-driven control flow runs — but
+ * there is still no MOVSP, no peripheral interrupt lines, no ADC, no
+ * flash/bootloader, and no ESP-IDF app-image loader, so real IDF
+ * firmware does NOT run yet. Loading Intel-HEX refuses with a
+ * message — raw images only.
  */
 
 const CLOCK_HZ = 240_000_000;

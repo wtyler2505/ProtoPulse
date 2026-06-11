@@ -309,8 +309,24 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       the ABI's entry-32 rule and the emulator caught it). Honest
       cuts: spill/fill costs no cycles; MOVSP and the handler-only
       L32E/S32E refuse; PS not modeled
-- [ ] ESP32 core, next slices: interrupts + exceptions, MOVSP/alloca,
-      more peripherals (timers, ADC), and an ESP-IDF app-image
+- [x] ESP32-S3 core slice 4 — exceptions + level-1 interrupts + the
+      core timer (landed 2026-06-11): RSR/WSR/RSIL/RFE over a real
+      special-register file (PS with INTLEVEL/EXCM gating, EPC1,
+      EXCSAVE1, EXCCAUSE, VECBASE, INTENABLE, INTERRUPT, CCOUNT,
+      CCOMPARE0 — numbers verified against the RM, including catching
+      its own index typo on EXCSAVE1), the CCOUNT/CCOMPARE timer
+      latching INT6 per ESP32-S3's core-isa.h, and level-1 dispatch
+      to VECBASE+0x340 with EXCCAUSE=Level1Interrupt. Proven
+      end-to-end: a periodic timer interrupt vectors into a handler
+      that does the architectural EXCSAVE1 save dance, re-arms
+      CCOMPARE0 (which clears the pending bit, per the RM), and RFEs
+      while main counts the ticks; RSIL latching + masked-delivery;
+      CCOUNT cycle-exactness. The assembler grew RSR/WSR/RSIL/RFE,
+      the SR name map, and PAD_TO (placing handlers at architectural
+      offsets). Honest cuts: timer line only, level-1 only, UM/WOE
+      stored not acted on, vectoring costs no cycles
+- [ ] ESP32 core, next slices: MOVSP/alloca, peripheral interrupt
+      lines + more peripherals (ADC, TIMG), and an ESP-IDF app-image
       loader — toward running real IDF-built firmware (a long road,
       walked openly)
 

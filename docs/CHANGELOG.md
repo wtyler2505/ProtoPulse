@@ -2,6 +2,43 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — ESP32-S3 slice 4: exceptions, interrupts, and time
+
+### Added
+- **Special registers + RSR/WSR/RSIL/RFE** (@protopulse/emu): PS
+  (INTLEVEL/EXCM gating), EPC1, EXCSAVE1, EXCCAUSE, VECBASE,
+  INTENABLE, INTERRUPT, CCOUNT, CCOMPARE0, and the WindowBase/
+  WindowStart SRs — numbers verified against the Cadence RM,
+  including catching the RM index's own typo (EXCSAVE1 is 209, not
+  192 — the EXCSAVE2..7 = 210–215 sequence proves it).
+- **The core timer**: CCOUNT increments every cycle; CCOUNT =
+  CCOMPARE0 latches the INT6 timer interrupt (line and level from
+  ESP32-S3's own core-isa.h), cleared by writing CCOMPARE0 — the RM
+  rule, honored exactly.
+- **Level-1 dispatch**: pending ∧ enabled ∧ INTLEVEL<1 ∧ ¬EXCM →
+  EPC1 ← PC, EXCCAUSE ← 4, EXCM ← 1, PC ← VECBASE + 0x340
+  (XCHAL_USER_VECOFS). RFE returns. Reset parks INTLEVEL at 15;
+  firmware lowers via RSIL like real crt0s do.
+- Assembler: RSR/WSR/RSIL/RFE builders, the SR name map, and PAD_TO
+  — NOP-filling to an absolute image offset so handlers can sit at
+  architectural addresses.
+
+### Verified (+4 tests, emu suite at 110 green)
+- CCOUNT advances exactly one per instruction (RSR deltas).
+- The full interrupt life: a periodic CCOMPARE0 interrupt vectors to
+  VECBASE+0x340, the handler saves context the architectural way
+  (EXCSAVE1 + scratch memory), increments a counter, re-arms (which
+  clears the pending bit), RFEs — and main counts 3 ticks.
+- RSIL: an interrupt latched while masked delivers the moment
+  INTLEVEL drops ([0, 1] observed).
+- Unknown special registers refuse loudly.
+
+### Honest cuts
+- Timer line only (no software/peripheral interrupt lines yet);
+  level-1 only; UM/WOE stored, not acted on; vectoring costs no
+  cycles; VECBASE alignment unenforced. Next: MOVSP, peripheral
+  lines, the IDF app-image loader.
+
 ## 2026-06-11 — ESP32-S3 slice 3: the windowed ABI
 
 ### Added

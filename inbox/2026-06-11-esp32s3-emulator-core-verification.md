@@ -124,3 +124,33 @@ Emulator approach: MAGIC SPILL/FILL — the handlers' documented net
 effect performed directly (same memory layout compiled code expects),
 no exception machinery. Cuts: spill/fill costs no cycles; MOVSP and
 the handler-only L32E/S32E/RFWO/RFWU refuse; PS not modeled.
+
+## Addendum: exceptions + level-1 interrupts + core timer (slice 4)
+
+Sources: Cadence ISA RM (SR table §5.3, EXCCAUSE table, Timer
+Interrupt Option §4.4.6, RSIL/RSR/WSR/RFE instruction pages) +
+esp-idf v5.2 `xtensa/config/core-isa.h` for the ESP32-S3 config.
+
+- SR numbers: WINDOWBASE 72, WINDOWSTART 73, EPC1 177, EXCSAVE1 209
+  (the RM index has a typo listing 192 — that is DEPC; EXCSAVE2..7 at
+  210–215 confirms 209), INTERRUPT 226 (read) / INTSET 226 (write),
+  INTCLEAR 227, INTENABLE 228, PS 230, VECBASE 231, EXCCAUSE 232,
+  CCOUNT 234, CCOMPARE0..2 240–242.
+- Encodings: RSR 0x030000|sr<<8|t<<4; WSR 0x130000|…; RSIL
+  0x006000|level<<8|t<<4 (also reads PS into at); RFE 0x003000
+  (PS.EXCM ← 0; PC ← EPC1).
+- Timer: CCOUNT increments every cycle; CCOUNT = CCOMPARE[i] latches
+  TIMERINT[i] until CCOMPARE[i] is written (RM: "timer interrupts are
+  cleared by writing CCOMPARE").
+- EXCCAUSE codes: 0 Illegal, 1 Syscall, 2 IFetchError, 3
+  LoadStoreError, 4 Level1Interrupt, 5 Alloca.
+- ESP32-S3 config (core-isa.h): XCHAL_TIMER0_INTERRUPT = 6 at level 1
+  (XCHAL_INT6_LEVEL = 1); XCHAL_USER_VECOFS = 0x340; XCHAL_KERNEL_
+  VECOFS = 0x300; XCHAL_VECBASE_RESET_VADDR = 0x40000000;
+  XCHAL_NUM_AREGS = 64 (confirming slice 3); XCHAL_NUM_TIMERS = 3.
+
+Emulator cuts: only the timer line (INT6) exists; level-1 only (no
+medium/high-priority levels, no XSR/WAITI); PS gates via INTLEVEL +
+EXCM, UM/WOE stored only; reset PS.INTLEVEL = 15 (conservative —
+firmware lowers via RSIL); vectoring costs no cycles; VECBASE
+alignment not enforced.

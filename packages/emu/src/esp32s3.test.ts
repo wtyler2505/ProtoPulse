@@ -10,11 +10,13 @@ import {
   ADD,
   ADD_N,
   ADDI,
+  ADDMI,
   ADDI_N,
   AND,
   assembleXtensa,
   BEQZ,
   BEQZ_N_TO,
+  BNE,
   BNEZ,
   BNEZ_TO,
   BR,
@@ -34,13 +36,20 @@ import {
   MOVI_N,
   NOP,
   NOP_N,
+  PAD_TO,
   RET,
   RET_N,
   RETW,
   RETW_N,
+  RFE,
+  RSIL,
+  RSR,
   S32I,
   S32I_N,
   SLLI,
+  SR,
+  SUB,
+  WSR,
 } from './xtensa-asm.js';
 
 /**
@@ -448,5 +457,120 @@ describe('Esp32s3Core — windowed ABI (slice 3)', () => {
     const c = core(image);
     c.step(60);
     expect([...c.drainUart()]).toEqual([42]);
+  });
+});
+
+describe('Esp32s3Core — exceptions + level-1 interrupts (slice 4)', () => {
+  const SCRATCH = 0x3fc88000 + 0x400;
+
+  it('RSR/WSR round-trip; CCOUNT advances exactly one per instruction', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, 0x1234], [
+      L32R(2, 0),
+      L32R(3, 1),
+      WSR(3, SR.VECBASE),
+      RSR(4, SR.VECBASE),
+      S32I(4, 2, 0x00), // tx 0x34 (low byte of the round-tripped value)
+      RSR(5, SR.CCOUNT),
+      NOP(),
+      NOP(),
+      NOP(),
+      RSR(6, SR.CCOUNT),
+      SUB(6, 6, 5), // exactly 4 instructions between the reads
+      S32I(6, 2, 0x00),
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    c.step(40);
+    expect([...c.drainUart()]).toEqual([0x34, 4]);
+  });
+
+  it('the CCOMPARE0 timer interrupt vectors, the handler re-arms, main counts 3 ticks', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, SCRATCH, ESP32S3_IRAM_BASE], [
+      // main:
+      L32R(2, 0), // a2 = UART
+      L32R(3, 1), // a3 = SCRATCH
+      MOVI(4, 0),
+      S32I(4, 3, 0), // counter = 0
+      L32R(5, 2),
+      WSR(5, SR.VECBASE), // vectors at the image base (1KB-aligned)
+      MOVI(6, 64), // 1 << 6 — the timer0 line
+      WSR(6, SR.INTENABLE),
+      RSR(7, SR.CCOUNT),
+      ADDMI(7, 7, 256),
+      WSR(7, SR.CCOMPARE0),
+      RSIL(8, 0), // unmask (reset leaves INTLEVEL = 15)
+      // loop until counter == 3:
+      MOVI(9, 3),
+      L32I(4, 3, 0), // [13]
+      BNE(4, 9, BR(-2)),
+      S32I(4, 2, 0x00), // tx 3
+      J(BR(-1)),
+      // the level-1 user vector lives at VECBASE + 0x340:
+      PAD_TO(0x340),
+      WSR(2, SR.EXCSAVE1), // save a2 the architectural way
+      L32R(2, 1), // a2 = SCRATCH (L32R reaches backward ✓)
+      S32I(3, 2, 8), // save a3 to scratch
+      L32I(3, 2, 0),
+      ADDI(3, 3, 1),
+      S32I(3, 2, 0), // counter++
+      RSR(3, SR.CCOMPARE0),
+      ADDMI(3, 3, 256),
+      WSR(3, SR.CCOMPARE0), // re-arm — also CLEARS the pending bit
+      L32I(3, 2, 8), // restore a3
+      RSR(2, SR.EXCSAVE1), // restore a2
+      RFE(),
+    ]);
+    const c = core(image);
+    c.step(2_000);
+    expect([...c.drainUart()]).toEqual([3]);
+  });
+
+  it('RSIL masks a pending interrupt; lowering INTLEVEL delivers it', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, SCRATCH, ESP32S3_IRAM_BASE], [
+      L32R(2, 0),
+      L32R(3, 1),
+      MOVI(4, 0),
+      S32I(4, 3, 0),
+      L32R(5, 2),
+      WSR(5, SR.VECBASE),
+      MOVI(6, 64),
+      WSR(6, SR.INTENABLE),
+      RSR(7, SR.CCOUNT),
+      ADDI(7, 7, 20),
+      WSR(7, SR.CCOMPARE0), // fires soon — but INTLEVEL is still 15
+      // burn well past the match while masked:
+      MOVI(8, 30),
+      ADDI(8, 8, -1),
+      BNEZ(8, BR(-2)),
+      L32I(4, 3, 0),
+      S32I(4, 2, 0x00), // tx 0 — latched but not delivered
+      RSIL(8, 0), // unmask → delivers immediately
+      NOP(),
+      L32I(4, 3, 0),
+      S32I(4, 2, 0x00), // tx 1
+      J(BR(-1)),
+      PAD_TO(0x340),
+      WSR(2, SR.EXCSAVE1),
+      L32R(2, 1),
+      S32I(3, 2, 8),
+      L32I(3, 2, 0),
+      ADDI(3, 3, 1),
+      S32I(3, 2, 0),
+      RSR(3, SR.CCOMPARE0),
+      ADDMI(3, 3, 7936), // re-arm far away — one tick only
+      WSR(3, SR.CCOMPARE0),
+      L32I(3, 2, 8),
+      RSR(2, SR.EXCSAVE1),
+      RFE(),
+    ]);
+    const c = core(image);
+    c.step(500);
+    expect([...c.drainUart()]).toEqual([0, 1]);
+  });
+
+  it('unimplemented special registers refuse loudly', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [], [RSR(2, 99), J(BR(-1))]);
+    const c = core(image);
+    expect(() => c.step(5)).toThrow('unimplemented special register 99');
   });
 });

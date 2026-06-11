@@ -1,9 +1,13 @@
 /**
  * Xtensa LX7 interpreter — the ESP32-S3 core's CPU: 24-bit core
- * instructions, the 16-bit code-density forms (slice 2), and the
- * windowed-register option (slice 3) — CALL4/8/12, CALLX4/8/12,
- * ENTRY, RETW/RETW.N over a 64-entry physical register file with
- * WindowBase/WindowStart, exactly as the Cadence ISA RM specifies.
+ * instructions, the 16-bit code-density forms (slice 2), the
+ * windowed-register option (slice 3 — CALL4/8/12, ENTRY, RETW over a
+ * 64-entry physical register file), and exceptions + level-1
+ * interrupts with the CCOUNT/CCOMPARE core timer (slice 4 — RSR/WSR/
+ * RSIL/RFE, EPC1/EXCSAVE1/EXCCAUSE/VECBASE/INTENABLE/INTERRUPT,
+ * timer0 on interrupt line 6 per ESP32-S3's core-isa.h, vectoring to
+ * VECBASE+0x340 with EXCCAUSE=Level1Interrupt). Exactly as the
+ * Cadence ISA RM specifies.
  *
  * Window overflow/underflow is handled by MAGIC SPILL/FILL: instead of
  * raising the exception and running the standard handlers, the
@@ -15,10 +19,13 @@
  * which matches the hardware's spill-and-retry fixpoint (spills never
  * change visible register values, only memory and WindowStart).
  *
- * Honest cuts: spill/fill costs no extra cycles (1 instruction =
- * 1 cycle everywhere); MOVSP and the handler-only L32E/S32E/RFWO/RFWU
- * are refused; PS is not modeled (WOE behaves as always-on; window
- * rules are enforced by throwing, not by exceptions). Everything
+ * Honest cuts: spill/fill and interrupt vectoring cost no extra
+ * cycles (1 instruction = 1 cycle everywhere); MOVSP and the
+ * handler-only L32E/S32E/RFWO/RFWU are refused; PS holds INTLEVEL +
+ * EXCM (gating interrupts) but UM/WOE/RING are stored, not acted on;
+ * only the timer line (INT6) exists — no software/external interrupt
+ * lines yet; VECBASE alignment is not enforced; only level-1
+ * interrupts (no medium/high-priority levels, no XSR). Everything
  * unimplemented throws with its address and bytes. Encodings +
  * semantics verified against the Espressif ISA overview, the full
  * Cadence ISA RM, and the ida-xtensa2 tables (see
@@ -48,6 +55,21 @@ export class XtensaCpu {
   /** Instructions retired (1 instruction = 1 cycle in this model). */
   cycles = 0;
 
+  // ── Slice 4: exception + interrupt state ──
+  /** PS: INTLEVEL [3:0], EXCM bit 4 (gating); UM/WOE stored only. */
+  ps = 0xf; // reset with interrupts masked — firmware lowers via RSIL
+  epc1 = 0;
+  excsave1 = 0;
+  exccause = 0;
+  /** Vector base — resets to the ROM region per XCHAL_VECBASE_RESET_VADDR. */
+  vecbase = 0x40000000;
+  intenable = 0;
+  /** Pending interrupt bits; only the timer line (bit 6) exists. */
+  interrupt = 0;
+  private ccompare0 = 0;
+  /** CCOUNT = (cycles + bias) >>> 0 — WSR.CCOUNT adjusts the bias. */
+  private ccountBias = 0;
+
   constructor(private readonly bus: XtensaBus) {}
 
   reset(pc: number, sp: number): void {
@@ -58,6 +80,19 @@ export class XtensaCpu {
     this.phys[1] = sp | 0;
     this.pc = pc;
     this.cycles = 0;
+    this.ps = 0xf;
+    this.epc1 = 0;
+    this.excsave1 = 0;
+    this.exccause = 0;
+    this.vecbase = 0x40000000;
+    this.intenable = 0;
+    this.interrupt = 0;
+    this.ccompare0 = 0;
+    this.ccountBias = 0;
+  }
+
+  get ccount(): number {
+    return (this.cycles + this.ccountBias) >>> 0;
   }
 
   /** Visible register a[i] of the CURRENT window (for inspection). */
@@ -135,8 +170,28 @@ export class XtensaCpu {
     }
   }
 
+  /** Take a pending enabled level-1 interrupt, per the RM's dispatch:
+   *  EPC1 ← PC, EXCCAUSE ← Level1Interrupt(4), PS.EXCM ← 1,
+   *  PC ← VECBASE + 0x340 (XCHAL_USER_VECOFS). */
+  private maybeInterrupt(): void {
+    if ((this.interrupt & this.intenable) === 0) return;
+    if ((this.ps & 0x10) !== 0) return; // EXCM blocks
+    if ((this.ps & 0xf) >= 1) return; // INTLEVEL masks level-1
+    this.epc1 = this.pc;
+    this.exccause = 4;
+    this.ps |= 0x10;
+    this.pc = (this.vecbase + 0x340) >>> 0;
+  }
+
+  /** CCOUNT ticked to this value — latch the timer interrupt on match
+   *  (cleared only by writing CCOMPARE0 or INTCLEAR, per the RM). */
+  private tickCcount(): void {
+    if (this.ccount === (this.ccompare0 >>> 0)) this.interrupt |= 1 << 6;
+  }
+
   /** Execute one instruction. */
   step(): void {
+    this.maybeInterrupt();
     const pc = this.pc;
     const b0 = this.bus.read(pc, 1);
     const b1 = this.bus.read(pc + 1, 1);
@@ -202,6 +257,7 @@ export class XtensaCpu {
       }
       this.pc = next >>> 0;
       this.cycles++;
+      this.tickCcount();
       return;
     }
 
@@ -243,6 +299,18 @@ export class XtensaCpu {
           const target = this.ra(s);
           this.calln(n, pc);
           next = target;
+        } else if (word === 0x003000) {
+          // RFE: PS.EXCM ← 0; PC ← EPC1
+          this.ps &= ~0x10;
+          next = this.epc1;
+        } else if ((word & 0xff000f) === 0x030000) {
+          this.wa(t, this.readSr((word >> 8) & 0xff, pc)); // RSR
+        } else if ((word & 0xff000f) === 0x130000) {
+          this.writeSr((word >> 8) & 0xff, this.ra(t), pc); // WSR
+        } else if ((word & 0xfff00f) === 0x006000) {
+          // RSIL at, level: at ← PS; PS.INTLEVEL ← level
+          this.wa(t, this.ps);
+          this.ps = (this.ps & ~0xf) | s;
         } else if ((word & 0xff000f) === 0x800000) {
           this.wa(r, (this.ra(s) + this.ra(t)) | 0); // ADD
         } else if ((word & 0xff000f) === 0xc00000) {
@@ -389,6 +457,49 @@ export class XtensaCpu {
 
     this.pc = next >>> 0;
     this.cycles++;
+    this.tickCcount();
+  }
+
+  /** Special-register read (RSR). Unknown registers refuse loudly. */
+  private readSr(sr: number, pc: number): number {
+    switch (sr) {
+      case 72: return this.windowBase;
+      case 73: return this.windowStart;
+      case 177: return this.epc1;
+      case 209: return this.excsave1;
+      case 226: return this.interrupt;
+      case 228: return this.intenable;
+      case 230: return this.ps;
+      case 231: return this.vecbase | 0;
+      case 232: return this.exccause;
+      case 234: return this.ccount | 0;
+      case 240: return this.ccompare0;
+      default:
+        throw new Error(`RSR of unimplemented special register ${String(sr)} at 0x${pc.toString(16)}`);
+    }
+  }
+
+  /** Special-register write (WSR). */
+  private writeSr(sr: number, v: number, pc: number): void {
+    switch (sr) {
+      case 72: this.windowBase = v & (NWINDOWS - 1); break;
+      case 73: this.windowStart = v & 0xffff; break;
+      case 177: this.epc1 = v >>> 0; break;
+      case 209: this.excsave1 = v | 0; break;
+      case 227: this.interrupt &= ~v; break; // INTCLEAR
+      case 228: this.intenable = v >>> 0; break;
+      case 230: this.ps = v >>> 0; break;
+      case 231: this.vecbase = v >>> 0; break;
+      case 232: this.exccause = v & 0x3f; break;
+      case 234: this.ccountBias = (v - this.cycles) | 0; break; // CCOUNT
+      case 240:
+        // Writing CCOMPARE0 clears the timer interrupt (RM rule).
+        this.ccompare0 = v >>> 0;
+        this.interrupt &= ~(1 << 6);
+        break;
+      default:
+        throw new Error(`WSR of unimplemented special register ${String(sr)} at 0x${pc.toString(16)}`);
+    }
   }
 
   /** CALLn (n=1,2,3): WindowCheck(n), PS.CALLINC ← n, a[4n] ← link. */
