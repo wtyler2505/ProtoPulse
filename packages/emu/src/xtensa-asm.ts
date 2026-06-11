@@ -197,6 +197,43 @@ export function ENTRY(s: number, frameBytes: number): number {
 
 export const RETW = (): number => 0x000090;
 
+// ── Exceptions / interrupts (slice 4) ────────────────────────────────
+
+/** Special-register numbers (Cadence ISA RM §5.3; EXCSAVE1 = 209). */
+export const SR = {
+  WINDOWBASE: 72,
+  WINDOWSTART: 73,
+  EPC1: 177,
+  EXCSAVE1: 209,
+  INTERRUPT: 226,
+  INTCLEAR: 227,
+  INTENABLE: 228,
+  PS: 230,
+  VECBASE: 231,
+  EXCCAUSE: 232,
+  CCOUNT: 234,
+  CCOMPARE0: 240,
+} as const;
+
+const srNum = (sr: number): number => range(sr, 0, 255, 'special register');
+
+/** RSR at, sr — at ← SR[sr]. */
+export const RSR = (t: number, sr: number): number =>
+  0x030000 | (srNum(sr) << 8) | (reg(t, 't') << 4);
+
+/** WSR at, sr — SR[sr] ← at. */
+export const WSR = (t: number, sr: number): number =>
+  0x130000 | (srNum(sr) << 8) | (reg(t, 't') << 4);
+
+/** RSIL at, 0..15 — at ← PS; PS.INTLEVEL ← level. */
+export function RSIL(t: number, level: number): number {
+  range(level, 0, 15, 'interrupt level');
+  return 0x006000 | (level << 8) | (reg(t, 't') << 4);
+}
+
+/** RFE — PS.EXCM ← 0; PC ← EPC1. */
+export const RFE = (): number => 0x003000;
+
 export const RET = (): number => 0x000080; // PC ← a0
 export const NOP = (): number => 0x0020f0;
 export const MEMW = (): number => 0x0020c0;
@@ -264,6 +301,15 @@ export interface Call0Ref {
   call0: { to: number; n: number };
 }
 
+/** Pad with NOP/NOP.N up to an absolute IMAGE byte offset — for
+ *  placing code at architectural offsets (e.g. a handler at
+ *  VECBASE + 0x340). */
+export interface PadTo {
+  padTo: number;
+}
+
+export const PAD_TO = (byteOffset: number): PadTo => ({ padTo: byteOffset });
+
 /** Index-based control flow, resolved from the real layout. */
 export interface FlowRef {
   flow:
@@ -273,7 +319,7 @@ export interface FlowRef {
     | { kind: 'ri6'; nez: boolean; s: number; to: number };
 }
 
-export type XtInstr = number | Narrow | L32RRef | Call0Ref | FlowRef;
+export type XtInstr = number | Narrow | L32RRef | Call0Ref | FlowRef | PadTo;
 
 /** Reference a literal-pool entry from code. */
 export function L32R(t: number, lit: number): L32RRef {
@@ -307,8 +353,18 @@ export const BEQZ_N_TO = (s: number, to: number): FlowRef =>
 export const BNEZ_N_TO = (s: number, to: number): FlowRef =>
   ({ flow: { kind: 'ri6', nez: true, s: reg(s, 's'), to } });
 
-const instrLen = (i: XtInstr): number =>
-  typeof i === 'number' ? 3 : 'w16' in i ? 2 : 'flow' in i && i.flow.kind === 'ri6' ? 2 : 3;
+const instrLen = (i: XtInstr, at: number): number => {
+  if (typeof i === 'number') return 3;
+  if ('w16' in i) return 2;
+  if ('padTo' in i) {
+    const gap = i.padTo - at;
+    if (gap < 0 || gap === 1) {
+      throw new Error(`PAD_TO ${String(i.padTo)} unreachable from byte ${String(at)} (gap ${String(gap)})`);
+    }
+    return gap;
+  }
+  return 'flow' in i && i.flow.kind === 'ri6' ? 2 : 3;
+};
 
 /**
  * Lay out a bootable raw image for a given base address:
@@ -331,7 +387,7 @@ export function assembleXtensa(base: number, literals: number[], code: XtInstr[]
   let cursor = codeStart;
   for (const instr of code) {
     at.push(cursor);
-    cursor += instrLen(instr);
+    cursor += instrLen(instr, cursor);
   }
   const total = cursor;
   const offsetOf = (index: number, what: string): number => {
@@ -366,6 +422,23 @@ export function assembleXtensa(base: number, literals: number[], code: XtInstr[]
     if ('w16' in instr) {
       out[pos] = instr.w16 & 0xff;
       out[pos + 1] = (instr.w16 >> 8) & 0xff;
+      return;
+    }
+    if ('padTo' in instr) {
+      // Fill gap with b NOPs (3B) + a NOP.Ns (2B): a·2 + b·3 = gap.
+      const gap = instr.padTo - pos;
+      const b = gap % 2;
+      let cur = pos;
+      for (let j = 0; j < b; j++) {
+        out[cur] = 0xf0;
+        out[cur + 1] = 0x20;
+        out[cur + 2] = 0x00;
+        cur += 3;
+      }
+      for (; cur < instr.padTo; cur += 2) {
+        out[cur] = 0x3d;
+        out[cur + 1] = 0xf0;
+      }
       return;
     }
     if ('call0' in instr) {
