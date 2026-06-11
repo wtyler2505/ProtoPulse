@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { pcbViewOf } from '@protopulse/renderer';
 
-import { runDrcCheck } from '../drc/runner.js';
+import { fabDeckFile, listFabDecks, runDrcCheck, setFabDeckFile } from '../drc/runner.js';
 import { pcbAnchorIds, pcbAnchorPosition } from '../pcb/anchors.js';
 import { getGraph, partDb, useSession } from '../state/session.js';
 import { useUi } from '../state/ui.js';
@@ -19,7 +19,17 @@ import type { DesignGraph } from '@protopulse/graph';
  * severity, hover highlights, click focuses the anchors on the PCB
  * canvas. No executable fixes yet (honest cut: DRC violations need
  * spatial edits the engine can't synthesize at v0.4).
+ *
+ * The fab picker selects which manufacturer's rule deck the WHOLE app
+ * answers to — DRC, walk/shove clearance, and zone pours all follow
+ * (see drc/runner.ts). Decks are versioned JSON in content/decks,
+ * each capability web-verified against the fab's official pages.
  */
+
+/** "jlcpcb-2layer-standard.json" → "jlcpcb-2layer-standard". */
+function deckLabel(file: string): string {
+  return file.replace(/\.json$/, '');
+}
 
 const SEVERITY_ORDER: Severity[] = ['error', 'warn', 'info'];
 
@@ -61,6 +71,7 @@ export function DrcPanel() {
   void opsVersion;
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<DrcOutcome | null>(null);
+  const [deckFile, setDeckFile] = useState(fabDeckFile());
   const graph = getGraph(useSession.getState());
 
   const onRun = async () => {
@@ -76,6 +87,24 @@ export function DrcPanel() {
 
   return (
     <div className="panel-body">
+      <label className="sim-field">
+        <span className="sim-field-label">fab</span>
+        <select
+          value={deckFile}
+          disabled={busy}
+          onChange={(e) => {
+            setFabDeckFile(e.target.value);
+            setDeckFile(e.target.value);
+            setOutcome(null); // the old report answered to another fab
+          }}
+        >
+          {listFabDecks().map((file) => (
+            <option key={file} value={file}>
+              {deckLabel(file)}
+            </option>
+          ))}
+        </select>
+      </label>
       <button
         type="button"
         className="primary-button"

@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — multi-fab rule decks + fab picker
+
+### Added
+- **OSHPark + PCBWay 2-layer rule decks** (content/decks): every
+  capability web-verified against the fab's official pages —
+  OSHPark 6/6 mil trace/space, 10 mil drill, 5 mil annular, 15 mil
+  edge keepout; PCBWay 0.1 mm trace/space, 0.15 mm drill/annular,
+  0.25 mm edge. Sources + the mil→nm table filed to
+  inbox/2026-06-11-fab-rule-deck-capabilities.md. The power-class
+  0.3 mm trace override is the house convention, noted as such.
+- **Fab picker** (@protopulse/app DRC panel): selects which
+  manufacturer's deck the WHOLE app answers to — DRC reports (the
+  deck joins the cache key, so the same head re-checks under a new
+  fab), the Router's direct runs, walk/shove clearance, and zone
+  pours all follow the selection, which persists across sessions.
+  Switching fabs clears the displayed report (it answered to
+  another fab) and re-pours zones at the new clearance.
+
+### Verified
+- Runner test: same head re-runs on fab switch, deck reloads,
+  unknown deck names refuse, the three decks list with JLC first.
+  Browser pass: picker lists all three, an OSHPark run reports
+  "deck oshpark-2layer-standard rev 2026-06", and the selection
+  survives a reload.
+
 ## 2026-06-11 — part packs: the community library's foundation
 
 ### Added

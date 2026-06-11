@@ -313,7 +313,17 @@ manufacturing pipeline (Vol II §H).
       format means a pack can already travel as a file
 - [ ] Community library: registry/sharing (product decision — needs
       Tyler: where packs live, who can publish, moderation)
-- [ ] Manufacturing pipeline (Vol II §H)
+- [x] Multi-fab rule decks + fab picker (landed 2026-06-11, the
+      manufacturing pipeline's foundation): OSHPark and PCBWay
+      2-layer decks join JLC — every capability web-verified against
+      the fab's official pages (sources in inbox/). The DRC panel's
+      fab picker selects which deck the WHOLE app answers to: DRC
+      reports (deck in the cache key), the Router's direct runs,
+      walk/shove clearance, and zone pours all follow, and the
+      choice persists. Vol I §6's "DRC rule decks per manufacturer,
+      versioned" is real
+- [ ] Manufacturing pipeline: quotes/ordering via fab APIs (Vol II
+      §H — product decision + external accounts; needs Tyler)
 
 ## Migration milestone — legacy retirement (between v0.6 and v0.7) ⬜
 

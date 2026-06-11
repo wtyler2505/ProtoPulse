@@ -1,0 +1,17 @@
+{
+  "deck": "oshpark-2layer-standard",
+  "rev": "2026-06",
+  "rules": {
+    "min_trace_nm": 152400,
+    "min_clearance_nm": 152400,
+    "min_drill_nm": 254000,
+    "min_annular_nm": 127000,
+    "copper_to_edge_nm": 381000,
+    "silk_min_width_nm": 127000
+  },
+  "classOverrides": {
+    "power": {
+      "min_trace_nm": 300000
+    }
+  }
+}
