@@ -2,6 +2,37 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — concepts wiki complete: 88/88
+
+### Added
+- **Final PCB tranche (12 articles)**: return-paths, loop-area,
+  trace-width-vs-current, vias-thermal-and-signal,
+  zones-and-thermal-reliefs, courtyards, annular-rings,
+  silk-discipline, stackup-basics, diff-pairs-at-hobby-scale,
+  acid-traps, panelization. The Vol III §2 seed list (88 articles,
+  nine categories) is complete. "See it" sections stay honest about
+  today's editor: solid-connect zones (no thermal reliefs yet), no
+  diff-pair mode, no panelization, 2-layer only.
+- **drcCodes frontmatter** (optional): PCB articles can claim the DRC
+  codes that deep-link to them, mirroring ercCodes. Validation is
+  bidirectional and lives in @protopulse/drc (content can't depend on
+  drc without a cycle): every DRC code maps to a real article, every
+  drcCodes claim is a real DRC code.
+
+### Changed
+- DRC codes re-pointed from placeholder fundamentals slugs to the real
+  PCB articles: DRC-TRACE-WIDTH → trace-width-vs-current, DRC-ANNULAR
+  and DRC-DRILL → annular-rings, DRC-ZONE-OVERLAP and
+  DRC-ZONE-ISOLATED → zones-and-thermal-reliefs. (DRC-CLEARANCE stays
+  on tolerance-stacking — the honest home; the seed list has no
+  dedicated clearance article.)
+
+### Verified
+- Content tests now require the pcb category, ≥88 articles, and all
+  12 PCB block slugs; the drc concept-mapping test scans the whole
+  wiki (was: fundamentals only). Full test:packages green; full-tree
+  eslint 0 errors.
+
 ## 2026-06-11 — the Architect: fifth crew member
 
 ### Added
