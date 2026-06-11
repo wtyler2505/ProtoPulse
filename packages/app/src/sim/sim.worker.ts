@@ -22,16 +22,22 @@ export interface EngineLike {
 
 const engine: EngineLike = new SpiceEngine() as EngineLike;
 
-/** Pure request → response mapping; errors become error replies. */
+/** Pure request → response mapping; errors become error replies.
+ *  `emit` streams a progress frame after each completed deck (batches
+ *  only — a single simulate has nothing to count). */
 export async function handleSimWorkerRequest(
   req: SimWorkerRequest,
   eng: EngineLike = engine,
+  emit?: (response: SimWorkerResponse) => void,
 ): Promise<SimWorkerResponse> {
   try {
     const bodies = req.kind === 'simulate' ? [req.netlistBody] : req.netlistBodies;
     const result: SimResult[] = [];
     for (const body of bodies) {
       result.push(await eng.run(body, req.analysis));
+      if (req.kind !== 'simulate') {
+        emit?.({ id: req.id, kind: 'progress', done: result.length, total: bodies.length });
+      }
     }
     return { id: req.id, ok: true, result };
   } catch (err) {
@@ -57,7 +63,9 @@ if (
   scope.document === undefined
 ) {
   scope.addEventListener('message', (event) => {
-    void handleSimWorkerRequest(event.data).then((response) => {
+    void handleSimWorkerRequest(event.data, undefined, (progress) => {
+      scope.postMessage?.(progress);
+    }).then((response) => {
       scope.postMessage?.(response);
     });
   });

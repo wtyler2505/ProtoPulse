@@ -1,5 +1,7 @@
 import { SimWorkerClient, simWorkerSupported } from './worker.js';
 
+import type { SimProgress } from './worker.js';
+
 import type {
   Analysis,
   FidelityEntry,
@@ -86,12 +88,14 @@ export interface SimRunner {
     parts: PartDb,
     spec: MonteCarloSpec,
     key: SimRunKey,
+    onProgress?: SimProgress,
   ) => Promise<McOutcome>;
   runStep: (
     graph: DesignGraph,
     parts: PartDb,
     spec: StepSpec,
     key: SimRunKey,
+    onProgress?: SimProgress,
   ) => Promise<StepOutcome>;
   /** Uncached raw simulate for the Analyst (the agent decides when to run);
    *  throws if the engine is unavailable — the agent loop reports it. */
@@ -181,6 +185,7 @@ export function createSimRunner(
     parts: PartDb,
     spec: MonteCarloSpec,
     key: SimRunKey,
+    onProgress?: SimProgress,
   ): Promise<McOutcome> =>
     runCached(`mc:${key.branch}@${String(key.opsVersion)}@${JSON.stringify(spec)}`, async (mod) => {
       if (workerClient && typeof mod.planMonteCarloNetlists === 'function') {
@@ -190,6 +195,7 @@ export function createSimRunner(
           'mc',
           plan.decks.map((d) => d.netlist),
           spec.base,
+          onProgress,
         );
         const trials: McTrial[] = results.map((r, i) => ({
           ...r,
@@ -213,6 +219,7 @@ export function createSimRunner(
     parts: PartDb,
     spec: StepSpec,
     key: SimRunKey,
+    onProgress?: SimProgress,
   ): Promise<StepOutcome> =>
     runCached(`step:${key.branch}@${String(key.opsVersion)}@${JSON.stringify(spec)}`, async (mod) => {
       if (workerClient && typeof mod.planStepNetlists === 'function') {
@@ -222,6 +229,7 @@ export function createSimRunner(
           'step',
           plan.decks.map((d) => d.netlist),
           spec.base,
+          onProgress,
         );
         const result: StepResult = {
           runs: results.map((r, i) => ({ ...r, value: plan.decks[i]?.value ?? '' })),
@@ -258,8 +266,9 @@ export function runMonteCarlo(
   parts: PartDb,
   spec: MonteCarloSpec,
   key: SimRunKey,
+  onProgress?: SimProgress,
 ): Promise<McOutcome> {
-  return simRunner.runMonteCarlo(graph, parts, spec, key);
+  return simRunner.runMonteCarlo(graph, parts, spec, key, onProgress);
 }
 
 /** Cached parameter-step entry point. */
@@ -268,8 +277,9 @@ export function runStep(
   parts: PartDb,
   spec: StepSpec,
   key: SimRunKey,
+  onProgress?: SimProgress,
 ): Promise<StepOutcome> {
-  return simRunner.runStep(graph, parts, spec, key);
+  return simRunner.runStep(graph, parts, spec, key, onProgress);
 }
 
 /** The real engine's simulate(), lazily loaded — wired into the Analyst. */
