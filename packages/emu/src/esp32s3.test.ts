@@ -16,6 +16,7 @@ import {
   assembleXtensa,
   BEQZ,
   BEQZ_N_TO,
+  BLT,
   BNE,
   BNEZ,
   BNEZ_TO,
@@ -573,6 +574,157 @@ describe('Esp32s3Core — exceptions + level-1 interrupts (slice 4)', () => {
     const image = assembleXtensa(ESP32S3_IRAM_BASE, [], [RSR(2, 99), J(BR(-1))]);
     const c = core(image);
     expect(() => c.step(5)).toThrow('unimplemented special register 99');
+  });
+});
+
+describe('Esp32s3Core — peripheral interrupt lines through the matrix (slice 6)', () => {
+  const SCRATCH = 0x3fc88000 + 0x800;
+  const INTMTX = 0x600c2000;
+  // GPIO_PINn config values (INT_TYPE [9:7], INT_ENA bit 13):
+  const PIN_POSEDGE = (1 << 7) | (1 << 13);
+  const PIN_HIGH_LEVEL = (5 << 7) | (1 << 13);
+
+  it('a rising-edge GPIO interrupt vectors through the matrix; falling edges do not', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, SCRATCH, ESP32S3_IRAM_BASE, GPIO, PIN_POSEDGE, INTMTX], [
+      L32R(2, 0), // a2 = UART
+      L32R(3, 1), // a3 = SCRATCH
+      MOVI(4, 0),
+      S32I(4, 3, 0), // counter = 0
+      L32R(5, 2),
+      WSR(5, SR.VECBASE),
+      L32R(5, 3), // a5 = GPIO base
+      L32R(6, 4),
+      S32I(6, 5, 0x84), // GPIO_PIN4 ← posedge | INT_ENA
+      L32R(7, 5), // a7 = interrupt matrix
+      MOVI(6, 0),
+      S32I(6, 7, 0x40), // GPIO source → CPU line 0
+      MOVI(6, 1),
+      WSR(6, SR.INTENABLE),
+      RSIL(8, 0),
+      // wait for counter == 2, settle, re-read — if falling edges
+      // wrongly counted, the re-read would say 3:
+      MOVI(9, 2),
+      L32I(4, 3, 0),
+      BNE(4, 9, BR(-2)),
+      MOVI(8, 40),
+      ADDI(8, 8, -1),
+      BNEZ(8, BR(-2)),
+      L32I(4, 3, 0),
+      S32I(4, 2, 0x00), // tx the settled count
+      J(BR(-1)),
+      PAD_TO(0x340),
+      // handler: counter++, drop the latched edge via STATUS_W1TC.
+      WSR(2, SR.EXCSAVE1),
+      L32R(2, 1), // a2 = SCRATCH
+      S32I(3, 2, 8),
+      S32I(4, 2, 12), // main polls in a3/a4 — save both
+      L32I(3, 2, 0),
+      ADDI(3, 3, 1),
+      S32I(3, 2, 0),
+      L32R(3, 3), // a3 = GPIO base
+      MOVI(4, 1 << 4),
+      S32I(4, 3, 0x4c), // STATUS_W1TC
+      L32I(4, 2, 12),
+      L32I(3, 2, 8),
+      RSR(2, SR.EXCSAVE1),
+      RFE(),
+    ]);
+    const c = core(image);
+    c.step(150); // config settles; IO4 idles low
+    c.setPin('IO4', 1);
+    c.step(100);
+    c.setPin('IO4', 0); // falling edge — must NOT count
+    c.step(100);
+    c.setPin('IO4', 1);
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([2]);
+  });
+
+  it('a high-level GPIO interrupt re-fires after W1TC until the level drops', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, SCRATCH, ESP32S3_IRAM_BASE, GPIO, PIN_HIGH_LEVEL, INTMTX], [
+      L32R(2, 0),
+      L32R(3, 1),
+      MOVI(4, 0),
+      S32I(4, 3, 0),
+      L32R(5, 2),
+      WSR(5, SR.VECBASE),
+      L32R(5, 3),
+      L32R(6, 4),
+      S32I(6, 5, 0x84), // GPIO_PIN4 ← high-level | INT_ENA
+      L32R(7, 5),
+      MOVI(6, 0),
+      S32I(6, 7, 0x40),
+      MOVI(6, 1),
+      WSR(6, SR.INTENABLE),
+      RSIL(8, 0),
+      // While IO4 is high the handler starves this loop (the line
+      // re-asserts after every W1TC — that is the point); once the
+      // host drops the pin, the count must have climbed ≥ 3.
+      MOVI(9, 3),
+      L32I(4, 3, 0),
+      BLT(4, 9, BR(-2)),
+      MOVI(4, 0xaa),
+      S32I(4, 2, 0x00),
+      J(BR(-1)),
+      PAD_TO(0x340),
+      WSR(2, SR.EXCSAVE1),
+      L32R(2, 1),
+      S32I(3, 2, 8),
+      S32I(4, 2, 12),
+      L32I(3, 2, 0),
+      ADDI(3, 3, 1),
+      S32I(3, 2, 0),
+      L32R(3, 3),
+      MOVI(4, 1 << 4),
+      S32I(4, 3, 0x4c), // W1TC — re-asserts while the level holds
+      L32I(4, 2, 12),
+      L32I(3, 2, 8),
+      RSR(2, SR.EXCSAVE1),
+      RFE(),
+    ]);
+    const c = core(image);
+    c.step(150);
+    c.setPin('IO4', 1);
+    c.step(600); // handler fires repeatedly; main is starved
+    c.setPin('IO4', 0);
+    c.step(300); // level gone → main finally runs and reports
+    expect([...c.drainUart()]).toEqual([0xaa]);
+  });
+
+  it('a fully interrupt-driven UART echo: RXFIFO_FULL wakes the handler per byte', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, ESP32S3_IRAM_BASE, INTMTX], [
+      L32R(2, 0), // a2 = UART
+      L32R(5, 1),
+      WSR(5, SR.VECBASE),
+      MOVI(3, 0),
+      S32I(3, 2, 0x24), // CONF1: RXFIFO_FULL_THRHD = 0 (any byte)
+      MOVI(3, 1),
+      S32I(3, 2, 0x0c), // INT_ENA = RXFIFO_FULL
+      L32R(7, 2),
+      MOVI(3, 1),
+      S32I(3, 7, 0x6c), // UART source → CPU line 1
+      MOVI(3, 2),
+      WSR(3, SR.INTENABLE),
+      RSIL(8, 0),
+      J(BR(-1)), // main does NOTHING — the echo is all interrupts
+      PAD_TO(0x340),
+      // main is parked and reads no registers, so a3 needs no save.
+      WSR(2, SR.EXCSAVE1),
+      L32R(2, 0),
+      L32I(3, 2, 0x00), // FIFO read — draining deasserts the line
+      S32I(3, 2, 0x00), // echo
+      RSR(2, SR.EXCSAVE1),
+      RFE(),
+    ]);
+    const c = core(image);
+    c.step(100);
+    expect([...c.drainUart()]).toEqual([]);
+    c.uartWrite(0x77);
+    c.step(100);
+    expect([...c.drainUart()]).toEqual([0x77]);
+    c.uartWrite(0x55); // the line must re-assert for a second byte
+    c.step(100);
+    expect([...c.drainUart()]).toEqual([0x55]);
   });
 });
 
