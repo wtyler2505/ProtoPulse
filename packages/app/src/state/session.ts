@@ -233,7 +233,9 @@ export interface SessionState {
   setReplayIndex: (index: number | null) => void;
   /** Sync: append remote envelopes to MAIN (dedupe by actor:lamport).
    *  Bypasses dispatch — remote ops are not locally undoable. */
-  ingestRemote: (envelopes: readonly OpEnvelope[]) => number;
+  ingestRemote: (envelopes: readonly OpEnvelope[], branch?: string) => number;
+  /** Adopt a branch learned from a sync peer (pointer only, no ops). */
+  adoptRemoteBranch: (name: string, base: { branch: string | null; opCount: number }) => { ok: true } | { ok: false; reason: string };
   /** Compute a three-way merge of `from` into the current branch. */
   startMerge: (from: string) => boolean;
   setMergeChoice: (index: number, choice: MergeChoice) => void;
@@ -387,9 +389,15 @@ export function createSessionStore(initial?: DesignBundle) {
       set({ replayIndex: clamped, selection: new Set<string>() });
     },
 
-    ingestRemote: (envelopes) => {
+    adoptRemoteBranch: (name, base) => {
       const { core: c, opsVersion } = get();
-      const fresh = c.ingest(MAIN_BRANCH, envelopes);
+      const result = c.log.adoptBranch(name, base);
+      if (result.ok) set({ opsVersion: opsVersion + 1 });
+      return result;
+    },
+    ingestRemote: (envelopes, branch = MAIN_BRANCH) => {
+      const { core: c, opsVersion } = get();
+      const fresh = c.ingest(branch, envelopes);
       if (fresh > 0) set({ opsVersion: opsVersion + 1 });
       return fresh;
     },

@@ -255,7 +255,15 @@ manufacturing pipeline (Vol II §H).
       Sync panel grew a token field; a rejected client stops cleanly
       instead of retry-looping). Reconnect/backoff and per-tab actor
       identity landed earlier
-- [ ] Sync branch sync (non-main branches stay local for now)
+- [x] Branch sync (landed 2026-06-11): every branch travels as
+      {name, base, OWN ops} — the inherited prefix is the base
+      pointer, never re-carried. Snapshots list branches main-first
+      so bases resolve in order; branches born mid-session re-announce
+      via an idempotent join; ops racing ahead of their branch's
+      snapshot heal by re-joining. A same-named branch with a
+      DIFFERENT base is unsyncable and stays local (advisory note,
+      not an error). Room storage records went branch-aware; old
+      bare-envelope files load as main
 - [ ] Community library with provenance tiers
 - [ ] Manufacturing pipeline (Vol II §H)
 

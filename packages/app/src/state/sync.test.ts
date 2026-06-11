@@ -237,3 +237,68 @@ describe('sync resilience', () => {
     expect(info()?.status).toBe('off');
   });
 });
+
+describe('branch sync (two editors)', () => {
+  it('a feature branch travels: pointer adopted, ops flow both ways, main untouched', async () => {
+    server = await createRelayServer();
+    const url = `ws://localhost:${String(server.port)}`;
+
+    const a = harness();
+    const b = harness();
+    // A: two ops on main, then a feature branch with one extra op.
+    a.store.getState().dispatch(placeResistor('ra', 'R1'), 'add R1');
+    expect(a.store.getState().createBranch('feature')).toBe(true);
+    a.store.getState().switchBranch('feature');
+    a.store.getState().dispatch(placeResistor('rf', 'R7', 20 * G), 'feature-only part');
+
+    a.client.connect(url, 'branchy');
+    await until(() => a.info()?.status === 'on', 'A online');
+    b.client.connect(url, 'branchy');
+    await until(() => b.info()?.status === 'on', 'B online');
+
+    // B adopts the branch and sees the feature-only component there…
+    await until(() => b.store.getState().core.log.has('feature'), 'B adopted feature');
+    await until(
+      () => b.store.getState().core.graphFor('feature').components.has('rf'),
+      'feature ops at B',
+    );
+    // …while B's main does NOT have it (the base pointer carried it, not main's log).
+    expect(b.store.getState().core.graphFor('main').components.has('rf')).toBe(false);
+    expect(b.store.getState().core.graphFor('feature').components.has('ra')).toBe(true);
+
+    // B edits the feature branch; A converges.
+    b.store.getState().switchBranch('feature');
+    b.store.getState().dispatch(placeResistor('rb', 'R8', 30 * G), 'B feature edit');
+    await until(
+      () => a.store.getState().core.graphFor('feature').components.has('rb'),
+      'B edit reached A',
+    );
+
+    a.client.disconnect();
+    b.client.disconnect();
+  });
+
+  it('a branch born mid-session announces itself and reaches the peer', async () => {
+    server = await createRelayServer();
+    const url = `ws://localhost:${String(server.port)}`;
+    const a = harness();
+    const b = harness();
+    a.client.connect(url, 'lateborn');
+    b.client.connect(url, 'lateborn');
+    await until(() => a.info()?.status === 'on' && b.info()?.status === 'on', 'both online');
+
+    a.store.getState().dispatch(placeResistor('ra', 'R1'), 'add R1');
+    expect(a.store.getState().createBranch('hotfix')).toBe(true);
+    a.store.getState().switchBranch('hotfix');
+    a.store.getState().dispatch(placeResistor('rh', 'R9', 40 * G), 'hotfix op');
+
+    await until(() => b.store.getState().core.log.has('hotfix'), 'B learned hotfix', 10_000);
+    await until(
+      () => b.store.getState().core.graphFor('hotfix').components.has('rh'),
+      'hotfix ops at B',
+      10_000,
+    );
+    a.client.disconnect();
+    b.client.disconnect();
+  });
+});

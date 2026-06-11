@@ -95,9 +95,11 @@ export function SyncPanel() {
         {sync.status === 'off' && <span>offline</span>}
         {sync.status === 'error' && <span>error: {sync.error ?? 'unknown'}</span>}
       </div>
+      {sync.note !== null && <p className="muted">note: {sync.note}</p>}
 
       <p className="muted">
-        Honest notes: the <strong>main</strong> branch syncs (other branches stay local). Every
+        Honest notes: ALL branches sync (a same-named branch with a different fork point stays
+        local — watch the note line). Every
         editor keeps its own copy — the relay only carries; with <code>PP_RELAY_DATA</code> set it
         also remembers rooms across restarts, and with <code>PP_RELAY_TOKEN</code> set it requires
         the token above. Dropped connections rejoin automatically with backoff; edits made

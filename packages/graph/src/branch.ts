@@ -122,6 +122,42 @@ export class BranchLog {
     return [];
   }
 
+  /** A branch's OWN (non-inherited) ops — what sync carries on the
+   *  wire. The inherited prefix travels as the base pointer instead,
+   *  so base ops are never double-carried. */
+  ownOpsFor(name: string): OpEnvelope[] {
+    return [...this.get(name).ops];
+  }
+
+  /**
+   * Adopt a branch learned from a peer. Same name + same base is a
+   * no-op (the peer and we agree); an unknown name creates the pointer
+   * EXACTLY as told. Refusals are sync-shaped, not throws:
+   * - missing base branch / base prefix not yet synced → retry later
+   *   (eventual consistency: the base catches up first);
+   * - same name with a DIFFERENT base → unsyncable, keep it local.
+   */
+  adoptBranch(name: string, base: BranchRef): { ok: true } | { ok: false; reason: string } {
+    const existing = this.branches.get(name);
+    if (existing) {
+      if (existing.base.branch === base.branch && existing.base.opCount === base.opCount) {
+        return { ok: true };
+      }
+      return { ok: false, reason: `branch ${name} exists locally with a different base — keeping it local` };
+    }
+    if (base.branch !== null) {
+      const parent = this.branches.get(base.branch);
+      if (!parent) {
+        return { ok: false, reason: `branch ${name} forks from unknown branch ${base.branch}` };
+      }
+      if (this.opsFor(base.branch).length < base.opCount) {
+        return { ok: false, reason: `branch ${name} forks past ${base.branch}'s synced head — retry after the base syncs` };
+      }
+    }
+    this.branches.set(name, { name, base: { ...base }, ops: [] });
+    return { ok: true };
+  }
+
   /** Snapshot for serialization. */
   entries(): BranchState[] {
     return [...this.branches.values()];
