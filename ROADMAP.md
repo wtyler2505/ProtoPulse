@@ -33,9 +33,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       independent community pinout (sources in inbox/). Strapping
       pins and EN noted; schematic-usable. Honest cut: no footprint
       yet — the land pattern is a later datasheet-exact slice
-- [ ] M1 stragglers: pcbnew import manually verified once
-      (`tools/golden/README.md` — Tyler), MSDF text + GPU picking
-      (renderer epic)
+- [x] SDF text + GPU picking (M1 straggler/renderer epic, landed
+      2026-06-11): the glyph atlas is now a signed distance field
+      (exact Felzenszwalb EDT with TinySDF sub-pixel seeding,
+      smoothstep shader) — text crisp at every zoom; a GPU color-pick
+      buffer (24-bit node IDs, offscreen ID pass + readPixels) drives
+      a hover highlight, with the flatbush index as tolerance
+      fallback for line art — the Vol II §B.2 dual picking system
+      complete (ADR-0015, ADR-0016). Honest cut: single-channel SDF,
+      not multi-channel MSDF — corners round ≤1 source pixel at
+      extreme zoom
+- [ ] M1 straggler: pcbnew import manually verified once
+      (`tools/golden/README.md` — Tyler)
 
 ## v0.2 — The Lab ✅ *(complete 2026-06-11)*
 

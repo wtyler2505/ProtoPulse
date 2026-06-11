@@ -1320,9 +1320,8 @@ Both exist and both run. **New agent/AI work targets the new runtime** (`@protop
 ### Known M1 gaps (do not paper over)
 
 - KiCad pcbnew import of golden netlists pending one manual verification (`tools/golden/README.md` checkbox).
-- No interactive merge-conflict resolver UI (conflicts surface as data).
-- MSDF text + GPU picking deferred; ESP32-S3 part deferred.
-- Simulation (v0.2), agent crew (v0.3), PCB (v0.4), hardware bridge (v0.5) are roadmap — never claim they exist.
+- (Updated 2026-06-11 — the other original M1 gaps have closed: merge resolver, SDF text + GPU picking, ESP32-S3 part, simulation (v0.2), crew (v0.3), PCB (v0.4) all landed. Check `ROADMAP.md` for canonical status before claiming anything exists or is missing.)
+- Still honest cuts: ESP32-S3 part has no footprint; SDF text is single-channel (not MSDF); WebSerial flashing and the v0.7 Probe await real hardware.
 
 ---
 

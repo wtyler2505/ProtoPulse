@@ -1,6 +1,6 @@
 # ADR-0012: M1 picking via flatbush R-tree, GPU pick buffer deferred
 
-**Status:** Accepted
+**Status:** Superseded by [ADR-0016](./0016-gpu-pick-buffer-dual-picking.md) (2026-06-11)
 **Date:** 2026-06-10
 **Deciders:** Tyler (via Milestone 1 plan approval)
 **Deviates from:** Vision Vol II §B.2 (dual system: GPU color-pick buffer + CPU R-tree)

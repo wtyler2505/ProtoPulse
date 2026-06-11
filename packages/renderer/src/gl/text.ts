@@ -1,7 +1,12 @@
+import { sdfFromAlpha } from '../sdf.js';
+
 /**
- * Canvas-2D-rasterized glyph atlas (honest M1 cut — no MSDF). ASCII
- * 32..126 rendered once at a single font size into an offscreen canvas,
- * uploaded as a texture; text draws as textured quads scaled to size.
+ * SDF glyph atlas (ADR-0015, supersedes the M1 canvas-alpha atlas).
+ * ASCII 32..126 rendered once at high resolution into an offscreen
+ * canvas, converted per cell to a signed distance field (../sdf.ts),
+ * uploaded as a single-channel R8 texture; the renderer's smoothstep
+ * shader reconstructs a crisp edge at any zoom. Single-channel SDF —
+ * corners round by ≤1 source pixel at extreme magnification.
  */
 
 export interface Glyph {
@@ -17,9 +22,15 @@ export interface Glyph {
 
 const FIRST_CHAR = 32;
 const LAST_CHAR = 126;
-const FONT_PX = 32;
-const CELL_W = 40;
-const CELL_H = 44;
+const FONT_PX = 48;
+/** Ink padding inside each cell — keeps the distance field from clipping. */
+const PAD = 8;
+/** SDF spread in source pixels (≤ PAD so fields stay inside their cell). */
+const SPREAD = 8;
+const CELL_W = 64;
+const CELL_H = 72;
+/** Baseline sits here so ascenders and descenders both fit the field. */
+const BASELINE = 52;
 const COLS = 12;
 
 export class GlyphAtlas {
@@ -27,7 +38,7 @@ export class GlyphAtlas {
   private glyphs = new Map<string, Glyph>();
   private fallback: Glyph | null = null;
 
-  /** Lazily rasterize + upload. Returns false when unavailable (no DOM). */
+  /** Lazily rasterize + transform + upload. False when unavailable (no DOM). */
   ensure(gl: WebGL2RenderingContext): boolean {
     if (this.texture) return true;
     if (typeof document === 'undefined') return false;
@@ -37,7 +48,7 @@ export class GlyphAtlas {
     const canvas = document.createElement('canvas');
     canvas.width = COLS * CELL_W;
     canvas.height = rows * CELL_H;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return false;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -50,26 +61,58 @@ export class GlyphAtlas {
       const col = i % COLS;
       const row = Math.floor(i / COLS);
       const x = col * CELL_W;
-      // Baseline sits ~80% down the cell so descenders fit.
-      const y = row * CELL_H + Math.round(CELL_H * 0.78);
-      ctx.fillText(ch, x + 2, y);
+      const y = row * CELL_H + BASELINE;
+      ctx.fillText(ch, x + PAD, y);
       const advancePx = ctx.measureText(ch).width;
       this.glyphs.set(ch, {
         u0: x / canvas.width,
         v0: (row * CELL_H) / canvas.height,
         u1: (x + CELL_W) / canvas.width,
         v1: (row * CELL_H + CELL_H) / canvas.height,
-        advance: (advancePx + 2) / FONT_PX,
+        // Slight tracking (+3px) matches the pre-SDF atlas's spacing.
+        advance: (advancePx + 3) / FONT_PX,
         width: CELL_W / FONT_PX,
       });
     }
     this.fallback = this.glyphs.get('?') ?? null;
 
+    // Coverage → per-cell distance fields (cells are independent so a
+    // wide neighbor can never bleed distance across a cell border).
+    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const sdf = new Uint8Array(canvas.width * canvas.height);
+    const cellAlpha = new Uint8Array(CELL_W * CELL_H);
+    for (let i = 0; i < count; i++) {
+      const cx = (i % COLS) * CELL_W;
+      const cy = Math.floor(i / COLS) * CELL_H;
+      for (let yy = 0; yy < CELL_H; yy++) {
+        for (let xx = 0; xx < CELL_W; xx++) {
+          cellAlpha[yy * CELL_W + xx] =
+            image.data[((cy + yy) * canvas.width + cx + xx) * 4 + 3] ?? 0;
+        }
+      }
+      const cellSdf = sdfFromAlpha(cellAlpha, CELL_W, CELL_H, SPREAD);
+      for (let yy = 0; yy < CELL_H; yy++) {
+        for (let xx = 0; xx < CELL_W; xx++) {
+          sdf[(cy + yy) * canvas.width + cx + xx] = cellSdf[yy * CELL_W + xx] ?? 0;
+        }
+      }
+    }
+
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R8,
+      canvas.width,
+      canvas.height,
+      0,
+      gl.RED,
+      gl.UNSIGNED_BYTE,
+      sdf,
+    );
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -87,11 +130,6 @@ export class GlyphAtlas {
     return this.glyphs.get(ch) ?? this.fallback;
   }
 
-  /**
-   * Emit textured-quad vertices for one text run anchored at (xMm, yMm)
-   * world-mm, glyph height `sizeMm`. Layout: [x, y, u, v] × 6 per glyph.
-   * The cell's full height maps onto sizeMm; glyphs stay upright.
-   */
   /** Sum of advances for a run, in mm at the given size. */
   measure(text: string, sizeMm: number): number {
     let w = 0;
@@ -102,6 +140,11 @@ export class GlyphAtlas {
     return w;
   }
 
+  /**
+   * Emit textured-quad vertices for one text run anchored at (xMm, yMm)
+   * world-mm, glyph height `sizeMm`. Layout: [x, y, u, v] × 6 per glyph.
+   * The cell's full height maps onto the quad; glyphs stay upright.
+   */
   appendRun(
     out: number[],
     text: string,
@@ -110,11 +153,15 @@ export class GlyphAtlas {
     sizeMm: number,
     align: 'left' | 'center' = 'left',
   ): void {
-    let penX = align === 'center' ? xMm - this.measure(text, sizeMm) / 2 : xMm;
-    // sizeMm is the requested cap height; the quad is slightly taller so
-    // the cell's ascender/descender padding doesn't shrink the visible glyph.
+    // Ink starts PAD px into each cell — shift the pen left to cancel it
+    // so the anchor (and centering) refer to the visible glyphs.
+    const inkOffset = sizeMm * (PAD / FONT_PX);
+    let penX =
+      (align === 'center' ? xMm - this.measure(text, sizeMm) / 2 : xMm) - inkOffset;
     const h = sizeMm * (CELL_H / FONT_PX);
-    const yBottom = yMm - sizeMm * 0.25; // descender room below the anchor
+    // Place the baseline (BASELINE px from the cell top) ≈5% of the em
+    // above the anchor — same visual seat as the pre-SDF atlas.
+    const yBottom = yMm - sizeMm * ((CELL_H - BASELINE) / FONT_PX - 0.05);
     for (const ch of text) {
       const g = this.glyph(ch);
       if (!g) continue;

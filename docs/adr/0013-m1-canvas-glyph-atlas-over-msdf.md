@@ -1,6 +1,6 @@
 # ADR-0013: M1 text via canvas-2D glyph atlas, MSDF deferred
 
-**Status:** Accepted
+**Status:** Superseded by [ADR-0015](./0015-sdf-glyph-atlas.md) (2026-06-11)
 **Date:** 2026-06-10
 **Deciders:** Tyler (via Milestone 1 plan approval)
 **Deviates from:** Vision Vol II §B.1 (MSDF font atlas, crisp at every zoom)
