@@ -117,7 +117,7 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       the builtin deck — a deck picker UI is later work.
       v0.3 IS COMPLETE.
 
-## v0.4 — The Board 🔨
+## v0.4 — The Board ✅ *(complete 2026-06-11)*
 
 - [x] PCB ops in the graph (footprints/traces/vias as identified entities,
       inverse/diff/merge closure, coverage gate held)
@@ -181,7 +181,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       target), and DRC-EDGE-CLEARANCE — copper must sit INSIDE the
       outline and keep the deck's copper_to_edge_nm from every edge.
       Browser-verified end to end against the JLC deck
-- [ ] Panelization (outline substrate now exists)
+- [x] Panelization (landed 2026-06-11): panelizeGraph — the panel is
+      a TRANSFORMED GRAPH (rows×cols copies with suffixed ids/refs,
+      offset copper, optional top/bottom rails, panel outline), so
+      every existing exporter and even DRC work on it unchanged.
+      V-cut lines ride Edge.Cuts. Honest cuts: rectangular outlines
+      only (a V-cut is a straight full-panel score), V-cut separation
+      only (mouse-bites later), no panel fiducials (graph can't hold
+      bare copper; fabs add their own), engine-level (no panel UI).
+      v0.4 IS COMPLETE.
 
 ## v0.5 — The Bridge 🔨
 

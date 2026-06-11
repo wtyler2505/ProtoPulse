@@ -208,7 +208,12 @@ export function exportGerberLayer(
  * fabs expect. Returns null when the design has no outline yet (an
  * honest absence, not an empty file).
  */
-export function exportEdgeCuts(graph: DesignGraph, opts: { date: string }): string | null {
+export function exportEdgeCuts(
+  graph: DesignGraph,
+  opts: { date: string },
+  /** Extra straight scores (panel V-cuts) drawn after the outline. */
+  vCuts: readonly { a: Vec; b: Vec }[] = [],
+): string | null {
   const outline = graph.pcb.outline;
   if (!outline || outline.length < 3) return null;
   const lines: string[] = [
@@ -226,6 +231,10 @@ export function exportEdgeCuts(graph: DesignGraph, opts: { date: string }): stri
   if (!first) return null;
   lines.push(`${xy(first)}D02*`);
   for (const p of rest) lines.push(`${xy(p)}D01*`);
-  lines.push(`${xy(first)}D01*`, 'M02*');
+  lines.push(`${xy(first)}D01*`);
+  for (const cut of vCuts) {
+    lines.push(`${xy(cut.a)}D02*`, `${xy(cut.b)}D01*`);
+  }
+  lines.push('M02*');
   return lines.join('\n') + '\n';
 }
