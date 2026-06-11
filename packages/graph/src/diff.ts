@@ -32,6 +32,10 @@ export interface GraphDelta {
     recreated: [Uuid, Uuid][];
   };
   constraints: { added: Uuid[]; removed: Uuid[]; changed: Uuid[] };
+  /** Bus 'changed' = membership only (name/kind are creation-fixed). */
+  buses: { added: Uuid[]; removed: Uuid[]; changed: Uuid[] };
+  /** Sheet 'changed' = interface only (name/parent are creation-fixed). */
+  sheets: { added: Uuid[]; removed: Uuid[]; changed: Uuid[] };
   schematicView: {
     placed: Uuid[];
     unplaced: Uuid[];
@@ -62,6 +66,12 @@ export function isEmptyDelta(d: GraphDelta): boolean {
     d.nets.membership.size === 0 &&
     d.nets.renamed.size === 0 &&
     d.nets.recreated.length === 0 &&
+    d.buses.added.length === 0 &&
+    d.buses.removed.length === 0 &&
+    d.buses.changed.length === 0 &&
+    d.sheets.added.length === 0 &&
+    d.sheets.removed.length === 0 &&
+    d.sheets.changed.length === 0 &&
     d.constraints.added.length === 0 &&
     d.constraints.removed.length === 0 &&
     d.constraints.changed.length === 0 &&
@@ -96,6 +106,9 @@ function componentDeltas(a: Component, b: Component): PropDelta[] {
   if (JSON.stringify(a.fields) !== JSON.stringify(b.fields)) {
     out.push({ field: 'fields', a: a.fields, b: b.fields });
   }
+  if ((a.sheetId ?? null) !== (b.sheetId ?? null)) {
+    out.push({ field: 'sheetId', a: a.sheetId ?? null, b: b.sheetId ?? null });
+  }
   return out;
 }
 
@@ -104,6 +117,8 @@ export function diff(a: DesignGraph, b: DesignGraph): GraphDelta {
     components: { added: [], removed: [], changed: new Map() },
     nets: { added: [], removed: [], membership: new Map(), renamed: new Map(), recreated: [] },
     constraints: { added: [], removed: [], changed: [] },
+    buses: { added: [], removed: [], changed: [] },
+    sheets: { added: [], removed: [], changed: [] },
     schematicView: { placed: [], unplaced: [], moved: [], wiresChanged: [] },
     pcbView: {
       placed: [],
@@ -221,6 +236,26 @@ export function diff(a: DesignGraph, b: DesignGraph): GraphDelta {
   diffGeometryMaps(a.pcb.traces, b.pcb.traces, delta.pcbView.tracesAdded, delta.pcbView.tracesRemoved);
   diffGeometryMaps(a.pcb.vias, b.pcb.vias, delta.pcbView.viasAdded, delta.pcbView.viasRemoved);
   diffGeometryMaps(a.pcb.zones, b.pcb.zones, delta.pcbView.zonesAdded, delta.pcbView.zonesRemoved);
+
+  // ── Buses & sheets ──
+  for (const [id, busB] of b.buses) {
+    const busA = a.buses.get(id);
+    if (!busA) delta.buses.added.push(id);
+    else if (busA.memberNets.join('|') !== busB.memberNets.join('|')) delta.buses.changed.push(id);
+  }
+  for (const id of a.buses.keys()) {
+    if (!b.buses.has(id)) delta.buses.removed.push(id);
+  }
+  for (const [id, sheetB] of b.sheets) {
+    const sheetA = a.sheets.get(id);
+    if (!sheetA) delta.sheets.added.push(id);
+    else if (JSON.stringify(sheetA.interface) !== JSON.stringify(sheetB.interface)) {
+      delta.sheets.changed.push(id);
+    }
+  }
+  for (const id of a.sheets.keys()) {
+    if (!b.sheets.has(id)) delta.sheets.removed.push(id);
+  }
 
   return delta;
 }

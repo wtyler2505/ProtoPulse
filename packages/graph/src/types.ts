@@ -52,6 +52,8 @@ export interface Component {
   value?: string;
   dnp: boolean;
   fields: Record<string, string>;
+  /** Sheet this component lives on; undefined = the root sheet. */
+  sheetId?: Uuid;
 }
 
 export interface Net {
@@ -70,7 +72,24 @@ export interface Bus {
   id: Uuid;
   name: string;
   kind: BusKind;
+  /** Sorted for determinism; maintained by assign_to_bus / GC / merges. */
   memberNets: Uuid[];
+}
+
+/** A hierarchical port on a sheet's boundary: a named, directed
+ *  binding to one of the design's nets. */
+export interface SheetPort {
+  name: string;
+  direction: 'in' | 'out' | 'inout';
+  netId: Uuid;
+}
+
+export interface Sheet {
+  id: Uuid;
+  name: string;
+  /** null = a top-level sheet. */
+  parentId: Uuid | null;
+  interface: SheetPort[];
 }
 
 export type NetSelector = { kind: 'net'; netId: Uuid } | { kind: 'class'; netClass: string };
@@ -174,6 +193,7 @@ export interface DesignGraph {
   components: Map<Uuid, Component>;
   nets: Map<Uuid, Net>;
   buses: Map<Uuid, Bus>;
+  sheets: Map<Uuid, Sheet>;
   constraints: Map<Uuid, Constraint>;
   schematic: SchematicView;
   pcb: PcbView;
@@ -189,6 +209,7 @@ export function emptyGraph(): DesignGraph {
     components: new Map(),
     nets: new Map(),
     buses: new Map(),
+    sheets: new Map(),
     constraints: new Map(),
     schematic: { placements: new Map(), wires: new Map() },
     pcb: { placements: new Map(), traces: new Map(), vias: new Map(), zones: new Map() },

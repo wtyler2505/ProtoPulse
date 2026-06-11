@@ -48,8 +48,17 @@ describe('deck seed', () => {
 
 describe('concept seed articles', () => {
   it('loads the full wiki across its category directories', () => {
-    expect(categoryDirs).toEqual(['buses', 'digital-mcu', 'fundamentals', 'passives', 'power', 'semiconductors']);
-    expect(concepts.length).toBeGreaterThanOrEqual(63);
+    expect(categoryDirs).toEqual([
+      'analog-sensing',
+      'buses',
+      'digital-mcu',
+      'fundamentals',
+      'passives',
+      'power',
+      'practice',
+      'semiconductors',
+    ]);
+    expect(concepts.length).toBeGreaterThanOrEqual(76);
   });
 
   it('contains every specced M1 slug', () => {
@@ -140,6 +149,27 @@ describe('concept seed articles', () => {
       'bus-capacitance',
       'termination-at-hobby-scale',
       'can-basics',
+    ];
+    for (const slug of expected) {
+      expect(slugs.has(slug), slug).toBe(true);
+    }
+  });
+
+  it('contains every Analog & sensing and Practice block slug', () => {
+    const expected = [
+      'adc-reference-quality',
+      'source-impedance-and-sample-caps',
+      'op-amp-golden-rules',
+      'non-inverting-and-inverting-amps',
+      'comparators-and-hysteresis',
+      'shunt-current-sensing',
+      'kelvin-connections',
+      'filtering-before-the-adc',
+      'aliasing',
+      'absolute-maximum-ratings-are-not-targets',
+      'soldering-driven-footprint-choices',
+      'esd-handling-truth-vs-ritual',
+      'how-to-ask-a-good-debugging-question',
     ];
     for (const slug of expected) {
       expect(slugs.has(slug), slug).toBe(true);

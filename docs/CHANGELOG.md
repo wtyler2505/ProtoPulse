@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — buses + sheets in the graph core; wiki at 76/88
+
+### Added
+- **Buses + sheets** (the Architect's substrate, Vol II §A.5): the
+  vision's five ops — create_bus, assign_to_bus, add_sheet,
+  set_sheet_interface, move_to_sheet — plus remove_bus/remove_sheet
+  (the inverse algebra demands them; zones set the precedent). Full
+  closure: bidirectional bus membership maintained through assign/GC/
+  merge_nets; sheet interface ports GC with their nets and re-point on
+  merges; occupied sheets refuse removal; component sheetId rides the
+  component prop deltas so diff/merge get sheet moves for free
+  (replayed as move_to_sheet, deferred until theirs-added sheets
+  exist — an op-ordering bug a closure test caught). Invariants:
+  bidirectional membership, parent existence + cycle walk, binding
+  existence. Serialization back-compatible.
+- **Concepts wiki 63 → 76**: analog-sensing/ (9 — ADC reference
+  quality through aliasing) and practice/ (4 — abs-max ratings,
+  footprint choices, ESD truth vs ritual, asking good debugging
+  questions). One tranche left: PCB (12), completing the 88.
+
+### Verified
+- 30 new graph tests; the 100%-branch gate on ops/apply/materialize/
+  diff HELD (all four at 100/100/100/100); 189 graph + 21 content +
+  383 app tests green; typecheck + lint clean.
+
 ## 2026-06-11 — copper zones, end to end
 
 ### Added

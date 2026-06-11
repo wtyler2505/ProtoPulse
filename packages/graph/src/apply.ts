@@ -13,7 +13,7 @@ export type ApplyResult =
   | { ok: false; error: string };
 
 export interface ApplyWarning {
-  code: 'net_gc' | 'wire_gc' | 'trace_gc' | 'via_gc' | 'zone_gc';
+  code: 'net_gc' | 'wire_gc' | 'trace_gc' | 'via_gc' | 'zone_gc' | 'bus_member_gc' | 'sheet_port_gc';
   message: string;
   netId?: Uuid;
 }
@@ -46,6 +46,20 @@ function gcNet(graph: DesignGraph, netId: Uuid, warnings: ApplyWarning[]): void 
     if (zone.netId === netId) {
       graph.pcb.zones.delete(id);
       warnings.push({ code: 'zone_gc', message: `Zone ${id} on dead net GC'd`, netId });
+    }
+  }
+  for (const bus of graph.buses.values()) {
+    const at = bus.memberNets.indexOf(netId);
+    if (at !== -1) {
+      bus.memberNets.splice(at, 1);
+      warnings.push({ code: 'bus_member_gc', message: `Dead net left bus ${bus.id}`, netId });
+    }
+  }
+  for (const sheet of graph.sheets.values()) {
+    const before = sheet.interface.length;
+    sheet.interface = sheet.interface.filter((port) => port.netId !== netId);
+    if (sheet.interface.length !== before) {
+      warnings.push({ code: 'sheet_port_gc', message: `Sheet ${sheet.id} port on dead net GC'd`, netId });
     }
   }
   warnings.push({ code: 'net_gc', message: `Empty net GC'd`, netId });
@@ -168,6 +182,15 @@ export function applyOp(graph: DesignGraph, op: OpBody): ApplyResult {
       }
       for (const zone of graph.pcb.zones.values()) {
         if (zone.netId === op.absorbed) zone.netId = op.survivor;
+      }
+      for (const bus of graph.buses.values()) {
+        const at = bus.memberNets.indexOf(op.absorbed);
+        if (at !== -1) bus.memberNets.splice(at, 1);
+      }
+      for (const sheet of graph.sheets.values()) {
+        for (const port of sheet.interface) {
+          if (port.netId === op.absorbed) port.netId = op.survivor;
+        }
       }
       graph.nets.delete(op.absorbed);
       return ok();
@@ -334,6 +357,92 @@ export function applyOp(graph: DesignGraph, op: OpBody): ApplyResult {
     case 'remove_zone': {
       if (!graph.pcb.zones.has(op.id)) return fail(`zone ${op.id} not found`);
       graph.pcb.zones.delete(op.id);
+      return ok();
+    }
+
+    case 'create_bus': {
+      if (graph.buses.has(op.id)) return fail(`bus ${op.id} already exists`);
+      graph.buses.set(op.id, { id: op.id, name: op.name, kind: op.busKind, memberNets: [] });
+      return ok();
+    }
+
+    case 'remove_bus': {
+      const bus = graph.buses.get(op.id);
+      if (!bus) return fail(`bus ${op.id} not found`);
+      for (const netId of bus.memberNets) {
+        const net = graph.nets.get(netId);
+        if (net) delete net.busId;
+      }
+      graph.buses.delete(op.id);
+      return ok();
+    }
+
+    case 'assign_to_bus': {
+      const net = graph.nets.get(op.netId);
+      if (!net) return fail(`net ${op.netId} not found`);
+      const target = op.busId === null ? null : graph.buses.get(op.busId);
+      if (op.busId !== null && !target) return fail(`bus ${op.busId} not found`);
+      // Leave the old bus.
+      if (net.busId !== undefined) {
+        const old = graph.buses.get(net.busId);
+        if (old) {
+          const at = old.memberNets.indexOf(op.netId);
+          if (at !== -1) old.memberNets.splice(at, 1);
+        }
+      }
+      if (op.busId === null || !target) {
+        delete net.busId;
+      } else {
+        net.busId = op.busId;
+        if (!target.memberNets.includes(op.netId)) {
+          target.memberNets.push(op.netId);
+          target.memberNets.sort();
+        }
+      }
+      return ok();
+    }
+
+    case 'add_sheet': {
+      if (graph.sheets.has(op.id)) return fail(`sheet ${op.id} already exists`);
+      if (op.parentId !== null && !graph.sheets.has(op.parentId)) {
+        return fail(`parent sheet ${op.parentId} not found`);
+      }
+      graph.sheets.set(op.id, { id: op.id, name: op.name, parentId: op.parentId, interface: [] });
+      return ok();
+    }
+
+    case 'remove_sheet': {
+      if (!graph.sheets.has(op.id)) return fail(`sheet ${op.id} not found`);
+      for (const sheet of graph.sheets.values()) {
+        if (sheet.parentId === op.id) return fail(`sheet ${op.id} still has child sheets`);
+      }
+      for (const comp of graph.components.values()) {
+        if (comp.sheetId === op.id) return fail(`sheet ${op.id} still has components on it`);
+      }
+      graph.sheets.delete(op.id);
+      return ok();
+    }
+
+    case 'set_sheet_interface': {
+      const sheet = graph.sheets.get(op.sheetId);
+      if (!sheet) return fail(`sheet ${op.sheetId} not found`);
+      for (const port of op.interface) {
+        if (!graph.nets.has(port.netId)) {
+          return fail(`sheet port ${port.name} binds missing net ${port.netId}`);
+        }
+      }
+      sheet.interface = op.interface.map((port) => ({ ...port }));
+      return ok();
+    }
+
+    case 'move_to_sheet': {
+      const comp = graph.components.get(op.componentId);
+      if (!comp) return fail(`component ${op.componentId} not found`);
+      if (op.sheetId !== null && !graph.sheets.has(op.sheetId)) {
+        return fail(`sheet ${op.sheetId} not found`);
+      }
+      if (op.sheetId === null) delete comp.sheetId;
+      else comp.sheetId = op.sheetId;
       return ok();
     }
 

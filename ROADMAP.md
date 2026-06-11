@@ -73,8 +73,14 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       routes land in the session as one undoable batch with
       meta {agent: 'router'}. Its substrate (PCB + DRC + walkaround +
       shove) made it an assembly job — exactly the vision's bet
-- [ ] Architect / Buyer (still need buses+sheets and sourcing
-      substrates)
+- [x] Buses + sheets in the graph core (landed 2026-06-11): the
+      vision's create_bus/assign_to_bus/add_sheet/set_sheet_interface/
+      move_to_sheet ops (+ the remove ops the inverse algebra demands),
+      full closure incl. GC/merge_nets maintenance, bidirectional
+      bus-membership invariants, sheet-parent cycle detection. The
+      Architect's substrate exists; UI surfaces are a later slice
+- [ ] The Architect (now unblocked: buses+sheets ✓) / Buyer (still
+      needs sourcing substrate)
 - [ ] Concepts wiki growth toward the 88-article seed list
 - [ ] Review deck versioning + community-extensible review rules
 

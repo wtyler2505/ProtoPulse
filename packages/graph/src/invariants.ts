@@ -96,6 +96,72 @@ export function validateGraph(graph: DesignGraph, opts: InvariantOpts = {}): Inv
       });
     }
   }
+  for (const bus of graph.buses.values()) {
+    for (const netId of bus.memberNets) {
+      const net = graph.nets.get(netId);
+      if (net?.busId !== bus.id) {
+        out.push({
+          code: 'geometry_on_dead_net',
+          message: `bus ${bus.id} lists net ${netId} which is missing or not assigned back`,
+          entityId: bus.id,
+        });
+      }
+    }
+  }
+  for (const net of graph.nets.values()) {
+    if (net.busId !== undefined) {
+      const bus = graph.buses.get(net.busId);
+      if (!bus?.memberNets.includes(net.id)) {
+        out.push({
+          code: 'geometry_on_dead_net',
+          message: `net ${net.id} claims bus ${net.busId} which is missing or does not list it`,
+          entityId: net.id,
+        });
+      }
+    }
+  }
+  for (const sheet of graph.sheets.values()) {
+    if (sheet.parentId !== null && !graph.sheets.has(sheet.parentId)) {
+      out.push({
+        code: 'geometry_on_dead_net',
+        message: `sheet ${sheet.id} has missing parent ${sheet.parentId}`,
+        entityId: sheet.id,
+      });
+    }
+    // Cycle walk — parents must terminate at a root.
+    const seen = new Set<string>([sheet.id]);
+    let cursor = sheet.parentId;
+    while (cursor !== null) {
+      if (seen.has(cursor)) {
+        out.push({
+          code: 'geometry_on_dead_net',
+          message: `sheet ${sheet.id} is part of a parent cycle`,
+          entityId: sheet.id,
+        });
+        break;
+      }
+      seen.add(cursor);
+      cursor = graph.sheets.get(cursor)?.parentId ?? null;
+    }
+    for (const port of sheet.interface) {
+      if (!graph.nets.has(port.netId)) {
+        out.push({
+          code: 'geometry_on_dead_net',
+          message: `sheet ${sheet.id} port ${port.name} binds missing net ${port.netId}`,
+          entityId: sheet.id,
+        });
+      }
+    }
+  }
+  for (const comp of graph.components.values()) {
+    if (comp.sheetId !== undefined && !graph.sheets.has(comp.sheetId)) {
+      out.push({
+        code: 'placement_without_component',
+        message: `component ${comp.id} lives on missing sheet ${comp.sheetId}`,
+        entityId: comp.id,
+      });
+    }
+  }
   for (const zone of graph.pcb.zones.values()) {
     if (!graph.nets.has(zone.netId)) {
       out.push({
