@@ -1,6 +1,6 @@
 # ProtoPulse Feature Maturity Classification
 
-**Date:** 2026-03-27 (Tables 1–3) · **Updated:** 2026-06-10 (Table 4 — engine redesign addendum)
+**Date:** 2026-03-27 (Tables 1–3) · **Updated:** 2026-06-11 (Table 4 — engine redesign addendum, refreshed through the v0.1–v0.6 landings)
 **Source evidence:** `reports/ai-audit/00-MASTER-REPORT.md`, `reports/ai-audit/05-client-ai-features.md`, `docs/checklist/MASTER_AUDIT_CHECKLIST.md` (Section 4 — Fresh Verification Results), `docs/checklist/WORKFLOW_VERIFICATION_MATRIX.md`
 
 **Purpose:** This document classifies every major ProtoPulse feature's real implementation status based on live browser verification, code inspection, and audit findings. It exists to close the gap between what the UI promises and what actually works, so that development effort can be directed at the right maturity tier.

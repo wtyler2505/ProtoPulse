@@ -1056,7 +1056,7 @@ The `routingStrategy` in `user_chat_settings` controls which AI provider handles
 
 ### Current State
 
-54 test files, ~1,553 tests, using Vitest 4.
+Legacy app: 725 test files, ~30.5k tests passing (≈421 env-dependent failures on `main` — tracked in `ROADMAP.md` off-vision items), using Vitest 4. Engine (`packages/`): 1,340 tests, all green, in their own CI workflow — that workflow is the merge gate.
 
 ### Test Infrastructure
 
@@ -1287,7 +1287,7 @@ One canonical design graph, many projections. Every mutation is a typed operatio
 
 ### Packages
 
-`graph` (the core), `parts` (17 seed parts, provenance tiers), `erc` (pin-conflict matrix + rules, executable fixes, finding codes → concept articles), `export` (deterministic KiCad netlist + CSV BOM), `cli` (`protopulse check`/`export`, exit 0/1/2), `renderer` (WebGL2), `app` (the new schematic editor, port 5174), `ai` (agent runtime), `content` (rule decks, concept wiki, curriculum). 346 tests; own CI at `.github/workflows/packages-ci.yml` (typecheck, lint, tests, golden smoke, builds; 100% branch coverage gate on the graph core).
+Sixteen workspaces: `graph` (the core), `parts` (18 seed parts, provenance tiers, part packs), `erc`, `drc` (versioned fab decks), `route` (walkaround/shove/pours), `export` (netlist, BOM, Gerber, drill, pick-and-place, panelization — all byte-exact contracts), `sim` (ngspice-WASM), `emu` (ATmega328P + RP2040 cores), `cosim` (the closed firmware↔analog loop), `review` (versioned review decks), `relay` (zero-conflict sync), `renderer` (WebGL2, SDF text, dual picking), `ai` (the six-member crew runtime), `cli` (`check`/`export`/`import-legacy`, exit 0/1/2), `content` (decks, the 88-article wiki, curriculum), `app` (the editor, port 5174). 1,340 tests; own CI at `.github/workflows/packages-ci.yml` (typecheck, lint, tests, golden smoke, builds; 100% branch coverage gate on the graph core). Full map: `packages/README.md`; status: `ROADMAP.md`.
 
 ### Rules for agents working in packages/
 
@@ -1300,7 +1300,7 @@ One canonical design graph, many projections. Every mutation is a typed operatio
 
 ```bash
 npm run check:packages           # typecheck every package
-npm run test:packages            # all 346 engine tests
+npm run test:packages            # all 1,340 engine tests
 npm run -w @protopulse/app dev   # editor → http://localhost:5174
 npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
 ```
@@ -1311,7 +1311,7 @@ npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <
 |---|---|---|
 | Where | `server/ai.ts`, `server/ai-tools/`, `server/genkit.ts` | `packages/ai` (`@protopulse/ai`) |
 | Provider | Google Genkit → Gemini (+ Claude via SDK), server-side SSE | Provider-agnostic adapters; Anthropic adapter (default `claude-sonnet-4-6`), browser-direct with the user's key |
-| Tools | 82+ tool actions across 11 modules | zod tool registry with **scope slices enforced at dispatch**; the Draftsman agent has exactly **8 tools** (add_component, connect, place_symbol, set_wire_geometry, rename_net, add_constraint, run_erc, batch) |
+| Tools | 113 tool actions across 11 modules | zod tool registry with **scope slices enforced at dispatch**; six crew members on one runtime — the Draftsman has exactly **8 tools** (add_component, connect, place_symbol, set_wire_geometry, rename_net, add_constraint, run_erc, batch); Analyst, Professor, Router, Architect, and Buyer each get their own slice |
 | Safety | Destructive-confirm in registry | Destructive-confirm gating + `explain()` narration + budgeted context assembly |
 | Auditability | `ai_actions` DB audit log | Every applied op carries `meta {agent, rationale}` — op-log blame |
 
