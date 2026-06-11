@@ -132,7 +132,14 @@ manufacturing pipeline (Vol II §H).
       fragment (`#d=…`). No server, no upload; Copy-share-link in the
       Export panel, confirm-guarded load on the receiving end. The
       67-op 555 fixture travels as a ~2.1k-char URL.
-- [ ] Sync relay (real-time multi-actor; the op-log is CRDT-shaped)
+- [x] Sync relay, first slice (landed 2026-06-10): `@protopulse/relay`
+      (in-memory WebSocket rooms that union envelopes by (actor,
+      lamport) — the relay carries, never owns) + the Sync tab in the
+      editor. Two browsers converge live; materialize's total order IS
+      the merge. Honest v1: main branch only, in-memory rooms, one tab
+      per design per profile
+- [ ] Sync relay hardening: persistence, auth, reconnect/backoff,
+      branch sync, per-tab actor identity
 - [ ] Community library with provenance tiers
 - [ ] Manufacturing pipeline (Vol II §H)
 

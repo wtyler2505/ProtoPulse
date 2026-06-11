@@ -2,6 +2,34 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — the sync relay: real-time collaboration
+
+### Added
+- **`@protopulse/relay`**: a tiny in-memory WebSocket room server. One
+  room = one shared op-log; the relay unions envelopes by (actor,
+  lamport) and broadcasts the news — it never interprets ops and never
+  resolves conflicts, because materialize's (lamport, actorId) total
+  order makes same-set ⇒ same-graph. Schema-validated frames, batch/
+  message caps, rooms survive everyone leaving. `npm run -w
+  @protopulse/relay dev` → ws://localhost:8787.
+- **Sync tab in the editor**: connect to a relay room and edits flow
+  both ways live. Joining sends your log, the snapshot brings theirs,
+  every local dispatch pushes deltas; remote ops ingest without
+  touching the undo stack (you can't undo someone else's edit — your
+  own undos sync as inverse ops). SessionCore grew `ingest` (dedupe +
+  lamport clock advance).
+- Honest v1 notes shipped in the panel itself: main branch only,
+  in-memory rooms, one tab per design per browser profile.
+
+### Verified
+- 6 relay tests (snapshot/union/dedupe/peers/validation/room
+  persistence) + 4 app integration tests running TWO REAL session
+  stores through a real in-process relay over Node's native WebSocket —
+  bidirectional edits, concurrent-edit convergence, undo propagation.
+- Two-browser live demo: an empty editor joined a room and received
+  the full design; an edit in browser A appeared on browser B's canvas
+  within a second.
+
 ## 2026-06-10 — shove + spring-back routing (E.1 steps 2–3)
 
 ### Added

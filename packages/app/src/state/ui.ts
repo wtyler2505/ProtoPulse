@@ -26,6 +26,7 @@ export type TabId =
   | 'drc'
   | 'branches'
   | 'history'
+  | 'sync'
   | 'export'
   | 'draftsman'
   | 'sim'

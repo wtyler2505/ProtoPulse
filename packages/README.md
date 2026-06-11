@@ -34,6 +34,7 @@ Screenshots are artifacts of [`tools/screenshots/`](../tools/screenshots/README.
 | `@protopulse/renderer` | WebGL2 retained scene graph, flatbush picking, nm→px camera | graph, parts |
 | `@protopulse/app` | The schematic editor: place/wire/undo/branch/diff/ERC panel/Draftsman | everything |
 | `@protopulse/ai` | Tool registry (scoped slices, explain()), context assembler, the Draftsman, provider adapters | graph, erc, parts |
+| `@protopulse/relay` | The sync relay: in-memory WebSocket rooms that union op-log envelopes — real-time collaboration with zero conflict resolution (the total order IS the merge) | graph, ws |
 | `@protopulse/content` | Schemas + loaders for rule decks, concept articles, track steps | zod, js-yaml |
 
 `tools/golden/` holds golden-file tests: known op-logs → known exports,

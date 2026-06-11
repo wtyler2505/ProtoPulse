@@ -22,6 +22,7 @@ import type {
   MergeChoice,
   MergeConflict,
   OpBody,
+  OpEnvelope,
   OpMeta,
 } from '@protopulse/graph';
 import type {PartDb} from '@protopulse/parts';
@@ -98,6 +99,26 @@ export class SessionCore {
       ...(meta !== undefined ? { meta } : {}),
     });
     this.version += 1;
+  }
+
+  /** Ingest REMOTE envelopes (sync): append unseen ones verbatim —
+   *  their (actor, lamport) identity is preserved, dedupe is by that
+   *  key, and the local lamport clock advances past everything seen so
+   *  the next local op sorts after. Returns how many were new. */
+  ingest(branch: string, envelopes: readonly OpEnvelope[]): number {
+    if (!this.log.has(branch)) return 0;
+    const seen = new Set(this.log.opsFor(branch).map((e) => `${e.actor}:${String(e.lamport)}`));
+    let fresh = 0;
+    for (const env of envelopes) {
+      const key = `${env.actor}:${String(env.lamport)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      this.log.append(branch, env);
+      this.lamport = Math.max(this.lamport, env.lamport);
+      fresh += 1;
+    }
+    if (fresh > 0) this.version += 1;
+    return fresh;
   }
 
   /** Materialized graph of a branch head, memoized on (branch, version). */
@@ -196,6 +217,9 @@ export interface SessionState {
   setDiffAgainst: (name: string | null) => void;
   /** Enter/scrub/exit replay; the index clamps to [0, opCount]. */
   setReplayIndex: (index: number | null) => void;
+  /** Sync: append remote envelopes to MAIN (dedupe by actor:lamport).
+   *  Bypasses dispatch — remote ops are not locally undoable. */
+  ingestRemote: (envelopes: readonly OpEnvelope[]) => number;
   /** Compute a three-way merge of `from` into the current branch. */
   startMerge: (from: string) => boolean;
   setMergeChoice: (index: number, choice: MergeChoice) => void;
@@ -347,6 +371,13 @@ export function createSessionStore(initial?: DesignBundle) {
       const clamped = Math.max(0, Math.min(Math.floor(index), c.opCount(branch)));
       // A past graph may not contain the current selection — drop it.
       set({ replayIndex: clamped, selection: new Set<string>() });
+    },
+
+    ingestRemote: (envelopes) => {
+      const { core: c, opsVersion } = get();
+      const fresh = c.ingest(MAIN_BRANCH, envelopes);
+      if (fresh > 0) set({ opsVersion: opsVersion + 1 });
+      return fresh;
     },
 
     startMerge: (from) => {
