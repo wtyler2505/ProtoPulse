@@ -20,6 +20,9 @@ import {
   BR,
   CALL0,
   CALL0_TO,
+  CALLN_TO,
+  CALLXN,
+  ENTRY,
   J,
   J_TO,
   L32I,
@@ -33,6 +36,8 @@ import {
   NOP_N,
   RET,
   RET_N,
+  RETW,
+  RETW_N,
   S32I,
   S32I_N,
   SLLI,
@@ -350,7 +355,98 @@ describe('Esp32s3Core — 16-bit code-density forms (slice 2)', () => {
     expect([...c.drainUart()]).toEqual([6]);
 
     const d = new Esp32s3Core();
-    d.loadFirmware(Uint8Array.from([0x1d, 0xf0])); // RETW.N
-    expect(() => d.step(1)).toThrow('unimplemented Xtensa instruction');
+    d.loadFirmware(Uint8Array.from([0x1d, 0xf0])); // RETW.N with a0 = 0
+    expect(() => d.step(1)).toThrow('call0-style link');
+  });
+});
+
+describe('Esp32s3Core — windowed ABI (slice 3)', () => {
+  it('ENTRY/RETW byte fixtures match real objdump output', () => {
+    // "entry a1, 32" disassembles as "36 41 00".
+    expect(word(ENTRY(1, 32))).toEqual([0x36, 0x41, 0x00]);
+    expect(word(RETW())).toEqual([0x90, 0x00, 0x00]);
+    expect(RETW_N().w16).toBe(0xf01d);
+    expect(word(CALLXN(2, 5))).toEqual([0xe0, 0x05, 0x00]);
+  });
+
+  it('CALL8/ENTRY rotate the window: args arrive in a2, locals survive', () => {
+    // crt0: a2=UART, a3=sentinel 7; a10=arg 5; call8 fn; tx a10 (retval)
+    // and a3 (sentinel) — both must survive the callee's window.
+    // fn: entry; a2 = arg; a2 += 1; retw → caller sees retval in a10.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART], [
+      L32R(2, 0),
+      MOVI(3, 7),
+      MOVI(10, 5),
+      CALLN_TO(2, 8), // call8 → fn at code[8] (4-aligned: 8 + 21 + pad)
+      S32I(10, 2, 0x00), // tx retval (6)
+      S32I(3, 2, 0x00), // tx sentinel (7)
+      J(BR(-1)),
+      NOP(), // pad: code[8] at byte 8 + 21 + 3 = 32 ✓
+      // fn:
+      ENTRY(1, 16),
+      ADDI(2, 2, 1), // retval = arg + 1
+      RETW(),
+    ]);
+    const c = core(image);
+    c.step(60);
+    expect([...c.drainUart()]).toEqual([6, 7]);
+  });
+
+  it('deep CALL8 recursion forces spills and fills; every frame survives', () => {
+    // rec(d): if d==0 return 0; r = rec(d-1); tx own depth; return d + r.
+    // Depth 12 → 14 live frames × 8 regs ≫ 64 physical: multiple
+    // overflow spills on the way down, underflow fills on the way up.
+    // The tx sequence proves each frame's saved register (a3) and the
+    // crt0 frame's UART pointer (a2) round-tripped through memory.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART], [
+      // crt0:
+      L32R(2, 0), // a2 = UART
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4), // [sp−12] ← sp: init the base save area like crt0 must
+      MOVI(10, 12), // arg
+      CALLN_TO(2, 8), // call8 rec
+      S32I(10, 2, 0x00), // tx total (78) through crt0's restored a2
+      J(BR(-1)),
+      NOP(), // pad: rec at code[8] = byte 8 + 24 = 32 ✓
+      // rec: frame 32 — a call8-making function must reserve 16 bytes
+      // of base save area PLUS 16 for its callee's extra save area
+      // (the ABI rule behind the canonical "entry a1, 32").
+      ENTRY(1, 32),
+      MOV_N(3, 2), // a3 = depth (this frame's sentinel)
+      BNEZ_TO(2, 13),
+      MOVI(2, 0), // base case: return 0
+      RETW(),
+      // [13] recurse:
+      ADDI(10, 2, -1),
+      CALLN_TO(2, 8),
+      L32R(7, 0), // a7 = UART (fresh in this window)
+      S32I(3, 7, 0x00), // tx own depth — only correct if a3 survived
+      ADD(2, 3, 10), // return depth + child sum
+      RETW_N(), // narrow return on the unwind path
+    ]);
+    const c = core(image);
+    c.step(2_000);
+    expect([...c.drainUart()]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 78]);
+  });
+
+  it('CALLX8 calls through a register; RETW frame-size mismatch refuses', () => {
+    const fnAddr = ESP32S3_IRAM_BASE + 12 + 24; // 2 literals → code at 12; code[8] = byte 36 (4-aligned)
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, fnAddr], [
+      L32R(2, 0),
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(4, 1), // fn address
+      MOVI(10, 41),
+      CALLXN(2, 4), // call8 via a4
+      S32I(10, 2, 0x00), // tx 42
+      J(BR(-1)),
+      // fn:
+      ENTRY(1, 16),
+      ADDI(2, 2, 1),
+      RETW(),
+    ]);
+    const c = core(image);
+    c.step(60);
+    expect([...c.drainUart()]).toEqual([42]);
   });
 });

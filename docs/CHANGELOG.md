@@ -2,6 +2,41 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — ESP32-S3 slice 3: the windowed ABI
+
+### Added
+- **Register windows** (@protopulse/emu): CALL4/8/12, CALLX4/8/12,
+  ENTRY, RETW/RETW.N over a 64-entry physical register file with
+  WindowBase/WindowStart, exactly per the Cadence ISA RM (whose
+  §4.7.1 quotes the mechanics verbatim). Overflow/underflow is
+  handled by MAGIC SPILL/FILL — the RM's reference handlers' net
+  effect performed directly, producing byte-for-byte the stack
+  layout compiled code and debuggers expect. The check runs lazily
+  on first touch of a register group, matching the hardware's
+  spill-and-retry fixpoint.
+- Assembler: ENTRY/RETW/RETW.N/CALLXn builders and CALLN_TO
+  index-based placeholders (sharing CALL0's 4-alignment
+  enforcement).
+
+### Verified
+- "entry a1, 32" = 36 41 00 byte fixture; window rotation argument
+  passing (caller a10 → callee a2) with caller locals surviving;
+  **14 live frames of call8 recursion over the 64-register file** —
+  multiple overflow spills on the way down, underflow fills on the
+  unwind, every frame's sentinel register and the root frame's UART
+  pointer round-tripping through memory ([1..12, 78] out the UART);
+  CALLX8 through a register; RETW with a call0-style link refuses.
+  The test's own first draft used ENTRY a1,16 in a call8-making
+  function — an ABI violation (callee extra save area needs 16 more
+  bytes) — and the emulator's faithful layout surfaced it: the
+  canonical "entry a1, 32" exists for a reason. 106 emu tests green.
+
+### Honest cuts
+- Spill/fill costs no cycles; MOVSP and handler-only L32E/S32E/RFWO/
+  RFWU refuse; PS not modeled (window rules enforced by throwing).
+  Still ahead for real ESP-IDF firmware: interrupts, peripherals,
+  the app-image loader.
+
 ## 2026-06-11 — ESP32-S3 slice 2: code-density instructions
 
 ### Added

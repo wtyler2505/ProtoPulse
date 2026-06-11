@@ -295,9 +295,24 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       placeholders — hand-counted branch offsets are how today's two
       assembler bugs happened, so the layout engine resolves targets
       now. RETW.N (windowed) refuses loudly
-- [ ] ESP32 core, next slices: windowed ABI (ENTRY/CALL8/RETW),
-      interrupts, more peripherals — toward running real
-      ESP-IDF-built firmware (a long road, walked openly)
+- [x] ESP32-S3 core slice 3 — the windowed ABI (landed 2026-06-11):
+      CALL4/8/12, CALLX4/8/12, ENTRY, RETW/RETW.N over a 64-entry
+      physical register file with WindowBase/WindowStart, per the
+      Cadence ISA RM's quoted mechanics. Overflow/underflow is MAGIC
+      SPILL/FILL — the RM's reference handlers' documented net effect
+      performed directly (a0..a3 to [nextSP−16..−4], extras to
+      [prevSP−32/−48..−20], prevSP from [sp−12]) — byte-for-byte the
+      layout compiled code expects, no exception machinery. Proven by
+      14 live frames of call8 recursion over the 64-register file:
+      multiple spill rounds down, fills on the unwind, every frame's
+      saved registers surviving (the test's own first draft violated
+      the ABI's entry-32 rule and the emulator caught it). Honest
+      cuts: spill/fill costs no cycles; MOVSP and the handler-only
+      L32E/S32E refuse; PS not modeled
+- [ ] ESP32 core, next slices: interrupts + exceptions, MOVSP/alloca,
+      more peripherals (timers, ADC), and an ESP-IDF app-image
+      loader — toward running real IDF-built firmware (a long road,
+      walked openly)
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 

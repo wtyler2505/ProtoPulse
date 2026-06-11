@@ -20,15 +20,16 @@ import type { DigitalLevel, McuCore, McuState, McuStepResult, PinEvent } from '.
  * reads).
  *
  * Honest cuts, stated plainly: SINGLE core (the S3 has two);
- * 1 instruction = 1 cycle at 240 MHz (no memory-wait or cache
- * modeling); one 480 KB SRAM window mapped at both its instruction-bus
- * and data-bus addresses (no SRAM0/cache regions); call0-ABI
- * instruction subset — 24-bit core forms plus the 16-bit code-density
- * forms (slice 2), but no register windows (ENTRY/CALL8/RETW refuse),
- * so real ESP-IDF firmware images will NOT run yet; no interrupts, no
- * ADC (the co-sim panel refuses ADC bindings for this core), no
- * bootloader. Loading Intel-HEX refuses with a message — raw images
- * only.
+ * 1 instruction = 1 cycle at 240 MHz (no memory-wait, cache, or
+ * spill/fill timing); one 480 KB SRAM window mapped at both its
+ * instruction-bus and data-bus addresses (no SRAM0/cache regions).
+ * The instruction set now spans the 24-bit core forms, the 16-bit
+ * code-density forms (slice 2), AND the windowed ABI (slice 3 —
+ * CALL4/8/12, ENTRY, RETW with magic spill/fill), so compiled
+ * windowed code structure runs — but there are still no interrupts,
+ * no MOVSP, no ADC, no flash/bootloader, and no ESP-IDF app-image
+ * loader, so real IDF firmware does NOT run yet. Loading Intel-HEX
+ * refuses with a message — raw images only.
  */
 
 const CLOCK_HZ = 240_000_000;
@@ -135,7 +136,7 @@ export class Esp32s3Core implements McuCore {
 
   inspect(): McuState {
     // No SREG on Xtensa — reported as 0; sp is a1 by call0 convention.
-    return { pc: this.cpu.pc, cycles: this.cpu.cycles, sreg: 0, sp: this.cpu.ar[1] ?? 0 };
+    return { pc: this.cpu.pc, cycles: this.cpu.cycles, sreg: 0, sp: this.cpu.a(1) };
   }
 
   /** Power-on reset: machine + peripheral state cleared, firmware kept. */
