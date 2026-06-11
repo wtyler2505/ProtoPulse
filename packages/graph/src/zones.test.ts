@@ -56,6 +56,35 @@ describe('zone apply', () => {
     expect(g.pcb.zones.get('z2')?.clearanceNm).toBe(200_000);
   });
 
+  it('keeps the thermal connect style through apply, inverse, merge, and JSON', () => {
+    // Apply: the field lands; absent means solid (undefined).
+    const g = buildGraph([...ledCircuitOps(), placeZone('zt', { connect: 'thermal' })]);
+    expect(g.pcb.zones.get('zt')?.connect).toBe('thermal');
+    expect(withZone().pcb.zones.get('z1')?.connect).toBeUndefined();
+
+    // Inverse: removing the zone inverts to a place_zone carrying connect.
+    const inv = invertOp(g, { kind: 'remove_zone', id: 'zt' });
+    expect(inv).toEqual([placeZone('zt', { connect: 'thermal' })]);
+
+    // Merge: a theirs-added thermal zone replays with its connect style.
+    const baseOps = envelopes(ledCircuitOps());
+    const theirsOps = [
+      ...baseOps,
+      { actor: 'them', lamport: baseOps.length + 1, ts: 0, op: placeZone('zt', { connect: 'thermal' }) },
+    ];
+    const merged = threeWayMerge(
+      materialize(baseOps).graph,
+      materialize(baseOps).graph,
+      materialize(theirsOps).graph,
+    );
+    const after = cloneGraph(materialize(baseOps).graph);
+    for (const op of merged.autoOps) expect(applyOp(after, op).ok).toBe(true);
+    expect(after.pcb.zones.get('zt')?.connect).toBe('thermal');
+
+    // JSON round-trip preserves it.
+    expect(graphFromJson(graphToJson(g)).pcb.zones.get('zt')?.connect).toBe('thermal');
+  });
+
   it('rejects unknown nets, duplicate ids, and removing the missing', () => {
     const g = buildGraph(ledCircuitOps());
     expect(applyOp(g, placeZone('zx', { netId: 'n-ghost' })).ok).toBe(false);

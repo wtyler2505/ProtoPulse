@@ -2,6 +2,35 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — thermal reliefs
+
+### Added
+- **Thermal reliefs on zone pours**: zones carry `connect: solid |
+  thermal` (optional, absent = solid) through the full graph closure —
+  apply/inverse/merge/serialize all preserve it, the 100%-branch gate
+  on the core held. Thermal pours carve an annular gap (pad inflated
+  by the pour clearance) around every same-net pad, bridged by 4
+  orthogonal spokes (default width 0.4mm, a solderability convention)
+  — computePour returns a reliefs count and the notch geometry is
+  exact-area tested. Same-net traces and vias stay solid-connect; the
+  honest cut is stated in the code, the wiki, and here.
+- **Zone Inspector**: selecting a zone now shows net/layer/corners and
+  a solid|thermal toggle — switching styles lands as ONE undoable
+  batch (remove + re-place under the same id; selection survives).
+- Obstacles now carry their copper kind (trace/via/pad) — the pour
+  partitions same-net pads from same-net track without label-parsing.
+
+### Verified
+- 2 new pour tests (exact notch area vs the solid pour; traces/vias
+  unaffected), 1 graph closure test (connect through apply, inverse,
+  merge replay, JSON). Browser-verified: thermal pour renders the 4
+  corner notches; Inspector toggle flips solid↔thermal as one batch
+  with live re-pour. Gerber goldens byte-identical (solid default).
+  Full test:packages green; full-tree eslint 0 errors.
+- The zones-and-thermal-reliefs wiki article's "See it" updated — it
+  honestly claimed reliefs didn't exist; now it honestly claims they
+  do.
+
 ## 2026-06-11 — concepts wiki complete: 88/88
 
 ### Added

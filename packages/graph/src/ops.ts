@@ -206,6 +206,7 @@ const zPlaceZone = z.object({
   layerId: z.string().min(1),
   outline: z.array(zVec).min(3),
   clearanceNm: zNm.optional(),
+  connect: z.enum(['solid', 'thermal']).optional(),
 });
 const zRemoveZone = z.object({ kind: z.literal('remove_zone'), id: zUuid });
 

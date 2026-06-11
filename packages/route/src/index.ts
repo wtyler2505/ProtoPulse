@@ -37,5 +37,5 @@ export {
   type ShoveReroute,
   type ShoveResult,
 } from './shove.js';
-export { computePour, pourArea, type PourPolygon, type PourResult } from './pour.js';
+export { computePour, pourArea, DEFAULT_SPOKE_WIDTH_NM, type PourPolygon, type PourResult } from './pour.js';
 export type { Aabb, Rect } from './geom.js';

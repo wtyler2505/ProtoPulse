@@ -129,7 +129,14 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       regions frozen in the new zoned-led golden. Honest cuts: solid
       connects (thermal reliefs later), square-corner keep-outs
       (conservative)
-- [ ] Thermal reliefs; panelization; cascading shove
+- [x] Thermal reliefs (landed 2026-06-11): zones carry a per-zone pad
+      connect style (solid | thermal) through the full graph closure;
+      thermal pours carve an annular gap around same-net pads bridged
+      by 4 orthogonal spokes (computePour, exact-area tested); toggle
+      lives in the Inspector as one undoable batch. Honest cuts: fixed
+      spoke width (0.4mm), same-net vias stay solid-connect. Goldens
+      untouched — solid is still the default
+- [ ] Panelization; cascading shove
 
 ## v0.5 — The Bridge 🔨
 

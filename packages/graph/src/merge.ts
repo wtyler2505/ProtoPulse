@@ -403,6 +403,7 @@ export function threeWayMerge(
       layerId: zn.layerId,
       outline: zn.outline.map((p) => ({ ...p })),
       ...(zn.clearanceNm !== undefined ? { clearanceNm: zn.clearanceNm } : {}),
+      ...(zn.connect !== undefined ? { connect: zn.connect } : {}),
     });
   }
   const oursTouchedVias = new Set([...baseToOurs.pcbView.viasAdded, ...baseToOurs.pcbView.viasRemoved]);
