@@ -47,6 +47,8 @@ export interface GraphDelta {
     tracesRemoved: Uuid[];
     viasAdded: Uuid[];
     viasRemoved: Uuid[];
+    zonesAdded: Uuid[];
+    zonesRemoved: Uuid[];
   };
 }
 
@@ -73,7 +75,9 @@ export function isEmptyDelta(d: GraphDelta): boolean {
     d.pcbView.tracesAdded.length === 0 &&
     d.pcbView.tracesRemoved.length === 0 &&
     d.pcbView.viasAdded.length === 0 &&
-    d.pcbView.viasRemoved.length === 0
+    d.pcbView.viasRemoved.length === 0 &&
+    d.pcbView.zonesAdded.length === 0 &&
+    d.pcbView.zonesRemoved.length === 0
   );
 }
 
@@ -109,6 +113,8 @@ export function diff(a: DesignGraph, b: DesignGraph): GraphDelta {
       tracesRemoved: [],
       viasAdded: [],
       viasRemoved: [],
+      zonesAdded: [],
+      zonesRemoved: [],
     },
   };
 
@@ -214,6 +220,7 @@ export function diff(a: DesignGraph, b: DesignGraph): GraphDelta {
   }
   diffGeometryMaps(a.pcb.traces, b.pcb.traces, delta.pcbView.tracesAdded, delta.pcbView.tracesRemoved);
   diffGeometryMaps(a.pcb.vias, b.pcb.vias, delta.pcbView.viasAdded, delta.pcbView.viasRemoved);
+  diffGeometryMaps(a.pcb.zones, b.pcb.zones, delta.pcbView.zonesAdded, delta.pcbView.zonesRemoved);
 
   return delta;
 }

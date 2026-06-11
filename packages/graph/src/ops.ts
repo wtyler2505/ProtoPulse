@@ -199,6 +199,16 @@ const zPlaceVia = z.object({
 });
 const zRemoveVia = z.object({ kind: z.literal('remove_via'), id: zUuid });
 
+const zPlaceZone = z.object({
+  kind: z.literal('place_zone'),
+  id: zPcbGeomId,
+  netId: zUuid,
+  layerId: z.string().min(1),
+  outline: z.array(zVec).min(3),
+  clearanceNm: zNm.optional(),
+});
+const zRemoveZone = z.object({ kind: z.literal('remove_zone'), id: zUuid });
+
 // ── Meta ops ─────────────────────────────────────────────────────────
 
 const zCheckpoint = z.object({ kind: z.literal('checkpoint'), label: z.string() });
@@ -235,6 +245,8 @@ export type OpBody =
   | z.infer<typeof zRemoveTrace>
   | z.infer<typeof zPlaceVia>
   | z.infer<typeof zRemoveVia>
+  | z.infer<typeof zPlaceZone>
+  | z.infer<typeof zRemoveZone>
   | z.infer<typeof zCheckpoint>
   | z.infer<typeof zAnnotate>
   | z.infer<typeof zSetDesignMeta>
@@ -274,6 +286,8 @@ export const opBodySchema: z.ZodType<OpBody> = z.union([
     zRemoveTrace,
     zPlaceVia,
     zRemoveVia,
+    zPlaceZone,
+    zRemoveZone,
     zCheckpoint,
     zAnnotate,
     zSetDesignMeta,

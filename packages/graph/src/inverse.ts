@@ -1,7 +1,7 @@
 import { netOfPort, parsePortRef } from './types.js';
 
 import type { OpBody } from './ops.js';
-import type { DesignGraph, Net, Trace, Uuid, Via, WireSegment } from './types.js';
+import type { DesignGraph, Net, Trace, Uuid, Via, WireSegment, Zone } from './types.js';
 
 /**
  * Undo emits the inverse op — the log is forward-only and honest about
@@ -176,6 +176,15 @@ export function invertOp(before: DesignGraph, op: OpBody): OpBody[] {
     case 'place_via':
       return [{ kind: 'remove_via', id: op.id }];
 
+    case 'place_zone':
+      return [{ kind: 'remove_zone', id: op.id }];
+
+    case 'remove_zone': {
+      const zone = before.pcb.zones.get(op.id);
+      if (!zone) return [];
+      return [placeZoneOp(zone)];
+    }
+
     case 'remove_via': {
       const via = before.pcb.vias.get(op.id);
       if (!via) return [];
@@ -233,6 +242,17 @@ function routeTraceOp(trace: Trace): OpBody {
   };
 }
 
+function placeZoneOp(zone: Zone): OpBody {
+  return {
+    kind: 'place_zone',
+    id: zone.id,
+    netId: zone.netId,
+    layerId: zone.layerId,
+    outline: zone.outline.map((v) => ({ ...v })),
+    ...(zone.clearanceNm !== undefined ? { clearanceNm: zone.clearanceNm } : {}),
+  };
+}
+
 function placeViaOp(via: Via): OpBody {
   return {
     kind: 'place_via',
@@ -273,6 +293,9 @@ function restorePcbGeometry(before: DesignGraph, netId: Uuid): OpBody[] {
   for (const via of before.pcb.vias.values()) {
     if (via.netId === netId) out.push(placeViaOp(via));
   }
+  for (const zone of before.pcb.zones.values()) {
+    if (zone.netId === netId) out.push(placeZoneOp(zone));
+  }
   return out;
 }
 
@@ -285,6 +308,9 @@ function repointPcbGeometry(before: DesignGraph, netId: Uuid): OpBody[] {
   }
   for (const via of before.pcb.vias.values()) {
     if (via.netId === netId) out.push({ kind: 'remove_via', id: via.id }, placeViaOp(via));
+  }
+  for (const zone of before.pcb.zones.values()) {
+    if (zone.netId === netId) out.push({ kind: 'remove_zone', id: zone.id }, placeZoneOp(zone));
   }
   return out;
 }
