@@ -40,11 +40,17 @@ import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuSt
  * register dance adc_oneshot_ll/analogRead performs: one-hot channel
  * select, start-bit edge, done poll, 12-bit data; conversions
  * complete instantly and attenuation is not modeled — full scale is
- * 3.3 V; channels are ADC1's, i.e. channel n reads GPIO n+1).
- * Interrupt-driven and analog firmware patterns run end-to-end — but
- * there is still no flash cache (flash-mapped image segments refuse),
- * no ADC2/DMA mode, and no TIMG, so real IDF firmware does NOT run
- * yet. Loading Intel-HEX refuses with a message.
+ * 3.3 V; channels are ADC1's, i.e. channel n reads GPIO n+1), plus
+ * TIMG0's timer 0 (slice 8 — the 54-bit general-purpose timer over
+ * the 80 MHz APB clock with its 16-bit prescaler, UPDATE-latched
+ * LO/HI reads, LOAD, and the alarm that hardware auto-disables on
+ * fire, exactly the behavior gptimer's ISR re-arms around).
+ * Interrupt-driven, analog, and gptimer-style firmware patterns run
+ * end-to-end — but there is still no flash cache (flash-mapped image
+ * segments refuse), no ADC2/DMA mode, no TIMG0 T1/TIMG1/watchdogs,
+ * and no XTAL clock source for the timer (APB only), so real IDF
+ * firmware does NOT run yet. Loading Intel-HEX refuses with a
+ * message.
  */
 
 const CLOCK_HZ = 240_000_000;
@@ -105,7 +111,37 @@ const UART_TX_DONE_INT = 1 << 14;
 const INTMTX_BASE = 0x600c2000;
 const INTMTX_GPIO_MAP = 0x040; // INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG
 const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
+const INTMTX_TG_T0_MAP = 0x0c8; // INTERRUPT_CORE0_TG_T0_INT_MAP_REG (TIMG0 T0)
 const INTMTX_DEFAULT_MAP = 16;
+
+// Timer group 0, timer 0 (timer_group_reg.h; flow per hal timer_ll.h
+// and the gptimer driver): the 54-bit general-purpose timer counting
+// APB ticks (80 MHz — soc.h APB_CLK_FREQ) through a 16-bit prescaler
+// (field value 0 means 65536; the HAL only programs 2..65536). The
+// alarm-enable bit is cleared BY HARDWARE when the alarm fires —
+// gptimer's ISR re-arms it for periodic use.
+const TIMG0_BASE = 0x6001f000;
+const TIMG_T0CONFIG = 0x00; // EN 31, INCREASE 30, AUTORELOAD 29, DIVIDER [28:13], ALARM_EN 10
+const TIMG_T0LO = 0x04;
+const TIMG_T0HI = 0x08;
+const TIMG_T0UPDATE = 0x0c;
+const TIMG_T0ALARMLO = 0x10;
+const TIMG_T0ALARMHI = 0x14;
+const TIMG_T0LOADLO = 0x18;
+const TIMG_T0LOADHI = 0x1c;
+const TIMG_T0LOAD = 0x20;
+const TIMG_INT_ENA = 0x70; // T0 is bit 0 in all four
+const TIMG_INT_RAW = 0x74;
+const TIMG_INT_ST = 0x78;
+const TIMG_INT_CLR = 0x7c;
+const T0_EN = 1 << 31;
+const T0_INCREASE = 1 << 30;
+const T0_AUTORELOAD = 1 << 29;
+const T0_ALARM_EN = 1 << 10;
+const T0_ARMED = T0_EN | T0_ALARM_EN;
+/** CPU cycles per APB tick: 240 MHz over 80 MHz. */
+const CYCLES_PER_APB = 3;
+const T0_MASK = 2 ** 54; // the counter is 54 bits wide
 
 // SAR ADC1 oneshot path (sens_reg.h; flow per hal/esp32s3/adc_ll.h —
 // the same register dance adc_oneshot_ll_* and analogRead perform):
@@ -171,6 +207,22 @@ export class Esp32s3Core implements McuCore {
   private uartRxThrhd = 96; // CONF1 RXFIFO_FULL_THRHD reset value
   private gpioIntMap = INTMTX_DEFAULT_MAP;
   private uartIntMap = INTMTX_DEFAULT_MAP;
+
+  // TIMG0 T0 state. The counter is virtual: t0Base is its value at
+  // cpu cycle t0Sync, and the live value derives from elapsed cycles
+  // — no per-cycle bookkeeping.
+  private t0Config = 0;
+  private t0Base = 0;
+  private t0Sync = 0;
+  private t0LatchLo = 0; // captured by a T0UPDATE write
+  private t0LatchHi = 0;
+  private t0AlarmLo = 0;
+  private t0AlarmHi = 0;
+  private t0LoadLo = 0;
+  private t0LoadHi = 0;
+  private timgIntEna = 0;
+  private timgIntRaw = 0;
+  private tgT0IntMap = INTMTX_DEFAULT_MAP;
 
   // SAR ADC1 oneshot state.
   private meas1Ctrl2 = 0; // the control bits firmware wrote
@@ -277,7 +329,10 @@ export class Esp32s3Core implements McuCore {
     }
     const start = this.cpu.cycles;
     const target = start + maxCycles;
-    while (this.cpu.cycles < target) this.cpu.step();
+    while (this.cpu.cycles < target) {
+      this.cpu.step();
+      if ((this.t0Config & T0_ARMED) === T0_ARMED) this.checkT0Alarm();
+    }
     const events = this.events;
     this.events = [];
     return { cycles: this.cpu.cycles - start, events };
@@ -346,6 +401,18 @@ export class Esp32s3Core implements McuCore {
     this.uartRxThrhd = 96;
     this.gpioIntMap = INTMTX_DEFAULT_MAP;
     this.uartIntMap = INTMTX_DEFAULT_MAP;
+    this.t0Config = 0;
+    this.t0Base = 0;
+    this.t0Sync = 0;
+    this.t0LatchLo = 0;
+    this.t0LatchHi = 0;
+    this.t0AlarmLo = 0;
+    this.t0AlarmHi = 0;
+    this.t0LoadLo = 0;
+    this.t0LoadHi = 0;
+    this.timgIntEna = 0;
+    this.timgIntRaw = 0;
+    this.tgT0IntMap = INTMTX_DEFAULT_MAP;
     this.meas1Ctrl2 = 0;
     this.adcData = 0;
     this.adcDone = false;
@@ -366,6 +433,49 @@ export class Esp32s3Core implements McuCore {
       throw new Error(`invalid pin "${pin}": expected 'IO0'..'IO${String(PIN_COUNT - 1)}'`);
     }
     return gpio;
+  }
+
+  private t0Divider(): number {
+    const field = (this.t0Config >>> 13) & 0xffff;
+    return field === 0 ? 65536 : field; // 0 means 65536, per the HAL
+  }
+
+  /** The live 54-bit counter, derived from elapsed CPU cycles. */
+  private t0Value(): number {
+    if ((this.t0Config & T0_EN) === 0) return this.t0Base;
+    const ticks = Math.floor((this.cpu.cycles - this.t0Sync) / (CYCLES_PER_APB * this.t0Divider()));
+    const delta = (this.t0Config & T0_INCREASE) !== 0 ? ticks : -ticks;
+    // NOT the usual ((x % M) + M) % M: adding 2^54 to a small positive
+    // value rounds it away (the float ulp at 2^54 is 4). Only add the
+    // modulus when the value is actually negative.
+    let v = (this.t0Base + delta) % T0_MASK;
+    if (v < 0) v += T0_MASK;
+    return v;
+  }
+
+  /** Freeze the counter into t0Base — required before any config
+   *  change so old-divider time doesn't replay under the new one. */
+  private t0Resync(): void {
+    this.t0Base = this.t0Value();
+    this.t0Sync = this.cpu.cycles;
+  }
+
+  /** Alarm comparator, run after every instruction while armed. On a
+   *  hit: latch the raw interrupt, auto-disable the alarm (the
+   *  hardware behavior gptimer's ISR re-arms around), auto-reload if
+   *  configured. */
+  private checkT0Alarm(): void {
+    const alarm = this.t0AlarmHi * 0x100000000 + this.t0AlarmLo;
+    const value = this.t0Value();
+    const hit = (this.t0Config & T0_INCREASE) !== 0 ? value >= alarm : value <= alarm;
+    if (!hit) return;
+    this.timgIntRaw |= 1;
+    this.t0Config &= ~T0_ALARM_EN;
+    if ((this.t0Config & T0_AUTORELOAD) !== 0) {
+      this.t0Base = (this.t0LoadHi * 0x100000000 + this.t0LoadLo) % T0_MASK;
+      this.t0Sync = this.cpu.cycles;
+    }
+    this.recomputeIrq();
   }
 
   /** UART0's raw interrupt bits: RXFIFO_FULL tracks the live FIFO
@@ -403,9 +513,11 @@ export class Esp32s3Core implements McuCore {
       }
     }
     const uartPending = (this.uartIntRaw() & this.uartIntEna) !== 0;
+    const timgPending = (this.timgIntRaw & this.timgIntEna & 1) !== 0;
     let mask = 0;
     if (gpioPending) mask |= 1 << (this.gpioIntMap & 31);
     if (uartPending) mask |= 1 << (this.uartIntMap & 31);
+    if (timgPending) mask |= 1 << (this.tgT0IntMap & 31);
     this.cpu.setExtInt(mask);
   }
 
@@ -486,7 +598,23 @@ export class Esp32s3Core implements McuCore {
       const off = addr - INTMTX_BASE;
       if (off === INTMTX_GPIO_MAP) return this.gpioIntMap;
       if (off === INTMTX_UART_MAP) return this.uartIntMap;
+      if (off === INTMTX_TG_T0_MAP) return this.tgT0IntMap;
       return INTMTX_DEFAULT_MAP; // unmodeled sources sit at their reset map
+    }
+    if (addr >= TIMG0_BASE && addr < TIMG0_BASE + 0x1000) {
+      const off = addr - TIMG0_BASE;
+      if (off === TIMG_T0CONFIG) return this.t0Config >>> 0;
+      if (off === TIMG_T0LO) return this.t0LatchLo >>> 0;
+      if (off === TIMG_T0HI) return this.t0LatchHi >>> 0;
+      if (off === TIMG_T0UPDATE) return 0; // capture completes instantly
+      if (off === TIMG_T0ALARMLO) return this.t0AlarmLo >>> 0;
+      if (off === TIMG_T0ALARMHI) return this.t0AlarmHi >>> 0;
+      if (off === TIMG_T0LOADLO) return this.t0LoadLo >>> 0;
+      if (off === TIMG_T0LOADHI) return this.t0LoadHi >>> 0;
+      if (off === TIMG_INT_ENA) return this.timgIntEna;
+      if (off === TIMG_INT_RAW) return this.timgIntRaw;
+      if (off === TIMG_INT_ST) return this.timgIntRaw & this.timgIntEna;
+      return 0;
     }
     if (addr >= SENS_BASE && addr < SENS_BASE + 0x400) {
       if (addr - SENS_BASE === SENS_SAR_MEAS1_CTRL2) {
@@ -554,8 +682,32 @@ export class Esp32s3Core implements McuCore {
       const off = addr - INTMTX_BASE;
       if (off === INTMTX_GPIO_MAP) this.gpioIntMap = value & 0x1f;
       else if (off === INTMTX_UART_MAP) this.uartIntMap = value & 0x1f;
+      else if (off === INTMTX_TG_T0_MAP) this.tgT0IntMap = value & 0x1f;
       // Map writes for unmodeled sources are accepted and dropped —
       // those sources never assert, so the mapping is moot.
+      this.recomputeIrq();
+      return;
+    }
+    if (addr >= TIMG0_BASE && addr < TIMG0_BASE + 0x1000) {
+      const off = addr - TIMG0_BASE;
+      const v = value >>> 0;
+      if (off === TIMG_T0CONFIG) {
+        this.t0Resync(); // freeze under the OLD divider/EN first
+        this.t0Config = v | 0;
+      } else if (off === TIMG_T0UPDATE) {
+        const val = this.t0Value();
+        this.t0LatchLo = val % 0x100000000;
+        this.t0LatchHi = Math.floor(val / 0x100000000);
+      } else if (off === TIMG_T0ALARMLO) this.t0AlarmLo = v;
+      else if (off === TIMG_T0ALARMHI) this.t0AlarmHi = v & 0x3fffff;
+      else if (off === TIMG_T0LOADLO) this.t0LoadLo = v;
+      else if (off === TIMG_T0LOADHI) this.t0LoadHi = v & 0x3fffff;
+      else if (off === TIMG_T0LOAD) {
+        // Any write reloads the counter from {LOADHI, LOADLO}.
+        this.t0Base = (this.t0LoadHi * 0x100000000 + this.t0LoadLo) % T0_MASK;
+        this.t0Sync = this.cpu.cycles;
+      } else if (off === TIMG_INT_ENA) this.timgIntEna = v;
+      else if (off === TIMG_INT_CLR) this.timgIntRaw &= ~v;
       this.recomputeIrq();
       return;
     }

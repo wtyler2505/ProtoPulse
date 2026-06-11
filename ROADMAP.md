@@ -361,8 +361,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       without analog channels; the co-sim panel now offers ADC1's
       channels 0–9 = GPIO1–10). Cuts: instant conversions, no
       attenuation (3.3 V full scale), no ADC2/DMA mode
-- [ ] ESP32 core, next slices: TIMG and flash-cache mapping — toward
-      running real IDF-built firmware (a long road, walked openly)
+- [x] ESP32-S3 core slice 8 — TIMG0 timer 0 (landed 2026-06-11): the
+      54-bit general-purpose timer over the 80 MHz APB clock with its
+      16-bit prescaler (field 0 = ÷65536, per the HAL),
+      UPDATE-latched LO/HI reads, LOAD, up/down counting, and the
+      alarm that hardware auto-disables on fire — exactly the
+      behavior gptimer's ISR re-arms around — routed through the
+      interrupt matrix (TG_T0 map at +0x0C8). The counter is virtual
+      (derived from elapsed cycles, no per-cycle cost). Proven:
+      cycle-exact tick counting through UPDATE, a periodic
+      autoreload alarm counting 3 with the gptimer re-arm dance, and
+      a one-shot alarm firing exactly once. Cuts: T0 only (no
+      T1/TIMG1/watchdogs), APB source only
+- [ ] ESP32 core, next slices: flash-cache mapping — toward running
+      real IDF-built firmware (a long road, walked openly)
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 

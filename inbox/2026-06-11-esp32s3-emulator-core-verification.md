@@ -247,3 +247,37 @@ clamp(round(volts / 3.3 × 4095), 0, 4095) like the RP2040 core;
 ADC2 and the APB_SARADC DMA mode are not modeled; the co-sim sampler
 surface (setAdcSampler / drainAdcReads) follows the McuCore contract,
 sampler surviving reset as bench wiring.
+
+## Addendum: TIMG0 timer 0 (slice 8)
+
+Sources: esp-idf v5.2 `soc/esp32s3/include/soc/timer_group_reg.h`,
+`hal/esp32s3/include/hal/timer_ll.h`, the gptimer driver
+(`components/driver/gptimer/gptimer.c`), `soc.h`, and
+`interrupt_core0_reg.h`:
+
+- DR_REG_TIMERGROUP0_BASE = 0x6001F000 (TIMG1 at 0x60020000). The S3
+  group has two general-purpose timers (T0/T1) plus a watchdog.
+- T0 registers: T0CONFIG 0x00 (EN bit 31, INCREASE bit 30,
+  AUTORELOAD bit 29, DIVIDER [28:13], ALARM_EN bit 10), T0LO 0x04,
+  T0HI 0x08, T0UPDATE 0x0C, T0ALARMLO 0x10, T0ALARMHI 0x14,
+  T0LOADLO 0x18, T0LOADHI 0x1C, T0LOAD 0x20; INT_ENA 0x70,
+  INT_RAW 0x74, INT_ST 0x78, INT_CLR 0x7C with T0 at bit 0.
+- Divider semantics (timer_ll.h): the HAL asserts 2..65536 and
+  writes 65536 as field value 0 — so field 0 means ÷65536.
+- Clock: APB at 80 MHz (soc.h APB_CLK_FREQ = 80·10⁶); at the modeled
+  240 MHz CPU that is 3 CPU cycles per APB tick.
+- Reads: trigger a capture via T0UPDATE, poll the update bit clear,
+  then read LO/HI (timer_ll_trigger_soft_capture).
+- Alarm: "when alarm event happens, the alarm will be disabled
+  automatically by hardware" (gptimer.c) — the ISR clears INT via
+  INT_CLR and re-enables the alarm for periodic/autoreload use.
+- Interrupt source map: INTERRUPT_CORE0_TG_T0_INT_MAP_REG at +0x0C8
+  from the matrix base (reset 16, like all map registers).
+
+Emulator approach: the counter is virtual — value derives from
+elapsed CPU cycles (no per-cycle bookkeeping); the alarm comparator
+runs after every instruction while EN+ALARM_EN are set. Cuts: TIMG0
+T0 only (no T1, no TIMG1, no watchdogs); APB clock source only (no
+XTAL); UPDATE captures instantly (the update bit always reads 0);
+54-bit wrap handled with float-safe modulo (the ulp at 2^54 is 4 —
+caught by the first test draft when (x%M+M)%M rounded 2 to 0).
