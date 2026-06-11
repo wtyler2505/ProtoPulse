@@ -59,7 +59,7 @@ describe('ratsnestSegments', () => {
       parts,
     );
     expect(segs).toEqual([
-      { netId: 'na', a: { x: 1 * MM, y: 0 }, b: { x: 9 * MM, y: 0 } },
+      { netId: 'na', a: { x: 1 * MM, y: 0 }, b: { x: 9 * MM, y: 0 }, aPort: 'r1:2', bPort: 'r2:1' },
     ]);
   });
 
@@ -121,8 +121,8 @@ describe('ratsnestSegments', () => {
     );
     // chain: traced r1:2 → r2:1, then r2:1 → r3:1 (nearest connected)
     expect(segs).toEqual([
-      { netId: 'na', a: { x: 1 * MM, y: 0 }, b: { x: 9 * MM, y: 0 } },
-      { netId: 'na', a: { x: 9 * MM, y: 0 }, b: { x: 19 * MM, y: 0 } },
+      { netId: 'na', a: { x: 1 * MM, y: 0 }, b: { x: 9 * MM, y: 0 }, aPort: 'r1:2', bPort: 'r2:1' },
+      { netId: 'na', a: { x: 9 * MM, y: 0 }, b: { x: 19 * MM, y: 0 }, aPort: 'r2:1', bPort: 'r3:1' },
     ]);
   });
 
@@ -136,7 +136,7 @@ describe('ratsnestSegments', () => {
 describe('dashedLines', () => {
   it('splits airwires into dash quads covering the segment', () => {
     const lines = dashedLines(
-      [{ netId: 'na', a: { x: 0, y: 0 }, b: { x: 2_000_000, y: 0 } }],
+      [{ netId: 'na', a: { x: 0, y: 0 }, b: { x: 2_000_000, y: 0 }, aPort: 'a:1', bPort: 'b:1' }],
       600_000,
       400_000,
     );
@@ -149,6 +149,9 @@ describe('dashedLines', () => {
   });
 
   it('zero-length segments produce nothing', () => {
-    expect(dashedLines([{ netId: 'x', a: { x: 5, y: 5 }, b: { x: 5, y: 5 } }]).length).toBe(0);
+    expect(
+      dashedLines([{ netId: 'x', a: { x: 5, y: 5 }, b: { x: 5, y: 5 }, aPort: 'a:1', bPort: 'b:1' }])
+        .length,
+    ).toBe(0);
   });
 });

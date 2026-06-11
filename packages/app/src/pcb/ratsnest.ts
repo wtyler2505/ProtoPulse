@@ -25,6 +25,9 @@ export interface RatsnestSegment {
   netId: string;
   a: Vec;
   b: Vec;
+  /** Port refs (componentId:pinKey) of the two endpoints. */
+  aPort: string;
+  bPort: string;
 }
 
 interface PadPos {
@@ -119,7 +122,15 @@ export function ratsnestSegments(
           nearest = c;
         }
       }
-      if (nearest) segments.push({ netId, a: { ...nearest.at }, b: { ...pad.at } });
+      if (nearest) {
+        segments.push({
+          netId,
+          a: { ...nearest.at },
+          b: { ...pad.at },
+          aPort: nearest.key,
+          bPort: pad.key,
+        });
+      }
       connected.push(pad);
     }
   }

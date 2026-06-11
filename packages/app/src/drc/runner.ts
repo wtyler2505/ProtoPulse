@@ -80,6 +80,17 @@ const defaultDeckLoader: DeckLoader = async () => {
  *  tool's walk/shove modes need min_clearance_nm). */
 export const loadDefaultDeck: DeckLoader = defaultDeckLoader;
 
+/** One-shot DRC for callers the cached runner can't serve — the
+ *  Router's working copies churn too fast for (branch, opsVersion)
+ *  keys. Loads module + deck lazily like everything else here. */
+export async function runDrcDirect(graph: DesignGraph, parts: PartDb): Promise<Finding[]> {
+  const mod = await defaultModuleLoader();
+  if (typeof mod.runDrc !== 'function') {
+    throw new Error('DRC not available yet — @protopulse/drc is not in this build');
+  }
+  return mod.runDrc(graph, parts, await defaultDeckLoader());
+}
+
 /** Primary branch + a few alternates without unbounded growth. */
 const CACHE_LIMIT = 16;
 
