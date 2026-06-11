@@ -2,6 +2,40 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — legacy → .ppx importer (migration milestone, gate 1)
+
+### Added
+- **`protopulse import-legacy`** (@protopulse/cli): converts a raw-row
+  JSON snapshot of one legacy project (psql recipe in the command
+  help) into a .ppx op-log bundle — components, values, schematic
+  placements (25 legacy px = one 1.27 mm grid step, rotations snapped
+  to quarter turns), and nets resolved from BOTH legacy segment
+  generations ({instanceId, pinId} and {fromInstanceId, …}), with
+  connector ids and names both accepted and pins mapped by name
+  first, ordinal only when the counts agree. Parts map onto the
+  engine seed library by mpn/title/category heuristics (generic NPN
+  → 2N3904 and generic N-MOSFET → AO3400, each noted); anything
+  unmappable — LDRs, mystery modules — is skipped with its reason.
+  Dirty data degrades loudly: a port claimed twice stays on the
+  net that existed first and the report says so. The bundle is
+  materialize-verified before it's written (problems = exit 1).
+
+### Honest scope
+- One legacy circuit design per bundle (--design picks; the report
+  lists the rest); hierarchy, breadboard/bench/pcb views, and
+  non-seed parts don't carry over. The legacy app's own export
+  format drops instance ids and part links — hence the raw-row
+  snapshot input.
+- Still open before legacy retirement: moving Tyler's real projects
+  through it (needs his database), then the default-UI flip.
+
+### Verified
+- 5 importer tests (mapping table incl. the LDR refusal; sound
+  bundle with values/placements/rotation snap; both segment
+  generations + id/name pin resolution; dirty-data degradation;
+  --design selection) and an end-to-end smoke: snapshot →
+  import-legacy → `protopulse check` exits 0 clean.
+
 ## 2026-06-11 — deferred-cuts sweep 2: mouse-bites + fab/panel UI
 
 ### Added

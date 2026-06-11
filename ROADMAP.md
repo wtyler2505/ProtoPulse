@@ -317,7 +317,18 @@ stopped using it. Sequence: v0.6 gives the engine its server/persistence
 legacy read-only for a grace period → delete area-by-area in deliberate
 PRs, biggest-dependency-last, one ADR per removal.
 
-- [ ] Legacy → .ppx importer (projects, designs, nets, placements)
+- [x] Legacy → .ppx importer (landed 2026-06-11): `protopulse
+      import-legacy <snapshot.json> --out <design.ppx.json>` — converts
+      a raw-row dump of one legacy project (the SQL recipe is in the
+      command help; the legacy app's own export format drops instance
+      ids and part links, severing connectivity) into an op-log bundle:
+      components, values, placements (25 px = one 1.27 mm grid step),
+      and nets from both segment generations. Parts map onto the seed
+      library by mpn/title heuristics; anything unmappable is skipped
+      WITH ITS REASON — no guessed pinouts. The produced bundle is
+      materialize-verified and `protopulse check`s clean. Still open:
+      moving Tyler's REAL projects through it (criterion 2 below needs
+      his database)
 - [ ] Default-UI flip + legacy read-only grace period
 - [ ] Area-by-area retirement with ADRs (server core + Tauri last)
 - [ ] Early safe weeding (independent of the above): root collab
