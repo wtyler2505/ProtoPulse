@@ -1,11 +1,17 @@
 /**
  * Hand-assembler for the Xtensa LX7 subset the ESP32-S3 core executes —
- * the asm.ts / thumb-asm.ts sibling. 24-bit instructions ONLY (the
- * 16-bit code-density forms are deliberately not emitted), call0 ABI
- * (no register windows). Encodings verified against the Espressif ISA
- * overview + the ida-xtensa2 disassembler tables, with known-good byte
- * fixtures pinned in the tests — see
+ * the asm.ts / thumb-asm.ts sibling. 24-bit core instructions plus the
+ * 16-bit code-density forms (narrow builders carry their width through
+ * layout), call0 ABI (no register windows). Encodings verified against
+ * the Espressif ISA overview, the full Cadence ISA RM, and the
+ * ida-xtensa2 disassembler tables, with known-good byte fixtures
+ * pinned in the tests — see
  * inbox/2026-06-11-esp32s3-emulator-core-verification.md.
+ *
+ * Control flow comes in two styles: raw-immediate builders (BEQ/J/…
+ * with BR(), valid ONLY in uniform 24-bit code) and index-based
+ * *_TO placeholders the assembler resolves from the real mixed-width
+ * layout — prefer those; hand-counted offsets are how bugs happen.
  *
  * Field layout (little-endian 24-bit word): op0=bits[3:0], t=[7:4],
  * s=[11:8], r=[15:12], op1=[19:16], op2=[23:20].
@@ -176,6 +182,54 @@ export const RET = (): number => 0x000080; // PC ← a0
 export const NOP = (): number => 0x0020f0;
 export const MEMW = (): number => 0x0020c0;
 
+// ── 16-bit code-density forms ────────────────────────────────────────
+// Narrow builders return { w16 } so layout knows their width.
+
+export interface Narrow {
+  w16: number;
+}
+
+/** MOV.N at, as — AR[t] ← AR[s]. */
+export function MOV_N(t: number, s: number): Narrow {
+  return { w16: 0x000d | (reg(t, 't') << 4) | (reg(s, 's') << 8) };
+}
+
+/** MOVI.N as, −32..95 — imm7 split bits[6:4]‖bits[15:12]. */
+export function MOVI_N(s: number, imm: number): Narrow {
+  range(imm, -32, 95, 'MOVI.N immediate');
+  const imm7 = imm & 0x7f;
+  return { w16: 0x000c | (((imm7 >> 4) & 0x7) << 4) | (reg(s, 's') << 8) | ((imm7 & 0xf) << 12) };
+}
+
+/** ADD.N ar, as, at. */
+export function ADD_N(r: number, s: number, t: number): Narrow {
+  return { w16: 0x000a | (reg(t, 't') << 4) | (reg(s, 's') << 8) | (reg(r, 'r') << 12) };
+}
+
+/** ADDI.N ar, as, imm — imm is −1 or 1..15 (−1 encodes as t=0). */
+export function ADDI_N(r: number, s: number, imm: number): Narrow {
+  if (imm !== -1) range(imm, 1, 15, 'ADDI.N immediate');
+  const t = imm === -1 ? 0 : imm;
+  return { w16: 0x000b | (t << 4) | (reg(s, 's') << 8) | (reg(r, 'r') << 12) };
+}
+
+/** L32I.N at, as, 0..60 (4-aligned). */
+export function L32I_N(t: number, s: number, off: number): Narrow {
+  range(off, 0, 60, 'L32I.N offset');
+  if (off % 4 !== 0) throw new Error('L32I.N offset must be 4-aligned');
+  return { w16: 0x0008 | (reg(t, 't') << 4) | (reg(s, 's') << 8) | ((off >> 2) << 12) };
+}
+
+/** S32I.N at, as, 0..60 (4-aligned). */
+export function S32I_N(t: number, s: number, off: number): Narrow {
+  range(off, 0, 60, 'S32I.N offset');
+  if (off % 4 !== 0) throw new Error('S32I.N offset must be 4-aligned');
+  return { w16: 0x0009 | (reg(t, 't') << 4) | (reg(s, 's') << 8) | ((off >> 2) << 12) };
+}
+
+export const RET_N = (): Narrow => ({ w16: 0xf00d });
+export const NOP_N = (): Narrow => ({ w16: 0xf03d });
+
 // ── Program assembly ─────────────────────────────────────────────────
 
 /** Placeholder resolved at layout time: L32R at, literals[index]. */
@@ -184,13 +238,22 @@ export interface L32RRef {
 }
 
 /** Placeholder resolved at layout time: CALL0 to code[index]. CALL0
- *  targets must be 4-byte aligned — pad with NOP()s so the callee's
- *  byte offset (4 + literals*4 + 3*index) is a multiple of 4. */
+ *  targets must be 4-byte aligned — pad with NOPs so the callee's
+ *  byte offset lands on a multiple of 4 (the assembler checks). */
 export interface Call0Ref {
   call0: { to: number };
 }
 
-export type XtInstr = number | L32RRef | Call0Ref;
+/** Index-based control flow, resolved from the real layout. */
+export interface FlowRef {
+  flow:
+    | { kind: 'j'; to: number }
+    | { kind: 'bri8'; op: number; s: number; t: number; to: number }
+    | { kind: 'bri12'; op: number; s: number; to: number }
+    | { kind: 'ri6'; nez: boolean; s: number; to: number };
+}
+
+export type XtInstr = number | Narrow | L32RRef | Call0Ref | FlowRef;
 
 /** Reference a literal-pool entry from code. */
 export function L32R(t: number, lit: number): L32RRef {
@@ -202,68 +265,131 @@ export function CALL0_TO(index: number): Call0Ref {
   return { call0: { to: index } };
 }
 
+/** J to code[index]. */
+export const J_TO = (to: number): FlowRef => ({ flow: { kind: 'j', to } });
+export const BEQ_TO = (s: number, t: number, to: number): FlowRef =>
+  ({ flow: { kind: 'bri8', op: 0x001007, s: reg(s, 's'), t: reg(t, 't'), to } });
+export const BNE_TO = (s: number, t: number, to: number): FlowRef =>
+  ({ flow: { kind: 'bri8', op: 0x009007, s: reg(s, 's'), t: reg(t, 't'), to } });
+export const BEQZ_TO = (s: number, to: number): FlowRef =>
+  ({ flow: { kind: 'bri12', op: 0x000016, s: reg(s, 's'), to } });
+export const BNEZ_TO = (s: number, to: number): FlowRef =>
+  ({ flow: { kind: 'bri12', op: 0x000056, s: reg(s, 's'), to } });
+/** BEQZ.N to code[index] — forward only (imm6 is unsigned). */
+export const BEQZ_N_TO = (s: number, to: number): FlowRef =>
+  ({ flow: { kind: 'ri6', nez: false, s: reg(s, 's'), to } });
+export const BNEZ_N_TO = (s: number, to: number): FlowRef =>
+  ({ flow: { kind: 'ri6', nez: true, s: reg(s, 's'), to } });
+
+const instrLen = (i: XtInstr): number =>
+  typeof i === 'number' ? 3 : 'w16' in i ? 2 : 'flow' in i && i.flow.kind === 'ri6' ? 2 : 3;
+
 /**
  * Lay out a bootable raw image for a given base address:
  *
  *   [J → code] [pad to 4] [literal pool] [code…]
  *
  * L32R can only reach BACKWARD (its 16-bit offset is one-extended), so
- * the pool sits between the entry jump and the code. Returns the bytes
- * to load at `base`.
+ * the pool sits between the entry jump and the code. Instructions may
+ * mix 24-bit and 16-bit (narrow) forms; index-based *_TO placeholders
+ * are resolved against the real byte layout. Returns the bytes to load
+ * at `base`.
  */
 export function assembleXtensa(base: number, literals: number[], code: XtInstr[]): Uint8Array {
   // Header: one J instruction (3 bytes) + 1 pad byte aligns the pool.
   const poolStart = 4;
   const codeStart = poolStart + literals.length * 4;
-  const out = new Uint8Array(codeStart + code.length * 3);
 
-  const jumpTo = codeStart; // J at PC=0 (relative to base)
-  const word0 = J(jumpTo - 0 - 4);
-  out[0] = word0 & 0xff;
-  out[1] = (word0 >> 8) & 0xff;
-  out[2] = (word0 >> 16) & 0xff;
+  // Pass 1: byte offset of every instruction.
+  const at: number[] = [];
+  let cursor = codeStart;
+  for (const instr of code) {
+    at.push(cursor);
+    cursor += instrLen(instr);
+  }
+  const total = cursor;
+  const offsetOf = (index: number, what: string): number => {
+    const a = at[index];
+    if (a === undefined) throw new Error(`${what} targets code[${String(index)}], outside the program`);
+    return a;
+  };
+
+  const out = new Uint8Array(total);
+  const putWord24 = (pos: number, word: number): void => {
+    out[pos] = word & 0xff;
+    out[pos + 1] = (word >> 8) & 0xff;
+    out[pos + 2] = (word >> 16) & 0xff;
+  };
+
+  putWord24(0, J(codeStart - 0 - 4));
 
   literals.forEach((v, i) => {
-    const at = poolStart + i * 4;
-    out[at] = v & 0xff;
-    out[at + 1] = (v >>> 8) & 0xff;
-    out[at + 2] = (v >>> 16) & 0xff;
-    out[at + 3] = (v >>> 24) & 0xff;
+    const a = poolStart + i * 4;
+    out[a] = v & 0xff;
+    out[a + 1] = (v >>> 8) & 0xff;
+    out[a + 2] = (v >>> 16) & 0xff;
+    out[a + 3] = (v >>> 24) & 0xff;
   });
 
   code.forEach((instr, i) => {
-    const at = codeStart + i * 3;
-    let word: number;
+    const pos = at[i] ?? 0;
     if (typeof instr === 'number') {
-      word = instr;
-    } else if ('call0' in instr) {
-      const targetAt = codeStart + instr.call0.to * 3;
-      const target = base + targetAt;
+      putWord24(pos, instr);
+      return;
+    }
+    if ('w16' in instr) {
+      out[pos] = instr.w16 & 0xff;
+      out[pos + 1] = (instr.w16 >> 8) & 0xff;
+      return;
+    }
+    if ('call0' in instr) {
+      const target = base + offsetOf(instr.call0.to, 'CALL0');
       if (target % 4 !== 0) {
         throw new Error(
           `CALL0 target code[${String(instr.call0.to)}] is at 0x${target.toString(16)} — not 4-aligned (pad with NOPs)`,
         );
       }
-      const pc = base + at;
-      const off = (target >> 2) - (pc >> 2) - 1;
-      word = CALL0(off);
-    } else {
-      const { t, lit } = instr.l32r;
-      if (lit < 0 || lit >= literals.length) {
-        throw new Error(`L32R literal index ${String(lit)} out of pool (size ${String(literals.length)})`);
-      }
-      const pc = base + at;
-      const litAddr = base + poolStart + lit * 4;
-      const anchor = (pc + 3) & ~3;
-      const offset = litAddr - anchor;
-      if (offset >= 0 || offset < -(1 << 18) || offset % 4 !== 0) {
-        throw new Error(`L32R cannot reach literal ${String(lit)} (offset ${String(offset)})`);
-      }
-      word = 0x000001 | (t << 4) | (((offset >> 2) & 0xffff) << 8);
+      const pc = base + pos;
+      putWord24(pos, CALL0((target >> 2) - (pc >> 2) - 1));
+      return;
     }
-    out[at] = word & 0xff;
-    out[at + 1] = (word >> 8) & 0xff;
-    out[at + 2] = (word >> 16) & 0xff;
+    if ('flow' in instr) {
+      const f = instr.flow;
+      const pc = base + pos;
+      const target = base + offsetOf(f.to, f.kind);
+      const rel = target - pc - 4;
+      if (f.kind === 'j') {
+        putWord24(pos, J(rel));
+      } else if (f.kind === 'bri8') {
+        range(rel, -128, 127, 'branch reach');
+        putWord24(pos, f.op | (f.t << 4) | (f.s << 8) | ((rel & 0xff) << 16));
+      } else if (f.kind === 'bri12') {
+        range(rel, -2048, 2047, 'branch reach');
+        putWord24(pos, f.op | (f.s << 8) | ((rel & 0xfff) << 12));
+      } else {
+        // RI6 narrow branch: zero-extended, forward only.
+        if (rel < 0 || rel > 63) {
+          throw new Error(`BEQZ.N/BNEZ.N can only reach 0..63 bytes FORWARD (got ${String(rel)})`);
+        }
+        const w = 0x008c | (f.nez ? 0x40 : 0) | (((rel >> 4) & 0x3) << 4) | (f.s << 8) | ((rel & 0xf) << 12);
+        out[pos] = w & 0xff;
+        out[pos + 1] = (w >> 8) & 0xff;
+      }
+      return;
+    }
+    // L32R
+    const { t, lit } = instr.l32r;
+    if (lit < 0 || lit >= literals.length) {
+      throw new Error(`L32R literal index ${String(lit)} out of pool (size ${String(literals.length)})`);
+    }
+    const pc = base + pos;
+    const litAddr = base + poolStart + lit * 4;
+    const anchor = (pc + 3) & ~3;
+    const offset = litAddr - anchor;
+    if (offset >= 0 || offset < -(1 << 18) || offset % 4 !== 0) {
+      throw new Error(`L32R cannot reach literal ${String(lit)} (offset ${String(offset)})`);
+    }
+    putWord24(pos, 0x000001 | (t << 4) | (((offset >> 2) & 0xffff) << 8));
   });
 
   return out;

@@ -70,3 +70,25 @@ Emulator cuts (stated in the core header): one 480 KB SRAM window
 mapped at both 0x40378000 and 0x3FC88000 (no SRAM0/cache modeling),
 single core, 1 instruction = 1 cycle at 240 MHz, raw-image loading
 only (no bootloader/IDF app format), no interrupts.
+
+## Addendum: 16-bit code-density instructions (slice 2)
+
+Source: the full Cadence "Xtensa ISA Reference Manual" (per-instruction
+pages), settling four details the Espressif overview's text extraction
+garbled:
+
+- MOV.N at, as → **AR[t] ← AR[s]** (dest in t — the overview's pseudo
+  was transposed).
+- MOVI.N as, -32..95 → register in **s**; imm7 = bits[6:4]‖bits[15:12];
+  decoded by "sign-extending the 7-bit value with the logical AND of
+  its two most significant bits" (range asymmetric because positive
+  constants are more frequent).
+- BEQZ.N/BNEZ.N → imm6 = bits[5:4]‖bits[15:12], **zero-extended,
+  forward-only** (target = PC + imm6 + 4); bit7=1 marks RI6, bit6
+  selects NEZ.
+- ADDI.N ar, as, imm → imm encoded in t: **t=0 means -1**, else 1..15
+  zero-extended.
+- L32I.N/S32I.N at, as, 0..60 → imm4 in r, zero-extended << 2.
+- op0=0xd subspace: r=0 → MOV.N; r=0xf with t=0 → RET.N, t=3 → NOP.N
+  (RETW.N t=1 is windowed — refused); opcodes RET.N 0xf00d,
+  NOP.N 0xf03d cross-checked against ida-xtensa2.
