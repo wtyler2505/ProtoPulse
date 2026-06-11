@@ -200,17 +200,20 @@ describe('sync resilience', () => {
     server = await createRelayServer();
     const url = `ws://localhost:${String(server.port)}`;
     const store = createSessionStore();
-    let info: SyncInfo | null = null;
-    const client = new SyncClient(store, (i) => { info = i; }, undefined, 25);
+    // Accessor instead of a bare local: TS control flow can't see the
+    // callback assignments and narrows a plain variable to never.
+    let latest: SyncInfo | null = null;
+    const info = (): SyncInfo | null => latest;
+    const client = new SyncClient(store, (i) => { latest = i; }, undefined, 25);
     client.connect(url, 'cancel');
-    await until(() => info?.status === 'on', 'online');
+    await until(() => info()?.status === 'on', 'online');
     await server.close();
     server = null;
-    await until(() => info?.status === 'reconnecting', 'reconnecting');
+    await until(() => info()?.status === 'reconnecting', 'reconnecting');
     client.disconnect();
-    expect(info?.status).toBe('off');
+    expect(info()?.status).toBe('off');
     // Stays off — no zombie timer flips it back.
     await new Promise((r) => setTimeout(r, 200));
-    expect(info?.status).toBe('off');
+    expect(info()?.status).toBe('off');
   });
 });
