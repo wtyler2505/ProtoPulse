@@ -41,6 +41,19 @@ Screenshots are artifacts of [`tools/screenshots/`](../tools/screenshots/README.
 byte-exact. `content/` holds the content layer (decks, concepts wiki
 seed, Track 1 steps).
 
+CI for circuits comes with the badge to prove it — this one is the
+real output of `protopulse check --badge` on the traffic-light-555
+golden fixture:
+
+![circuit: ERC clean](../docs/badges/traffic-light-555.svg)
+
+```bash
+node packages/cli/dist/protopulse.js check <design> --badge circuit.svg
+```
+
+The badge always tells the truth — it goes red with the error count
+even while the same run fails your pipeline.
+
 ## Conventions
 
 - **Integer nanometers everywhere.** `MM = 1_000_000`; the schematic grid
