@@ -61,10 +61,21 @@ export interface EmuModule {
   Rp2040Core: new () => McuCore;
 }
 
-/** Selectable MCU cores, keyed by the emu module's constructor names. */
+/** Selectable MCU cores, keyed by the emu module's constructor names.
+ *  `adcChannels` are the single-ended mux channels the co-sim panel
+ *  offers for net→ADC bindings: the 328P has ADC0–7, the RP2040 has
+ *  ADC0–3 (GP26–29; channel 4 is the internal temperature sensor). */
 export const CORE_KINDS = {
-  atmega328p: { ctor: 'Atmega328pCore', label: 'ATmega328P (AVR, 16 MHz)' },
-  rp2040: { ctor: 'Rp2040Core', label: 'RP2040 (Cortex-M0+, 125 MHz)' },
+  atmega328p: {
+    ctor: 'Atmega328pCore',
+    label: 'ATmega328P (AVR, 16 MHz)',
+    adcChannels: [0, 1, 2, 3, 4, 5, 6, 7] as readonly number[],
+  },
+  rp2040: {
+    ctor: 'Rp2040Core',
+    label: 'RP2040 (Cortex-M0+, 125 MHz)',
+    adcChannels: [0, 1, 2, 3] as readonly number[],
+  },
 } as const;
 
 export type CoreKind = keyof typeof CORE_KINDS;

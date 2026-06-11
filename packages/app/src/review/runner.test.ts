@@ -130,6 +130,36 @@ describe('createReviewRunner', () => {
     }
   });
 
+  it('the deck is part of the cache key AND the history key — decks do not cross-pollinate', async () => {
+    const builtinReport = report([finding('REV-A')]);
+    const deckReport = report([finding('REV-B')], 'deck-2');
+    const mod = mockModule([builtinReport, deckReport]);
+    const runner = createReviewRunner(mod.loader);
+    const deck = { deck: 'strict', rev: '2', checks: {} };
+
+    // Same (branch, opsVersion), two decks: both runs execute (no cache
+    // collision)…
+    await runner.run(graph, parts, OPTS, { branch: 'main', opsVersion: 1 });
+    const underDeck = await runner.run(
+      graph,
+      parts,
+      { ...OPTS, deck },
+      { branch: 'main', opsVersion: 1 },
+    );
+    expect(mod.runReview).toHaveBeenCalledTimes(2);
+    expect(underDeck.ok).toBe(true);
+    if (underDeck.ok) {
+      // …and the deck's first run has no previous — the builtin run's
+      // report must not become another deck's diff baseline.
+      expect(underDeck.previous).toBeNull();
+      expect(underDeck.delta).toBeNull();
+    }
+
+    // The deck run is itself cached: same key, no third execution.
+    await runner.run(graph, parts, { ...OPTS, deck }, { branch: 'main', opsVersion: 1 });
+    expect(mod.runReview).toHaveBeenCalledTimes(2);
+  });
+
   it('surfaces a missing runReview as an error value, not a throw', async () => {
     const runner = createReviewRunner(() => Promise.resolve({}));
     const outcome = await runner.run(graph, parts, OPTS, { branch: 'main', opsVersion: 1 });

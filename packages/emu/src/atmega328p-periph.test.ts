@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { assemble, IN, LDI, LDS, OUT, RJMP, SBRS, STS } from './asm.js';
+import { assemble, IN, IO, LDI, LDS, MEM, OUT, RJMP, SBI, SBRC, SBRS, STS, WDR } from './asm.js';
 import { Atmega328pCore } from './atmega328p.js';
 
 /**
- * The v0.5 peripheral round-out — timers 1/2, SPI, TWI — each driven
- * by real hand-assembled firmware against real avr8js peripherals,
- * exactly like the original blink/UART/ADC suites.
+ * The v0.5 peripheral round-out — timers 1/2, SPI, TWI, EEPROM, and
+ * the watchdog — each driven by real hand-assembled firmware against
+ * real avr8js peripherals, exactly like the original blink/UART/ADC
+ * suites.
  */
 
 // I/O-space addresses (OUT/IN) and data-space addresses (STS/LDS),
@@ -196,5 +197,94 @@ describe('TWI master', () => {
     // (TWINT sets with a NACK status) and reaches the STOP.
     const result = c.step(5_000);
     expect(result.cycles).toBeGreaterThanOrEqual(5_000); // never wedged
+  });
+});
+
+describe('EEPROM', () => {
+  it('firmware writes a byte (EEMPE window), polls EEPE, reads it back via EERE', () => {
+    const c = core(
+      assemble([
+        LDI(16, 0x08), // UCSR0B: TXEN0 — readback ships out the UART
+        STS(DS_UCSR0B, 16),
+        LDI(16, 0x10), // EEPROM address 0x010
+        OUT(IO.EEARL, 16),
+        LDI(16, 0x00),
+        OUT(IO.EEARH, 16),
+        LDI(17, 0x42), // the byte
+        OUT(IO.EEDR, 17),
+        LDI(18, 0x04), // EECR: EEMPE — arm the 4-cycle write window
+        OUT(IO.EECR, 18),
+        SBI(IO.EECR, 1), // EEPE within the window — write starts
+        // poll: spin while EEPE is still set (erase+write ≈ 3.6 ms)
+        IN(19, IO.EECR),
+        SBRC(19, 1),
+        RJMP(-3),
+        // read back: address registers still hold 0x010
+        LDI(20, 0xee), // sentinel — must be overwritten by the EERE read
+        OUT(IO.EEDR, 20),
+        SBI(IO.EECR, 0), // EERE — EEPROM → EEDR
+        IN(20, IO.EEDR),
+        STS(DS_UDR0, 20),
+        RJMP(-1),
+      ]),
+    );
+    c.step(120_000); // erase 28800 + write 28800 cycles, plus slack
+    expect([...c.drainUart()]).toEqual([0x42]);
+    expect(c.eepromMemory()[0x10]).toBe(0x42);
+  });
+
+  it('EEPROM is nonvolatile: content survives a power-on reset()', () => {
+    const c = core(assemble([RJMP(-1)]));
+    c.eepromMemory()[0x20] = 0x77; // bench pre-seed
+    c.step(100);
+    c.reset(); // rebuilds CPU + peripherals; EEPROM backend must survive
+    expect(c.eepromMemory()[0x20]).toBe(0x77);
+  });
+
+  it('a pre-seeded byte is readable by firmware (read path, no write first)', () => {
+    const c = core(
+      assemble([
+        LDI(16, 0x08),
+        STS(DS_UCSR0B, 16),
+        LDI(16, 0x33), // EEPROM address 0x033
+        OUT(IO.EEARL, 16),
+        SBI(IO.EECR, 0), // EERE
+        IN(20, IO.EEDR),
+        STS(DS_UDR0, 20),
+        RJMP(-1),
+      ]),
+    );
+    c.eepromMemory()[0x33] = 0x5a;
+    c.step(2_000);
+    expect([...c.drainUart()]).toEqual([0x5a]);
+  });
+});
+
+describe('watchdog', () => {
+  /** WDTCSR = WDCE|WDE (arm), then WDE with prescaler 0 → 2048 WDT
+   *  ticks at 128 kHz = 16 ms = 256,000 CPU cycles at 16 MHz. */
+  const armWatchdog = [
+    LDI(16, 0x18), // WDCE | WDE
+    LDI(17, 0x08), // WDE, shortest prescaler
+    STS(MEM.WDTCSR, 16),
+    STS(MEM.WDTCSR, 17), // 2 cycles after the arm — inside the 4-cycle window
+  ];
+
+  it('a hung loop times out: the CPU resets and MCUSR.WDRF is set', () => {
+    const c = core(assemble([...armWatchdog, RJMP(-1)]));
+    c.step(600_000); // > 2 timeout periods
+    expect((c.raw().cpu.data[IO.MCUSR + 0x20] ?? 0) & 0x08).toBe(0x08);
+  });
+
+  it('firmware that feeds the dog (WDR) never resets', () => {
+    const c = core(
+      assemble([
+        ...armWatchdog,
+        WDR(), // loop: feed…
+        RJMP(-2), // …forever
+      ]),
+    );
+    c.step(600_000);
+    expect((c.raw().cpu.data[IO.MCUSR + 0x20] ?? 0) & 0x08).toBe(0);
   });
 });

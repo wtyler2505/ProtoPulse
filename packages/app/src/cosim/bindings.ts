@@ -108,7 +108,9 @@ export function validateSpec(spec: CosimWindowSpec): string | null {
 
 // ── Closed loop (FEEDBACK direction) ─────────────────────────────────
 
-/** ATmega328P single-ended ADC mux channels offered by the panel. */
+/** ATmega328P single-ended ADC mux channels — the default candidate
+ *  set. The panel offers the loaded core's own list instead (see
+ *  CORE_KINDS in ../emu/types.ts: the RP2040 has only ADC0–3). */
 export const ADC_CHANNEL_CANDIDATES: readonly number[] = Array.from({ length: 8 }, (_, i) => i);
 
 /** Cap on windowS / quantumS — every quantum is a FULL from-zero

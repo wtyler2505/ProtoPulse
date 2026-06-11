@@ -128,8 +128,9 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       deviations) and extraChecks (pure functions over public types;
       the deck configures them exactly like built-ins). Reports pin
       deck name + rev; content/review-decks/protopulse-standard.json
-      is the copyable template. Honest cut: the ReviewPanel still runs
-      the builtin deck — a deck picker UI is later work.
+      is the copyable template. The ReviewPanel's deck picker (landed
+      2026-06-11) offers builtin + every bundled deck; report history
+      (the opened/closed delta) is kept per (branch, deck).
       v0.3 IS COMPLETE.
 
 ## v0.4 — The Board ✅ *(complete 2026-06-11)*
@@ -243,8 +244,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       host byte handler (no handler = bus floats 0xFF, like real
       disconnected MISO); TWI master against a host bus handler with
       synchronous acks (no handler = NACK, an empty bus, never a
-      hang). Honest gaps: EEPROM/watchdog unwired, SPI/TWI slave mode
-      not modeled
+      hang). Honest gap: SPI/TWI slave mode not modeled
+- [x] AVR EEPROM + watchdog (landed 2026-06-11): 1 KiB EEPROM against
+      a persistent backend — nonvolatile across reset(), like the
+      silicon (eepromMemory() for bench pre-seeding/inspection);
+      watchdog with the real WDCE arm window — WDE timeout resets the
+      CPU and sets MCUSR.WDRF, WDR feeds it. Honest note: avr8js's
+      watchdog reset preserves I/O registers (real silicon clears
+      them); SRAM surviving is faithful. Co-sim ADC channel candidates
+      now come from the borrowed core (RP2040 offers ADC0–3, not the
+      AVR's 0–7), and the panel names the core it borrowed
 - [ ] ESP32 core (no off-the-shelf JS emulator — a build, not a wire-up)
 
 ## v0.6 — The World 🔨 *(first slice landed early)*
