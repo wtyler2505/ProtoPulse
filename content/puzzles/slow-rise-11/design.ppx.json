@@ -1,0 +1,577 @@
+{
+  "format": "ppx-bundle",
+  "version": 1,
+  "designId": "puzzle-slow-rise-11",
+  "head": "main",
+  "branches": [
+    {
+      "name": "main",
+      "base": {
+        "branch": null,
+        "opCount": 0
+      },
+      "ops": [
+        {
+          "actor": "puzzle-author",
+          "lamport": 1,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "u1",
+            "ref": "U1",
+            "partId": "core:ne555",
+            "partRev": 1
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 2,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "ra",
+            "ref": "R3",
+            "partId": "core:resistor",
+            "partRev": 1,
+            "value": "1k"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 3,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "rbt",
+            "ref": "R4",
+            "partId": "core:resistor",
+            "partRev": 1,
+            "value": "4.7k"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 4,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "ct",
+            "ref": "C2",
+            "partId": "core:capacitor",
+            "partRev": 1,
+            "value": "100nF"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 5,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "q1",
+            "ref": "Q1",
+            "partId": "core:2n3904",
+            "partRev": 1
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 6,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "rb",
+            "ref": "R2",
+            "partId": "core:resistor",
+            "partRev": 1,
+            "value": "10k"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 7,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "rpull",
+            "ref": "R1",
+            "partId": "core:resistor",
+            "partRev": 1,
+            "value": "100k"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 8,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "cbus",
+            "ref": "C1",
+            "partId": "core:capacitor",
+            "partRev": 1,
+            "value": "10nF"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 9,
+          "ts": 0,
+          "op": {
+            "kind": "add_component",
+            "id": "bat",
+            "ref": "BT1",
+            "partId": "core:battery",
+            "partRev": 1,
+            "value": "5V"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 10,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "bat:+",
+            "newNetId": "net-vcc"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 11,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "u1:8",
+            "netId": "net-vcc"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 12,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "u1:4",
+            "netId": "net-vcc"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 13,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "ra:1",
+            "netId": "net-vcc"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 14,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "rpull:1",
+            "netId": "net-vcc"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 15,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "bat:-",
+            "newNetId": "net-gnd"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 16,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "u1:1",
+            "netId": "net-gnd"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 17,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "ct:2",
+            "netId": "net-gnd"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 18,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "cbus:2",
+            "netId": "net-gnd"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 19,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "q1:E",
+            "netId": "net-gnd"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 20,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "ra:2",
+            "newNetId": "net-disch"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 21,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "u1:7",
+            "netId": "net-disch"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 22,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "rbt:1",
+            "netId": "net-disch"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 23,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "rbt:2",
+            "newNetId": "net-timing"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 24,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "u1:2",
+            "netId": "net-timing"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 25,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "u1:6",
+            "netId": "net-timing"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 26,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "ct:1",
+            "netId": "net-timing"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 27,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "u1:3",
+            "newNetId": "net-drive"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 28,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "rb:1",
+            "netId": "net-drive"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 29,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "rb:2",
+            "newNetId": "net-base"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 30,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "q1:B",
+            "netId": "net-base"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 31,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "rpull:2",
+            "newNetId": "net-bus"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 32,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "cbus:1",
+            "netId": "net-bus"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 33,
+          "ts": 0,
+          "op": {
+            "kind": "connect",
+            "port": "q1:C",
+            "netId": "net-bus"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 34,
+          "ts": 0,
+          "op": {
+            "kind": "rename_net",
+            "netId": "net-vcc",
+            "name": "VCC"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 35,
+          "ts": 0,
+          "op": {
+            "kind": "rename_net",
+            "netId": "net-gnd",
+            "name": "GND"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 36,
+          "ts": 0,
+          "op": {
+            "kind": "rename_net",
+            "netId": "net-disch",
+            "name": "DISCH"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 37,
+          "ts": 0,
+          "op": {
+            "kind": "rename_net",
+            "netId": "net-timing",
+            "name": "TIMING"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 38,
+          "ts": 0,
+          "op": {
+            "kind": "rename_net",
+            "netId": "net-drive",
+            "name": "DRIVE"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 39,
+          "ts": 0,
+          "op": {
+            "kind": "rename_net",
+            "netId": "net-base",
+            "name": "BASE"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 40,
+          "ts": 0,
+          "op": {
+            "kind": "rename_net",
+            "netId": "net-bus",
+            "name": "BUS"
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 41,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "bat",
+            "at": {
+              "x": -12700000,
+              "y": 0
+            },
+            "rot": 0,
+            "mirror": false
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 42,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "u1",
+            "at": {
+              "x": 0,
+              "y": 0
+            },
+            "rot": 0,
+            "mirror": false
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 43,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "ra",
+            "at": {
+              "x": 10160000,
+              "y": 7620000
+            },
+            "rot": 270,
+            "mirror": false
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 44,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "rbt",
+            "at": {
+              "x": 10160000,
+              "y": -1270000
+            },
+            "rot": 270,
+            "mirror": false
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 45,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "ct",
+            "at": {
+              "x": 10160000,
+              "y": -10160000
+            },
+            "rot": 270,
+            "mirror": false
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 46,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "rb",
+            "at": {
+              "x": 17780000,
+              "y": 2540000
+            },
+            "rot": 0,
+            "mirror": false
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 47,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "q1",
+            "at": {
+              "x": 25400000,
+              "y": 2540000
+            },
+            "rot": 0,
+            "mirror": false
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 48,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "rpull",
+            "at": {
+              "x": 30480000,
+              "y": 10160000
+            },
+            "rot": 270,
+            "mirror": false
+          }
+        },
+        {
+          "actor": "puzzle-author",
+          "lamport": 49,
+          "ts": 0,
+          "op": {
+            "kind": "place_symbol",
+            "componentId": "cbus",
+            "at": {
+              "x": 35560000,
+              "y": -2540000
+            },
+            "rot": 270,
+            "mirror": false
+          }
+        }
+      ]
+    }
+  ]
+}

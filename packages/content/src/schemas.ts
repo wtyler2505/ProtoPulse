@@ -71,3 +71,29 @@ export const TrackStepSchema = z.object({
 });
 
 export type TrackStep = z.infer<typeof TrackStepSchema>;
+
+// ── Failure puzzles (Vol III §1.4) ───────────────────────────────────
+// A broken design + symptom + instruments; solved when the user
+// annotates the actual root-cause net/component. The design ships as a
+// sibling design.ppx.json; rootCause.anchors are entity ids IN that
+// design. The catalog format is public — community puzzles are
+// first-class content.
+
+export const PuzzleSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  /** What the user observes — written like a bench complaint. */
+  symptom: z.string().min(1),
+  /** Which instruments to reach for (suggested, not enforced). */
+  instruments: z.array(z.string().min(1)).min(1),
+  /** Entity ids (components/nets) that count as the root cause. */
+  rootCause: z.object({
+    anchors: z.array(z.string().min(1)).min(1),
+    /** Shown AFTER the puzzle is solved. */
+    explanation: z.string().min(1),
+  }),
+  /** Progressive hints, mildest first. */
+  hints: z.array(z.string().min(1)),
+});
+
+export type Puzzle = z.infer<typeof PuzzleSchema>;
