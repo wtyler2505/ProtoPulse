@@ -352,9 +352,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       rising-edge pin interrupt counts 2 of 3 edges (falling ignored),
       a high-level interrupt re-fires until the pin drops, and a
       fully interrupt-driven UART echo with main parked on a jump
-- [ ] ESP32 core, next slices: more peripherals (ADC, TIMG) and
-      flash-cache mapping — toward running real IDF-built firmware
-      (a long road, walked openly)
+- [x] ESP32-S3 core slice 7 — SAR ADC1 oneshot (landed 2026-06-11):
+      the SENS_SAR_MEAS1_CTRL2 register dance the oneshot driver and
+      analogRead perform (one-hot channel select in SAR1_EN_PAD, the
+      MEAS1_START_SAR 0→1 pulse, MEAS1_DONE_SAR poll, 12-bit
+      MEAS1_DATA_SAR), wired to the McuCore co-sim sampler surface
+      (setAdcSampler/drainAdcReads — the ESP32-S3 was the only core
+      without analog channels; the co-sim panel now offers ADC1's
+      channels 0–9 = GPIO1–10). Cuts: instant conversions, no
+      attenuation (3.3 V full scale), no ADC2/DMA mode
+- [ ] ESP32 core, next slices: TIMG and flash-cache mapping — toward
+      running real IDF-built firmware (a long road, walked openly)
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 

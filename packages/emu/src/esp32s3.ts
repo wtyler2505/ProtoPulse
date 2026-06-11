@@ -1,7 +1,7 @@
 import { XtensaCpu } from './xtensa.js';
 
 import type { XtensaBus } from './xtensa.js';
-import type { DigitalLevel, McuCore, McuState, McuStepResult, PinEvent } from './types.js';
+import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuStepResult, PinEvent } from './types.js';
 
 /**
  * ESP32-S3 v0 — a from-scratch Xtensa LX7 core, the first slice of the
@@ -35,11 +35,16 @@ import type { DigitalLevel, McuCore, McuState, McuStepResult, PinEvent } from '.
  * loader (slice 5), plus peripheral interrupt lines through the
  * interrupt matrix (slice 6 — GPIO edge/level pin interrupts via
  * GPIO_PINn/STATUS and UART0's RXFIFO_FULL/TX_DONE via INT_RAW/ST/
- * ENA/CLR, each source's 5-bit map register selecting its CPU line).
- * Interrupt-driven firmware patterns run end-to-end — but there is
- * still no flash cache (flash-mapped image segments refuse), no ADC,
- * and no TIMG, so real IDF firmware does NOT run yet. Loading
- * Intel-HEX refuses with a message.
+ * ENA/CLR, each source's 5-bit map register selecting its CPU line),
+ * plus SAR ADC1's oneshot path (slice 7 — the SENS_SAR_MEAS1_CTRL2
+ * register dance adc_oneshot_ll/analogRead performs: one-hot channel
+ * select, start-bit edge, done poll, 12-bit data; conversions
+ * complete instantly and attenuation is not modeled — full scale is
+ * 3.3 V; channels are ADC1's, i.e. channel n reads GPIO n+1).
+ * Interrupt-driven and analog firmware patterns run end-to-end — but
+ * there is still no flash cache (flash-mapped image segments refuse),
+ * no ADC2/DMA mode, and no TIMG, so real IDF firmware does NOT run
+ * yet. Loading Intel-HEX refuses with a message.
  */
 
 const CLOCK_HZ = 240_000_000;
@@ -102,6 +107,21 @@ const INTMTX_GPIO_MAP = 0x040; // INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG
 const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
 const INTMTX_DEFAULT_MAP = 16;
 
+// SAR ADC1 oneshot path (sens_reg.h; flow per hal/esp32s3/adc_ll.h —
+// the same register dance adc_oneshot_ll_* and analogRead perform):
+// SENS_SAR_MEAS1_CTRL2 holds MEAS1_DATA_SAR [15:0], MEAS1_DONE_SAR
+// bit 16, MEAS1_START_SAR bit 17 (a 0→1 edge starts a conversion),
+// MEAS1_START_FORCE bit 18, SAR1_EN_PAD [30:19] (one-hot channel
+// select, written as 1<<channel), SAR1_EN_PAD_FORCE bit 31.
+const SENS_BASE = 0x60008800;
+const SENS_SAR_MEAS1_CTRL2 = 0x0c;
+const MEAS1_DONE_SAR = 1 << 16;
+const MEAS1_START_SAR = 1 << 17;
+// 12-bit result. Attenuation is not modeled: full scale is the 3.3 V
+// supply, quantized like the RP2040 core does.
+const ADC_VREF = 3.3;
+const ADC_MAX = 4095;
+
 // ESP-IDF app-image format (esp_app_format.h; checksum from esptool):
 const ESP_IMAGE_MAGIC = 0xe9;
 const ESP_IMAGE_HEADER_BYTES = 24; // esp_image_header_t
@@ -151,6 +171,14 @@ export class Esp32s3Core implements McuCore {
   private uartRxThrhd = 96; // CONF1 RXFIFO_FULL_THRHD reset value
   private gpioIntMap = INTMTX_DEFAULT_MAP;
   private uartIntMap = INTMTX_DEFAULT_MAP;
+
+  // SAR ADC1 oneshot state.
+  private meas1Ctrl2 = 0; // the control bits firmware wrote
+  private adcData = 0; // latched 12-bit result
+  private adcDone = false;
+  private adcReads: AdcReadRequest[] = [];
+  /** Bench wiring — survives reset(), like loaded firmware. */
+  private sampler: AdcSampler | null = null;
   /** Last driven level per pin; undefined while not output-enabled. */
   private driven: (DigitalLevel | undefined)[] = new Array<DigitalLevel | undefined>(PIN_COUNT).fill(undefined);
   private events: PinEvent[] = [];
@@ -286,6 +314,16 @@ export class Esp32s3Core implements McuCore {
     return out;
   }
 
+  setAdcSampler(fn: AdcSampler): void {
+    this.sampler = fn;
+  }
+
+  drainAdcReads(): AdcReadRequest[] {
+    const out = this.adcReads;
+    this.adcReads = [];
+    return out;
+  }
+
   inspect(): McuState {
     // No SREG on Xtensa — reported as 0; sp is a1 by call0 convention.
     return { pc: this.cpu.pc, cycles: this.cpu.cycles, sreg: 0, sp: this.cpu.a(1) };
@@ -308,6 +346,10 @@ export class Esp32s3Core implements McuCore {
     this.uartRxThrhd = 96;
     this.gpioIntMap = INTMTX_DEFAULT_MAP;
     this.uartIntMap = INTMTX_DEFAULT_MAP;
+    this.meas1Ctrl2 = 0;
+    this.adcData = 0;
+    this.adcDone = false;
+    this.adcReads = []; // the sampler itself survives — bench wiring
     this.driven.fill(undefined);
     this.events = [];
     this.rxQueue = [];
@@ -446,6 +488,14 @@ export class Esp32s3Core implements McuCore {
       if (off === INTMTX_UART_MAP) return this.uartIntMap;
       return INTMTX_DEFAULT_MAP; // unmodeled sources sit at their reset map
     }
+    if (addr >= SENS_BASE && addr < SENS_BASE + 0x400) {
+      if (addr - SENS_BASE === SENS_SAR_MEAS1_CTRL2) {
+        let v = this.meas1Ctrl2 & ~(MEAS1_DONE_SAR | 0xffff);
+        if (this.adcDone) v |= MEAS1_DONE_SAR | (this.adcData & 0xfff);
+        return v >>> 0;
+      }
+      return 0;
+    }
     throw new Error(`read outside the modeled ESP32-S3 map: 0x${addr.toString(16)}`);
   }
 
@@ -509,12 +559,26 @@ export class Esp32s3Core implements McuCore {
       this.recomputeIrq();
       return;
     }
+    if (addr >= SENS_BASE && addr < SENS_BASE + 0x400) {
+      if (addr - SENS_BASE === SENS_SAR_MEAS1_CTRL2) {
+        const prev = this.meas1Ctrl2;
+        this.meas1Ctrl2 = value >>> 0;
+        // adc_oneshot_ll_start pulses MEAS1_START_SAR low then high —
+        // the 0→1 edge runs a conversion. It completes immediately
+        // (the conversion-time cut, stated in the header).
+        if ((value & MEAS1_START_SAR) !== 0 && (prev & MEAS1_START_SAR) === 0) {
+          const enPad = (value >>> 19) & 0xfff;
+          const channel = enPad === 0 ? 0 : 31 - Math.clz32(enPad & -enPad);
+          const volts = this.sampler ? this.sampler(channel, this.cpu.cycles) : 0;
+          this.adcData = Math.min(ADC_MAX, Math.max(0, Math.round((volts / ADC_VREF) * ADC_MAX)));
+          this.adcDone = true;
+          this.adcReads.push({ channel, cycle: this.cpu.cycles });
+        }
+      }
+      return;
+    }
     throw new Error(`write outside the modeled ESP32-S3 map: 0x${addr.toString(16)}`);
   }
 }
 
-// The McuCore contract's optional ADC surfaces (setAdcSampler /
-// drainAdcReads) are deliberately absent: this v0 core has no ADC, and
-// the optional methods' absence is exactly how the co-sim layer
-// discovers that.
 export { IRAM_BASE as ESP32S3_IRAM_BASE, DRAM_BASE as ESP32S3_DRAM_BASE, GPIO_BASE as ESP32S3_GPIO_BASE, UART0_BASE as ESP32S3_UART0_BASE };
