@@ -2,6 +2,7 @@
 slug: panelization
 title: Panelization
 ercCodes: []
+drcCodes: [DRC-EDGE-CLEARANCE]
 ---
 
 ## What it is
