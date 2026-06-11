@@ -7,6 +7,7 @@ export {
   CatalogSchema,
   ConceptFrontmatterSchema,
   DeckSchema,
+  ReviewDeckSchema,
   TrackStepSchema,
   deckRulesSchema,
   type CatalogEntry,
@@ -14,6 +15,7 @@ export {
   type ConceptFrontmatter,
   type Deck,
   type DeckRules,
+  type ReviewDeck,
   type SourcingCatalog,
   type TrackStep,
 } from './schemas.js';

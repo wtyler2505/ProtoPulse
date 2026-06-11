@@ -294,6 +294,62 @@ describe('check: dnp-power', () => {
   });
 });
 
+describe('review decks + community checks', () => {
+  it('a deck disables checks and overrides severities; the report pins deck+rev', () => {
+    // wired555 has unverified parts (info) — disable that check, and
+    // force decoupling findings (warn) up to error.
+    const deck = {
+      deck: 'strict-house',
+      rev: '7',
+      checks: {
+        'unverified-parts': { enabled: false },
+        decoupling: { severity: 'error' as const },
+      },
+    };
+    const base = runReview(graphOf(wired555()), parts, { date: DATE });
+    const decked = runReview(graphOf(wired555()), parts, { date: DATE, deck });
+
+    expect(decked.deck).toBe('strict-house');
+    expect(decked.deckRev).toBe('7');
+    expect(base.deck).toBe('builtin');
+    expect(base.findings.some((f) => f.check === 'unverified-parts')).toBe(true);
+    expect(decked.findings.some((f) => f.check === 'unverified-parts')).toBe(false);
+    const decoupling = decked.findings.filter((f) => f.check === 'decoupling');
+    expect(decoupling.length).toBeGreaterThan(0);
+    expect(decoupling.every((f) => f.severity === 'error')).toBe(true);
+  });
+
+  it('community checks join the run as first-class citizens the deck can configure', () => {
+    const noElectrolytics = {
+      id: 'no-electrolytics',
+      run: (graph: Parameters<typeof runReview>[0]) =>
+        [...graph.components.values()]
+          .filter((c) => c.partId === 'core:capacitor-electrolytic')
+          .map((c) => ({
+            severity: 'warn' as const,
+            code: 'COMMUNITY-NO-ELECTROLYTICS',
+            message: `${c.ref} is electrolytic — this deck forbids them`,
+            anchors: [{ kind: 'component' as const, componentId: c.id }],
+          })),
+    };
+    const ops = [
+      ...wired555(),
+      { kind: 'add_component', id: 'ce', ref: 'C9', partId: 'core:capacitor-electrolytic', partRev: 1 } as const,
+    ];
+    const report = runReview(graphOf(ops), parts, { date: DATE, extraChecks: [noElectrolytics] });
+    const hit = report.findings.find((f) => f.code === 'COMMUNITY-NO-ELECTROLYTICS');
+    expect(hit).toMatchObject({ check: 'no-electrolytics', severity: 'warn' });
+
+    // The deck governs extras exactly like built-ins.
+    const silenced = runReview(graphOf(ops), parts, {
+      date: DATE,
+      extraChecks: [noElectrolytics],
+      deck: { deck: 'd', rev: '1', checks: { 'no-electrolytics': { enabled: false } } },
+    });
+    expect(silenced.findings.some((f) => f.check === 'no-electrolytics')).toBe(false);
+  });
+});
+
 describe('report shape', () => {
   it('carries tool, deckRev, the injected date, designId and branch', () => {
     const report = runReview(graphOf(wired555()), parts, { date: DATE, designId: 'd-1', branch: 'main' });

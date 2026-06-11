@@ -1,0 +1,13 @@
+{
+  "deck": "protopulse-standard",
+  "rev": "2",
+  "note": "The house review deck — every built-in check at its native severity. A deck states deviations; this one has none, and exists so reports pin a NAMED, versioned deck and community decks have a template to copy.",
+  "checks": {
+    "erc": { "enabled": true },
+    "decoupling": { "enabled": true },
+    "power-tree": { "enabled": true },
+    "unverified-parts": { "enabled": true },
+    "single-pin-ics": { "enabled": true },
+    "dnp-power": { "enabled": true }
+  }
+}

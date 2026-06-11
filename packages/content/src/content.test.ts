@@ -1,10 +1,11 @@
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ERC_CODES } from '@protopulse/erc';
 import { describe, expect, it } from 'vitest';
 
+import { ReviewDeckSchema } from './schemas.js';
 import { loadCatalogFile, loadConceptDir, loadDeckFile, loadTrackDir, parseCatalog, parseConceptFrontmatter, parseDeck, parseTrackStep } from './load.js';
 
 // packages/content/src → repo root.
@@ -43,6 +44,25 @@ describe('deck seed', () => {
   it('rejects decks with missing rule keys', () => {
     expect(() => parseDeck('{"deck":"x","rev":"1","rules":{},"classOverrides":{}}')).toThrow();
     expect(() => parseDeck('not json')).toThrow(/not valid JSON/);
+  });
+});
+
+describe('review deck seed', () => {
+  it('the standard deck parses and lists every built-in check enabled', () => {
+    const raw = JSON.parse(
+      readFileSync(resolve(repoRoot, 'content/review-decks/protopulse-standard.json'), 'utf8'),
+    ) as unknown;
+    const deck = ReviewDeckSchema.parse(raw);
+    expect(deck.deck).toBe('protopulse-standard');
+    expect(Object.keys(deck.checks).sort()).toEqual([
+      'decoupling',
+      'dnp-power',
+      'erc',
+      'power-tree',
+      'single-pin-ics',
+      'unverified-parts',
+    ]);
+    expect(Object.values(deck.checks).every((c) => c.enabled === true)).toBe(true);
   });
 });
 
