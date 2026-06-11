@@ -92,3 +92,35 @@ garbled:
 - op0=0xd subspace: r=0 → MOV.N; r=0xf with t=0 → RET.N, t=3 → NOP.N
   (RETW.N t=1 is windowed — refused); opcodes RET.N 0xf00d,
   NOP.N 0xf03d cross-checked against ida-xtensa2.
+
+## Addendum: windowed-register option (slice 3)
+
+Source: Cadence ISA RM §4.7.1 (Windowed Register Option) — the
+mechanics are quoted verbatim in the RM:
+
+- CALLn: WindowCheck(0,0,n); PS.CALLINC ← n; AR[4n] ← n‖(PC+3)[29:0].
+- ENTRY s, imm12: AR[CALLINC·4+s] ← AR[s] − (imm12≪3); WindowBase +=
+  CALLINC; WindowStart[WindowBase] ← 1. (Fixture: "entry a1, 32" =
+  36 41 00.)
+- RETW/RETW.N: n ← a0[31:30]; target = PC[31:30]‖a0[29:0]; frame-size
+  validity check against the WindowStart bits below; WindowBase −= n;
+  clear caller's WS bit; underflow when WS[new] is 0.
+- WindowCheck fixpoint: spill the lowest live frame overlapping the
+  referenced register group; retry.
+- Spill/fill net effect (from the RM's reference handlers):
+  a0..a3 → [nextFrame.sp − 16..−4]; for 8/12-sized frames, prevSP =
+  [frame.sp − 12], a4..a7(..a11) → [prevSP − 32(−48)..−20]. The
+  initial frame's [sp − 12] must be pre-initialized by crt0 (RM:
+  "as if it had been written by a window overflow").
+- ABI consequence verified the hard way: a call8-making function must
+  ENTRY with frame ≥ 32 (16 base + 16 callee-extra) — an
+  ENTRY a1,16 caller's extra save area overlaps its caller's base
+  save area, which is precisely the bug the emulator surfaced in a
+  first test draft.
+- NAREG: ESP32-S3 configures 64 physical ARs (XCHAL_NUM_AREGS = 64 in
+  esp-idf core-isa.h).
+
+Emulator approach: MAGIC SPILL/FILL — the handlers' documented net
+effect performed directly (same memory layout compiled code expects),
+no exception machinery. Cuts: spill/fill costs no cycles; MOVSP and
+the handler-only L32E/S32E/RFWO/RFWU refuse; PS not modeled.

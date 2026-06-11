@@ -178,6 +178,25 @@ export function CALL0(offset18: number): number {
 /** CALLX0 as — a0 ← PC+3; PC ← AR[s]. */
 export const CALLX0 = (s: number): number => 0x0000c0 | (reg(s, 's') << 8);
 
+// ── Windowed ABI (slice 3) ───────────────────────────────────────────
+
+/** CALLX4/8/12 as — windowed indirect call (n = 1, 2, 3). */
+export function CALLXN(n: number, s: number): number {
+  range(n, 1, 3, 'CALLXn size');
+  return 0x0000c0 | (n << 4) | (reg(s, 's') << 8);
+}
+
+/** ENTRY as, frameBytes — rotates the window by PS.CALLINC and
+ *  allocates the frame (multiple of 8, 0..32760). s must be a0..a3. */
+export function ENTRY(s: number, frameBytes: number): number {
+  range(s, 0, 3, 'ENTRY register');
+  range(frameBytes, 0, 32760, 'ENTRY frame');
+  if (frameBytes % 8 !== 0) throw new Error('ENTRY frame must be a multiple of 8');
+  return 0x000036 | (s << 8) | ((frameBytes >> 3) << 12);
+}
+
+export const RETW = (): number => 0x000090;
+
 export const RET = (): number => 0x000080; // PC ← a0
 export const NOP = (): number => 0x0020f0;
 export const MEMW = (): number => 0x0020c0;
@@ -228,6 +247,7 @@ export function S32I_N(t: number, s: number, off: number): Narrow {
 }
 
 export const RET_N = (): Narrow => ({ w16: 0xf00d });
+export const RETW_N = (): Narrow => ({ w16: 0xf01d });
 export const NOP_N = (): Narrow => ({ w16: 0xf03d });
 
 // ── Program assembly ─────────────────────────────────────────────────
@@ -241,7 +261,7 @@ export interface L32RRef {
  *  targets must be 4-byte aligned — pad with NOPs so the callee's
  *  byte offset lands on a multiple of 4 (the assembler checks). */
 export interface Call0Ref {
-  call0: { to: number };
+  call0: { to: number; n: number };
 }
 
 /** Index-based control flow, resolved from the real layout. */
@@ -262,7 +282,13 @@ export function L32R(t: number, lit: number): L32RRef {
 
 /** Call the subroutine at code[index] (call0 ABI). */
 export function CALL0_TO(index: number): Call0Ref {
-  return { call0: { to: index } };
+  return { call0: { to: index, n: 0 } };
+}
+
+/** CALL4/8/12 to code[index] (windowed ABI; n = 1, 2, 3). */
+export function CALLN_TO(n: number, index: number): Call0Ref {
+  range(n, 1, 3, 'CALLn size');
+  return { call0: { to: index, n } };
 }
 
 /** J to code[index]. */
@@ -343,14 +369,15 @@ export function assembleXtensa(base: number, literals: number[], code: XtInstr[]
       return;
     }
     if ('call0' in instr) {
-      const target = base + offsetOf(instr.call0.to, 'CALL0');
+      const target = base + offsetOf(instr.call0.to, 'CALLn');
       if (target % 4 !== 0) {
         throw new Error(
-          `CALL0 target code[${String(instr.call0.to)}] is at 0x${target.toString(16)} — not 4-aligned (pad with NOPs)`,
+          `CALLn target code[${String(instr.call0.to)}] is at 0x${target.toString(16)} — not 4-aligned (pad with NOPs)`,
         );
       }
       const pc = base + pos;
-      putWord24(pos, CALL0((target >> 2) - (pc >> 2) - 1));
+      const off = (target >> 2) - (pc >> 2) - 1;
+      putWord24(pos, CALL0(off) | (instr.call0.n << 4));
       return;
     }
     if ('flow' in instr) {
