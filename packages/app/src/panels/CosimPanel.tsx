@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
 import {
-  ADC_CHANNEL_CANDIDATES,
   addAdcBinding,
   addBinding,
   addInputBinding,
@@ -16,6 +15,7 @@ import {
 import { runCosim, runCosimClosed } from '../cosim/runner.js';
 import { assembleCosimTraces, slowdownFactor } from '../cosim/traces.js';
 import { sharedEmuSession } from '../emu/runner.js';
+import { CORE_KINDS } from '../emu/types.js';
 import { Plot, traceColor } from '../sim/Plot.js';
 import { engNotation } from '../sim/scales.js';
 import { sweepVectorName } from '../sim/types.js';
@@ -156,9 +156,11 @@ export function CosimPanel() {
   const effectiveInputNet = nets.some((n) => n.id === newInputNet)
     ? newInputNet
     : (nets[0]?.id ?? '');
-  const availableChannels = ADC_CHANNEL_CANDIDATES.filter(
-    (ch) => !adc.some((a) => a.channel === ch),
-  ).map(String);
+  // ADC channels come from the borrowed core, not a fixed AVR list —
+  // the RP2040 only has ADC0–3.
+  const availableChannels = CORE_KINDS[session.coreKind].adcChannels
+    .filter((ch) => !adc.some((a) => a.channel === ch))
+    .map(String);
   const effectiveChannel = availableChannels.includes(newAdcChannel)
     ? newAdcChannel
     : (availableChannels[0] ?? '');
@@ -368,6 +370,7 @@ export function CosimPanel() {
 
   return (
     <div className="panel-body cosim-panel">
+      <p className="muted">core: {CORE_KINDS[session.coreKind].label} (borrowed from the Firmware tab)</p>
       <h3 className="panel-subtitle">Mode</h3>
       <SelectField
         label="loop"

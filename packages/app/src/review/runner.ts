@@ -66,7 +66,14 @@ export function createReviewRunner(loader: ReviewModuleLoader = defaultLoader): 
     opts: ReviewRunOpts,
     key: ReviewRunKey,
   ): Promise<ReviewOutcome> => {
-    const cacheKey = `review:${key.branch}@${String(key.opsVersion)}`;
+    // The deck is part of the cache identity: the same head reviewed
+    // under a different deck is a different report. History (the
+    // "previous" used for the opened/closed delta) is per (branch,
+    // deck) too — a deck switch must not diff against another deck's
+    // findings.
+    const deckId = opts.deck ? `${opts.deck.deck}@${opts.deck.rev}` : 'builtin';
+    const cacheKey = `review:${key.branch}@${String(key.opsVersion)}#${deckId}`;
+    const historyKey = `${key.branch}#${deckId}`;
     const hit = cache.get(cacheKey);
     // Errors are remembered but never served from cache — a retry re-runs.
     if (hit?.ok) return hit;
@@ -80,7 +87,7 @@ export function createReviewRunner(loader: ReviewModuleLoader = defaultLoader): 
         );
       }
       const report = mod.runReview(graph, parts, opts);
-      const prior = latest.get(key.branch);
+      const prior = latest.get(historyKey);
       // A cache-expired re-run of the SAME head must not become its own
       // previous; only a different (branch, opsVersion) advances history.
       const previous = prior && prior.cacheKey !== cacheKey ? prior.report : null;
@@ -88,7 +95,7 @@ export function createReviewRunner(loader: ReviewModuleLoader = defaultLoader): 
         previous !== null && typeof mod.diffReports === 'function'
           ? mod.diffReports(previous, report)
           : null;
-      latest.set(key.branch, { cacheKey, report });
+      latest.set(historyKey, { cacheKey, report });
       outcome = { ok: true, report, previous, delta };
     } catch (err) {
       outcome = { ok: false, error: err instanceof Error ? err.message : String(err) };

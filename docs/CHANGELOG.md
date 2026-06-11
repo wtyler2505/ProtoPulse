@@ -2,6 +2,35 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — deferred-cuts sweep 1: EEPROM + watchdog, per-core ADC, deck picker
+
+### Added
+- **AVR EEPROM** (@protopulse/emu): 1 KiB against a persistent
+  backend — nonvolatile across reset() like the silicon, with
+  eepromMemory() for bench pre-seeding and inspection. Firmware
+  tests cover the full EECR state machine: EEMPE 4-cycle arm window,
+  EEPE polling through the ~3.6 ms erase+write, EERE read-back out
+  the UART, and persistence across a power-on reset.
+- **AVR watchdog** (@protopulse/emu): the WDCE change-enable window,
+  WDE timeout → CPU reset + MCUSR.WDRF, WDR feeding. Firmware tests:
+  a hung loop gets reset (WDRF asserted); a WDR loop never does.
+  Honest note in the core header: avr8js's watchdog reset preserves
+  I/O registers where real silicon clears them.
+- **Per-core ADC channels** (@protopulse/app co-sim): the closed-loop
+  ADC binding picker now offers the borrowed core's own channels
+  (RP2040: ADC0–3 on GP26–29; AVR: ADC0–7) instead of a fixed AVR
+  list, and the panel names which core it borrowed from the Firmware
+  tab.
+- **Review deck picker** (@protopulse/app): the Review panel offers
+  builtin + every versioned deck bundled from content/review-decks
+  (glob + zod mirror, same pattern as the sourcing catalog). The
+  deck is part of the report cache key AND the history key — the
+  opened/closed delta never diffs across decks (runner test pins
+  this). The report line now names deck + rev.
+
+### Still honest gaps
+- SPI/TWI slave mode (the host is always the far end); ESP32 core.
+
 ## 2026-06-11 — SDF text + GPU picking (the renderer epic)
 
 ### Added

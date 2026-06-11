@@ -1,12 +1,16 @@
 import {
   ADCMuxInputType,
   AVRADC,
+  AVRClock,
+  AVREEPROM,
   AVRIOPort,
   AVRSPI,
   AVRTWI,
   AVRTimer,
   AVRUSART,
+  AVRWatchdog,
   CPU,
+  EEPROMMemoryBackend,
   PinState,
   adcConfig,
   avrInstruction,
@@ -19,6 +23,7 @@ import {
   timer2Config,
   twiConfig,
   usart0Config,
+  watchdogConfig,
 } from 'avr8js';
 import { z } from 'zod';
 
@@ -41,17 +46,23 @@ import type {
  * through the GPIO ports, so waveforms land in the pin-event stream),
  * GPIO ports B/C/D, USART0, SPI (master mode against a host byte
  * handler — see setSpiHandler), TWI (master mode against a host bus
- * handler — see setTwiHandler), and the ADC (avr8js AVRADC with the
+ * handler — see setTwiHandler), the ADC (avr8js AVRADC with the
  * voltage source replaced by a host sampler — see the ADC block in
- * buildCore). Honest gaps: EEPROM and the watchdog are NOT wired;
- * SPI/TWI slave mode is not modeled (the host is always the far end).
- * Firmware touching unwired peripherals reads/writes plain RAM bytes,
- * so it won't crash, but those peripherals do nothing.
+ * buildCore), the EEPROM (1 KiB; nonvolatile — the backing memory
+ * survives reset() like real silicon, see eepromMemory), and the
+ * watchdog (WDE timeout resets the CPU and sets MCUSR.WDRF; WDR feeds
+ * it; note avr8js's watchdog reset does not clear I/O registers the
+ * way real silicon does — SRAM surviving is faithful, ports surviving
+ * is not). Honest gap: SPI/TWI slave mode is not modeled (the host is
+ * always the far end). Firmware touching unwired peripherals
+ * reads/writes plain RAM bytes, so it won't crash, but those
+ * peripherals do nothing.
  */
 
 const CLOCK_HZ = 16_000_000;
 const FLASH_BYTES = 0x8000; // 32 KiB flash (datasheet §1)
 const SRAM_BYTES = 2048; // internal SRAM, RAMEND = 0x08FF (datasheet §8.3)
+const EEPROM_BYTES = 1024; // 1 KiB EEPROM (datasheet §1)
 
 const PORT_LETTERS = ['B', 'C', 'D'] as const;
 type PortLetter = (typeof PORT_LETTERS)[number];
@@ -79,6 +90,9 @@ interface CoreParts {
   spi: AVRSPI;
   twi: AVRTWI;
   adc: AVRADC;
+  clock: AVRClock;
+  eeprom: AVREEPROM;
+  watchdog: AVRWatchdog;
 }
 
 /** Host side of the TWI bus — the slave(s) the master firmware talks
@@ -119,6 +133,8 @@ export class Atmega328pCore implements McuCore {
   private adcSampler: AdcSampler | undefined;
   private spiHandler: ((mosiByte: number) => number) | undefined;
   private twiHandler: TwiHostHandler | undefined;
+  /** Nonvolatile: deliberately NOT rebuilt by reset() — see eepromMemory. */
+  private eepromBackend = new EEPROMMemoryBackend(EEPROM_BYTES);
 
   constructor(options: Atmega328pOptions = {}) {
     const aVcc = options.aVccVolts ?? 5;
@@ -199,6 +215,15 @@ export class Atmega328pCore implements McuCore {
     this.twiHandler = handler;
   }
 
+  /**
+   * The live EEPROM backing store (1 KiB), for bench inspection and
+   * pre-seeding. Nonvolatile like the silicon: it survives reset() —
+   * only loading different firmware on a fresh core gives a blank one.
+   */
+  eepromMemory(): Uint8Array {
+    return this.eepromBackend.memory;
+  }
+
   /** ADC conversions completed since the last drain (honesty readout). */
   drainAdcReads(): AdcReadRequest[] {
     const out = this.adcReads;
@@ -214,7 +239,8 @@ export class Atmega328pCore implements McuCore {
   /**
    * Power-on reset semantics, stronger than the RESET pin: the CPU and
    * all peripherals are rebuilt, so SRAM is cleared and the cycle
-   * counter returns to 0. The loaded firmware is kept. Pending UART
+   * counter returns to 0. The loaded firmware is kept, and so is the
+   * EEPROM content (nonvolatile, like the silicon). Pending UART
    * queues, unread pin events and undrained ADC reads are dropped;
    * the ADC sampler (host wiring) is kept.
    */
@@ -355,6 +381,17 @@ export class Atmega328pCore implements McuCore {
       }, adc.sampleCycles);
     };
 
+    // EEPROM: avr8js handles the EECR/EEDR/EEAR state machine (EEMPE's
+    // 4-cycle window, erase/write timing, EERE reads) against our
+    // persistent backend — nonvolatile across reset().
+    const eeprom = new AVREEPROM(cpu, this.eepromBackend);
+
+    // Watchdog: WDR feeds it; on timeout with WDE set (and WDIE clear)
+    // avr8js resets the CPU and sets MCUSR.WDRF. The 128 kHz WDT clock
+    // is derived from the system clock (prescaler 2048 → ~16 ms).
+    const clock = new AVRClock(cpu, CLOCK_HZ);
+    const watchdog = new AVRWatchdog(cpu, watchdogConfig, clock);
+
     for (const letter of PORT_LETTERS) {
       const port = ports[letter];
       // Last observed *driven* level per pin; undefined while the pin
@@ -380,7 +417,7 @@ export class Atmega328pCore implements McuCore {
       });
     }
 
-    return { cpu, ports, usart, timer0, timer1, timer2, spi, twi, adc };
+    return { cpu, ports, usart, timer0, timer1, timer2, spi, twi, adc, clock, eeprom, watchdog };
   }
 }
 

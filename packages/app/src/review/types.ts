@@ -26,16 +26,34 @@ export interface ReviewFinding {
 
 export interface ReviewReport {
   tool: 'protopulse-review';
+  /** Deck name the run was pinned to ('builtin' when none was given). */
+  deck?: string;
   deckRev: string;
   date: string;
   counts: { error: number; warn: number; info: number };
   findings: ReviewFinding[];
 }
 
+/** Per-check deck configuration (pinned mirror of @protopulse/review's
+ *  ReviewCheckConfig). Absent check ids run with defaults. */
+export interface ReviewCheckConfig {
+  enabled?: boolean;
+  severity?: 'error' | 'warn' | 'info';
+}
+
+/** A versioned review deck — structural, anything matching works. */
+export interface ReviewDeckLike {
+  deck: string;
+  rev: string;
+  checks: Record<string, ReviewCheckConfig>;
+}
+
 export interface ReviewRunOpts {
   date: string;
   designId?: string;
   branch?: string;
+  /** Versioned deck to run under; absent = 'builtin' (all defaults). */
+  deck?: ReviewDeckLike;
 }
 
 export type RunReviewFn = (graph: DesignGraph, parts: PartDb, opts: ReviewRunOpts) => ReviewReport;

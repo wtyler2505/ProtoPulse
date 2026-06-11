@@ -123,6 +123,11 @@ export function BRSH(k: number): number {
   return 0xf400 | ((k & 0x7f) << 3);
 }
 
+/** WDR — 1001 0101 1010 1000. Feeds the watchdog. 1 cycle. */
+export function WDR(): number {
+  return 0x95a8;
+}
+
 /**
  * STS k,Rr (two words) — 1001 001r rrrr 0000 + 16-bit data address.
  * 2 cycles. Needed for extended-I/O registers (e.g. UCSR0B/UDR0)
@@ -168,13 +173,19 @@ export const IO = {
   PIND: 0x09,
   DDRD: 0x0a,
   PORTD: 0x0b,
+  EECR: 0x1f,
+  EEDR: 0x20,
+  EEARL: 0x21,
+  EEARH: 0x22,
   TCCR0A: 0x24,
   TCCR0B: 0x25,
   TCNT0: 0x26,
+  MCUSR: 0x34,
 } as const;
 
 /** ATmega328P data-space addresses (for LDS/STS). Datasheet §36. */
 export const MEM = {
+  WDTCSR: 0x60,
   ADCL: 0x78,
   ADCH: 0x79,
   ADCSRA: 0x7a,
