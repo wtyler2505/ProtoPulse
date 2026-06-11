@@ -77,11 +77,12 @@ export const CORE_KINDS = {
     label: 'RP2040 (Cortex-M0+, 125 MHz)',
     adcChannels: [0, 1, 2, 3] as readonly number[],
   },
-  // The from-scratch v0 core: raw call0-ABI images only (no HEX/IDF
-  // apps), GPIO + UART0, no ADC — hence the empty channel list.
+  // The from-scratch core: raw images and SRAM-resident ESP-IDF app
+  // images (no HEX, no flash cache), GPIO + UART0, no ADC — hence the
+  // empty channel list.
   esp32s3: {
     ctor: 'Esp32s3Core',
-    label: 'ESP32-S3 (Xtensa LX7, 240 MHz) — v0, raw images',
+    label: 'ESP32-S3 (Xtensa LX7, 240 MHz) — raw + .bin app images',
     adcChannels: [] as readonly number[],
   },
 } as const;

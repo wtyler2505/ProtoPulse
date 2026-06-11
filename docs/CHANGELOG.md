@@ -2,6 +2,41 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — ESP32-S3 slice 5: MOVSP + the ESP-IDF app-image loader
+
+### Added
+- **MOVSP** (@protopulse/emu): the windowed ABI's last gap. With a
+  caller's frame live in the register file it is a plain
+  stack-pointer move; with all three WindowStart bits below clear
+  (the RM's AllocaCause condition) it performs the Alloca handler's
+  net effect — the 4-word base save area moves from below the old sp
+  to below the new one. Same magic-handler approach as spill/fill.
+- **ESP-IDF app-image loader**: `loadFirmware` now boots esptool-built
+  .bin images (magic 0xE9). The 24-byte header is validated against
+  esp-idf's esp_app_format.h (entry_addr honored, chip_id must be 9 =
+  ESP32-S3, ≤16 segments), each segment loads into the modeled SRAM
+  window, and the trailing checksum byte (XOR of segment data seeded
+  0xEF, esptool's ESP_CHECKSUM_MAGIC) is verified. `reset()` replays
+  the segments and restarts at the image's entry point. The Firmware
+  panel's existing .bin path feeds straight into this.
+- Assembler: the `MOVSP(t, s)` builder.
+
+### Verified (+4 tests, emu suite at 114 green)
+- A two-segment image (code → IRAM at a non-base address, data →
+  DRAM) boots at its entry point and survives reset().
+- Wrong-chip (`targets ESP32 (chip_id 0)`), flash-mapped-segment, and
+  corrupted-checksum images refuse with clear messages.
+- MOVSP both ways: plain move with the caller live (sp moves, save
+  area does NOT); Alloca path with the callers hidden via WSR
+  WINDOWSTART (markers at [sp−16] and [sp−4] travel with the stack).
+
+### Honest cuts
+- Flash-mapped segments (0x42xxxxxx/0x3Cxxxxxx) refuse — the flash
+  cache is not modeled, so only IRAM/DRAM-resident images run; the
+  SHA-256 trailer is not verified (the XOR checksum is); flash
+  header fields are ignored. Next: peripheral interrupt lines, ADC,
+  TIMG, flash-cache mapping.
+
 ## 2026-06-11 — ESP32-S3 slice 4: exceptions, interrupts, and time
 
 ### Added
