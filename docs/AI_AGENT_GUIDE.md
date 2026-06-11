@@ -1056,7 +1056,7 @@ The `routingStrategy` in `user_chat_settings` controls which AI provider handles
 
 ### Current State
 
-Legacy app: 725 test files, ~30.5k tests passing (≈421 env-dependent failures on `main` — tracked in `ROADMAP.md` off-vision items), using Vitest 4. Engine (`packages/`): 1,340 tests, all green, in their own CI workflow — that workflow is the merge gate.
+Legacy app: 725 test files, ~30.5k tests passing (≈421 env-dependent failures on `main` — tracked in `ROADMAP.md` off-vision items), using Vitest 4. Engine (`packages/`): 1,349 tests, all green, in their own CI workflow — that workflow is the merge gate.
 
 ### Test Infrastructure
 
@@ -1287,7 +1287,7 @@ One canonical design graph, many projections. Every mutation is a typed operatio
 
 ### Packages
 
-Sixteen workspaces: `graph` (the core), `parts` (18 seed parts, provenance tiers, part packs), `erc`, `drc` (versioned fab decks), `route` (walkaround/shove/pours), `export` (netlist, BOM, Gerber, drill, pick-and-place, panelization — all byte-exact contracts), `sim` (ngspice-WASM), `emu` (ATmega328P + RP2040 cores), `cosim` (the closed firmware↔analog loop), `review` (versioned review decks), `relay` (zero-conflict sync), `renderer` (WebGL2, SDF text, dual picking), `ai` (the six-member crew runtime), `cli` (`check`/`export`/`import-legacy`, exit 0/1/2), `content` (decks, the 88-article wiki, curriculum), `app` (the editor, port 5174). 1,340 tests; own CI at `.github/workflows/packages-ci.yml` (typecheck, lint, tests, golden smoke, builds; 100% branch coverage gate on the graph core). Full map: `packages/README.md`; status: `ROADMAP.md`.
+Sixteen workspaces: `graph` (the core), `parts` (18 seed parts, provenance tiers, part packs), `erc`, `drc` (versioned fab decks), `route` (walkaround/shove/pours), `export` (netlist, BOM, Gerber, drill, pick-and-place, panelization — all byte-exact contracts), `sim` (ngspice-WASM), `emu` (ATmega328P + RP2040 + from-scratch ESP32-S3 v0 cores), `cosim` (the closed firmware↔analog loop), `review` (versioned review decks), `relay` (zero-conflict sync), `renderer` (WebGL2, SDF text, dual picking), `ai` (the six-member crew runtime), `cli` (`check`/`export`/`import-legacy`, exit 0/1/2), `content` (decks, the 88-article wiki, curriculum), `app` (the editor, port 5174). 1,349 tests; own CI at `.github/workflows/packages-ci.yml` (typecheck, lint, tests, golden smoke, builds; 100% branch coverage gate on the graph core). Full map: `packages/README.md`; status: `ROADMAP.md`.
 
 ### Rules for agents working in packages/
 
@@ -1300,7 +1300,7 @@ Sixteen workspaces: `graph` (the core), `parts` (18 seed parts, provenance tiers
 
 ```bash
 npm run check:packages           # typecheck every package
-npm run test:packages            # all 1,340 engine tests
+npm run test:packages            # all 1,349 engine tests
 npm run -w @protopulse/app dev   # editor → http://localhost:5174
 npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
 ```

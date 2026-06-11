@@ -2,6 +2,46 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — ESP32-S3 core v0: the from-scratch emulator epic begins
+
+### Added
+- **Xtensa LX7 interpreter** (@protopulse/emu xtensa.ts): the 24-bit
+  call0-ABI subset (~32 instructions — ALU, shifts, loads/stores,
+  branches, J/JX/CALL0/CALLX0/RET, L32R, MOVI/ADDI/ADDMI). Every
+  encoding verified against the Espressif ISA overview AND the
+  ida-xtensa2 disassembler tables; unimplemented encodings throw
+  with address and bytes instead of guessing.
+- **Hand-assembler** (xtensa-asm.ts, the asm.ts/thumb-asm.ts
+  sibling): 24-bit builders, a BR() displacement helper, an L32R
+  literal pool, CALL0_TO with 4-alignment enforcement, and a
+  bootable image layout (entry jump → pool → code).
+- **Esp32s3Core** under the McuCore contract: GPIO matrix (both
+  banks, IO0–IO48, OUT/W1TS/W1TC + ENABLE + IN, cycle-stamped pin
+  events) and UART0 (FIFO + STATUS RXFIFO_CNT) at the REAL S3
+  addresses from esp-idf v5.2's own soc headers (sources in
+  inbox/2026-06-11-esp32s3-emulator-core-verification.md).
+- **Firmware panel**: loads raw .bin images (the core's format)
+  alongside Intel HEX; the core picker gains the S3 with an honest
+  "v0, raw images" label; co-sim offers it no ADC channels because
+  it has no ADC.
+
+### Verified
+- 9 tests, all real hand-assembled Xtensa machine code, with the
+  assembler's bytes pinned against independent disassembly fixtures
+  (RET 80 00 00, MOVI a2,63 = 22 a0 3f, …) so an assembler/
+  interpreter shared bug cannot hide: zero-jitter blink on IO5,
+  host-driven input mirror, high-bank IO33 via OUT1/ENABLE1, UART
+  hello + echo through STATUS polling, CALL0/RET double-twice,
+  SLLI arithmetic, loud HEX/unknown-instruction refusals, reset
+  replay.
+
+### Honest cuts (stated in the core header)
+- Single core (the S3 has two); 1 instruction = 1 cycle at 240 MHz;
+  one 480 KB SRAM window on both buses; no 16-bit density forms, no
+  register windows — real ESP-IDF firmware will NOT run yet; no
+  interrupts, no ADC, no bootloader. The ROADMAP names the next
+  slices.
+
 ## 2026-06-11 — documentation overhaul: every living doc audited against the code
 
 ### Fixed (stale claims, verified against the repo before correcting)

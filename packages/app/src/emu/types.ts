@@ -59,6 +59,7 @@ export interface McuCore {
 export interface EmuModule {
   Atmega328pCore: new () => McuCore;
   Rp2040Core: new () => McuCore;
+  Esp32s3Core: new () => McuCore;
 }
 
 /** Selectable MCU cores, keyed by the emu module's constructor names.
@@ -75,6 +76,13 @@ export const CORE_KINDS = {
     ctor: 'Rp2040Core',
     label: 'RP2040 (Cortex-M0+, 125 MHz)',
     adcChannels: [0, 1, 2, 3] as readonly number[],
+  },
+  // The from-scratch v0 core: raw call0-ABI images only (no HEX/IDF
+  // apps), GPIO + UART0, no ADC — hence the empty channel list.
+  esp32s3: {
+    ctor: 'Esp32s3Core',
+    label: 'ESP32-S3 (Xtensa LX7, 240 MHz) — v0, raw images',
+    adcChannels: [] as readonly number[],
   },
 } as const;
 

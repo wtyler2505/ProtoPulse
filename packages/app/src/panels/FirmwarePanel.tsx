@@ -46,6 +46,7 @@ export function FirmwarePanel() {
   const flashStatus = useUi((s) => s.flashStatus);
 
   const [hexText, setHexText] = useState('');
+  const [binImage, setBinImage] = useState<Uint8Array | null>(null);
   const [coreKind, setCoreKind] = useState<CoreKind>(session.coreKind);
   const [loadInfo, setLoadInfo] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -82,7 +83,7 @@ export function FirmwarePanel() {
 
   const onLoad = async () => {
     setRunning(false);
-    const out = await session.load(hexText, coreKind);
+    const out = await session.load(binImage ?? hexText, coreKind);
     if (out.ok) {
       setLoadError(null);
       setLoadInfo(`Firmware loaded — ${CORE_KINDS[coreKind].label.split(' (')[0] ?? coreKind} @ ${engNotation(out.clockHz)}Hz`);
@@ -98,7 +99,14 @@ export function FirmwarePanel() {
   const onPickFile = async (input: HTMLInputElement) => {
     const file = input.files?.[0];
     if (!file) return;
-    setHexText(await file.text());
+    if (/\.(bin|img)$/i.test(file.name)) {
+      // Raw machine-code image (the ESP32-S3 v0 core's format).
+      setBinImage(new Uint8Array(await file.arrayBuffer()));
+      setHexText('');
+    } else {
+      setBinImage(null);
+      setHexText(await file.text());
+    }
     input.value = ''; // re-picking the same file fires onChange again
   };
 
@@ -149,7 +157,7 @@ export function FirmwarePanel() {
 
   return (
     <div className="panel-body firmware-panel">
-      <h3 className="panel-subtitle">Firmware (Intel HEX)</h3>
+      <h3 className="panel-subtitle">Firmware (Intel HEX, or a raw .bin for the ESP32-S3)</h3>
       <textarea
         className="firmware-hex"
         spellCheck={false}
@@ -158,8 +166,12 @@ export function FirmwarePanel() {
         aria-label="Intel HEX firmware"
         onChange={(e) => {
           setHexText(e.target.value);
+          setBinImage(null);
         }}
       />
+      {binImage !== null && (
+        <p className="muted">binary image loaded ({binImage.length} bytes) — Load runs it on the selected core</p>
+      )}
       <label className="sim-field">
         <span className="sim-field-label">core</span>
         <select
@@ -177,10 +189,10 @@ export function FirmwarePanel() {
         </select>
       </label>
       <label className="firmware-file">
-        <span className="sim-field-label">.hex file</span>
+        <span className="sim-field-label">firmware file</span>
         <input
           type="file"
-          accept=".hex,.ihex,.eep,text/plain"
+          accept=".hex,.ihex,.eep,.bin,.img,text/plain,application/octet-stream"
           onChange={(e) => {
             void onPickFile(e.currentTarget);
           }}
@@ -191,7 +203,7 @@ export function FirmwarePanel() {
         <button
           type="button"
           className="primary-button"
-          disabled={hexText.trim() === ''}
+          disabled={hexText.trim() === '' && binImage === null}
           onClick={() => {
             void onLoad();
           }}
