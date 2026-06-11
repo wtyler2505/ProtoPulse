@@ -31,7 +31,7 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       (`tools/golden/README.md`), MSDF text + GPU picking, ESP32-S3
       verified part
 
-## v0.2 — The Lab 🔨
+## v0.2 — The Lab ✅ *(complete 2026-06-11)*
 
 - [x] `@protopulse/sim` — graph→SPICE netlist with model tiers, ngspice-WASM
       engine (eecircuit-engine), analyses: op/tran/dc/ac (48 tests incl.
@@ -39,18 +39,23 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
 - [x] Fidelity bar (Vol II §D.4) — per-component tier chips; simulations
       never lie about what they are
 - [x] Plot workspace v1 — canvas plot, eng-notation axes, crosshair
-      cursors, dB/log-x for AC (math channels, FFT, branch overlays ⬜)
+      cursors, dB/log-x for AC (math channels, FFT, and branch
+      overlays all landed later in v0.2 — see below)
 - [x] The Analyst — run_simulation/measure/read_design tools on the shared
       agent loop; first live Anthropic panel in the app
 - [x] Monte Carlo (seeded, per-class tolerances, spaghetti plots) +
-      parameter stepping + noise analysis (engine supports .noise;
-      graph-driven noise needs an AC-capable source emitter ⬜)
+      parameter stepping + noise analysis (graph-driven .noise runs
+      via the AC-source emitter below; Noise is a SimPanel analysis)
 - [x] Math channels (safe expression evaluator) + branch overlay —
       'plot the same node on two design branches against each other'
 - [x] NE555 behavioral macromodel — the traffic-light fixture oscillates
       at 0.719s measured vs 0.721s theory
-- [x] Sim worker — ngspice off the main thread (node fallback kept;
-      streaming still ⬜)
+- [x] Sim worker — ngspice off the main thread (node fallback kept)
+- [x] Sim worker streaming (landed 2026-06-11, the Lab's last piece):
+      batch runs (Monte Carlo / parameter step) stream one progress
+      frame per completed deck — the panel shows "Run 7/20 complete…"
+      instead of a frozen spinner. Honest scope: single-deck runs
+      can't stream (ngspice-WASM runs a deck to completion)
 - [x] Plot FFT (radix-2, Hann, resampled) + AC-source emitter
       (fields.ac) unlocking graph-driven .ac/.noise runs
 - [x] Sim ghost overlay (landed 2026-06-10): after op/tran runs the
@@ -58,7 +63,7 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       legend in the panel, (branch, opsVersion)-stamped so stale
       ghosts never draw — the Probe's live-overlay UX, sim-fed today
 
-## v0.3 — The Crew 🔨
+## v0.3 — The Crew ✅ *(complete 2026-06-11)*
 
 - [x] Design Review as a first-class artifact (`@protopulse/review`,
       Vol II §G.4): six checks, executable fixes, stored/diffable

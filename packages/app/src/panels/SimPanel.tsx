@@ -187,6 +187,8 @@ export function SimPanel() {
   const [compareBranch, setCompareBranch] = useState('');
 
   const [busy, setBusy] = useState(false);
+  /** Streamed batch progress (Monte Carlo / step), or null. */
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [data, setData] = useState<RunData | null>(null);
   const [visible, setVisible] = useState<ReadonlySet<string>>(new Set());
@@ -316,6 +318,8 @@ export function SimPanel() {
     }
     setFormError(null);
     setBusy(true);
+    setProgress(null);
+    const onProgress = (done: number, total: number) => { setProgress({ done, total }); };
     const s = useSession.getState();
     const g = getGraph(s);
     const key = { branch: s.branch, opsVersion: s.opsVersion };
@@ -329,7 +333,7 @@ export function SimPanel() {
         setBusy(false);
         return;
       }
-      const outcome = await runMonteCarlo(g, partDb, spec, key);
+      const outcome = await runMonteCarlo(g, partDb, spec, key, onProgress);
       next = { mode: 'mc', outcome };
       if (outcome.ok) keys = traceKeys(outcome.result.trials);
     } else if (kind === 'step') {
@@ -339,7 +343,7 @@ export function SimPanel() {
         setBusy(false);
         return;
       }
-      const outcome = await runStep(g, partDb, spec, key);
+      const outcome = await runStep(g, partDb, spec, key, onProgress);
       next = { mode: 'step', outcome };
       if (outcome.ok) keys = traceKeys(outcome.result.runs);
     } else {
@@ -679,7 +683,13 @@ export function SimPanel() {
       >
         {busy ? 'Running…' : 'Run'}
       </button>
-      {busy && <p className="muted">First run boots the simulation engine — a few seconds.</p>}
+      {busy && (
+        <p className="muted">
+          {progress
+            ? `Run ${String(progress.done)}/${String(progress.total)} complete…`
+            : 'First run boots the simulation engine — a few seconds.'}
+        </p>
+      )}
       {formError && <p className="sim-error">{formError}</p>}
 
       {errorText !== null && <p className="sim-error">{errorText}</p>}

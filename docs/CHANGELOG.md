@@ -2,6 +2,35 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — sim worker streaming: v0.2 complete
+
+### Added
+- **Batch progress streaming**: Monte Carlo and parameter-step runs
+  stream one progress frame per completed deck from the sim worker;
+  the Sim panel shows "Run 7/20 complete…" instead of a frozen
+  spinner. Protocol: a `progress` frame per deck before the final
+  reply, correlated by id; the client routes frames to an onProgress
+  callback threaded from the panel through the cached runner.
+
+### Honest scope
+- Single-deck runs can't stream — ngspice-WASM runs a deck to
+  completion; the boot message stays for those.
+
+### Milestone
+- **v0.2 (The Lab) is COMPLETE.** The two remaining ⬜ markers in the
+  ROADMAP were stale (math channels/FFT/branch overlays and the
+  AC-source emitter for graph-driven noise all landed earlier) — the
+  section is reconciled and closed. v0.1 retains only its three
+  M1 stragglers (pcbnew manual check, MSDF/GPU picking, ESP32-S3
+  part).
+
+### Verified
+- 2 new tests: the pure worker handler emits exactly one frame per
+  batch deck (none for single runs), and SimWorkerClient routes
+  frames to onProgress while resolving the final batch once, over the
+  real handler behind a shim worker. Full test:packages green;
+  full-tree eslint 0 errors.
+
 ## 2026-06-11 — review decks + community rules: v0.3 complete
 
 ### Added

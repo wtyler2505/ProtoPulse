@@ -38,7 +38,12 @@ type SimWorkerRequestBody = SimWorkerRequest extends infer T
 
 export type SimWorkerResponse =
   | { id: number; ok: true; result: SimResult[] }
-  | { id: number; ok: false; error: string };
+  | { id: number; ok: false; error: string }
+  /** Streamed once per completed deck in a batch — the panel shows
+   *  honest progress instead of a frozen spinner. */
+  | { id: number; kind: 'progress'; done: number; total: number };
+
+export type SimProgress = (done: number, total: number) => void;
 
 /**
  * The slice of the DOM Worker surface the client uses — narrow enough
@@ -69,6 +74,7 @@ function spawnSimWorker(): WorkerLike {
 interface Pending {
   resolve: (results: SimResult[]) => void;
   reject: (error: Error) => void;
+  onProgress?: SimProgress;
 }
 
 /**
@@ -103,6 +109,10 @@ export class SimWorkerClient {
   private onMessage(data: SimWorkerResponse): void {
     const entry = this.pending.get(data.id);
     if (!entry) return; // stale reply from a superseded worker
+    if ('kind' in data) {
+      entry.onProgress?.(data.done, data.total);
+      return; // batch still running
+    }
     this.pending.delete(data.id);
     if (data.ok) {
       entry.resolve(data.result);
@@ -121,12 +131,12 @@ export class SimWorkerClient {
     }
   }
 
-  private request(req: SimWorkerRequestBody): Promise<SimResult[]> {
+  private request(req: SimWorkerRequestBody, onProgress?: SimProgress): Promise<SimResult[]> {
     const id = this.nextId;
     this.nextId += 1;
     const worker = this.ensureWorker();
     return new Promise<SimResult[]>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(id, { resolve, reject, ...(onProgress ? { onProgress } : {}) });
       worker.postMessage({ ...req, id } as SimWorkerRequest);
     });
   }
@@ -141,8 +151,14 @@ export class SimWorkerClient {
     return first;
   }
 
-  /** Pre-built deck list (Monte Carlo / step), results in deck order. */
-  runBatch(kind: 'mc' | 'step', netlistBodies: string[], analysis: Analysis): Promise<SimResult[]> {
-    return this.request({ kind, netlistBodies, analysis });
+  /** Pre-built deck list (Monte Carlo / step), results in deck order.
+   *  onProgress fires once per completed deck. */
+  runBatch(
+    kind: 'mc' | 'step',
+    netlistBodies: string[],
+    analysis: Analysis,
+    onProgress?: SimProgress,
+  ): Promise<SimResult[]> {
+    return this.request({ kind, netlistBodies, analysis }, onProgress);
   }
 }
