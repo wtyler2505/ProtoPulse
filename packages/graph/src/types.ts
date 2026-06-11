@@ -137,6 +137,19 @@ export interface Via {
   span: [string, string];
 }
 
+/** A copper zone: an outline polygon on one layer, poured for one net.
+ *  The POUR (outline minus foreign copper at clearance) is a derived
+ *  artifact computed by consumers — the graph stores intent only. */
+export interface Zone {
+  id: Uuid;
+  netId: Uuid;
+  layerId: string;
+  /** Outline polygon, integer nm, ≥3 vertices, implicitly closed. */
+  outline: Vec[];
+  /** Pour clearance override; consumers default to the deck's. */
+  clearanceNm?: Nm;
+}
+
 export interface Annotation {
   anchor: Uuid  ;
   text: string;
@@ -154,6 +167,7 @@ export interface PcbView {
   placements: Map<Uuid, FootprintPlacement>;
   traces: Map<Uuid, Trace>;
   vias: Map<Uuid, Via>;
+  zones: Map<Uuid, Zone>;
 }
 
 export interface DesignGraph {
@@ -177,7 +191,7 @@ export function emptyGraph(): DesignGraph {
     buses: new Map(),
     constraints: new Map(),
     schematic: { placements: new Map(), wires: new Map() },
-    pcb: { placements: new Map(), traces: new Map(), vias: new Map() },
+    pcb: { placements: new Map(), traces: new Map(), vias: new Map(), zones: new Map() },
     annotations: [],
     meta: {},
     counters: { net: 0 },

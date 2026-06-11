@@ -104,7 +104,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       around it (cluster-merged hulls; pads/vias never move; cascades
       refuse honestly); deleting the shover springs victims back to
       their pre-shove paths when still legal — the op-log IS the memory
-- [ ] Zones/pours; panelization; cascading shove
+- [x] Zones/pours (landed 2026-06-11, four gated phases): place_zone/
+      remove_zone through the graph core with full closure (the 100%
+      coverage gate caught merge_nets not re-pointing zones); computePour
+      in @protopulse/route (martinez clipping, integer-nm boundary,
+      exact-area tests); pours render under copper + Zone drawing tool;
+      DRC zone-overlap error + isolated-island warn; Gerber G36/G37
+      regions frozen in the new zoned-led golden. Honest cuts: solid
+      connects (thermal reliefs later), square-corner keep-outs
+      (conservative)
+- [ ] Thermal reliefs; panelization; cascading shove
 
 ## v0.5 — The Bridge 🔨
 

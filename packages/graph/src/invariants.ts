@@ -96,6 +96,15 @@ export function validateGraph(graph: DesignGraph, opts: InvariantOpts = {}): Inv
       });
     }
   }
+  for (const zone of graph.pcb.zones.values()) {
+    if (!graph.nets.has(zone.netId)) {
+      out.push({
+        code: 'geometry_on_dead_net',
+        message: `zone ${zone.id} attached to missing net ${zone.netId}`,
+        entityId: zone.id,
+      });
+    }
+  }
   for (const via of graph.pcb.vias.values()) {
     if (!graph.nets.has(via.netId)) {
       out.push({
@@ -177,6 +186,15 @@ export function validateGraph(graph: DesignGraph, opts: InvariantOpts = {}): Inv
         code: 'non_integer_coordinate',
         message: `via ${via.id} has non-integer coordinates`,
         entityId: via.id,
+      });
+    }
+  }
+  for (const zone of graph.pcb.zones.values()) {
+    if (zone.outline.some((v) => !Number.isInteger(v.x) || !Number.isInteger(v.y))) {
+      out.push({
+        code: 'non_integer_coordinate',
+        message: `zone ${zone.id} has non-integer coordinates`,
+        entityId: zone.id,
       });
     }
   }

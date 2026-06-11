@@ -13,7 +13,7 @@ export type ApplyResult =
   | { ok: false; error: string };
 
 export interface ApplyWarning {
-  code: 'net_gc' | 'wire_gc' | 'trace_gc' | 'via_gc';
+  code: 'net_gc' | 'wire_gc' | 'trace_gc' | 'via_gc' | 'zone_gc';
   message: string;
   netId?: Uuid;
 }
@@ -40,6 +40,12 @@ function gcNet(graph: DesignGraph, netId: Uuid, warnings: ApplyWarning[]): void 
     if (via.netId === netId) {
       graph.pcb.vias.delete(id);
       warnings.push({ code: 'via_gc', message: `Via ${id} on dead net GC'd`, netId });
+    }
+  }
+  for (const [id, zone] of graph.pcb.zones) {
+    if (zone.netId === netId) {
+      graph.pcb.zones.delete(id);
+      warnings.push({ code: 'zone_gc', message: `Zone ${id} on dead net GC'd`, netId });
     }
   }
   warnings.push({ code: 'net_gc', message: `Empty net GC'd`, netId });
@@ -159,6 +165,9 @@ export function applyOp(graph: DesignGraph, op: OpBody): ApplyResult {
       }
       for (const via of graph.pcb.vias.values()) {
         if (via.netId === op.absorbed) via.netId = op.survivor;
+      }
+      for (const zone of graph.pcb.zones.values()) {
+        if (zone.netId === op.absorbed) zone.netId = op.survivor;
       }
       graph.nets.delete(op.absorbed);
       return ok();
@@ -306,6 +315,25 @@ export function applyOp(graph: DesignGraph, op: OpBody): ApplyResult {
     case 'remove_via': {
       if (!graph.pcb.vias.has(op.id)) return fail(`via ${op.id} not found`);
       graph.pcb.vias.delete(op.id);
+      return ok();
+    }
+
+    case 'place_zone': {
+      if (!graph.nets.has(op.netId)) return fail(`net ${op.netId} not found`);
+      if (graph.pcb.zones.has(op.id)) return fail(`zone ${op.id} already exists`);
+      graph.pcb.zones.set(op.id, {
+        id: op.id,
+        netId: op.netId,
+        layerId: op.layerId,
+        outline: op.outline.map((v) => ({ ...v })),
+        ...(op.clearanceNm !== undefined ? { clearanceNm: op.clearanceNm } : {}),
+      });
+      return ok();
+    }
+
+    case 'remove_zone': {
+      if (!graph.pcb.zones.has(op.id)) return fail(`zone ${op.id} not found`);
+      graph.pcb.zones.delete(op.id);
       return ok();
     }
 

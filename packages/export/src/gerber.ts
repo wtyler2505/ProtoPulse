@@ -1,6 +1,9 @@
 import { compareRefs } from './kicad-netlist.js';
 import { applyPcbPlacement, formatMm, quarterTurnsOf } from './pcb-common.js';
 
+import { computePour } from '@protopulse/route';
+
+import type { FootprintSource } from '@protopulse/route';
 import type { DesignGraph, Vec } from '@protopulse/graph';
 import type { PartDb } from '@protopulse/parts';
 
@@ -22,6 +25,10 @@ export type CopperLayer = 'F.Cu' | 'B.Cu';
 export interface GerberOpts {
   /** ISO timestamp recorded in %TF.CreationDate. */
   date: string;
+  /** Pour clearance for zone fills (the deck's min_clearance). REQUIRED
+   *  when the design has zones on the layer — exporting a zone without
+   *  knowing its clearance would freeze a guess into a fab file. */
+  pourClearanceNm?: number;
 }
 
 type Aperture = { kind: 'C'; dNm: number } | { kind: 'R'; wNm: number; hNm: number };
@@ -139,6 +146,38 @@ export function exportGerberLayer(
   ];
   for (const a of apertures) {
     lines.push(`%ADD${String(dcodes.get(apertureKey(a)))}${apertureTemplate(a)}*%`);
+  }
+
+  // ── Zone pours as G36/G37 regions ──
+  // Dark outers first, then their holes as LPC (clear) regions, then
+  // polarity restored BEFORE pads/traces draw — so carved foreign
+  // copper still lands dark on top of its own clearance hole.
+  const zones = [...graph.pcb.zones.values()]
+    .filter((z) => z.layerId === layer)
+    .sort((a, b) => (a.id < b.id ? -1 : 1));
+  if (zones.length > 0) {
+    if (opts.pourClearanceNm === undefined) {
+      throw new Error('gerber export: design has zones — pass pourClearanceNm (the deck min_clearance)');
+    }
+    const region = (ring: readonly Vec[]): void => {
+      const [first, ...rest] = ring;
+      if (!first) return;
+      lines.push('G36*', `${xy(first)}D02*`);
+      for (const p of rest) lines.push(`${xy(p)}D01*`);
+      lines.push(`${xy(first)}D01*`, 'G37*');
+    };
+    const pours = zones.map((z) =>
+      computePour(z, graph, parts as unknown as FootprintSource, opts.pourClearanceNm ?? 0),
+    );
+    for (const pour of pours) {
+      for (const poly of pour.polygons) region(poly.outer);
+    }
+    const holes = pours.flatMap((pour) => pour.polygons.flatMap((poly) => poly.holes));
+    if (holes.length > 0) {
+      lines.push('%LPC*%');
+      for (const hole of holes) region(hole);
+      lines.push('%LPD*%');
+    }
   }
 
   let current: number | undefined;

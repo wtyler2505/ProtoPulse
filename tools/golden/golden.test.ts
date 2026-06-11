@@ -20,6 +20,8 @@ import { z } from 'zod';
  * update-golden.ts and review it.
  */
 const GOLDEN_DATE = '2026-01-01T00:00:00.000Z';
+/** content/decks/jlcpcb-2layer-standard.json min_clearance_nm — zones freeze their pours at this. */
+const JLC_CLEARANCE_NM = 127_000;
 const fixturesDir = join(import.meta.dirname, 'fixtures');
 const names = readdirSync(fixturesDir, { withFileTypes: true })
   .filter((d) => d.isDirectory())
@@ -27,8 +29,8 @@ const names = readdirSync(fixturesDir, { withFileTypes: true })
   .sort();
 
 describe('golden exports', () => {
-  it('has the four fixtures', () => {
-    expect(names).toEqual(['led-resistor', 'probe-input-protection', 'routed-led', 'traffic-light-555']);
+  it('has the five fixtures', () => {
+    expect(names).toEqual(['led-resistor', 'probe-input-protection', 'routed-led', 'traffic-light-555', 'zoned-led']);
   });
 
   for (const name of names) {
@@ -61,12 +63,12 @@ describe('golden exports', () => {
       if (existsSync(join(dir, 'expected.F.Cu.gbr'))) {
         it('F.Cu Gerber matches byte-exactly', () => {
           const expected = readFileSync(join(dir, 'expected.F.Cu.gbr'), 'utf8');
-          expect(exportGerberLayer(result.graph, seedPartDb(), 'F.Cu', { date: GOLDEN_DATE })).toBe(expected);
+          expect(exportGerberLayer(result.graph, seedPartDb(), 'F.Cu', { date: GOLDEN_DATE, pourClearanceNm: JLC_CLEARANCE_NM })).toBe(expected);
         });
 
         it('B.Cu Gerber matches byte-exactly', () => {
           const expected = readFileSync(join(dir, 'expected.B.Cu.gbr'), 'utf8');
-          expect(exportGerberLayer(result.graph, seedPartDb(), 'B.Cu', { date: GOLDEN_DATE })).toBe(expected);
+          expect(exportGerberLayer(result.graph, seedPartDb(), 'B.Cu', { date: GOLDEN_DATE, pourClearanceNm: JLC_CLEARANCE_NM })).toBe(expected);
         });
 
         it('Excellon drill file matches byte-exactly', () => {

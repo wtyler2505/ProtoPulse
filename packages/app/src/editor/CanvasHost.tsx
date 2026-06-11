@@ -23,7 +23,8 @@ import {
   pcbFlipSelectionOps,
   PcbSelectTool,
   PcbTraceTool,
-  PcbViaTool
+  PcbViaTool,
+  PcbZoneTool
 
 } from '../pcb/tools.js';
 import { asOpBodies, DEFAULT_TRACE_WIDTH_NM } from '../pcb/types.js';
@@ -112,7 +113,10 @@ export function CanvasHost() {
     let graph: DesignGraph = getGraph(useSession.getState());
     let graphKey = '';
     let lastBranch = useSession.getState().branch;
-    const scene = isPcb ? buildPcbScene(graph, partDb) : buildScene(graph, partDb);
+    let lastClearance: number | null = isPcb ? routingClearanceNm() : null;
+    const scene = isPcb
+      ? buildPcbScene(graph, partDb, routingClearanceNm())
+      : buildScene(graph, partDb);
     pickIndex.rebuild(scene);
 
     let ratsnest: Float32Array | null = isPcb
@@ -222,6 +226,7 @@ export function CanvasHost() {
           tool = new PcbPlaceTool(ui.pcbPlaceComponentId);
         } else if (ui.pcbTool === 'trace') tool = new PcbTraceTool();
         else if (ui.pcbTool === 'via') tool = new PcbViaTool();
+        else if (ui.pcbTool === 'zone') tool = new PcbZoneTool();
         else tool = new PcbSelectTool();
       } else {
         if (ui.tool === 'place' && ui.placePartId) tool = new PlaceTool(ui.placePartId);
@@ -385,12 +390,25 @@ export function CanvasHost() {
       // pcb path falls back to a full rebuild there.
       const session = useSession.getState();
       const replay = session.replayIndex === null ? 'live' : String(session.replayIndex);
+      // The deck clearance arrives asynchronously after the scene is
+      // built — when it lands, zones gain their pours: full rebuild.
+      const clearanceNow = isPcb ? routingClearanceNm() : null;
+      if (isPcb && clearanceNow !== lastClearance) {
+        lastClearance = clearanceNow;
+        rebuildPcbScene(scene, graph, partDb, clearanceNow);
+        pickIndex.rebuild(scene);
+        overlayVersion++;
+      }
+
       const key = `${session.branch}@${String(session.opsVersion)}#${replay}`;
       if (key !== graphKey) {
         const next = getGraph(session);
         if (isPcb) {
-          if (session.branch === lastBranch) syncPcbScene(scene, diff(graph, next), next, partDb);
-          else rebuildPcbScene(scene, next, partDb);
+          if (session.branch === lastBranch) {
+            syncPcbScene(scene, diff(graph, next), next, partDb, routingClearanceNm());
+          } else {
+            rebuildPcbScene(scene, next, partDb, routingClearanceNm());
+          }
           ratsnest = dashedLines(ratsnestSegments(next, pcbViewOf(next), padSource));
           overlayVersion++;
         } else {

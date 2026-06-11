@@ -153,9 +153,33 @@ function probeInputProtection(): OpBody[] {
   ];
 }
 
+/**
+ * routed-led plus a GND zone over the board: the pour carves the LED_A
+ * trace/via/foreign pads at clearance and keeps D1:K (GND) connected.
+ * Freezes the G36/G37 region emission in the Gerber contract.
+ */
+function zonedLed(): OpBody[] {
+  return [
+    ...routedLed(),
+    {
+      kind: 'place_zone',
+      id: 'zone-gnd',
+      netId: 'net-gnd',
+      layerId: 'F.Cu',
+      outline: [
+        { x: 2_000_000, y: -5_000_000 },
+        { x: 18_000_000, y: -5_000_000 },
+        { x: 18_000_000, y: 5_000_000 },
+        { x: 2_000_000, y: 5_000_000 },
+      ],
+    },
+  ];
+}
+
 export const FIXTURES: Record<string, OpEnvelope[]> = {
   'led-resistor': envelopes(ledResistor()),
   'routed-led': envelopes(routedLed()),
+  'zoned-led': envelopes(zonedLed()),
   'traffic-light-555': envelopes(trafficLight555()),
   'probe-input-protection': envelopes(probeInputProtection()),
 };

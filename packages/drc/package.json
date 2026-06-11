@@ -15,6 +15,7 @@
     "@protopulse/graph": "*",
     "@protopulse/parts": "*",
     "flatbush": "^4.4.0",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "polygon-clipping": "^0.15.7"
   }
 }

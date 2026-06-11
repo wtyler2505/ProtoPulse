@@ -266,6 +266,8 @@ export function pcbDeleteSelectionOps(
       ops.push({ kind: 'remove_trace', id });
     } else if (view.vias.has(id)) {
       ops.push({ kind: 'remove_via', id });
+    } else if (view.zones?.has(id)) {
+      ops.push({ kind: 'remove_zone', id });
     }
   }
   return ops;
@@ -631,4 +633,87 @@ export class PcbViaTool {
   }
 }
 
-export type PcbTool = PcbSelectTool | PcbPlaceTool | PcbTraceTool | PcbViaTool;
+// ── Zone tool ────────────────────────────────────────────────────────
+
+/**
+ * Draw a copper zone: the FIRST click must land on a pad with a net
+ * (the zone pours for that net — same seeding rule as the trace tool);
+ * later clicks drop snapped corners; clicking the first corner again
+ * (with ≥3 corners down) closes the polygon and commits place_zone.
+ */
+export class PcbZoneTool {
+  readonly kind = 'pcb-zone';
+  private netId: Uuid | null = null;
+  private corners: Vec[] = [];
+
+  constructor(private readonly makeId: () => Uuid = newUuid) {}
+
+  get drawing(): boolean {
+    return this.netId !== null;
+  }
+
+  pointerDown(pt: Vec, env: PcbToolEnv): PcbToolResult {
+    if (this.netId === null) {
+      const pad = findPadAt(env.graph, env.view, env.parts, pt);
+      if (!pad?.netId) {
+        return { status: 'Zones pour for a net — start by clicking a pad on that net (GND, usually).' };
+      }
+      this.netId = pad.netId;
+      this.corners = [snapPcb(pt)];
+      const name = env.graph.nets.get(pad.netId)?.name ?? pad.netId;
+      return { status: `Zone for net ${name} — click corners; click the first corner again to close.` };
+    }
+
+    const snapped = snapPcb(pt);
+    const first = this.corners[0];
+    const closing =
+      this.corners.length >= 3 &&
+      first !== undefined &&
+      Math.abs(snapped.x - first.x) <= PCB_SNAP_NM &&
+      Math.abs(snapped.y - first.y) <= PCB_SNAP_NM;
+    if (closing) {
+      const netId = this.netId;
+      const outline = [...this.corners];
+      this.netId = null;
+      this.corners = [];
+      return {
+        ops: [{ kind: 'place_zone', id: this.makeId(), netId, layerId: env.activeLayer, outline }],
+        opsLabel: 'place zone',
+        ghost: null,
+        resetTool: true,
+      };
+    }
+    const last = this.corners[this.corners.length - 1];
+    if (last?.x === snapped.x && last.y === snapped.y) return {};
+    this.corners = [...this.corners, snapped];
+    return {};
+  }
+
+  pointerMove(pt: Vec, _env: PcbToolEnv): PcbToolResult {
+    if (this.netId === null) return {};
+    const pts = [...this.corners, snapPcb(pt)];
+    const lines: number[] = [];
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      if (a && b) lines.push(a.x, a.y, b.x, b.y);
+    }
+    // Close-back preview to the first corner once a polygon is possible.
+    const first = pts[0];
+    const tail = pts[pts.length - 1];
+    if (pts.length >= 3 && first && tail) lines.push(tail.x, tail.y, first.x, first.y);
+    return { ghost: Float32Array.from(lines) };
+  }
+
+  pointerUp(): PcbToolResult {
+    return {};
+  }
+
+  cancel(): PcbToolResult {
+    this.netId = null;
+    this.corners = [];
+    return { ghost: null };
+  }
+}
+
+export type PcbTool = PcbSelectTool | PcbPlaceTool | PcbTraceTool | PcbViaTool | PcbZoneTool;

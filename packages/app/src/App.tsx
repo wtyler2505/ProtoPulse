@@ -167,6 +167,14 @@ function Toolbar() {
           </button>
           <button
             type="button"
+            className={pcbTool === 'zone' ? 'active' : ''}
+            title="draw a copper zone: click a pad to pick the net, then corners; click the first corner to close"
+            onClick={() => { setPcbTool('zone'); }}
+          >
+            Zone
+          </button>
+          <button
+            type="button"
             className={`layer-chip ${activeLayer === 'F.Cu' ? 'layer-f' : 'layer-b'}`}
             title="active copper layer — new traces route here"
             onClick={toggleLayer}

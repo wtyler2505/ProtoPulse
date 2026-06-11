@@ -1,0 +1,11 @@
+M48
+; ProtoPulse drill file
+; Created: 2026-01-01T00:00:00.000Z
+METRIC
+T1C0.300
+%
+G90
+G05
+T1
+X10.000Y0.000
+M30

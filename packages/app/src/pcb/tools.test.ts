@@ -12,6 +12,7 @@ import {
   PcbSelectTool,
   PcbTraceTool,
   PcbViaTool,
+  PcbZoneTool,
   resolveTraceEndpoint,
   snapPcb
 } from './tools.js';
@@ -686,5 +687,50 @@ describe('PcbTraceTool — walk and shove modes', () => {
     expect(res.ops).toBeUndefined();
     expect(res.status).toContain('Shove refused');
     expect(tool.routing).toBe(true); // user adjusts and retries
+  });
+});
+
+describe('PcbZoneTool', () => {
+  it('seeds the net from a pad, collects corners, closes on the first corner', () => {
+    const tool = new PcbZoneTool(makeId);
+    const e = env(wiredGraph());
+    // Must start on a pad.
+    expect(tool.pointerDown({ x: 5 * MM, y: 5 * MM }, e).status).toContain('clicking a pad');
+    // Seed on r1 pad 2 (net na, at 1mm,0).
+    tool.pointerDown({ x: 1 * MM, y: 0 }, e);
+    expect(tool.drawing).toBe(true);
+    tool.pointerDown({ x: 9 * MM, y: 0 }, e);
+    tool.pointerDown({ x: 9 * MM, y: 6 * MM }, e);
+    tool.pointerDown({ x: 1 * MM, y: 6 * MM }, e);
+    // Close: click the first corner again.
+    const res = tool.pointerDown({ x: 1 * MM, y: 0 }, e);
+    expect(res.opsLabel).toBe('place zone');
+    expect(res.resetTool).toBe(true);
+    expect(res.ops?.[0]).toMatchObject({
+      kind: 'place_zone',
+      netId: 'na',
+      layerId: 'F.Cu',
+    });
+    if (res.ops?.[0]?.kind !== 'place_zone') throw new Error('expected place_zone');
+    expect(res.ops[0].outline).toHaveLength(4);
+    expect(tool.drawing).toBe(false);
+  });
+
+  it('previews the polygon with a close-back edge; cancel clears', () => {
+    const tool = new PcbZoneTool(makeId);
+    const e = env(wiredGraph());
+    tool.pointerDown({ x: 1 * MM, y: 0 }, e);
+    tool.pointerDown({ x: 9 * MM, y: 0 }, e);
+    const ghost = tool.pointerMove({ x: 9 * MM, y: 6 * MM }, e).ghost;
+    expect(ghost).toBeInstanceOf(Float32Array);
+    expect(ghost!.length).toBe(12); // 2 edges + close-back = 3 segments
+    expect(tool.cancel().ghost).toBeNull();
+    expect(tool.drawing).toBe(false);
+  });
+
+  it('deleting a selected zone emits remove_zone', () => {
+    const withZones = { ...view({}), zones: new Map([['z1', { netId: 'na', layerId: 'F.Cu', outline: [] }]]) };
+    const ops = pcbDeleteSelectionOps(withZones as never, new Set(['z1']));
+    expect(ops).toEqual([{ kind: 'remove_zone', id: 'z1' }]);
   });
 });

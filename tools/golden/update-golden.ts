@@ -15,6 +15,8 @@ import type {DesignBundle} from '@protopulse/graph';
  * intentional — then review the diff like the contract change it is.
  */
 const GOLDEN_DATE = '2026-01-01T00:00:00.000Z';
+/** content/decks/jlcpcb-2layer-standard.json min_clearance_nm — zones freeze their pours at this. */
+const JLC_CLEARANCE_NM = 127_000;
 
 for (const [name, ops] of Object.entries(FIXTURES)) {
   const dir = join(import.meta.dirname, 'fixtures', name);
@@ -30,8 +32,8 @@ for (const [name, ops] of Object.entries(FIXTURES)) {
   // Fab exports only for fixtures that carry PCB content — the
   // schematic-only fixtures keep their existing files byte-identical.
   if (graph.pcb.placements.size > 0 || graph.pcb.traces.size > 0 || graph.pcb.vias.size > 0) {
-    writeFileSync(join(dir, 'expected.F.Cu.gbr'), exportGerberLayer(graph, seedPartDb(), 'F.Cu', { date: GOLDEN_DATE }));
-    writeFileSync(join(dir, 'expected.B.Cu.gbr'), exportGerberLayer(graph, seedPartDb(), 'B.Cu', { date: GOLDEN_DATE }));
+    writeFileSync(join(dir, 'expected.F.Cu.gbr'), exportGerberLayer(graph, seedPartDb(), 'F.Cu', { date: GOLDEN_DATE, pourClearanceNm: JLC_CLEARANCE_NM }));
+    writeFileSync(join(dir, 'expected.B.Cu.gbr'), exportGerberLayer(graph, seedPartDb(), 'B.Cu', { date: GOLDEN_DATE, pourClearanceNm: JLC_CLEARANCE_NM }));
     writeFileSync(join(dir, 'expected.drl'), exportExcellon(graph, seedPartDb(), { date: GOLDEN_DATE }));
     writeFileSync(join(dir, 'expected.pos.csv'), exportPickPlace(graph, seedPartDb()));
   }

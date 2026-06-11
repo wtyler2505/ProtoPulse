@@ -301,6 +301,25 @@ export function threeWayMerge(
       path: t.path.map((p) => ({ ...p })),
     });
   }
+  const oursTouchedZones = new Set([...baseToOurs.pcbView.zonesAdded, ...baseToOurs.pcbView.zonesRemoved]);
+  for (const id of baseToTheirs.pcbView.zonesRemoved) {
+    if (!ours.pcb.zones.has(id) || oursTouchedZones.has(id)) continue;
+    autoOps.push({ kind: 'remove_zone', id });
+  }
+  for (const id of baseToTheirs.pcbView.zonesAdded) {
+    if (oursTouchedZones.has(id)) continue;
+    const zn = theirs.pcb.zones.get(id);
+    if (!zn || !ours.nets.has(zn.netId)) continue;
+    if (ours.pcb.zones.has(id) && !baseToTheirs.pcbView.zonesRemoved.includes(id)) continue;
+    autoOps.push({
+      kind: 'place_zone',
+      id: zn.id,
+      netId: zn.netId,
+      layerId: zn.layerId,
+      outline: zn.outline.map((p) => ({ ...p })),
+      ...(zn.clearanceNm !== undefined ? { clearanceNm: zn.clearanceNm } : {}),
+    });
+  }
   const oursTouchedVias = new Set([...baseToOurs.pcbView.viasAdded, ...baseToOurs.pcbView.viasRemoved]);
   for (const id of baseToTheirs.pcbView.viasRemoved) {
     if (!ours.pcb.vias.has(id) || oursTouchedVias.has(id)) continue;
