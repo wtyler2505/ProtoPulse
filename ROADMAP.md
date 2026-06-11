@@ -158,7 +158,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       (136 conversions, sustained oscillation 1.83-3.20V around the
       2.5V threshold)
 - [ ] WebSerial/WebUSB flashing (needs real hardware to verify)
-- [ ] RP2040 / ESP32 cores; timers 1/2, SPI, TWI, ADC peripherals
+- [x] RP2040 core (landed 2026-06-11): second McuCore, on wokwi's
+      rp2040js — Cortex-M0+ with SIO GPIO (cycle-stamped pin events +
+      external drive), PL011 UART0 both ways, and the SAR ADC wired to
+      the host sampler (12-bit @ 3.3 V; the AVR is 10-bit @ 5 V — each
+      core states its own truth). Tests are hand-assembled Thumb
+      (thumb-asm.ts, the asm.ts sibling) poking real registers. Honest
+      cuts: raw-code entry (no bootrom/UF2), instant ADC conversions,
+      engine-level only — the Firmware panel still drives the AVR
+- [ ] ESP32 core; AVR timers 1/2, SPI, TWI peripherals; Firmware-panel
+      core picker
 
 ## v0.6 — The World 🔨 *(first slice landed early)*
 

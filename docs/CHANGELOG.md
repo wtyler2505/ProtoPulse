@@ -2,6 +2,35 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — RP2040 core: the second MCU
+
+### Added
+- **Rp2040Core** (`@protopulse/emu`): the McuCore contract's second
+  implementation, on wokwi's rp2040js (Cortex-M0+). GPIO pin events
+  cycle-stamped off the real core counter; setPin drives pads (input
+  levels survive reset — bench wiring, not machine state); PL011
+  UART0 both directions; the SAR ADC consults the host sampler at
+  12 bits against 3.3 V (the AVR core is 10-bit @ 5 V — each core
+  states its own architecture's truth, PC in bytes vs words included).
+- **thumb-asm.ts**: hand-assembler for the Thumb-16 subset the tests
+  need (asm.ts's Cortex sibling, encodings from the ARMv6-M ARM) plus
+  loadConst for 32-bit register constants.
+
+### Honest cuts (stated in the adapter)
+- Firmware images are raw Thumb entered at the flash base (no
+  bootrom/boot2/UF2); ADC conversions complete instantly instead of
+  after the silicon's ~2 µs; reset = rebuild (rp2040js has no full
+  power-on reset); engine-level only — the Firmware panel still
+  drives the AVR until a core picker lands.
+
+### Verified
+- 7 tests, all real hand-assembled firmware against real RP2040
+  registers: GP25 blink (cycle-stamped alternation), GP2→GP25 input
+  mirror through SIO+PADS, UART TX, full UART echo (firmware enables
+  the PL011 and echoes a fed byte), ADC start→READY-poll→RESULT→UART
+  round trip through the sampler, reset/firmware-survival, guards.
+  Full test:packages green; full-tree eslint 0 errors.
+
 ## 2026-06-11 — sync relay round 2: persistence + auth
 
 ### Added

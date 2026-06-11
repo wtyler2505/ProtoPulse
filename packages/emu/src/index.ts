@@ -33,6 +33,7 @@ export {
 export { Atmega328pCore, pinIdSchema } from './atmega328p.js';
 export type { Atmega328pOptions } from './atmega328p.js';
 export { parseIntelHex } from './intel-hex.js';
+export { Rp2040Core, RP2040_CLOCK_HZ } from './rp2040.js';
 export type {
   AdcReadRequest,
   AdcSampler,
