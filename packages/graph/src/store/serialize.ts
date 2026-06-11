@@ -33,6 +33,7 @@ export interface GraphSnapshotJson {
   components: unknown[];
   nets: unknown[];
   buses: unknown[];
+  sheets?: unknown[];
   constraints: unknown[];
   schematic: { placements: unknown[]; wires: unknown[] };
   pcb: { placements: unknown[]; traces: unknown[]; vias: unknown[]; zones?: unknown[] };
@@ -46,6 +47,7 @@ export function graphToJson(graph: DesignGraph): GraphSnapshotJson {
     components: [...graph.components.entries()],
     nets: [...graph.nets.entries()],
     buses: [...graph.buses.entries()],
+    sheets: [...graph.sheets.entries()],
     constraints: [...graph.constraints.entries()],
     schematic: {
       placements: [...graph.schematic.placements.entries()],
@@ -68,6 +70,7 @@ export function graphFromJson(json: GraphSnapshotJson): DesignGraph {
     components: new Map(json.components as [string, never][]),
     nets: new Map(json.nets as [string, never][]),
     buses: new Map(json.buses as [string, never][]),
+    sheets: new Map((json.sheets ?? []) as [string, never][]),
     constraints: new Map(json.constraints as [string, never][]),
     schematic: {
       placements: new Map(json.schematic.placements as [string, never][]),

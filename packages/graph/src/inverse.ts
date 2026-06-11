@@ -179,6 +179,64 @@ export function invertOp(before: DesignGraph, op: OpBody): OpBody[] {
     case 'place_zone':
       return [{ kind: 'remove_zone', id: op.id }];
 
+    case 'create_bus':
+      return [{ kind: 'remove_bus', id: op.id }];
+
+    case 'remove_bus': {
+      const bus = before.buses.get(op.id);
+      if (!bus) return [];
+      const out: OpBody[] = [
+        { kind: 'create_bus', id: bus.id, name: bus.name, busKind: bus.kind },
+      ];
+      for (const netId of bus.memberNets) {
+        out.push({ kind: 'assign_to_bus', netId, busId: bus.id });
+      }
+      return out;
+    }
+
+    case 'assign_to_bus': {
+      const net = before.nets.get(op.netId);
+      if (!net) return [];
+      return [{ kind: 'assign_to_bus', netId: op.netId, busId: net.busId ?? null }];
+    }
+
+    case 'add_sheet':
+      return [{ kind: 'remove_sheet', id: op.id }];
+
+    case 'remove_sheet': {
+      const sheet = before.sheets.get(op.id);
+      if (!sheet) return [];
+      const out: OpBody[] = [
+        { kind: 'add_sheet', id: sheet.id, name: sheet.name, parentId: sheet.parentId },
+      ];
+      if (sheet.interface.length > 0) {
+        out.push({
+          kind: 'set_sheet_interface',
+          sheetId: sheet.id,
+          interface: sheet.interface.map((port) => ({ ...port })),
+        });
+      }
+      return out;
+    }
+
+    case 'set_sheet_interface': {
+      const sheet = before.sheets.get(op.sheetId);
+      if (!sheet) return [];
+      return [
+        {
+          kind: 'set_sheet_interface',
+          sheetId: op.sheetId,
+          interface: sheet.interface.map((port) => ({ ...port })),
+        },
+      ];
+    }
+
+    case 'move_to_sheet': {
+      const comp = before.components.get(op.componentId);
+      if (!comp) return [];
+      return [{ kind: 'move_to_sheet', componentId: op.componentId, sheetId: comp.sheetId ?? null }];
+    }
+
     case 'remove_zone': {
       const zone = before.pcb.zones.get(op.id);
       if (!zone) return [];

@@ -42,6 +42,9 @@ export function threeWayMerge(
 ): MergeResult {
   const autoOps: OpBody[] = [];
   const conflicts: MergeConflict[] = [];
+  /** move_to_sheet replays must land AFTER the sheets section creates
+   *  any theirs-added target sheets — collected here, appended there. */
+  const deferredSheetMoves: OpBody[] = [];
   const baseToTheirs = diff(base, theirs);
   const baseToOurs = diff(base, ours);
 
@@ -127,6 +130,13 @@ export function threeWayMerge(
         continue;
       }
       if (oursTouch) continue; // both made the same change
+      if (d.field === 'sheetId') {
+        const target = d.b as Uuid | null;
+        if (target === null || ours.sheets.has(target) || baseToTheirs.sheets.added.includes(target)) {
+          deferredSheetMoves.push({ kind: 'move_to_sheet', componentId: id, sheetId: target });
+        }
+        continue;
+      }
       if (d.field === 'ref') props.ref = d.b as string;
       else if (d.field === 'value') props.value = (d.b as string | undefined) ?? null;
       else if (d.field === 'dnp') props.dnp = d.b as boolean;
@@ -215,6 +225,81 @@ export function threeWayMerge(
     }
     if (!oursRename) autoOps.push({ kind: 'rename_net', netId: id, name: newName });
   }
+
+  // ── Buses & sheets (theirs-only changes replay; ours wins races) ──
+  for (const id of baseToTheirs.buses.added) {
+    if (ours.buses.has(id)) continue;
+    const bus = theirs.buses.get(id);
+    if (!bus) continue;
+    autoOps.push({ kind: 'create_bus', id: bus.id, name: bus.name, busKind: bus.kind });
+    for (const netId of bus.memberNets) {
+      if (ours.nets.has(netId) || autoOpsCreateNet(autoOps, netId)) {
+        autoOps.push({ kind: 'assign_to_bus', netId, busId: bus.id });
+      }
+    }
+  }
+  for (const id of baseToTheirs.buses.removed) {
+    if (!ours.buses.has(id) || baseToOurs.buses.changed.includes(id)) continue;
+    autoOps.push({ kind: 'remove_bus', id });
+  }
+  for (const id of baseToTheirs.buses.changed) {
+    if (!ours.buses.has(id) || baseToOurs.buses.changed.includes(id)) continue;
+    const theirBus = theirs.buses.get(id);
+    const ourBus = ours.buses.get(id);
+    if (!theirBus || !ourBus) continue;
+    for (const netId of theirBus.memberNets) {
+      if (!ourBus.memberNets.includes(netId) && ours.nets.has(netId)) {
+        autoOps.push({ kind: 'assign_to_bus', netId, busId: id });
+      }
+    }
+    for (const netId of ourBus.memberNets) {
+      if (!theirBus.memberNets.includes(netId) && !theirs.nets.has(netId)) continue;
+      if (!theirBus.memberNets.includes(netId)) {
+        autoOps.push({ kind: 'assign_to_bus', netId, busId: null });
+      }
+    }
+  }
+  for (const id of baseToTheirs.sheets.added) {
+    if (ours.sheets.has(id)) continue;
+    const sheet = theirs.sheets.get(id);
+    if (!sheet) continue;
+    if (sheet.parentId !== null && !ours.sheets.has(sheet.parentId) &&
+        !baseToTheirs.sheets.added.includes(sheet.parentId)) {
+      continue; // parent unavailable in ours — skip rather than corrupt
+    }
+    autoOps.push({ kind: 'add_sheet', id: sheet.id, name: sheet.name, parentId: sheet.parentId });
+    if (sheet.interface.length > 0) {
+      const bindable = sheet.interface.filter((port) => ours.nets.has(port.netId));
+      if (bindable.length === sheet.interface.length) {
+        autoOps.push({
+          kind: 'set_sheet_interface',
+          sheetId: sheet.id,
+          interface: sheet.interface.map((port) => ({ ...port })),
+        });
+      }
+    }
+  }
+  for (const id of baseToTheirs.sheets.removed) {
+    if (!ours.sheets.has(id) || baseToOurs.sheets.changed.includes(id)) continue;
+    const hasResidents =
+      [...ours.sheets.values()].some((sub) => sub.parentId === id) ||
+      [...ours.components.values()].some((c) => c.sheetId === id);
+    if (!hasResidents) autoOps.push({ kind: 'remove_sheet', id });
+  }
+  for (const id of baseToTheirs.sheets.changed) {
+    if (!ours.sheets.has(id) || baseToOurs.sheets.changed.includes(id)) continue;
+    const sheet = theirs.sheets.get(id);
+    if (!sheet) continue;
+    if (sheet.interface.every((port) => ours.nets.has(port.netId))) {
+      autoOps.push({
+        kind: 'set_sheet_interface',
+        sheetId: id,
+        interface: sheet.interface.map((port) => ({ ...port })),
+      });
+    }
+  }
+
+  autoOps.push(...deferredSheetMoves);
 
   // ── Constraints ──
   for (const id of baseToTheirs.constraints.added) {

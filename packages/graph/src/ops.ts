@@ -209,6 +209,47 @@ const zPlaceZone = z.object({
 });
 const zRemoveZone = z.object({ kind: z.literal('remove_zone'), id: zUuid });
 
+// ── Buses & sheets (Vol II A.5; remove ops added for inverse closure) ─
+
+const zBusKind = z.enum(['SPI', 'I2C', 'UART', 'USB', 'CAN', 'PWR', 'GPIO', 'custom']);
+const zCreateBus = z.object({
+  kind: z.literal('create_bus'),
+  id: zUuid,
+  name: z.string().min(1),
+  busKind: zBusKind,
+});
+const zRemoveBus = z.object({ kind: z.literal('remove_bus'), id: zUuid });
+const zAssignToBus = z.object({
+  kind: z.literal('assign_to_bus'),
+  netId: zUuid,
+  /** null detaches the net from its bus. */
+  busId: zUuid.nullable(),
+});
+
+const zSheetPort = z.object({
+  name: z.string().min(1),
+  direction: z.enum(['in', 'out', 'inout']),
+  netId: zUuid,
+});
+const zAddSheet = z.object({
+  kind: z.literal('add_sheet'),
+  id: zUuid,
+  name: z.string().min(1),
+  parentId: zUuid.nullable(),
+});
+const zRemoveSheet = z.object({ kind: z.literal('remove_sheet'), id: zUuid });
+const zSetSheetInterface = z.object({
+  kind: z.literal('set_sheet_interface'),
+  sheetId: zUuid,
+  interface: z.array(zSheetPort),
+});
+const zMoveToSheet = z.object({
+  kind: z.literal('move_to_sheet'),
+  componentId: zUuid,
+  /** null moves the component back to the root sheet. */
+  sheetId: zUuid.nullable(),
+});
+
 // ── Meta ops ─────────────────────────────────────────────────────────
 
 const zCheckpoint = z.object({ kind: z.literal('checkpoint'), label: z.string() });
@@ -247,6 +288,13 @@ export type OpBody =
   | z.infer<typeof zRemoveVia>
   | z.infer<typeof zPlaceZone>
   | z.infer<typeof zRemoveZone>
+  | z.infer<typeof zCreateBus>
+  | z.infer<typeof zRemoveBus>
+  | z.infer<typeof zAssignToBus>
+  | z.infer<typeof zAddSheet>
+  | z.infer<typeof zRemoveSheet>
+  | z.infer<typeof zSetSheetInterface>
+  | z.infer<typeof zMoveToSheet>
   | z.infer<typeof zCheckpoint>
   | z.infer<typeof zAnnotate>
   | z.infer<typeof zSetDesignMeta>
@@ -288,6 +336,13 @@ export const opBodySchema: z.ZodType<OpBody> = z.union([
     zRemoveVia,
     zPlaceZone,
     zRemoveZone,
+    zCreateBus,
+    zRemoveBus,
+    zAssignToBus,
+    zAddSheet,
+    zRemoveSheet,
+    zSetSheetInterface,
+    zMoveToSheet,
     zCheckpoint,
     zAnnotate,
     zSetDesignMeta,

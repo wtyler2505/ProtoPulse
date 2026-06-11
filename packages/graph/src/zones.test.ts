@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { applyOp } from './apply.js';
 import { diff } from './diff.js';
+import { validateGraph } from './invariants.js';
 import { invertOp } from './inverse.js';
 import { materialize } from './materialize.js';
 import { threeWayMerge } from './merge.js';
-import { validateGraph } from './invariants.js';
 import { graphFromJson, graphToJson } from './store/serialize.js';
-import { cloneGraph } from './types.js';
 import { buildGraph, envelopes, FIX, ledCircuitOps } from './test-helpers.js';
+import { cloneGraph } from './types.js';
 
 import type { OpBody } from './ops.js';
 import type { DesignGraph, Vec } from './types.js';
