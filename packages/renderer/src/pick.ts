@@ -26,10 +26,11 @@ const KIND_RANK: Record<SceneNode['kind'], number> = {
   wire: 2,
   trace: 2,
   zone: 3, // everything else wins — zones are huge and easy to hit
+  outline: 4, // the board edge is context, not a selection target
 };
 
 /** Kinds whose AABB is mostly empty — require proximity to a segment. */
-const LINEAR_KINDS = new Set<SceneNode['kind']>(['wire', 'trace']);
+const LINEAR_KINDS = new Set<SceneNode['kind']>(['wire', 'trace', 'outline']);
 
 function area(b: Bounds): number {
   return Math.max(0, b.maxX - b.minX) * Math.max(0, b.maxY - b.minY);

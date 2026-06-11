@@ -89,6 +89,8 @@ export interface PcbViewLike {
   vias: ReadonlyMap<Uuid, PcbViaLike>;
   /** Optional so pinned-contract mocks predating zones stay valid. */
   zones?: ReadonlyMap<Uuid, Zone>;
+  /** Board outline (Edge.Cuts); optional for the same mock reason. */
+  outline?: readonly Vec[];
 }
 
 // ── House palette (copper layers) ────────────────────────────────────
@@ -443,7 +445,7 @@ export function pcbViewOf(graph: DesignGraph): PcbViewLike {
   if (!raw || typeof raw !== 'object') {
     return { placements: new Map(), traces: new Map(), vias: new Map() };
   }
-  const view = raw as { placements?: unknown; traces?: unknown; vias?: unknown; zones?: unknown };
+  const view = raw as { placements?: unknown; traces?: unknown; vias?: unknown; zones?: unknown; outline?: unknown };
   return {
     placements:
       view.placements instanceof Map
@@ -452,6 +454,7 @@ export function pcbViewOf(graph: DesignGraph): PcbViewLike {
     traces: toIdMap<PcbTraceLike>(view.traces, 'trace'),
     vias: toIdMap<PcbViaLike>(view.vias, 'via'),
     zones: view.zones instanceof Map ? (view.zones as ReadonlyMap<Uuid, Zone>) : new Map<Uuid, Zone>(),
+    ...(Array.isArray(view.outline) ? { outline: view.outline as readonly Vec[] } : {}),
   };
 }
 
@@ -511,9 +514,32 @@ export function buildZoneNode(
   };
 }
 
+export const OUTLINE_NODE_ID = '__board-outline__';
+
+/** The board outline: closed yellow-ish edge lines, never filled and
+ *  never a selection target — context, not copper. */
+export function buildOutlineNode(outline: readonly Vec[]): SceneNode {
+  const lines: number[] = [];
+  for (let i = 0; i < outline.length; i++) {
+    const a = outline[i];
+    const b = outline[(i + 1) % outline.length];
+    if (a && b) lines.push(a.x, a.y, b.x, b.y);
+  }
+  const lineArr = Float32Array.from(lines);
+  return {
+    id: OUTLINE_NODE_ID,
+    kind: 'outline',
+    lines: lineArr,
+    texts: [],
+    color: [0.85, 0.78, 0.35, 1.0],
+    bounds: boundsOfLines(lineArr) ?? { minX: 0, minY: 0, maxX: 0, maxY: 0 },
+  };
+}
+
 function buildPcbNodes(graph: DesignGraph, parts: PartDb, pourClearanceNm: number | null = null): SceneNode[] {
   const view = pcbViewOf(graph);
   const nodes: SceneNode[] = [];
+  if (view.outline && view.outline.length >= 3) nodes.push(buildOutlineNode(view.outline));
   for (const [zoneId, zone] of view.zones ?? []) {
     nodes.push(buildZoneNode(zoneId, zone, graph, parts, pourClearanceNm));
   }
@@ -607,6 +633,15 @@ export function syncPcbScene(
   pourClearanceNm: number | null = null,
 ): void {
   const view = pcbViewOf(graph);
+
+  // ── Board outline ──
+  if (delta.pcbView.outlineChanged) {
+    if (view.outline && view.outline.length >= 3) {
+      scene.update(buildOutlineNode(view.outline));
+    } else {
+      scene.remove(OUTLINE_NODE_ID);
+    }
+  }
 
   // ── Zones ──
   // Pours depend on EVERY piece of copper on their layer, so any pcb

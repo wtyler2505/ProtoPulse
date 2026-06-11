@@ -21,6 +21,7 @@ import {
   PcbPlaceTool,
   pcbDeleteSelectionOps,
   pcbFlipSelectionOps,
+  PcbOutlineTool,
   PcbSelectTool,
   PcbTraceTool,
   PcbViaTool,
@@ -227,6 +228,7 @@ export function CanvasHost() {
         } else if (ui.pcbTool === 'trace') tool = new PcbTraceTool();
         else if (ui.pcbTool === 'via') tool = new PcbViaTool();
         else if (ui.pcbTool === 'zone') tool = new PcbZoneTool();
+        else if (ui.pcbTool === 'outline') tool = new PcbOutlineTool();
         else tool = new PcbSelectTool();
       } else {
         if (ui.tool === 'place' && ui.placePartId) tool = new PlaceTool(ui.placePartId);

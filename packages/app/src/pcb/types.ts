@@ -73,7 +73,8 @@ export type PcbOpBody =
       outline: Vec[];
       clearanceNm?: number;
     }
-  | { kind: 'remove_zone'; id: Uuid };
+  | { kind: 'remove_zone'; id: Uuid }
+  | { kind: 'set_board_outline'; outline: Vec[] | null };
 
 /** The single sanctioned cast from pinned pcb ops to the graph op union. */
 export function asOpBodies(ops: PcbOpBody[]): OpBody[] {

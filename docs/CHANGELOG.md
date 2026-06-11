@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-11 — outline UI + the copper-to-edge check
+
+### Added
+- **Outline tool** in the PCB toolbar: click corners anywhere, click
+  the first corner again to close — commits set_board_outline,
+  replacing any previous outline (singleton semantics, one undoable
+  op).
+- **Outline rendering**: the board edge draws as yellow Edge.Cuts
+  lines under everything; it is context, never a selection target
+  (worst pick rank, segment-proximity hit test).
+- **DRC-EDGE-CLEARANCE**: with an outline present, every copper item
+  must sit INSIDE it and keep the deck's copper_to_edge_nm from every
+  edge; items outside the board are called out as such. Maps to the
+  panelization wiki article (breakaway stress near edges). No
+  outline → no findings: a schematic-stage design is not in
+  violation.
+
+### Verified
+- 2 DRC tests (clean inside / no-outline silence; edge-hugging trace
+  + outside via both flagged as errors). Browser-verified end to end:
+  outline renders, the toolbar tool exists, and the DRC panel reports
+  "trace t-edge is 25000nm from the board edge — the deck requires
+  300000nm" against the real JLC deck. Full test:packages green;
+  eslint 0 errors.
+
 ## 2026-06-11 — board outline in the core
 
 ### Added

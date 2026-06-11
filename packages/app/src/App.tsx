@@ -179,6 +179,14 @@ function Toolbar() {
           </button>
           <button
             type="button"
+            className={pcbTool === 'outline' ? 'active' : ''}
+            title="draw the board outline (Edge.Cuts): click corners, click the first corner to close"
+            onClick={() => { setPcbTool('outline'); }}
+          >
+            Outline
+          </button>
+          <button
+            type="button"
             className={`layer-chip ${activeLayer === 'F.Cu' ? 'layer-f' : 'layer-b'}`}
             title="active copper layer — new traces route here"
             onClick={toggleLayer}
