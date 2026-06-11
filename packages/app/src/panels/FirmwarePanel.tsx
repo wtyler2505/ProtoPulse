@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 
 import { sharedEmuSession } from '../emu/runner.js';
 import { buildPinTraces, traceToPlotXY } from '../emu/timeline.js';
+import { CORE_KINDS } from '../emu/types.js';
 import { Plot, traceColor } from '../sim/Plot.js';
 import { engNotation } from '../sim/scales.js';
 import { useUi } from '../state/ui.js';
 
+import type { CoreKind } from '../emu/types.js';
 import type { PlotTrace } from '../sim/Plot.js';
 
 /**
@@ -44,6 +46,7 @@ export function FirmwarePanel() {
   const flashStatus = useUi((s) => s.flashStatus);
 
   const [hexText, setHexText] = useState('');
+  const [coreKind, setCoreKind] = useState<CoreKind>(session.coreKind);
   const [loadInfo, setLoadInfo] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -79,10 +82,10 @@ export function FirmwarePanel() {
 
   const onLoad = async () => {
     setRunning(false);
-    const out = await session.load(hexText);
+    const out = await session.load(hexText, coreKind);
     if (out.ok) {
       setLoadError(null);
-      setLoadInfo(`Firmware loaded — ATmega328P @ ${engNotation(out.clockHz)}Hz`);
+      setLoadInfo(`Firmware loaded — ${CORE_KINDS[coreKind].label.split(' (')[0] ?? coreKind} @ ${engNotation(out.clockHz)}Hz`);
       setVisiblePins(null);
     } else {
       setLoadInfo(null);
@@ -157,6 +160,22 @@ export function FirmwarePanel() {
           setHexText(e.target.value);
         }}
       />
+      <label className="sim-field">
+        <span className="sim-field-label">core</span>
+        <select
+          value={coreKind}
+          aria-label="MCU core"
+          onChange={(e) => {
+            setCoreKind(e.target.value as CoreKind);
+          }}
+        >
+          {Object.entries(CORE_KINDS).map(([id, info]) => (
+            <option key={id} value={id}>
+              {info.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <label className="firmware-file">
         <span className="sim-field-label">.hex file</span>
         <input

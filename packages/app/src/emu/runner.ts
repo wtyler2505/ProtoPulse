@@ -1,4 +1,6 @@
-import type { DigitalLevel, EmuModule, McuCore, McuInspection, PinEvent } from './types.js';
+import { CORE_KINDS } from './types.js';
+
+import type { CoreKind, DigitalLevel, EmuModule, McuCore, McuInspection, PinEvent } from './types.js';
 
 /**
  * Firmware emulation session: wraps the LAZY '@protopulse/emu' import
@@ -73,9 +75,12 @@ export interface EmuSessionOpts {
 }
 
 export interface EmuSession {
-  /** Lazily boots the core (once) and loads Intel-HEX firmware.
-   *  Errors come back as values — bad hex never throws into the panel. */
-  load(hex: Uint8Array | string): Promise<EmuLoadOutcome>;
+  /** Lazily boots the core (rebuilt when `coreKind` changes) and loads
+   *  Intel-HEX firmware. Errors come back as values — bad hex never
+   *  throws into the panel. Default core: ATmega328P. */
+  load(hex: Uint8Array | string, coreKind?: CoreKind): Promise<EmuLoadOutcome>;
+  /** The core kind the session is currently running. */
+  readonly coreKind: CoreKind;
   /** One animation frame of emulation; no-op before a successful load
    *  and while suspended. */
   runFrame(): EmuFrameResult;
@@ -114,6 +119,7 @@ export function createEmuSession(opts: EmuSessionOpts = {}): EmuSession {
 
   let modulePromise: Promise<Partial<EmuModule>> | null = null;
   let core: McuCore | null = null;
+  let kind: CoreKind = 'atmega328p';
   let loaded = false;
   let suspended = false;
   let cycles = 0;
@@ -144,16 +150,19 @@ export function createEmuSession(opts: EmuSessionOpts = {}): EmuSession {
     serial = appendBounded(serial, decodeAscii(bytes), UART_CAP);
   };
 
-  const load = async (hex: Uint8Array | string): Promise<EmuLoadOutcome> => {
+  const load = async (hex: Uint8Array | string, coreKind: CoreKind = 'atmega328p'): Promise<EmuLoadOutcome> => {
     try {
-      if (core === null) {
+      if (core === null || coreKind !== kind) {
         const mod = await loadModule();
-        if (typeof mod.Atmega328pCore !== 'function') {
+        const ctorName = CORE_KINDS[coreKind].ctor;
+        const Ctor = mod[ctorName];
+        if (typeof Ctor !== 'function') {
           throw new Error(
-            'MCU emulation not available yet — @protopulse/emu is not in this build',
+            `MCU emulation not available yet — @protopulse/emu has no ${ctorName} in this build`,
           );
         }
-        core = new mod.Atmega328pCore();
+        core = new Ctor();
+        kind = coreKind;
       }
       core.reset();
       core.loadFirmware(hex);
@@ -213,6 +222,9 @@ export function createEmuSession(opts: EmuSessionOpts = {}): EmuSession {
     reset,
     get loaded() {
       return loaded;
+    },
+    get coreKind() {
+      return kind;
     },
     get cycles() {
       return cycles;
