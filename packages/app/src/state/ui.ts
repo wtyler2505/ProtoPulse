@@ -14,7 +14,7 @@ import type { Vec } from '@protopulse/graph';
 
 export type ToolId = 'select' | 'wire' | 'place';
 export type ViewMode = 'schematic' | 'pcb';
-export type PcbToolId = 'select' | 'trace' | 'via' | 'zone' | 'place';
+export type PcbToolId = 'select' | 'trace' | 'via' | 'zone' | 'outline' | 'place';
 export type PcbLayer = 'F.Cu' | 'B.Cu';
 /** Trace tool routing mode: hand octilinear, walkaround autoroute, or
  *  shove (the new trace goes straight; blocking traces detour). */

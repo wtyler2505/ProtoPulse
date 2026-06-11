@@ -345,3 +345,53 @@ describe('runDrc — zones', () => {
     expect(found).not.toContain('DRC-ZONE-ISOLATED');
   });
 });
+
+describe('runDrc — board edge', () => {
+  const OUTLINE: OpBody = {
+    kind: 'set_board_outline',
+    outline: [
+      { x: 0, y: 0 },
+      { x: 20_000_000, y: 0 },
+      { x: 20_000_000, y: 12_000_000 },
+      { x: 0, y: 12_000_000 },
+    ],
+  };
+
+  it('no outline → no edge findings; copper inside at distance is clean', () => {
+    const base: OpBody[] = [
+      { kind: 'add_component', id: 'ra', ref: 'R1', partId: 'core:resistor', partRev: 1 },
+      { kind: 'connect', port: 'ra:1', newNetId: 'n1' },
+      {
+        kind: 'route_trace', id: 't1', netId: 'n1', layerId: 'F.Cu', widthNm: 250_000,
+        path: [{ x: 5_000_000, y: 6_000_000 }, { x: 15_000_000, y: 6_000_000 }],
+      },
+    ];
+    const without = runDrc(graphOf(base), parts, deck);
+    expect(without.some((f) => f.code === 'DRC-EDGE-CLEARANCE')).toBe(false);
+    const inside = runDrc(graphOf([...base, OUTLINE]), parts, deck);
+    expect(inside.some((f) => f.code === 'DRC-EDGE-CLEARANCE')).toBe(false);
+  });
+
+  it('flags a trace hugging the edge and a via outside the board', () => {
+    const ops: OpBody[] = [
+      { kind: 'add_component', id: 'ra', ref: 'R1', partId: 'core:resistor', partRev: 1 },
+      { kind: 'connect', port: 'ra:1', newNetId: 'n1' },
+      OUTLINE,
+      // Centerline 150k from the y=0 edge; copper edge at 25k < 300k rule.
+      {
+        kind: 'route_trace', id: 't-edge', netId: 'n1', layerId: 'F.Cu', widthNm: 250_000,
+        path: [{ x: 5_000_000, y: 150_000 }, { x: 15_000_000, y: 150_000 }],
+      },
+      // Entirely outside the outline.
+      {
+        kind: 'place_via', id: 'v-out', netId: 'n1', at: { x: 25_000_000, y: 6_000_000 },
+        drillNm: 300_000, padNm: 600_000, span: ['F.Cu', 'B.Cu'],
+      },
+    ];
+    const findings = runDrc(graphOf(ops), parts, deck);
+    const edge = findings.filter((f) => f.code === 'DRC-EDGE-CLEARANCE');
+    expect(edge.some((f) => f.message.includes('t-edge'))).toBe(true);
+    expect(edge.some((f) => f.message.includes('v-out'))).toBe(true);
+    expect(edge.every((f) => f.severity === 'error')).toBe(true);
+  });
+});

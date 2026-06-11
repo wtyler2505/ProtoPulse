@@ -442,12 +442,61 @@ function ruleZones(ctx: DrcCtx): Finding[] {
   return out;
 }
 
+/** Copper must stay copper_to_edge_nm away from the board outline.
+ *  Runs only when an outline exists — a design without one is still at
+ *  the schematic stage, not in violation. Two tests per copper item: a
+ *  representative point must be INSIDE the outline at all, and the
+ *  shape must keep the deck's distance from every outline edge. */
+function ruleEdgeClearance(ctx: DrcCtx): Finding[] {
+  const outline = ctx.graph.pcb.outline;
+  if (!outline || outline.length < 3) return [];
+  const out: Finding[] = [];
+  const edges: { a: Vec; b: Vec }[] = outline.map((a, i) => ({
+    a,
+    b: outline[(i + 1) % outline.length] ?? a,
+  }));
+  for (const item of ctx.items) {
+    const min = ruleFor(ctx, item.netId, 'copper_to_edge_nm');
+    const center =
+      item.shape.kind === 'rect'
+        ? item.shape.rect.at
+        : {
+            x: (item.shape.a.x + item.shape.b.x) / 2,
+            y: (item.shape.a.y + item.shape.b.y) / 2,
+          };
+    if (!pointInPolygon(center, outline)) {
+      out.push({
+        severity: 'error',
+        code: 'DRC-EDGE-CLEARANCE',
+        message: `${item.label} sits OUTSIDE the board outline`,
+        anchors: item.netId === null ? [] : [netAnchor(item.netId)],
+      });
+      continue;
+    }
+    for (const edge of edges) {
+      const gap = copperGap(item.shape, { kind: 'capsule', a: edge.a, b: edge.b, r: 0 });
+      if (gap < min) {
+        // One finding per item — the nearest-edge detail isn't worth N dupes.
+        out.push({
+          severity: 'error',
+          code: 'DRC-EDGE-CLEARANCE',
+          message: `${item.label} is ${String(Math.max(0, Math.round(gap)))}nm from the board edge — the deck requires ${String(min)}nm`,
+          anchors: item.netId === null ? [] : [netAnchor(item.netId)],
+        });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
 const RULES: ((ctx: DrcCtx) => Finding[])[] = [
   ruleTraceWidth,
   ruleViaGeometry,
   ruleClearance,
   ruleUnrouted,
   ruleZones,
+  ruleEdgeClearance,
 ];
 
 export function runDrc(graph: DesignGraph, parts: PartDb, deck: Deck): Finding[] {

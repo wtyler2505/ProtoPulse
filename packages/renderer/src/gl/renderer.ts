@@ -256,6 +256,7 @@ export class WebGL2Renderer {
     // Line-ish geometry first so bodies draw on top (wires under symbols;
     // traces under vias under footprints).
     const drawRank: Record<SceneNode['kind'], number> = {
+      outline: -2,
       zone: -1,
       wire: 0,
       trace: 0,

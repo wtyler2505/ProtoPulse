@@ -174,8 +174,13 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       null when no outline — honest absence). Substrate-first like
       buses+sheets: outline drawing tool, renderer display, and the
       DRC copper-to-edge check are the open surfaces
-- [ ] Outline UI (draw/edit tool, renderer display) + DRC
-      copper-to-edge check (the deck rule finally has an edge)
+- [x] Outline UI + DRC copper-to-edge (landed 2026-06-11): Outline
+      toolbar tool (click corners, close on the first corner —
+      replaces the previous outline, singleton semantics), yellow
+      Edge.Cuts render in the PCB scene (context, never a selection
+      target), and DRC-EDGE-CLEARANCE — copper must sit INSIDE the
+      outline and keep the deck's copper_to_edge_nm from every edge.
+      Browser-verified end to end against the JLC deck
 - [ ] Panelization (outline substrate now exists)
 
 ## v0.5 — The Bridge 🔨

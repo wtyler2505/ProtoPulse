@@ -716,4 +716,71 @@ export class PcbZoneTool {
   }
 }
 
-export type PcbTool = PcbSelectTool | PcbPlaceTool | PcbTraceTool | PcbViaTool | PcbZoneTool;
+/**
+ * Draw the board outline (Edge.Cuts): click corners anywhere on the
+ * canvas; clicking the first corner again (with ≥3 corners down)
+ * closes the polygon and commits set_board_outline — replacing any
+ * existing outline (it's a singleton; the op is its own patch).
+ */
+export class PcbOutlineTool {
+  readonly kind = 'pcb-outline';
+  private corners: Vec[] = [];
+
+  get drawing(): boolean {
+    return this.corners.length > 0;
+  }
+
+  pointerDown(pt: Vec, _env: PcbToolEnv): PcbToolResult {
+    const snapped = snapPcb(pt);
+    if (this.corners.length === 0) {
+      this.corners = [snapped];
+      return { status: 'Board outline — click corners; click the first corner again to close.' };
+    }
+    const first = this.corners[0];
+    const closing =
+      this.corners.length >= 3 &&
+      first !== undefined &&
+      Math.abs(snapped.x - first.x) <= PCB_SNAP_NM &&
+      Math.abs(snapped.y - first.y) <= PCB_SNAP_NM;
+    if (closing) {
+      const outline = [...this.corners];
+      this.corners = [];
+      return {
+        ops: [{ kind: 'set_board_outline', outline }],
+        opsLabel: 'set board outline',
+        ghost: null,
+        resetTool: true,
+      };
+    }
+    const last = this.corners[this.corners.length - 1];
+    if (last?.x === snapped.x && last.y === snapped.y) return {};
+    this.corners = [...this.corners, snapped];
+    return {};
+  }
+
+  pointerMove(pt: Vec, _env: PcbToolEnv): PcbToolResult {
+    if (this.corners.length === 0) return {};
+    const pts = [...this.corners, snapPcb(pt)];
+    const lines: number[] = [];
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      if (a && b) lines.push(a.x, a.y, b.x, b.y);
+    }
+    const first = pts[0];
+    const tail = pts[pts.length - 1];
+    if (pts.length >= 3 && first && tail) lines.push(tail.x, tail.y, first.x, first.y);
+    return { ghost: Float32Array.from(lines) };
+  }
+
+  pointerUp(): PcbToolResult {
+    return {};
+  }
+
+  cancel(): PcbToolResult {
+    this.corners = [];
+    return { ghost: null };
+  }
+}
+
+export type PcbTool = PcbSelectTool | PcbPlaceTool | PcbTraceTool | PcbViaTool | PcbZoneTool | PcbOutlineTool;
