@@ -224,6 +224,24 @@ export function importLegacy(input: unknown, designName?: string): ImportOutcome
   >();
   const noteOnce = new Set<string>();
 
+  // Legacy DBs have no unique constraint on reference designators, and
+  // a duplicate ref would be rejected by the engine ('ref designator
+  // already in use'), cascading into a broken bundle. Uniquify with a
+  // visible suffix instead — and say so.
+  const usedRefs = new Set<string>();
+  const uniqueRef = (ref: string): string => {
+    if (!usedRefs.has(ref)) {
+      usedRefs.add(ref);
+      return ref;
+    }
+    let n = 2;
+    while (usedRefs.has(`${ref}.${String(n)}`)) n += 1;
+    const renamed = `${ref}.${String(n)}`;
+    usedRefs.add(renamed);
+    report.notes.push(`duplicate reference designator ${ref} in the legacy data — renamed to ${renamed}`);
+    return renamed;
+  };
+
   // Components, values, placements — refdes order keeps output stable.
   const instances = [...design.instances].sort((a, b) =>
     a.referenceDesignator.localeCompare(b.referenceDesignator, undefined, { numeric: true }),
@@ -255,7 +273,7 @@ export function importLegacy(input: unknown, designName?: string): ImportOutcome
     ops.push({
       kind: 'add_component',
       id: componentId,
-      ref: inst.referenceDesignator,
+      ref: uniqueRef(inst.referenceDesignator),
       partId: match.partId,
       partRev: 1,
     });

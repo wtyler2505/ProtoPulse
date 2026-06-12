@@ -2,8 +2,16 @@
  * Tauri Desktop API Bridge
  *
  * Drop-in replacement for the Electron preload API (ElectronAPI interface).
- * Uses Tauri v2 JS bindings (@tauri-apps/api + plugins) to provide identical
- * functionality: file dialogs, filesystem I/O, process spawning, menu events.
+ * Uses Tauri v2 JS bindings (@tauri-apps/api + plugins) plus the generated
+ * tauri-specta bindings (`@/lib/bindings`) for custom Rust commands: file
+ * dialogs, filesystem I/O, app info, menu events.
+ *
+ * Phase 2.1 (Native Authority): `spawnProcess` was REMOVED from this bridge.
+ * The backing `spawn_process(command, args)` Rust command was a generic
+ * process primitive (full RCE from the webview) and is excluded from the
+ * `AppManifest::commands` allowlist in src-tauri/build.rs. Typed, scoped
+ * replacements (e.g. arduino_* commands) arrive per
+ * docs/decisions/2026-05-12-adr-arduino-typed-commands.md.
  *
  * Usage:
  *   import { getDesktopAPI, isTauri } from '@/lib/tauri-api';
@@ -11,11 +19,22 @@
  *   if (api) { await api.writeFile('/tmp/out.txt', data); }
  */
 
-import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { save as saveDialog, open as openDialog } from '@tauri-apps/plugin-dialog';
+import { commands } from '@/lib/bindings';
+
+/**
+ * Unwrap a tauri-specta `typedError` result into a resolved value or a
+ * thrown Error, matching the plain-promise DesktopAPI/ElectronAPI contract.
+ */
+function unwrap<T>(result: { status: 'ok'; data: T } | { status: 'error'; error: string }): T {
+  if (result.status === 'error') {
+    throw new Error(result.error);
+  }
+  return result.data;
+}
 
 // ---------------------------------------------------------------------------
 // Environment detection
@@ -49,10 +68,6 @@ export interface DesktopAPI {
   }) => Promise<{ canceled: boolean; filePaths: string[] }>;
   readFile: (filePath: string) => Promise<string>;
   writeFile: (filePath: string, data: string) => Promise<void>;
-  spawnProcess: (
-    command: string,
-    args: string[],
-  ) => Promise<{ stdout: string; stderr: string; exitCode: number | null }>;
   getVersion: () => Promise<string>;
   getPlatform: () => Promise<string>;
   onMenuAction: (callback: (action: string) => void) => () => void;
@@ -121,32 +136,23 @@ function buildTauriAPI(): DesktopAPI {
     },
 
     // ── Filesystem ─────────────────────────────────────────────────────
+    // Generated tauri-specta bindings — command names can never drift from
+    // src-tauri/src/lib.rs (Phase 1.3 / Phase 2.1).
     readFile: async (filePath: string): Promise<string> => {
-      return invoke<string>('read_file_contents', { path: filePath });
+      return unwrap(await commands.readFile(filePath));
     },
 
     writeFile: async (filePath: string, data: string): Promise<void> => {
-      await invoke<void>('write_file_contents', { path: filePath, data });
-    },
-
-    // ── Process ────────────────────────────────────────────────────────
-    spawnProcess: async (
-      command: string,
-      args: string[],
-    ): Promise<{ stdout: string; stderr: string; exitCode: number | null }> => {
-      return invoke<{ stdout: string; stderr: string; exitCode: number | null }>(
-        'spawn_process',
-        { command, args },
-      );
+      unwrap(await commands.writeFile(filePath, data));
     },
 
     // ── App info ───────────────────────────────────────────────────────
     getVersion: async (): Promise<string> => {
-      return invoke<string>('get_app_version');
+      return commands.getVersion();
     },
 
     getPlatform: async (): Promise<string> => {
-      return invoke<string>('get_platform');
+      return commands.getPlatform();
     },
 
     // ── Menu events ────────────────────────────────────────────────────
@@ -211,7 +217,7 @@ export function getDesktopAPI(): DesktopAPI | null {
   // so subsequent accesses are synchronous.
   const api = buildTauriAPI();
 
-  void invoke<string>('get_platform').then((p) => {
+  void commands.getPlatform().then((p) => {
     cachedPlatform = p;
     // Patch the already-built API object so callers that read `.platform`
     // after the first tick get the real value.
