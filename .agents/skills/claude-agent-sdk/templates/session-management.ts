@@ -17,7 +17,7 @@ async function startSession(prompt: string): Promise<string> {
   const response = query({
     prompt,
     options: {
-      model: "claude-sonnet-4-5"
+      model: "claude-sonnet-4-6"
     }
   });
 
@@ -43,7 +43,7 @@ async function resumeSession(sessionId: string, prompt: string): Promise<void> {
     prompt,
     options: {
       resume: sessionId,
-      model: "claude-sonnet-4-5"
+      model: "claude-sonnet-4-6"
     }
   });
 
@@ -63,7 +63,7 @@ async function forkSession(sessionId: string, prompt: string): Promise<void> {
     options: {
       resume: sessionId,
       forkSession: true,  // Creates new branch
-      model: "claude-sonnet-4-5"
+      model: "claude-sonnet-4-6"
     }
   });
 

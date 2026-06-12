@@ -14,8 +14,8 @@ async function deployWithAgents(version: string) {
   const response = query({
     prompt: `Deploy version ${version} to production with full validation`,
     options: {
-      model: "claude-sonnet-4-5",
-      workingDirectory: process.cwd(),
+      model: "claude-sonnet-4-6",
+      cwd: process.cwd(),
       systemPrompt: `You are a DevOps orchestrator.
 
 Coordinate specialized agents to:
@@ -103,7 +103,7 @@ async function complexWorkflow() {
   const response = query({
     prompt: "API response time increased by 300% in last hour. Investigate and fix",
     options: {
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       systemPrompt: "You coordinate incident response across specialized teams.",
 
       agents: {

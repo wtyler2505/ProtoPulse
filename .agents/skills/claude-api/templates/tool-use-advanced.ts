@@ -60,7 +60,7 @@ const calculatorTool = betaZodTool({
 // Example 2: Using toolRunner for automatic execution
 async function automaticToolExecution() {
   const finalMessage = await anthropic.beta.messages.toolRunner({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1000,
     messages: [
       {
@@ -84,7 +84,7 @@ async function automaticToolExecution() {
 // Example 3: Streaming with tools
 async function streamingWithTools() {
   const runner = anthropic.beta.messages.toolRunner({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1000,
     messages: [
       {
@@ -149,7 +149,7 @@ const emailTool = betaZodTool({
 
 async function complexToolChain() {
   const finalMessage = await anthropic.beta.messages.toolRunner({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 2000,
     messages: [
       {
@@ -173,7 +173,7 @@ async function complexToolChain() {
 async function toolsWithMaxIterations() {
   try {
     const finalMessage = await anthropic.beta.messages.toolRunner({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       max_iterations: 3, // Limit tool execution loops
       messages: [
@@ -199,7 +199,7 @@ async function toolsWithMaxIterations() {
 // Example 6: Custom tool runner with manual control
 async function manualToolRunner() {
   const runner = anthropic.beta.messages.toolRunner({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1000,
     messages: [
       {
@@ -249,7 +249,7 @@ const unreliableTool = betaZodTool({
 async function toolWithErrorRecovery() {
   try {
     const finalMessage = await anthropic.beta.messages.toolRunner({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [
         {

@@ -36,7 +36,7 @@ const client = new Anthropic({
 });
 
 const message = await client.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   messages: [
     { role: 'user', content: 'Hello, Claude!' },
@@ -50,7 +50,7 @@ console.log(message.content[0].text);
 
 ```typescript
 const stream = await client.messages.stream({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   messages: [
     { role: 'user', content: 'Write a story about a robot.' },
@@ -68,7 +68,7 @@ for await (const event of stream) {
 
 ```typescript
 const message = await client.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   system: [
     {
@@ -116,7 +116,7 @@ export default {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         messages: [
           { role: 'user', content: 'Hello, Claude!' },
@@ -145,7 +145,7 @@ export default {
             'content-type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-5-20250929',
+            model: 'claude-sonnet-4-6',
             max_tokens: 1024,
             stream: true,
             messages: [
@@ -193,7 +193,7 @@ export default {
 
 ```typescript
 const message = await client.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   tools: [
     {
@@ -224,7 +224,7 @@ if (message.stop_reason === 'tool_use') {
 
   // Send result back
   const finalMessage = await client.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     tools: [...],
     messages: [
@@ -249,7 +249,7 @@ if (message.stop_reason === 'tool_use') {
 
 ```typescript
 const message = await client.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   messages: [
     {
@@ -277,7 +277,7 @@ const message = await client.messages.create({
 
 ```typescript
 const message = await client.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 4096,
   thinking: {
     type: 'enabled',
@@ -304,7 +304,7 @@ console.log('Answer:', textBlock?.text);
 ```typescript
 try {
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       { role: 'user', content: 'Hello!' },
@@ -344,7 +344,7 @@ try {
 - [ ] Monitoring and logging set up
 - [ ] Cost tracking enabled
 - [ ] Timeouts configured
-- [ ] Model version pinned (claude-sonnet-4-5-20250929)
+- [ ] Model version pinned (claude-sonnet-4-6)
 - [ ] Max tokens set appropriately
 
 ---

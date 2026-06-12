@@ -9,7 +9,7 @@ async function streamWithEvents() {
   console.log('Claude:');
 
   const stream = anthropic.messages.stream({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {
@@ -47,7 +47,7 @@ async function streamWithManualIteration() {
   console.log('Claude:');
 
   const stream = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {
@@ -85,7 +85,7 @@ async function streamWithAbort() {
   console.log('Claude (can be aborted):');
 
   const stream = anthropic.messages.stream({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 2048,
     messages: [
       {
@@ -134,7 +134,7 @@ async function streamWithRetry(maxRetries = 3) {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const stream = anthropic.messages.stream({
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         messages: [
           {

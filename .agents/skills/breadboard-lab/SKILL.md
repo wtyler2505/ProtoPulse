@@ -9,7 +9,7 @@ Use this skill for the ProtoPulse Breadboard tab as a complete bench workflow, n
 
 ## What This Skill Covers
 
-- Workbench orchestration in `client/src/components/circuit-editor/BreadboardView.tsx`
+- Workbench orchestration in `client/src/components/circuit-editor/BreadboardView.tsx` (a ~700-line shell post-extraction; toolbar/dialogs live in `breadboard-view/`, the canvas in `breadboard-canvas/`, per-part SVGs in `breadboard-components/`)
 - Starter, project-linked, stash-backed, and exact-part bench flows
 - Board health and issue focus workflows
 - Selected-part trust and readiness
@@ -19,6 +19,7 @@ Use this skill for the ProtoPulse Breadboard tab as a complete bench workflow, n
 
 ## What This Skill Does Not Replace
 
+- The engine redesign: `packages/` (`@protopulse/*` monorepo, golden files in `tools/golden/`, `.ppx`) is a separate jurisdiction — `shared/parts` ≠ `@protopulse/parts`; orient from AGENTS.md §The Engine Redesign
 - Generic frontend design guidance: compose with `frontend-design`
 - Generic testing process: compose with `testing-mastery`
 - Generic completion proof: compose with `verification-mastery`

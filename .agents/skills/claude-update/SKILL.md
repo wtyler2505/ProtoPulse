@@ -24,13 +24,11 @@ update AI documentation to incorporate them as appropriate.
 | Type                          | Location             |
 | ----------------------------- | -------------------- |
 | Cross-cutting (naming, utils) | CLAUDE.md Code Rules |
-| Component patterns            | `component` skill    |
-| Accessibility                 | `aria` skill         |
-| API design / DX               | `api` skill          |
-| Documentation                 | `docs` skill   |
-| NotebookLM Notesbook updates  | `docs/notebooklm.md` (when created) + `pp-knowledge` skill |
+| Breadboard Lab workflows (BreadboardView, bench, DRC, wiring) | `breadboard-lab` skill |
+| Dev server / local run conventions | `devserver` skill |
+| NotebookLM Notesbook updates  | `docs/notebooklm.md` — Codex-owned, do not touch (see AGENTS.md §PP-NLM) |
 | ProtoPulse skill conventions  | `.claude/skills/pp-knowledge/SKILL.md` |
-| Studio archive policy         | `docs/notebooklm.md` §Auto-Download |
+| Studio archive policy         | `docs/notebooklm.md` — Codex-owned, do not touch (see AGENTS.md §PP-NLM) |
 | Notebook taxonomy / aliases / tags | `pp-knowledge` skill — Tier map |
 | MCP routing / auto-use rules  | `AGENTS.md` §MCP Auto-Routing + `feedback_mcp_auto_routing.md` memory note |
 | Tyler hard rules / "automagic" / mandatory directives | MEMORY.md ABSOLUTE RULES + `feedback_<slug>.md` memory note |
@@ -51,8 +49,8 @@ When Tyler asks for MCP servers to be used "automatically" / "automagically" / "
 
 Check consistency:
 
-1. `.claude/skills/README.md` — Quick Reference, Skills table
-2. `CLAUDE.md` — if skill changes affect repo-wide conventions
+1. `CLAUDE.md` / `AGENTS.md` — if skill changes affect repo-wide conventions
+2. `.agents/skills/` twin — most `.claude/skills/claude-*` entries are symlinks into `.agents/skills/`; if a real copy exists on both sides, keep them in sync
 
 ## Process
 

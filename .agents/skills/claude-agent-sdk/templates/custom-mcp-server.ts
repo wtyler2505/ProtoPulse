@@ -134,7 +134,7 @@ async function useCustomTools() {
   const response = query({
     prompt: "What's the weather in San Francisco? Also query users with gmail addresses and calculate 15% tip on $85.50",
     options: {
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       mcpServers: {
         "weather-service": weatherServer,
         "database": databaseServer

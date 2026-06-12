@@ -34,7 +34,7 @@ export default {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5-20250929',
+          model: 'claude-sonnet-4-6',
           max_tokens: 1024,
           messages,
         }),
@@ -81,7 +81,7 @@ export const streamingEndpoint = {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5-20250929',
+          model: 'claude-sonnet-4-6',
           max_tokens: 1024,
           messages,
           stream: true,
@@ -188,7 +188,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         messages,
       }),
@@ -236,7 +236,7 @@ async function handleStream(request: Request, env: Env): Promise<Response> {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         messages,
         stream: true,

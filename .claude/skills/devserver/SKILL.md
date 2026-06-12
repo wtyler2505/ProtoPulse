@@ -14,6 +14,7 @@ Manage the ProtoPulse development server. Starts on port 5000 via tmux for persi
 - `stop` — Stop the dev server
 - `status` — Check if the dev server is running
 - `restart` — Stop and restart the dev server
+- `logs` — Tail recent dev server output from the tmux pane
 
 ## Actions
 
@@ -124,6 +125,25 @@ Manage the ProtoPulse development server. Starts on port 5000 via tmux for persi
        {last 5 lines}
    ```
 
+### Logs
+
+1. **Verify the tmux session exists:**
+   ```bash
+   tmux has-session -t dev 2>/dev/null && echo "exists" || echo "none"
+   ```
+
+2. **If it exists, tail the pane (default last 40 lines; `-S -200` pulls scrollback history):**
+   ```bash
+   tmux capture-pane -t dev -p -S -200 | tail -40
+   ```
+
+3. **If the session is gone but port 5000 is in use**, report which process owns it instead:
+   ```bash
+   lsof -i :5000
+   ```
+
+4. **Report:** the tailed lines verbatim, plus a one-line health verdict (errors / warnings / clean).
+
 ### Restart
 
 1. Execute the Stop action
@@ -134,6 +154,7 @@ Manage the ProtoPulse development server. Starts on port 5000 via tmux for persi
 
 - If `npm run dev` fails to start: capture tmux output and report the error
 - If port 5000 is used by a non-ProtoPulse process: report the PID and process name, ask user before killing
+- **Port-5000 collision with `dev:client`:** `npm run dev:client` (`vite dev --port 5000`) claims the SAME port as the full dev server (`npm run dev`) — they cannot run together. If start fails with `EADDRINUSE` and the holder is a vite-only process, that is this collision: stop one of them (or run the client-only server on a different port, e.g. `vite dev --port 5173`)
 - If tmux is not installed: tell the user to install it (`sudo apt install tmux`)
 - If health check keeps failing: show the last 20 lines of tmux output for debugging
 
@@ -143,3 +164,4 @@ Manage the ProtoPulse development server. Starts on port 5000 via tmux for persi
 - The working directory is always `/home/wtyler/Projects/ProtoPulse`
 - Do NOT use `&` or `nohup` — tmux handles backgrounding
 - The dev server runs Vite + Express on port 5000 (both frontend and API)
+- A sibling entry point exists: `npm run tauri:dev` (Tauri desktop shell). It manages its own dev process outside this tmux session — this skill manages only the web dev server. If `tauri:dev` is active, port 5000 may be in use even with no `dev` tmux session

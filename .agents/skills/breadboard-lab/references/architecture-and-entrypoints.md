@@ -4,7 +4,7 @@
 
 Start at `client/src/components/circuit-editor/BreadboardView.tsx`.
 
-That file is the orchestration shell. It decides:
+That file is the orchestration shell (~700 lines post-extraction). The toolbar, dialogs, and empty state were extracted to `breadboard-view/`; the canvas to `breadboard-canvas/`; per-part SVG renderers to `breadboard-components/`. The shell decides:
 
 - when the workbench is shown
 - how circuits are created and selected
@@ -15,6 +15,26 @@ That file is the orchestration shell. It decides:
 If the UX feels missing, confusing, or inconsistent, the root cause is often in this file.
 
 ## Subsystem Map
+
+Component paths are relative to `client/src/components/circuit-editor/`.
+
+### Extracted view shell (`breadboard-view/`)
+
+- `BreadboardToolbar.tsx` — mode toggles, zoom, grid controls
+- `BreadboardDialogs.tsx` — dialog mounting extracted from the shell
+- `BreadboardEmptyState.tsx` — no-circuit empty state
+- `useBreadboardDialogState.ts` — dialog open/close state hook
+
+### Canvas subsystem (`breadboard-canvas/`)
+
+- `index.tsx` — the `BreadboardCanvas` component (largest single breadboard file)
+- `canvas-helpers.ts` — pure placement/drop helpers (`getDropTypeFromPart`, `buildPlacementForDrop`, `WIRE_COLORS`)
+- `useCanvasViewport.ts` + `CanvasToolbar.tsx` — zoom/pan state and canvas-local toolbar
+- `WireColorMenu.tsx`, `CanvasCoordinateReadout.tsx`, `CanvasEmptyGuidance.tsx`
+
+### Per-part SVG renderers (`breadboard-components/`)
+
+- ~20 part-family SVGs (`ResistorSvg`, `LedSvg`, `IcSvg`, `ConnectorSvg`, …) exported via `index.ts`; consumed by `BreadboardComponentRenderer.tsx`
 
 ### Workbench shell
 

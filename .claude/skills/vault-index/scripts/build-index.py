@@ -3,8 +3,10 @@
 build-index.py — Build the plan↔vault↔code backlink index.
 
 Scans:
-  - docs/superpowers/plans/**/*.md for references to knowledge/<slug>
-  - client/src/**/*.{ts,tsx,js,jsx} and server/**/*.{ts,js} for VaultHoverCard /
+  - docs/plans/**/*.md and docs/superpowers/plans/**/*.md for references to
+    knowledge/<slug>
+  - client/src/**/*.{ts,tsx,js,jsx}, server/**/*.{ts,js}, and
+    packages/*/src/**/*.{ts,tsx,js,jsx} for VaultHoverCard /
     VaultExplainer / useVaultNote / useVaultSearch slug usages
   - knowledge/**/*.md frontmatter for `related` / `supersedes` / `superseded-by`
 
@@ -143,24 +145,33 @@ def build(root: Path, stale_days: int) -> dict:
             "last_indexed": None,
         }
 
-    # Scan plans
+    # Scan plans (active plans live in docs/plans/; legacy superpowers plans kept)
     plan_count = 0
-    for md in iter_files(root, "docs/superpowers/plans", {".md"}):
-        plan_count += 1
-        for line, slug, excerpt in scan_refs(md, PLAN_PATTERNS):
-            if slug in notes:
-                notes[slug]["referenced_by_plans"].append({
-                    "plan": str(md.relative_to(root)),
-                    "line": line,
-                    "excerpt": excerpt,
-                })
+    for plan_dir in ("docs/plans", "docs/superpowers/plans"):
+        for md in iter_files(root, plan_dir, {".md"}):
+            plan_count += 1
+            for line, slug, excerpt in scan_refs(md, PLAN_PATTERNS):
+                if slug in notes:
+                    notes[slug]["referenced_by_plans"].append({
+                        "plan": str(md.relative_to(root)),
+                        "line": line,
+                        "excerpt": excerpt,
+                    })
 
-    # Scan code
+    # Scan code (root app + the packages/* engine workspaces)
     code_count = 0
-    for base_dir, exts in [
+    code_dirs: list[tuple[str, set[str]]] = [
         ("client/src", {".ts", ".tsx", ".js", ".jsx"}),
         ("server",     {".ts", ".js"}),
-    ]:
+    ]
+    pkgs_dir = root / "packages"
+    if pkgs_dir.is_dir():
+        for pkg_src in sorted(pkgs_dir.glob("*/src")):
+            if pkg_src.is_dir():
+                code_dirs.append(
+                    (str(pkg_src.relative_to(root)), {".ts", ".tsx", ".js", ".jsx"})
+                )
+    for base_dir, exts in code_dirs:
         for src in iter_files(root, base_dir, exts):
             code_count += 1
             for line, slug, excerpt in scan_refs(src, CODE_PATTERNS):

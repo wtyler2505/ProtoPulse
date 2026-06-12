@@ -15,8 +15,8 @@ async function autoApproveEdits() {
   const response = query({
     prompt: "Refactor the user service to use async/await throughout",
     options: {
-      model: "claude-sonnet-4-5",
-      workingDirectory: "/path/to/project",
+      model: "claude-sonnet-4-6",
+      cwd: "/path/to/project",
       permissionMode: "acceptEdits"  // Auto-approve file edits
     }
   });
@@ -33,7 +33,7 @@ async function bypassAllPermissions() {
   const response = query({
     prompt: "Run comprehensive test suite and fix all failures",
     options: {
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       permissionMode: "bypassPermissions"
       // ⚠️ CAUTION: Skips ALL permission checks
       // Use only in trusted, sandboxed environments
@@ -52,7 +52,7 @@ async function customPermissions() {
   const response = query({
     prompt: "Deploy the application to production",
     options: {
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       permissionMode: "default",
       canUseTool: async (toolName, input) => {
         // Allow read-only operations
@@ -126,7 +126,7 @@ async function environmentBasedPermissions(environment: 'development' | 'staging
   const response = query({
     prompt: "Deploy the latest changes",
     options: {
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       permissionMode: "default",
       canUseTool: async (toolName, input) => {
         // Production requires approval for everything
@@ -170,7 +170,7 @@ async function loggingPermissions() {
   const response = query({
     prompt: "Implement new feature X",
     options: {
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       permissionMode: "default",
       canUseTool: async (toolName, input) => {
         // Log all tool usage

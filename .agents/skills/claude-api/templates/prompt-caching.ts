@@ -28,7 +28,7 @@ Always provide detailed, production-ready advice with code examples.
 
   // First request - creates cache
   const message1 = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     system: [
       {
@@ -53,7 +53,7 @@ Always provide detailed, production-ready advice with code examples.
 
   // Second request - hits cache (within 5 minutes)
   const message2 = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     system: [
       {
@@ -85,7 +85,7 @@ async function cacheLargeDocument() {
   // Ensure document is >= 1024 tokens
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {
@@ -143,7 +143,7 @@ Always be polite, helpful, and provide actionable solutions.
   });
 
   const response1 = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     system: [
       {
@@ -168,7 +168,7 @@ Always be polite, helpful, and provide actionable solutions.
   });
 
   const response2 = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     system: [
       {
@@ -215,7 +215,7 @@ async function cacheConversationHistory() {
   messagesWithCache.push(messages[messages.length - 1]);
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: messagesWithCache,
   });

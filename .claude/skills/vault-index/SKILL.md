@@ -1,7 +1,7 @@
 ---
 name: vault-index
-description: Build + maintain the bidirectional plan↔vault↔code backlink index at ops/index/plan-vault-backlinks.json. Greps every plan under docs/superpowers/plans/ and every client/src file for vault slug references, reconciles against knowledge/, commits the JSON index. Lets downstream tools answer "who consumes this note?" and "is a note orphaned?". Triggers on "/vault-index", "/vault-index rebuild", "rebuild vault backlinks", "who references knowledge/X".
-version: "1.0"
+description: Build + maintain the bidirectional plan↔vault↔code backlink index at ops/index/plan-vault-backlinks.json. Greps every plan under docs/plans/ + docs/superpowers/plans/ and every client/src, server, and packages/*/src file for vault slug references, reconciles against knowledge/, commits the JSON index. Lets downstream tools answer "who consumes this note?" and "is a note orphaned?". Triggers on "/vault-index", "/vault-index rebuild", "rebuild vault backlinks", "who references knowledge/X".
+version: "1.1"
 user-invocable: true
 context: fork
 allowed-tools: Read, Grep, Glob, Bash
@@ -13,7 +13,7 @@ argument-hint: "[--rebuild] [--json] [--query <slug>] [--orphans] [--stale-days 
 **Mode: $ARGUMENTS**
 
 Parse flags:
-- `--rebuild` — full rebuild (default). Walks all plans + client/src + knowledge/.
+- `--rebuild` — full rebuild (default). Walks all plans (docs/plans/ + docs/superpowers/plans/) + client/src + server + packages/*/src + knowledge/.
 - `--json` — emit result JSON. Otherwise human summary.
 - `--query <slug>` — show backlinks for a specific note slug.
 - `--orphans` — list notes under knowledge/ with zero backlinks.
@@ -21,6 +21,11 @@ Parse flags:
 
 **Execute these steps:**
 
+0. **Index staleness guard** — check the index file's age before serving any view from it:
+   ```bash
+   stat -c %Y ops/index/plan-vault-backlinks.json 2>/dev/null
+   ```
+   If the file is missing, or its mtime is more than **7 days** old, WARN loudly ("backlink index is N days stale — downstream answers may be wrong") and recommend a rebuild. In `--query`/`--orphans` mode, surface the warning alongside the result; in rebuild mode the rebuild itself resolves it.
 1. **Resolve repo root** — default to git root, else CWD.
 2. **Invoke scripts/build-index.py** — see §Index shape below.
 3. **Write index** — atomic write to `ops/index/plan-vault-backlinks.json`.
@@ -82,9 +87,9 @@ Parse flags:
 
 ## Scan rules
 
-**Plan scan** — grep under `docs/superpowers/plans/` for `knowledge/<slug>.md` OR `slug="<slug>"` OR wiki-links `[[slug]]` OR inline backticks containing slugs. Record `(plan, line, 200-char-excerpt)`.
+**Plan scan** — grep under `docs/plans/` (active plans) AND `docs/superpowers/plans/` (legacy) for `knowledge/<slug>.md` OR `slug="<slug>"` OR wiki-links `[[slug]]` OR inline backticks containing slugs. Record `(plan, line, 200-char-excerpt)`.
 
-**Code scan** — grep under `client/src/`, `server/` for `<VaultHoverCard slug="..."`, `<VaultExplainer slug="..."`, `useVaultNote("...")`, `useVaultSearch(...)`, `buildVaultContext(...)`. Record `(file, line, 100-char-context)`.
+**Code scan** — grep under `client/src/`, `server/`, and `packages/*/src/` (the `@protopulse/*` engine workspaces) for `<VaultHoverCard slug="..."`, `<VaultExplainer slug="..."`, `useVaultNote("...")`, `useVaultSearch(...)`, `buildVaultContext(...)`. Record `(file, line, 100-char-context)`.
 
 **Vault internal scan** — for each knowledge/*.md, parse frontmatter `related:`, `supersedes:`, `superseded-by:` fields. Build forward + reverse adjacency lists.
 
@@ -132,3 +137,4 @@ A backlink is stale when the referencing plan or code file hasn't been touched i
 ## Version history
 
 - **1.0 (2026-04-18)** — initial ship. ProtoPulse paths. Depends on T2 frontmatter for `related/supersedes`.
+- **1.1 (2026-06-11)** — engine-redesign awareness: scan roots now include `docs/plans/` (active plan home) and `packages/*/src` (the `@protopulse/*` workspaces); added the 7-day index staleness guard.

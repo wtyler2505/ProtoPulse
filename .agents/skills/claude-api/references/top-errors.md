@@ -355,7 +355,7 @@ No thinking blocks in response
 **Solution:**
 ```typescript
 // ❌ Wrong model - no extended thinking
-model: 'claude-sonnet-4-5-20250929'
+model: 'claude-sonnet-4-6'
 
 // ✅ Correct models for extended thinking
 model: 'claude-3-7-sonnet-20250228'  // Has extended thinking

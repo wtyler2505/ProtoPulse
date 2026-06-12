@@ -217,9 +217,9 @@ SYSTEM: You are giving wiring advice for a {{trust_tier}} part.
 
 **Why it's wrong:** A similar function already exists in another `-lib` file. Now there are 2 slightly different implementations and the next bug will only fix one.
 
-**The fix:** Before writing any new breadboard helper, grep:
+**The fix:** Before writing any new breadboard helper, search:
 ```bash
-grep -rn "similar_function_name\|related_keyword" client/src/lib/breadboard-*.ts client/src/lib/circuit-editor/*.ts
+rg -n "similar_function_name|related_keyword" client/src/lib/breadboard-*.ts client/src/lib/circuit-editor/ client/src/components/circuit-editor/breadboard-canvas/
 ```
 
 If anything close exists, extend it. Don't fork it.

@@ -19,7 +19,7 @@ const tools = [{
 
 // 1. Send request with tools
 const response = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   tools,
   messages: [{ role: 'user', content: 'Weather in NYC?' }]
@@ -51,7 +51,7 @@ async function chatWithTools(userMessage) {
 
   while (true) {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       tools,
       messages,
@@ -91,7 +91,7 @@ const weatherTool = betaZodTool({
 
 // Automatic execution
 const finalMessage = await anthropic.beta.messages.toolRunner({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1000,
   messages: [{ role: 'user', content: 'Weather in SF?' }],
   tools: [weatherTool],

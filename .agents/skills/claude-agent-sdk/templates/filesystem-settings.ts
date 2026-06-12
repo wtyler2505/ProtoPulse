@@ -15,7 +15,7 @@ async function loadAllSettings() {
   const response = query({
     prompt: "Build a new feature following project conventions",
     options: {
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       settingSources: ["user", "project", "local"]
       // Loads:
       // 1. ~/.claude/settings.json (user)
@@ -42,7 +42,7 @@ async function projectSettingsOnly() {
   const response = query({
     prompt: "Run automated code review",
     options: {
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       settingSources: ["project"]
       // Only .claude/settings.json
       // Ignores user and local settings
@@ -62,9 +62,9 @@ async function isolatedExecution() {
   const response = query({
     prompt: "Analyze this code snippet",
     options: {
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       settingSources: [],  // Empty = no filesystem settings
-      workingDirectory: "/tmp/sandbox",
+      cwd: "/tmp/sandbox",
       allowedTools: ["Read", "Grep", "Glob"],
       systemPrompt: "You are a code analyzer."
       // Fully isolated, no filesystem dependencies
@@ -84,7 +84,7 @@ async function hybridConfiguration() {
   const response = query({
     prompt: "Implement user authentication system",
     options: {
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       settingSources: ["project"],  // Load CLAUDE.md and project settings
       systemPrompt: "Follow security best practices and company coding standards.",
       agents: {
@@ -113,13 +113,13 @@ async function loadProjectInstructions() {
   const response = query({
     prompt: "Implement new feature according to project guidelines",
     options: {
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       systemPrompt: {
         type: 'preset',
         preset: 'claude_code'  // Required to use CLAUDE.md
       },
       settingSources: ["project"],  // Reads CLAUDE.md from project directory
-      workingDirectory: process.cwd()
+      cwd: process.cwd()
     }
   });
 
@@ -157,10 +157,10 @@ async function environmentSpecificSettings(
   const response = query({
     prompt: "Deploy application",
     options: {
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       settingSources,
       permissionMode,
-      workingDirectory: process.cwd()
+      cwd: process.cwd()
     }
   });
 
@@ -176,7 +176,7 @@ async function environmentSpecificSettings(
 /**
  * ~/.claude/settings.json (User Settings)
  * {
- *   "model": "claude-sonnet-4-5",
+ *   "model": "claude-sonnet-4-6",
  *   "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
  *   "permissionMode": "default"
  * }
@@ -185,7 +185,7 @@ async function environmentSpecificSettings(
 /**
  * .claude/settings.json (Project Settings - version controlled)
  * {
- *   "model": "claude-sonnet-4-5",
+ *   "model": "claude-sonnet-4-6",
  *   "allowedTools": ["Read", "Write", "Edit", "Grep", "Glob"],
  *   "disallowedTools": ["Bash"],
  *   "agents": {
