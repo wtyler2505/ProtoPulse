@@ -142,11 +142,15 @@ import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuSt
  * modeled (slice 15): CTRL/CTRL2, packed pattern tables, DATA_STATUS,
  * DMA_CONF storage, and ADC1/ADC2 done interrupts; timer/start
  * triggers complete instantly and clearing DONE while timer mode is
- * enabled advances the pattern stream. Cut: GDMA descriptors are NOT
- * modeled, so adc_continuous_read() cannot receive real DMA frames
- * yet. Still missing: GDMA-backed ADC continuous frame delivery,
- * sleep/wake, and eFuse programming — so full IDF/FreeRTOS firmware
- * does NOT run yet.
+ * enabled advances the pattern stream. GDMA RX channel descriptors
+ * are modeled for ADC continuous mode (slice 16): a channel whose
+ * IN_PERI_SEL is ADC_DAC consumes APB_SARADC result words into the
+ * real 12-byte DMA descriptor format in SRAM, updates descriptor
+ * length/owner/SUC_EOF, and raises the RX DONE/SUC_EOF raw bits.
+ * Cuts: no GDMA interrupt-matrix route yet, no descriptor rings
+ * beyond simple next-pointer advancement, no overflow/backpressure
+ * timing. Still missing: sleep/wake and eFuse programming — so full
+ * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -456,9 +460,9 @@ const ADC_MAX = 4095;
 // ADC1 as 0..9, expose ADC2 as 10..19 (ADC2 channel n = GPIO n+11).
 const ADC2_SAMPLER_CHANNEL_BASE = 10;
 
-// APB_SARADC digital controller (reg_base.h / apb_saradc_reg.h). This
-// is the register substrate used by ADC continuous/DMA mode; GDMA
-// descriptor writes are still outside this core.
+// APB_SARADC digital controller (reg_base.h / apb_saradc_reg.h).
+// Paired below with the first GDMA RX descriptor path for ADC
+// continuous frames.
 const APB_SARADC_BASE = 0x60040000;
 const APB_SARADC_CTRL = 0x00;
 const APB_SARADC_CTRL2 = 0x04;
@@ -493,6 +497,49 @@ const APB_SARADC_SAR1_PATT_P_CLEAR = 1 << 23;
 const APB_SARADC_INT_ADC1_DONE = 1 << 31;
 const APB_SARADC_INT_ADC2_DONE = 1 << 30;
 const APB_SARADC_DMA_RESET_FSM = 1 << 30;
+
+// GDMA RX channel substrate for ADC continuous frames (gdma_reg.h).
+// This first slice models the in-link path IDF's ADC continuous driver
+// uses: RX channel n selects peripheral 8 (ADC_DAC), starts from a
+// 20-bit inlink descriptor address, and fills 12-byte DMA descriptors
+// in SRAM. TX/outlink and non-ADC peripherals remain inert.
+const GDMA_BASE = 0x6003f000;
+const GDMA_RX_CHANNELS = 5;
+const GDMA_CH_STRIDE = 0xc0;
+const GDMA_IN_CONF0 = 0x00;
+const GDMA_IN_CONF1 = 0x04;
+const GDMA_IN_INT_RAW = 0x08;
+const GDMA_IN_INT_ST = 0x0c;
+const GDMA_IN_INT_ENA = 0x10;
+const GDMA_IN_INT_CLR = 0x14;
+const GDMA_IN_LINK = 0x20;
+const GDMA_IN_STATE = 0x24;
+const GDMA_IN_SUC_EOF_DES_ADDR = 0x28;
+const GDMA_IN_ERR_EOF_DES_ADDR = 0x2c;
+const GDMA_IN_DSCR = 0x30;
+const GDMA_IN_DSCR_BF0 = 0x34;
+const GDMA_IN_DSCR_BF1 = 0x38;
+const GDMA_IN_WEIGHT = 0x3c;
+const GDMA_IN_PRI = 0x44;
+const GDMA_IN_PERI_SEL = 0x48;
+const GDMA_IN_RST = 1 << 0;
+const GDMA_IN_DONE_INT = 1 << 0;
+const GDMA_IN_SUC_EOF_INT = 1 << 1;
+const GDMA_IN_DSCR_ERR_INT = 1 << 3;
+const GDMA_IN_DSCR_EMPTY_INT = 1 << 4;
+const GDMA_INLINK_ADDR_MASK = 0x000f_ffff;
+const GDMA_INLINK_AUTO_RET = 1 << 20;
+const GDMA_INLINK_STOP = 1 << 21;
+const GDMA_INLINK_START = 1 << 22;
+const GDMA_INLINK_RESTART = 1 << 23;
+const GDMA_INLINK_PARK = 1 << 24;
+const GDMA_PERI_ADC_DAC = 8;
+const GDMA_PERI_NONE = 0x3f;
+const GDMA_DESC_SIZE_MASK = 0xfff;
+const GDMA_DESC_LENGTH_MASK = 0xfff << 12;
+const GDMA_DESC_SUC_EOF = 1 << 30;
+const GDMA_DESC_OWNER_DMA = 1 << 31;
+const ADC_DIGI_RESULT_BYTES = 4;
 
 // ESP-IDF app-image format (esp_app_format.h; checksum from esptool):
 const ESP_IMAGE_MAGIC = 0xe9;
@@ -553,6 +600,24 @@ interface TimgGroup {
   maps: number[];
 }
 
+interface GdmaRxChannel {
+  conf0: number;
+  conf1: number;
+  intRaw: number;
+  intEna: number;
+  inLink: number;
+  currentDesc: number;
+  sucEofDesc: number;
+  errEofDesc: number;
+  descBf0: number;
+  descBf1: number;
+  weight: number;
+  pri: number;
+  periSel: number;
+  offset: number;
+  active: boolean;
+}
+
 const freshGpTimer = (): GpTimer => ({
   config: 0,
   base: 0,
@@ -580,6 +645,24 @@ const freshTimgGroup = (): TimgGroup => ({
   intEna: 0,
   intRaw: 0,
   maps: [INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP],
+});
+
+const freshGdmaRx = (): GdmaRxChannel => ({
+  conf0: 0,
+  conf1: 0x0c, // INFIFO_FULL threshold reset from gdma_reg.h
+  intRaw: 0,
+  intEna: 0,
+  inLink: GDMA_INLINK_AUTO_RET,
+  currentDesc: 0,
+  sucEofDesc: 0,
+  errEofDesc: 0,
+  descBf0: 0,
+  descBf1: 0,
+  weight: 0x0f00,
+  pri: 0,
+  periSel: GDMA_PERI_NONE,
+  offset: 0,
+  active: false,
 });
 
 /** GPIO0-48; bank 0 covers 0-31, bank 1 covers 32-48. */
@@ -674,6 +757,7 @@ export class Esp32s3Core implements McuCore {
   private apbSaradcDmaConf = 0xff;
   private apbSaradcClkmConf = APB_SARADC_CLKM_CONF_RESET;
   private apbSaradcDataStatus = [0, 0];
+  private gdmaRx: GdmaRxChannel[] = Array.from({ length: GDMA_RX_CHANNELS }, freshGdmaRx);
   /** Bench wiring — survives reset(), like loaded firmware. */
   private sampler: AdcSampler | null = null;
   /** Last driven level per pin; undefined while not output-enabled. */
@@ -929,7 +1013,9 @@ export class Esp32s3Core implements McuCore {
     const muxChannel = this.apbSaradcPattern(unit);
     const channel = unit === 1 ? muxChannel : ADC2_SAMPLER_CHANNEL_BASE + muxChannel;
     const data = this.sampleAdc(channel);
-    this.apbSaradcDataStatus[unit - 1] = (data & 0xfff) | ((muxChannel & 0xf) << 13);
+    const word = (data & 0xfff) | ((muxChannel & 0xf) << 13) | ((unit - 1) << 17);
+    this.apbSaradcDataStatus[unit - 1] = word >>> 0;
+    this.gdmaPushAdcWord(word >>> 0);
     this.apbSaradcIntRaw |= unit === 1 ? APB_SARADC_INT_ADC1_DONE : APB_SARADC_INT_ADC2_DONE;
   }
 
@@ -945,6 +1031,113 @@ export class Esp32s3Core implements McuCore {
       const unit = this.apbSaradcAlterNext;
       this.apbSaradcConvert(unit);
       this.apbSaradcAlterNext = unit === 1 ? 2 : 1;
+    }
+  }
+
+  private sramU32(addr: number): number {
+    const idx = this.sramIndex(addr);
+    if (idx === null || idx + 4 > this.sram.length) {
+      throw new Error(`GDMA descriptor points outside modeled SRAM: 0x${addr.toString(16)}`);
+    }
+    return (
+      (this.sram[idx] ?? 0) |
+      ((this.sram[idx + 1] ?? 0) << 8) |
+      ((this.sram[idx + 2] ?? 0) << 16) |
+      ((this.sram[idx + 3] ?? 0) << 24)
+    ) >>> 0;
+  }
+
+  private setSramU32(addr: number, value: number): void {
+    const idx = this.sramIndex(addr);
+    if (idx === null || idx + 4 > this.sram.length) {
+      throw new Error(`GDMA write points outside modeled SRAM: 0x${addr.toString(16)}`);
+    }
+    const v = value >>> 0;
+    this.sram[idx] = v & 0xff;
+    this.sram[idx + 1] = (v >>> 8) & 0xff;
+    this.sram[idx + 2] = (v >>> 16) & 0xff;
+    this.sram[idx + 3] = (v >>> 24) & 0xff;
+  }
+
+  private gdmaDescriptorAddress(field: number): number {
+    const low = field & GDMA_INLINK_ADDR_MASK;
+    const dramLow = DRAM_BASE & GDMA_INLINK_ADDR_MASK;
+    const iramLow = IRAM_BASE & GDMA_INLINK_ADDR_MASK;
+    if (low >= dramLow && low < dramLow + SRAM_BYTES) return DRAM_BASE + (low - dramLow);
+    if (low >= iramLow && low < iramLow + SRAM_BYTES) return IRAM_BASE + (low - iramLow);
+    return low;
+  }
+
+  private gdmaMarkDscrErr(ch: GdmaRxChannel, desc: number): void {
+    ch.errEofDesc = desc >>> 0;
+    ch.intRaw |= GDMA_IN_DSCR_ERR_INT;
+    ch.active = false;
+    ch.offset = 0;
+  }
+
+  private gdmaStart(ch: GdmaRxChannel): void {
+    const desc = this.gdmaDescriptorAddress(ch.inLink);
+    ch.currentDesc = desc >>> 0;
+    ch.offset = 0;
+    ch.active = desc !== 0;
+    if (!ch.active) ch.intRaw |= GDMA_IN_DSCR_EMPTY_INT;
+  }
+
+  private gdmaPushAdcWord(word: number): void {
+    const ch = this.gdmaRx.find((rx) => rx.active && rx.periSel === GDMA_PERI_ADC_DAC);
+    if (ch === undefined) return;
+    this.gdmaPushRxWord(ch, word >>> 0);
+  }
+
+  private gdmaPushRxWord(ch: GdmaRxChannel, word: number): void {
+    let desc = ch.currentDesc >>> 0;
+    if (desc === 0) {
+      ch.intRaw |= GDMA_IN_DSCR_EMPTY_INT;
+      ch.active = false;
+      return;
+    }
+    let dw0 = this.sramU32(desc);
+    const size = dw0 & GDMA_DESC_SIZE_MASK;
+    if (size < ADC_DIGI_RESULT_BYTES || (dw0 & GDMA_DESC_OWNER_DMA) === 0) {
+      this.gdmaMarkDscrErr(ch, desc);
+      return;
+    }
+    const buffer = this.sramU32(desc + 4);
+    if (ch.offset + ADC_DIGI_RESULT_BYTES > size) {
+      const next = this.sramU32(desc + 8);
+      if (next === 0) {
+        ch.intRaw |= GDMA_IN_DSCR_EMPTY_INT;
+        ch.active = false;
+        return;
+      }
+      ch.descBf1 = ch.descBf0;
+      ch.descBf0 = desc;
+      desc = next >>> 0;
+      ch.currentDesc = desc;
+      ch.offset = 0;
+      dw0 = this.sramU32(desc);
+      if ((dw0 & GDMA_DESC_OWNER_DMA) === 0 || (dw0 & GDMA_DESC_SIZE_MASK) < ADC_DIGI_RESULT_BYTES) {
+        this.gdmaMarkDscrErr(ch, desc);
+        return;
+      }
+    }
+    this.setSramU32(buffer + ch.offset, word);
+    ch.offset += ADC_DIGI_RESULT_BYTES;
+    const length = Math.min(ch.offset, size) & GDMA_DESC_SIZE_MASK;
+    let nextDw0 = (dw0 & ~GDMA_DESC_LENGTH_MASK) | (length << 12);
+    if (ch.offset >= size) {
+      const next = this.sramU32(desc + 8);
+      nextDw0 = (nextDw0 & ~GDMA_DESC_OWNER_DMA) | GDMA_DESC_SUC_EOF;
+      this.setSramU32(desc, nextDw0 >>> 0);
+      ch.sucEofDesc = desc;
+      ch.intRaw |= GDMA_IN_DONE_INT | GDMA_IN_SUC_EOF_INT;
+      ch.descBf1 = ch.descBf0;
+      ch.descBf0 = desc;
+      ch.currentDesc = next >>> 0;
+      ch.offset = 0;
+      if (next === 0) ch.active = false;
+    } else {
+      this.setSramU32(desc, nextDw0 >>> 0);
     }
   }
 
@@ -1029,6 +1222,7 @@ export class Esp32s3Core implements McuCore {
     this.apbSaradcDmaConf = 0xff;
     this.apbSaradcClkmConf = APB_SARADC_CLKM_CONF_RESET;
     this.apbSaradcDataStatus = [0, 0];
+    this.gdmaRx = Array.from({ length: GDMA_RX_CHANNELS }, freshGdmaRx);
     this.driven.fill(undefined);
     this.events = [];
     this.rxQueue = [];
@@ -1533,6 +1727,29 @@ export class Esp32s3Core implements McuCore {
       if (off === TIMG_INT_ST) return grp.intRaw & grp.intEna;
       return 0;
     }
+    if (addr >= GDMA_BASE && addr < GDMA_BASE + GDMA_RX_CHANNELS * GDMA_CH_STRIDE) {
+      const rel = addr - GDMA_BASE;
+      const ch = this.gdmaRx[Math.floor(rel / GDMA_CH_STRIDE)];
+      const off = rel % GDMA_CH_STRIDE;
+      if (ch === undefined) return 0;
+      if (off === GDMA_IN_CONF0) return ch.conf0 >>> 0;
+      if (off === GDMA_IN_CONF1) return ch.conf1 >>> 0;
+      if (off === GDMA_IN_INT_RAW) return ch.intRaw >>> 0;
+      if (off === GDMA_IN_INT_ST) return (ch.intRaw & ch.intEna) >>> 0;
+      if (off === GDMA_IN_INT_ENA) return ch.intEna >>> 0;
+      if (off === GDMA_IN_INT_CLR) return 0;
+      if (off === GDMA_IN_LINK) return (ch.inLink | (ch.active ? 0 : GDMA_INLINK_PARK)) >>> 0;
+      if (off === GDMA_IN_STATE) return ch.currentDesc & 0x3ffff;
+      if (off === GDMA_IN_SUC_EOF_DES_ADDR) return ch.sucEofDesc >>> 0;
+      if (off === GDMA_IN_ERR_EOF_DES_ADDR) return ch.errEofDesc >>> 0;
+      if (off === GDMA_IN_DSCR) return ch.currentDesc >>> 0;
+      if (off === GDMA_IN_DSCR_BF0) return ch.descBf0 >>> 0;
+      if (off === GDMA_IN_DSCR_BF1) return ch.descBf1 >>> 0;
+      if (off === GDMA_IN_WEIGHT) return ch.weight >>> 0;
+      if (off === GDMA_IN_PRI) return ch.pri >>> 0;
+      if (off === GDMA_IN_PERI_SEL) return ch.periSel >>> 0;
+      return 0;
+    }
     if (addr >= SENS_BASE && addr < SENS_BASE + 0x400) {
       const off = addr - SENS_BASE;
       if (off === SENS_SAR_MEAS1_CTRL2) {
@@ -1751,6 +1968,35 @@ export class Esp32s3Core implements McuCore {
       } else if (off === TIMG_INT_ENA) grp.intEna = v;
       else if (off === TIMG_INT_CLR) grp.intRaw &= ~v;
       this.recomputeIrq();
+      return;
+    }
+    if (addr >= GDMA_BASE && addr < GDMA_BASE + GDMA_RX_CHANNELS * GDMA_CH_STRIDE) {
+      const rel = addr - GDMA_BASE;
+      const ch = this.gdmaRx[Math.floor(rel / GDMA_CH_STRIDE)];
+      const off = rel % GDMA_CH_STRIDE;
+      const v = value >>> 0;
+      if (ch === undefined) return;
+      if (off === GDMA_IN_CONF0) {
+        ch.conf0 = v;
+        if ((v & GDMA_IN_RST) !== 0) {
+          ch.active = false;
+          ch.offset = 0;
+          ch.currentDesc = 0;
+          ch.intRaw = 0;
+        }
+      } else if (off === GDMA_IN_CONF1) ch.conf1 = v;
+      else if (off === GDMA_IN_INT_ENA) ch.intEna = v;
+      else if (off === GDMA_IN_INT_CLR) ch.intRaw &= ~v;
+      else if (off === GDMA_IN_LINK) {
+        ch.inLink = v & (GDMA_INLINK_ADDR_MASK | GDMA_INLINK_AUTO_RET);
+        if ((v & GDMA_INLINK_STOP) !== 0) {
+          ch.active = false;
+          ch.offset = 0;
+        }
+        if ((v & (GDMA_INLINK_START | GDMA_INLINK_RESTART)) !== 0) this.gdmaStart(ch);
+      } else if (off === GDMA_IN_WEIGHT) ch.weight = v & 0x0f00;
+      else if (off === GDMA_IN_PRI) ch.pri = v & 0x0f;
+      else if (off === GDMA_IN_PERI_SEL) ch.periSel = v & 0x3f;
       return;
     }
     if (addr >= SENS_BASE && addr < SENS_BASE + 0x400) {

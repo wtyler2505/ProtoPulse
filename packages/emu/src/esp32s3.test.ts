@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   Esp32s3Core,
+  ESP32S3_DRAM_BASE,
   ESP32S3_GPIO_BASE,
   ESP32S3_IRAM_BASE,
   ESP32S3_UART0_BASE,
@@ -2102,5 +2103,68 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
     c.step(20_000); // boot 1: tx 1, RWDT bites
     c.step(500); // boot 2: tx the cause
     expect([...c.drainUart()]).toEqual([9]);
+  });
+});
+
+describe('Esp32s3Core — ADC continuous GDMA frames (slice 16)', () => {
+  const GDMA = 0x6003f000;
+  const APB_SARADC = 0x60040000;
+  const DESC = ESP32S3_DRAM_BASE + 0x1000;
+  const BUF = ESP32S3_DRAM_BASE + 0x1040;
+  const DESC_LINK_START = (DESC & 0x000f_ffff) | (1 << 22) | (1 << 20);
+  const DESC_8_BYTES_DMA = 0x80000008;
+  const ADC_DAC_PERI = 8;
+  const ADC1_CH2_PATTERN = (2 << 2) << 18;
+
+  it('writes ADC digital-controller results into a GDMA RX descriptor buffer', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [DESC, BUF, DESC_8_BYTES_DMA, GDMA, DESC_LINK_START, APB_SARADC, ADC1_CH2_PATTERN, UART],
+      [
+        L32R(2, 0), // a2 = descriptor
+        L32R(3, 1), // a3 = buffer
+        L32R(4, 2), // owner=DMA, size=8 bytes
+        S32I(4, 2, 0),
+        S32I(3, 2, 4),
+        MOVI(5, 0),
+        S32I(5, 2, 8), // next = NULL
+
+        L32R(6, 3), // a6 = GDMA base
+        MOVI(7, ADC_DAC_PERI),
+        S32I(7, 6, 0x48), // IN_PERI_SEL_CH0 = ADC_DAC
+        L32R(7, 4),
+        S32I(7, 6, 0x20), // IN_LINK_CH0 = desc | START
+
+        L32R(8, 5), // a8 = APB_SARADC
+        L32R(9, 6),
+        S32I(9, 8, 0x18), // SAR1 pattern table: ADC1 channel 2
+        MOVI(10, 2),
+        S32I(10, 8, 0x00), // START edge: sample 1
+        MOVI(10, 0),
+        S32I(10, 8, 0x00),
+        MOVI(10, 2),
+        S32I(10, 8, 0x00), // START edge: sample 2, descriptor complete
+
+        L32R(12, 7), // UART
+        L32I(11, 3, 0),
+        SRLI(11, 11, 8),
+        S32I(11, 12, 0), // sample 1 high byte: 0x48 = ch2 + 2048 raw
+        L32I(11, 3, 4),
+        SRLI(11, 11, 8),
+        S32I(11, 12, 0), // sample 2 high byte
+        L32I(11, 2, 0),
+        SRLI(11, 11, 12),
+        S32I(11, 12, 0), // descriptor length = 8
+        L32I(11, 6, 0x08),
+        S32I(11, 12, 0), // GDMA INT_RAW = DONE|SUC_EOF
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.setAdcSampler((channel) => (channel === 2 ? 1.65 : 0));
+    c.step(400);
+
+    expect([...c.drainUart()]).toEqual([0x48, 0x48, 8, 3]);
+    expect(c.drainAdcReads().map((r) => r.channel)).toEqual([2, 2]);
   });
 });

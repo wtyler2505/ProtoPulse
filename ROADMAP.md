@@ -408,11 +408,24 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       and INT_RAW/ST/CLR, decodes packed 6-bit pattern entries, and
       runs instant timer/start-triggered conversions through the same
       host sampler/read-log surface. Clearing ADC1_DONE while timer
-      mode is enabled advances the running pattern table. Cuts: no
-      GDMA descriptor engine yet, so adc_continuous_read() cannot
-      receive DMA frames
+      mode is enabled advances the running pattern table. Cuts at
+      landing: no GDMA descriptor engine yet; slice 16 fills that gap
+- [x] ESP32-S3 core slice 16 — ADC continuous GDMA frame delivery
+      (landed 2026-06-12): GDMA RX channel registers at 0x6003F000
+      now model the in-link path IDF's ADC continuous driver uses.
+      A channel whose IN_PERI_SEL is ADC_DAC consumes APB_SARADC
+      result words into real 12-byte DMA descriptors in SRAM,
+      updating descriptor length, owner, SUC_EOF, RX DONE/SUC_EOF
+      raw status, and EOF descriptor address. The frame word uses
+      ESP32-S3's 32-bit ADC_DIGI_OUTPUT_FORMAT_TYPE2 layout
+      (12-bit data, 4-bit channel, unit bit). Proven by hand-
+      assembled firmware that builds a descriptor, starts GDMA, runs
+      two ADC1 channel-2 conversions, and reads the frame back from
+      the DMA buffer. Cuts: no GDMA interrupt-matrix route yet, no
+      driver-pool/backpressure timing, only simple next-pointer
+      descriptor advancement
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
-      firmware: GDMA-backed ADC continuous frame delivery,
+      firmware: GDMA interrupt delivery/driver-pool behavior,
       sleep/wake, eFuse programming, interrupt delivery still outside
       the currently modeled sources, and remaining peripherals —
       walked openly, slice by slice
