@@ -7,25 +7,35 @@
  * feed the pure `buildSceneModel()` transform, whose memoised output drives
  * `SceneModelView` inside `BoardScene`.
  *
+ * PP3D-5 adds picking: clicks raycast the scene (drei `<Bvh>` accelerated),
+ * the picked element is outlined and described in the `InspectorPanel`, and a
+ * double-click fits the camera onto the element. Selection state lives in
+ * `usePicking`; all display data comes from the pure `describeSelection`.
+ *
  * The outer chrome mirrors the CSS viewer's title bar so the two engines feel
  * like one feature behind the `viewer3dEngine` flag.
  */
 
 import { Canvas } from '@react-three/fiber';
 import { Box } from 'lucide-react';
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { useProjectBoard } from '@/hooks/useProjectBoard';
 import {
   useCircuitDesigns,
   useCircuitInstances,
+  useCircuitNets,
   useCircuitVias,
   useCircuitWires,
 } from '@/lib/circuit-editor/hooks';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 
 import { buildSceneModel } from './model/buildSceneModel';
+import { describeSelection } from './model/scene-lookup';
+import type { SceneSelection } from './model/scene-model';
+import { InspectorPanel } from './panels/InspectorPanel';
 import { BoardScene } from './scene/BoardScene';
+import { usePicking } from './tools/usePicking';
 
 /** Background clear color for the viewport (dark studio). Distinct from the
  *  board green so the non-blank-canvas variance gate has signal. */
@@ -44,6 +54,7 @@ export default function WebGLBoardViewer() {
   const { data: instances } = useCircuitInstances(circuitId);
   const { data: wires } = useCircuitWires(circuitId);
   const { data: vias } = useCircuitVias(circuitId);
+  const { data: nets } = useCircuitNets(circuitId);
 
   // Pure transform, memoised on query-data identity (plan §6): recomputes only
   // when the board row or circuit data actually changes — never per frame.
@@ -63,9 +74,25 @@ export default function WebGLBoardViewer() {
         instances: instances ?? [],
         wires: wires ?? [],
         vias: vias ?? [],
+        nets: nets ?? [],
       }),
-    [board, instances, wires, vias],
+    [board, instances, wires, vias, nets],
   );
+
+  // --- Picking (PP3D-5) ---
+  const { selection, pick, clear, set } = usePicking();
+  const [focusNonce, setFocusNonce] = useState(0);
+
+  /** Double-click: select the element (non-toggling) and fit the camera. */
+  const handleFocus = useCallback(
+    (target: SceneSelection) => {
+      set(target);
+      setFocusNonce((n) => n + 1);
+    },
+    [set],
+  );
+
+  const details = useMemo(() => describeSelection(model, selection), [model, selection]);
 
   return (
     <div data-testid="board-viewer-3d-view" className="flex flex-col h-full gap-4 p-4">
@@ -82,7 +109,7 @@ export default function WebGLBoardViewer() {
       {/* WebGL viewport */}
       <div
         data-testid="board-3d-viewport"
-        className="flex-1 min-h-0 rounded-lg border border-border/50 overflow-hidden"
+        className="relative flex-1 min-h-0 rounded-lg border border-border/50 overflow-hidden"
         style={{ backgroundColor: VIEWPORT_BACKGROUND }}
       >
         <Canvas
@@ -95,9 +122,19 @@ export default function WebGLBoardViewer() {
           onCreated={({ gl }) => {
             gl.setClearColor(VIEWPORT_BACKGROUND);
           }}
+          onPointerMissed={clear}
         >
-          <BoardScene model={model} />
+          <BoardScene
+            model={model}
+            selection={selection}
+            onPick={pick}
+            onFocus={handleFocus}
+            focusNonce={focusNonce}
+          />
         </Canvas>
+
+        {/* Inspector for the picked element (PP3D-5). */}
+        <InspectorPanel details={details} onClose={clear} />
       </div>
     </div>
   );

@@ -9,14 +9,24 @@
  *   - Traces           → one merged ribbon geometry per trace (see
  *     `trace-geometry.ts`), copper material shared per side.
  *
- * Selection/picking lands in PP3D-5; this component is purely presentational.
+ * Picking (PP3D-5): every element forwards R3F pointer events as a
+ * `SceneSelection` via `onPick` (single click) / `onFocus` (double click —
+ * fit-to-selection). drei `<Instances>` raycasts the underlying
+ * `InstancedMesh` and routes the hit's `instanceId` to the matching
+ * `<Instance>`, so per-instance handlers receive exactly the picked
+ * element. Events `stopPropagation()` so only the front-most hit selects.
  */
 
 import { Instance, Instances } from '@react-three/drei';
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
-import type { MaterialKey, SceneComponent, SceneModel } from '../model/scene-model';
+import type {
+  MaterialKey,
+  SceneComponent,
+  SceneModel,
+  SceneSelection,
+} from '../model/scene-model';
 
 import { buildTraceGeometry, COPPER_THICKNESS_MM } from './trace-geometry';
 
@@ -52,7 +62,33 @@ function bodyRotationY(c: SceneComponent): number {
   return THREE.MathUtils.degToRad(-c.rotationDeg);
 }
 
-function ComponentBodies({ model }: { model: SceneModel }) {
+/** Per-element pick handlers (PP3D-5). */
+interface PickHandlers {
+  onPick?: (selection: SceneSelection) => void;
+  onFocus?: (selection: SceneSelection) => void;
+}
+
+/** Build the R3F click/double-click props for one scene element. */
+function pickEvents(
+  selection: SceneSelection,
+  { onPick, onFocus }: PickHandlers,
+): {
+  onClick: (e: { stopPropagation: () => void }) => void;
+  onDoubleClick: (e: { stopPropagation: () => void }) => void;
+} {
+  return {
+    onClick: (e) => {
+      e.stopPropagation();
+      onPick?.(selection);
+    },
+    onDoubleClick: (e) => {
+      e.stopPropagation();
+      onFocus?.(selection);
+    },
+  };
+}
+
+function ComponentBodies({ model, ...handlers }: { model: SceneModel } & PickHandlers) {
   const halfThickness = model.board.thicknessMm / 2;
 
   const families = useMemo(() => {
@@ -78,6 +114,7 @@ function ComponentBodies({ model }: { model: SceneModel }) {
               rotation={[0, bodyRotationY(c), 0]}
               scale={[c.bodyW, c.bodyH, c.bodyD]}
               color={c.color}
+              {...pickEvents({ kind: 'component', id: c.id }, handlers)}
             />
           ))}
         </Instances>
@@ -86,7 +123,7 @@ function ComponentBodies({ model }: { model: SceneModel }) {
   );
 }
 
-function Pads({ model }: { model: SceneModel }) {
+function Pads({ model, ...handlers }: { model: SceneModel } & PickHandlers) {
   const halfThickness = model.board.thicknessMm / 2;
   if (model.pads.length === 0) return null;
 
@@ -104,13 +141,14 @@ function Pads({ model }: { model: SceneModel }) {
             p.z,
           ]}
           scale={[p.diameter, PAD_HEIGHT_MM, p.diameter]}
+          {...pickEvents({ kind: 'pad', id: p.id }, handlers)}
         />
       ))}
     </Instances>
   );
 }
 
-function Vias({ model }: { model: SceneModel }) {
+function Vias({ model, ...handlers }: { model: SceneModel } & PickHandlers) {
   if (model.vias.length === 0) return null;
 
   return (
@@ -122,13 +160,14 @@ function Vias({ model }: { model: SceneModel }) {
           key={v.id}
           position={[v.x, (v.yTop + v.yBottom) / 2, v.z]}
           scale={[v.outerDiameter, v.yTop - v.yBottom + COPPER_THICKNESS_MM * 2, v.outerDiameter]}
+          {...pickEvents({ kind: 'via', id: v.id }, handlers)}
         />
       ))}
     </Instances>
   );
 }
 
-function Traces({ model }: { model: SceneModel }) {
+function Traces({ model, ...handlers }: { model: SceneModel } & PickHandlers) {
   // Build (and dispose) one merged geometry per trace.
   const traceGeometries = useMemo(
     () =>
@@ -158,6 +197,7 @@ function Traces({ model }: { model: SceneModel }) {
           key={trace.id}
           geometry={geometry}
           position={[0, trace.y + (trace.side === 'top' ? 1 : -1) * (COPPER_THICKNESS_MM / 2), 0]}
+          {...pickEvents({ kind: 'trace', id: trace.id }, handlers)}
         >
           <meshStandardMaterial {...MATERIAL_PROPS[trace.material]} />
         </mesh>
@@ -166,18 +206,18 @@ function Traces({ model }: { model: SceneModel }) {
   );
 }
 
-export interface SceneModelViewProps {
+export interface SceneModelViewProps extends PickHandlers {
   model: SceneModel;
 }
 
 /** Renders all non-substrate SceneModel geometry (bodies, pads, traces, vias). */
-export function SceneModelView({ model }: SceneModelViewProps) {
+export function SceneModelView({ model, onPick, onFocus }: SceneModelViewProps) {
   return (
     <group name="scene-model">
-      <ComponentBodies model={model} />
-      <Pads model={model} />
-      <Traces model={model} />
-      <Vias model={model} />
+      <ComponentBodies model={model} onPick={onPick} onFocus={onFocus} />
+      <Pads model={model} onPick={onPick} onFocus={onFocus} />
+      <Traces model={model} onPick={onPick} onFocus={onFocus} />
+      <Vias model={model} onPick={onPick} onFocus={onFocus} />
     </group>
   );
 }

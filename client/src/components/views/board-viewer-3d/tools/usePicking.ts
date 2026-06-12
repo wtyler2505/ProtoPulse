@@ -20,6 +20,8 @@ export interface PickingState {
   pick: (clicked: SceneSelection) => void;
   /** Clear the selection (background click / Escape). */
   clear: () => void;
+  /** Set the selection directly (no toggle) — used by double-click focus. */
+  set: (selection: SceneSelection) => void;
 }
 
 export function usePicking(): PickingState {
@@ -31,5 +33,7 @@ export function usePicking(): PickingState {
 
   const clear = useCallback(() => setSelection(null), []);
 
-  return { selection, pick, clear };
+  const set = useCallback((target: SceneSelection) => setSelection(target), []);
+
+  return { selection, pick, clear, set };
 }

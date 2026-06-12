@@ -13,15 +13,19 @@
  * honest.
  */
 
-import { Bounds } from '@react-three/drei';
+import { Bounds, Bvh, useBounds } from '@react-three/drei';
+import { useEffect } from 'react';
+import * as THREE from 'three';
 
 import { ViewCube } from '../controls/ViewCube';
 import { ViewerCamera } from '../controls/ViewerCamera';
+import { selectionBounds } from '../model/scene-lookup';
 
-import type { SceneModel } from '../model/scene-model';
+import type { SceneModel, SceneSelection } from '../model/scene-model';
 
 import { BoardSubstrate, DEFAULT_BOARD } from './BoardSubstrate';
 import { SceneModelView } from './SceneModelView';
+import { SelectionHighlight } from './SelectionHighlight';
 
 import type { BoardSubstrateProps } from './BoardSubstrate';
 
@@ -30,6 +34,48 @@ export interface BoardSceneProps {
   board?: BoardSubstrateProps;
   /** Real project data (PP3D-4). When present it drives substrate + geometry. */
   model?: SceneModel | null;
+  /** Currently selected element (PP3D-5). */
+  selection?: SceneSelection | null;
+  /** Single-click pick (toggle semantics applied by the caller). */
+  onPick?: (selection: SceneSelection) => void;
+  /** Double-click pick — caller bumps `focusNonce` to fit the camera. */
+  onFocus?: (selection: SceneSelection) => void;
+  /** Increment to animate the camera onto the current selection. */
+  focusNonce?: number;
+}
+
+/**
+ * Fits the `<Bounds>`-managed camera onto the selected element whenever
+ * `focusNonce` changes (double-click → fit-to-selection, plan §7).
+ */
+function FitToSelection({
+  model,
+  selection,
+  focusNonce,
+}: {
+  model: SceneModel | null | undefined;
+  selection: SceneSelection | null | undefined;
+  focusNonce: number;
+}) {
+  const bounds = useBounds();
+
+  useEffect(() => {
+    if (focusNonce === 0 || !model || !selection) return;
+    const box = selectionBounds(model, selection);
+    if (!box) return;
+    bounds
+      .refresh(
+        new THREE.Box3(
+          new THREE.Vector3(box.min.x, box.min.y, box.min.z),
+          new THREE.Vector3(box.max.x, box.max.y, box.max.z),
+        ),
+      )
+      .fit();
+    // `bounds` is a stable drei API object; refit only on an explicit request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusNonce]);
+
+  return null;
 }
 
 /**
@@ -59,7 +105,14 @@ function PlaceholderComponents({ thicknessMm }: { thicknessMm: number }) {
   );
 }
 
-export function BoardScene({ board, model }: BoardSceneProps) {
+export function BoardScene({
+  board,
+  model,
+  selection = null,
+  onPick,
+  onFocus,
+  focusNonce = 0,
+}: BoardSceneProps) {
   const dims: BoardSubstrateProps = model
     ? {
         widthMm: model.board.widthMm,
@@ -85,15 +138,23 @@ export function BoardScene({ board, model }: BoardSceneProps) {
       />
       <directionalLight position={[-80, 40, -60]} intensity={0.4} />
 
-      {/* Frame the board (and its contents) on mount and when they change. */}
+      {/* Frame the board (and its contents) on mount and when they change.
+          `<Bvh>` builds three-mesh-bvh bounds trees over the contained meshes
+          so picking raycasts stay cheap on dense boards (PP3D-5). */}
       <Bounds fit clip observe margin={1.2}>
-        <BoardSubstrate {...dims} />
-        {model && !model.isEmpty ? (
-          <SceneModelView model={model} />
-        ) : (
-          <PlaceholderComponents thicknessMm={thicknessMm} />
-        )}
+        <Bvh firstHitOnly>
+          <BoardSubstrate {...dims} />
+          {model && !model.isEmpty ? (
+            <SceneModelView model={model} onPick={onPick} onFocus={onFocus} />
+          ) : (
+            <PlaceholderComponents thicknessMm={thicknessMm} />
+          )}
+        </Bvh>
+        <FitToSelection model={model} selection={selection} focusNonce={focusNonce} />
       </Bounds>
+
+      {/* Outline highlight for the picked element (outside the Bvh/raycast tree). */}
+      {model ? <SelectionHighlight model={model} selection={selection} /> : null}
 
       {/* CAD navigation. */}
       <ViewerCamera maxDistance={Math.max(dims.widthMm ?? 100, dims.heightMm ?? 80) * 8} />
