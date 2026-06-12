@@ -57,6 +57,12 @@ export interface SceneComponent {
   id: string;
   refDes: string;
   package: string;
+  /** Component value (e.g. "10k", "0.1uF") from instance properties, if any. */
+  value?: string;
+  /** Datasheet URL from instance properties, if any (PP3D-5 inspector). */
+  datasheetUrl?: string;
+  /** Supplier / part-source label from instance properties, if any. */
+  supplier?: string;
   /** Centre position in scene space (mm): x = width, z = depth. */
   x: number;
   z: number;
@@ -99,6 +105,8 @@ export interface SceneTrace {
   /** y offset (mm) at which the ribbon sits (top or bottom copper plane). */
   y: number;
   material: MaterialKey;
+  /** Net this trace belongs to, resolved from `circuit_nets` (PP3D-5). */
+  netName?: string;
 }
 
 /** A via as a plated cylinder spanning the board (or a layer subset). */
@@ -112,6 +120,21 @@ export interface SceneVia {
   yBottom: number;
   yTop: number;
   material: MaterialKey;
+  /** Net this via belongs to, resolved from `circuit_nets` (PP3D-5). */
+  netName?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Selection (PP3D-5)
+// ---------------------------------------------------------------------------
+
+/** Which family of scene element a selection points at. */
+export type SelectionKind = 'component' | 'pad' | 'trace' | 'via';
+
+/** A picked scene element: kind + the stable SceneModel id. */
+export interface SceneSelection {
+  kind: SelectionKind;
+  id: string;
 }
 
 /** A non-plated mechanical/mounting drill hole. */

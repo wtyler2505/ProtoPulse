@@ -18,7 +18,7 @@
  * transform stays decoupled and a test can supply deterministic fixtures.
  */
 
-import type { CircuitInstanceRow, CircuitViaRow, CircuitWireRow } from '@shared/schema';
+import type { CircuitInstanceRow, CircuitNetRow, CircuitViaRow, CircuitWireRow } from '@shared/schema';
 
 import type { Footprint } from '@/lib/pcb/footprint-library';
 import { FootprintLibrary } from '@/lib/pcb/footprint-library';
@@ -60,6 +60,8 @@ export interface BuildSceneModelInput {
   instances: CircuitInstanceRow[];
   wires: CircuitWireRow[];
   vias: CircuitViaRow[];
+  /** Circuit nets — used to resolve `netId` → net name on traces/vias (PP3D-5). */
+  nets?: CircuitNetRow[];
   /** Optional injectable footprint resolver (defaults to FootprintLibrary). */
   resolveFootprint?: FootprintResolver;
 }
@@ -170,6 +172,7 @@ function toScene(
  */
 export function buildSceneModel(input: BuildSceneModelInput): SceneModel {
   const { board, instances, wires, vias } = input;
+  const netNameById = new Map<number, string>((input.nets ?? []).map((n) => [n.id, n.name]));
   const resolveFootprint = input.resolveFootprint ?? ((p) => FootprintLibrary.getFootprint(p));
 
   const widthMm = board.widthMm;
@@ -213,10 +216,20 @@ export function buildSceneModel(input: BuildSceneModelInput): SceneModel {
     const { x, z } = toScene(inst.pcbX as number, inst.pcbY as number, widthMm, heightMm);
 
     const componentId = `circuit-instance-${inst.id}`;
+    const props = (inst.properties ?? {}) as Record<string, unknown>;
+    const propString = (key: string): string | undefined => {
+      const v = props[key];
+      if (typeof v === 'string' && v.trim()) return v;
+      if (typeof v === 'number') return String(v);
+      return undefined;
+    };
     components.push({
       id: componentId,
       refDes: inst.referenceDesignator,
       package: pkg,
+      value: propString('value'),
+      datasheetUrl: propString('datasheetUrl') ?? propString('datasheet'),
+      supplier: propString('supplier') ?? propString('manufacturer'),
       x,
       z,
       rotationDeg: inst.pcbRotation ?? inst.schematicRotation ?? 0,
@@ -262,6 +275,7 @@ export function buildSceneModel(input: BuildSceneModelInput): SceneModel {
       // Copper sits just proud of the board face on the chosen side.
       y: side === 'top' ? halfThickness : -halfThickness,
       material: 'copper',
+      netName: netNameById.get(wire.netId),
     });
   }
 
@@ -277,6 +291,7 @@ export function buildSceneModel(input: BuildSceneModelInput): SceneModel {
       yBottom: -halfThickness,
       yTop: halfThickness,
       material: padMaterial,
+      netName: netNameById.get(via.netId),
     };
   });
 

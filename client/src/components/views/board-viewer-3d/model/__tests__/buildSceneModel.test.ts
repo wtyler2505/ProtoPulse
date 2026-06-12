@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import type { CircuitInstanceRow, CircuitViaRow, CircuitWireRow } from '@shared/schema';
+import type { CircuitInstanceRow, CircuitNetRow, CircuitViaRow, CircuitWireRow } from '@shared/schema';
 import type { Footprint } from '@/lib/pcb/footprint-library';
 
 import { buildSceneModel, type BuildSceneBoard } from '../buildSceneModel';
@@ -311,5 +311,105 @@ describe('buildSceneModel — board appearance', () => {
     const model = buildSceneModel({ board: makeBoard({ layers: 6 }), ...EMPTY });
     expect(model.board.layerCount).toBe(6);
     expect(model.stack.layers.filter((l) => l.role === 'copper')).toHaveLength(6);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PP3D-5: net names + inspector metadata
+// ---------------------------------------------------------------------------
+
+describe('buildSceneModel — net resolution (PP3D-5)', () => {
+  const nets = [
+    { id: 1, circuitId: 1, name: 'VCC', netType: 'power', voltage: '3.3V', busWidth: null, segments: [], labels: [], style: {}, createdAt: new Date(0) },
+    { id: 2, circuitId: 1, name: 'GND', netType: 'ground', voltage: null, busWidth: null, segments: [], labels: [], style: {}, createdAt: new Date(0) },
+  ] as CircuitNetRow[];
+
+  it('resolves wire.netId → trace.netName', () => {
+    const model = buildSceneModel({
+      board: makeBoard(),
+      instances: [],
+      wires: [makeWire({ id: 1, netId: 1 }), makeWire({ id: 2, netId: 2 })],
+      vias: [],
+      nets,
+    });
+    expect(model.traces[0].netName).toBe('VCC');
+    expect(model.traces[1].netName).toBe('GND');
+  });
+
+  it('resolves via.netId → via.netName', () => {
+    const model = buildSceneModel({
+      board: makeBoard(),
+      instances: [],
+      wires: [],
+      vias: [makeVia({ id: 1, netId: 2 })],
+      nets,
+    });
+    expect(model.vias[0].netName).toBe('GND');
+  });
+
+  it('leaves netName undefined when nets are absent or netId unknown', () => {
+    const noNets = buildSceneModel({ board: makeBoard(), instances: [], wires: [makeWire()], vias: [makeVia()] });
+    expect(noNets.traces[0].netName).toBeUndefined();
+    expect(noNets.vias[0].netName).toBeUndefined();
+
+    const unknown = buildSceneModel({
+      board: makeBoard(),
+      instances: [],
+      wires: [makeWire({ netId: 99 })],
+      vias: [],
+      nets,
+    });
+    expect(unknown.traces[0].netName).toBeUndefined();
+  });
+});
+
+describe('buildSceneModel — component inspector metadata (PP3D-5)', () => {
+  it('extracts value/datasheetUrl/supplier from instance properties', () => {
+    const model = buildSceneModel({
+      board: makeBoard(),
+      instances: [
+        makeInstance({
+          properties: {
+            value: '10k',
+            datasheetUrl: 'https://example.com/ds.pdf',
+            supplier: 'DigiKey',
+          },
+        }),
+      ],
+      wires: [],
+      vias: [],
+      resolveFootprint,
+    });
+    expect(model.components[0].value).toBe('10k');
+    expect(model.components[0].datasheetUrl).toBe('https://example.com/ds.pdf');
+    expect(model.components[0].supplier).toBe('DigiKey');
+  });
+
+  it('coerces numeric values and falls back to datasheet/manufacturer keys', () => {
+    const model = buildSceneModel({
+      board: makeBoard(),
+      instances: [
+        makeInstance({ properties: { value: 470, datasheet: 'https://x.com/d.pdf', manufacturer: 'TI' } }),
+      ],
+      wires: [],
+      vias: [],
+      resolveFootprint,
+    });
+    expect(model.components[0].value).toBe('470');
+    expect(model.components[0].datasheetUrl).toBe('https://x.com/d.pdf');
+    expect(model.components[0].supplier).toBe('TI');
+  });
+
+  it('leaves metadata undefined for empty properties', () => {
+    const model = buildSceneModel({
+      board: makeBoard(),
+      instances: [makeInstance({ properties: {} })],
+      wires: [],
+      vias: [],
+      resolveFootprint,
+    });
+    expect(model.components[0].value).toBeUndefined();
+    expect(model.components[0].datasheetUrl).toBeUndefined();
+    expect(model.components[0].supplier).toBeUndefined();
   });
 });
