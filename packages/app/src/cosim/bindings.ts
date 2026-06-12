@@ -152,8 +152,8 @@ export function removeInputBinding(
 
 /** Validate one ADC feedback binding; null when fine. */
 export function validateAdcBinding(b: AdcBinding): string | null {
-  if (!Number.isInteger(b.channel) || b.channel < 0 || b.channel > 15) {
-    return `ADC channel must be an integer 0–15 (got ${String(b.channel)})`;
+  if (!Number.isInteger(b.channel) || b.channel < 0 || b.channel > 19) {
+    return `ADC channel must be an integer 0–19 (got ${String(b.channel)})`;
   }
   if (b.netId.trim() === '') return `ADC ${String(b.channel)}: a binding needs a net`;
   return null;

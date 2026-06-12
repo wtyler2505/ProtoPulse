@@ -65,7 +65,8 @@ export interface EmuModule {
 /** Selectable MCU cores, keyed by the emu module's constructor names.
  *  `adcChannels` are the single-ended mux channels the co-sim panel
  *  offers for net→ADC bindings: the 328P has ADC0–7, the RP2040 has
- *  ADC0–3 (GP26–29; channel 4 is the internal temperature sensor). */
+ *  ADC0–3 (GP26–29; channel 4 is the internal temperature sensor).
+ *  ESP32-S3 uses host channels 0–9 for ADC1 and 10–19 for ADC2. */
 export const CORE_KINDS = {
   atmega328p: {
     ctor: 'Atmega328pCore',
@@ -79,11 +80,15 @@ export const CORE_KINDS = {
   },
   // The from-scratch core: raw images and SRAM-resident ESP-IDF app
   // images (no HEX, no flash cache), GPIO + UART0 with interrupt
-  // lines, and SAR ADC1 oneshot — channel n reads GPIO n+1.
+  // lines, and SAR ADC oneshot. Channels 0–9 are ADC1 GPIO1–10;
+  // channels 10–19 are ADC2 GPIO11–20.
   esp32s3: {
     ctor: 'Esp32s3Core',
     label: 'ESP32-S3 (Xtensa LX7, 240 MHz) — raw + .bin app images',
-    adcChannels: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as readonly number[],
+    adcChannels: [
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+      10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    ] as readonly number[],
   },
 } as const;
 

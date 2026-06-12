@@ -996,6 +996,132 @@ describe('Esp32s3Core — SAR ADC1 oneshot (slice 7)', () => {
   });
 });
 
+describe('Esp32s3Core — SAR ADC2 oneshot (slice 14)', () => {
+  const SENS = 0x60008800;
+  // SENS_SAR_MEAS2_CTRL2 mirrors ADC1's pulse/done/data shape. ADC2
+  // channel 4 maps to physical GPIO15; the host sampler sees channel
+  // 14 so ADC1 channel 4 and ADC2 channel 4 cannot collide.
+  const CTRL_ADC2_CH4 = (0x80000000 | (1 << 18) | (1 << (19 + 4))) >>> 0;
+  const CTRL_ADC2_CH4_START = (CTRL_ADC2_CH4 | (1 << 17)) >>> 0;
+
+  const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, SENS, CTRL_ADC2_CH4, CTRL_ADC2_CH4_START, 0xfff], [
+    L32R(2, 0), // a2 = UART
+    L32R(3, 1), // a3 = SENS
+    L32R(4, 2),
+    S32I(4, 3, 0x30), // start low
+    L32R(4, 3),
+    S32I(4, 3, 0x30), // start 0→1 — the conversion runs
+    L32I(5, 3, 0x30), // poll MEAS2_DONE_SAR (bit 16)
+    SRAI(6, 5, 16),
+    MOVI(7, 1),
+    AND(6, 6, 7),
+    BEQZ(6, BR(-5)),
+    L32R(7, 4), // 0xfff — MEAS2_DATA_SAR is the low 12 bits
+    AND(5, 5, 7),
+    S32I(5, 2, 0x00),
+    SRLI(5, 5, 8),
+    S32I(5, 2, 0x00),
+    J(BR(-1)),
+  ]);
+
+  it('uses the ADC2 register block and a distinct host sampler channel', () => {
+    const c = core(image);
+    c.setAdcSampler((channel) => (channel === 14 ? 0.825 : 0));
+    c.step(120);
+    // round(0.825 / 3.3 × 4095) = 1024 → bytes [0x00, 0x04].
+    expect([...c.drainUart()]).toEqual([0x00, 0x04]);
+    const reads = c.drainAdcReads();
+    expect(reads.map((r) => r.channel)).toEqual([14]);
+    expect(reads[0]?.cycle).toBeGreaterThan(0);
+  });
+});
+
+describe('Esp32s3Core — APB_SARADC digital controller (slice 15)', () => {
+  const APB_SARADC = 0x60040000;
+  const INT_ADC1_DONE = 0x80000000;
+  const CTRL_ADC1_LEN1 = 1 << 25; // data_sar_sel, single ADC1, pattern length 1
+  const CTRL_ADC1_LEN2 = (1 << 25) | (1 << 15); // sar1_patt_len = 1 -> length 2
+  const CTRL2_TIMER_ENABLE = (1 << 24) | (1 << 11);
+  const MASK_12BIT = 0xfff;
+  const SAR1_PATTERN_CH4 = ((4 << 2) << 18) >>> 0;
+  const SAR1_PATTERN_CH2_CH5 = (((2 << 2) << 18) | ((5 << 2) << 12)) >>> 0;
+
+  it('timer-triggered digital ADC1 conversion latches INT_ST and DATA_STATUS', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [UART, APB_SARADC, SAR1_PATTERN_CH4, CTRL_ADC1_LEN1, INT_ADC1_DONE, CTRL2_TIMER_ENABLE, MASK_12BIT],
+      [
+        L32R(2, 0),
+        L32R(3, 1),
+        L32R(4, 2),
+        S32I(4, 3, 0x18), // SAR1 pattern table item 0 = channel 4
+        L32R(4, 3),
+        S32I(4, 3, 0x00), // ADC1, one pattern item, type2 output semantics
+        L32R(4, 4),
+        S32I(4, 3, 0x5c), // enable ADC1_DONE
+        L32R(4, 5),
+        S32I(4, 3, 0x04), // timer enable triggers one digital conversion
+        L32I(5, 3, 0x64), // INT_ST
+        SRAI(5, 5, 31),
+        MOVI(6, 1),
+        AND(5, 5, 6),
+        S32I(5, 2, 0x00), // tx done? 1=yes
+        L32I(5, 3, 0x40), // ADC1 DATA_STATUS
+        L32R(6, 6),
+        AND(5, 5, 6),
+        S32I(5, 2, 0x00),
+        SRLI(5, 5, 8),
+        S32I(5, 2, 0x00),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.setAdcSampler((channel) => (channel === 4 ? 1.65 : 0));
+    c.step(160);
+    expect([...c.drainUart()]).toEqual([1, 0x00, 0x08]);
+    expect(c.drainAdcReads().map((r) => r.channel)).toEqual([4]);
+  });
+
+  it('clearing ADC1_DONE advances the running pattern table', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [UART, APB_SARADC, SAR1_PATTERN_CH2_CH5, CTRL_ADC1_LEN2, INT_ADC1_DONE, CTRL2_TIMER_ENABLE, MASK_12BIT],
+      [
+        L32R(2, 0),
+        L32R(3, 1),
+        L32R(4, 2),
+        S32I(4, 3, 0x18), // channel 2, then channel 5
+        L32R(4, 3),
+        S32I(4, 3, 0x00),
+        L32R(4, 4),
+        S32I(4, 3, 0x5c),
+        L32R(4, 5),
+        S32I(4, 3, 0x04),
+        L32I(5, 3, 0x40),
+        L32R(6, 6),
+        AND(5, 5, 6),
+        S32I(5, 2, 0x00),
+        SRLI(5, 5, 8),
+        S32I(5, 2, 0x00),
+        L32R(4, 4),
+        S32I(4, 3, 0x68), // clear done; timer mode immediately queues next pattern
+        L32I(5, 3, 0x40),
+        L32R(6, 6),
+        AND(5, 5, 6),
+        S32I(5, 2, 0x00),
+        SRLI(5, 5, 8),
+        S32I(5, 2, 0x00),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.setAdcSampler((channel) => (channel === 2 ? 0.825 : channel === 5 ? 3.3 : 0));
+    c.step(220);
+    expect([...c.drainUart()]).toEqual([0x00, 0x04, 0xff, 0x0f]);
+    expect(c.drainAdcReads().map((r) => r.channel)).toEqual([2, 5]);
+  });
+});
+
 /**
  * Build an esptool-shaped app image: 24-byte header (magic 0xE9,
  * segment count, entry @4, chip_id @12), the segments, and the XOR

@@ -36,11 +36,14 @@ import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuSt
  * interrupt matrix (slice 6 — GPIO edge/level pin interrupts via
  * GPIO_PINn/STATUS and UART0's RXFIFO_FULL/TX_DONE via INT_RAW/ST/
  * ENA/CLR, each source's 5-bit map register selecting its CPU line),
- * plus SAR ADC1's oneshot path (slice 7 — the SENS_SAR_MEAS1_CTRL2
- * register dance adc_oneshot_ll/analogRead performs: one-hot channel
- * select, start-bit edge, done poll, 12-bit data; conversions
- * complete instantly and attenuation is not modeled — full scale is
- * 3.3 V; channels are ADC1's, i.e. channel n reads GPIO n+1), plus
+ * plus SAR ADC1/ADC2's oneshot paths (slice 7 + slice 14 — the
+ * SENS_SAR_MEASx_CTRL2 register dance adc_oneshot_ll/analogRead
+ * performs: one-hot channel select, start-bit edge, done poll, 12-bit
+ * data; conversions complete instantly and attenuation is not modeled
+ * — full scale is 3.3 V; ADC1 channel n reads GPIO n+1, ADC2 channel
+ * n reads GPIO n+11 and is exposed to the host sampler as channel
+ * 10+n so the one-dimensional McuCore ADC surface stays unambiguous),
+ * plus
  * TIMG0's timer 0 (slice 8 — the 54-bit general-purpose timer over
  * the 80 MHz APB clock with its 16-bit prescaler, UPDATE-latched
  * LO/HI reads, LOAD, and the alarm that hardware auto-disables on
@@ -135,8 +138,15 @@ import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuSt
  * real modeled registers); the RWDT INT stage action advances the
  * stage but raises no CPU interrupt (the RTC interrupt block is not
  * modeled); SUPER_WDT, sleep pause, and XTAL clock sources are out
- * of scope. Still missing: ADC2/DMA mode, sleep/wake, and eFuse
- * programming — so full IDF/FreeRTOS firmware does NOT run yet.
+ * of scope. The APB_SARADC digital-controller register substrate is
+ * modeled (slice 15): CTRL/CTRL2, packed pattern tables, DATA_STATUS,
+ * DMA_CONF storage, and ADC1/ADC2 done interrupts; timer/start
+ * triggers complete instantly and clearing DONE while timer mode is
+ * enabled advances the pattern stream. Cut: GDMA descriptors are NOT
+ * modeled, so adc_continuous_read() cannot receive real DMA frames
+ * yet. Still missing: GDMA-backed ADC continuous frame delivery,
+ * sleep/wake, and eFuse programming — so full IDF/FreeRTOS firmware
+ * does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -277,12 +287,13 @@ const RTC_WDTWPROTECT = 0xb0;
 const RTC_WDT_FEED_BIT = 1 << 31; // RTC_CNTL_RTC_WDT_FEED
 const RWDT_CONFIG0_RESET = ((1 << 16) | (1 << 13) | (1 << 12) | (1 << 9)) >>> 0;
 
-// SAR ADC1 oneshot path (sens_reg.h; flow per hal/esp32s3/adc_ll.h —
-// the same register dance adc_oneshot_ll_* and analogRead perform):
-// SENS_SAR_MEAS1_CTRL2 holds MEAS1_DATA_SAR [15:0], MEAS1_DONE_SAR
-// bit 16, MEAS1_START_SAR bit 17 (a 0→1 edge starts a conversion),
-// MEAS1_START_FORCE bit 18, SAR1_EN_PAD [30:19] (one-hot channel
-// select, written as 1<<channel), SAR1_EN_PAD_FORCE bit 31.
+// SAR ADC1/ADC2 oneshot paths (sens_reg.h; flow per
+// hal/esp32s3/adc_ll.h — the same register dance adc_oneshot_ll_* and
+// analogRead perform): SENS_SAR_MEASx_CTRL2 holds MEASx_DATA_SAR
+// [15:0], MEASx_DONE_SAR bit 16, MEASx_START_SAR bit 17 (a 0→1 edge
+// starts a conversion), MEASx_START_FORCE bit 18, SARx_EN_PAD
+// [30:19] (one-hot channel select, written as 1<<channel), and
+// SARx_EN_PAD_FORCE bit 31.
 // Flash-cache-mapped windows (soc.h SOC_IROM/DROM_*, confirmed by
 // ext_mem_defs.h). App-image segments with load addresses here are
 // MAPPED by the bootloader's MMU setup, not copied — the vaddr in
@@ -432,12 +443,56 @@ const CORE1_RESET_SP = 0x4000;
 
 const SENS_BASE = 0x60008800;
 const SENS_SAR_MEAS1_CTRL2 = 0x0c;
+const SENS_SAR_MEAS2_CTRL2 = 0x30;
 const MEAS1_DONE_SAR = 1 << 16;
 const MEAS1_START_SAR = 1 << 17;
+const MEAS2_DONE_SAR = 1 << 16;
+const MEAS2_START_SAR = 1 << 17;
 // 12-bit result. Attenuation is not modeled: full scale is the 3.3 V
 // supply, quantized like the RP2040 core does.
 const ADC_VREF = 3.3;
 const ADC_MAX = 4095;
+// The McuCore ADC sampler/read-log surface is one-dimensional. Keep
+// ADC1 as 0..9, expose ADC2 as 10..19 (ADC2 channel n = GPIO n+11).
+const ADC2_SAMPLER_CHANNEL_BASE = 10;
+
+// APB_SARADC digital controller (reg_base.h / apb_saradc_reg.h). This
+// is the register substrate used by ADC continuous/DMA mode; GDMA
+// descriptor writes are still outside this core.
+const APB_SARADC_BASE = 0x60040000;
+const APB_SARADC_CTRL = 0x00;
+const APB_SARADC_CTRL2 = 0x04;
+const APB_SARADC_FSM_WAIT = 0x0c;
+const APB_SARADC_SAR1_STATUS = 0x10;
+const APB_SARADC_SAR2_STATUS = 0x14;
+const APB_SARADC_SAR1_PATT_TAB1 = 0x18;
+const APB_SARADC_SAR2_PATT_TAB1 = 0x28;
+const APB_SARADC_APB_ADC_ARB_CTRL = 0x38;
+const APB_SARADC_FILTER_CTRL0 = 0x3c;
+const APB_SARADC_APB_SARADC1_DATA_STATUS = 0x40;
+const APB_SARADC_THRES0_CTRL = 0x44;
+const APB_SARADC_THRES1_CTRL = 0x48;
+const APB_SARADC_THRES_CTRL = 0x58;
+const APB_SARADC_INT_ENA = 0x5c;
+const APB_SARADC_INT_RAW = 0x60;
+const APB_SARADC_INT_ST = 0x64;
+const APB_SARADC_INT_CLR = 0x68;
+const APB_SARADC_DMA_CONF = 0x6c;
+const APB_SARADC_APB_ADC_CLKM_CONF = 0x70;
+const APB_SARADC_APB_SARADC2_DATA_STATUS = 0x78;
+const APB_SARADC_APB_CTRL_DATE = 0x3fc;
+const APB_SARADC_CTRL_RESET = 0x407f8240;
+const APB_SARADC_CTRL2_RESET = 0xa1fe;
+const APB_SARADC_FSM_WAIT_RESET = 0xff0808;
+const APB_SARADC_CLKM_CONF_RESET = 0x04;
+const APB_SARADC_DATE_RESET = 0x02101180;
+const APB_SARADC_TIMER_EN = 1 << 24;
+const APB_SARADC_START = 1 << 1;
+const APB_SARADC_SAR2_PATT_P_CLEAR = 1 << 24;
+const APB_SARADC_SAR1_PATT_P_CLEAR = 1 << 23;
+const APB_SARADC_INT_ADC1_DONE = 1 << 31;
+const APB_SARADC_INT_ADC2_DONE = 1 << 30;
+const APB_SARADC_DMA_RESET_FSM = 1 << 30;
 
 // ESP-IDF app-image format (esp_app_format.h; checksum from esptool):
 const ESP_IMAGE_MAGIC = 0xe9;
@@ -594,11 +649,31 @@ export class Esp32s3Core implements McuCore {
   private cpuPerConf = SYSTEM_CPU_PER_CONF_RESET;
   private sysclkConf = SYSTEM_SYSCLK_CONF_RESET;
 
-  // SAR ADC1 oneshot state.
+  // SAR ADC1/ADC2 oneshot state.
   private meas1Ctrl2 = 0; // the control bits firmware wrote
-  private adcData = 0; // latched 12-bit result
-  private adcDone = false;
+  private meas2Ctrl2 = 0;
+  private adcData = 0; // ADC1 latched 12-bit result
+  private adc2Data = 0;
+  private adcDone = false; // ADC1 done bit
+  private adc2Done = false;
   private adcReads: AdcReadRequest[] = [];
+  // APB_SARADC digital-controller state (continuous/DMA register
+  // substrate). Pattern tables contain 4 regs × 4 packed 6-bit entries.
+  private apbSaradcCtrl = APB_SARADC_CTRL_RESET;
+  private apbSaradcCtrl2 = APB_SARADC_CTRL2_RESET;
+  private apbSaradcFsmWait = APB_SARADC_FSM_WAIT_RESET;
+  private apbSaradcSar1Patt = [0, 0, 0, 0];
+  private apbSaradcSar2Patt = [0, 0, 0, 0];
+  private apbSaradcPatternIdx = [0, 0];
+  private apbSaradcAlterNext: 1 | 2 = 1;
+  private apbSaradcArbCtrl = 0;
+  private apbSaradcFilterCtrl0 = 0;
+  private apbSaradcThres = [0, 0, 0];
+  private apbSaradcIntEna = 0;
+  private apbSaradcIntRaw = 0;
+  private apbSaradcDmaConf = 0xff;
+  private apbSaradcClkmConf = APB_SARADC_CLKM_CONF_RESET;
+  private apbSaradcDataStatus = [0, 0];
   /** Bench wiring — survives reset(), like loaded firmware. */
   private sampler: AdcSampler | null = null;
   /** Last driven level per pin; undefined while not output-enabled. */
@@ -815,6 +890,64 @@ export class Esp32s3Core implements McuCore {
     return this.active === this.cpu1 ? this.core1Epoch + this.cpu1.cycles : this.cpu.cycles;
   }
 
+  private sampleAdc(channel: number): number {
+    const cycle = this.now();
+    const volts = this.sampler ? this.sampler(channel, cycle) : 0;
+    const data = Math.min(ADC_MAX, Math.max(0, Math.round((volts / ADC_VREF) * ADC_MAX)));
+    this.adcReads.push({ channel, cycle });
+    return data;
+  }
+
+  private runSarAdcConversion(unit: 1 | 2, ctrl: number): void {
+    const enPad = (ctrl >>> 19) & 0xfff;
+    const muxChannel = enPad === 0 ? 0 : 31 - Math.clz32(enPad & -enPad);
+    const channel = unit === 1 ? muxChannel : ADC2_SAMPLER_CHANNEL_BASE + muxChannel;
+    const data = this.sampleAdc(channel);
+    if (unit === 1) {
+      this.adcData = data;
+      this.adcDone = true;
+    } else {
+      this.adc2Data = data;
+      this.adc2Done = true;
+    }
+  }
+
+  private apbSaradcPattern(unit: 1 | 2): number {
+    const ui = unit - 1;
+    const lenShift = unit === 1 ? 15 : 19;
+    const len = ((this.apbSaradcCtrl >>> lenShift) & 0xf) + 1;
+    const idx = (this.apbSaradcPatternIdx[ui] ?? 0) % len;
+    const regs = unit === 1 ? this.apbSaradcSar1Patt : this.apbSaradcSar2Patt;
+    const tab = regs[idx >> 2] ?? 0;
+    const shift = 18 - (idx & 3) * 6;
+    const pat = (tab >>> shift) & 0x3f;
+    this.apbSaradcPatternIdx[ui] = (idx + 1) % len;
+    return (pat >>> 2) & 0xf;
+  }
+
+  private apbSaradcConvert(unit: 1 | 2): void {
+    const muxChannel = this.apbSaradcPattern(unit);
+    const channel = unit === 1 ? muxChannel : ADC2_SAMPLER_CHANNEL_BASE + muxChannel;
+    const data = this.sampleAdc(channel);
+    this.apbSaradcDataStatus[unit - 1] = (data & 0xfff) | ((muxChannel & 0xf) << 13);
+    this.apbSaradcIntRaw |= unit === 1 ? APB_SARADC_INT_ADC1_DONE : APB_SARADC_INT_ADC2_DONE;
+  }
+
+  private apbSaradcRunDigitalConversion(): void {
+    const ctrl = this.apbSaradcCtrl;
+    const workMode = (ctrl >>> 3) & 0x3;
+    const sarSel = (ctrl >>> 5) & 0x1;
+    if (workMode === 0) this.apbSaradcConvert(sarSel === 0 ? 1 : 2);
+    else if (workMode === 1) {
+      this.apbSaradcConvert(1);
+      this.apbSaradcConvert(2);
+    } else {
+      const unit = this.apbSaradcAlterNext;
+      this.apbSaradcConvert(unit);
+      this.apbSaradcAlterNext = unit === 1 ? 2 : 1;
+    }
+  }
+
   /** esp_cpu_stall's split 0x86 code, both halves present. */
   private core1RtcStalled(): boolean {
     return (
@@ -875,9 +1008,27 @@ export class Esp32s3Core implements McuCore {
     this.cpuPerConf = SYSTEM_CPU_PER_CONF_RESET;
     this.sysclkConf = SYSTEM_SYSCLK_CONF_RESET;
     this.meas1Ctrl2 = 0;
+    this.meas2Ctrl2 = 0;
     this.adcData = 0;
+    this.adc2Data = 0;
     this.adcDone = false;
+    this.adc2Done = false;
     this.adcReads = []; // the sampler itself survives — bench wiring
+    this.apbSaradcCtrl = APB_SARADC_CTRL_RESET;
+    this.apbSaradcCtrl2 = APB_SARADC_CTRL2_RESET;
+    this.apbSaradcFsmWait = APB_SARADC_FSM_WAIT_RESET;
+    this.apbSaradcSar1Patt = [0, 0, 0, 0];
+    this.apbSaradcSar2Patt = [0, 0, 0, 0];
+    this.apbSaradcPatternIdx = [0, 0];
+    this.apbSaradcAlterNext = 1;
+    this.apbSaradcArbCtrl = 0;
+    this.apbSaradcFilterCtrl0 = 0;
+    this.apbSaradcThres = [0, 0, 0];
+    this.apbSaradcIntEna = 0;
+    this.apbSaradcIntRaw = 0;
+    this.apbSaradcDmaConf = 0xff;
+    this.apbSaradcClkmConf = APB_SARADC_CLKM_CONF_RESET;
+    this.apbSaradcDataStatus = [0, 0];
     this.driven.fill(undefined);
     this.events = [];
     this.rxQueue = [];
@@ -1383,11 +1534,45 @@ export class Esp32s3Core implements McuCore {
       return 0;
     }
     if (addr >= SENS_BASE && addr < SENS_BASE + 0x400) {
-      if (addr - SENS_BASE === SENS_SAR_MEAS1_CTRL2) {
+      const off = addr - SENS_BASE;
+      if (off === SENS_SAR_MEAS1_CTRL2) {
         let v = this.meas1Ctrl2 & ~(MEAS1_DONE_SAR | 0xffff);
         if (this.adcDone) v |= MEAS1_DONE_SAR | (this.adcData & 0xfff);
         return v >>> 0;
       }
+      if (off === SENS_SAR_MEAS2_CTRL2) {
+        let v = this.meas2Ctrl2 & ~(MEAS2_DONE_SAR | 0xffff);
+        if (this.adc2Done) v |= MEAS2_DONE_SAR | (this.adc2Data & 0xfff);
+        return v >>> 0;
+      }
+      return 0;
+    }
+    if (addr >= APB_SARADC_BASE && addr < APB_SARADC_BASE + 0x400) {
+      const off = addr - APB_SARADC_BASE;
+      if (off === APB_SARADC_CTRL) return this.apbSaradcCtrl >>> 0;
+      if (off === APB_SARADC_CTRL2) return this.apbSaradcCtrl2 >>> 0;
+      if (off === APB_SARADC_FSM_WAIT) return this.apbSaradcFsmWait >>> 0;
+      if (off === APB_SARADC_SAR1_STATUS || off === APB_SARADC_SAR2_STATUS) return 0;
+      if (off >= APB_SARADC_SAR1_PATT_TAB1 && off < APB_SARADC_SAR1_PATT_TAB1 + 16 && (off & 3) === 0) {
+        return (this.apbSaradcSar1Patt[(off - APB_SARADC_SAR1_PATT_TAB1) >> 2] ?? 0) >>> 0;
+      }
+      if (off >= APB_SARADC_SAR2_PATT_TAB1 && off < APB_SARADC_SAR2_PATT_TAB1 + 16 && (off & 3) === 0) {
+        return (this.apbSaradcSar2Patt[(off - APB_SARADC_SAR2_PATT_TAB1) >> 2] ?? 0) >>> 0;
+      }
+      if (off === APB_SARADC_APB_ADC_ARB_CTRL) return this.apbSaradcArbCtrl >>> 0;
+      if (off === APB_SARADC_FILTER_CTRL0) return this.apbSaradcFilterCtrl0 >>> 0;
+      if (off === APB_SARADC_APB_SARADC1_DATA_STATUS) return (this.apbSaradcDataStatus[0] ?? 0) >>> 0;
+      if (off === APB_SARADC_THRES0_CTRL) return (this.apbSaradcThres[0] ?? 0) >>> 0;
+      if (off === APB_SARADC_THRES1_CTRL) return (this.apbSaradcThres[1] ?? 0) >>> 0;
+      if (off === APB_SARADC_THRES_CTRL) return (this.apbSaradcThres[2] ?? 0) >>> 0;
+      if (off === APB_SARADC_INT_ENA) return this.apbSaradcIntEna >>> 0;
+      if (off === APB_SARADC_INT_RAW) return this.apbSaradcIntRaw >>> 0;
+      if (off === APB_SARADC_INT_ST) return (this.apbSaradcIntRaw & this.apbSaradcIntEna) >>> 0;
+      if (off === APB_SARADC_INT_CLR) return 0;
+      if (off === APB_SARADC_DMA_CONF) return this.apbSaradcDmaConf >>> 0;
+      if (off === APB_SARADC_APB_ADC_CLKM_CONF) return this.apbSaradcClkmConf >>> 0;
+      if (off === APB_SARADC_APB_SARADC2_DATA_STATUS) return (this.apbSaradcDataStatus[1] ?? 0) >>> 0;
+      if (off === APB_SARADC_APB_CTRL_DATE) return APB_SARADC_DATE_RESET;
       return 0;
     }
     if (addr >= RTCCNTL_BASE && addr < RTCCNTL_END) {
@@ -1569,21 +1754,67 @@ export class Esp32s3Core implements McuCore {
       return;
     }
     if (addr >= SENS_BASE && addr < SENS_BASE + 0x400) {
-      if (addr - SENS_BASE === SENS_SAR_MEAS1_CTRL2) {
+      const off = addr - SENS_BASE;
+      if (off === SENS_SAR_MEAS1_CTRL2) {
         const prev = this.meas1Ctrl2;
         this.meas1Ctrl2 = value >>> 0;
         // adc_oneshot_ll_start pulses MEAS1_START_SAR low then high —
         // the 0→1 edge runs a conversion. It completes immediately
         // (the conversion-time cut, stated in the header).
         if ((value & MEAS1_START_SAR) !== 0 && (prev & MEAS1_START_SAR) === 0) {
-          const enPad = (value >>> 19) & 0xfff;
-          const channel = enPad === 0 ? 0 : 31 - Math.clz32(enPad & -enPad);
-          const volts = this.sampler ? this.sampler(channel, this.now()) : 0;
-          this.adcData = Math.min(ADC_MAX, Math.max(0, Math.round((volts / ADC_VREF) * ADC_MAX)));
-          this.adcDone = true;
-          this.adcReads.push({ channel, cycle: this.now() });
+          this.runSarAdcConversion(1, value);
+        }
+      } else if (off === SENS_SAR_MEAS2_CTRL2) {
+        const prev = this.meas2Ctrl2;
+        this.meas2Ctrl2 = value >>> 0;
+        // Same adc_oneshot_ll_start pulse for ADC2, backed by its
+        // separate MEAS2_DONE/DATA bits.
+        if ((value & MEAS2_START_SAR) !== 0 && (prev & MEAS2_START_SAR) === 0) {
+          this.runSarAdcConversion(2, value);
         }
       }
+      return;
+    }
+    if (addr >= APB_SARADC_BASE && addr < APB_SARADC_BASE + 0x400) {
+      const off = addr - APB_SARADC_BASE;
+      const v = value >>> 0;
+      if (off === APB_SARADC_CTRL) {
+        const prev = this.apbSaradcCtrl;
+        if ((v & APB_SARADC_SAR1_PATT_P_CLEAR) !== 0) this.apbSaradcPatternIdx[0] = 0;
+        if ((v & APB_SARADC_SAR2_PATT_P_CLEAR) !== 0) this.apbSaradcPatternIdx[1] = 0;
+        this.apbSaradcCtrl = v;
+        if ((v & APB_SARADC_START) !== 0 && (prev & APB_SARADC_START) === 0) {
+          this.apbSaradcRunDigitalConversion();
+        }
+      } else if (off === APB_SARADC_CTRL2) {
+        const prev = this.apbSaradcCtrl2;
+        this.apbSaradcCtrl2 = v;
+        if ((v & APB_SARADC_TIMER_EN) !== 0 && (prev & APB_SARADC_TIMER_EN) === 0) {
+          this.apbSaradcRunDigitalConversion();
+        }
+      } else if (off === APB_SARADC_FSM_WAIT) this.apbSaradcFsmWait = v;
+      else if (off >= APB_SARADC_SAR1_PATT_TAB1 && off < APB_SARADC_SAR1_PATT_TAB1 + 16 && (off & 3) === 0) {
+        this.apbSaradcSar1Patt[(off - APB_SARADC_SAR1_PATT_TAB1) >> 2] = v & 0x00ff_ffff;
+      } else if (off >= APB_SARADC_SAR2_PATT_TAB1 && off < APB_SARADC_SAR2_PATT_TAB1 + 16 && (off & 3) === 0) {
+        this.apbSaradcSar2Patt[(off - APB_SARADC_SAR2_PATT_TAB1) >> 2] = v & 0x00ff_ffff;
+      } else if (off === APB_SARADC_APB_ADC_ARB_CTRL) this.apbSaradcArbCtrl = v;
+      else if (off === APB_SARADC_FILTER_CTRL0) this.apbSaradcFilterCtrl0 = v;
+      else if (off === APB_SARADC_THRES0_CTRL) this.apbSaradcThres[0] = v;
+      else if (off === APB_SARADC_THRES1_CTRL) this.apbSaradcThres[1] = v;
+      else if (off === APB_SARADC_THRES_CTRL) this.apbSaradcThres[2] = v;
+      else if (off === APB_SARADC_INT_ENA) this.apbSaradcIntEna = v;
+      else if (off === APB_SARADC_INT_CLR) {
+        this.apbSaradcIntRaw &= ~v;
+        if ((this.apbSaradcCtrl2 & APB_SARADC_TIMER_EN) !== 0) this.apbSaradcRunDigitalConversion();
+      } else if (off === APB_SARADC_DMA_CONF) {
+        this.apbSaradcDmaConf = v;
+        if ((v & APB_SARADC_DMA_RESET_FSM) !== 0) {
+          this.apbSaradcIntRaw = 0;
+          this.apbSaradcDataStatus = [0, 0];
+          this.apbSaradcPatternIdx = [0, 0];
+          this.apbSaradcAlterNext = 1;
+        }
+      } else if (off === APB_SARADC_APB_ADC_CLKM_CONF) this.apbSaradcClkmConf = v;
       return;
     }
     if (addr >= RTCCNTL_BASE && addr < RTCCNTL_END) {

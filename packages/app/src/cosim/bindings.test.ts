@@ -180,11 +180,11 @@ describe('input bindings (comparator feedback)', () => {
 
 describe('ADC bindings (sampler feedback)', () => {
   it('validates the channel range and net presence', () => {
-    expect(validateAdcBinding({ channel: -1, netId: 'net-1' })).toMatch(/0–15/);
-    expect(validateAdcBinding({ channel: 16, netId: 'net-1' })).toMatch(/0–15/);
+    expect(validateAdcBinding({ channel: -1, netId: 'net-1' })).toMatch(/0–19/);
+    expect(validateAdcBinding({ channel: 20, netId: 'net-1' })).toMatch(/0–19/);
     expect(validateAdcBinding({ channel: 1.5, netId: 'net-1' })).toMatch(/integer/);
     expect(validateAdcBinding({ channel: 0, netId: '' })).toMatch(/net/);
-    expect(validateAdcBinding({ channel: 7, netId: 'net-1' })).toBeNull();
+    expect(validateAdcBinding({ channel: 19, netId: 'net-1' })).toBeNull();
   });
 
   it('addAdcBinding appends without mutating; duplicate channels refused', () => {
@@ -270,7 +270,7 @@ describe('validateClosedLoopSpec', () => {
       ),
     ).toMatch(/bound twice/);
     expect(
-      validateClosedLoopSpec(closedSpec({ adc: [{ channel: 16, netId: 'net-1' }] })),
-    ).toMatch(/0–15/);
+      validateClosedLoopSpec(closedSpec({ adc: [{ channel: 20, netId: 'net-1' }] })),
+    ).toMatch(/0–19/);
   });
 });

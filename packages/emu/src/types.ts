@@ -38,9 +38,9 @@ export interface McuStepResult {
 /** One completed ADC conversion — the co-sim honesty readout unit. */
 export interface AdcReadRequest {
   /**
-   * Mux channel latched at conversion start (ADMUX MUX bits): 0-7 are
-   * the ADC pins, 8 is the temperature sensor, 14/15 are the internal
-   * 1.1 V bandgap and GND.
+   * Core-defined mux/sampler channel latched at conversion start.
+   * AVR follows ADMUX (0-7 ADC pins, 8 temperature, 14/15 bandgap/GND);
+   * ESP32-S3 uses 0-9 for ADC1 and 10-19 for ADC2.
    */
   channel: number;
   /** Absolute CPU cycle count at conversion COMPLETION. */
@@ -93,10 +93,10 @@ export interface McuCore {
 
   /**
    * Install the analog source the ADC consults when a conversion
-   * completes. The returned voltage is quantized to 10 bits as
-   * clamp(round(volts / vref * 1023), 0, 1023). Without a sampler,
-   * every conversion reads 0 V. The sampler survives reset(), like
-   * loaded firmware: it is bench wiring, not machine state.
+   * completes. The returned voltage is quantized by the core's ADC
+   * resolution and reference voltage. Without a sampler, every
+   * conversion reads 0 V. The sampler survives reset(), like loaded
+   * firmware: it is bench wiring, not machine state.
    *
    * Optional in the contract only because not every core has an ADC
    * (and existing co-sim fakes predate it); Atmega328pCore always

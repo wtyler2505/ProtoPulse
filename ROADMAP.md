@@ -384,9 +384,38 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       from DROM, and survives reset; cache-window writes and
       unmapped-window reads refuse loudly. Cuts: 1-cycle XIP reads
       (no cache-miss timing), no MMU registers (no runtime remap)
+- [x] ESP32-S3 core slices 10–13 — IDF startup runway (landed
+      2026-06-12): host-intercepted ROM functions, RTC/eFuse/SYSTEM
+      startup registers, second-core release/reset behavior, all four
+      general-purpose TIMG timers, MWDT watchdogs, and the RTC RWDT.
+      Cuts: ROM is semantic traps rather than redistributable mask
+      ROM, no peripheral interrupts route to core 1, watchdog reset
+      routing is simplified, and RTC watchdog interrupt delivery is
+      not modeled yet
+- [x] ESP32-S3 core slice 14 — SAR ADC2 oneshot (landed 2026-06-12):
+      SENS_SAR_MEAS2_CTRL2 now mirrors ADC1's oneshot flow
+      (one-hot SAR2_EN_PAD select, MEAS2_START_SAR pulse,
+      MEAS2_DONE_SAR poll, 12-bit MEAS2_DATA_SAR). ADC2 channel n
+      maps to GPIO n+11 and is exposed to the one-dimensional co-sim
+      sampler/read-log surface as channel 10+n, so ADC1 and ADC2 mux
+      numbers cannot collide. Cuts: instant conversions, no
+      attenuation; the APB_SARADC continuous substrate starts in
+      slice 15
+- [x] ESP32-S3 core slice 15 — APB_SARADC digital-controller
+      substrate (landed 2026-06-12): the register block at
+      0x60040000 now stores CTRL/CTRL2/FSM_WAIT/pattern tables/
+      DMA_CONF/CLKM/threshold config, exposes ADC1/ADC2 DATA_STATUS
+      and INT_RAW/ST/CLR, decodes packed 6-bit pattern entries, and
+      runs instant timer/start-triggered conversions through the same
+      host sampler/read-log surface. Clearing ADC1_DONE while timer
+      mode is enabled advances the running pattern table. Cuts: no
+      GDMA descriptor engine yet, so adc_continuous_read() cannot
+      receive DMA frames
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
-      firmware: ROM functions, RTC/eFuse/SYSTEM registers, second
-      core, remaining peripherals — walked openly, slice by slice
+      firmware: GDMA-backed ADC continuous frame delivery,
+      sleep/wake, eFuse programming, interrupt delivery still outside
+      the currently modeled sources, and remaining peripherals —
+      walked openly, slice by slice
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 
