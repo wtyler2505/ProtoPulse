@@ -19,7 +19,7 @@ import fs from 'fs';
 const imageData = fs.readFileSync('./image.jpg').toString('base64');
 
 const message = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   messages: [{
     role: 'user',
@@ -56,7 +56,7 @@ content: [
 
 ```typescript
 const message = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   tools: [searchProductTool],
   messages: [{

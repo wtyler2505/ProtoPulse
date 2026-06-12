@@ -14,8 +14,8 @@ async function basicQuery() {
   const response = query({
     prompt: "Analyze the codebase and suggest improvements",
     options: {
-      model: "claude-sonnet-4-5",  // or "haiku", "opus"
-      workingDirectory: process.cwd(),
+      model: "claude-sonnet-4-6",  // or "haiku", "opus"
+      cwd: process.cwd(),
       allowedTools: ["Read", "Grep", "Glob"]
     }
   });

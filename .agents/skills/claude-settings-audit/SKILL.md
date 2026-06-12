@@ -30,14 +30,7 @@ Check for these indicator files:
 | **Infra**    | `*.tf` files, `kubernetes/`, `helm/`                                                  |
 | **Monorepo** | `lerna.json`, `nx.json`, `turbo.json`, `pnpm-workspace.yaml`                          |
 
-## Phase 2: Detect Services
-
-Check for service integrations:
-
-| Service    | Detection                                                                       |
-| ---------- | ------------------------------------------------------------------------------- |
-| **Sentry** | `sentry-sdk` in deps, `@sentry/*` packages, `.sentryclirc`, `sentry.properties` |
-| **Linear** | Linear config files, `.linear/` directory                                       |
+## Phase 2: Detect Frameworks
 
 Read dependency files to identify frameworks:
 
@@ -136,48 +129,7 @@ Only include commands for tools actually detected in the project.
 | `*.tf` files         | `terraform --version`, `terraform providers`, `terraform state list` |
 | `Makefile`           | `make --version`, `make -n`                                          |
 
-### Skills (for Sentry Projects)
-
-If this is a Sentry project (or sentry-skills plugin is installed), include:
-
-```json
-[
-  "Skill(sentry-skills:agents-md)",
-  "Skill(sentry-skills:blog-writing-guide)",
-  "Skill(sentry-skills:brand-guidelines)",
-  "Skill(sentry-skills:claude-settings-audit)",
-  "Skill(sentry-skills:code-review)",
-  "Skill(sentry-skills:code-simplifier)",
-  "Skill(sentry-skills:commit)",
-  "Skill(sentry-skills:create-branch)",
-  "Skill(sentry-skills:django-access-review)",
-  "Skill(sentry-skills:django-perf-review)",
-  "Skill(sentry-skills:doc-coauthoring)",
-  "Skill(sentry-skills:find-bugs)",
-  "Skill(sentry-skills:gh-review-requests)",
-  "Skill(sentry-skills:gha-security-review)",
-  "Skill(sentry-skills:iterate-pr)",
-  "Skill(sentry-skills:pr-writer)",
-  "Skill(sentry-skills:security-review)",
-  "Skill(sentry-skills:skill-scanner)",
-  "Skill(sentry-skills:skill-writer)",
-  "Skill(sentry-skills:sred-project-organizer)",
-  "Skill(sentry-skills:sred-work-summary)"
-]
-```
-
 ### WebFetch Domains
-
-#### Always Include (Sentry Projects)
-
-```json
-[
-  "WebFetch(domain:docs.sentry.io)",
-  "WebFetch(domain:develop.sentry.dev)",
-  "WebFetch(domain:docs.github.com)",
-  "WebFetch(domain:cli.github.com)"
-]
-```
 
 #### Framework-Specific
 
@@ -205,38 +157,7 @@ MCP servers are configured in `.mcp.json` (not `settings.json`). Check for exist
 cat .mcp.json 2>/dev/null || echo "No existing .mcp.json"
 ```
 
-#### Sentry MCP (if Sentry SDK detected)
-
-Add to `.mcp.json` (replace `{org-slug}` and `{project-slug}` with your Sentry organization and project slugs):
-
-```json
-{
-  "mcpServers": {
-    "sentry": {
-      "type": "http",
-      "url": "https://mcp.sentry.dev/mcp/{org-slug}/{project-slug}"
-    }
-  }
-}
-```
-
-#### Linear MCP (if Linear usage detected)
-
-Add to `.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "linear": {
-      "command": "npx",
-      "args": ["-y", "@linear/mcp-server"],
-      "env": {
-        "LINEAR_API_KEY": "${LINEAR_API_KEY}"
-      }
-    }
-  }
-}
-```
+Suggest MCP servers only for services the project demonstrably uses (detected via dependencies or config files).
 
 **Note**: Never suggest GitHub MCP. Always use `gh` CLI commands for GitHub.
 
@@ -259,7 +180,6 @@ Example output structure:
 | Languages       | Python 3.x     |
 | Package Manager | poetry         |
 | Frameworks      | Django, Celery |
-| Services        | Sentry         |
 | Build Tools     | Docker, Make   |
 
 ## Recommended .claude/settings.json
@@ -267,17 +187,38 @@ Example output structure:
 \`\`\`json
 {
 "permissions": {
+"defaultMode": "default",
 "allow": [
-// ... grouped by category with comments
+// read-only commands, grouped by category with comments
 ],
-"deny": []
+"ask": [
+// state-modifying but routine commands the user wants gated, e.g.
+// "Bash(git push:*)", "Write(**/*.config.*)"
+],
+"deny": [
+// secrets and destructive ops, e.g. "Read(.env)", "Bash(rm -rf:*)"
+]
 }
 }
 \`\`\`
 
+### Permission Tiers and Modes
+
+Three rule tiers: `allow` (run without prompting), `ask` (always prompt, even in permissive modes), `deny` (always blocked). `deny` beats `ask` beats `allow`.
+
+`defaultMode` sets the session's baseline permission mode:
+
+| Mode                | Behavior                                                  |
+| ------------------- | ---------------------------------------------------------- |
+| `default`           | Prompt on first use of each tool                          |
+| `acceptEdits`       | Auto-accept file edits; still prompt for bash etc.        |
+| `plan`              | Read-only analysis, no edits or commands                  |
+| `dontAsk`           | Auto-deny anything not explicitly allowed                 |
+| `bypassPermissions` | Skip all prompts (use only in sandboxed environments)     |
+
 ## Recommended .mcp.json (if applicable)
 
-If you use Sentry or Linear, add the MCP config to `.mcp.json`...
+If detected services warrant MCP servers, add the config to `.mcp.json`...
 ```
 
 ## Important Rules
@@ -310,3 +251,7 @@ Only include the package manager actually used by the project:
 | `Pipfile.lock`      | pipenv commands | pip, poetry                            |
 
 If multiple lock files exist, include only the commands for each detected manager.
+
+## Related Skills
+
+- `claude-automation-recommender` (global): broader analysis that recommends hooks, subagents, skills, plugins, and MCP servers for a codebase — use it after this audit when you want the full automation pass, not just permissions.

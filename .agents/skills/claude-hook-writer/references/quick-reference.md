@@ -167,7 +167,11 @@ echo "[$(date)] Debug info" >> "$LOG_FILE"
 - `SessionEnd` - When Claude Code exits
 - `Notification` - During alerts
 - `Stop` / `SubagentStop` - When responses finish
+- `SubagentStart` - When a subagent/teammate spawns
 - `PreCompact` - Before context compaction
+- `PostCompact` - After context compaction
+- `TaskCompleted` - When a task list item completes
+- `TeammateIdle` - When an agent-team teammate goes idle
 
 ---
 

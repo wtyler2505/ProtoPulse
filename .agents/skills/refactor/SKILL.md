@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: Plan vault restructuring from config changes. Compares config.yaml against derivation.md, identifies dimension shifts, shows restructuring plan, executes on approval. Triggers on "/refactor", "restructure vault".
+description: Plan vault restructuring from config changes. Compares config.yaml against derivation.md, identifies dimension shifts, shows restructuring plan, executes on approval. Triggers on "/refactor", "restructure vault". NOT for code refactoring — use normal editing/refactoring approaches for code (this skill only restructures the Ars Contexta knowledge vault).
 version: "1.0"
 generated_from: "arscontexta-v1.6"
 user-invocable: true
@@ -160,7 +160,7 @@ For content-impacting changes:
 
 ### Interaction Constraint Check
 
-Read `${GEMINI_EXTENSION_ROOT}/reference/interaction-constraints.md` and check:
+Read `.agents/skills/refactor/reference/interaction-constraints.md` (vendored from the arscontexta plugin — `${GEMINI_EXTENSION_ROOT}` is not set for this project-local skill) and check:
 
 1. **Hard blocks:** Would the new configuration create a combination that WILL fail?
    - Example: atomic granularity + 2-tier navigation at high volume
@@ -244,7 +244,7 @@ echo "[list of changes]" >> ops/changelog.md
 For each skill affected by the dimension changes:
 
 1. Read the current skill from the generated skills directory
-2. Consult `${GEMINI_EXTENSION_ROOT}/reference/` for the latest skill generation approach
+2. Consult the arscontexta plugin reference dir if installed (`~/.claude/plugins/cache/agenticnotetaking/arscontexta/<version>/reference/`) for the latest skill generation approach; otherwise rely on the existing skill's structure as the template
 3. Apply vocabulary transformation from derivation-manifest
 4. Apply processing depth settings from the new config
 5. Write the regenerated skill
@@ -307,9 +307,9 @@ If Phase 2 identified content-impacting changes:
 1. **Schema migration:** Add/remove/rename fields across knowledge
    ```bash
    # Example: add a new required field to all knowledge
+   # (GNU sed form — portable on Linux; macOS/BSD sed would need `sed -i ''`)
    for f in {vocabulary.knowledge}/*.md; do
-     grep -q '^new_field:' "$f" || sed -i '' '/^description:/a\
-   new_field: [default value]' "$f"
+     grep -q '^new_field:' "$f" || sed -i '/^description:/a new_field: [default value]' "$f"
    done
    ```
 
@@ -321,9 +321,10 @@ If Phase 2 identified content-impacting changes:
 
 3. **Link updates:** Update all wiki links affected by renames
    ```bash
-   # Use rename script if available
-   ops/scripts/rename-note.sh "old name" "new name"
+   # Find every file referencing the old slug, then rewrite the wiki links
+   rg -l '\[\[old-slug\]\]' | xargs -r sed -i 's/\[\[old-slug\]\]/[[new-slug]]/g'
    ```
+   Verify zero dangling links afterward (Phase 5 wiki-link check).
 
 4. **topic map restructuring:** Merge/split MOCs as needed
    - For splits: create sub-MOCs, move Core Ideas, update parent

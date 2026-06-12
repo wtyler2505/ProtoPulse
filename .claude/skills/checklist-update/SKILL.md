@@ -1,6 +1,6 @@
 ---
 name: checklist-update
-description: Toggle checklist items by issue ID and update summary counts in audit checklists
+description: Toggle checklist items by issue ID and update summary counts in audit checklists. Use to mark VA-/audit checklist items done, when Tyler says "update the audit checklist", "check off VA-XXX", or after /fix-audit-failures lands fixes that need bookkeeping.
 ---
 
 # /checklist-update
@@ -27,17 +27,23 @@ Format: `<ID> [action] [-- description]` or batch: `<ID1>,<ID2>,<ID3> [action]`
 
 ## Procedure
 
-### Step 1: Locate the Checklist
+### Step 1: Locate the Checklist and Detect Format
 
 1. If the conversation has a recently referenced checklist file, use that
-2. Otherwise, glob for checklist files:
+2. Otherwise, glob for checklist files in priority order:
    ```
+   docs/audits/*visual-audit*.md     # primary — where /visual-audit writes
+   docs/audits/*checklist*.md
    docs/*checklist*.md
    docs/*CHECKLIST*.md
-   docs/*audit*.md
    ```
 3. Use the most recently modified match
-4. If no file found: tell user and ask for the path
+4. **Format detection (mandatory before any edit):** this skill operates ONLY on checkbox-format checklists — files containing lines matching `- [ ] **ID**` or `- [x] **ID**` (e.g., `- [ ] **VA-001** ...`). Verify with:
+   ```bash
+   rg -c '^\s*- \[[ x]\] \*\*[A-Z]+-[0-9]+\*\*' <candidate-file>
+   ```
+   - If the most recently modified match has NO such lines (e.g., it's a table-based checklist, an audit report, or prose), do NOT edit it. Instead, list all candidate files with a note of which ones contain checkbox lines, and stop with a clear message: "The most recent match (<file>) is not a checkbox-format checklist. Candidates: ... — tell me which to use."
+5. If no file found at all: tell user and ask for the path
 
 ### Step 2: Parse Arguments
 
@@ -82,7 +88,7 @@ After toggling, recount and update the summary section at the top of the checkli
 
 Print a concise report:
 ```
-Checklist updated: docs/visual-audit-checklist.md
+Checklist updated: docs/audits/2026-06-11-visual-audit.md
   Checked: VA-001, VA-005, VA-012
   Not found: (none)
   Progress: 45/107 (42%)
@@ -92,6 +98,7 @@ Checklist updated: docs/visual-audit-checklist.md
 
 - ID not found in checklist: report it but continue with remaining IDs
 - Checklist file not found: list available checklist files and ask user
+- File found but wrong format (no `- [ ] **ID**` lines): list candidates and stop — never "best-effort" edit a non-checkbox file
 - ID already in target state (checking an already-checked item): skip silently, note in report
 - Malformed checklist line: report the issue but don't corrupt the file
 
@@ -101,3 +108,4 @@ Checklist updated: docs/visual-audit-checklist.md
 - Preserve all existing formatting and content outside the toggled lines
 - The summary update must be accurate — recount from the actual `[x]` and `[ ]` markers
 - Support any ID prefix pattern (VA-, VL-, FA-, etc.)
+- Upstream: `/visual-audit` generates these checklists; `/fix-audit-failures` calls this skill for post-fix bookkeeping

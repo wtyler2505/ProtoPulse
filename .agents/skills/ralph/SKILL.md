@@ -15,7 +15,7 @@ argument-hint: "N [--parallel] [--batch id] [--type extract] [--dry-run] — N =
 
 Parse arguments:
 - N (required unless --dry-run): number of tasks to process
-- --parallel: concurrent claim workers (max 5) + cross-connect validation
+- --parallel: concurrent claim workers, max 5 (within the project-wide cap of 6 total agents) + cross-connect validation
 - --batch [id]: process only tasks from specific batch
 - --type [type]: process only tasks at a specific phase (extract, create, connect, revisit, verify, enrich)
 - --dry-run: show what would execute without running
@@ -52,13 +52,13 @@ Each phase maps to specific Task tool parameters. Use these EXACTLY when spawnin
 |-------|---------------|---------|
 | extract | /extract | Extract claims from source material |
 | create | (inline note creation) | Write the {DOMAIN:note} file |
-| enrich | /enrich | Add content to existing {DOMAIN:note} |
+| enrich | task-file instructions (/enrich wraps this) | Add content to existing {DOMAIN:note} |
 | connect | /connect | Find connections, update {DOMAIN:topic map}s |
 | revisit | /revisit | Update older {DOMAIN:note_plural} with new connections |
 | verify | /verify | Description quality + schema + health checks |
 
 **All phases use the same subagent configuration:**
-- subagent_type: knowledge-worker (if available) or default
+- subagent_type: general-purpose
 - mode: dontAsk
 
 Subagents inherit the session model. Users running opus get opus quality on processing phases. Users running sonnet get sonnet everywhere. Fresh context per phase already ensures efficiency — every phase gets full capability in the smart zone.
@@ -67,12 +67,18 @@ Subagents inherit the session model. Users running opus get opus quality on proc
 
 ## Step 1: Read Queue State
 
-Read the queue file. Check these locations in order:
-1. `ops/queue.yaml`
-2. `ops/queue/queue.yaml`
-3. `ops/queue/queue.json`
+Read the queue file at `ops/queue/queue.json`.
 
 Parse the queue. Identify ALL pending tasks.
+
+**phase_order null-handling (REQUIRED):** If the queue header's `phase_order` is null or missing, use these defaults AND repair the header before processing:
+
+```bash
+jq '.phase_order = {"claim": ["create","reflect","reweave","verify"], "enrichment": ["enrich","reflect","reweave","verify"]}' \
+  ops/queue/queue.json > tmp.json && mv tmp.json ops/queue/queue.json
+```
+
+Note: `reflect`/`reweave` are the machine phase names stored in task `current_phase` / `completed_phases` fields (this vault's vocabulary calls these phases connect/revisit). The repair must use the machine names, not the vocabulary names. Never proceed with a null `phase_order` — phase progression (Step 4e) dereferences it.
 
 **Queue structure (v2 schema):**
 
@@ -199,13 +205,13 @@ ONE PHASE ONLY. Do NOT run connect.
 
 For **enrich** phase:
 ```
-Read the task file at ops/queue/{FILE} for context.
-
-You are processing task {ID} from the work queue.
-Phase: enrich | Target: {TARGET}
-
-Run /enrich --handoff using the task file for context.
-The task file specifies which existing {DOMAIN:note} to enrich and what to add.
+Read the enrichment task file at ops/queue/{FILE} and follow its embedded
+instructions: the frontmatter names the target_note and the addition; the
+## Reduce Notes section explains what to add and why. Load the target note
+from {DOMAIN:knowledge}/, add the enrichment content, then fill the task
+file's ## Enrich section with what was done. Output RALPH HANDOFF.
+(The /enrich skill at .claude/skills/enrich/SKILL.md wraps this workflow —
+invoke /enrich --handoff ops/queue/{FILE} if the Skill tool is available.)
 ONE PHASE ONLY. Do NOT run connect.
 ```
 
@@ -390,7 +396,7 @@ Ralph Lead (you) — orchestration only
 
 ### 6a. Identify Parallelizable Claims
 
-From the filtered queue, find pending claims. A claim is parallelizable when its `status == "pending"`. Cap at 5 concurrent workers (or N, whichever is smaller).
+From the filtered queue, find pending claims. A claim is parallelizable when its `status == "pending"`. Cap at 5 concurrent workers (or N, whichever is smaller) — 5, not 6, because the lead session itself counts against the project-wide cap of 6 total agents.
 
 Report:
 ```
@@ -524,7 +530,7 @@ Queue state:
 
 Next steps:
   {if more pending tasks}: Run /ralph {remaining} to continue
-  {if batch complete}: Run /archive-batch {batch-id}
+  {if batch complete}: Archive the batch using the inline archive procedure in the pipeline skill (Phase 5): move task files to ops/queue/archive/{date}-{batch-id}/, write {batch-id}-summary.md, mark queue entries archived
   {if queue empty}: All tasks processed
 ```
 

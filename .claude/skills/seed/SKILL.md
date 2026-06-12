@@ -14,7 +14,7 @@ argument-hint: "[file] — path to source file to seed for processing"
 
 **Target: $ARGUMENTS**
 
-The target MUST be a file path. If no target provided, list captures/ contents and ask which to seed.
+The target MUST be a file path. If no target provided, list inbox/ contents and ask which to seed.
 
 ### Step 0: Read Vocabulary
 
@@ -27,8 +27,8 @@ Read `ops/derivation-manifest.md` (or fall back to `ops/derivation.md`) for doma
 ## Step 1: Validate Source
 
 Confirm the target file exists. If it does not, check common locations:
-- `captures/{filename}`
-- Subdirectories of captures/
+- `inbox/{filename}`
+- Subdirectories of inbox/
 
 If the file cannot be found, report error and stop:
 ```
@@ -52,9 +52,8 @@ Search the queue file and archive folders for matching source names:
 ```bash
 SOURCE_NAME=$(basename "$FILE" .md | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
 
-# Check queue for existing entry
-# Search in ops/queue.yaml, ops/queue/queue.yaml, or ops/queue/queue.json
-grep -l "$SOURCE_NAME" ops/queue*.yaml ops/queue/*.yaml ops/queue/*.json 2>/dev/null
+# Check queue for existing entry (the queue lives at ops/queue/queue.json)
+grep -l "$SOURCE_NAME" ops/queue/queue.json 2>/dev/null
 
 # Check archive folders
 ls -d ops/queue/archive/*-${SOURCE_NAME}* 2>/dev/null
@@ -65,12 +64,12 @@ ls -d ops/queue/archive/*-${SOURCE_NAME}* 2>/dev/null
 If semantic search is available (qmd MCP tools or CLI), check for content overlap:
 
 ```
-mcp__qmd__search query="claims from {source filename}" limit=5
+mcp__qmd__qmd_search query="claims from {source filename}" limit=5
 ```
 
-Or via keyword search in the insights/ directory:
+Or via keyword search in the knowledge/ directory:
 ```bash
-grep -rl "{key terms from source title}" insights/ 2>/dev/null | head -5
+grep -rl "{key terms from source title}" knowledge/ 2>/dev/null | head -5
 ```
 
 ### 2c. Report Duplicates
@@ -93,22 +92,22 @@ mkdir -p "$ARCHIVE_DIR"
 ```
 
 The archive folder serves two purposes:
-1. Permanent home for the source file (moved from captures)
+1. Permanent home for the source file (moved from inbox)
 2. Destination for task files after batch completion (/archive-batch moves them here)
 
 ## Step 4: Move Source to Archive
 
 Move the source file from its current location to the archive folder. This is the **claiming step** — once moved, the source is owned by this processing batch.
 
-**captures sources get moved:**
+**inbox sources get moved:**
 ```bash
-if [[ "$FILE" == *"captures"* ]] || [[ "$FILE" == *"inbox"* ]]; then
+if [[ "$FILE" == *"inbox"* ]]; then
   mv "$FILE" "$ARCHIVE_DIR/"
   FINAL_SOURCE="$ARCHIVE_DIR/$(basename "$FILE")"
 fi
 ```
 
-**Sources outside captures stay in place:**
+**Sources outside inbox stay in place:**
 ```bash
 # Living docs (like configuration files) stay where they are
 # Archive folder is still created for task files
@@ -117,25 +116,32 @@ FINAL_SOURCE="$FILE"
 
 Use `$FINAL_SOURCE` in the task file — this is the path all downstream phases reference.
 
-**Why move immediately:** All references (task files, insights' Source footers) use the final archived path from the start. No path updates needed later. If it is in captures, it is unclaimed. Claimed sources live in archive.
+**Why move immediately:** All references (task files, knowledge notes' Source footers) use the final archived path from the start. No path updates needed later. If it is in inbox, it is unclaimed. Claimed sources live in archive.
 
 ## Step 5: Determine Claim Numbering
 
-Find the highest existing claim number across the queue and archive to ensure globally unique claim IDs.
+Find the highest existing claim number across ALL three locations — live task files, the queue, and archived batches — to ensure globally unique claim IDs. Scanning only one location causes claim-number collisions.
 
 ```bash
-# Check queue for highest claim number in file references
-QUEUE_MAX=$(grep -oE '[0-9]{3}\.md' ops/queue*.yaml ops/queue/*.yaml 2>/dev/null | \
-  grep -oE '[0-9]{3}' | sort -n | tail -1)
+# (a) Live claim task files sitting in the queue directory
+LIVE_MAX=$(find ops/queue -maxdepth 1 -name "*-[0-9][0-9][0-9].md" 2>/dev/null | \
+  grep -v summary | sed 's/.*-\([0-9][0-9][0-9]\)\.md$/\1/' | sort -n | tail -1)
+LIVE_MAX=${LIVE_MAX:-0}
+
+# (b) Task "file" fields referenced in the queue (ops/queue/queue.json)
+QUEUE_MAX=$(jq -r '.tasks[].file // empty' ops/queue/queue.json 2>/dev/null | \
+  grep -oE '[0-9]{3}\.md$' | grep -oE '^[0-9]{3}' | sort -n | tail -1)
 QUEUE_MAX=${QUEUE_MAX:-0}
 
-# Check archive for highest claim number
+# (c) Archived batches
 ARCHIVE_MAX=$(find ops/queue/archive -name "*-[0-9][0-9][0-9].md" 2>/dev/null | \
-  grep -v summary | sed 's/.*-\([0-9][0-9][0-9]\)\.md/\1/' | sort -n | tail -1)
+  grep -v summary | sed 's/.*-\([0-9][0-9][0-9]\)\.md$/\1/' | sort -n | tail -1)
 ARCHIVE_MAX=${ARCHIVE_MAX:-0}
 
-# Next claim starts after the highest
-NEXT_CLAIM_START=$((QUEUE_MAX > ARCHIVE_MAX ? QUEUE_MAX + 1 : ARCHIVE_MAX + 1))
+# Next claim starts after the max of all three.
+# 10# forces decimal — zero-padded values like 009 would otherwise parse as octal.
+MAX=$(printf '%s\n' "$LIVE_MAX" "$QUEUE_MAX" "$ARCHIVE_MAX" | sort -n | tail -1)
+NEXT_CLAIM_START=$((10#$MAX + 1))
 ```
 
 Claim numbers are globally unique and never reused across batches. This ensures every claim file name (`{source}-{NNN}.md`) is unique vault-wide.
@@ -168,7 +174,7 @@ Content type: {detected type}
 
 ## Acceptance Criteria
 - Extract claims, implementation ideas, tensions, and testable hypotheses
-- Duplicate check against insights/ during extraction
+- Duplicate check against knowledge/ during extraction
 - Near-duplicates create enrichment tasks (do not skip)
 - Each output type gets appropriate handling
 
@@ -181,20 +187,8 @@ Content type: {detected type}
 
 ## Step 7: Update Queue
 
-Add the extract task entry to the queue file.
+Add the extract task entry to the `tasks` array of the queue file (`ops/queue/queue.json`):
 
-**For YAML queues (ops/queue.yaml):**
-```yaml
-- id: {SOURCE_BASENAME}
-  type: extract
-  status: pending
-  source: "{FINAL_SOURCE}"
-  file: "{SOURCE_BASENAME}.md"
-  created: "{UTC timestamp}"
-  next_claim_start: {NEXT_CLAIM_START}
-```
-
-**For JSON queues (ops/queue/queue.json):**
 ```json
 {
   "id": "{SOURCE_BASENAME}",
@@ -207,7 +201,7 @@ Add the extract task entry to the queue file.
 }
 ```
 
-**If no queue file exists:** Create one with the appropriate schema header (phase_order definitions) and this first task entry.
+**If no queue file exists:** Create `ops/queue/queue.json` with the appropriate schema header (phase_order definitions) and this first task entry.
 
 ## Step 8: Report
 
@@ -253,16 +247,16 @@ Claim numbers (NNN) are globally unique across all batches, ensuring every filen
 
 ## Source Handling Patterns
 
-**captures source (most common):**
+**inbox source (most common):**
 ```
-captures/research/article.md
+inbox/research/article.md
     | /seed
     v
 ops/queue/archive/2026-01-30-article/article.md  <- source moved here
 ops/queue/article.md                               <- task file created
 ```
 
-**Living doc (outside captures):**
+**Living doc (outside inbox):**
 ```
 CLAUDE.md -> stays as CLAUDE.md (no move)
 ops/queue/archive/2026-01-30-claude-md/           <- folder still created
@@ -275,9 +269,9 @@ When /archive-batch runs later, it moves task files into the existing archive fo
 
 ## Edge Cases
 
-**Source outside captures:** Works — source stays in place, archive folder is created for task files only.
+**Source outside inbox:** Works — source stays in place, archive folder is created for task files only.
 
-**No queue file:** Create `ops/queue/queue.yaml` (or `.json`) with schema header and this first entry.
+**No queue file:** Create `ops/queue/queue.json` with schema header and this first entry.
 
 **Large source (2500+ lines):** Note in output: "Large source ({N} lines) -- /extract will chunk automatically."
 
@@ -291,13 +285,13 @@ When /archive-batch runs later, it moves task files into the existing archive fo
 
 **never:**
 - Skip duplicate detection (prevents wasted processing)
-- Move a source that is not in captures (living docs stay in place)
+- Move a source that is not in inbox (living docs stay in place)
 - Reuse claim numbers from previous batches (globally unique is required)
 - Create a task file without updating the queue (both must happen together)
 
 **always:**
 - Ask before proceeding when duplicates are detected
 - Create the archive folder even for living docs (task files need it)
-- Use the archived path (not original) in the task file for captures sources
+- Use the archived path (not original) in the task file for inbox sources
 - Report next steps clearly so the user knows what to do next
-- Compute next_claim_start from both queue AND archive (not just one)
+- Compute next_claim_start from live task files, queue.json, AND archived batches (max of all three)

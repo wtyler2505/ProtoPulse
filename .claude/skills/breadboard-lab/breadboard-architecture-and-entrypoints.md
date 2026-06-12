@@ -1,32 +1,48 @@
 # Breadboard Architecture And Entrypoints
 
-## The One File That Governs Everything
+> Layout verified 2026-06-11 (post-extraction refactor). Search by symbol name, never by line number — line numbers rot.
 
-**`client/src/components/circuit-editor/BreadboardView.tsx` (2,284 lines)** is the orchestration shell. Nothing happens in the Breadboard tab that doesn't flow through this file.
+## The File That Governs Everything
 
-Key exports + functions (search by name):
+**`client/src/components/circuit-editor/BreadboardView.tsx` (~700 lines)** is the orchestration shell. Nothing happens in the Breadboard tab that doesn't flow through this file — but most of the meat was extracted into the `breadboard-view/` and `breadboard-canvas/` subdirectories. BreadboardView composes them.
 
-| Symbol | Line (approx) | Responsibility |
-|---|---:|---|
-| `BreadboardView` (default export) | 231 | Top-level component. Wires toolbar, canvas, sidebar, overlays, dialogs, coach. |
-| `BreadboardToolbar` | 774 | Mode toggles (wire / select / place), zoom, grid controls, undo/redo |
-| `BreadboardCanvas` | 850 | Grid + components + overlays SVG layer composition |
-| `buildAutoPlacementTemplate` | 153 | Converts circuit-instance + ComponentPart → initial breadboard placement |
-| `findAutoPlacement` | 170 | Finds an empty slot on the board for auto-placement |
-| `getDropTypeFromPart` | 186 | Classifies drop behavior by part family |
-| `isDipLikeType` | 192 | DIP-heuristic for center-channel straddling placement |
-| `buildPlacementForDrop` | 197 | Merges drag payload + drop target → final placement |
-| `WIRE_COLORS`, `WIRE_COLOR_PRESETS` | 219, 225 | Wire color palette (user can cycle per wire) |
+Key symbols and where they live NOW (search by name):
 
-If Breadboard feels buggy, confusing, or inconsistent, the root cause is **usually** in one of those symbols — either an orchestration gap (something never mounts), a state-truth issue (props drift from actual state), or a wiring gap between subsystems.
+| Symbol | Home | Responsibility |
+|---|---|---|
+| `BreadboardView` (default export) | `BreadboardView.tsx` | Top-level component. Wires toolbar, canvas, sidebar, overlays, dialogs, coach. |
+| `BreadboardToolbar` | `breadboard-view/BreadboardToolbar.tsx` | Mode toggles (wire / select / place), zoom, grid controls, undo/redo |
+| `BreadboardDialogs` | `breadboard-view/BreadboardDialogs.tsx` | All dialog mounting extracted out of the shell |
+| `BreadboardEmptyState` | `breadboard-view/BreadboardEmptyState.tsx` | No-circuit empty state |
+| `useBreadboardDialogState` | `breadboard-view/useBreadboardDialogState.ts` | Dialog open/close state hook |
+| `BreadboardCanvas` | `breadboard-canvas/index.tsx` | Grid + components + overlays SVG layer composition (the biggest single file, ~1,650 lines) |
+| `buildAutoPlacementTemplate` | `breadboard-canvas/canvas-helpers.ts` | Converts circuit-instance + ComponentPart → initial breadboard placement |
+| `findAutoPlacement` | `breadboard-canvas/canvas-helpers.ts` | Finds an empty slot on the board for auto-placement |
+| `getDropTypeFromPart` | `breadboard-canvas/canvas-helpers.ts` | Classifies drop behavior by part family |
+| `isDipLikeType` | `breadboard-canvas/canvas-helpers.ts` | DIP-heuristic for center-channel straddling placement |
+| `buildPlacementForDrop` | `breadboard-canvas/canvas-helpers.ts` | Merges drag payload + drop target → final placement |
+| `placementAnchorPixel` | `breadboard-canvas/canvas-helpers.ts` | Placement → pixel anchor conversion |
+| `WIRE_COLORS` | `breadboard-canvas/canvas-helpers.ts` | Wire color palette (user can cycle per wire) |
+| `useCanvasViewport` | `breadboard-canvas/useCanvasViewport.ts` | Zoom/pan viewport state |
+| `useBreadboardCoachPlan` | `useBreadboardCoachPlan.ts` (in `components/circuit-editor/`, NOT `lib/`) | Coach plan React hook (~650 lines) |
+
+All paths above are relative to `client/src/components/circuit-editor/`. If Breadboard feels buggy, confusing, or inconsistent, the root cause is **usually** in one of those symbols — either an orchestration gap (something never mounts), a state-truth issue (props drift from actual state), or a wiring gap between subsystems.
 
 ## Complete Subsystem Map
+
+### 0. The Three Extracted Subdirectories (new since the refactor)
+
+| Directory | Purpose |
+|---|---|
+| `breadboard-view/` | View-shell pieces extracted from BreadboardView: `BreadboardToolbar.tsx`, `BreadboardDialogs.tsx`, `BreadboardEmptyState.tsx`, `useBreadboardDialogState.ts` (each has tests in `breadboard-view/__tests__/`) |
+| `breadboard-canvas/` | The canvas subsystem: `index.tsx` (`BreadboardCanvas`), `canvas-helpers.ts` (placement/drop pure helpers), `useCanvasViewport.ts`, `CanvasToolbar.tsx`, `WireColorMenu.tsx`, `CanvasCoordinateReadout.tsx`, `CanvasEmptyGuidance.tsx` (tests in `breadboard-canvas/__tests__/`) |
+| `breadboard-components/` | ~20 per-part-family SVG renderers (`ResistorSvg`, `LedSvg`, `IcSvg`, `ConnectorSvg`, `MotorSvg`, …) exported via `index.ts` barrel; consumed by `BreadboardComponentRenderer.tsx` |
 
 ### 1. Workbench Shell (right rail + dialogs)
 
 | File | Role |
 |---|---|
-| `BreadboardWorkbenchSidebar.tsx` (347 LOC) | Right-rail container. Hosts shelves, inventory status, exact-part triggers, reconciliation summary |
+| `BreadboardWorkbenchSidebar.tsx` | Right-rail container. Hosts shelves, inventory status, exact-part triggers, reconciliation summary |
 | `BreadboardStarterShelf.tsx` | Curated "just drop this" starter parts for beginners |
 | `BreadboardInventoryDialog.tsx` | Detailed stash browser + reconciliation dialog |
 | `BreadboardExactPartRequestDialog.tsx` | User types MPN / description → resolver → verified/candidate/draft flow |
@@ -40,8 +56,11 @@ If Breadboard feels buggy, confusing, or inconsistent, the root cause is **usual
 
 | File | Role |
 |---|---|
+| `breadboard-canvas/index.tsx` | `BreadboardCanvas` — composes grid, components, wires, overlays into the SVG canvas |
+| `breadboard-canvas/canvas-helpers.ts` | Pure placement/drop helpers (`getDropTypeFromPart`, `buildPlacementForDrop`, `WIRE_COLORS`, …) |
+| `breadboard-canvas/useCanvasViewport.ts` + `CanvasToolbar.tsx` | Zoom/pan state + canvas-local toolbar |
 | `BreadboardGrid.tsx` | Hole grid, row/column labels, drop-preview (snap preview + fit-zone highlight) |
-| `BreadboardComponentRenderer.tsx` | SVG footprint rendering for standard breadboard components |
+| `BreadboardComponentRenderer.tsx` | SVG footprint rendering; dispatches to `breadboard-components/` per-part SVGs, bendable legs via `BendableLegRenderer.tsx` |
 | `BreadboardBenchPartRenderer.tsx` | Off-board parts that live adjacent to the bench (Mega, hub motor, BLDC driver) — connected via bench pins |
 | `BreadboardWireEditor.tsx` | Wire selection, drag to re-route, endpoint snap preview (connects to breadboard holes OR bench pins) |
 | `BreadboardDrcOverlay.tsx` | Real-time rule violations rendered in-canvas |
@@ -52,20 +71,20 @@ If Breadboard feels buggy, confusing, or inconsistent, the root cause is **usual
 
 ### 3. Trust & Readiness (pure-lib logic)
 
-| File | LOC | Role |
+| File | ~LOC | Role |
 |---|---:|---|
-| `breadboard-bench.ts` | 332 | Per-part readiness derivation (verified-exact / connector-defined / heuristic / stash-absent). Bench summary. |
-| `breadboard-part-inspector.ts` | 754 | Selected-part detail: pin-map confidence, fit verdict, provenance history, coach actionability |
-| `breadboard-layout-quality.ts` | 240 | Scoring: rail usage balance, signal-path length, decoupling adjacency, off-board tidiness |
-| `breadboard-board-audit.ts` | 891 | Full audit: issue generation + severity + remediation links |
-| `breadboard-preflight.ts` | 523 | "Can this build right now?" — gate before bring-up / fab / demo |
+| `breadboard-bench.ts` | 350 | Per-part readiness derivation (verified-exact / connector-defined / heuristic / stash-absent). Bench summary. |
+| `breadboard-part-inspector.ts` | 800 | Selected-part detail: pin-map confidence, fit verdict, provenance history, coach actionability |
+| `breadboard-layout-quality.ts` | 250 | Scoring: rail usage balance, signal-path length, decoupling adjacency, off-board tidiness |
+| `breadboard-board-audit.ts` | 1,400 | Full audit: issue generation + severity + remediation links |
+| `breadboard-preflight.ts` | 550 | "Can this build right now?" — gate before bring-up / fab / demo |
 
 ### 4. Coach / AI
 
-| File | LOC | Role |
+| File | ~LOC | Role |
 |---|---:|---|
-| `breadboard-coach-plan.ts` | 393 | Plan derivation from selected part + board state |
-| `useBreadboardCoachPlan.ts` | — | React hook wrapper + memoization |
+| `breadboard-coach-plan.ts` | 400 | Plan derivation from selected part + board state |
+| `useBreadboardCoachPlan.ts` | 650 | React hook wrapper + memoization — lives in `components/circuit-editor/`, NOT `lib/` |
 | `BreadboardCoachOverlay.tsx` | — | Overlay UI for coach plan steps |
 | `breadboard-ai-prompts.ts` | 175 | Prompt templates that pass trust-tier info to the model correctly |
 
@@ -84,9 +103,11 @@ If Breadboard feels buggy, confusing, or inconsistent, the root cause is **usual
 
 ### 6. Auxiliary
 
-| File | LOC | Role |
+| File | ~LOC | Role |
 |---|---:|---|
 | `breadboard-3d.ts` | 700 | Optional 3D rendering of board + placed parts |
+
+LOC values throughout this file are approximate (nearest 50) — run `wc -l` when precision matters.
 
 ## Request-To-Entrypoint Routing
 
@@ -127,14 +148,14 @@ These relationships are subtle. Cache them:
 - **Exact-part resolution** is **not** a breadboard file — it lives in `shared/exact-part-resolver.ts` + `shared/verified-boards/*.ts`. The breadboard dialog (`BreadboardExactPartRequestDialog.tsx`) is a caller.
 - **Shortfall computation** is **not** a breadboard file — it lives in `shared/parts/shortfall.ts` + `server/storage/bom.ts`. Breadboard just displays it.
 - **Vault knowledge** at `knowledge/breadboard-intelligence.md` is the source of truth for layout rules, verified-board quirks, and bench-coach claims. **Before hardcoding a rule, grep the vault.**
-- **Tests for pure libs** live in `client/src/lib/__tests__/breadboard-*.test.ts`. **Tests for components** live in `client/src/components/circuit-editor/__tests__/Breadboard*.test.tsx`. Different conventions — follow the existing one.
+- **Tests live in four places**: pure libs in `client/src/lib/__tests__/` and `client/src/lib/circuit-editor/__tests__/`; components in `client/src/components/circuit-editor/__tests__/`; the extracted subsystems each carry their own `breadboard-view/__tests__/` and `breadboard-canvas/__tests__/`. Follow the convention of the directory you're editing.
 
 ## When In Doubt
 
-Grep, don't guess. The codebase has ~4,000 LOC of breadboard surface across 40+ files. Running:
+Search, don't guess. The codebase has ~19,000 LOC of breadboard surface across 60+ files. Running:
 
 ```
-grep -rn "SomeBreadboardSymbol" client/src/components/circuit-editor client/src/lib/breadboard* client/src/lib/circuit-editor 2>/dev/null | head
+rg -n "SomeBreadboardSymbol" client/src/components/circuit-editor client/src/lib | head
 ```
 
 usually finds existing infrastructure in < 2 seconds.

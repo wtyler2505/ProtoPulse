@@ -52,7 +52,7 @@ Cache hits require:
 
 ```typescript
 const message = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   system: [
     {
@@ -71,7 +71,7 @@ const message = await anthropic.messages.create({
 
 ```typescript
 const message = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   messages: [
     {
@@ -101,7 +101,7 @@ const message = await anthropic.messages.create({
 ```typescript
 // Turn 1 - Creates cache
 const response1 = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   system: [
     {
@@ -117,7 +117,7 @@ const response1 = await anthropic.messages.create({
 
 // Turn 2 - Hits cache (same system prompt)
 const response2 = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   system: [
     {
@@ -159,7 +159,7 @@ messages[messages.length - 1] = {
 messages.push({ role: 'user', content: 'Message 3' });
 
 const response = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   messages,
 });
@@ -214,7 +214,7 @@ const document = fs.readFileSync('./document.txt', 'utf-8'); // 10k tokens
 // All requests use same cached document
 for (const question of questions) {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {
@@ -243,7 +243,7 @@ for (const question of questions) {
 const codebase = await loadCodebase(); // 50k tokens
 
 const review = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 2048,
   system: [
     { type: 'text', text: 'You are a code reviewer.' },
@@ -266,7 +266,7 @@ const knowledgeBase = await loadKB(); // 20k tokens
 
 // Cache persists across all customer queries
 const response = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   system: [
     { type: 'text', text: 'You are a customer support agent.' },

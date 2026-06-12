@@ -6,9 +6,9 @@ description: Use when working with Anthropic Claude Agent SDK, subagents, tool o
 # Claude Agent SDK
 
 **Status**: Production Ready
-**Last Updated**: 2025-11-21
-**Dependencies**: @anthropic-ai/claude-code, zod
-**Latest Versions**: @anthropic-ai/claude-code@2.0.49+, zod@3.23.0+
+**Last Updated**: 2026-06-11
+**Dependencies**: @anthropic-ai/claude-agent-sdk, zod
+**Latest Versions**: verify via Context7 (`/anthropics/claude-agent-sdk-typescript`) before pinning — version pins rot; treat any version number in this skill as illustrative
 
 ---
 
@@ -43,8 +43,8 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 const response = query({
   prompt: "Analyze the codebase and suggest improvements",
   options: {
-    model: "claude-sonnet-4-5",
-    workingDirectory: process.cwd(),
+    model: "claude-sonnet-4-6",
+    cwd: process.cwd(),
     allowedTools: ["Read", "Grep", "Glob"]
   }
 });
@@ -102,8 +102,8 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 const response = query({
   prompt: "Review this code for bugs",
   options: {
-    model: "claude-sonnet-4-5",        // or "haiku", "opus"
-    workingDirectory: "/path/to/project",
+    model: "claude-sonnet-4-6",        // or "haiku", "opus"
+    cwd: "/path/to/project",
     allowedTools: ["Read", "Grep", "Glob"],
     permissionMode: "default"
   }
@@ -119,7 +119,7 @@ for await (const message of response) {
 | Model | ID | Best For | Speed | Capability |
 |-------|-----|----------|-------|------------|
 | **Haiku** | `"haiku"` | Fast tasks, monitoring | Fastest | Basic |
-| **Sonnet** | `"sonnet"` or `"claude-sonnet-4-5"` | Balanced | Medium | High |
+| **Sonnet** | `"sonnet"` or `"claude-sonnet-4-6"` | Balanced | Medium | High |
 | **Opus** | `"opus"` | Complex reasoning | Slowest | Highest |
 
 ---
@@ -257,7 +257,7 @@ This skill prevents **12** documented issues. The top 3 most common:
 ✅ Implement `canUseTool` for custom permission logic
 ✅ Handle all message types in streaming loop
 ✅ Use Zod schemas for tool input validation
-✅ Set `workingDirectory` for multi-project environments
+✅ Set `cwd` for multi-project environments
 ✅ Test MCP servers in isolation before integration
 ✅ Use `settingSources: ["project"]` in CI/CD
 ✅ Monitor tool execution with `tool_call` messages
@@ -274,7 +274,7 @@ This skill prevents **12** documented issues. The top 3 most common:
 ❌ Allow unrestricted Bash access without `canUseTool`
 ❌ Load settings from user in CI/CD (`settingSources: ["user"]`)
 ❌ Trust tool results without validation
-❌ Hardcode file paths (use `workingDirectory`)
+❌ Hardcode file paths (use `cwd`)
 ❌ Use `acceptEdits` mode with untrusted prompts
 ❌ Skip Zod validation for tool inputs
 
@@ -299,9 +299,9 @@ This skill prevents **12** documented issues. The top 3 most common:
 
 ## Official Documentation
 
-- **Agent SDK Overview**: https://docs.claude.com/en/api/agent-sdk/overview
-- **TypeScript API**: https://docs.claude.com/en/api/agent-sdk/typescript
-- **Python API**: https://docs.claude.com/en/api/agent-sdk/python
+- **Agent SDK Overview**: https://platform.claude.com/docs/en/agent-sdk/overview
+- **TypeScript API**: https://platform.claude.com/docs/en/agent-sdk/typescript
+- **Python API**: https://platform.claude.com/docs/en/agent-sdk/python
 - **Model Context Protocol**: https://modelcontextprotocol.io/
 - **GitHub (TypeScript)**: https://github.com/anthropics/claude-agent-sdk-typescript
 - **GitHub (Python)**: https://github.com/anthropics/claude-agent-sdk-python
@@ -309,7 +309,7 @@ This skill prevents **12** documented issues. The top 3 most common:
 
 ---
 
-## Package Versions (Verified 2025-10-25)
+## Package Versions (illustrative — verify current versions via Context7; pins rot)
 
 ```json
 {
@@ -329,7 +329,7 @@ This skill prevents **12** documented issues. The top 3 most common:
 ## Production Examples
 
 This skill is based on official Anthropic documentation and SDK patterns:
-- **Documentation**: https://docs.claude.com/en/api/agent-sdk/
+- **Documentation**: https://platform.claude.com/docs/en/agent-sdk/
 - **Validation**: ✅ All patterns tested with SDK 0.1.0+
 - **Use Cases**: Coding agents, SRE systems, security auditors, CI/CD automation
 - **Platform Support**: Node.js 18+, TypeScript 5.3+
@@ -342,7 +342,7 @@ This skill is based on official Anthropic documentation and SDK patterns:
 - [ ] Claude Code CLI installed (`bun add -g @anthropic-ai/claude-code`)
 - [ ] SDK installed (`bun add @anthropic-ai/claude-agent-sdk zod`)
 - [ ] ANTHROPIC_API_KEY environment variable set
-- [ ] workingDirectory set for project
+- [ ] cwd set for project
 - [ ] allowedTools configured (or using default)
 - [ ] permissionMode chosen (default recommended)
 - [ ] Error handling implemented
@@ -360,10 +360,4 @@ This skill is based on official Anthropic documentation and SDK patterns:
 4. Check [references/session-management.md](references/session-management.md) for persistent conversations
 5. Review [references/permissions-guide.md](references/permissions-guide.md) for security policies
 6. Check [references/top-errors.md](references/top-errors.md) for common issues
-7. Consult official docs: https://docs.claude.com/en/api/agent-sdk/
-
----
-
-**Token Efficiency**: ~65% savings vs manual Agent SDK integration (estimated)
-**Error Prevention**: 100% (all 12 documented issues prevented)
-**Development Time**: 30 minutes with skill vs 3-4 hours manual
+7. Consult official docs: https://platform.claude.com/docs/en/agent-sdk/

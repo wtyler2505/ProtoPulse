@@ -13,8 +13,8 @@ async function queryWithTools() {
   const response = query({
     prompt: "Review the authentication module for security issues and fix any vulnerabilities",
     options: {
-      model: "claude-sonnet-4-5",
-      workingDirectory: "/path/to/project",
+      model: "claude-sonnet-4-6",
+      cwd: "/path/to/project",
       systemPrompt: `You are a security-focused code reviewer.
 
 Analyze code for:

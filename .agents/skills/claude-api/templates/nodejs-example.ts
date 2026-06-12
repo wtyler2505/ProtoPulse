@@ -33,7 +33,7 @@ async function simpleCLIChatbot() {
 
       try {
         const response = await anthropic.messages.create({
-          model: 'claude-sonnet-4-5-20250929',
+          model: 'claude-sonnet-4-6',
           max_tokens: 1024,
           messages,
         });
@@ -75,7 +75,7 @@ async function streamingCLIChatbot() {
         process.stdout.write('\nClaude: ');
 
         const stream = anthropic.messages.stream({
-          model: 'claude-sonnet-4-5-20250929',
+          model: 'claude-sonnet-4-6',
           max_tokens: 1024,
           messages: [{ role: 'user', content: userInput }],
         });
@@ -115,7 +115,7 @@ async function batchProcessing(inputFile: string, outputFile: string) {
 
     try {
       const message = await anthropic.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -149,7 +149,7 @@ async function summarizeDocument(filePath: string) {
   const document = fs.readFileSync(filePath, 'utf-8');
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 2048,
     system: 'You are an expert document summarizer. Provide concise, accurate summaries.',
     messages: [
@@ -181,7 +181,7 @@ async function summarizeDocument(filePath: string) {
 // Example 5: Code review assistant
 async function codeReview(codeContent: string, language: string) {
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 2048,
     system: `You are an expert ${language} code reviewer. Analyze code for:
 - Bugs and potential issues
@@ -207,7 +207,7 @@ async function codeReview(codeContent: string, language: string) {
 // Example 6: Translation service
 async function translateText(text: string, from: string, to: string) {
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {
@@ -232,7 +232,7 @@ async function parallelRequests(prompts: string[]) {
   const promises = prompts.map(async (prompt, index) => {
     try {
       const message = await anthropic.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-sonnet-4-6',
         max_tokens: 512,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -265,7 +265,7 @@ async function requestWithRetry(
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const message = await anthropic.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -306,7 +306,7 @@ class ConversationLogger {
     this.messages.push({ role: 'user', content: userMessage });
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       messages: this.messages,
     });

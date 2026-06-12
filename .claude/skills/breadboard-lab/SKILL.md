@@ -9,40 +9,57 @@ Treat the Breadboard tab as **a physical bench with rules**, not an SVG editor. 
 
 ## Quick Reference
 
-| Topic | File | LOC | Role |
+**Post-extraction layout (verified 2026-06-11):** `BreadboardView.tsx` is now a ~700-line orchestration shell. The toolbar, dialogs, and empty state were extracted to `breadboard-view/`; the canvas to `breadboard-canvas/`; per-part SVG renderers to `breadboard-components/`.
+
+| Topic | File | ~LOC | Role |
 |---|---|---:|---|
-| **Main entrypoint** | `client/src/components/circuit-editor/BreadboardView.tsx` | 2284 | Orchestration shell (toolbar, canvas, overlays, dialogs, coach) — **ALWAYS start here** |
-| Workbench sidebar | `client/src/components/circuit-editor/BreadboardWorkbenchSidebar.tsx` | 347 | Right-rail surface: starter shelf, project parts, stash, exact-part dialog triggers |
+| **Main entrypoint** | `client/src/components/circuit-editor/BreadboardView.tsx` | 700 | Orchestration shell composing toolbar, canvas, sidebar, overlays, dialogs, coach — **ALWAYS start here** |
+| **View shell pieces** | `client/src/components/circuit-editor/breadboard-view/` | 350 | Extracted from BreadboardView: `BreadboardToolbar.tsx`, `BreadboardDialogs.tsx`, `BreadboardEmptyState.tsx`, `useBreadboardDialogState.ts` |
+| **Canvas subsystem** | `client/src/components/circuit-editor/breadboard-canvas/` | 2,150 | `index.tsx` (the `BreadboardCanvas` component, ~1,650), `canvas-helpers.ts` (placement/drop helpers incl. `getDropTypeFromPart`, `WIRE_COLORS`), `useCanvasViewport.ts`, `CanvasToolbar.tsx`, `WireColorMenu.tsx`, `CanvasCoordinateReadout.tsx`, `CanvasEmptyGuidance.tsx` |
+| **Per-part SVG renderers** | `client/src/components/circuit-editor/breadboard-components/` | 2,400 | ~20 part-family SVG renderers (`ResistorSvg`, `LedSvg`, `IcSvg`, `ConnectorSvg`, …) + `index.ts` barrel |
+| Workbench sidebar | `client/src/components/circuit-editor/BreadboardWorkbenchSidebar.tsx` | 350 | Right-rail surface: starter shelf, project parts, stash, exact-part dialog triggers |
 | Starter shelf | `client/src/components/circuit-editor/BreadboardStarterShelf.tsx` | — | Canonical starter parts a beginner can drop on a bench instantly |
 | Inventory dialog | `client/src/components/circuit-editor/BreadboardInventoryDialog.tsx` | — | "What's on my bench / in my drawer" reconciliation |
 | Exact-part request | `client/src/components/circuit-editor/BreadboardExactPartRequestDialog.tsx` | — | User asks for a specific MPN → resolver → verified/candidate/needs-draft |
 | Reconciliation | `client/src/components/circuit-editor/BreadboardReconciliationPanel.tsx` | — | BOM gaps, stash diffs, shopping list surface |
 | Shopping list | `client/src/components/circuit-editor/BreadboardShoppingList.tsx` | — | Shortfall items surfaced as buy-this list |
 | Quick intake | `client/src/components/circuit-editor/BreadboardQuickIntake.tsx` | — | "Which board do you have?" fast onboarding |
-| Board audit | `client/src/lib/breadboard-board-audit.ts` + `BreadboardBoardAuditPanel.tsx` | 891 | Scored issue generator + remediation UI |
-| Bench trust/readiness | `client/src/lib/breadboard-bench.ts` | 332 | Per-part readiness labels (verified-exact / connector-defined / heuristic / stash-absent) |
-| Part inspector | `client/src/lib/breadboard-part-inspector.ts` + `BreadboardPartInspector.tsx` | 754 | Selected-part detail panel — pin map confidence, fit, provenance |
-| Layout quality | `client/src/lib/breadboard-layout-quality.ts` | 240 | Scoring: rail usage, signal-path length, decoupling adjacency |
-| Preflight | `client/src/lib/breadboard-preflight.ts` | 523 | "Can this build? What's missing?" before bring-up |
-| Coach plan | `client/src/lib/breadboard-coach-plan.ts` + `useBreadboardCoachPlan.ts` + `BreadboardCoachOverlay.tsx` | 393 | Proactive guidance: next-step suggestions grounded in selected part |
+| Board audit | `client/src/lib/breadboard-board-audit.ts` + `BreadboardBoardAuditPanel.tsx` | 1,400 | Scored issue generator + remediation UI |
+| Bench trust/readiness | `client/src/lib/breadboard-bench.ts` | 350 | Per-part readiness labels (verified-exact / connector-defined / heuristic / stash-absent) |
+| Part inspector | `client/src/lib/breadboard-part-inspector.ts` + `BreadboardPartInspector.tsx` | 800 | Selected-part detail panel — pin map confidence, fit, provenance |
+| Layout quality | `client/src/lib/breadboard-layout-quality.ts` | 250 | Scoring: rail usage, signal-path length, decoupling adjacency |
+| Preflight | `client/src/lib/breadboard-preflight.ts` | 550 | "Can this build? What's missing?" before bring-up |
+| Coach plan | `client/src/lib/breadboard-coach-plan.ts` + `client/src/components/circuit-editor/useBreadboardCoachPlan.ts` + `BreadboardCoachOverlay.tsx` | 1,400 | Proactive guidance: next-step suggestions grounded in selected part. NOTE: the hook lives in `components/circuit-editor/`, NOT `lib/` |
 | AI prompts | `client/src/lib/breadboard-ai-prompts.ts` | 175 | Coach prompt templates — keep trust-tier language consistent |
 | 3D rendering | `client/src/lib/breadboard-3d.ts` | 700 | Optional 3D preview model of the board + placed parts |
-| Canvas grid | `client/src/components/circuit-editor/BreadboardGrid.tsx` | — | Hole array rendering, drop-preview, fit zones |
-| Component renderer | `client/src/components/circuit-editor/BreadboardComponentRenderer.tsx` | — | SVG footprint rendering with bendable legs |
+| Canvas grid | `client/src/components/circuit-editor/BreadboardGrid.tsx` | 600 | Hole array rendering, drop-preview, fit zones |
+| Component renderer | `client/src/components/circuit-editor/BreadboardComponentRenderer.tsx` | 450 | Dispatches to `breadboard-components/` SVGs; bendable legs via `BendableLegRenderer.tsx` |
 | Bench-pin renderer | `client/src/components/circuit-editor/BreadboardBenchPartRenderer.tsx` | — | Off-board parts (Mega, hub motor, BLDC driver) that attach via bench pins |
 | Wire editor | `client/src/components/circuit-editor/BreadboardWireEditor.tsx` + `breadboard-wire-editor.ts` | — | Select/move/delete wires with endpoint snap preview |
 | DRC overlay | `client/src/components/circuit-editor/BreadboardDrcOverlay.tsx` + `breadboard-drc.ts` | — | Real-time violations: shorts, floating inputs, missing decouplers |
 | Connectivity overlay | `client/src/components/circuit-editor/BreadboardConnectivityOverlay.tsx` + `breadboard-connectivity.ts` | — | Visualize the electrical net graph beneath the board |
 | Connectivity explainer | `client/src/components/circuit-editor/BreadboardConnectivityExplainer.tsx` | — | "Why is this pin connected to that one?" — teach the rail model |
-| Shared model | `client/src/lib/circuit-editor/breadboard-model.ts` | — | Canonical data model: holes, rails, occupancy, placement geometry |
+| Shared model | `client/src/lib/circuit-editor/breadboard-model.ts` | 650 | Canonical data model: holes, rails, occupancy, placement geometry |
+| Constants | `client/src/lib/circuit-editor/breadboard-constants.ts` | 250 | Grid geometry, pitch, board dimension constants shared by canvas + model |
 | Bench connectors | `client/src/lib/circuit-editor/breadboard-bench-connectors.ts` | — | Bench-pin endpoint rules for off-board parts |
 | Drag/move | `client/src/lib/circuit-editor/breadboard-drag-move.ts` | — | Placement drag semantics with grid snap |
 | Undo | `client/src/lib/circuit-editor/breadboard-undo.ts` | — | Breadboard-scoped undo/redo stack |
-| Sync | `client/src/lib/circuit-editor/view-sync.ts` | — | Schematic ↔ breadboard net + placement coherence |
+| Sync | `client/src/lib/circuit-editor/view-sync.ts` | 750 | Schematic ↔ breadboard net + placement coherence |
 | Animations | `client/src/components/circuit-editor/breadboard-animations.css` | — | Drop preview, snap halo, coach highlight keyframes |
 | Cursor hook | `client/src/lib/circuit-editor/useBreadboardCursor.ts` | — | Cursor-style state: pointer / drawing-wire / placing / rejecting |
 
-**Total surface: ~4,000+ lines of breadboard-specific logic.** The skill's job is to keep those systems coherent.
+**Total surface: ~19,000+ lines of breadboard-specific source (excluding tests) across 60+ files.** The skill's job is to keep those systems coherent. LOC values are approximate (nearest 50) — trust the tree (`fd`/`wc`), not this table, when precision matters.
+
+## Legacy vs Engine — Jurisdiction Boundary
+
+**This skill governs the LEGACY breadboard surface only** — the shipping app under `client/`, `server/`, `shared/`. It does NOT cover the engine redesign:
+
+- `packages/` is the greenfield `@protopulse/*` npm-workspaces monorepo (`@protopulse/graph`, `@protopulse/parts`, `@protopulse/app`, `@protopulse/erc`, …) living alongside the legacy app. It is a **separate jurisdiction** with its own conventions (integer-nanometer coordinates, op-log design model, own CI).
+- `shared/parts/` (legacy catalog, this skill's territory) ≠ `@protopulse/parts` (engine seed catalog). Never assume a part definition in one exists in the other; never "fix" one by copying from the other without checking both contracts.
+- Golden files in `tools/golden/` and the `.ppx` format are **contracts** — never re-freeze casually; deliberate changes only via `tools/golden/update-golden.ts`.
+- Engine work routes through AGENTS.md §The Engine Redesign (packages/) and `packages/README.md`, not this skill.
+
+If a request mentions `packages/`, `@protopulse/*`, `.ppx`, golden files, or the new editor on port 5174, you're outside this skill's map — orient from AGENTS.md first.
 
 ## When To Invoke This Skill
 
@@ -129,7 +146,7 @@ If any answer is "no" or "not sure," the change isn't ready.
 
 1. **Orient** — read `./breadboard-architecture-and-entrypoints.md` for file map.
 2. **Classify** — which of the 5 subsystems does this request primarily touch?
-3. **Check if already exists** — grep the codebase. Many requested features exist as lib helpers or dormant dialog props that aren't surfaced from `BreadboardView.tsx` yet.
+3. **Check if already exists** — search the codebase (`rg` / ast-grep). Many requested features exist as lib helpers or dormant dialog props that aren't surfaced from `BreadboardView.tsx` yet.
 4. **Consult the vault** — `knowledge/breadboard-intelligence.md` lists every verified-board quirk, layout rule, and bench-coach claim. Use `mcp__qmd__qmd_vector_search` with "breadboard" + topic to find adjacent claims.
 5. **Design smallest change** — keep the 5-subsystem coherence. Reject changes that improve one pillar at the cost of another.
 6. **Write/update tests** — see `./breadboard-testing-and-browser-verification.md`. Test the interaction, not the isolated function.

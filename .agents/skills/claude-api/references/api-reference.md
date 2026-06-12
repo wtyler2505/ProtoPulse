@@ -27,7 +27,7 @@ Create a message with Claude.
 
 ```typescript
 {
-  model: string,              // Required: "claude-sonnet-4-5-20250929", etc.
+  model: string,              // Required: "claude-sonnet-4-6", etc.
   max_tokens: number,         // Required: Maximum tokens to generate (1-8192)
   messages: Message[],        // Required: Conversation history
   system?: string | SystemBlock[],  // Optional: System prompt
@@ -112,12 +112,7 @@ Create a message with Claude.
 
 ## Model IDs
 
-| Model | ID | Context Window |
-|-------|-----|----------------|
-| Claude Sonnet 4.5 | claude-sonnet-4-5-20250929 | 200k tokens |
-| Claude 3.7 Sonnet | claude-3-7-sonnet-20250228 | 2M tokens |
-| Claude Opus 4 | claude-opus-4-20250514 | 200k tokens |
-| Claude 3.5 Haiku | claude-3-5-haiku-20241022 | 200k tokens |
+Do not copy model IDs from this legacy reference — see `../shared/models.md` for the current catalog (aliases, full IDs, retirements) and the Models API discovery pattern for live capability data.
 
 ## Tool Definition
 

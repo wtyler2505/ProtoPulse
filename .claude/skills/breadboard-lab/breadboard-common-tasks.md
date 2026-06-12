@@ -4,7 +4,7 @@ Canned procedures for frequent Breadboard Lab work. Follow steps in order.
 
 ## Recipe 1: Add a new starter part
 
-1. Check parts catalog exists: `grep -rn "newPartName" shared/parts/ shared/verified-boards/`
+1. Check parts catalog exists: `rg -n "newPartName" shared/parts/ shared/verified-boards/`
 2. If not, add part definition to `shared/parts/` or `shared/verified-boards/`
 3. Register in starter registry
 4. Add `<StarterPart>` entry in `BreadboardStarterShelf.tsx` with vault reference
@@ -57,10 +57,20 @@ Canned procedures for frequent Breadboard Lab work. Follow steps in order.
 4. Use sync invariant tests from ai-audit-and-sync reference
 5. Add negative test for specific drift scenario
 
-## Recipe 7: Safe editing of BreadboardView.tsx (2,284 lines)
+## Recipe 7: Safe editing of the BreadboardView shell (post-extraction)
 
-1. Identify section (toolbar ~774, canvas ~850, default export ~231)
-2. Run full test: `npx vitest run client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx`
+`BreadboardView.tsx` is now a ~700-line orchestration shell. The meat lives in extracted modules — edit the RIGHT file, not the shell:
+
+1. Route the change first (search by symbol, never by line number):
+   - Toolbar / mode toggles → `breadboard-view/BreadboardToolbar.tsx`
+   - Dialog mounting / open-close state → `breadboard-view/BreadboardDialogs.tsx` + `breadboard-view/useBreadboardDialogState.ts`
+   - Empty state → `breadboard-view/BreadboardEmptyState.tsx`
+   - Canvas rendering / placement / drop → `breadboard-canvas/index.tsx` (`BreadboardCanvas`) + `breadboard-canvas/canvas-helpers.ts`
+   - Zoom/pan → `breadboard-canvas/useCanvasViewport.ts`
+   - Per-part SVG visuals → `breadboard-components/<Part>Svg.tsx`
+   - Only true orchestration (composition, prop wiring, subsystem handoffs) belongs in `BreadboardView.tsx` itself
+2. Run the shell test plus the extracted module's own tests:
+   `npx vitest run client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx client/src/components/circuit-editor/breadboard-view/__tests__ client/src/components/circuit-editor/breadboard-canvas/__tests__`
 3. Standalone tsc: `NODE_OPTIONS='--max-old-space-size=16384' npx tsc --noEmit`
 4. Verify the 6-question lens (SKILL.md) before commit
 5. Browser verify all toolbar modes
@@ -76,7 +86,7 @@ Canned procedures for frequent Breadboard Lab work. Follow steps in order.
 ## General Pitfall Checklist
 
 Before claiming any breadboard task done:
-- Did I grep before inventing?
+- Did I search (`rg` / ast-grep) before inventing?
 - Does provenance survive? (trust tiers + origin labels unchanged)
 - Did I update the test for the subsystem I touched?
 - Did I verify in a real browser?

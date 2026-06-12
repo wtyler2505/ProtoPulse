@@ -2,7 +2,7 @@
 name: revisit
 description: Update old notes with new connections. The backward pass that /connect doesn't do. Revisit existing notes that predate newer related content, add connections, sharpen claims, consider splits. Triggers on "/revisit", "/revisit [note]", "update old notes", "backward connections", "revisit notes".
 user-invocable: true
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__qmd__search, mcp__qmd__vector_search, mcp__qmd__deep_search, mcp__qmd__status
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__qmd__qmd_search, mcp__qmd__qmd_vector_search, mcp__qmd__qmd_deep_search, mcp__qmd__qmd_status
 context: fork
 ---
 
@@ -32,13 +32,7 @@ If these files don't exist, use universal defaults.
 | standard | Balanced review. Search semantic neighbors and same-{vocabulary.topic_map} {vocabulary.note_plural}. Add connections, sharpen if needed. |
 | quick | Minimal backward pass. Add obvious connections only. No rewrites or splits. |
 
-**Reweave scope:**
-
-| Scope | Behavior |
-|-------|----------|
-| related | Search {vocabulary.note_plural} directly related to the target (same {vocabulary.topic_map}, semantic neighbors) |
-| broad | Search across all {vocabulary.topic_map_plural} and semantic space for potential connections |
-| full | Complete review including potential splits, rewrites, and claim challenges |
+**Reweave scope:** `related` = search {vocabulary.note_plural} directly related to the target (same {vocabulary.topic_map}, semantic neighbors); `broad` = search across all {vocabulary.topic_map_plural} and semantic space for potential connections; `full` = complete review including potential splits, rewrites, and claim challenges.
 
 ## EXECUTE NOW
 
@@ -75,22 +69,9 @@ Parse immediately:
 
 # Reweave
 
-Revisit old {vocabulary.note_plural} with everything you know today. {vocabulary.note_plural} are living documents — they grow, get rewritten, split apart, sharpen their claims. This is the backward pass that keeps the network alive.
+Revisit old {vocabulary.note_plural} with everything you know today. {vocabulary.note_plural} are living documents — they grow, get rewritten, split apart, sharpen their claims. This is the backward pass that keeps the network alive. Reweaving is a full reconsideration: ask **"If I wrote this {vocabulary.note} today, what would be different?"**
 
-## Philosophy
-
-**{vocabulary.note_plural} are living documents, not finished artifacts.**
-
-A {vocabulary.note} written last month was written with last month's understanding. Since then:
-- New {vocabulary.note_plural} exist that relate to it
-- Understanding of the topic deepened
-- The claim might need sharpening or challenging
-- What was one idea might now be three
-- Connections that were not obvious then are obvious now
-
-Reweaving is not just "add backward links." It is completely reconsidering the {vocabulary.note} based on current knowledge. Ask: **"If I wrote this {vocabulary.note} today, what would be different?"**
-
-> "The {vocabulary.note} you wrote yesterday is a hypothesis. Today's knowledge is the test."
+Deep guidance (extended philosophy, action examples, evaluation tests, proposal format): references/reweave-actions.md
 
 ## What Reweaving Can Do
 
@@ -104,38 +85,13 @@ Reweaving is not just "add backward links." It is completely reconsidering the {
 | **Improve the description** | Better framing emerged |
 | **Update examples** | Better illustrations exist now |
 
-Reweaving is NOT just Phase 4 of /connect applied backward. It is a full reconsideration.
-
 ## Invocation Patterns
 
-### /revisit [[note]]
-
-Fully reconsider a specific {vocabulary.note} against current knowledge.
-
-### /revisit (no argument)
-
-Scan for candidates needing reweaving, present ranked list.
-
-### /revisit --sparse
-
-Process {vocabulary.note_plural} flagged as sparse by /health.
-
-### /revisit --since Nd
-
-Reweave all {vocabulary.note_plural} not updated in N days.
-
-**How to find candidates:**
-```bash
-# Find notes not modified in 30 days
-find {vocabulary.notes}/ -name "*.md" -mtime +30 -type f
-```
-
-### /revisit --handoff [[note]]
-
-External loop mode for /ralph:
-- Execute full workflow as normal
-- At the end, output structured RALPH HANDOFF block
-- Used when running isolated phases with fresh context per task
+- **/revisit [[note]]** — fully reconsider a specific {vocabulary.note} against current knowledge
+- **/revisit** (no argument) — scan for candidates needing reweaving, present ranked list
+- **/revisit --sparse** — process {vocabulary.note_plural} flagged as sparse by arscontexta:health
+- **/revisit --since Nd** — reweave all {vocabulary.note_plural} not updated in N days. Find candidates: `find {vocabulary.notes}/ -name "*.md" -mtime +30 -type f`
+- **/revisit --handoff [[note]]** — external loop mode for /ralph: execute full workflow, then output structured RALPH HANDOFF block (used when running isolated phases with fresh context per task)
 
 ---
 
@@ -143,57 +99,21 @@ External loop mode for /ralph:
 
 ### Phase 1: Understand the {vocabulary.note} as It Exists
 
-Read the target {vocabulary.note} completely. Understand:
-- What claim does it make?
-- What reasoning supports the claim?
-- What connections does it have?
-- When was it written/last modified?
-- What was the context when it was created?
+Read the target {vocabulary.note} completely: what claim does it make? What reasoning supports it? What connections does it have? When was it written/last modified? What was the context when created?
 
-**Also read the task file** if one exists (pipeline execution). The task file's Reflect section shows:
-- What connections /connect just added
-- Which {vocabulary.topic_map_plural} were updated
-- What synthesis opportunities were flagged
-- What the discovery trace looked like
-
-This context prevents redundant work — you know what /connect already found, so you can focus on what it missed or what needs deeper reconsideration.
+**Also read the task file** if one exists (pipeline execution). The task file's Reflect section shows what connections /connect just added, which {vocabulary.topic_map_plural} were updated, what synthesis opportunities were flagged, and the discovery trace. This context prevents redundant work — you know what /connect already found, so you can focus on what it missed or what needs deeper reconsideration.
 
 ### Phase 2: Gather Current Knowledge (Dual Discovery)
 
-Use the same dual discovery pattern as /connect — {vocabulary.topic_map} exploration AND semantic search in parallel.
+Use the same dual discovery pattern as /connect — {vocabulary.topic_map} exploration AND semantic search in parallel, with the canonical qmd three-tier fallback (MCP `mcp__qmd__qmd_deep_search` → bash `qmd query` with lock-dir serialization → grep-only) and index-freshness check.
 
-**Path 1: {vocabulary.topic_map} Exploration** — curated navigation
+**Canonical procedure (do not fork — shared with /connect):** ../shared-references/dual-discovery.md
 
-From the {vocabulary.note}'s Topics footer, identify which {vocabulary.topic_map}(s) it belongs to:
-- Read the relevant {vocabulary.topic_map}(s)
-- What synthesis exists that might affect this {vocabulary.note}?
-- What newer {vocabulary.note_plural} in Core Ideas should this {vocabulary.note} reference?
-- What tensions involve this {vocabulary.note}?
-
-**Path 2: Semantic Search** — find what {vocabulary.topic_map_plural} might miss
-
-**Three-tier fallback for semantic search:**
-
-**Tier 1 — MCP tools (preferred):** Use `mcp__qmd__deep_search` (hybrid search with expansion + reranking):
-- query: "[{vocabulary.note}'s core concepts and mechanisms]"
-- limit: 15
-
-**Tier 2 — bash qmd with lock serialization:** If MCP tools fail or are unavailable:
-```bash
-LOCKDIR="ops/queue/.locks/qmd.lock"
-while ! mkdir "$LOCKDIR" 2>/dev/null; do sleep 2; done
-qmd query "[note's core concepts]" --collection {vocabulary.notes_collection} --limit 15 2>/dev/null
-rm -rf "$LOCKDIR"
-```
-
-The lock prevents multiple parallel workers from loading large models simultaneously.
-
-**Tier 3 — grep only:** If both MCP and bash fail, log "qmd unavailable, grep-only discovery" and rely on {vocabulary.topic_map} + keyword search only. This degrades quality but does not block work.
+Revisit-specific framing for Path 1 ({vocabulary.topic_map} exploration): from the {vocabulary.note}'s Topics footer, identify its {vocabulary.topic_map}(s) and ask — what synthesis exists that might affect this {vocabulary.note}? What newer {vocabulary.note_plural} in Core Ideas should it reference? What tensions involve it?
 
 Evaluate results by relevance — read any result where title or snippet suggests genuine connection.
 
-**Also check:**
-- Backlinks — what {vocabulary.note_plural} already reference this one? Do they suggest the target should cite back?
+**Also check backlinks** — what {vocabulary.note_plural} already reference this one? Do they suggest the target should cite back?
 
 ```bash
 grep -rl '\[\[target note title\]\]' {vocabulary.notes}/ --include="*.md"
@@ -214,109 +134,23 @@ grep -rl '\[\[target note title\]\]' {vocabulary.notes}/ --include="*.md"
 | Claim is partially wrong | Revise with nuance |
 | Claim is contradicted | Flag tension, propose revision |
 
-**The Sharpening Test:**
-
-Read the title. Ask: could someone disagree with this specific claim?
-- If yes, the claim is sharp enough
-- If no, it is too vague and needs sharpening
-
-Example:
-- Vague: "context matters" (who would disagree?)
-- Sharp: "explicit context beats automatic memory" (arguable position)
-
-**The Split Test:**
-
-Does this {vocabulary.note} make multiple claims that could stand alone?
-- If the {vocabulary.note} connects to 5+ topics across different domains, it probably needs splitting
-- If you would want to link to part of it but not all, it is a split candidate
+Apply the **Sharpening Test** (could someone disagree with this specific claim?) and the **Split Test** (multiple claims that could stand alone? 5+ topics across domains?). Examples: references/reweave-actions.md.
 
 ### Phase 4: Evaluate Connections
 
-**Backward connections (what this {vocabulary.note} should reference):**
+**Backward connections (what this {vocabulary.note} should reference):** For each newer {vocabulary.note}, ask: does it extend this argument? Provide evidence or examples? Share mechanisms? Create tension worth acknowledging? Would referencing it strengthen the reasoning?
 
-For each newer {vocabulary.note}, ask:
-- Does it extend this {vocabulary.note}'s argument?
-- Does it provide evidence or examples?
-- Does it share mechanisms?
-- Does it create tension worth acknowledging?
-- Would referencing it strengthen the reasoning?
+**Forward connections (what should reference this {vocabulary.note}):** Check newer {vocabulary.note_plural} that SHOULD link here but do not — do they make arguments relying on this claim? Would following this link provide useful context?
 
-**Forward connections (what should reference this {vocabulary.note}):**
+**Agent Traversal Check (apply to all connections):** Ask **"If an agent follows this link during traversal, what decision or understanding does it enable?"** Connections exist to serve agent navigation. Adding a link because content is "related" without operational value creates noise. Every connection should help an agent understand WHY something works, decide HOW to implement something, or surface a tension to consider. Reject connections that are merely "interesting" without agent utility.
 
-Check newer {vocabulary.note_plural} that SHOULD link here but do not:
-- Do they make arguments that rely on this claim?
-- Would following this link provide useful context?
-
-**Agent Traversal Check (apply to all connections):**
-
-Ask: **"If an agent follows this link during traversal, what decision or understanding does it enable?"**
-
-Connections exist to serve agent navigation. Adding a link because content is "related" without operational value creates noise. Every backward or forward connection should answer:
-- Does this help an agent understand WHY something works?
-- Does this help an agent decide HOW to implement something?
-- Does this surface a tension the agent should consider?
-
-Reject connections that are merely "interesting" without agent utility.
-
-**Articulation requirement:**
-
-Every new connection must articulate WHY:
-- "extends this by adding the temporal dimension"
-- "provides evidence that supports this claim"
-- "contradicts this — needs resolution"
-
-Never: "related" or "see also"
+**Articulation requirement:** Every new connection must articulate WHY — "extends this by adding the temporal dimension", "provides evidence that supports this claim", "contradicts this — needs resolution". Never: "related" or "see also".
 
 ### Phase 5: Apply Changes
 
 **For pipeline execution (--handoff mode):** Apply changes directly. The pipeline needs to proceed without waiting for approval.
 
-**For interactive execution (no --handoff):** Present the reweave proposal first, then apply after approval.
-
-**Reweave proposal format (interactive only):**
-
-```markdown
-## Reweave Proposal: [[target note]]
-
-**Last modified:** YYYY-MM-DD
-**Current knowledge evaluated:** N newer {vocabulary.note_plural}, M backlinks
-
-### Claim Assessment
-
-[Does the claim hold? Need sharpening? Splitting? Revision?]
-
-### Proposed Changes
-
-**1. [change type]: [description]**
-
-Current:
-> [existing text]
-
-Proposed:
-> [new text]
-
-Rationale: [why this change]
-
-**2. [change type]: [description]**
-...
-
-### Connections to Add
-
-- [[newer note A]] — [relationship]: [specific reason]
-- [[newer note B]] — [relationship]: [specific reason]
-
-### Connections to Verify (other {vocabulary.note_plural} should link here)
-
-- [[note X]] might benefit from referencing this because...
-
-### Not Changing
-
-- [What was considered but rejected, and why]
-
----
-
-Apply these changes? (yes/no/modify)
-```
+**For interactive execution (no --handoff):** Present the reweave proposal first, then apply after approval. Proposal format: references/reweave-actions.md.
 
 **When applying changes:**
 
@@ -326,185 +160,25 @@ Apply these changes? (yes/no/modify)
 4. Verify all link targets exist
 5. Update description if claim changed
 
----
-
-## The Five Reweave Actions
-
-### 1. Add Connections
-
-The simplest action. Newer {vocabulary.note_plural} exist that should be referenced.
-
-**Inline connections (preferred):**
-```markdown
-# before
-The constraint shifts from capture to curation.
-
-# after
-The constraint shifts from capture to curation, and since [[throughput matters more than accumulation]], the question becomes who does the selecting.
-```
-
-**Footer connections:**
-```yaml
-relevant_notes:
-  - "[[newer note]] — extends this by adding temporal dimension"
-```
-
-### 2. Rewrite Content
-
-Understanding evolved. The prose should reflect current thinking, not historical thinking.
-
-**When to rewrite:**
-- Reasoning is clearer now
-- Better examples exist
-- Phrasing was awkward
-- Important nuance was missing
-
-**How to rewrite:**
-- Preserve the core claim (unless challenging it)
-- Improve the path to the conclusion
-- Incorporate new connections as prose
-- Maintain the {vocabulary.note}'s voice
-
-### 3. Sharpen the Claim
-
-Vague claims cannot be built on. Sharpen means making the claim more specific and arguable.
-
-**Sharpening patterns:**
-
-| Vague | Sharp |
-|-------|-------|
-| "X is important" | "X matters because Y, which enables Z" |
-| "consider doing X" | "X works when [condition] because [mechanism]" |
-| "there are tradeoffs" | "[specific tradeoff]: gaining X costs Y" |
-
-**When sharpening, also update:**
-- Title (if claim changed) — use the rename script if available
-- Description (must match new claim)
-- Body (reasoning must support sharpened claim)
-
-### 4. Split the {vocabulary.note}
-
-One {vocabulary.note} became multiple ideas over time. Splitting creates focused, composable pieces.
-
-**Split indicators:**
-- Connects to 5+ topics across different domains
-- Makes multiple distinct claims
-- You would want to link to part but not all
-- Different sections could be referenced independently
-
-**Split process:**
-
-1. Identify the distinct claims
-2. Create new {vocabulary.note_plural} for each claim
-3. Each new {vocabulary.note} gets:
-   - Focused title (the claim)
-   - Own description
-   - Relevant subset of content
-   - Appropriate connections
-4. Original {vocabulary.note} either:
-   - Becomes a synthesis linking to the splits
-   - Gets archived if splits fully replace it
-   - Retains one claim and links to others
-
-**Example split:**
-
-Original: "knowledge systems need both structure and flexibility"
-
-Splits:
-- [[structure enables retrieval at scale]]
-- [[flexibility allows organic growth]]
-- [[structure and flexibility create tension]] (links to both)
-
-**When NOT to split:**
-- {vocabulary.note} is genuinely about one thing that touches many areas
-- Connections are all variations of the same relationship
-- Splitting would create {vocabulary.note_plural} too thin to stand alone
-
-### 5. Challenge the Claim
-
-New evidence contradicts the original. Do not silently "fix" — acknowledge the evolution.
-
-**Challenge patterns:**
-
-```markdown
-# if partially wrong
-The original insight was [X]. However, [[newer evidence]] suggests [Y]. The refined claim is [Z].
-
-# if tension exists
-This argues [X]. But [[contradicting note]] argues [Y]. The tension remains unresolved — possibly [X] applies in context A while [Y] applies in context B.
-
-# if significantly wrong
-This note originally claimed [X]. Based on [[evidence]], the claim is revised: [new claim].
-```
-
-**Always log challenges:** When a claim is challenged or revised, this is a significant event. Note it in the task file Reweave section with the original claim, the new evidence, and the revised position.
+The five reweave actions (add connections, rewrite, sharpen, split, challenge) each have detailed procedures and examples in references/reweave-actions.md.
 
 ---
 
 ## Enrichment-Triggered Actions
 
-When processing a {vocabulary.note} that came through the enrichment pipeline, check the task file for `post_enrich_action` signals. These were surfaced by /enrich and need execution:
+When processing a {vocabulary.note} that came through the enrichment pipeline, check the task file for `post_enrich_action` signals (`title-sharpen`, `split-recommended`, `merge-candidate`). These were surfaced by /enrich and need execution. Never auto-merge or auto-delete on merge-candidate — log for human review.
 
-### title-sharpen
-
-The enrich phase determined the {vocabulary.note}'s title is too vague after content integration.
-
-1. Read `post_enrich_detail` for the recommended new title
-2. Evaluate: is the suggested title actually better? (sharper claim, more specific, still composable as prose)
-3. If yes and a rename script exists: use it to rename. Otherwise rename manually and update all wiki links.
-4. Update the {vocabulary.note}'s description to match the new title
-5. Log the rename in the task file Reweave section
-
-### split-recommended
-
-The enrich phase determined the {vocabulary.note} now covers multiple distinct claims.
-
-1. Read `post_enrich_detail` for the split recommendation
-2. Evaluate: does splitting genuinely improve the vault? (each piece must stand alone)
-3. If yes:
-   - Create new {vocabulary.note} files for each split claim
-   - Move relevant content from original to splits
-   - Update original to either link to splits or retain one claim
-   - Create queue entries for the new {vocabulary.note_plural} starting at the connect phase
-4. Log the split in the task file Reweave section
-
-### merge-candidate
-
-The enrich phase determined this {vocabulary.note} substantially overlaps with another.
-
-**Do NOT auto-merge or auto-delete.** This requires human judgment.
-
-1. Log the merge recommendation in the task file Reweave section
-2. Note which {vocabulary.note_plural} overlap and why
-3. The final report surfaces this for human review
+Deep guidance: references/enrichment-actions.md
 
 ---
 
 ## Quality Gates
 
-### Gate 1: Articulation Test
-
-Every change must be articulable. "I am adding this because..." with a specific reason.
-
-### Gate 2: Improvement Test
-
-After changes, is the {vocabulary.note} better? More useful? More connected? More accurate?
-
-If you cannot confidently say yes, do not make the change.
-
-### Gate 3: Coherence Test
-
-After changes, does the {vocabulary.note} still cohere as a single focused piece? Or did you accidentally make it broader?
-
-### Gate 4: Network Test
-
-Do the changes improve the network? More traversal paths? Better paths?
-
-### Gate 5: When NOT to Change
-
-- The {vocabulary.note} is accurate, well-connected, and recent — leave it alone
-- The "improvement" would just be cosmetic rewording — do not churn
-- The {vocabulary.note} is a historical record — these evolve through status changes, not rewrites
+1. **Articulation Test** — every change must be articulable: "I am adding this because..." with a specific reason.
+2. **Improvement Test** — after changes, is the {vocabulary.note} better? More useful? More connected? More accurate? If you cannot confidently say yes, do not make the change.
+3. **Coherence Test** — does the {vocabulary.note} still cohere as a single focused piece? Or did you accidentally make it broader?
+4. **Network Test** — do the changes improve the network? More traversal paths? Better paths?
+5. **When NOT to change** — the {vocabulary.note} is accurate, well-connected, and recent (leave it alone); the "improvement" would be cosmetic rewording (do not churn); the {vocabulary.note} is a historical record (these evolve through status changes, not rewrites).
 
 ---
 
@@ -542,45 +216,11 @@ Do the changes improve the network? More traversal paths? Better paths?
 
 ---
 
-## What Success Looks Like
-
-Successful reweaving:
-- {vocabulary.note} reflects current understanding, not historical understanding
-- Claim is sharp enough to disagree with
-- Connections exist to relevant newer content
-- {vocabulary.note} participates actively in the network
-- Someone reading it today gets the best version
-
-The test: **if this {vocabulary.note} were written today with everything you know, would it be meaningfully different?** If yes and you did not change it, reweaving failed.
-
----
-
 ## Critical Constraints
 
-**Never:**
-- Silently change claims without acknowledging evolution
-- Split {vocabulary.note_plural} into pieces too thin to stand alone
-- Add connections without articulating why
-- Rewrite voice/style (preserve the {vocabulary.note}'s character)
-- Make changes without approval in interactive mode
-- Create wiki links to non-existent files
+**Never:** silently change claims without acknowledging evolution; split {vocabulary.note_plural} into pieces too thin to stand alone; add connections without articulating why; rewrite voice/style (preserve the {vocabulary.note}'s character); make changes without approval in interactive mode; create wiki links to non-existent files.
 
-**Always:**
-- Present proposals before editing (interactive mode)
-- Explain rationale for each change
-- Preserve what is still valid
-- Log significant claim changes
-- Verify link targets exist
-
----
-
-## The Network Lives Through Evolution
-
-{vocabulary.note_plural} written yesterday do not know about today. {vocabulary.note_plural} written with old understanding do not reflect new understanding. Without reweaving, the vault becomes a graveyard of outdated thinking that happens to be organized.
-
-Reweaving is how knowledge stays alive. Not just connecting, but questioning, sharpening, splitting, rewriting. Every {vocabulary.note} is a hypothesis. Every reweave is a test.
-
-The network compounds through evolution, not just accumulation.
+**Always:** present proposals before editing (interactive mode); explain rationale for each change; preserve what is still valid; log significant claim changes; verify link targets exist.
 
 ---
 

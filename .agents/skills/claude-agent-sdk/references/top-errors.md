@@ -438,7 +438,7 @@ const server2 = createSdkMcpServer({
 ```
 
 ### Why It Happens
-- Path outside `workingDirectory`
+- Path outside `cwd`
 - No read/write permissions
 - Protected system directory
 
@@ -446,7 +446,7 @@ const server2 = createSdkMcpServer({
 ```typescript
 // Set correct working directory
 options: {
-  workingDirectory: "/path/to/accessible/dir"
+  cwd: "/path/to/accessible/dir"
 }
 
 // Or fix permissions
@@ -455,7 +455,7 @@ options: {
 ```
 
 ### Prevention
-- Set appropriate `workingDirectory`
+- Set appropriate `cwd`
 - Verify file permissions
 - Don't access system directories
 - Use dedicated project directories

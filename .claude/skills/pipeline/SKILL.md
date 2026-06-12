@@ -17,7 +17,7 @@ argument-hint: "[file] — path to source file to process end-to-end"
 Parse immediately:
 - Source file path: the file to process (required)
 - `--handoff`: output RALPH HANDOFF block at end (for chaining)
-- If target is empty: list files in captures/ and ask which to process
+- If target is empty: list files in inbox/ and ask which to process
 
 ### Step 0: Read Vocabulary
 
@@ -44,7 +44,7 @@ Phase 2: /extract (via /ralph) — extract claims from source
 Phase 3: /ralph (all claims) — create -> reflect -> reweave -> verify
     |
     v
-Phase 4: /archive-batch — move task files, generate summary
+Phase 4: archive (inline, Phase 5 below) — move task files, generate summary
     |
     v
 Complete
@@ -56,23 +56,8 @@ The pipeline is the convenience wrapper. /ralph is the engine. /seed is the entr
 
 ## Phase 1: Seed
 
-Invoke /seed on the target file to create the extract task, check for duplicates, and move the source to its archive folder.
-
-**How to invoke:**
-
-Use the Skill tool if available, otherwise execute the /seed workflow directly:
-- Validate source exists
-- Check for prior processing (duplicate detection)
-- Create archive folder
-- Move source from captures to archive
-- Create extract task file
-- Add extract task to queue
-
-**Capture from seed output:**
-- **Batch ID**: the source basename (used for --batch filtering in subsequent steps)
-- **Archive folder path**: where the source was moved
-- **next_claim_start**: the claim numbering start
-
+Invoke /seed on the target file — it validates the source, detects duplicates, creates the archive folder, moves the source from inbox/, creates the extract task, and updates the queue.
+Capture from its output: **batch_id** (the source basename, used for --batch filtering), **archive folder path**, and **next_claim_start**.
 Report: `$ Seeded: {source-name}`
 
 **If seed reports the file was already processed:** Ask the user whether to proceed or skip. Do NOT auto-skip — the user may want to re-process with different scope.
@@ -166,18 +151,11 @@ Check the queue: count tasks for this batch that are NOT done.
 
 ## Phase 5: Archive Batch
 
-When all tasks for the batch are complete, archive the batch.
+When all tasks for the batch are complete, archive the batch directly. This inline procedure IS the archive step — there is no separate archive skill:
 
-**How to invoke:**
-
-```
-/archive-batch {batch_id}
-```
-
-Or execute directly:
-1. Move all task files from `ops/queue/` to `ops/queue/archive/{date}-{batch_id}/`
-2. Generate a batch summary file: `{batch_id}-summary.md`
-3. Remove completed entries from the queue (or mark as archived)
+1. Move all task files for the batch from `ops/queue/` to `ops/queue/archive/{date}-{batch_id}/`
+2. Generate a batch summary file in that archive folder: `{batch_id}-summary.md`
+3. Mark the batch's queue entries as archived (`status: "archived"`) — or remove them — via jq on `ops/queue/queue.json`
 
 The summary should include:
 - Source file name and original location
@@ -232,7 +210,7 @@ Work Done:
 - Archived batch to {archive_path}
 
 Files Modified:
-- insights/ ({N} new insights)
+- knowledge/ ({N} new insights)
 - ops/queue/archive/{date}-{batch_id}/ (archived)
 
 Learnings:
@@ -259,7 +237,7 @@ Queue Updates:
 **The pipeline is resumable.** Queue state persists across sessions:
 - /seed detects prior processing and asks whether to proceed
 - /ralph picks up from the last completed phase (queue is the source of truth)
-- /archive-batch verifies completeness before archiving
+- The archive phase verifies completeness before archiving
 
 **Seed failure:** If /seed fails (file not found, duplicate detected and user declines), stop the pipeline entirely.
 
@@ -267,7 +245,7 @@ Queue Updates:
 
 **Processing failure:** If /ralph fails mid-batch, the queue preserves state. Individual claims resume from their failed phase on next /ralph invocation.
 
-**Archive failure:** If archiving fails, the claims are still created and connected. Only the organizational cleanup is missing — re-run /archive-batch manually.
+**Archive failure:** If archiving fails, the claims are still created and connected. Only the organizational cleanup is missing — re-run the Phase 5 inline archive procedure manually.
 
 ---
 
@@ -280,7 +258,7 @@ The pipeline is designed to be interrupted and resumed at any point:
 | Before seed | Run /pipeline again (starts fresh) |
 | After seed, before reduce | /ralph 1 --batch {id} --type extract |
 | After reduce, during claims | /ralph --batch {id} (picks up from failed phase) |
-| After all claims, before archive | /archive-batch {id} |
+| After all claims, before archive | Run the Phase 5 inline archive procedure for {id} |
 
 State lives in the queue file. The pipeline reads queue state, not session state. This means you can interrupt, close the session, and resume later.
 
@@ -288,7 +266,7 @@ State lives in the queue file. The pipeline reads queue state, not session state
 
 ## Edge Cases
 
-**No target file:** List captures/ candidates, suggest the best one based on age and relevance.
+**No target file:** List inbox/ candidates, suggest the best one based on age and relevance.
 
 **Source already seeded:** /seed detects this and asks the user. If they decline, the pipeline stops cleanly.
 

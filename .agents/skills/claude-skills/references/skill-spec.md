@@ -1,18 +1,18 @@
 # Skill Spec (This Repo)
 
-This document defines what a "production-grade Skill" means in this repository. Use it as the source of truth when creating or refactoring anything under `skills/`.
+This document defines what a "production-grade Skill" means in this repository. Use it as the source of truth when creating or refactoring anything under `.claude/skills/`.
 
 Keywords: MUST / SHOULD / MAY / MUST NOT / SHOULD NOT are normative.
 
 ## 1. Directory & Naming
 
-- A Skill MUST be a directory under `skills/` named after its `name` field.
+- A Skill MUST be a directory under `.claude/skills/` (this repo symlinks these to `.agents/skills/`); the directory name is the /command.
 - The directory name MUST match `^[a-z][a-z0-9-]*$`.
 - The Skill entrypoint MUST be `SKILL.md` at the root of the skill directory.
 
-## 2. Frontmatter (Required)
+## 2. Frontmatter
 
-`SKILL.md` MUST start with YAML frontmatter:
+`SKILL.md` SHOULD start with YAML frontmatter:
 
 ```yaml
 ---
@@ -21,12 +21,15 @@ description: "What it does + when to use (activation triggers)."
 ---
 ```
 
-Rules:
-- `name` MUST match `^[a-z][a-z0-9-]*$`.
-- `name` SHOULD equal the directory name.
-- `description` MUST be decidable and operational:
+Per the current Claude Code spec (code.claude.com/docs/en/skills), all frontmatter fields are optional; the command name comes from the directory name, and `name` is only a display label. This repo's conventions:
+
+- The directory name MUST match `^[a-z][a-z0-9-]*$` (it is the `/command`).
+- If `name` is present, it SHOULD equal the directory name.
+- `description` MUST be present, decidable, and operational:
   - Good: "X development and debugging. Use when doing A/B/C."
   - Bad: "Helps with X."
+- Invocation-control fields (`disable-model-invocation`, `user-invocable`, `context: fork`, `agent`, `allowed-tools`, `disallowed-tools`, `model`, `effort`, `paths`, `hooks`, `shell`, `when_to_use`, `argument-hint`, `arguments`) are all valid and MUST NOT be flagged as errors. See the table in `../SKILL.md`.
+- Skills with side effects (deploy, commit, send) SHOULD set `disable-model-invocation: true`.
 
 ## 3. SKILL.md Structure
 
@@ -107,5 +110,6 @@ Each Skill SHOULD include a `## Maintenance` section with:
 Before shipping, run the checklist in `quality-checklist.md` and (if available) the validator:
 
 ```bash
-./skills/claude-skills/scripts/validate-skill.sh skills/<skill-name> --strict
+# from the claude-skills skill root
+./scripts/validate-skill.sh ../<skill-name> --strict
 ```

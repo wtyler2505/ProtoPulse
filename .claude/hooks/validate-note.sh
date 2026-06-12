@@ -37,12 +37,18 @@ case "$FILE_PATH" in
         fi
       done
 
+      # Enum lists below are generated from ops/config.yaml _schema — keep in sync.
+      # Policy: preferred (v2) -> silent pass; accepted-legacy -> WARN (never fail);
+      # unknown -> WARN pointing at the ops/config.yaml _schema block.
+
       # Validate type enum if present
       note_type=$(grep '^type:' "$FILE_PATH" 2>/dev/null | head -1 | sed 's/^type: *//' | tr -d '"' | tr -d "'")
       if [[ -n "$note_type" && "$note_type" != "moc" ]]; then
         case "$note_type" in
-          claim|decision|concept|insight|pattern|debt-note|need) ;;
-          *) echo "VALIDATION WARNING: $FILE_PATH has invalid type: '$note_type' (expected: claim, decision, concept, insight, pattern, debt-note, need)" ;;
+          claim|pattern|reference|meta) ;;
+          decision|concept|insight|debt-note|need|domain-knowledge|knowledge-note|knowledge)
+            echo "VALIDATION WARNING: $FILE_PATH has accepted-legacy type: '$note_type' (preferred: claim, pattern, reference, moc, meta — see ops/config.yaml _schema)" ;;
+          *) echo "VALIDATION WARNING: $FILE_PATH has unknown type: '$note_type' (not in preferred or accepted-legacy lists — see ops/config.yaml _schema)" ;;
         esac
       fi
 
@@ -50,8 +56,10 @@ case "$FILE_PATH" in
       confidence=$(grep '^confidence:' "$FILE_PATH" 2>/dev/null | head -1 | sed 's/^confidence: *//' | tr -d '"' | tr -d "'")
       if [[ -n "$confidence" ]]; then
         case "$confidence" in
-          proven|likely|experimental|outdated) ;;
-          *) echo "VALIDATION WARNING: $FILE_PATH has invalid confidence: '$confidence' (expected: proven, likely, experimental, outdated)" ;;
+          speculative|emerging|supported|verified|established) ;;
+          proven|likely|experimental|outdated|high|medium)
+            echo "VALIDATION WARNING: $FILE_PATH has accepted-legacy confidence: '$confidence' (preferred: speculative, emerging, supported, verified, established — see ops/config.yaml _schema)" ;;
+          *) echo "VALIDATION WARNING: $FILE_PATH has unknown confidence: '$confidence' (not in preferred or accepted-legacy lists — see ops/config.yaml _schema)" ;;
         esac
       fi
     fi

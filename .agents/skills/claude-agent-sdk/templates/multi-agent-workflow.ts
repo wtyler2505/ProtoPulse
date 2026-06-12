@@ -79,8 +79,8 @@ async function runDevOpsAgent(task: string) {
   const response = query({
     prompt: task,
     options: {
-      model: "claude-sonnet-4-5",
-      workingDirectory: process.cwd(),
+      model: "claude-sonnet-4-6",
+      cwd: process.cwd(),
       systemPrompt: `You are a DevOps automation expert and orchestrator.
 
 Your responsibilities:

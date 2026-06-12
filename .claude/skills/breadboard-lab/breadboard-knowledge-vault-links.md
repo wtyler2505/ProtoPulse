@@ -82,7 +82,7 @@ done
 
 ### Tables Below Are Snapshot Only
 
-The tables that follow are a **2026-04-17 snapshot** of vault structure. If you're reading this more than ~30 days after that date, verify before citing.
+The tables that follow are a **2026-04-17 snapshot** of vault structure (2026-06-11 verification: spot-checked slugs still valid). If you're reading this more than ~30 days after the last verification, verify before citing.
 
 ## MOC (Topic Map)
 

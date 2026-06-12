@@ -1,6 +1,6 @@
 ---
 name: fix-audit-failures
-description: Parse a visual audit checklist and deploy an agent team to fix all unchecked items with strict file ownership
+description: Parse a visual audit checklist and deploy an agent team to fix all unchecked items with strict file ownership. Use after /visual-audit produces a checklist, or when Tyler says "fix the audit failures", "work the audit checklist", or "fix the VA items".
 ---
 
 # /fix-audit-failures
@@ -9,9 +9,9 @@ Parse a visual audit checklist markdown file, group unchecked items by affected 
 
 ## Arguments
 
-- `checklist_path` (required) — Path to the audit checklist markdown file (e.g., `docs/visual-audit-checklist.md`)
+- `checklist_path` (required) — Path to the audit checklist markdown file (e.g., `docs/audits/2026-06-11-visual-audit.md`)
 
-If no argument provided, glob for `docs/*audit*checklist*.md` or `docs/*CHECKLIST*.md` and use the most recently modified one.
+If no argument provided, glob for `docs/audits/*visual-audit*.md` (then fall back to `docs/*audit*checklist*.md`) and use the most recently modified one.
 
 ## Procedure
 
@@ -29,21 +29,35 @@ If no argument provided, glob for `docs/*audit*checklist*.md` or `docs/*CHECKLIS
 
 ### Step 2: Map Issues to Files
 
-1. For each unchecked issue, identify the source file(s) it affects
-   - Use the `file:line` annotation if present
-   - If no file annotation, infer from the view name:
-     - Architecture → `client/src/components/views/ArchitectureView.tsx`
-     - Schematic → `client/src/components/views/SchematicView.tsx`
-     - Breadboard → `client/src/components/views/BreadboardView.tsx`
-     - PCB Layout → `client/src/components/views/PCBLayoutView.tsx`
-     - Component Editor → `client/src/components/views/ComponentEditorView.tsx`
-     - Procurement → `client/src/components/views/ProcurementView.tsx`
-     - Validation → `client/src/components/views/ValidationView.tsx`
-     - Output → `client/src/components/views/OutputView.tsx`
-     - Sidebar → `client/src/components/layout/Sidebar.tsx`
-     - Chat Panel → `client/src/components/panels/ChatPanel.tsx`
-   - For shared UI issues (shadcn components), map to `client/src/components/ui/`
-   - For CSS/theme issues, map to `client/src/index.css` or Tailwind config
+1. For each unchecked issue, identify the source file(s) it affects.
+   - Use the `file:line` annotation if present.
+   - If no file annotation, **resolve the view name through the live routing — never guess paths**:
+
+   ```bash
+   # Which component does this ViewMode render?
+   rg -n "activeView === '" client/src/pages/workspace/ViewRenderer.tsx
+
+   # Where does that component live on disk?
+   rg -n "import\('@/" client/src/pages/workspace/lazy-imports.ts
+
+   # Find a specific component's file directly:
+   rg -n "ComponentName = lazy" client/src/pages/workspace/lazy-imports.ts
+   ```
+
+   Resolved examples (verified 2026-06-11 — re-run the rg commands above rather than trusting these blindly):
+
+   | View | Renders | File |
+   |------|---------|------|
+   | Breadboard | `BreadboardView` | `client/src/components/circuit-editor/BreadboardView.tsx` |
+   | PCB Layout | `PCBLayoutView` | `client/src/components/circuit-editor/PCBLayoutView.tsx` |
+   | Output | `ExportPanel` | `client/src/components/panels/ExportPanel.tsx` |
+
+   Caveats:
+   - The circuit editors (Breadboard, PCB) live in `client/src/components/circuit-editor/`, NOT `components/views/`. Their internals are further split into subdirectories (e.g., `breadboard-canvas/`, `breadboard-view/`) — the issue may belong to a child component, so follow imports from the entry file.
+   - `components/views/OutputView.tsx` is dead code — never edit it for `output`-view issues; the `output` ViewMode renders ExportPanel (see table above).
+   - Sidebar and Chat Panel are not ViewModes: `client/src/components/layout/Sidebar.tsx`, `client/src/components/panels/ChatPanel.tsx`.
+   - For shared UI issues (shadcn components), map to `client/src/components/ui/`.
+   - For CSS/theme issues, map to `client/src/index.css` or Tailwind config.
 
 2. Group issues by file — each file gets ONE owner
 
@@ -89,11 +103,12 @@ Agent: "ui-components-agent"
 ### Step 5: Verify and Update Checklist
 
 1. Run `npm run check` — must pass with zero errors
-2. For each successfully fixed issue, update the checklist:
-   - Change `- [ ]` to `- [x]`
-   - Append fix description: `- [x] **VA-001** [Architecture] Fixed contrast... (fixed in commit abc123)`
-3. Update summary counts at top of checklist
-4. Report to user:
+2. For each successfully fixed issue, run `/checklist-update` to do the bookkeeping (toggle `- [ ]` → `- [x]`, append the fix description, recount the summary block). Batch the IDs, e.g.:
+   ```
+   /checklist-update VA-001,VA-005,VA-012 check -- Fixed in this pass
+   ```
+   Do not hand-edit the checklist — `/checklist-update` owns the format and summary counts.
+3. Report to user:
    - Issues fixed: N/M
    - Issues remaining: list with reasons
    - Any new issues introduced: flag them
