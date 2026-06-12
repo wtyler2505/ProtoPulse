@@ -7,7 +7,9 @@ argument-hint: "<duration> [scope]"
 
 # Configure Bash Timeout Settings
 
-Configure the bash command timeout values in your Claude Code settings.json file. The default timeout is 2 minutes (120000ms), which is often insufficient for long-running operations like builds, tests, or deployments.
+Configure the bash command timeout values in your Claude Code settings.json file. Claude Code's stock default is 2 minutes (120000ms), which is insufficient for long-running operations like builds, tests, or deployments.
+
+**House rule (recommended default): 60 minutes (3600000ms).** Tyler's standing instruction is that timeouts for all commands are set to no less than 60 minutes unless specifically stated otherwise, and anything expected to run longer than 30 minutes runs in the background. When no duration is given, configure 3600000ms.
 
 ## Current Settings
 
@@ -21,12 +23,11 @@ Project settings: !if [ -f .claude/settings.json ]; then if command -v jq &>/dev
 
 ## Common Timeout Values
 
-- 2 minutes: 120000 (default)
-- 5 minutes: 300000
+- 2 minutes: 120000 (Claude Code stock default — too short for this setup)
 - 10 minutes: 600000
-- 15 minutes: 900000
-- 20 minutes: 1200000
 - 30 minutes: 1800000
+- 60 minutes: 3600000 (**house-rule recommended default**)
+- 120 minutes: 7200000
 
 ## Configure Settings
 
@@ -48,23 +49,23 @@ Project settings: !if [ -f .claude/settings.json ]; then if command -v jq &>/dev
 
 Specify the timeout duration (e.g., "10min", "20min", "5m", "600s") and optionally the scope:
 - `$ARGUMENTS` format: `[duration] [scope]`
-- Duration: Required (e.g., "10min", "20min", "300s")
+- Duration: Optional — defaults to "60min" (house rule) when omitted
 - Scope: Optional - "user" (default) or "project"
 
 Examples:
-- `/bash-timeout 10min` - Set user-level timeout to 10 minutes
-- `/bash-timeout 20min project` - Set project-level timeout to 20 minutes
-- `/bash-timeout 600s user` - Set user-level timeout to 600 seconds
+- `/config:bash-timeout` - Set user-level timeout to the house default, 60 minutes
+- `/config:bash-timeout 60min` - Set user-level timeout to 60 minutes
+- `/config:bash-timeout 90min project` - Set project-level timeout to 90 minutes
 
 ## Implementation Steps
 
-1. Parse the arguments to extract duration and scope
+1. Parse the arguments to extract duration and scope (no duration → use 60min / 3600000ms; reject anything below 60min unless Tyler explicitly insists)
 2. Convert duration to milliseconds
 3. Determine the settings file path based on scope
 4. Read existing settings if the file exists
 5. Update or add the env section with new timeout values
 6. Set BASH_DEFAULT_TIMEOUT_MS to the specified value
-7. Set BASH_MAX_TIMEOUT_MS to 2x the default value (or at least 20 minutes)
+7. Set BASH_MAX_TIMEOUT_MS to 2x the default value (so 7200000ms when using the 60-min default)
 8. Write the updated settings back to the file
 9. Confirm the changes to the user
 
@@ -73,8 +74,8 @@ Examples:
 ```json
 {
   "env": {
-    "BASH_DEFAULT_TIMEOUT_MS": "600000",
-    "BASH_MAX_TIMEOUT_MS": "1200000"
+    "BASH_DEFAULT_TIMEOUT_MS": "3600000",
+    "BASH_MAX_TIMEOUT_MS": "7200000"
   },
   "hooks": {
     // existing hooks configuration...
@@ -83,5 +84,7 @@ Examples:
 ```
 
 This sets:
-- Default timeout: 10 minutes (600000ms)
-- Maximum timeout: 20 minutes (1200000ms)
+- Default timeout: 60 minutes (3600000ms) — the house-rule default
+- Maximum timeout: 120 minutes (7200000ms)
+
+Reminder: commands expected to exceed 30 minutes should run in the background (`run_in_background`) regardless of timeout settings.

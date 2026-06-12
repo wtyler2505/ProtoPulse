@@ -8,6 +8,8 @@ model: sonnet
 
 # 🔬 Research Command
 
+> **Note:** The `deep-research` skill is the primary research surface (fan-out web searches, adversarial verification, cited report). This command is the agent-dispatch variant — use it when you specifically want parallel `research-expert` subagents with filesystem artifacts.
+
 Conduct deep, parallel research on any topic using multiple specialized subagents.
 
 ## Research Query
@@ -35,7 +37,7 @@ $ARGUMENTS
 
 3. **SIMPLE FACTUAL QUERIES** (Quick lookup)
    - Characteristics: Single fact, recent event, specific data point
-   - Examples: "When was GPT-4 released?", "Current CEO of Microsoft"
+   - Examples: "When was Claude Opus 4.8 released?", "Current CEO of Microsoft"
    - Strategy: 1-2 subagents for verification
    - Focus on authoritative sources
 
@@ -60,8 +62,8 @@ You MUST begin each task prompt with one of these trigger phrases to control sub
 
 Example Task invocations:
 ```
-Task(description="Academic research", prompt="Deep dive: Find all academic papers on transformer architectures from 2017-2024", subagent_type="research-expert")
-Task(description="Quick fact check", prompt="Quick check: Verify the release date of GPT-4", subagent_type="research-expert")
+Task(description="Academic research", prompt="Deep dive: Find all academic papers on transformer architectures from 2017-2026", subagent_type="research-expert")
+Task(description="Quick fact check", prompt="Quick check: Verify the release date of Claude Opus 4.8", subagent_type="research-expert")
 Task(description="Company research", prompt="Investigate: OpenAI's current product offerings and pricing", subagent_type="research-expert")
 ```
 
@@ -162,7 +164,7 @@ The synthesized report (written to file) must include:
   - Task 3: "Investigate: Anthropic's current AI products, models, and capabilities"
   - Task 4: "Explore: Performance benchmarks comparing models from all three companies"
   - Task 5: "Investigate: Business models, pricing, and market positioning for each"
-  - Task 6: "Quick check: Latest announcements and news from each company (2024)"
+  - Task 6: "Quick check: Latest announcements and news from each company (2026)"
 
 **DEPTH-FIRST Example:** "How do transformer models achieve attention?"
 - Classification: Depth-first (single topic, deep understanding)
@@ -171,10 +173,10 @@ The synthesized report (written to file) must include:
   - Task 2: "Comprehensive: Visual diagrams and step-by-step walkthrough of self-attention"
   - Task 3: "Thorough research: Seminal papers including 'Attention is All You Need' and subsequent improvements"
 
-**SIMPLE FACTUAL Example:** "When was Claude 3 released?"
+**SIMPLE FACTUAL Example:** "When was Claude Sonnet 4.6 released?"
 - Classification: Simple factual query
 - Launch 1 subagent with verification mode:
-  - Task 1: "Quick check: Verify the official release date of Claude 3 from Anthropic"
+  - Task 1: "Quick check: Verify the official release date of Claude Sonnet 4.6 from Anthropic"
 
 Each subagent works independently, writes findings to `/tmp/research_*.md`, and returns a lightweight summary.
 
