@@ -15,7 +15,6 @@ import {
   ADDI_N,
   AND,
   assembleXtensa,
-  type XtInstr,
   BEQZ,
   BEQZ_N_TO,
   BLT,
@@ -58,6 +57,8 @@ import {
   SUB,
   WSR,
 } from './xtensa-asm.js';
+
+import type { XtInstr } from './xtensa-asm.js';
 
 /**
  * The ESP32-S3 v0 suite — real hand-assembled Xtensa machine code
@@ -1349,7 +1350,7 @@ describe('Esp32s3Core — ROM functions (slice 10)', () => {
     const c = core(image);
     c.step(120);
     const text = 'n=42!\n';
-    expect([...c.drainUart()]).toEqual([...[...text].map((ch) => ch.charCodeAt(0)), text.length]);
+    expect([...c.drainUart()]).toEqual([...Array.from(text, (ch) => ch.charCodeAt(0)), text.length]);
   });
 
   it('memset and memcpy ROM exports mutate DRAM and return dst', () => {
@@ -1760,9 +1761,16 @@ describe('Esp32s3Core — second core (slice 12)', () => {
     const io7 = events.filter((e) => e.pin === 'IO7');
     expect(io5.length).toBeGreaterThan(3);
     expect(io7.length).toBeGreaterThan(3);
+    const firstIo5 = io5[0];
+    const lastIo5 = io5.at(-1);
+    const firstIo7 = io7[0];
+    const lastIo7 = io7.at(-1);
+    if (firstIo5 === undefined || lastIo5 === undefined || firstIo7 === undefined || lastIo7 === undefined) {
+      throw new Error('expected both cores to emit GPIO events');
+    }
     // Interleaved, not sequential: each stream starts before the other ends.
-    expect(io7[0]!.cycle).toBeLessThan(io5[io5.length - 1]!.cycle);
-    expect(io5[0]!.cycle).toBeLessThan(io7[io7.length - 1]!.cycle);
+    expect(firstIo7.cycle).toBeLessThan(lastIo5.cycle);
+    expect(firstIo5.cycle).toBeLessThan(lastIo7.cycle);
   });
 
   it("per-core CCOMPARE0 interrupts don't cross-fire (separate VECBASE/INTENABLE/CCOUNT)", () => {
@@ -1832,7 +1840,10 @@ describe('Esp32s3Core — second core (slice 12)', () => {
     // Each timer fires exactly once, on its own core, on its own schedule.
     expect(io5.map((e) => e.level)).toEqual([1]);
     expect(io7.map((e) => e.level)).toEqual([1]);
-    expect(io7[0]!.cycle - io5[0]!.cycle).toBeGreaterThan(150);
+    const [io5Timer] = io5;
+    const [io7Timer] = io7;
+    if (io5Timer === undefined || io7Timer === undefined) throw new Error('expected one timer event per core');
+    expect(io7Timer.cycle - io5Timer.cycle).toBeGreaterThan(150);
   });
 
   it('SW_APPCPU_RST sets the APPCPU reset cause (12) while PROCPU keeps power-on (1)', () => {
@@ -2168,6 +2179,72 @@ describe('Esp32s3Core — ADC continuous GDMA frames (slice 16)', () => {
 
     expect([...c.drainUart()]).toEqual([0x48, 0x48, 8, 3]);
     expect(c.drainAdcReads().map((r) => r.channel)).toEqual([2, 2]);
+  });
+
+  it('advances ADC continuous writes across chained GDMA RX descriptors', () => {
+    const desc2 = ESP32S3_DRAM_BASE + 0x1020;
+    const buf2 = ESP32S3_DRAM_BASE + 0x10c0;
+    const desc4BytesDma = 0x80000004;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [DESC, desc2, BUF, buf2, desc4BytesDma, GDMA, DESC_LINK_START, APB_SARADC, ADC1_CH2_PATTERN, UART],
+      [
+        L32R(2, 0), // descriptor 1
+        L32R(3, 1), // descriptor 2
+        L32R(4, 4), // owner=DMA, size=4 bytes
+        S32I(4, 2, 0),
+        L32R(5, 2),
+        S32I(5, 2, 4),
+        S32I(3, 2, 8), // descriptor 1 -> descriptor 2
+        S32I(4, 3, 0),
+        L32R(5, 3),
+        S32I(5, 3, 4),
+        MOVI(5, 0),
+        S32I(5, 3, 8),
+
+        L32R(6, 5), // GDMA
+        MOVI(7, ADC_DAC_PERI),
+        S32I(7, 6, 0x48),
+        L32R(7, 6),
+        S32I(7, 6, 0x20),
+
+        L32R(8, 7), // APB_SARADC
+        L32R(9, 8),
+        S32I(9, 8, 0x18),
+        MOVI(10, 2),
+        S32I(10, 8, 0x00), // sample 1 fills descriptor 1
+        MOVI(10, 0),
+        S32I(10, 8, 0x00),
+        MOVI(10, 2),
+        S32I(10, 8, 0x00), // sample 2 must hop to descriptor 2
+
+        L32R(12, 9), // UART
+        L32R(3, 2),
+        L32I(11, 3, 0),
+        SRLI(11, 11, 8),
+        S32I(11, 12, 0), // buffer 1 high byte
+        L32R(3, 3),
+        L32I(11, 3, 0),
+        SRLI(11, 11, 8),
+        S32I(11, 12, 0), // buffer 2 high byte
+        L32R(2, 0),
+        L32I(11, 2, 0),
+        SRLI(11, 11, 12),
+        S32I(11, 12, 0), // descriptor 1 length
+        L32R(2, 1),
+        L32I(11, 2, 0),
+        SRLI(11, 11, 12),
+        S32I(11, 12, 0), // descriptor 2 length
+        L32I(11, 6, 0x08),
+        S32I(11, 12, 0), // GDMA INT_RAW = DONE|SUC_EOF from descriptor 2
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.setAdcSampler((channel) => (channel === 2 ? 1.65 : 0));
+    c.step(500);
+
+    expect([...c.drainUart()]).toEqual([0x48, 0x48, 4, 4, 3]);
   });
 
   it('routes GDMA RX DONE/SUC_EOF through the interrupt matrix to a level-1 handler', () => {

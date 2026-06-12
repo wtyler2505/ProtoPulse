@@ -1,7 +1,7 @@
 import { XtensaCpu } from './xtensa.js';
 
-import type { XtensaBus } from './xtensa.js';
 import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuStepResult, PinEvent } from './types.js';
+import type { XtensaBus } from './xtensa.js';
 
 /**
  * ESP32-S3 v0 — a from-scratch Xtensa LX7 core, the first slice of the
@@ -781,6 +781,14 @@ export class Esp32s3Core implements McuCore {
     this.active = this.cpu;
   }
 
+  private consumePendingReset(startCycle: number): McuStepResult | null {
+    if (!this.pendingReset) return null;
+    const consumed = this.cpu.cycles - startCycle;
+    const resetEvents = this.events;
+    this.reset();
+    return { cycles: consumed, events: resetEvents };
+  }
+
   loadFirmware(image: Uint8Array | string): void {
     if (typeof image === 'string' || (image.length > 0 && image[0] === 0x3a)) {
       throw new Error(
@@ -880,13 +888,11 @@ export class Esp32s3Core implements McuCore {
     while (this.cpu.cycles < target) {
       this.active = this.cpu;
       this.cpu.step();
-      if (this.pendingReset) {
+      const core0Reset = this.consumePendingReset(start);
+      if (core0Reset !== null) {
         // software_reset ROM trap: a power-on reset that ends this
         // step() call (the cycle counter restarts from 0).
-        const consumed = this.cpu.cycles - start;
-        const resetEvents = this.events;
-        this.reset();
-        return { cycles: consumed, events: resetEvents };
+        return core0Reset;
       }
       // Lockstep interleave (slice 12): core 1 catches up to core 0's
       // timeline — 1 instr = 1 cycle on both, so they alternate.
@@ -895,12 +901,8 @@ export class Esp32s3Core implements McuCore {
           this.active = this.cpu1;
           while (this.core1Epoch + this.cpu1.cycles < this.cpu.cycles) {
             this.cpu1.step();
-            if (this.pendingReset) {
-              const consumed = this.cpu.cycles - start;
-              const resetEvents = this.events;
-              this.reset();
-              return { cycles: consumed, events: resetEvents };
-            }
+            const core1Reset = this.consumePendingReset(start);
+            if (core1Reset !== null) return core1Reset;
           }
           this.active = this.cpu;
         } else {
@@ -910,13 +912,11 @@ export class Esp32s3Core implements McuCore {
         }
       }
       this.checkTimersAndWdts();
-      if (this.pendingReset) {
+      const timedReset = this.consumePendingReset(start);
+      if (timedReset !== null) {
         // A watchdog stage bit (slice 13) — same shape as the
         // software_reset path above.
-        const consumed = this.cpu.cycles - start;
-        const resetEvents = this.events;
-        this.reset();
-        return { cycles: consumed, events: resetEvents };
+        return timedReset;
       }
     }
     const events = this.events;
