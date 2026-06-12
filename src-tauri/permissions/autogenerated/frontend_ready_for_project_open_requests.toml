@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-frontend-ready-for-project-open-requests"
+description = "Enables the frontend_ready_for_project_open_requests command without any pre-configured scope."
+commands.allow = ["frontend_ready_for_project_open_requests"]
+
+[[permission]]
+identifier = "deny-frontend-ready-for-project-open-requests"
+description = "Denies the frontend_ready_for_project_open_requests command without any pre-configured scope."
+commands.deny = ["frontend_ready_for_project_open_requests"]
