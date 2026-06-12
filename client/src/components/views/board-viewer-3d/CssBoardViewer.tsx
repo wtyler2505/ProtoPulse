@@ -209,7 +209,7 @@ const Trace3DElement = memo(function Trace3DElement({
       }}
     >
       {trace.points.slice(0, -1).map((pt, i) => {
-        const next = trace.points[i + 1];
+        const next = trace.points.at(i + 1);
         if (!next) { return null; }
 
         const x1Pct = (pt.x / boardWidth) * 100;

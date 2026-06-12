@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 
-import type { CircuitInstanceRow, CircuitNetRow, CircuitViaRow, CircuitWireRow } from '@shared/schema';
 import type { Footprint } from '@/lib/pcb/footprint-library';
 
-import { buildSceneModel, type BuildSceneBoard } from '../buildSceneModel';
+import type { CircuitInstanceRow, CircuitNetRow, CircuitViaRow, CircuitWireRow } from '@shared/schema';
+
+import { buildSceneModel  } from '../buildSceneModel';
+
+import type {BuildSceneBoard} from '../buildSceneModel';
 
 // ---------------------------------------------------------------------------
 // Fixtures

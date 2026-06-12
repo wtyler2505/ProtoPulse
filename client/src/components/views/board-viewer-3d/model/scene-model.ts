@@ -97,7 +97,7 @@ export interface ScenePad {
 export interface SceneTrace {
   id: string;
   /** Centreline points in scene space (mm). */
-  points: Array<{ x: number; z: number }>;
+  points: { x: number; z: number }[];
   /** Ribbon width (mm). */
   width: number;
   /** Copper side. */

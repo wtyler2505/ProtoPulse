@@ -8,10 +8,12 @@
  * proxy's `raycast` is disabled so the highlight never swallows picks.
  */
 
-import { Outlines } from '@react-three/drei';
 import { useMemo } from 'react';
 
+import { Outlines } from '@react-three/drei';
+
 import { selectionBounds } from '../model/scene-lookup';
+
 import type { SceneModel, SceneSelection } from '../model/scene-model';
 
 /** Accent used for the selection outline (matches the app primary hue). */

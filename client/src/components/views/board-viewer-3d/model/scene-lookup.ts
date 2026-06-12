@@ -34,7 +34,7 @@ export function nextSelection(
   clicked: SceneSelection | null,
 ): SceneSelection | null {
   if (!clicked) return null;
-  if (current && current.kind === clicked.kind && current.id === clicked.id) {
+  if (current?.kind === clicked.kind && current.id === clicked.id) {
     return null;
   }
   return clicked;

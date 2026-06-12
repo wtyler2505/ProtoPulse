@@ -12,6 +12,7 @@ import {
   selectionBounds,
   traceLength,
 } from '../scene-lookup';
+
 import type {
   SceneComponent,
   SceneModel,

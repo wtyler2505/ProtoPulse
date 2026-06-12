@@ -17,9 +17,12 @@
  * element. Events `stopPropagation()` so only the front-most hit selects.
  */
 
-import { Instance, Instances } from '@react-three/drei';
 import { useEffect, useMemo } from 'react';
+
+import { Instance, Instances } from '@react-three/drei';
 import * as THREE from 'three';
+
+import { buildTraceGeometry, COPPER_THICKNESS_MM } from './trace-geometry';
 
 import type {
   MaterialKey,
@@ -28,7 +31,6 @@ import type {
   SceneSelection,
 } from '../model/scene-model';
 
-import { buildTraceGeometry, COPPER_THICKNESS_MM } from './trace-geometry';
 
 /** PBR parameter sets for each material key (plan §9 visual design). */
 export const MATERIAL_PROPS: Readonly<

@@ -18,13 +18,15 @@
  * transform stays decoupled and a test can supply deterministic fixtures.
  */
 
-import type { CircuitInstanceRow, CircuitNetRow, CircuitViaRow, CircuitWireRow } from '@shared/schema';
 
 import type { Footprint } from '@/lib/pcb/footprint-library';
 import { FootprintLibrary } from '@/lib/pcb/footprint-library';
 
+import type { CircuitInstanceRow, CircuitNetRow, CircuitViaRow, CircuitWireRow } from '@shared/schema';
+
 import { buildLayerStack } from './layer-stack';
 import { getPackageHeight } from './package-heights';
+
 import type {
   MaterialKey,
   SceneBoard,
@@ -121,7 +123,7 @@ function resolvePackage(
   inst: CircuitInstanceRow,
   resolveFootprint: FootprintResolver,
 ): string {
-  const props = (inst.properties ?? {}) as Record<string, unknown>;
+  const props = inst.properties as Record<string, unknown>;
   const declared = props.packageType;
   if (typeof declared === 'string' && declared && resolveFootprint(declared)) {
     return declared;
@@ -202,7 +204,7 @@ export function buildSceneModel(input: BuildSceneModelInput): SceneModel {
   const components: SceneComponent[] = [];
   const pads: ScenePad[] = [];
 
-  const placed = instances.filter((i) => i.pcbX != null && i.pcbY != null);
+  const placed = instances.filter((i) => i.pcbX !== null && i.pcbY !== null);
   for (const inst of placed) {
     const pkg = resolvePackage(inst, resolveFootprint);
     const footprint = resolveFootprint(pkg);
@@ -212,11 +214,14 @@ export function buildSceneModel(input: BuildSceneModelInput): SceneModel {
     const side: 'top' | 'bottom' = inst.pcbSide === 'back' ? 'bottom' : 'top';
     const material = bodyMaterialForPackage(pkg);
 
-    // pcbX/pcbY are guaranteed non-null by the filter above.
-    const { x, z } = toScene(inst.pcbX as number, inst.pcbY as number, widthMm, heightMm);
+    // pcbX/pcbY are guaranteed non-null by the filter above; the guard keeps
+    // the types honest without non-null assertions.
+    const { pcbX, pcbY } = inst;
+    if (pcbX === null || pcbY === null) continue;
+    const { x, z } = toScene(pcbX, pcbY, widthMm, heightMm);
 
     const componentId = `circuit-instance-${inst.id}`;
-    const props = (inst.properties ?? {}) as Record<string, unknown>;
+    const props = inst.properties as Record<string, unknown>;
     const propString = (key: string): string | undefined => {
       const v = props[key];
       if (typeof v === 'string' && v.trim()) return v;
@@ -232,7 +237,7 @@ export function buildSceneModel(input: BuildSceneModelInput): SceneModel {
       supplier: propString('supplier') ?? propString('manufacturer'),
       x,
       z,
-      rotationDeg: inst.pcbRotation ?? inst.schematicRotation ?? 0,
+      rotationDeg: inst.pcbRotation ?? inst.schematicRotation,
       side,
       bodyW,
       bodyD,
@@ -242,7 +247,7 @@ export function buildSceneModel(input: BuildSceneModelInput): SceneModel {
     });
 
     // Pads from footprint, positioned relative to the component centre.
-    if (footprint?.pads?.length) {
+    if (footprint && footprint.pads.length > 0) {
       for (const pad of footprint.pads) {
         pads.push({
           id: `${componentId}-pad-${pad.number}`,
@@ -262,7 +267,7 @@ export function buildSceneModel(input: BuildSceneModelInput): SceneModel {
   const traces: SceneTrace[] = [];
   const pcbWires = wires.filter((w) => w.view === 'pcb' || !w.view);
   for (const wire of pcbWires) {
-    const rawPoints = (wire.points as Array<{ x: number; y: number }> | null) ?? [];
+    const rawPoints = (wire.points as { x: number; y: number }[] | null) ?? [];
     if (rawPoints.length < 2) {
       continue;
     }
@@ -270,7 +275,7 @@ export function buildSceneModel(input: BuildSceneModelInput): SceneModel {
     traces.push({
       id: `circuit-wire-${wire.id}`,
       points: rawPoints.map((p) => toScene(p.x, p.y, widthMm, heightMm)),
-      width: wire.width ?? 0.2,
+      width: wire.width,
       side,
       // Copper sits just proud of the board face on the chosen side.
       y: side === 'top' ? halfThickness : -halfThickness,

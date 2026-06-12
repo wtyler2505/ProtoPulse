@@ -11,6 +11,7 @@
 import { useCallback, useState } from 'react';
 
 import { nextSelection } from '../model/scene-lookup';
+
 import type { SceneSelection } from '../model/scene-model';
 
 export interface PickingState {
@@ -31,9 +32,9 @@ export function usePicking(): PickingState {
     setSelection((current) => nextSelection(current, clicked));
   }, []);
 
-  const clear = useCallback(() => setSelection(null), []);
+  const clear = useCallback(() => { setSelection(null); }, []);
 
-  const set = useCallback((target: SceneSelection) => setSelection(target), []);
+  const set = useCallback((target: SceneSelection) => { setSelection(target); }, []);
 
   return { selection, pick, clear, set };
 }

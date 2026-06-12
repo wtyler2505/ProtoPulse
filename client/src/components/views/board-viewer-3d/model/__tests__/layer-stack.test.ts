@@ -4,9 +4,11 @@ import {
   buildLayerStack,
   copperLayerCount,
   COPPER_THICKNESS_MM,
-  MAX_LAYERS,
-  type LayerStack,
+  MAX_LAYERS
+  
 } from '../layer-stack';
+
+import type {LayerStack} from '../layer-stack';
 
 function copperLayers(stack: LayerStack) {
   return stack.layers.filter((l) => l.role === 'copper');

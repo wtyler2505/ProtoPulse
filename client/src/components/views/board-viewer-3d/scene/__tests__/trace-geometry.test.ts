@@ -1,8 +1,8 @@
 /**
  * trace-geometry tests (PP3D-4) — pure three.js geometry, no WebGL needed.
  */
-import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { describe, expect, it } from 'vitest';
 
 import { buildTraceGeometry, COPPER_THICKNESS_MM } from '../trace-geometry';
 
