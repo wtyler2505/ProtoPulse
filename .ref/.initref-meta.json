@@ -1,11 +1,12 @@
 {
-  "generated_at": "2026-02-19T04:42:21Z",
-  "git_sha": "966a9a383840867e8336fa7cdf90636ae4bfdc47",
+  "generated_at": "2026-06-12T04:46:41Z",
+  "git_sha": "442776009ce18ee691cd2cc926d5607b9ee758d6",
   "project_root": "/home/wtyler/Projects/ProtoPulse",
-  "files_analyzed": 128,
+  "files_analyzed": 2419,
   "flags_used": "",
   "file_hashes": {
-    "project-dna.md": "379342417639dbe690bea7d35e713c34aa3153f2798b6b727a208ca5c9279fd6",
-    "project-map.md": "4d84bf73147db9699488f9b80a60be84ae8b7e1d6a2e195c89333681b27f3db2"
+    "project-dna.md": "c8aa997027f92c28e5ab2f081a3325091dfcb17ce16f5b74fa5033e7d9ad6c6c",
+    "project-map.md": "3b4d0fad4c082c6fa29150eeb0df0cea76141206d653ab04c5d7f1505e726118",
+    "project-tools.md": "b9c0253079b912aba59c669253b899e3ed3017c88374796d61580c6d5a76e61b"
   }
 }
