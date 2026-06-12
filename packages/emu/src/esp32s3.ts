@@ -49,13 +49,25 @@ import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuSt
  * their IROM/DROM vaddrs — the net effect of the bootloader's MMU
  * setup plus a fully-warmed cache (XIP reads cost 1 cycle like
  * everything else; no cache-miss timing, no MMU registers, no SPI
- * flash writes). Interrupt-driven, analog, gptimer-style, and
- * flash-resident firmware patterns run end-to-end — but there are
- * still no ROM functions, no RTC/eFuse/SYSTEM registers, no second
- * core, no ADC2/DMA mode, no TIMG0 T1/TIMG1/watchdogs, and no XTAL
- * clock source for the timer (APB only), so full IDF/FreeRTOS
- * firmware does NOT run yet. Loading Intel-HEX refuses with a
- * message.
+ * flash writes). ROM functions (slice 10) are HOST-INTERCEPTED
+ * TRAPS, not real mask-ROM code: each modeled function's REAL entry
+ * address (esp-idf's esp32s3.rom.ld / .rom.newlib.ld) serves a
+ * synthetic ENTRY+RETW stub, and fetching the RETW runs the
+ * function's semantic effect on the host — ets_printf (register
+ * varargs only, %dicusxXp%% with 0/width flags), uart_tx_one_char,
+ * ets_delay_us (jumps CCOUNT forward, so a CCOMPARE0 equality inside
+ * the skipped span is missed), memset/memcpy/strlen, and
+ * software_reset (modeled as power-on reset; the running step()
+ * returns early). Windowed-ABI callers only — a call0-style call
+ * into ROM refuses at the stub's RETW; any OTHER address in the
+ * ROM0/ROM1 ranges refuses loudly, naming the address and the
+ * modeled functions (no silent garbage). Interrupt-driven, analog,
+ * gptimer-style, and flash-resident firmware patterns run
+ * end-to-end — but there are still no RTC/eFuse/SYSTEM registers,
+ * no second core, no ADC2/DMA mode, no TIMG0 T1/TIMG1/watchdogs,
+ * and no XTAL clock source for the timer (APB only), so full
+ * IDF/FreeRTOS firmware does NOT run yet. Loading Intel-HEX refuses
+ * with a message.
  */
 
 const CLOCK_HZ = 240_000_000;
@@ -165,6 +177,48 @@ const IROM_HIGH = 0x44000000;
 const DROM_LOW = 0x3c000000;
 const DROM_HIGH = 0x3e000000;
 
+// ── Slice 10: ROM functions as host-intercepted traps ──
+// The mask-ROM ranges (ESP32-S3 TRM / datasheet "Internal Memory
+// Address Mapping"): ROM0 0x4000_0000..0x4005_FFFF (384 KiB,
+// instruction bus), ROM1 0x3FF0_0000..0x3FF1_FFFF (128 KiB, data
+// bus). The real ROM's code is not emulated; instead each modeled
+// function's REAL entry address — straight out of esp-idf v5.2's
+// components/esp_rom/esp32s3/ld/esp32s3.rom.ld (+ .rom.newlib.ld for
+// the libc exports) — serves a synthetic ENTRY+RETW stub, and the
+// fetch of that RETW triggers the function's semantic effect on the
+// host (result into the callee window's a2, return via the CPU's own
+// RETW with its spill/fill machinery). This is the standard
+// trick for ROM-less emulation; QEMU-esp32s3 instead ships Espressif's
+// real ROM dump, which we deliberately do not (no redistributable
+// blob, no mask-ROM UART/SPI drivers to model under it).
+// esp_rom_delay_us is the IDF-side alias of ets_delay_us
+// (esp32s3.rom.api.ld), so it needs no separate entry. Windowed-ABI
+// callers only: a call0-style call lands on the stub's RETW, which
+// already refuses call0 links loudly. Any other ROM address refuses
+// with a diagnostic naming it — no silent garbage.
+const ROM0_LOW = 0x40000000;
+const ROM0_HIGH = 0x40060000;
+const ROM1_LOW = 0x3ff00000;
+const ROM1_HIGH = 0x3ff20000;
+const ROM_FNS: Record<number, string> = {
+  0x400005d0: 'ets_printf',
+  0x40000600: 'ets_delay_us', // = esp_rom_delay_us
+  0x40000648: 'uart_tx_one_char',
+  0x400006d8: 'software_reset',
+  0x400011e8: 'memset',
+  0x400011f4: 'memcpy',
+  0x40001248: 'strlen',
+};
+const ROM_FN_LIST = Object.entries(ROM_FNS)
+  .map(([a, n]) => `${n}@0x${Number(a).toString(16)}`)
+  .join(', ');
+/** The stub every ROM function serves: ENTRY a1,16 ; RETW. */
+const ROM_STUB = Uint8Array.from([0x36, 0x21, 0x00, 0x90, 0x00, 0x00]);
+const CYCLES_PER_US = CLOCK_HZ / 1_000_000; // 240
+/** Walk-the-bus guard for strlen / %s — a missing NUL must refuse,
+ *  not spin forever. */
+const ROM_STR_MAX = 0x10000;
+
 const SENS_BASE = 0x60008800;
 const SENS_SAR_MEAS1_CTRL2 = 0x0c;
 const MEAS1_DONE_SAR = 1 << 16;
@@ -255,6 +309,9 @@ export class Esp32s3Core implements McuCore {
 
   private rxQueue: number[] = [];
   private txBuffer: number[] = [];
+
+  /** Set by the software_reset ROM trap; consumed by step(). */
+  private pendingReset = false;
 
   constructor() {
     this.cpu = new XtensaCpu(this.bus());
@@ -357,6 +414,14 @@ export class Esp32s3Core implements McuCore {
     const target = start + maxCycles;
     while (this.cpu.cycles < target) {
       this.cpu.step();
+      if (this.pendingReset) {
+        // software_reset ROM trap: a power-on reset that ends this
+        // step() call (the cycle counter restarts from 0).
+        const consumed = this.cpu.cycles - start;
+        const resetEvents = this.events;
+        this.reset();
+        return { cycles: consumed, events: resetEvents };
+      }
       if ((this.t0Config & T0_ARMED) === T0_ARMED) this.checkT0Alarm();
     }
     const events = this.events;
@@ -447,6 +512,7 @@ export class Esp32s3Core implements McuCore {
     this.events = [];
     this.rxQueue = [];
     this.txBuffer = [];
+    this.pendingReset = false;
     this.cpu = new XtensaCpu(this.bus());
     // SP at the top of the DRAM window, like a bare-metal crt0 would.
     this.cpu.reset(this.entry, DRAM_BASE + SRAM_BYTES);
@@ -566,6 +632,167 @@ export class Esp32s3Core implements McuCore {
     }
   }
 
+  // ── ROM function traps (slice 10) ──
+
+  /** Serve the synthetic ENTRY+RETW stub for a modeled ROM function;
+   *  fetching the RETW's first byte (entry+3) runs the function's
+   *  semantic effect — at that point the CPU's ENTRY has already
+   *  rotated the window, so args sit in the callee's a2.. and the
+   *  CPU's own RETW performs the return (with its spill/fill and its
+   *  call0-link refusal). Triggering on the fetch (not on PC) means a
+   *  level-1 interrupt taken at entry+3 cannot double-run the effect:
+   *  no fetch happens on the vectored step, and the post-RFE retry
+   *  fetches — and runs — it exactly once. */
+  private romRead(addr: number, bytes: 1 | 2 | 4): number {
+    let fn: number | null = null;
+    for (const a of Object.keys(ROM_FNS)) {
+      const base = Number(a);
+      if (addr >= base && addr < base + ROM_STUB.length) {
+        fn = base;
+        break;
+      }
+    }
+    if (fn === null) {
+      throw new Error(
+        `ROM address 0x${addr.toString(16)} is not a modeled ROM function — ` +
+          `this core traps only ${ROM_FN_LIST}; the mask ROM's code is not emulated`,
+      );
+    }
+    if (addr === fn + 3 && bytes === 1) this.romTrap(fn);
+    let v = 0;
+    for (let i = bytes - 1; i >= 0; i--) v = (v << 8) | (ROM_STUB[addr - fn + i] ?? 0);
+    return v >>> 0;
+  }
+
+  /** Write the trap's return value into the callee window's a2. */
+  private romRet(v: number): void {
+    this.cpu.phys[(this.cpu.windowBase * 4 + 2) & (this.cpu.phys.length - 1)] = v | 0;
+  }
+
+  private romTrap(fn: number): void {
+    const arg = (i: number): number => this.cpu.a(2 + i);
+    switch (fn) {
+      case 0x400005d0: // ets_printf
+        this.romRet(this.romPrintf());
+        break;
+      case 0x40000600: // ets_delay_us — burn cycles at the modeled 240 MHz.
+        // One jump, not a loop: a CCOMPARE0 equality strictly inside
+        // the skipped span is missed (honest cut — the header says so).
+        this.cpu.cycles += (arg(0) >>> 0) * CYCLES_PER_US;
+        break;
+      case 0x40000648: { // uart_tx_one_char — returns 0 (OK)
+        this.txBuffer.push(arg(0) & 0xff);
+        this.uartTxDone = true;
+        this.recomputeIrq();
+        this.romRet(0);
+        break;
+      }
+      case 0x400006d8: // software_reset — never returns; step() resets.
+        this.pendingReset = true;
+        break;
+      case 0x400011e8: { // memset(dst, c, n) → dst
+        const dst = arg(0) >>> 0;
+        const c = arg(1) & 0xff;
+        const n = arg(2) >>> 0;
+        for (let i = 0; i < n; i++) this.busWrite((dst + i) >>> 0, 1, c);
+        this.romRet(dst | 0);
+        break;
+      }
+      case 0x400011f4: { // memcpy(dst, src, n) → dst
+        const dst = arg(0) >>> 0;
+        const src = arg(1) >>> 0;
+        const n = arg(2) >>> 0;
+        for (let i = 0; i < n; i++) this.busWrite((dst + i) >>> 0, 1, this.busRead((src + i) >>> 0, 1));
+        this.romRet(dst | 0);
+        break;
+      }
+      case 0x40001248: // strlen(s)
+        this.romRet(this.romStrlen(arg(0) >>> 0));
+        break;
+      default:
+        throw new Error(`ROM trap dispatch out of sync for 0x${fn.toString(16)} — this is a core bug`);
+    }
+  }
+
+  private romStrlen(ptr: number): number {
+    for (let n = 0; n <= ROM_STR_MAX; n++) {
+      if (this.busRead((ptr + n) >>> 0, 1) === 0) return n;
+    }
+    throw new Error(`strlen ROM trap: no NUL within ${String(ROM_STR_MAX)} bytes of 0x${ptr.toString(16)} — bad pointer?`);
+  }
+
+  /** Minimal ets_printf: %d %i %u %x %X %p %c %s %% with '0' and
+   *  width flags ('l' modifiers accepted and ignored; width is not
+   *  applied to %s). Register varargs only (a3..a7); anything fancier
+   *  refuses loudly rather than printing garbage. */
+  private romPrintf(): number {
+    let argIdx = 0;
+    const nextArg = (): number => {
+      if (argIdx >= 5) {
+        throw new Error('ets_printf trap supports at most 5 varargs (register args a3..a7 — stack varargs are not modeled)');
+      }
+      return this.cpu.a(3 + argIdx++) | 0;
+    };
+    const out: number[] = [];
+    const emitStr = (str: string): void => {
+      for (let i = 0; i < str.length; i++) out.push(str.charCodeAt(i) & 0xff);
+    };
+    let p = this.cpu.a(2) >>> 0;
+    for (let guard = 0; ; guard++) {
+      if (guard > ROM_STR_MAX) {
+        throw new Error('ets_printf trap: format string has no NUL within 64 KiB — bad pointer?');
+      }
+      const ch = this.busRead(p++, 1);
+      if (ch === 0) break;
+      if (ch !== 0x25) {
+        out.push(ch);
+        continue;
+      }
+      let c = this.busRead(p++, 1);
+      if (c === 0x25) {
+        out.push(0x25); // %%
+        continue;
+      }
+      let zero = false;
+      let width = 0;
+      if (c === 0x30) {
+        zero = true;
+        c = this.busRead(p++, 1);
+      }
+      while (c >= 0x30 && c <= 0x39) {
+        width = width * 10 + (c - 0x30);
+        c = this.busRead(p++, 1);
+      }
+      while (c === 0x6c) c = this.busRead(p++, 1); // 'l'
+      const pad = (str: string): string =>
+        str.length >= width ? str : (zero ? '0' : ' ').repeat(width - str.length) + str;
+      switch (c) {
+        case 0x64: case 0x69: emitStr(pad(String(nextArg()))); break; // %d %i
+        case 0x75: emitStr(pad(String(nextArg() >>> 0))); break; // %u
+        case 0x78: emitStr(pad((nextArg() >>> 0).toString(16))); break; // %x
+        case 0x58: emitStr(pad((nextArg() >>> 0).toString(16).toUpperCase())); break; // %X
+        case 0x70: emitStr(`0x${(nextArg() >>> 0).toString(16)}`); break; // %p
+        case 0x63: out.push(nextArg() & 0xff); break; // %c
+        case 0x73: { // %s
+          const sp = nextArg() >>> 0;
+          const len = this.romStrlen(sp); // guards against a missing NUL
+          for (let i = 0; i < len; i++) out.push(this.busRead((sp + i) >>> 0, 1));
+          break;
+        }
+        default:
+          throw new Error(
+            `ets_printf trap: unsupported conversion '%${String.fromCharCode(c)}' — only %d %i %u %x %X %p %c %s %% are modeled`,
+          );
+      }
+    }
+    for (const b of out) this.txBuffer.push(b);
+    if (out.length > 0) {
+      this.uartTxDone = true;
+      this.recomputeIrq();
+    }
+    return out.length;
+  }
+
   private bus(): XtensaBus {
     return {
       read: (addr, bytes) => this.busRead(addr, bytes),
@@ -601,6 +828,9 @@ export class Esp32s3Core implements McuCore {
         }
       }
       throw new Error(`read of unmapped flash-cache address 0x${addr.toString(16)} — only the app image's IROM/DROM segments are mapped`);
+    }
+    if ((addr >= ROM0_LOW && addr < ROM0_HIGH) || (addr >= ROM1_LOW && addr < ROM1_HIGH)) {
+      return this.romRead(addr, bytes);
     }
     if (addr >= GPIO_BASE && addr < GPIO_BASE + 0x1000) {
       const off = addr - GPIO_BASE;
@@ -675,6 +905,9 @@ export class Esp32s3Core implements McuCore {
     }
     if (this.inCacheWindow(addr)) {
       throw new Error(`write to flash-cache address 0x${addr.toString(16)} — flash is read-only through the cache`);
+    }
+    if ((addr >= ROM0_LOW && addr < ROM0_HIGH) || (addr >= ROM1_LOW && addr < ROM1_HIGH)) {
+      throw new Error(`write to ROM address 0x${addr.toString(16)} — the mask ROM is read-only`);
     }
     if (addr >= GPIO_BASE && addr < GPIO_BASE + 0x1000) {
       const off = addr - GPIO_BASE;
