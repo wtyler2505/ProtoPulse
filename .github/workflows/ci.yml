@@ -25,6 +25,8 @@ jobs:
       - run: npm ci
 
       - run: npx eslint .
+        env:
+          NODE_OPTIONS: --max-old-space-size=16384
 
   typecheck:
     name: Type Check

@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 /**
  * Phase 9.2 — Arduino CLI sidecar prep (R4 retro Wave 8 / C12+C23).
  *
@@ -27,6 +29,7 @@ import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   existsSync,
+  copyFileSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -40,6 +43,13 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+interface SidecarAssetSpec {
+  asset: string;
+  ext: "tar.gz" | "zip";
+  arduinoBinary: string;
+  sha256: string;
+}
 
 /**
  * Pinned arduino-cli version. Bump deliberately; the bundled binary IS the
@@ -59,10 +69,7 @@ const ARDUINO_CLI_VERSION = "1.4.1";
  * Hashes verified 2026-05-12 against
  * https://github.com/arduino/arduino-cli/releases/download/v1.4.1/1.4.1-checksums.txt
  */
-const TARGET_TO_ASSET: Record<
-  string,
-  { asset: string; ext: "tar.gz" | "zip"; arduinoBinary: string; sha256: string }
-> = {
+const TARGET_TO_ASSET: Record<string, SidecarAssetSpec | undefined> = {
   "x86_64-unknown-linux-gnu": {
     asset: `arduino-cli_${ARDUINO_CLI_VERSION}_Linux_64bit.tar.gz`,
     ext: "tar.gz",
@@ -162,6 +169,24 @@ function extractArchive(archivePath: string, ext: string, destDir: string): void
   }
 }
 
+function moveFile(source: string, destination: string): void {
+  try {
+    renameSync(source, destination);
+  } catch (error) {
+    const code =
+      typeof error === "object" && error !== null && "code" in error
+        ? (error as { code?: string }).code
+        : undefined;
+
+    if (code !== "EXDEV") {
+      throw error;
+    }
+
+    copyFileSync(source, destination);
+    rmSync(source, { force: true });
+  }
+}
+
 function main(): void {
   // R4 retro Wave 7 (C7): SKIP_ARDUINO_SIDECAR dev opt-out with safety check
   // — refuse to skip if externalBin is declared in tauri.conf.json.
@@ -219,7 +244,7 @@ function main(): void {
     const binariesDir = resolve(__dirname, "..", "..", "src-tauri", "binaries");
     mkdirSync(binariesDir, { recursive: true });
     const finalPath = resolve(binariesDir, `arduino-cli-${target}${ext}`);
-    renameSync(extractedBinary, finalPath);
+    moveFile(extractedBinary, finalPath);
 
     if (!target.endsWith("msvc")) {
       chmodSync(finalPath, 0o755);
