@@ -1,12 +1,16 @@
 /**
- * BoardScene — composes the WebGL board viewer scene (PP3D-1, Phase 1).
+ * BoardScene — composes the WebGL board viewer scene (PP3D-1/PP3D-4).
  *
  * This is the in-`<Canvas>` content: lighting, the extruded board substrate,
- * a couple of placeholder component boxes, the orbit camera, the navigation
- * view cube, and a `<Bounds fit>` wrapper that frames whatever is inside it.
+ * the data-driven SceneModel geometry (components/pads/traces/vias), the orbit
+ * camera, the navigation view cube, and a `<Bounds fit>` wrapper that frames
+ * whatever is inside it.
  *
- * Phase 1 uses default/placeholder dimensions only — real project data is wired
- * in Phase 2 via a pure `buildSceneModel` transform.
+ * When a {@link SceneModel} is supplied (PP3D-4, real project data via
+ * `buildSceneModel`), the substrate takes its dimensions/colour from the model
+ * and `SceneModelView` renders the real geometry. Without a model (or with an
+ * empty one) a few placeholder bodies keep the Phase-1 non-blank-canvas gate
+ * honest.
  */
 
 import { Bounds } from '@react-three/drei';
@@ -14,19 +18,23 @@ import { Bounds } from '@react-three/drei';
 import { ViewCube } from '../controls/ViewCube';
 import { ViewerCamera } from '../controls/ViewerCamera';
 
-import { BoardSubstrate, DEFAULT_BOARD  } from './BoardSubstrate';
+import type { SceneModel } from '../model/scene-model';
 
-import type {BoardSubstrateProps} from './BoardSubstrate';
+import { BoardSubstrate, DEFAULT_BOARD } from './BoardSubstrate';
+import { SceneModelView } from './SceneModelView';
+
+import type { BoardSubstrateProps } from './BoardSubstrate';
 
 export interface BoardSceneProps {
-  /** Board dimensions (defaults to schema board defaults). */
+  /** Board dimensions (defaults to schema board defaults). Ignored when `model` is given. */
   board?: BoardSubstrateProps;
+  /** Real project data (PP3D-4). When present it drives substrate + geometry. */
+  model?: SceneModel | null;
 }
 
 /**
- * A few placeholder component bodies so the Phase-1 scene reads as a populated
- * board (and gives the non-blank-canvas gate real geometry to detect). These
- * are replaced by data-driven instanced bodies in Phase 2.
+ * A few placeholder component bodies so an empty scene reads as a populated
+ * board (and gives the non-blank-canvas gate real geometry to detect).
  */
 function PlaceholderComponents({ thicknessMm }: { thicknessMm: number }) {
   const topY = thicknessMm / 2;
@@ -51,8 +59,18 @@ function PlaceholderComponents({ thicknessMm }: { thicknessMm: number }) {
   );
 }
 
-export function BoardScene({ board }: BoardSceneProps) {
-  const dims = { ...DEFAULT_BOARD, ...board };
+export function BoardScene({ board, model }: BoardSceneProps) {
+  const dims: BoardSubstrateProps = model
+    ? {
+        widthMm: model.board.widthMm,
+        heightMm: model.board.heightMm,
+        thicknessMm: model.board.thicknessMm,
+        cornerRadiusMm: model.board.cornerRadiusMm,
+        color: model.board.maskColor,
+      }
+    : { ...DEFAULT_BOARD, ...board };
+
+  const thicknessMm = dims.thicknessMm ?? DEFAULT_BOARD.thicknessMm;
 
   return (
     <>
@@ -67,10 +85,14 @@ export function BoardScene({ board }: BoardSceneProps) {
       />
       <directionalLight position={[-80, 40, -60]} intensity={0.4} />
 
-      {/* Frame the board (and placeholders) on mount and when they change. */}
+      {/* Frame the board (and its contents) on mount and when they change. */}
       <Bounds fit clip observe margin={1.2}>
         <BoardSubstrate {...dims} />
-        <PlaceholderComponents thicknessMm={dims.thicknessMm ?? DEFAULT_BOARD.thicknessMm} />
+        {model && !model.isEmpty ? (
+          <SceneModelView model={model} />
+        ) : (
+          <PlaceholderComponents thicknessMm={thicknessMm} />
+        )}
       </Bounds>
 
       {/* CAD navigation. */}

@@ -1,10 +1,11 @@
 /**
- * WebGLBoardViewer — the WebGL (@react-three/fiber) 3D board viewer (PP3D-1).
+ * WebGLBoardViewer — the WebGL (@react-three/fiber) 3D board viewer (PP3D-1/PP3D-4).
  *
- * Phase 1 scaffold: a real, demand-rendered R3F `<Canvas>` hosting an extruded
- * board substrate, basic lighting, CAD-style `<CameraControls>`, a navigation
- * `<GizmoViewcube>`, and a `<Bounds fit>` auto-frame. No project data yet —
- * default board dimensions only (Phase 2 wires real data).
+ * Hosts a demand-rendered R3F `<Canvas>` with the extruded board substrate,
+ * CAD-style `<CameraControls>`, a navigation `<GizmoViewcube>`, and — as of
+ * PP3D-4 — the REAL project data path: `useProjectBoard` + `useCircuit*`
+ * feed the pure `buildSceneModel()` transform, whose memoised output drives
+ * `SceneModelView` inside `BoardScene`.
  *
  * The outer chrome mirrors the CSS viewer's title bar so the two engines feel
  * like one feature behind the `viewer3dEngine` flag.
@@ -12,7 +13,18 @@
 
 import { Canvas } from '@react-three/fiber';
 import { Box } from 'lucide-react';
+import { useMemo } from 'react';
 
+import { useProjectBoard } from '@/hooks/useProjectBoard';
+import {
+  useCircuitDesigns,
+  useCircuitInstances,
+  useCircuitVias,
+  useCircuitWires,
+} from '@/lib/circuit-editor/hooks';
+import { useProjectId } from '@/lib/contexts/project-id-context';
+
+import { buildSceneModel } from './model/buildSceneModel';
 import { BoardScene } from './scene/BoardScene';
 
 /** Background clear color for the viewport (dark studio). Distinct from the
@@ -20,6 +32,41 @@ import { BoardScene } from './scene/BoardScene';
 const VIEWPORT_BACKGROUND = '#15161d';
 
 export default function WebGLBoardViewer() {
+  const projectId = useProjectId();
+  const { board } = useProjectBoard(projectId);
+
+  // A project's PCB renders its first circuit design (same convention the
+  // PCB layout view uses). `enabled: circuitId > 0` keeps the child queries
+  // idle until a design exists.
+  const { data: designs } = useCircuitDesigns(projectId);
+  const circuitId = designs?.[0]?.id ?? 0;
+
+  const { data: instances } = useCircuitInstances(circuitId);
+  const { data: wires } = useCircuitWires(circuitId);
+  const { data: vias } = useCircuitVias(circuitId);
+
+  // Pure transform, memoised on query-data identity (plan §6): recomputes only
+  // when the board row or circuit data actually changes — never per frame.
+  const model = useMemo(
+    () =>
+      buildSceneModel({
+        board: {
+          widthMm: board.widthMm,
+          heightMm: board.heightMm,
+          thicknessMm: board.thicknessMm,
+          cornerRadiusMm: board.cornerRadiusMm,
+          layers: board.layers,
+          finish: board.finish,
+          solderMaskColor: board.solderMaskColor,
+          silkscreenColor: board.silkscreenColor,
+        },
+        instances: instances ?? [],
+        wires: wires ?? [],
+        vias: vias ?? [],
+      }),
+    [board, instances, wires, vias],
+  );
+
   return (
     <div data-testid="board-viewer-3d-view" className="flex flex-col h-full gap-4 p-4">
       {/* Header */}
@@ -49,7 +96,7 @@ export default function WebGLBoardViewer() {
             gl.setClearColor(VIEWPORT_BACKGROUND);
           }}
         >
-          <BoardScene />
+          <BoardScene model={model} />
         </Canvas>
       </div>
     </div>
