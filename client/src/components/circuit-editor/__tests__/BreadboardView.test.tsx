@@ -14,12 +14,24 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactElement, ReactNode } from 'react';
 import type { CircuitInstanceRow } from '@shared/schema';
 
 import { COMPONENT_DRAG_TYPE } from '../ComponentPlacer';
 import { coordToPixel } from '@/lib/circuit-editor/breadboard-model';
+
+// Render with a real QueryClient so components that use React Query directly
+// (e.g. VaultHoverCard via useVaultQuickFetch) mount without crashing.
+function render(ui: ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Mock all hooks and child components before importing BreadboardView

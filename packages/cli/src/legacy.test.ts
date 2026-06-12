@@ -137,6 +137,51 @@ describe('importLegacy', () => {
     expect(report.notes.join('\n')).toContain('Sub Sheet');
   });
 
+  it('duplicate reference designators are uniquified, never a broken bundle', () => {
+    // Real legacy DBs contain duplicate refdes rows (no unique constraint).
+    // Found 2026-06-12 with a synthetic snapshot: the second add_component
+    // was rejected ("ref designator R1 already in use") and every later op
+    // touching that component cascaded into problems.
+    const s = snapshot();
+    s.designs[0]!.instances.push({
+      id: 105,
+      referenceDesignator: 'R1',
+      partId: 11,
+      schematicX: 400,
+      schematicY: 50,
+      schematicRotation: 0,
+      properties: {},
+    });
+    s.designs[0]!.nets.push({
+      id: 205,
+      name: 'DUPREF',
+      segments: [{ instanceId: 105, pinId: 'pin1' }, { instanceId: 104, pinId: 'E' }],
+    });
+
+    const { bundle, report } = importLegacy(s);
+    expect(report.problems).toEqual([]);
+    expect(report.components).toBe(4);
+    expect(report.notes.join('\n')).toContain('R1');
+
+    const g = materialize(bundle.branches[0]?.ops ?? []).graph;
+    const refs = [...g.components.values()].map((c) => c.ref).sort();
+    expect(new Set(refs).size).toBe(refs.length); // all unique
+    // Its net still imported against the renamed component.
+    const byName = new Map([...g.nets.values()].map((n) => [n.name, n]));
+    expect(byName.get('DUPREF')?.ports).toContain('legacy-105:1');
+  });
+
+  it('unicode survives: project name slug, refs, net names, values', () => {
+    const s = snapshot();
+    s.project.name = 'Ünïcode — Nasty 🚀 Edge/Case!!';
+    s.designs[0]!.nets[1]!.name = 'NÉT_ÜNI';
+    const { bundle, report } = importLegacy(s);
+    expect(report.problems).toEqual([]);
+    expect(bundle.designId).not.toBe(''); // slug never collapses to empty
+    const g = materialize(bundle.branches[0]?.ops ?? []).graph;
+    expect([...g.nets.values()].some((n) => n.name === 'NÉT_ÜNI')).toBe(true);
+  });
+
   it('--design selects by name; an unknown name throws with the list', () => {
     const { report } = importLegacy(snapshot(), 'Sub Sheet');
     expect(report.designName).toBe('Sub Sheet');

@@ -1295,31 +1295,6 @@ export function BreadboardCanvas({
             {/* Connectivity explainer overlay — S6-07 */}
             <BreadboardConnectivityExplainer visible={showConnectivityExplainer} />
 
-            {/* Keyboard cursor indicator — S6-01 */}
-            {cursor.active && (() => {
-              const cursorPx = coordToPixel({ type: 'terminal', col: cursor.col, row: cursor.row });
-              return (
-                <g data-testid="breadboard-keyboard-cursor" className="bb-cursor-blink">
-                  <circle
-                    cx={cursorPx.x}
-                    cy={cursorPx.y}
-                    r={6}
-                    fill="none"
-                    stroke="#facc15"
-                    strokeWidth={1.5}
-                    opacity={0.9}
-                  />
-                  <circle
-                    cx={cursorPx.x}
-                    cy={cursorPx.y}
-                    r={2}
-                    fill="#facc15"
-                    opacity={0.9}
-                  />
-                </g>
-              );
-            })()}
-
             {/* Bendable component legs (BL-0593) — rendered behind component bodies */}
             <BendableLegRenderer
               instances={instances ?? []}
@@ -1350,119 +1325,29 @@ export function BreadboardCanvas({
               );
             })}
 
-            {selectedInstanceModel && (
-              <BreadboardPinAnchorOverlay
-                selectedInstanceModel={selectedInstanceModel}
-                hoveredInspectorPinId={hoveredInspectorPinId}
-                coachPlanVisible={coachPlanVisible}
-                coachPlan={coachPlan}
-              />
-            )}
+            {/* Coach overlays — pin anchors + staged coach plan (W1.12b: CoachLayer) */}
+            <CoachLayer
+              selectedInstanceModel={selectedInstanceModel}
+              hoveredInspectorPinId={hoveredInspectorPinId}
+              coachPlanVisible={coachPlanVisible}
+              coachPlan={coachPlan}
+              preparedCoachHookups={preparedCoachHookups}
+              preparedCoachBridges={preparedCoachBridges}
+              stagedCoachSuggestions={stagedCoachSuggestions}
+              resolvedCoachSuggestions={resolvedCoachSuggestions}
+              onApplyRemediation={handleApplyCoachRemediation}
+            />
 
-            {coachPlanVisible && coachPlan && (
-              <BreadboardCoachPlanOverlay
-                coachPlan={coachPlan}
-                preparedCoachHookups={preparedCoachHookups}
-                preparedCoachBridges={preparedCoachBridges}
-                stagedCoachSuggestions={stagedCoachSuggestions}
-                resolvedCoachSuggestions={resolvedCoachSuggestions}
-                onApplyRemediation={(suggestionId) => handleApplyCoachRemediation(suggestionId)}
-              />
-            )}
-
-            {/* Existing wires */}
-            {breadboardWires.map((wire: CircuitWireRow) => {
-              const pts = (wire.points as Array<{ x: number; y: number }>) ?? [];
-              if (pts.length < 2) return null;
-              const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-              const isJumper = wire.provenance === 'jumper';
-              const isSynced = wire.provenance === 'synced';
-              const isCoach = wire.provenance === 'coach';
-
-              // Look up simulation wire visual state
-              const wireState: WireVisualState | undefined = isLive
-                ? wireVisualStates.get(String(wire.netId))
-                : undefined;
-              const isAnimated = wireState != null && wireState.animationSpeed > 0;
-              const animDuration = isAnimated ? Math.max(0.05, 16 / wireState.animationSpeed) : 0;
-              const animDirection = wireState?.currentDirection === -1 ? 'reverse' : 'forward';
-
-              return (
-                <g key={wire.id}>
-                  {/* Simulation current flow glow */}
-                  {isAnimated && (
-                    <path
-                      d={pathD}
-                      stroke="var(--color-editor-accent)"
-                      strokeWidth={(wire.width ?? 1.5) + 1.5}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      fill="none"
-                      opacity={0.2}
-                      style={{ filter: 'blur(1.5px)' }}
-                      pointerEvents="none"
-                    />
-                  )}
-                  <path
-                    d={pathD}
-                    stroke={isAnimated ? 'var(--color-editor-accent)' : isJumper ? '#f59e0b' : (wire.color ?? '#3498db')}
-                    strokeWidth={isJumper ? 3 : (wire.width ?? 1.5)}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeDasharray={isSynced ? '6 3' : isCoach ? '3 3' : undefined}
-                    fill="none"
-                    className={cn(
-                      isAnimated ? 'sim-wire-animated' : 'transition-opacity cursor-pointer',
-                      !isAnimated && (selectedWireId === wire.id ? 'opacity-100' : 'opacity-80 hover:opacity-100'),
-                    )}
-                    style={isAnimated ? { animationDuration: `${animDuration}s` } : undefined}
-                    data-direction={isAnimated ? animDirection : undefined}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedWireId(wire.id);
-                    }}
-                    onContextMenu={(e) => handleWireContextMenu(e, wire.id)}
-                    data-testid={isAnimated ? `wire-animated-${wire.id}` : `wire-${wire.id}`}
-                  />
-                  {/* Jumper wire endpoint connectors */}
-                  {isJumper && pts.length >= 2 && (
-                    <>
-                      <circle cx={pts[0].x} cy={pts[0].y} r={3} fill="#f59e0b" stroke="#92400e" strokeWidth={0.5} />
-                      <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r={3} fill="#f59e0b" stroke="#92400e" strokeWidth={0.5} />
-                    </>
-                  )}
-                  {/* Simulation current label at wire midpoint */}
-                  {isAnimated && pts.length >= 2 && (() => {
-                    const midIdx = Math.floor(pts.length / 2);
-                    const midPt = pts[midIdx];
-                    return (
-                      <g pointerEvents="none">
-                        <rect
-                          x={midPt.x + 2}
-                          y={midPt.y - 6}
-                          width={30}
-                          height={10}
-                          rx={2}
-                          fill="rgba(0,0,0,0.7)"
-                          stroke="rgba(0,240,255,0.2)"
-                          strokeWidth={0.5}
-                        />
-                        <text
-                          x={midPt.x + 4}
-                          y={midPt.y + 1}
-                          fill="var(--color-editor-accent)"
-                          fontSize={6}
-                          fontFamily="monospace"
-                          data-testid={`wire-sim-label-${wire.id}`}
-                        >
-                          {formatSIValue(wireState.currentMagnitude, 'A')}
-                        </text>
-                      </g>
-                    );
-                  })()}
-                </g>
-              );
-            })}
+            {/* Existing wires + wire-in-progress (W1.12b: WireLayer) */}
+            <WireLayer
+              wires={breadboardWires}
+              isLive={isLive}
+              wireVisualStates={wireVisualStates}
+              selectedWireId={selectedWireId}
+              onSelectWire={setSelectedWireId}
+              onWireContextMenu={handleWireContextMenu}
+              wireInProgress={wireInProgress}
+            />
 
             {/* BL-0543: Wire editing overlay (select, delete, drag endpoints) */}
             <BreadboardWireEditor
@@ -1535,99 +1420,15 @@ export function BreadboardCanvas({
               visible={isLive}
             />
 
-            {/* BL-0619 / BL-0128: Simulation component visual overlays */}
-            {isLive && componentVisualStates.size > 0 && (instances ?? []).map((inst) => {
-              if (inst.breadboardX == null || inst.breadboardY == null) { return null; }
-              const state = componentVisualStates.get(inst.referenceDesignator);
-              if (!state) { return null; }
-
-              const x = inst.breadboardX;
-              const y = inst.breadboardY;
-
-              if (state.type === 'led' && state.glowing) {
-                const color = state.color === 'red' ? '#ef4444'
-                  : state.color === 'green' ? '#22c55e'
-                  : state.color === 'blue' ? '#3b82f6'
-                  : state.color === 'yellow' ? '#facc15'
-                  : state.color === 'white' ? '#f5f5f5'
-                  : '#22c55e';
-                return (
-                  <g key={`sim-led-${inst.id}`} pointerEvents="none" data-testid={`sim-bb-led-${inst.referenceDesignator}`}>
-                    <circle cx={x} cy={y} r={8} fill={color} opacity={state.brightness * 0.3} style={{ filter: 'blur(4px)' }} />
-                    <circle cx={x} cy={y} r={4} fill={color} opacity={state.brightness * 0.6} />
-                  </g>
-                );
-              }
-
-              if (state.type === 'resistor' || (state.type === 'generic' && Math.abs(state.current) > 0.0001)) {
-                return (
-                  <g key={`sim-val-${inst.id}`} pointerEvents="none" data-testid={`sim-bb-value-${inst.referenceDesignator}`}>
-                    <rect x={x + 8} y={y - 8} width={32} height={14} rx={2} fill="rgba(0,0,0,0.7)" stroke="rgba(0,240,255,0.2)" strokeWidth={0.5} />
-                    <text x={x + 10} y={y - 1} fill="var(--color-editor-accent)" fontSize={5} fontFamily="monospace">
-                      {formatSIValue(state.voltageDrop, 'V')}
-                    </text>
-                    <text x={x + 10} y={y + 4} fill="var(--color-editor-accent)" fontSize={5} fontFamily="monospace" opacity={0.7}>
-                      {formatSIValue(state.current, 'A')}
-                    </text>
-                  </g>
-                );
-              }
-
-              if (state.type === 'switch') {
-                return (
-                  <g key={`sim-sw-${inst.id}`} pointerEvents="none" data-testid={`sim-bb-switch-${inst.referenceDesignator}`}>
-                    <text
-                      x={x + 8}
-                      y={y + 2}
-                      fill={state.closed ? '#22c55e' : '#ef4444'}
-                      fontSize={6}
-                      fontFamily="sans-serif"
-                      fontWeight="bold"
-                    >
-                      {state.closed ? 'ON' : 'OFF'}
-                    </text>
-                  </g>
-                );
-              }
-
-              return null;
-            })}
-
-            {selectedInstanceModel && hoveredInspectorPinId && (() => {
-              const pin = selectedInstanceModel.pins.find((candidate) => candidate.id === hoveredInspectorPinId);
-              if (!pin) {
-                return null;
-              }
-
-              return (
-                <g data-testid="breadboard-pin-highlight" pointerEvents="none">
-                  <circle
-                    cx={pin.pixel.x}
-                    cy={pin.pixel.y}
-                    r={5}
-                    fill="rgba(0,240,255,0.14)"
-                    stroke="var(--color-editor-accent)"
-                    strokeWidth={1.2}
-                  />
-                  <circle
-                    cx={pin.pixel.x}
-                    cy={pin.pixel.y}
-                    r={2}
-                    fill="var(--color-editor-accent)"
-                    opacity={0.95}
-                  />
-                  <text
-                    x={pin.pixel.x + 6}
-                    y={pin.pixel.y - 6}
-                    fill="var(--color-editor-accent)"
-                    fontSize={5}
-                    fontFamily="monospace"
-                  >
-                    {pin.label} · {pin.coordLabel}
-                  </text>
-                </g>
-              );
-            })()}
+            {/* Keyboard cursor + simulation states + inspector pin highlight (W1.12b: OverlayLayer) */}
+            <OverlayLayer
+              cursor={cursor}
+              isLive={isLive}
+              componentVisualStates={componentVisualStates}
+              instances={instances ?? []}
+              selectedInstanceModel={selectedInstanceModel}
+              hoveredInspectorPinId={hoveredInspectorPinId}
+            />
           </g>
         </svg>
 
