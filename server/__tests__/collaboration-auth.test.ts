@@ -606,8 +606,8 @@ describe('Collaboration Auth — Lock Enforcement', () => {
     const ws2 = await simulateJoin(1, 'session-b', { userId: 2, isOwner: false });
 
     // User 1 locks node n1
-    const ws1 = server.getRoom(1)!;
-    const entry1 = ws1.get(1)!;
+    // BL-0879: rooms are keyed by connectionId — look up by user id
+    const entry1 = Array.from(server.getRoom(1)!.values()).find((e) => e.user.userId === 1)!;
     sendMessage(entry1.ws as unknown as MockWebSocket, makeMsg('lock-request', { entityType: 'node', entityId: 'n1', userId: 1, timeout: 30000 }, 1));
 
     // User 2 locks a different node
@@ -637,7 +637,8 @@ describe('Collaboration Auth — Lock Enforcement', () => {
     const ws2 = await simulateJoin(1, 'session-b', { userId: 2, isOwner: false });
 
     // User 1 gets a short lock
-    const ws1Mock = server.getRoom(1)!.get(1)!.ws;
+    // BL-0879: rooms are keyed by connectionId — look up by user id
+    const ws1Mock = Array.from(server.getRoom(1)!.values()).find((e) => e.user.userId === 1)!.ws;
     sendMessage(ws1Mock as unknown as MockWebSocket, makeMsg('lock-request', { entityType: 'node', entityId: 'n1', userId: 1, timeout: 5000 }, 1));
 
     // Advance past lock timeout + cleanup

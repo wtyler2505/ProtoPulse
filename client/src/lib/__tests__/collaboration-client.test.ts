@@ -890,4 +890,132 @@ describe('CollaborationClient', () => {
       expect(op0.value).toEqual({ label: 'combined' });
     });
   });
+
+  /* ---------------------------------------------------------------- */
+  /*  BL-0879: state-update-ack emission                                */
+  /* ---------------------------------------------------------------- */
+
+  describe('BL-0879: state-update ACKs', () => {
+    function connected(): { client: CollaborationClient; ws: MockWebSocket } {
+      const client = new CollaborationClient(1, 'sess');
+      client.setUserId(42);
+      client.connect();
+      const ws = getLastWs();
+      ws.simulateOpen();
+      return { client, ws };
+    }
+
+    function getAcks(ws: MockWebSocket): CollabMessage[] {
+      return ws.sent
+        .map((s) => JSON.parse(s) as CollabMessage)
+        .filter((m) => m.type === 'state-update-ack');
+    }
+
+    // Client test 1 — ACK after remote update
+    it('sends state-update-ack after a remote state-update with server-tagged update ops', () => {
+      const { client, ws } = connected();
+      const updates: unknown[] = [];
+      client.on('state-update', (ops) => updates.push(ops));
+
+      ws.simulateMessage(makeMsg('state-update', {
+        operations: [
+          { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'remote' }, timestamp: 7, clientId: 2 },
+        ],
+      }, 2));
+
+      // Existing state-update listener still fires.
+      expect(updates).toHaveLength(1);
+
+      const acks = getAcks(ws);
+      expect(acks).toHaveLength(1);
+      expect(acks[0].payload.updates).toEqual([{ entityKey: 'nodes:n1', timestamp: 7 }]);
+    });
+
+    // Client test 2 — no ACK for untagged or non-update ops
+    it('does not ACK insert-only batches or updates missing a numeric timestamp', () => {
+      const { ws } = connected();
+
+      ws.simulateMessage(makeMsg('state-update', {
+        operations: [{ op: 'insert', path: ['nodes'], value: { id: 'n1' }, timestamp: 3, clientId: 2 }],
+      }, 2));
+
+      ws.simulateMessage(makeMsg('state-update', {
+        operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'x' } }],
+      }, 2));
+
+      expect(getAcks(ws)).toHaveLength(0);
+    });
+
+    // Client test 3 — resolve mine still strips server metadata (an
+    // earlier conflict ACK exists in ws.sent; look up the state-update)
+    it('resolveConflict mine strips server metadata even with a prior conflict ACK in flight', () => {
+      const { client, ws } = connected();
+      ws.simulateMessage(makeMsg('conflict-detected', {
+        conflicts: [{
+          id: 'c1', projectId: 1, kind: 'lww-update', path: ['nodes'], key: 'n1',
+          yourOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' }, timestamp: 5, clientId: 42 },
+          theirOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'theirs' }, timestamp: 10, clientId: 2 },
+          detectedAt: 10,
+        }],
+      }, 42));
+
+      // The conflict ACK is already in ws.sent.
+      expect(getAcks(ws)).toHaveLength(1);
+
+      client.resolveConflict('c1', 'mine');
+
+      const sent = ws.sent.map((s) => JSON.parse(s) as CollabMessage);
+      const stateUpdates = sent.filter((m) => m.type === 'state-update');
+      expect(stateUpdates.length).toBeGreaterThanOrEqual(1);
+      const lastOps = stateUpdates[stateUpdates.length - 1].payload.operations as Array<Record<string, unknown>>;
+      expect(lastOps).toHaveLength(1);
+      expect(lastOps[0].timestamp).toBeUndefined();
+      expect(lastOps[0].clientId).toBeUndefined();
+    });
+
+    // Client test 4 — conflict receive ACKs theirOp and does NOT ACK yourOp
+    it('conflict receive ACKs theirOp only — never yourOp', () => {
+      const { client, ws } = connected();
+      const handler = vi.fn();
+      client.on('conflicts-change', handler);
+
+      ws.simulateMessage(makeMsg('conflict-detected', {
+        conflicts: [{
+          id: 'c1', projectId: 1, kind: 'lww-update', path: ['nodes'], key: 'n1',
+          yourOp: { op: 'update', path: ['boards', 'nodes'], key: 'n1', value: { label: 'mine' }, timestamp: 5, clientId: 42 },
+          theirOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'theirs' }, timestamp: 10, clientId: 2 },
+          detectedAt: 10,
+        }],
+      }, 42));
+
+      // pendingConflicts + conflicts-change behavior still occurs.
+      expect(client.getPendingConflicts()).toHaveLength(1);
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      const acks = getAcks(ws);
+      expect(acks).toHaveLength(1);
+      const entries = acks[0].payload.updates as Array<Record<string, unknown>>;
+      expect(entries).toEqual([{ entityKey: 'nodes:n1', timestamp: 10 }]);
+      // No ACK entry uses yourOp's timestamp or yourOp-derived key.
+      expect(entries.some((e) => e.timestamp === 5)).toBe(false);
+      expect(entries.some((e) => e.entityKey === 'boards.nodes:n1')).toBe(false);
+    });
+
+    // Client test 5 — invalid theirOp ACK entries are skipped
+    it('skips invalid theirOp ACK entries but still surfaces the conflict', () => {
+      const { client, ws } = connected();
+
+      ws.simulateMessage(makeMsg('conflict-detected', {
+        conflicts: [{
+          id: 'c1', projectId: 1, kind: 'lww-update', path: ['nodes'], key: 'n1',
+          yourOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' } },
+          theirOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'theirs' } }, // no timestamp
+          detectedAt: 10,
+        }],
+      }, 42));
+
+      expect(client.getPendingConflicts()).toHaveLength(1);
+      expect(getAcks(ws)).toHaveLength(0);
+    });
+  });
 });

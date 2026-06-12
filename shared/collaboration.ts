@@ -26,6 +26,7 @@ export type CollabMessageType =
   | 'cursor-move'
   | 'selection-change'
   | 'state-update'
+  | 'state-update-ack'
   | 'state-sync'
   | 'awareness'
   | 'lock-request'
@@ -82,6 +83,43 @@ export function operationEntityKey(op: CRDTOperation): string | null {
     return null;
   }
   return null;
+}
+
+/* ------------------------------------------------------------------ */
+/*  BL-0879: state-update ACK payload                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One acknowledged update-frontier entry. `entityKey` is the canonical
+ * update conflict key produced by `updateConflictKey()`; `timestamp` is
+ * the server-assigned Lamport timestamp of the acknowledged update op.
+ */
+export interface StateUpdateAckEntry {
+  entityKey: string;
+  timestamp: number;
+}
+
+/**
+ * Payload of a `state-update-ack` message. Sent by the client after it
+ * has dispatched a remote `state-update` (or a `conflict-detected`
+ * `theirOp`) to its listeners. BL-0879 scope: ACKs only advance UPDATE
+ * frontiers — insert/delete remain on the `recentOps` window (BL-0882)
+ * and this ACK does not close insert/delete conflict eviction.
+ */
+export interface StateUpdateAckPayload {
+  updates: StateUpdateAckEntry[];
+}
+
+/**
+ * Canonical conflict key for UPDATE operations (BL-0879). Used for
+ * `keyFrontiers`, `observedFrontiers`, ACK payload generation, and
+ * server ACK validation. Deliberately distinct from
+ * `operationEntityKey()` (last-path-segment lock key) — mixing them
+ * would create nested-path drift in conflict detection.
+ */
+export function updateConflictKey(op: CRDTOperation): string | null {
+  if (op.op !== 'update' || !op.key) { return null; }
+  return `${op.path.join('.')}:${op.key}`;
 }
 
 /* ------------------------------------------------------------------ */

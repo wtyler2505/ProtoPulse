@@ -12,11 +12,13 @@ import type {
   CollabRole,
   CRDTOperation,
   Conflict,
+  StateUpdateAckEntry,
 } from '@shared/collaboration';
 import {
   CURSOR_THROTTLE_MS,
   isValidCollabMessage,
   lockKey,
+  updateConflictKey,
 } from '@shared/collaboration';
 
 /* ------------------------------------------------------------------ */
@@ -186,6 +188,10 @@ export class CollaborationClient {
 
     switch (message.type) {
       case 'state-sync':
+        // BL-0879: payload.connectionId is server-side identity for this
+        // WebSocket; the client does NOT echo it on subsequent messages.
+        // Server reads connectionId from the WebSocket handler closure.
+        // This field is exposed for debugging/telemetry only.
         this.handleStateSync(message.payload);
         break;
       case 'join':
@@ -207,7 +213,7 @@ export class CollaborationClient {
         });
         break;
       case 'state-update':
-        this.emit('state-update', message.payload.operations as CRDTOperation[]);
+        this.handleRemoteStateUpdate(message.payload);
         break;
       case 'lock-granted':
         this.handleLockGranted(message);
@@ -223,6 +229,7 @@ export class CollaborationClient {
         break;
       case 'conflict-detected':
         this.handleConflicts(message.payload);
+        this.sendConflictTheirOpAck(message.payload);
         break;
       case 'error':
         this.emit('error', new Error(String(message.payload.error)));
@@ -319,6 +326,70 @@ export class CollaborationClient {
     }
 
     this.emit('role-changed', { userId: targetUserId, role });
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  BL-0879: state-update ACKs                                        */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * Handle a remote `state-update` broadcast: emit to listeners, then
+   * ACK the server-tagged update ops. The ACK means "the collaboration
+   * client dispatched the update to all registered synchronous
+   * listeners" — the strongest implementable boundary in BL-0879 (there
+   * is no production document-apply listener yet; strict
+   * React-committed semantics belong to BL-0883).
+   */
+  private handleRemoteStateUpdate(payload: Record<string, unknown>): void {
+    const operations = Array.isArray(payload.operations)
+      ? payload.operations as CRDTOperation[]
+      : [];
+    if (operations.length === 0) { return; }
+
+    this.emit('state-update', operations);
+    this.sendStateUpdateAck(operations);
+  }
+
+  /** ACK server-tagged UPDATE ops from a remote state-update broadcast. */
+  private sendStateUpdateAck(operations: CRDTOperation[]): void {
+    const updates = operations.flatMap((op) => {
+      const entityKey = updateConflictKey(op);
+      if (!entityKey || typeof op.timestamp !== 'number') { return []; }
+      return [{ entityKey, timestamp: op.timestamp }];
+    });
+    this.sendStateUpdateAckEntries(updates);
+  }
+
+  /**
+   * ACK conflict `theirOp`s. Only `theirOp` is ACKed — the loser's
+   * dropped `yourOp` was never accepted into the authoritative frontier
+   * and must not advance any observed frontier.
+   */
+  private sendConflictTheirOpAck(payload: Record<string, unknown>): void {
+    const raw = payload.conflicts;
+    if (!Array.isArray(raw)) { return; }
+
+    const updates = (raw as Conflict[]).flatMap((conflict) => {
+      const theirOp = conflict.theirOp;
+      const entityKey = updateConflictKey(theirOp);
+      if (!entityKey || typeof theirOp.timestamp !== 'number') { return []; }
+      return [{ entityKey, timestamp: theirOp.timestamp }];
+    });
+
+    this.sendStateUpdateAckEntries(updates);
+  }
+
+  /** Single sender for both normal and conflict ACKs. */
+  private sendStateUpdateAckEntries(updates: StateUpdateAckEntry[]): void {
+    if (updates.length === 0) { return; }
+
+    this.send({
+      type: 'state-update-ack',
+      userId: this.myUserId,
+      projectId: this.projectId,
+      timestamp: Date.now(),
+      payload: { updates },
+    });
   }
 
   /* ---------------------------------------------------------------- */
