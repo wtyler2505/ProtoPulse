@@ -6,15 +6,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // We need to test the class in isolation, not the singleton.
 // Import the module and reset state between tests.
 
-// Mock localStorage before module import
-const store = new Map<string, string>();
-vi.stubGlobal('localStorage', {
-  getItem: vi.fn((key: string) => store.get(key) ?? null),
-  setItem: vi.fn((key: string, value: string) => { store.set(key, value); }),
-  removeItem: vi.fn((key: string) => { store.delete(key); }),
-  clear: vi.fn(() => { store.clear(); }),
-});
-
 import type { RatsnestNet } from '@/components/circuit-editor/RatsnestOverlay';
 
 // ---------------------------------------------------------------------------
@@ -38,7 +29,7 @@ function makeNet(netId: number, name: string, pinCount = 2): RatsnestNet {
 
 describe('RatsnestFilter', () => {
   beforeEach(() => {
-    store.clear();
+    localStorage.clear();
     // Reset the singleton state
     ratsnestFilter.showAll();
   });
@@ -144,8 +135,8 @@ describe('RatsnestFilter', () => {
 
   it('persists filter state to localStorage on change', () => {
     ratsnestFilter.setNetVisibility(7, false);
-    expect(store.has('protopulse-ratsnest-filter')).toBe(true);
-    const saved = JSON.parse(store.get('protopulse-ratsnest-filter')!) as Array<[number, { visible: boolean }]>;
+    expect(localStorage.getItem('protopulse-ratsnest-filter')).not.toBeNull();
+    const saved = JSON.parse(localStorage.getItem('protopulse-ratsnest-filter')!) as Array<[number, { visible: boolean }]>;
     const entry = saved.find(([id]) => id === 7);
     expect(entry).toBeDefined();
     expect(entry![1].visible).toBe(false);
@@ -154,7 +145,7 @@ describe('RatsnestFilter', () => {
   it('showAll clears localStorage state', () => {
     ratsnestFilter.setNetVisibility(1, false);
     ratsnestFilter.showAll();
-    const saved = JSON.parse(store.get('protopulse-ratsnest-filter')!) as unknown[];
+    const saved = JSON.parse(localStorage.getItem('protopulse-ratsnest-filter')!) as unknown[];
     expect(saved).toHaveLength(0);
   });
 

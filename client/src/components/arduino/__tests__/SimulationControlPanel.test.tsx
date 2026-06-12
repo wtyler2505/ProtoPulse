@@ -7,7 +7,6 @@ import SimulationControlPanel from '../SimulationControlPanel';
 // ---------------------------------------------------------------------------
 
 const mockFetch = vi.fn();
-vi.stubGlobal('fetch', mockFetch);
 
 // ---------------------------------------------------------------------------
 // Mock EventSource
@@ -48,7 +47,10 @@ class MockEventSource {
   static lastInstance: MockEventSource | null = null;
 }
 
-vi.stubGlobal('EventSource', MockEventSource);
+function installSimulationGlobals(): void {
+  vi.stubGlobal('fetch', mockFetch);
+  vi.stubGlobal('EventSource', MockEventSource);
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -96,6 +98,7 @@ describe('SimulationControlPanel', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockFetch.mockReset();
     MockEventSource.lastInstance = null;
+    installSimulationGlobals();
   });
 
   afterEach(() => {

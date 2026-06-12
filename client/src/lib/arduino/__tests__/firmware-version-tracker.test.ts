@@ -16,22 +16,6 @@ vi.stubGlobal('crypto', {
   randomUUID: vi.fn(() => `fw-uuid-${++uuidCounter}`),
 });
 
-const store: Record<string, string> = {};
-vi.stubGlobal('localStorage', {
-  getItem: vi.fn((key: string) => store[key] ?? null),
-  setItem: vi.fn((key: string, val: string) => {
-    store[key] = val;
-  }),
-  removeItem: vi.fn((key: string) => {
-    delete store[key];
-  }),
-  clear: vi.fn(() => {
-    for (const k of Object.keys(store)) {
-      delete store[k];
-    }
-  }),
-});
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -190,9 +174,7 @@ describe('FirmwareVersionTracker', () => {
   let tracker: FirmwareVersionTracker;
 
   beforeEach(() => {
-    for (const k of Object.keys(store)) {
-      delete store[k];
-    }
+    localStorage.clear();
     uuidCounter = 0;
     FirmwareVersionTracker.resetInstance();
     tracker = FirmwareVersionTracker.getInstance();
@@ -588,7 +570,7 @@ describe('FirmwareVersionTracker', () => {
     });
 
     it('handles corrupted localStorage gracefully', () => {
-      store['protopulse-firmware-versions'] = '{{{invalid';
+      localStorage.setItem('protopulse-firmware-versions', '{{{invalid');
       FirmwareVersionTracker.resetInstance();
       const tracker2 = FirmwareVersionTracker.getInstance();
       expect(tracker2.listVersions(1)).toHaveLength(0);

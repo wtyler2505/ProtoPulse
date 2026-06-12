@@ -47,24 +47,30 @@ class MockWorker {
   }
 }
 
-// Mock the Worker global and URL.createObjectURL/revokeObjectURL
-vi.stubGlobal('Worker', MockWorker);
-vi.stubGlobal(
-  'URL',
-  new Proxy(globalThis.URL ?? {}, {
-    get(target, prop) {
-      if (prop === 'createObjectURL') {
-        return () => 'blob:mock-worker-url';
-      }
-      if (prop === 'revokeObjectURL') {
-        return () => undefined;
-      }
-      return Reflect.get(target, prop) as unknown;
-    },
-  }),
-);
-vi.stubGlobal('Blob', class MockBlob {
-  constructor(public parts: string[], public options?: BlobPropertyBag) {}
+function installWorkerGlobals(): void {
+  vi.stubGlobal('Worker', MockWorker);
+  vi.stubGlobal(
+    'URL',
+    new Proxy(globalThis.URL ?? {}, {
+      get(target, prop) {
+        if (prop === 'createObjectURL') {
+          return () => 'blob:mock-worker-url';
+        }
+        if (prop === 'revokeObjectURL') {
+          return () => undefined;
+        }
+        return Reflect.get(target, prop) as unknown;
+      },
+    }),
+  );
+  vi.stubGlobal('Blob', class MockBlob {
+    constructor(public parts: string[], public options?: BlobPropertyBag) {}
+  });
+}
+
+beforeEach(() => {
+  installWorkerGlobals();
+  MockWorker.reset();
 });
 
 // Mock sucrase transform — return code as-is (it's already JS in tests)
