@@ -15,10 +15,10 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![Vitest](https://img.shields.io/badge/Tests-1,553_passing-6da13f?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Engine Tests](https://img.shields.io/badge/Engine_Tests-1,377_passing-6da13f?style=flat-square&logo=vitest&logoColor=white)](packages/README.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-00F0FF?style=flat-square)](LICENSE)
 
-[**Features**](#features) · [**Why ProtoPulse**](#why-protopulse) · [**Quick Start**](#quick-start) · [**AI Engine**](#ai-engine) · [**Architecture**](#architecture) · [**Roadmap**](#roadmap) · [**Docs**](#documentation)
+[**Features**](#features) · [**Why ProtoPulse**](#why-protopulse) · [**Quick Start**](#quick-start) · [**The Engine**](#the-engine-packages) · [**AI Engine**](#ai-engine) · [**Architecture**](#architecture) · [**Roadmap**](#roadmap) · [**Docs**](#documentation)
 
 </div>
 
@@ -34,7 +34,7 @@ Every electronics learning journey currently requires bouncing between 4-6 diffe
 
 **ProtoPulse is what happens when you refuse to use 6 tools and build one that does everything.** Born from a real project — a maker building a rover with Arduino Mega, ESP32, and salvaged hoverboard motors — who couldn't find a single tool that covered the full journey from "I don't know electronics" to "here are my Gerbers."
 
-The AI doesn't just chat — it has **82 tool actions** that place components, wire connections, populate your BOM, run design rule checks, and export manufacturing files. Describe a circuit in plain English. Watch it appear on screen.
+The AI doesn't just chat — it has **113 tool actions** that place components, wire connections, populate your BOM, run design rule checks, and export manufacturing files. Describe a circuit in plain English. Watch it appear on screen. And in the redesigned engine, a **six-member AI crew** — Draftsman, Analyst, Professor, Router, Architect, Buyer — works the same design graph you do, every action signed and undoable.
 
 > **Think TinkerCad + Fritzing + KiCad, unified in the browser, with an AI engineer sitting next to you who never gets tired of explaining things.**
 
@@ -67,7 +67,7 @@ Full interactive circuit editor — place component **instances**, draw **nets**
 
 <h3>AI Design Assistant</h3>
 
-An AI that **acts**, not just answers. Generate complete architectures from a sentence. Place components, wire connections, populate your BOM, run validation, export to KiCad — **82 tool actions** across 11 modules. Streams via SSE with **Claude** and **Gemini** support.
+An AI that **acts**, not just answers. Generate complete architectures from a sentence. Place components, wire connections, populate your BOM, run validation, export to KiCad — **113 tool actions** across 11 modules. Streams via SSE with **Claude** and **Gemini** support.
 
 </td>
 </tr>
@@ -151,7 +151,7 @@ Crafted dark theme with **neon cyan** (`#00F0FF`) and purple accents, built for 
 <th align="center">Altium</th>
 </tr>
 <tr><td><strong>Browser-based</strong></td><td align="center">Yes</td><td align="center">No</td><td align="center">No</td><td align="center">Yes</td><td align="center">No</td></tr>
-<tr><td><strong>AI assistant with real tools</strong></td><td align="center"><strong>82 tools</strong></td><td align="center">No</td><td align="center">No</td><td align="center">Limited</td><td align="center">No</td></tr>
+<tr><td><strong>AI assistant with real tools</strong></td><td align="center"><strong>113 tools + a 6-agent crew</strong></td><td align="center">No</td><td align="center">No</td><td align="center">Limited</td><td align="center">No</td></tr>
 <tr><td><strong>Open source</strong></td><td align="center">MIT</td><td align="center">GPL</td><td align="center">GPL</td><td align="center">No</td><td align="center">No</td></tr>
 <tr><td><strong>Architecture block diagrams</strong></td><td align="center">Yes</td><td align="center">No</td><td align="center">No</td><td align="center">No</td><td align="center">No</td></tr>
 <tr><td><strong>Concept-to-export in one tool</strong></td><td align="center">Yes</td><td align="center">Partial</td><td align="center">No</td><td align="center">Partial</td><td align="center">Yes</td></tr>
@@ -209,7 +209,8 @@ npm run build           # Production build (Vite + esbuild)
 npm start               # Production server
 npm run check           # TypeScript type check (must pass clean)
 npm run db:push         # Sync Drizzle schema to PostgreSQL
-npm test                # All tests (54 files, 1,553 tests)
+npm test                # Legacy suite (725 files, ~30.5k tests)
+npm run test:packages   # Engine suite (1,377 tests, all green)
 npm run test:watch      # Vitest interactive watch mode
 npm run test:coverage   # Tests with v8 coverage report
 npx eslint .            # Lint (strict TypeScript rules)
@@ -220,9 +221,74 @@ npx prettier --write .  # Format
 
 <br>
 
+## The Engine (packages/)
+
+ProtoPulse is being redesigned from the ground up ("the vision", three volumes). The greenfield npm-workspaces monorepo at [`packages/`](packages/README.md) lives *alongside* the legacy app above — which keeps running untouched and migrates onto the engine via a checklist-gated [migration milestone](ROADMAP.md#migration-milestone--legacy-retirement-between-v06-and-v07). **Four engine stages have shipped complete** — v0.1 The Graph, v0.2 The Lab, v0.3 The Crew, v0.4 The Board — with v0.5 The Bridge (firmware emulation) and v0.6 The World (sync, community, manufacturing) most of the way there. [`ROADMAP.md`](ROADMAP.md) is the canonical, dated record.
+
+The thesis: **one canonical design graph, many projections.** Every mutation is a typed operation; the design IS its op-log (JSON Lines), and the graph is just a materialized view. That one decision buys deterministic byte-exact exports, exact undo (inverse ops), O(1) branches, visual diff, three-way merge with conflicts surfaced as data, time-lapse replay, and zero-conflict live sync — all from the same mechanism, never silently resolved.
+
+<p align="center">
+<img src="docs/screenshots/cosim-demo.gif" alt="20-second demo loop: blink firmware assembled from raw AVR opcodes runs live in the emulator, pin B5 is bound to net LED_A, and ngspice solves the circuit the firmware drives — square wave over analog response on one axis" width="830">
+</p>
+<p align="center"><em>The whole thesis in one ~20 s loop: real AVR firmware → live emulation → pin bound to a net → SPICE-solved response, one axis.</em></p>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/schematic.png" alt="The new schematic editor: a 555 astable driving three LED branches"></td>
+<td width="50%"><img src="docs/screenshots/cosim.png" alt="Co-simulation: blink firmware's pin edges plotted over the analog response"></td>
+</tr>
+<tr>
+<td align="center"><em>The new editor — 555 astable with three LED branches (golden fixture)</em></td>
+<td align="center"><em>Co-sim: real AVR firmware's square wave over the SPICE-solved response, one axis</em></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/pcb-mode.png" alt="PCB mode: pads, an F.Cu trace, and a via on the routed-led fixture"></td>
+<td width="50%"><img src="docs/screenshots/branch-diff.png" alt="Branch diff overlay: R1 changed on try-alt, highlighted amber against main"></td>
+</tr>
+<tr>
+<td align="center"><em>The board canvas (v0.4) — pads, copper trace, via</em></td>
+<td align="center"><em>O(1) branches with the diff overlay — R1's edit on <code>try-alt</code> flagged amber vs <code>main</code></em></td>
+</tr>
+</table>
+
+<p align="center">
+<img src="docs/screenshots/replay-demo.gif" alt="Time-lapse replay: the History tab scrubs the 555 traffic-light design's op-log and the schematic rebuilds itself component by component, wire by wire" width="830">
+</p>
+<p align="center"><em>The design IS its op-log: the History tab replays any design building itself, op by op.</em></p>
+
+> Screenshots are artifacts of [`tools/screenshots/`](tools/screenshots/README.md) — regenerated by script, never hand-cropped.
+
+| Package | What it does |
+|:--------|:-------------|
+| `@protopulse/graph` | The core — typed ops, integer-nm coordinates, branch/diff/merge, `.ppx` stores. 100% branch coverage gate, enforced in CI. |
+| `@protopulse/parts` · `erc` · `export` | 18-part seed library with provenance tiers + community part packs · pin-conflict ERC with executable fixes · byte-exact KiCad netlist, BOM, Gerber X2, Excellon, pick-and-place, panelization |
+| `@protopulse/drc` · `route` | DRC against versioned fab decks (JLC / OSHPark / PCBWay) · walkaround + shove-with-spring-back routing, zone pours with thermal reliefs |
+| `@protopulse/sim` · `cosim` · `emu` | ngspice-WASM simulation with fidelity tiers, Monte Carlo, FFT · the closed firmware↔analog co-sim loop · ATmega328P, RP2040, and a from-scratch ESP32-S3 Xtensa core (windowed ABI, interrupts, ADC, timers, XIP from real `.bin` app images) running real machine code |
+| `@protopulse/cli` | `protopulse check` / `export` / `import-legacy` — headless ERC, "CI for circuits" (exit 0/1/2), the legacy-Postgres migration path |
+| `@protopulse/renderer` · `app` | WebGL2 scene graph with SDF text + GPU picking · the editor: schematic + PCB modes, sim panels, branches with merge resolver, replay, live sync, fab exports |
+| `@protopulse/ai` · `review` · `relay` | The **six-member crew** (Draftsman · Analyst · Professor · Router · Architect · Buyer) on one runtime with op-log blame · versioned design-review decks · the zero-conflict sync relay |
+| `@protopulse/content` | Fab rule decks, review decks, sourcing catalog, the complete 88-article concepts wiki, curriculum Track 1 "First Light" |
+
+**1,377 tests**, own CI (`.github/workflows/packages-ci.yml`): typecheck, lint, tests, golden smoke, builds.
+
+```bash
+npm run check:packages           # typecheck every package
+npm run test:packages            # all 1,377 engine tests
+npm run -w @protopulse/app dev   # new editor → http://localhost:5174
+npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
+```
+
+**Engine roadmap:** canonical home is [`ROADMAP.md`](./ROADMAP.md) (v0.1 The Graph → v0.7 The Probe, each entry dated); the frozen founding spec lives in [`docs/vision/`](./docs/vision/README.md).
+
+See [`packages/README.md`](packages/README.md) for the full 16-package map, conventions, and format spec pointers.
+
+<br>
+
 ## AI Engine
 
-The AI doesn't just chat — it has **82 tool actions** that directly manipulate your design:
+> This section describes the **legacy app's** AI stack (`server/ai.ts`). The redesigned engine has its own provider-agnostic agent runtime, [`@protopulse/ai`](#the-engine-packages), home of the complete six-member crew — new agent work targets that runtime.
+
+The AI doesn't just chat — it has **113 tool actions** that directly manipulate your design:
 
 <table>
 <tr>
@@ -264,6 +330,8 @@ All in a single streamed response. Every action logged and undoable.
 
 ## Architecture
 
+> Two architectures coexist in this repo. The diagram below is the **legacy app** (`client/` `server/` `shared/`) — still the shipping product. The redesigned engine is the [`packages/`](#the-engine-packages) monorepo, and the legacy app migrates onto it in later milestones.
+
 ```mermaid
 graph TB
     subgraph Browser["Browser — React 19 + Vite 7"]
@@ -279,11 +347,11 @@ graph TB
         direction LR
         MW["Middleware<br><sub>helmet · compress<br>rate-limit · auth</sub>"]
         Routes["Routes<br><sub>21 domain routers<br>13 circuit routers</sub>"]
-        AI["AI Service<br><sub>Claude + Gemini<br>82 tools · SSE</sub>"]
+        AI["AI Service<br><sub>Claude + Gemini<br>113 tools · SSE</sub>"]
         Storage["Storage<br><sub>Drizzle ORM<br>LRU Cache</sub>"]
     end
 
-    Storage --> DB[("PostgreSQL<br><sub>27 tables</sub>")]
+    Storage --> DB[("PostgreSQL<br><sub>47 tables</sub>")]
 
     style Browser fill:#0D1B2A,stroke:#1B3A5C,color:#E0E7FF
     style Server fill:#0D1B2A,stroke:#1B3A5C,color:#E0E7FF
@@ -309,7 +377,7 @@ graph TB
 </details>
 
 <details>
-<summary><strong>Database Schema — 27 tables</strong></summary>
+<summary><strong>Database Schema — 47 tables (core selection below)</strong></summary>
 <br>
 
 | Table | Purpose |
@@ -374,7 +442,7 @@ server/
   circuit-routes.ts     Barrel — 13 circuit routers from server/circuit-routes/
   circuit-routes/       designs, instances, nets, wires, netlist, exports,
                         simulations, hierarchy, imports, autoroute, expansion
-  ai.ts                 AI integration — Claude + Gemini, streaming, 82 tools
+  ai.ts                 AI integration — Claude + Gemini, streaming, 113 tools
   ai-tools/             11 modules: architecture, bom, circuit, component,
                         export, navigation, project, validation, registry, types
   storage.ts            IStorage interface + DatabaseStorage (LRU cache, 1,598 lines)
@@ -399,11 +467,11 @@ shared/
 
 <table>
 <tr>
-<td align="center"><strong>54</strong><br><sub>test files</sub></td>
-<td align="center"><strong>1,553</strong><br><sub>tests passing</sub></td>
+<td align="center"><strong>725</strong><br><sub>legacy test files</sub></td>
+<td align="center"><strong>~30.5k</strong><br><sub>legacy tests passing</sub></td>
+<td align="center"><strong>1,377</strong><br><sub>engine tests, all green</sub></td>
 <td align="center"><strong>0</strong><br><sub>TypeScript errors</sub></td>
-<td align="center"><strong>strict</strong><br><sub>mode enabled</sub></td>
-<td align="center"><strong>27</strong><br><sub>database tables</sub></td>
+<td align="center"><strong>47</strong><br><sub>database tables</sub></td>
 <td align="center"><strong>50+</strong><br><sub>API endpoints</sub></td>
 </tr>
 </table>
@@ -412,23 +480,36 @@ shared/
 - **happy-dom** for client-side component testing
 - **@testing-library/react** for behavior-driven UI tests
 - **v8 coverage** reporting
-- **ESLint** strict TypeScript rules + **Prettier** formatting
+- **ESLint** strict TypeScript rules + **Prettier** formatting (covers `packages/` too — zero errors policy)
 - **Zod** validation on every API boundary
+- The engine adds its own **1,377 tests** (`npm run test:packages`), byte-exact golden-file export tests in `tools/golden/`, and a **100% branch coverage gate** on the graph core — all enforced in a separate, fully green CI workflow
+- Honest note: ~421 legacy tests are env-dependent and failing on `main` (tracked in [ROADMAP — off-vision work items](ROADMAP.md#off-vision-work-items)); the engine workflow is the merge gate and stays green
 
 <br>
 
 ## Roadmap
+
+Legacy app phases:
 
 ```
 Phase 2   ████████████████████  Complete    Component Editor (SVG, connectors, buses)
 Phase 3   ████████████████████  Complete    Circuit schematic capture (instances, nets, ERC)
 Phase 4   ████████████████████  Complete    Breadboard / PCB layout, Gerber & KiCad export
 Phase 5   ████████████████████  Complete    Circuit simulation, SPICE, frequency analysis
-Phase 0   ██████████████░░░░░░  Active      Audit + feature waves (177/245 — 72.2%)
+Phase 0   ██████████████░░░░░░  Active      Audit + feature waves (ledger: docs/MASTER_BACKLOG.md)
 Phase 1   ░░░░░░░░░░░░░░░░░░░░  Next        Live simulation, breadboard wiring, hardware comms
 ```
 
-**The Vision:** ProtoPulse aims to be the single tool a maker needs from "I've never touched electronics" to "here are my Gerbers." See [`docs/future-features-and-ideas-list.md`](docs/future-features-and-ideas-list.md) for the full roadmap including live simulation, Web Serial hardware communication, camera-based component ID, and engineering calculators.
+> Legacy-app phase work is paused in favor of the engine; the engine roadmap below is where the action is.
+
+Engine redesign (the vision, three volumes): **v0.1 The Graph, v0.2 The
+Lab, v0.3 The Crew, and v0.4 The Board are complete**; v0.5 The Bridge
+and v0.6 The World are most of the way there, the legacy→`.ppx` importer
+exists, and what remains is gated on hardware, product decisions, or one
+emulator epic. The canonical, dated record is [`ROADMAP.md`](./ROADMAP.md);
+the frozen founding spec is [`docs/vision/`](./docs/vision/README.md).
+
+**The Vision:** ProtoPulse aims to be the single tool a maker needs from "I've never touched electronics" to "here are my Gerbers." The engine redesign is how it gets there; see also [`docs/future-features-and-ideas-list.md`](docs/future-features-and-ideas-list.md) for the legacy-app idea backlog including camera-based component ID and engineering calculators.
 
 <br>
 
@@ -436,10 +517,15 @@ Phase 1   ░░░░░░░░░░░░░░░░░░░░  Next    
 
 | Document | Audience | Covers |
 |:---------|:---------|:-------|
+| **[ROADMAP.md](ROADMAP.md)** | Everyone | The canonical build order and status — every engine stage, dated, with honest cuts stated |
+| **[ARCHITECTURE.md](ARCHITECTURE.md)** | Engineers | Deliberately thin pointer index — one home per fact |
+| **[packages/README.md](packages/README.md)** | Engineers | The redesigned engine — 16-package map, conventions, `.ppx` format pointers |
 | **[DEVELOPER.md](docs/DEVELOPER.md)** | Engineers | Architecture, API reference (50+ endpoints), database schema, middleware, auth flow |
-| **[USER_GUIDE.md](docs/USER_GUIDE.md)** | End users | Feature walkthroughs, keyboard shortcuts, troubleshooting, glossary |
-| **[AI_AGENT_GUIDE.md](docs/AI_AGENT_GUIDE.md)** | AI assistants | Conventions, file organization, audit status, phase roadmap, all 82 AI tools |
-| **[CHANGELOG.md](docs/CHANGELOG.md)** | Everyone | Version history, feature additions, breaking changes |
+| **[USER_GUIDE.md](docs/USER_GUIDE.md)** | End users | Feature walkthroughs (legacy app + new editor), keyboard shortcuts, troubleshooting |
+| **[AI_AGENT_GUIDE.md](docs/AI_AGENT_GUIDE.md)** | AI assistants | Conventions, file organization, both AI stacks, development rules |
+| **[FEATURE_MATURITY.md](docs/FEATURE_MATURITY.md)** | Everyone | The honesty matrix — what's production, what's partial, what's a stub |
+| **[CHANGELOG.md](docs/CHANGELOG.md)** | Everyone | Dated history of every landing |
+| **[docs/vision/](docs/vision/README.md)** | Everyone | The frozen three-volume founding spec — deviations get ADRs, never edits |
 
 <br>
 

@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       messages,
     });
@@ -51,7 +51,7 @@ export async function POST_STREAMING(request: NextRequest) {
     const { messages } = await request.json();
 
     const stream = anthropic.messages.stream({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       messages,
     });
@@ -109,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       messages,
     });
@@ -144,7 +144,7 @@ export async function streamHandler(req: NextApiRequest, res: NextApiResponse) {
     res.setHeader('Connection', 'keep-alive');
 
     const stream = anthropic.messages.stream({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       messages,
     });
@@ -197,7 +197,7 @@ export async function POST_WITH_TOOLS(request: NextRequest) {
 
     while (true) {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         tools,
         messages: conversationMessages,
@@ -255,7 +255,7 @@ export async function POST_WITH_CACHING(request: NextRequest) {
     const { messages, systemPrompt } = await request.json();
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       system: [
         {

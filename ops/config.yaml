@@ -87,3 +87,62 @@ session:
   capture_enabled: true
   sessions_dir: ops/sessions/
   orient_on_start: true
+
+# =============================================================================
+# --- Vault Note Schema (_schema) — SINGLE SOURCE OF TRUTH ---
+# =============================================================================
+# Canonical enum + format policy for knowledge/ note frontmatter.
+# Added 2026-06-11 to resolve the "vault schema schism": three incompatible
+# schemas coexisted (the v2 JSON schema, the validate-note.sh hook's enums,
+# and the live 743-note vault). See docs/audits/2026-06-11-skill-audit.md
+# (Executive Summary item 1 + Cluster 5, vault-validate entry).
+#
+# Policy:
+#   - "preferred" = the v2 schema values. ALL NEW notes use these.
+#   - "accepted_legacy" = values present in the live vault. Validators WARN
+#     on them, NEVER FAIL. There is NO mass migration of existing notes;
+#     legacy values are upgraded opportunistically (e.g. via /revisit).
+#   - Unknown values (in neither list) -> WARN, naming this _schema block.
+#
+# Consumers (keep in sync when editing this block):
+#   - .claude/hooks/validate-note.sh         (PostToolUse hook; hardcoded copy)
+#   - .claude/skills/vault-validate/         (SKILL.md + scripts/validate.py)
+#   - .claude/skills/vault-quality-gate/     (SKILL.md + scripts/gate.py)
+#   - .claude/skills/validate/  and  .agents/skills/validate/
+#   - .claude/skills/verify/    and  .agents/skills/verify/
+_schema:
+  type:
+    preferred:
+      - claim
+      - pattern
+      - reference
+      - moc
+      - meta
+    accepted_legacy:
+      - decision
+      - concept
+      - insight
+      - debt-note
+      - need
+      - domain-knowledge
+      - knowledge-note
+      - knowledge
+  confidence:
+    preferred:
+      - speculative
+      - emerging
+      - supported
+      - verified
+      - established
+    accepted_legacy:
+      - proven
+      - likely
+      - experimental
+      - outdated
+      - high
+      - medium
+  topics:
+    # BOTH formats are valid. Validators must pass bare slugs silently and
+    # WARN (never FAIL) on wiki-link entries.
+    preferred_format: bare-slug        # e.g.  - power-systems
+    accepted_legacy_format: wiki-link  # e.g.  - "[[power-systems]]"

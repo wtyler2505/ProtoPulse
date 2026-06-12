@@ -18,6 +18,11 @@ This directory contains Architecture Decision Records (ADRs) documenting key tec
 | [0009](0009-tauri-over-electron.md) | Tauri v2 over Electron for Native Desktop Shell | Accepted |
 | [0010](0010-unified-parts-catalog.md) | Unified Parts Catalog | Accepted |
 | [0011](0011-delete-lifecycle-policy.md) | Global Delete Lifecycle Policy (Soft vs Hard Deletes) | Accepted |
+| [0012](0012-m1-flatbush-picking-over-gpu-pick-buffer.md) | M1 picking via flatbush R-tree, GPU pick buffer deferred | Superseded by 0016 |
+| [0013](0013-m1-canvas-glyph-atlas-over-msdf.md) | M1 text via canvas-2D glyph atlas, MSDF deferred | Superseded by 0015 |
+| [0014](0014-m1-merge-conflicts-as-data.md) | M1 merge conflicts surface as data | Accepted (deviation closed — resolver UI shipped) |
+| [0015](0015-sdf-glyph-atlas.md) | SDF glyph atlas | Accepted |
+| [0016](0016-gpu-pick-buffer-dual-picking.md) | GPU pick buffer + flatbush — the dual picking system | Accepted |
 
 ## Template
 

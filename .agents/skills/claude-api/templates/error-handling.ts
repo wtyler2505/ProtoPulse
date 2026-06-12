@@ -8,7 +8,7 @@ const anthropic = new Anthropic({
 async function basicErrorHandling(prompt: string) {
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -163,7 +163,7 @@ class APIErrorHandler {
 async function streamWithErrorHandling(prompt: string) {
   try {
     const stream = anthropic.messages.stream({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -314,7 +314,7 @@ async function robustAPICall(prompt: string) {
     const validation = validateRequest({
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 1024,
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
     });
 
     if (!validation.valid) {
@@ -324,7 +324,7 @@ async function robustAPICall(prompt: string) {
     const result = await circuitBreaker.execute(() =>
       errorHandler.execute(() =>
         anthropic.messages.create({
-          model: 'claude-sonnet-4-5-20250929',
+          model: 'claude-sonnet-4-6',
           max_tokens: 1024,
           messages: [{ role: 'user', content: prompt }],
         })
@@ -349,7 +349,7 @@ if (require.main === module) {
       console.log('\n=== Testing Rate Limit Handler ===\n');
       return handleRateLimits(() =>
         anthropic.messages.create({
-          model: 'claude-sonnet-4-5-20250929',
+          model: 'claude-sonnet-4-6',
           max_tokens: 1024,
           messages: [{ role: 'user', content: 'Test message' }],
         })

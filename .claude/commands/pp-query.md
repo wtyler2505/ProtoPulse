@@ -6,7 +6,7 @@ allowed-tools: Bash(nlm:*)
 
 # /pp-query
 
-One-shot recall against the full `pp:active` corpus. Use when scope is unclear or spans tiers.
+One-shot recall against the full `pp:active` corpus. Use when scope is unclear or crosses `pp-core` and `pp-hardware`.
 
 ## Args
 $ARGUMENTS

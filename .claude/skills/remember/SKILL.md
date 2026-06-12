@@ -34,9 +34,17 @@ If these files don't exist (pre-init invocation or standalone use), use universa
 Parse immediately:
 - If target contains a quoted description or unquoted text: **explicit mode** — user describes friction directly
 - If target is empty: **contextual mode** — review recent conversation for corrections
-- If target contains `--mine-sessions` or `--mine`: **session mining mode** — scan ops/sessions/ for patterns
+- If target contains `--mine-sessions` or `--mine`: **session mining mode** — read `references/session-mining.md` and follow it
 
-**START NOW.** Reference below defines the three modes.
+**START NOW.** Reference below defines the modes.
+
+### Reference Files (progressive disclosure — read on demand)
+
+| File | Read when |
+|------|-----------|
+| `references/session-mining.md` | Target contains `--mine-sessions` / `--mine` — full 7-step mining workflow (find unmined sessions, mine six pattern types, classify, deduplicate, create notes, mark `mined: true`, report) |
+| `references/note-design-and-edge-cases.md` | Before creating ANY methodology note (title pattern, body quality, category selection) and when hitting edge cases (missing ops/methodology/, duplicate friction, contradicting methodology, no sessions, very long sessions, implicit corrections, empty context) |
+| `../shared-references/methodology-loop.md` | For the full methodology learning loop + Rule Zero (the spec model this skill writes into) |
 
 ---
 
@@ -85,7 +93,9 @@ For each existing note, check if it covers the same behavioral area. Specificall
 
 Write to `ops/methodology/`:
 
-**Rule Zero:** This methodology note becomes part of the system's canonical specification. ops/methodology/ is not a log of what happened — it is the authoritative declaration of how the system should behave. Write this note as a directive: what the agent SHOULD do, not what went wrong. Future sessions, /rethink drift checks, and meta-skills will consult this note as ground truth for system behavior.
+**Rule Zero:** This methodology note becomes part of the system's canonical specification. ops/methodology/ is not a log of what happened — it is the authoritative declaration of how the system should behave. Write this note as a directive: what the agent SHOULD do, not what went wrong. Future sessions, /rethink drift checks, and meta-skills will consult this note as ground truth for system behavior. (Full Rule Zero + loop: `../shared-references/methodology-loop.md`.)
+
+**Before writing:** read `references/note-design-and-edge-cases.md` — title pattern (describe the DO, not the problem), body quality rules, category selection.
 
 **Filename:** Convert the prose title to kebab-case. Example: "don't process personal notes like research" becomes `dont-process-personal-notes-like-research.md`.
 
@@ -130,7 +140,7 @@ Related: [[methodology]]
 
 ### Step 4: Update Methodology MOC
 
-Edit `ops/methodology.md` (create if missing):
+Edit `ops/methodology.md` (create if missing — template in `references/note-design-and-edge-cases.md` §No ops/methodology/ Directory):
 
 1. Find the section for the note's category
 2. Add the note with a context phrase: `- [[note title]] — [what this teaches]`
@@ -258,277 +268,18 @@ Flag provided: `/remember --mine-sessions` or `/remember --mine`
 
 This mode scans stored session transcripts for friction patterns the user addressed during work but did not explicitly `/remember`.
 
-### Step 1: Find Unmined Sessions
-
-```bash
-# Find session files without mined: true marker
-UNMINED=$(grep -rL '^mined: true' ops/sessions/*.md 2>/dev/null)
-UNMINED_COUNT=$(echo "$UNMINED" | grep -c . 2>/dev/null || echo 0)
-```
-
-If no unmined sessions found:
-```
---=={ remember — mine }==--
-
-  No unprocessed sessions found in ops/sessions/.
-  All sessions have been mined for friction patterns.
-```
-
-### Step 2: Mine Each Session
-
-For each unmined session, read the full content and search for:
-
-| Pattern | What to Look For | Significance |
-|---------|-----------------|-------------|
-| User corrections | "no", "that's wrong", "not like that" followed by correct approach | Direct methodology learning |
-| Repeated redirections | Same type of correction appearing multiple times | Strong behavioral signal |
-| Workflow breakdowns | Steps that failed, had to be retried, or produced wrong output | Process gap |
-| Agent confusion | Questions the agent asked that it should have known the answer to | Missing context or methodology |
-| Undocumented decisions | User made a choice without explaining reasoning — but the choice reveals a preference | Implicit methodology |
-| Escalation patterns | User moving from gentle correction to firm direction | Methodology note urgency signal |
-
-### Step 3: Classify Findings
-
-For each detected pattern, classify into one of two output types:
-
-| Finding Type | Output | When |
-|-------------|--------|------|
-| Actionable methodology learning | Methodology note in `ops/methodology/` | Clear behavioral change needed. Agent can act on this. |
-| Novel observation requiring more context | Observation note in `ops/observations/` | Pattern detected but not yet clear enough for methodology guidance. Needs accumulation. |
-
-### Step 4: Deduplicate Against Existing Notes
-
-Before creating any notes:
-
-1. Read all existing methodology notes in `ops/methodology/`
-2. Read all existing observations in `ops/observations/`
-3. For each finding:
-   - If an existing methodology note covers this → skip or add as evidence to existing
-   - If an existing observation covers this → skip or add as evidence to existing
-   - If novel → create new note
-
-### Step 5: Create Notes
-
-**For methodology findings:** Follow the same creation process as explicit mode (Step 3 in Explicit Mode section), with `source: session-mining` and add `session_source: [session filename]`.
-
-**For observation findings:**
-
-```markdown
----
-description: [what was observed and what it suggests]
-category: [friction | surprise | process-gap | methodology]
-status: pending
-observed: YYYY-MM-DD
-source: session-mining
-session_source: [session filename]
----
-
-# [the observation as a sentence]
-
-[What happened, which session, why it matters, and what pattern it might be part of.]
-
----
-
-Related: [[observations]]
-```
-
-### Step 6: Mark Sessions as Mined
-
-After processing each session, add `mined: true` to its frontmatter:
-
-```bash
-# Add mined marker to session file frontmatter
-```
-
-Use Edit tool to add `mined: true` after the existing frontmatter fields. Do not modify other frontmatter content.
-
-### Step 7: Report
-
-```
---=={ remember — mine }==--
-
-  Sessions scanned: [N]
-
-  Methodology notes created: [count]
-    - [filename] — [brief description]
-
-  Observations created: [count]
-    - [filename] — [brief description]
-
-  Duplicates skipped: [count]
-    - [existing note] — already covers [pattern]
-
-  Sessions marked as mined: [list]
-
-  [If pattern thresholds reached:]
-  Category "[category]" now has [N] methodology notes.
-  Consider running /rethink to review [category] patterns.
-```
+**Full workflow (MANDATORY read):** `references/session-mining.md` — find unmined sessions (`grep -rL '^mined: true' ops/sessions/*.md`), mine each for six pattern types (corrections, repeated redirections, workflow breakdowns, agent confusion, undocumented decisions, escalation), classify findings (methodology note vs observation), deduplicate against existing notes, create notes (`source: session-mining` + `session_source`), mark sessions `mined: true`, then report.
 
 ---
 
 ## The Methodology Learning Loop
 
-This is the complete cycle that /remember participates in:
+/remember is the capture layer of the methodology learning loop: work happens → corrections get captured as methodology notes → agents read them at session start → behavior improves → 3+ notes in a category trigger /rethink elevation to context-file changes. **Rule Zero:** ops/methodology/ is the system's canonical specification — write directives, not incident reports; /remember writes the spec, /rethink enforces it.
 
-```
-Work happens
-  → user corrects agent behavior (explicit or implicit)
-  → /remember captures correction as methodology note
-  → methodology note filed to ops/methodology/
-  → agent reads methodology notes at session start (via context file reference)
-  → agent behavior improves
-  → fewer corrections needed
-  → when methodology notes accumulate (3+ in same category)
-  → /rethink triages and detects patterns
-  → patterns elevated to context file changes
-  → system methodology evolves at the architectural level
-  → the cycle continues with new friction at the edges
-```
-
-Each layer of this loop serves a different purpose:
-- **/remember** captures individual friction points — fast, low ceremony
-- **ops/methodology/** stores accumulated behavioral guidance — persists across sessions
-- **/rethink** detects patterns and proposes structural changes — periodic, deliberate
-- **ops/context.md** (or equivalent) embodies the system's stable methodology — changes rarely, by human approval
-
-The loop is healthy when methodology notes accumulate slowly (friction is being addressed) and /rethink elevates patterns to context-level changes when thresholds are exceeded.
-
-The loop is unhealthy when the same category keeps getting methodology notes without elevation (the system is capturing friction but not learning from it).
-
-### Rule Zero: Methodology as Canonical Specification
-
-The methodology folder is more than a friction capture log. It is the system's authoritative self-model — the canonical specification from which drift is measured.
-
-**What this means for /remember:**
-- Every methodology note you create becomes part of the spec. Write directives, not incident reports.
-- The title should be an actionable behavior ("check for semantic duplicates before creating any note") not a problem description ("duplicate creation issue").
-- Future /rethink sessions will compare system behavior against what methodology notes declare. Vague notes create unmeasurable specs.
-
-**What this means for the system:**
-- ops/methodology/ is consulted by meta-skills (/ask, /architect, /rethink) as the source of truth for how the system works.
-- Drift detection compares methodology note assertions against actual config.yaml and context file state.
-- When methodology notes are stale (older than config changes), the system surfaces this as a maintenance condition.
-
-The methodology folder is the spec. /remember writes the spec. /rethink enforces the spec. The loop is closed.
+**Full loop diagram, layer responsibilities, health signals, and Rule Zero details:** `../shared-references/methodology-loop.md`.
 
 ---
 
-## Methodology Note Design
+## Methodology Note Design and Edge Cases
 
-### Title Pattern
-
-Methodology note titles should describe what the agent should DO, not what went wrong:
-
-| Bad (describes problem) | Good (describes behavior) |
-|------------------------|--------------------------|
-| "duplicate creation issue" | "check for semantic duplicates before creating any note" |
-| "wrong tone problem" | "match the user's formality level in all output" |
-| "processing too aggressive" | "differentiate personal notes from research in processing depth" |
-
-The title is what the agent reads at session start. It should be immediately actionable as a behavioral directive.
-
-### Body Quality
-
-Methodology notes are operational guidance, not essays. They should be:
-
-1. **Specific enough for a fresh agent session** — no assumed context from the session that created them
-2. **Scoped explicitly** — when does this apply and when does it not?
-3. **Dual-sided** — both what to do AND what to avoid
-4. **Evidence-grounded** — reference the specific friction that triggered this learning
-
-### Category Selection
-
-Choose the most specific applicable category:
-
-| Category | Use When |
-|----------|---------|
-| processing | Friction during /extract, extraction, claim creation |
-| capture | Friction during inbox filing, raw material handling |
-| connection | Friction during /connect, link evaluation, MOC updates |
-| maintenance | Friction during /revisit, health checks, cleanup |
-| voice | Friction about writing style, tone, output formatting |
-| behavior | Friction about general agent conduct, interaction patterns, tool usage |
-| quality | Friction about note quality, description writing, title crafting |
-
-If a friction point spans categories (e.g., "processing voice" or "capture quality"), choose the primary category and mention the secondary in the body.
-
----
-
-## Edge Cases
-
-### No ops/methodology/ Directory
-
-Create it and the `ops/methodology.md` MOC:
-
-```markdown
----
-description: Methodology notes capturing how this system has learned to operate
-type: moc
----
-
-# methodology
-
-Methodology notes organized by category. Each note captures a specific behavioral learning.
-
-## Processing
-
-## Capture
-
-## Connection
-
-## Maintenance
-
-## Voice
-
-## Behavior
-
-## Quality
-```
-
-### Duplicate Friction
-
-If a methodology note with very similar content already exists:
-1. Do NOT create a duplicate
-2. Link to the existing note
-3. Add the new instance as evidence: update the existing note's body with the new context
-4. Report: "Extended existing methodology note [[title]] with additional evidence"
-
-### Contradicting Existing Methodology
-
-If the new friction CONTRADICTS an existing methodology note (user now wants the opposite of what was previously captured):
-1. Create an observation in `ops/observations/` documenting the contradiction
-2. Update the existing methodology note's status to `superseded` and add `superseded_by: [new note]`
-3. Create the new methodology note with the updated guidance
-4. Report the contradiction and suggest /rethink if this is part of a broader pattern
-
-### No Sessions to Mine
-
-Report clearly: "No unprocessed sessions found in ops/sessions/." Do not treat this as an error.
-
-### Very Long Sessions
-
-For sessions longer than 2000 lines:
-1. Process in chunks of ~500 lines
-2. Track findings across chunks to detect patterns that span the session
-3. Report chunk-level progress for transparency
-
-### Implicit vs Explicit Corrections
-
-Some corrections are implicit — the user does it themselves rather than telling the agent to change:
-- User manually edits a note the agent created (the edit reveals what was wrong)
-- User chooses a different approach without explaining why
-- User skips a step the agent suggested
-
-In contextual mode, flag these as lower-confidence findings and always confirm before creating methodology notes from implicit signals.
-
-### Empty Conversation Context
-
-In contextual mode with no conversation history (e.g., first message of a session):
-
-```
---=={ remember — contextual }==--
-
-  No conversation context available to analyze.
-  Use /remember "description" to capture specific friction directly.
-```
+Title pattern (describe the DO, not the problem), body quality rules, category selection, and all edge-case handling (missing ops/methodology/ → create dir + MOC, duplicate friction → extend with evidence, contradiction → supersede + observation, no sessions to mine, very long sessions → 500-line chunks, implicit corrections → lower confidence + confirm, empty conversation context): `references/note-design-and-edge-cases.md` — read before creating any note and whenever an edge case applies.

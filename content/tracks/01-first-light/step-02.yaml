@@ -1,0 +1,29 @@
+# Step 2 — add the resistor, derive its value, sweep it.
+id: first-light-02
+title: Add the resistor that saves the LED
+mode: guided
+unlocks:
+  - ohms-law-in-practice
+  - si-prefixes-4k7
+given: snippet:led-battery-naive
+goal:
+  - sim: "LED current between 8mA and 15mA with the chosen resistor"
+  - sim: "Sweep 100R to 4k7 and record how brightness tracks current"
+  - erc: clean
+professor:
+  beginner: >-
+    The resistor is the thing that decides the current. Pick the value
+    with the recipe: (battery volts minus LED volts) divided by the
+    current you want. Try it, then sweep the value and watch the LED dim.
+  intermediate: >-
+    R = (Vbat − Vf) / If. For 3V, a red LED (~2.0V) and 10mA target,
+    that's about 100Ω. Sweep 100Ω → 4.7kΩ and note current is roughly
+    inversely proportional to R — the LED drop barely moves.
+  expert: >-
+    Derive the operating point graphically: load line from Vbat with
+    slope −1/R against the diode curve. Note the design is insensitive
+    to Vf spread when the resistor drops a healthy fraction of Vbat —
+    that margin is the whole trick.
+deliverable: >-
+  A schematic with battery, resistor, and LED in series, ERC-clean, with
+  the resistor value justified by the calculation in a note.

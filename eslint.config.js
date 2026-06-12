@@ -17,6 +17,8 @@ export default tseslint.config(
       'server/public/**',
       'temp/**',
       'attached_assets/**',
+      'packages/*/dist/**',
+      'packages/*/coverage/**',
     ],
   },
 
@@ -203,6 +205,15 @@ export default tseslint.config(
     files: ['server/**/*.ts'],
     rules: {
       // Console usage is expected in server code (logging)
+      'no-console': 'off',
+    },
+  },
+
+  // ── Tooling scripts (tools/) ────────────────────────────────────────
+  {
+    files: ['tools/screenshots/**/*.ts'],
+    rules: {
+      // The rig narrates its progress to the terminal by design.
       'no-console': 'off',
     },
   },

@@ -1,8 +1,8 @@
 ---
 name: verify
-description: Combined verification — recite (description quality via cold-read prediction) + validate (schema compliance) + review (health checks). Use as a quality gate after creating notes or as periodic maintenance. Triggers on "/verify", "/verify [note]", "verify note quality", "check note health".
+description: Combined verification — recite (description quality via cold-read prediction) + validate (schema compliance) + review (health checks). Use as a quality gate after creating notes or as periodic maintenance. Vault note quality gate — NOT for verifying code changes (use the built-in code-verification `verify` skill for that). Triggers on "/verify", "/verify [note]", "verify note quality", "check note health".
 user-invocable: true
-allowed-tools: Read, Write, Edit, Grep, Glob, mcp__qmd__vector_search
+allowed-tools: Read, Write, Edit, Grep, Glob, mcp__qmd__qmd_vector_search
 context: fork
 ---
 
@@ -72,7 +72,7 @@ ALL FOUR must pass.
 
 Before any retrieval tests, verify the semantic search index is current:
 
-1. Try `mcp__qmd__vector_search` with a simple test query to confirm MCP availability
+1. Try `mcp__qmd__qmd_vector_search` with a simple test query to confirm MCP availability
 2. If MCP is unavailable (tool fails or returns error), try qmd CLI (`qmd status`) to confirm local CLI availability
 3. If either MCP or qmd CLI is available, proceed to Step 1
 4. If neither MCP nor qmd CLI is available: note "retrieval test will be deferred" and proceed — do NOT let index issues block verification
@@ -123,8 +123,8 @@ NOW read the complete note. Compare against your prediction.
 
 Test whether the description enables semantic retrieval:
 
-- Tier 1 (preferred): `mcp__qmd__vector_search` with query = "[the note's description text]", collection = "{vocabulary.notes_collection}", limit = 10
-- Tier 2 (CLI fallback): `qmd vsearch "[the note's description text]" --collection {vocabulary.notes_collection} -n 10`
+- Tier 1 (preferred): `mcp__qmd__qmd_vector_search` with query = "[the note's description text]", collection = "protopulse-vault", limit = 10
+- Tier 2 (CLI fallback): `qmd query "[the note's description text]" --collection protopulse-vault -n 10`
 - Tier 3: if both MCP and qmd CLI are unavailable, report "retrieval test deferred (semantic search unavailable)" — do NOT skip silently
 
 Check where the note appears in results:
@@ -132,7 +132,7 @@ Check where the note appears in results:
 - Position 4-10: adequate but could improve
 - Not in top 10: flag — description may not convey the note's meaning
 
-**Why vector_search specifically:** Agents find notes via semantic search during reflect and reweave. Testing with keyword search tests the wrong retrieval method. Full hybrid search with LLM reranking compensates for weak descriptions — too lenient. vector_search tests real semantic findability without hiding bad descriptions behind reranking.
+**Why qmd_vector_search specifically:** Agents find notes via semantic search during reflect and reweave. Testing with keyword search tests the wrong retrieval method. Full hybrid search with LLM reranking compensates for weak descriptions — too lenient. qmd_vector_search tests real semantic findability without hiding bad descriptions behind reranking.
 
 **6. Draft improved description if needed**
 
@@ -154,10 +154,10 @@ If prediction score < 3:
 ### Step 2: VALIDATE (schema check)
 
 Read the template that applies to this note type. Determine the template by checking:
-- Note location (e.g., insights/ uses the standard note template)
+- Note location (e.g., knowledge/ uses the standard note template)
 - Type field in frontmatter (if present, may indicate a specialized template)
 
-If the vault has templates with `_schema` blocks, read the `_schema` from the relevant template for authoritative field requirements. If no `_schema` exists, use the checks below as defaults.
+If the vault has templates with `_schema` blocks, read the `_schema` from the relevant template for authoritative field requirements. For `type`/`confidence` enums and topics format, the `_schema:` block in `ops/config.yaml` is canonical — preferred values pass, accepted-legacy values WARN (never FAIL). If no `_schema` exists, use the checks below as defaults.
 
 **Required fields (FAIL if missing):**
 
@@ -187,7 +187,7 @@ If the vault has templates with `_schema` blocks, read the `_schema` from the re
 
 **Domain-specific field enums (WARN if invalid):**
 
-If the note has fields with enumerated values (type, category, status, etc.), check them against the template's `_schema.enums` block. Each invalid enum value produces a WARN.
+For `type` and `confidence`, check against the `_schema:` block in `ops/config.yaml` (the single source of truth): `preferred` values pass silently, `accepted_legacy` values produce a WARN (never FAIL). For other enumerated fields (category, status, etc.), check the template's `_schema.enums` block. Each invalid enum value produces a WARN naming the valid options.
 
 **Relevant notes format (WARN if incorrect):**
 
@@ -197,11 +197,13 @@ If the note has fields with enumerated values (type, category, status, etc.), ch
 | Relationship type | Should use standard types: extends, foundation, contradicts, enables, example | INFO |
 | Links exist | Each referenced note must exist as a file | WARN |
 
-**Topics format (FAIL if invalid):**
+**Topics format (per `ops/config.yaml` `_schema` — bare slug preferred, wiki-link accepted-legacy):**
 
 | Constraint | Check | Severity |
 |------------|-------|----------|
-| Format | Array of wiki links: `["[[topic]]"]` | FAIL |
+| Format — bare slug | `topics` entries as bare slugs (`- power-systems`) — preferred | PASS |
+| Format — wiki link | `topics` entries as wiki links (`- "[[power-systems]]"`) — accepted-legacy | WARN (never FAIL) |
+| Format — other | Entry is neither a bare slug nor a wiki link | FAIL |
 | Links exist | Each topic map must exist as a file | WARN |
 
 **Composability (WARN if fails):**
@@ -292,7 +294,7 @@ RECITE:
 VALIDATE:
   Required fields: [PASS/FAIL — detail]
   Description constraints: [PASS/WARN — detail]
-  Topics format: [PASS/FAIL — detail]
+  Topics format: [PASS/WARN/FAIL — detail]
   Optional fields: [PASS/WARN/N/A]
   Relevant notes: [PASS/WARN/N/A]
   Composability: [PASS/WARN]
@@ -327,88 +329,17 @@ Recommended Actions:
 
 # Verify
 
-Combined verification: recite (description quality) + validate (schema compliance) + review (health checks). Three lightweight checks in one context window.
+Combined verification: recite (description quality) + validate (schema compliance) + review (health checks). Three lightweight checks in one context window — the unit of verification is the insight, not the check type.
 
-## philosophy
+**Execution-order rule (load-bearing):** index freshness runs before everything; recite runs FIRST (cold-read prediction before any full read — validate/review would contaminate it); after recite reads the full note, validate and review can run in any order.
 
-**verification is one concern, not three.**
-
-recite tests whether the description enables retrieval. validate checks schema compliance. review checks graph health. all three operate on the same note, read the same frontmatter, and together answer one question: is this insight ready?
-
-running them separately meant three context windows, three subagent spawns, three rounds of reading the same file. the checks are lightweight enough (combined context ~15-25% of window) that they fit comfortably in one session while staying in the smart zone.
-
-> "the unit of verification is the insight, not the check type."
-
-## execution order matters
-
-**Recite MUST run first.** The cold-read prediction test requires forming an honest prediction from title + description BEFORE reading the full note. If validate or review ran first (both read the full note), the prediction would be contaminated. Recite's constraint: predict first, read second.
-
-**Index freshness runs before everything.** The retrieval test in recite depends on semantic search having current data. Without a freshness check, recently created notes produce false retrieval failures that obscure actual description quality issues.
-
-After recite reads the full note, validate and review can run in any order since they both need the full content.
-
-## recite: description quality
-
-the testing effect applied to vault quality. read only title + description, predict what the note argues, then check. if your prediction fails, the description fails.
-
-**why this matters:** descriptions are the API of the vault. agents decide whether to load a note based on title + description. a misleading description causes two failure modes:
-- **false positive:** agent reads the note expecting X, wastes context on Y
-- **false negative:** agent skips the note because description doesn't signal relevance
-
-both degrade the vault's value as a knowledge tool.
-
-**retrieval test rationale:** agents find notes via semantic search during reflect and reweave. testing with BM25 keyword matching tests the wrong retrieval method. full hybrid search with LLM reranking compensates for weak descriptions — too lenient. vector_search tests real semantic findability without hiding bad descriptions.
-
-## validate: schema compliance
-
-checks against the relevant template schema:
-
-| Check | Requirement | Severity |
-|-------|-------------|----------|
-| `description` | Must exist, non-empty | FAIL |
-| `topics` | Must exist, array of wiki links | FAIL |
-| description length | < 200 chars | WARN |
-| description content | Adds info beyond title | WARN |
-| description format | No trailing period | WARN |
-| domain enum fields | Valid values per template `_schema.enums` | WARN |
-| `relevant_notes` format | Array with context phrases | WARN |
-| YAML integrity | Well-formed, `---` delimiters | FAIL |
-| Composability | Title passes "This note argues that [title]" test | WARN |
-
-**FAIL means fix needed. WARN is informational but worth addressing.**
-
-**template discovery:** The skill reads the template for the note type to get its `_schema` block. If no template exists or no `_schema` block is found, fall back to the default checks above.
-
-## review: per-note health
-
-5 focused checks per note (not a full vault-wide audit):
-
-1. **YAML frontmatter** — well-formed, has `---` delimiters, valid parsing
-2. **Description quality** — present, adds info beyond title, not a restatement
-3. **topic map connection** — appears in at least one topic map
-4. **Wiki link count** — >= 2 outgoing links (graph participation threshold)
-5. **Link resolution** — all wiki links point to existing files (full body scan, excluding backtick-wrapped examples)
-
-plus 3 deep-only checks for comprehensive audits:
-6. **Orphan risk** — incoming link count (is anything pointing here?)
-7. **Content staleness** — does the content still seem accurate?
-8. **Bundling** — does the note make multiple distinct claims?
-
-## common failure patterns
-
-| Pattern | Symptom | Fix |
-|---------|---------|-----|
-| Title restated as description | Recite score 1-2, prediction trivially correct but content is richer | Rewrite description to add mechanism/scope |
-| Missing topic map | Review fails MOC check | Add to appropriate topic map or create Topics footer |
-| Dangling links | Review fails link resolution | Remove link, create the target note, or fix the spelling |
-| Sparse note | < 2 outgoing links | Route to /connect for connection finding |
-| Schema drift | Enum values not in template | Update note to use valid values, or propose enum addition |
+**Deep guidance:** `references/verification-rationale.md` — read when diagnosing failures or questioning the method. Contains: the philosophy (why one concern, not three), execution-order rationale, recite/validate/review rationale (descriptions as the vault's API, false-positive/false-negative failure modes, why qmd_vector_search and not BM25/hybrid), the consolidated schema-check table, the 5+3 review check summary, and the common failure patterns table (title-restated descriptions, missing topic maps, dangling links, sparse notes, schema drift — with fixes).
 
 ## batch mode (--all)
 
 When verifying all notes:
 
-1. Discover all notes in insights/ directory
+1. Discover all notes in knowledge/ directory
 2. For each note, run the full verification pipeline
 3. Produce summary report:
    - Total notes checked
@@ -427,7 +358,7 @@ Run all three checks on a specific note. Full detailed report.
 
 ### /verify --all
 
-Comprehensive audit of all notes in insights/. Summary table + flagged failures.
+Comprehensive audit of all notes in knowledge/. Summary table + flagged failures.
 
 ### /verify --handoff [note]
 
@@ -448,7 +379,7 @@ Work Done:
 - Description improved: [yes/no]
 
 Files Modified:
-- insights/[note].md (description improved, if applicable)
+- knowledge/[note].md (description improved, if applicable)
 - [task file path] (Verify section updated, if applicable)
 
 Learnings:
@@ -472,7 +403,7 @@ When a task file is in context (pipeline execution), update the `## Verify` sect
 
 Recite:
 - Prediction: N/5 — [brief reason]
-- Retrieval: #N via MCP vector_search or CLI vsearch (or "deferred")
+- Retrieval: #N via MCP qmd_vector_search or CLI `qmd query` (or "deferred")
 - Description: [kept/improved — brief note]
 
 Validate:

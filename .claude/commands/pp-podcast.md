@@ -1,15 +1,15 @@
 ---
 description: Generate an audio overview (podcast) for a notebook. Auto-archives to docs/nlm-archive/.
-argument-hint: [alias=pp-journal] [--format deep_dive|brief|critique|debate] [--length short|default|long]
+argument-hint: [alias=pp-core] [--format deep_dive|brief|critique|debate] [--length short|default|long]
 allowed-tools: Bash(nlm:*), Bash(bash:*), Bash(echo:*)
 ---
 
 # /pp-podcast
 
-Generate audio overview, poll until completed, then trigger Phase 11 archive hook.
+Generate audio overview, poll until completed, then trigger the Studio archive hook.
 
 ## Args
-$ARGUMENTS  (defaults: alias=pp-journal, format=deep_dive, length=default)
+$ARGUMENTS  (defaults: alias=pp-core, format=deep_dive, length=default)
 
 ## Steps
 1. Auth gate.

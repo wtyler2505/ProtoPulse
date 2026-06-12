@@ -1,7 +1,7 @@
 ---
 description: Capture a physical bench observation to pp-bench notebook.
 argument-hint: <observation>
-allowed-tools: Bash(nlm:*), Bash(date:*), Bash(touch:*)
+allowed-tools: Bash(nlm:*), Bash(date:*), Bash(touch:*), AskUserQuestion
 ---
 
 # /pp-bench
@@ -27,3 +27,4 @@ $ARGUMENTS
 ## Notes
 - 0 quota.
 - Citation rule: part number + vendor + measurement source on every claim.
+- Alias resolution: `pp-bench` is a compatibility alias resolving to `pp-hardware`; run `nlm alias get pp-bench` before write.

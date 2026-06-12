@@ -1,6 +1,6 @@
 # ProtoPulse Feature Maturity Classification
 
-**Date:** 2026-03-27
+**Date:** 2026-03-27 (Tables 1–3) · **Updated:** 2026-06-11 (Table 4 — engine redesign addendum, refreshed through the v0.1–v0.6 landings)
 **Source evidence:** `reports/ai-audit/00-MASTER-REPORT.md`, `reports/ai-audit/05-client-ai-features.md`, `docs/checklist/MASTER_AUDIT_CHECKLIST.md` (Section 4 — Fresh Verification Results), `docs/checklist/WORKFLOW_VERIFICATION_MATRIX.md`
 
 **Purpose:** This document classifies every major ProtoPulse feature's real implementation status based on live browser verification, code inspection, and audit findings. It exists to close the gap between what the UI promises and what actually works, so that development effort can be directed at the right maturity tier.
@@ -186,3 +186,27 @@ This does not mean they are low quality. Many are well-engineered, well-tested, 
    - `ai-co-designer` scoring (placeholder returns)
 
 5. **The ordering workflow is the biggest truthfulness gap at the view level.** The full wizard flow works beautifully in the UI but places orders to localStorage only — no server API call. A user could reasonably believe they placed a real order.
+
+---
+
+## Table 4: The Engine Redesign (packages/) — Milestone 1 Addendum
+
+**Added:** 2026-06-10
+**Source evidence:** packages CI (`.github/workflows/packages-ci.yml` — typecheck, lint, 346 tests, golden smoke, builds), golden-file tests in `tools/golden/`, `packages/README.md`. Unlike Tables 1–3, these maturity calls are based on automated test/CI evidence, not live browser audit sessions.
+
+Everything in Tables 1–3 describes the **legacy app**, which is unchanged. Milestone 1 added the greenfield `@protopulse/*` monorepo alongside it.
+
+| Component | Maturity | Honest status |
+|-----------|----------|---------------|
+| `@protopulse/graph` (op-log core) | Production | Solid and tested. 100% branch coverage gate on ops/apply/materialize/diff enforced in CI. Deterministic materialization, undo, branches, diff, three-way merge all covered. Merge conflict *resolution* is data-only — no interactive resolver UI yet. |
+| `@protopulse/parts` (seed library) | Functional | 18 seed parts. NE555, BAT54S, and ESP32-S3-WROOM-1 pin maps datasheet-verified; the rest carry the `unverified`/`community-tested` provenance tiers they declare. ESP32-S3 is schematic-only (no footprint yet). |
+| `@protopulse/erc` | Functional | Pin-conflict matrix + net rules tested; one finding (open-collector-missing-pull-up) ships an executable fix. Every finding code maps to a concept article. Rule set is intentionally small at M1. |
+| `@protopulse/export` (KiCad netlist, CSV BOM) | Functional | Byte-exact golden tests pass for all three fixtures. One honesty gap: KiCad pcbnew *import* of the golden netlists still awaits a single manual verification (open checkbox in `tools/golden/README.md`). Not Production until that box is checked. |
+| `@protopulse/cli` (`protopulse check`/`export`) | Functional | Headless ERC with exit codes 0/1/2; runs in CI as the golden smoke. Build step required (`npm run -w @protopulse/cli build`). |
+| `@protopulse/renderer` (WebGL2) | Functional | Retained scene graph, nm→px camera with LOD, SDF glyph atlas (crisp text at every zoom, ADR-0015), dual picking — GPU ID buffer for O(1) hover + flatbush R-tree for tolerance/marquee/snap (ADR-0016). Honest cut: single-channel SDF, not MSDF — corners round ≤1 source pixel at extreme zoom. |
+| `@protopulse/app` (new schematic editor) | Functional | M1 daily-drivable: place/wire, undo/redo, branch switcher with diff overlay, ERC panel with apply-fix, exports, Draftsman panel. Dev-server only (port 5174); not the shipping product. |
+| `@protopulse/ai` (agent runtime + crew) | Functional | All six crew members (Draftsman, Analyst, Professor, Router, Architect, Buyer) on one runtime — scoped registries, destructive gating, explain(), context budgets — tested **with a fake provider**; the Anthropic adapter is browser-direct with a user key and has not had the same automated coverage. Op-log blame (`meta {agent, rationale}`) verified. |
+| `@protopulse/content` + `content/` | Functional | JLCPCB rule deck (versioned JSON), 88-article concepts wiki covering every ERC/DRC code, review decks, sourcing catalog (no prices by design), Track 1 steps with machine-checkable goals. Schemas + loaders tested. |
+| Simulation (v0.2 "The Lab") | Functional | Shipped 2026-06-11 (see ROADMAP v0.2): graph→SPICE with ngspice-WASM, op/tran/dc/ac, fidelity bar, canvas voltage ghost, worker streaming. Do not confuse with the legacy app's SPICE features (Table 1, `simulation` view). |
+| PCB (v0.4 "The Board") | Functional | Shipped 2026-06-11 (see ROADMAP v0.4): footprints/traces/vias/zones with thermal reliefs, push-and-shove with cascade, DRC against the rule deck, board outline + Edge.Cuts, Gerber/drill/pick-place export, panelization. The legacy `pcb` view is unrelated. |
+| Hardware bridge / probe (v0.5 / v0.7) | Partial | Emulator side of v0.5 shipped: ATmega328P (timers, SPI, TWI, EEPROM, watchdog) + RP2040 + a from-scratch ESP32-S3 (full Xtensa LX7 interpreter: code density, windowed ABI, level-1 interrupts + the interrupt matrix, SAR ADC1, TIMG0, esptool `.bin` app images with flash-mapped XIP — unmodified IDF/FreeRTOS firmware still needs ROM functions/RTC/eFuse/dual-core, tracked in ROADMAP.md) under one McuCore contract, firmware panel with core picker, co-sim bench with per-core ADC channels. WebSerial flashing and the v0.7 Probe await real hardware (Tyler). |

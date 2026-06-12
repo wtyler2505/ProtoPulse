@@ -1,0 +1,23 @@
+{
+  "name": "@protopulse/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "protopulse check \u2014 headless ERC and exports. CI for circuits.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "bin": {
+    "protopulse": "./dist/protopulse.js"
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/protopulse.js --banner:js=\"#!/usr/bin/env node\nimport { createRequire as __pp_cr } from 'node:module'; const require = __pp_cr(import.meta.url);\"",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@protopulse/erc": "*",
+    "@protopulse/export": "*",
+    "@protopulse/graph": "*",
+    "@protopulse/parts": "*",
+    "commander": "^14.0.0"
+  }
+}

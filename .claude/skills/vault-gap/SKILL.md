@@ -1,11 +1,11 @@
 ---
 name: vault-gap
-description: Check whether the Ars Contexta vault has sufficient coverage on a topic. Auto-drafts an inbox/ stub and queues ops/queue/gap-stubs.md when coverage is thin. Returns a structured payload for plan Research logs. Honors the inbox/ → /extract → knowledge/ pipeline discipline — never writes to knowledge/ directly. Triggers on "/vault-gap", "/vault-gap [topic]", "is there a vault note on X", "check vault coverage for Y", "do we have knowledge on Z".
-version: "1.1"
+description: Check whether the Ars Contexta vault has sufficient coverage on a topic. Auto-drafts an inbox/ stub and queues ops/queue/gap-stubs.md when coverage is thin. Returns a structured payload for plan Research logs. Also files user-submitted note suggestions via `--source user` (formerly /vault-inbox) — writes inbox/YYYY-MM-DD-user-suggested-<slug>.md + appends ops/queue/user-suggestions.md. Honors the inbox/ → /extract → knowledge/ pipeline discipline — never writes to knowledge/ directly. Triggers on "/vault-gap", "/vault-gap [topic]", "is there a vault note on X", "check vault coverage for Y", "do we have knowledge on Z", "file a note suggestion", "suggest a vault note".
+version: "1.2"
 user-invocable: true
 context: fork
 allowed-tools: Read, Write, Grep, Glob, Bash, mcp__qmd__qmd_search, mcp__qmd__qmd_vector_search, mcp__qmd__qmd_deep_search, mcp__qmd__qmd_collections, mcp__qmd__qmd_status
-argument-hint: "[topic to check for vault coverage] [--origin-plan path/to/plan.md] [--origin-task 1.2] [--min-notes 3]"
+argument-hint: "[topic] [--origin-plan path/to/plan.md] [--origin-task 1.2] [--min-notes 3] [--source user] [--description 'what the note should say'] [--submitter name] [--origin-slug slug-hit-404]"
 ---
 
 ## EXECUTE NOW
@@ -18,8 +18,14 @@ Parse flags from `$ARGUMENTS`:
 - `--origin-plan <path>` — plan file the gap was discovered in (for backlink)
 - `--origin-task <id>` — task ID within that plan (e.g. "5.9")
 - `--min-notes <N>` — threshold below which to auto-seed stub (default 3)
+- `--source user` — user-suggestion mode (formerly `/vault-inbox`): file the topic as a user-submitted note suggestion instead of running coverage scoring. See §User-suggestion mode.
+- `--description <text>` — (user mode) what the note should claim (≤500 chars)
+- `--submitter <name>` — (user mode) contributor identifier; defaults to `$USER` or "anonymous"
+- `--origin-slug <slug>` — (user mode) slug of the `<VaultHoverCard>`/`<VaultExplainer>` that 404'd, if any
 
 Strip flags from topic before searching.
+
+**If `--source user` was passed, skip the coverage-scoring steps below and execute §User-suggestion mode instead.**
 
 **Execute these steps in order:**
 
@@ -138,6 +144,60 @@ in priority order (most-referenced-by-pending-plans first per T15; FIFO otherwis
 | 2026-04-18T22:15:00Z | "WCAG focus ring contrast" | wcag-focus-ring-3to1-contrast | plans/2026-04-18-e2e-walkthrough/03-a11y-systemic.md | Wave 10 Task 10.1 | missing | pending |
 ```
 
+## User-suggestion mode (`--source user`) — formerly /vault-inbox
+
+Files a user-submitted note suggestion as an inbox stub. Separate queue + lower
+priority class than agent-detected gaps.
+
+**Steps:**
+
+1. **Derive slug** — run `${CLAUDE_SKILL_DIR}/scripts/derive-slug.sh "<topic>"`. The script enforces: non-empty result, alphanumeric+dash only, no path-traversal characters, 80-char cap at a word boundary. Never construct filenames from raw user text.
+2. **Check collisions** — if `inbox/*-user-suggested-<slug>.md` exists, append `-v2`, `-v3`, etc.
+3. **Write stub** — `inbox/YYYY-MM-DD-user-suggested-<slug>.md` from `${CLAUDE_SKILL_DIR}/templates/user-suggested-stub.md`. Includes `source_type: user-suggested`, `submitter`, `suggested_at` timestamp, `origin_surface: cli` (or `ui`), `origin_slug` if supplied, and the verbatim description (≤500 chars, plain text only).
+4. **Append to queue log** — run `${CLAUDE_SKILL_DIR}/scripts/append-user-suggestion.sh <slug> <topic> <submitter> <origin-slug> <inbox-path>` to append a row to `ops/queue/user-suggestions.md` (bootstraps the file if missing). This queue is separate from `gap-stubs.md` — different priority class.
+5. **Return confirmation payload** — `{"ok": true, "stub_path": "inbox/...", "queue_row": ...}`.
+
+**Example:**
+
+```bash
+/vault-gap "ESP32 strapping pin behavior on deep sleep" --source user \
+  --description "Strapping pins are only sampled at cold boot, not on deep-sleep wake" \
+  --submitter tyler
+```
+
+**Security posture** (user text is untrusted input):
+- Never trust user input for filenames — always derive via `derive-slug.sh`.
+- Never execute user content — stubs are markdown, read as text.
+- Path-traversal guard — the slug script rejects anything outside `[a-z0-9-]`.
+- Size cap — 4KB total stub body including frontmatter; description ≤500 chars.
+- Stubs land with `triage_status: pending-review`; `/extract` requires explicit moderation approval (`--include-user-queue`) before processing them, and ranks them BELOW plan-driven gap stubs unless `unblocks:` points at a pending plan.
+
+**Unshipped HTTP/UI half:** the `POST /api/vault/suggest` route + `<VaultInboxCta>` modal were never implemented. That spec now lives at `docs/plans/vault-inbox-ui-spec.md` (marked not-implemented). This CLI mode is the only shipped path.
+
+## Prioritization (extract-queue ordering) — formerly /vault-extract-priority
+
+When `/extract` (or anyone) needs to order pending gap stubs by demand, score each
+`pending`/`in_progress` row of `ops/queue/gap-stubs.md` (reading each stub's
+`unblocks:` frontmatter) with:
+
+```
+score(stub) =
+    5 * len(unblocks[])                       # more plans unblocked = higher
+  + 3 * recency_bonus                         # newer gaps score higher
+  + 2 * (1 if origin plan is in tier A/B)     # P0/a11y > polish
+  + 1 * (1 if coverage == "missing")          # missing > thin
+  + 0.5 * origin_plan_referenced_count        # hot plans first
+```
+
+`recency_bonus = max(0, 30 - days_since_captured) / 30` (0..1 over 30d).
+`origin_plan_referenced_count` = how many other stubs cite the same plan.
+Tier A/B detection: plan files matching `01-p0-*.md`, `02-p1-*.md`, `03-a11y-*.md`.
+
+Process highest score first. User-suggestion queue rows (`user-suggestions.md`) rank
+below all plan-driven stubs unless their `unblocks:` points at a pending plan.
+(The standalone `/vault-extract-priority` skill that wrapped this formula is retired —
+nothing ever invoked it; the formula lives here now. See also `reference/scoring-rubric.md`.)
+
 ## Slug derivation
 
 Lowercase → replace non-alphanumeric with `-` → collapse consecutive dashes → trim leading/trailing dashes. Cap at 80 chars (truncate at last word boundary).
@@ -172,10 +232,11 @@ If `Write` fails on the stub (permission, disk space):
 ## Integration points (downstream)
 
 - **T5 `/vault-suggest-for-plan`** — calls `/vault-gap` in a loop over plan tasks.
-- **T8 `<VaultInbox>` UI** — invokes the stub-creation logic server-side when a user clicks "Suggest a note".
-- **T15 extract-queue priority** — reads `ops/queue/gap-stubs.md` to prioritize /extract processing.
+- **`--source user` (this skill)** — user-facing suggestion intake; the unshipped UI half is specced in `docs/plans/vault-inbox-ui-spec.md`.
+- **§Prioritization (this skill)** — `/extract` orders `ops/queue/gap-stubs.md` by the demand-scoring formula above.
 - **Plan research logs** — paste the payload directly.
 
 ## Version history
 
+- **1.2 (2026-06-11)** — absorbed `/vault-inbox` as `--source user` mode (CLI flow + hardened derive-slug; unshipped HTTP/UI spec moved to `docs/plans/vault-inbox-ui-spec.md`). Absorbed the retired `/vault-extract-priority` scoring formula as §Prioritization.
 - **1.0 (2026-04-18)** — initial ship. ProtoPulse qmd tool names (`mcp__qmd__qmd_*`). Stub format aligned with existing `inbox/` convention.

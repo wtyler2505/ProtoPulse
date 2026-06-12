@@ -1,0 +1,283 @@
+[
+  {
+    "actor": "golden",
+    "lamport": 1,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "bat",
+      "ref": "BT1",
+      "partId": "core:battery",
+      "partRev": 1,
+      "value": "9V"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 2,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "r1",
+      "ref": "R1",
+      "partId": "core:resistor",
+      "partRev": 1,
+      "value": "330"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 3,
+    "ts": 0,
+    "op": {
+      "kind": "add_component",
+      "id": "d1",
+      "ref": "D1",
+      "partId": "core:led",
+      "partRev": 1,
+      "value": "red"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 4,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "bat:+",
+      "newNetId": "net-vbat"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 5,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "r1:1",
+      "netId": "net-vbat"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 6,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "r1:2",
+      "newNetId": "net-led"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 7,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "d1:A",
+      "netId": "net-led"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 8,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "d1:K",
+      "newNetId": "net-gnd"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 9,
+    "ts": 0,
+    "op": {
+      "kind": "connect",
+      "port": "bat:-",
+      "netId": "net-gnd"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 10,
+    "ts": 0,
+    "op": {
+      "kind": "rename_net",
+      "netId": "net-vbat",
+      "name": "VBAT"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 11,
+    "ts": 0,
+    "op": {
+      "kind": "rename_net",
+      "netId": "net-led",
+      "name": "LED_A"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 12,
+    "ts": 0,
+    "op": {
+      "kind": "rename_net",
+      "netId": "net-gnd",
+      "name": "GND"
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 13,
+    "ts": 0,
+    "op": {
+      "kind": "place_symbol",
+      "componentId": "bat",
+      "at": {
+        "x": 0,
+        "y": 0
+      },
+      "rot": 0,
+      "mirror": false
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 14,
+    "ts": 0,
+    "op": {
+      "kind": "place_symbol",
+      "componentId": "r1",
+      "at": {
+        "x": 12700000,
+        "y": 0
+      },
+      "rot": 0,
+      "mirror": false
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 15,
+    "ts": 0,
+    "op": {
+      "kind": "place_symbol",
+      "componentId": "d1",
+      "at": {
+        "x": 25400000,
+        "y": 0
+      },
+      "rot": 0,
+      "mirror": false
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 16,
+    "ts": 0,
+    "op": {
+      "kind": "place_footprint",
+      "componentId": "r1",
+      "at": {
+        "x": 5000000,
+        "y": 0
+      },
+      "rotMilli": 0,
+      "side": "top",
+      "locked": false
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 17,
+    "ts": 0,
+    "op": {
+      "kind": "place_footprint",
+      "componentId": "d1",
+      "at": {
+        "x": 15000000,
+        "y": 0
+      },
+      "rotMilli": 0,
+      "side": "top",
+      "locked": false
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 18,
+    "ts": 0,
+    "op": {
+      "kind": "route_trace",
+      "id": "trace-led-a",
+      "netId": "net-led",
+      "layerId": "F.Cu",
+      "widthNm": 250000,
+      "path": [
+        {
+          "x": 5950000,
+          "y": 0
+        },
+        {
+          "x": 10000000,
+          "y": 0
+        },
+        {
+          "x": 14050000,
+          "y": 0
+        }
+      ]
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 19,
+    "ts": 0,
+    "op": {
+      "kind": "place_via",
+      "id": "via-led",
+      "netId": "net-led",
+      "at": {
+        "x": 10000000,
+        "y": 0
+      },
+      "drillNm": 300000,
+      "padNm": 600000,
+      "span": [
+        "F.Cu",
+        "B.Cu"
+      ]
+    }
+  },
+  {
+    "actor": "golden",
+    "lamport": 20,
+    "ts": 0,
+    "op": {
+      "kind": "place_zone",
+      "id": "zone-gnd",
+      "netId": "net-gnd",
+      "layerId": "F.Cu",
+      "outline": [
+        {
+          "x": 2000000,
+          "y": -5000000
+        },
+        {
+          "x": 18000000,
+          "y": -5000000
+        },
+        {
+          "x": 18000000,
+          "y": 5000000
+        },
+        {
+          "x": 2000000,
+          "y": 5000000
+        }
+      ]
+    }
+  }
+]

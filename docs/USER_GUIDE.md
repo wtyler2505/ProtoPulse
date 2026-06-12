@@ -2,7 +2,7 @@
 
 Welcome to **ProtoPulse** — the all-in-one electronics design tool for makers who learn by building. Whether you're wiring up your first LED circuit or designing a multi-board rover with motor controllers and microcontrollers, ProtoPulse brings everything together in one place so you never have to bounce between TinkerCad, Fritzing, KiCad, and a SPICE simulator.
 
-Architecture block diagrams, circuit schematics, BOM management, design validation, AI-assisted design with 82 tool actions, and 14+ export formats — all in your browser, with an AI that doesn't just answer questions but actually builds circuits alongside you.
+Architecture block diagrams, circuit schematics, BOM management, design validation, AI-assisted design with 113 tool actions, and 14+ export formats — all in your browser, with an AI that doesn't just answer questions but actually builds circuits alongside you. And alongside it all: the redesigned engine's editor, where a six-member AI crew works the same design graph you do (see [Section 19](#19-the-new-editor-the-engine)).
 
 This guide will walk you through every feature in detail so you can get the most out of the platform.
 
@@ -85,6 +85,7 @@ This guide will walk you through every feature in detail so you can get the most
 16. [Tips and Best Practices](#16-tips-and-best-practices)
 17. [Troubleshooting](#17-troubleshooting)
 18. [Glossary](#18-glossary)
+19. [The New Editor (the engine)](#19-the-new-editor-the-engine)
 
 ---
 
@@ -1189,6 +1190,67 @@ If you encounter a problem not listed here, try these general steps:
 | **UART** | Universal Asynchronous Receiver/Transmitter — a serial communication protocol commonly used for debugging. |
 | **USB** | Universal Serial Bus — a standard for data transfer and power delivery. |
 | **Validation** | The process of checking your design for errors, warnings, and improvement opportunities. |
+
+---
+
+## 19. The New Editor (the engine)
+
+ProtoPulse is being rebuilt from the ground up on a new engine, and its editor has grown far past a preview: full schematic capture, a real PCB mode, simulation and firmware co-simulation, branches with merging, live sync, and a six-member AI crew. It runs **alongside** the main app — everything described in this guide keeps working exactly as before. ([ROADMAP.md](../ROADMAP.md) is the dated record of what landed when.)
+
+### Running it
+
+The new editor is a separate dev app on its own port:
+
+```bash
+npm run -w @protopulse/app dev
+```
+
+Then open `http://localhost:5174` (the main app stays on port 5000).
+
+### What it can do today
+
+- **Place and wire components** — wires route automatically in clean right-angle (Manhattan) segments. Whatever is under your cursor lights up softly before you click, and text stays crisp no matter how far you zoom in.
+- **Undo/redo** that is always exact, because every change you make is recorded as an operation in the design's history.
+- **Branches with real merging** — like saving alternate versions of your circuit. Switch between them instantly, a green/amber overlay shows exactly what differs, and the **merge** button combines two branches three-way: compatible changes merge automatically, and anything both branches changed differently is shown as a conflict you decide explicitly (yours or theirs) — nothing is ever merged silently.
+- **History (time-lapse replay)** — every design is its full operation log, and the History tab lets you scrub through it: drag the slider (or press Play) and watch the design rebuild itself op by op on the canvas. Click any operation to jump to that moment. The editor is read-only while you're in the past; **Back to live** returns to the present.
+- **Blame** — select any component or net and the Inspector shows its complete life story: who made each change, when, and (for AI-made changes) why. Click any entry to time-travel to that exact moment.
+- **ERC panel** — electrical rule checks with one-click **Apply Fix** for some findings (e.g., a missing pull-up resistor), and each finding links to a short concept article that explains *why* it matters.
+- **Export** — KiCad netlist, CSV BOM, and a single-file design bundle.
+- **Share links** — *Copy share link* puts your entire design (history and branches included) into a compressed URL. No account, no upload, no server: send the link any way you like, and it opens in the other person's editor. Opening a link never silently replaces your own work — you're asked first.
+- **Live sync** — the Sync tab connects your editor to a relay room (`npm run -w @protopulse/relay dev` starts one locally). Everyone in the room sees everyone's edits within a second, with no merge dialogs — the design's operation log makes simultaneous edits combine deterministically. Your undo only undoes *your* edits.
+- **The Draftsman** — an AI assistant panel that can place and wire components for you. It uses your own Anthropic API key, asks before doing anything destructive, and explains what it's doing as it goes.
+- **Part packs** — the palette's "Load part pack…" button adds parts from a JSON pack file (a friend's bench favorites, a club library). Every part declares its trust tier — unverified, community-tested, or verified — visible in its tooltip, packs can never overwrite the built-in library, and a loaded pack is still there next session.
+- **The rest of the AI crew** — separate tabs for the **Analyst** (runs real simulations and reads the plots), the **Professor** (explains any finding from the concepts wiki), the **Router** (routes the board walk-first, shove when cornered, and won't call it done until DRC agrees), the **Architect** (groups related nets onto named buses and organizes components into hierarchical sheets with explicit interface ports), and the **Buyer** (assigns verified vendor part numbers from a date-stamped catalog snapshot, prefers no-setup-fee basic parts, and never invents prices or stock). Each one works on a private copy and lands its changes as a single undoable batch, signed with its name in the design's history.
+
+### A look at the Lab and Co-sim
+
+The newer engine milestones added simulation panels to the editor's sidebar. Two highlights:
+
+![The Sim tab after a transient run: the fidelity bar tells you which parts ran as real SPICE models and which as behavioral stand-ins, above the trace toggles and the waveform plot](screenshots/sim-panel.png)
+
+*The Sim tab after a transient run. Read the **fidelity bar** before believing anything: it lists exactly which parts ran as real SPICE models and which as behavioral stand-ins.*
+
+After an operating-point or transient run, the schematic itself lights up: every wire tints by its solved voltage, cold blue at the lowest and warm orange at the highest, with a legend in the Sim panel. Edit anything and the tint disappears rather than showing stale numbers.
+
+![The Co-sim tab: blink firmware running on the emulated ATmega328P, its B5 pin bound to the LED_A net, square wave stacked over the analog response on one time axis](screenshots/cosim.png)
+
+*The Co-sim tab: real AVR firmware (the classic blink) stepped together with the analog solver — the MCU pin's square wave and the solved node voltages on one time axis, with an honest slowdown readout.*
+
+![Time-lapse replay: the History tab scrubbing through the 555 traffic-light design's op-log, the schematic rebuilding itself component by component on the canvas](screenshots/replay-demo.gif)
+
+*The History tab replaying a design's op-log — components land, nets connect, wires draw. Every frame is a real, replayable operation.*
+
+These screenshots are regenerated by script ([`tools/screenshots/`](../tools/screenshots/README.md)) so they never drift from the real UI.
+
+### The board side
+
+The editor has a full PCB mode (toggle in the toolbar): place footprints from the tray, route copper with the trace tool — in **manual** (hand-drawn), **walk** (auto-detour around copper at the rule deck's clearance), or **shove** mode (your trace goes straight; traces in the way are pushed aside, and they *spring back* to their original paths if you later delete yours) — drop vias, follow the ratsnest, draw copper zones that pour around foreign copper at the deck's clearance (select a zone to switch its pads between solid and thermal-relief connections), draw the board outline, and run DRC against your fab's rule deck — pick JLCPCB, OSHPark, or PCBWay in the DRC tab and the whole app follows: the checks, the routing clearance, and the zone pours all answer to that fab's verified capabilities. Gerber/Excellon/pick-and-place exports are byte-exact tested.
+
+The Export tab downloads the full **fab set** (front/back copper, board edge, drill file, pick-and-place) for the board — or for a **panel**: pick rows × columns, optional rails, and how the boards separate (**V-cut** scores, or **mouse-bites**: a routed channel bridged by snap-off tabs with perforation drills). The panel is the same design replicated as one graph, so even DRC runs on it unchanged.
+
+### What's coming
+
+The new editor grows in stages. Still ahead: live vendor sourcing for the Buyer, WebSerial flashing of real boards, the hardware probe, and community/fab features. The full current status always lives in [ROADMAP.md](../ROADMAP.md).
 
 ---
 

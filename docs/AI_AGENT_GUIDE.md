@@ -2,7 +2,9 @@
 
 > **Audience:** AI coding agents (Claude Code, Cursor, Copilot, Cody, etc.)
 > **Purpose:** The definitive reference for any AI agent picking up this codebase cold.
-> **Last updated:** 2026-03-02
+> **Last updated:** 2026-06-10
+>
+> **Read this first:** as of Milestone 1 of the engine redesign (2026-06-10), **two codebases coexist in this repo**. Sections 1–14 document the **legacy app** (`client/ server/ shared/`) — still the shipping product. The redesigned engine lives in `packages/` (`@protopulse/*`) and has its own conventions and CI — see [Section 15](#15-the-engine-redesign-packages--protopulseai) before touching anything under `packages/`.
 
 ---
 
@@ -22,6 +24,7 @@
 12. [Testing Expectations](#12-testing-expectations)
 13. [Common Gotchas](#13-common-gotchas)
 14. [Working With This Codebase Checklist](#14-working-with-this-codebase-checklist)
+15. [The Engine Redesign (packages/) + @protopulse/ai](#15-the-engine-redesign-packages--protopulseai)
 
 ---
 
@@ -55,6 +58,7 @@
 | Design preferences (AI-learned per-project) | ✅ Shipped |
 | Chat branches | ✅ Shipped |
 | Audit log | ✅ Shipped |
+| **Engine redesign Milestone 1** — `packages/` monorepo (graph/op-log core, new schematic editor, Draftsman agent) | ✅ Landed (see [Section 15](#15-the-engine-redesign-packages--protopulseai)) |
 
 ### Target Users
 
@@ -1052,7 +1056,7 @@ The `routingStrategy` in `user_chat_settings` controls which AI provider handles
 
 ### Current State
 
-54 test files, ~1,553 tests, using Vitest 4.
+Legacy app: 725 test files, ~30.5k tests passing (≈421 env-dependent failures on `main` — tracked in `ROADMAP.md` off-vision items), using Vitest 4. Engine (`packages/`): 1,377 tests, all green, in their own CI workflow — that workflow is the merge gate.
 
 ### Test Infrastructure
 
@@ -1270,6 +1274,54 @@ npx vitest run -t "test name"               # By test name
    └─ npm test (no regressions)
    └─ Switch through all tabs
 ```
+
+---
+
+## 15. The Engine Redesign (packages/) + @protopulse/ai
+
+Milestone 1 (2026-06-10) landed a greenfield npm-workspaces monorepo at `packages/` — the ground-up redesign from Tyler's vision volumes. It lives **alongside** the legacy app; `client/ server/ shared/` are untouched and still ship. The legacy app migrates onto the engine in later milestones. Canonical overview: `packages/README.md`. The `.ppx` format spec: `packages/graph/README.md`.
+
+### The architecture in one paragraph
+
+One canonical design graph, many projections. Every mutation is a typed operation; **the design IS its op-log** (JSON Lines) and the graph is a materialized view, deterministically ordered by `(lamport, actorId)`. Integer-nanometer coordinates, UUIDv7 entities, ports as `componentId:pinKey`. Undo = inverse ops (forward-only history). Branches are O(1) pointers; visual diff via GraphDelta; three-way merge surfaces conflicts as data, never silently.
+
+### Packages
+
+Sixteen workspaces: `graph` (the core), `parts` (18 seed parts, provenance tiers, part packs), `erc`, `drc` (versioned fab decks), `route` (walkaround/shove/pours), `export` (netlist, BOM, Gerber, drill, pick-and-place, panelization — all byte-exact contracts), `sim` (ngspice-WASM), `emu` (ATmega328P + RP2040 + a from-scratch ESP32-S3 Xtensa LX7 core that boots real esptool `.bin` app images), `cosim` (the closed firmware↔analog loop), `review` (versioned review decks), `relay` (zero-conflict sync), `renderer` (WebGL2, SDF text, dual picking), `ai` (the six-member crew runtime), `cli` (`check`/`export`/`import-legacy`, exit 0/1/2), `content` (decks, the 88-article wiki, curriculum), `app` (the editor, port 5174). 1,377 tests; own CI at `.github/workflows/packages-ci.yml` (typecheck, lint, tests, golden smoke, builds; 100% branch coverage gate on the graph core). Full map: `packages/README.md`; status: `ROADMAP.md`.
+
+### Rules for agents working in packages/
+
+1. **Integer nanometers only** — floats break diff determinism; zod rejects them at the boundary.
+2. **Ops are self-contained** — every op carries enough to apply and invert it.
+3. **Golden files are contracts** — `tools/golden/` exports are byte-exact. Never re-freeze casually; deliberate changes only, via `tools/golden/update-golden.ts`.
+4. **Packages ship TS source** (`main: ./src/index.ts`) — only the CLI builds a bundle.
+5. **Never write directly to `knowledge/`** — vault content routes through the `inbox/` pipeline (see root `CLAUDE.md`/`AGENTS.md`).
+6. **New seed parts follow the Hardware & Component Verification Protocol** — real datasheet specs only, no invented dimensions or pinouts.
+
+```bash
+npm run check:packages           # typecheck every package
+npm run test:packages            # all 1,377 engine tests
+npm run -w @protopulse/app dev   # editor → http://localhost:5174
+npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
+```
+
+### Two AI stacks — know which one you're in
+
+| | Legacy stack | New runtime |
+|---|---|---|
+| Where | `server/ai.ts`, `server/ai-tools/`, `server/genkit.ts` | `packages/ai` (`@protopulse/ai`) |
+| Provider | Google Genkit → Gemini (+ Claude via SDK), server-side SSE | Provider-agnostic adapters; Anthropic adapter (default `claude-sonnet-4-6`), browser-direct with the user's key |
+| Tools | 113 tool actions across 11 modules | zod tool registry with **scope slices enforced at dispatch**; six crew members on one runtime — the Draftsman has exactly **8 tools** (add_component, connect, place_symbol, set_wire_geometry, rename_net, add_constraint, run_erc, batch); Analyst, Professor, Router, Architect, and Buyer each get their own slice |
+| Safety | Destructive-confirm in registry | Destructive-confirm gating + `explain()` narration + budgeted context assembly |
+| Auditability | `ai_actions` DB audit log | Every applied op carries `meta {agent, rationale}` — op-log blame |
+
+Both exist and both run. **New agent/AI work targets the new runtime** (`@protopulse/ai`); the Genkit stack is maintained as part of the legacy app until migration.
+
+### Known M1 gaps (do not paper over)
+
+- KiCad pcbnew import of golden netlists pending one manual verification (`tools/golden/README.md` checkbox).
+- (Updated 2026-06-11 — the other original M1 gaps have closed: merge resolver, SDF text + GPU picking, ESP32-S3 part, simulation (v0.2), crew (v0.3), PCB (v0.4) all landed. Check `ROADMAP.md` for canonical status before claiming anything exists or is missing.)
+- Still honest cuts: ESP32-S3 part has no footprint; SDF text is single-channel (not MSDF); WebSerial flashing and the v0.7 Probe await real hardware.
 
 ---
 

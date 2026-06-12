@@ -1,0 +1,7 @@
+Refs,Qty,Value,Part,MPN,DNP
+D1,1,,BAT54S dual series Schottky,BAT54S,
+D2,1,24V,TVS diode (unidirectional),,
+J1,1,,"Header 2×10 0.1""",,
+PWR1,1,,VCC rail,,
+PWR2,1,,GND rail,,
+R1,1,100k,Resistor,,

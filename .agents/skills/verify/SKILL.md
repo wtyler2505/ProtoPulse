@@ -1,8 +1,8 @@
 ---
 name: verify
-description: Combined verification — recite (description quality via cold-read prediction) + validate (schema compliance) + review (health checks). Use as a quality gate after creating knowledge or as periodic maintenance. Triggers on "/verify", "/verify [note]", "verify note quality", "check note health".
+description: Combined verification — recite (description quality via cold-read prediction) + validate (schema compliance) + review (health checks). Use as a quality gate after creating knowledge or as periodic maintenance. Vault note quality gate — NOT for verifying code changes (use the built-in code-verification `verify` skill for that). Triggers on "/verify", "/verify [note]", "verify note quality", "check note health".
 user-invocable: true
-allowed-tools: Read, Write, Edit, Grep, Glob, mcp__qmd__vector_search
+allowed-tools: Read, Write, Edit, Grep, Glob, mcp__qmd__qmd_vector_search
 context: fork
 ---
 
@@ -16,7 +16,7 @@ Read these files to configure domain-specific behavior:
    - Use `vocabulary.verify` for the process verb in output
    - Use `vocabulary.topic_map` for topic map references
    - Use `vocabulary.templates` for the templates folder path
-   - Use `vocabulary.cmd_reflect` for redirect when missing connections found
+   - Use `vocabulary.cmd_connect` for redirect when missing connections found
 
 2. **`ops/config.yaml`** — processing depth, verification settings
    - `processing.depth`: deep | standard | quick
@@ -41,7 +41,7 @@ If these files don't exist, use universal defaults.
 Parse immediately:
 - If target contains a note name: verify that specific note
 - If target contains `--handoff`: output RALPH HANDOFF block at end
-- If target is "all" or "recent": verify recently created/modified knowledge
+- If target is "all" or "recent": verify recently created/modified notes
 - If target is empty: ask which note to verify
 
 ## Anti-Shortcut Warning
@@ -59,9 +59,9 @@ Before marking verification as passed, you MUST complete ALL four categories:
 3. COMPLETE link verification — confirm ALL wiki links in the note
    resolve to existing files. A single dangling link FAILS.
 
-4. COMPLETE {DOMAIN:topic map} integration — verify the note appears in at least
-   one {DOMAIN:topic map}'s Core Ideas section with a context phrase.
-   A note with no {DOMAIN:topic map} mention FAILS.
+4. COMPLETE topic map integration — verify the note appears in at least
+   one topic map's Core Ideas section with a context phrase.
+   A note with no topic map mention FAILS.
 
 Do NOT declare success after checking only one or two categories.
 ALL FOUR must pass.
@@ -72,12 +72,12 @@ ALL FOUR must pass.
 
 Before any retrieval tests, verify the semantic search index is current:
 
-1. Try `mcp__qmd__vector_search` with a simple test query to confirm MCP availability
+1. Try `mcp__qmd__qmd_vector_search` with a simple test query to confirm MCP availability
 2. If MCP is unavailable (tool fails or returns error), try qmd CLI (`qmd status`) to confirm local CLI availability
 3. If either MCP or qmd CLI is available, proceed to Step 1
 4. If neither MCP nor qmd CLI is available: note "retrieval test will be deferred" and proceed — do NOT let index issues block verification
 
-The index freshness check prevents false retrieval failures on recently created knowledge. If the index is stale, retrieval test results should be interpreted with that context.
+The index freshness check prevents false retrieval failures on recently created notes. If the index is stale, retrieval test results should be interpreted with that context.
 
 ### Step 1: RECITE (cold-read prediction test)
 
@@ -99,7 +99,7 @@ Before reading further, write out what you expect:
 - Core argument: what claim does this note make?
 - Mechanism: what reasoning or evidence does it use?
 - Scope: what boundaries does the argument have?
-- Likely connections: what other knowledge would it reference?
+- Likely connections: what other notes would it reference?
 
 Write this prediction explicitly in your output. It must be specific enough to be wrong.
 
@@ -123,8 +123,8 @@ NOW read the complete note. Compare against your prediction.
 
 Test whether the description enables semantic retrieval:
 
-- Tier 1 (preferred): `mcp__qmd__vector_search` with query = "[the note's description text]", collection = "{vocabulary.notes_collection}", limit = 10
-- Tier 2 (CLI fallback): `qmd vsearch "[the note's description text]" --collection {vocabulary.notes_collection} -n 10`
+- Tier 1 (preferred): `mcp__qmd__qmd_vector_search` with query = "[the note's description text]", collection = "protopulse-vault", limit = 10
+- Tier 2 (CLI fallback): `qmd query "[the note's description text]" --collection protopulse-vault -n 10`
 - Tier 3: if both MCP and qmd CLI are unavailable, report "retrieval test deferred (semantic search unavailable)" — do NOT skip silently
 
 Check where the note appears in results:
@@ -132,7 +132,7 @@ Check where the note appears in results:
 - Position 4-10: adequate but could improve
 - Not in top 10: flag — description may not convey the note's meaning
 
-**Why vector_search specifically:** Agents find knowledge via semantic search during connect and revisit. Testing with keyword search tests the wrong retrieval method. Full hybrid search with LLM reranking compensates for weak descriptions — too lenient. vector_search tests real semantic findability without hiding bad descriptions behind reranking.
+**Why qmd_vector_search specifically:** Agents find notes via semantic search during connect and revisit. Testing with keyword search tests the wrong retrieval method. Full hybrid search with LLM reranking compensates for weak descriptions — too lenient. qmd_vector_search tests real semantic findability without hiding bad descriptions behind reranking.
 
 **6. Draft improved description if needed**
 
@@ -154,17 +154,17 @@ If prediction score < 3:
 ### Step 2: VALIDATE (schema check)
 
 Read the template that applies to this note type. Determine the template by checking:
-- Note location (e.g., {DOMAIN:knowledge}/ uses the standard note template)
+- Note location (e.g., knowledge/ uses the standard note template)
 - Type field in frontmatter (if present, may indicate a specialized template)
 
-If the vault has templates with `_schema` blocks, read the `_schema` from the relevant template for authoritative field requirements. If no `_schema` exists, use the checks below as defaults.
+If the vault has templates with `_schema` blocks, read the `_schema` from the relevant template for authoritative field requirements. For `type`/`confidence` enums and topics format, the `_schema:` block in `ops/config.yaml` is canonical — preferred values pass, accepted-legacy values WARN (never FAIL). If no `_schema` exists, use the checks below as defaults.
 
 **Required fields (FAIL if missing):**
 
 | Field | Requirement | Severity |
 |-------|-------------|----------|
 | `description` | Must exist and be non-empty | FAIL |
-| Topics footer or `topics` field | Must reference at least one {DOMAIN:topic map} | FAIL |
+| Topics footer or `topics` field | Must reference at least one topic map | FAIL |
 
 **Description constraints (WARN if violated):**
 
@@ -187,22 +187,24 @@ If the vault has templates with `_schema` blocks, read the `_schema` from the re
 
 **Domain-specific field enums (WARN if invalid):**
 
-If the note has fields with enumerated values (type, category, status, etc.), check them against the template's `_schema.enums` block. Each invalid enum value produces a WARN.
+For `type` and `confidence`, check against the `_schema:` block in `ops/config.yaml` (the single source of truth): `preferred` values pass silently, `accepted_legacy` values produce a WARN (never FAIL). For other enumerated fields (category, status, etc.), check the template's `_schema.enums` block. Each invalid enum value produces a WARN naming the valid options.
 
-**Relevant knowledge format (WARN if incorrect):**
+**Relevant notes format (WARN if incorrect):**
 
 | Constraint | Check | Severity |
 |------------|-------|----------|
-| Format | Array with context: fork
+| Format | Array with context: `["[[note]] -- relationship"]` | WARN |
 | Relationship type | Should use standard types: extends, foundation, contradicts, enables, example | INFO |
 | Links exist | Each referenced note must exist as a file | WARN |
 
-**Topics format (FAIL if invalid):**
+**Topics format (per `ops/config.yaml` `_schema` — bare slug preferred, wiki-link accepted-legacy):**
 
 | Constraint | Check | Severity |
 |------------|-------|----------|
-| Format | Array of wiki links: `["[[topic]]"]` | FAIL |
-| Links exist | Each {DOMAIN:topic map} must exist as a file | WARN |
+| Format — bare slug | `topics` entries as bare slugs (`- power-systems`) — preferred | PASS |
+| Format — wiki link | `topics` entries as wiki links (`- "[[power-systems]]"`) — accepted-legacy | WARN (never FAIL) |
+| Format — other | Entry is neither a bare slug nor a wiki link | FAIL |
+| Links exist | Each topic map must exist as a file | WARN |
 
 **Composability (WARN if fails):**
 
@@ -225,17 +227,17 @@ Run these 5 checks on the note:
 - Description adds information beyond the title
 - Description is not just the title rephrased
 
-**3. {DOMAIN:topic map} connection**
-- Note appears in at least one {DOMAIN:topic map}'s Core Ideas section
-- How to check: grep for `[[note title]]` in files that serve as {DOMAIN:topic map}s
-- The note's Topics footer references a valid {DOMAIN:topic map}
-- A note with no {DOMAIN:topic map} mention is orphaned — FAIL
+**3. topic map connection**
+- Note appears in at least one topic map's Core Ideas section
+- How to check: grep for `[[note title]]` in files that serve as topic maps
+- The note's Topics footer references a valid topic map
+- A note with no topic map mention is orphaned — FAIL
 
 **4. Wiki link density**
 - Count outgoing wiki links in the note body (not just frontmatter)
 - Expected minimum: 2 outgoing links
 - If < 2: flag as sparse — the note is not participating in the graph
-- Sparse knowledge should be routed to /connect for connection finding
+- Sparse notes should be routed to /connect for connection finding
 
 **5. Link resolution**
 - Scan ALL wiki links in the note — body, frontmatter `relevant_notes`, and Topics
@@ -257,7 +259,7 @@ Run these 5 checks on the note:
 - Flag anything that reads as potentially outdated
 
 **8. Bundling analysis**
-- Does the note make multiple distinct claims that could be separate knowledge?
+- Does the note make multiple distinct claims that could be separate notes?
 - Check: could you link to part of this note without dragging unrelated context?
 - If yes: flag for potential splitting
 
@@ -269,13 +271,13 @@ If you have Edit tool access, apply fixes for clear-cut issues:
 - Improved description if recite score < 3
 - Missing `---` frontmatter delimiters
 - Trailing period on description
-- Missing Topics footer (if obvious which {DOMAIN:topic map} applies)
+- Missing Topics footer (if obvious which topic map applies)
 
 **Do NOT auto-fix (requires judgment):**
-- Bundled knowledge (splitting requires understanding the claims)
+- Bundled notes (splitting requires understanding the claims)
 - Content staleness (needs human review of factual accuracy)
 - Missing connections (use /connect instead — connection finding is its own phase)
-- Ambiguous {DOMAIN:topic map} assignment (when note could fit multiple)
+- Ambiguous topic map assignment (when note could fit multiple)
 
 ### Step 5: Compile Results
 
@@ -292,15 +294,15 @@ RECITE:
 VALIDATE:
   Required fields: [PASS/FAIL — detail]
   Description constraints: [PASS/WARN — detail]
-  Topics format: [PASS/FAIL — detail]
+  Topics format: [PASS/WARN/FAIL — detail]
   Optional fields: [PASS/WARN/N/A]
-  Relevant knowledge: [PASS/WARN/N/A]
+  Relevant notes: [PASS/WARN/N/A]
   Composability: [PASS/WARN]
 
 REVIEW:
   Frontmatter: [PASS/FAIL]
   Description quality: [PASS/WARN]
-  {DOMAIN:topic map} connection: [PASS/FAIL — which {DOMAIN:topic map}]
+  topic map connection: [PASS/FAIL — which topic map]
   Wiki links: N outgoing [PASS/WARN if < 2]
   Link resolution: [PASS/FAIL — broken links listed]
 
@@ -327,97 +329,26 @@ Recommended Actions:
 
 # Verify
 
-Combined verification: recite (description quality) + validate (schema compliance) + review (health checks). Three lightweight checks in one context window.
+Combined verification: recite (description quality) + validate (schema compliance) + review (health checks). Three lightweight checks in one context window — the unit of verification is the insight, not the check type.
 
-## philosophy
+**Execution-order rule (load-bearing):** index freshness runs before everything; recite runs FIRST (cold-read prediction before any full read — validate/review would contaminate it); after recite reads the full note, validate and review can run in any order.
 
-**verification is one concern, not three.**
-
-recite tests whether the description enables retrieval. validate checks schema compliance. review checks graph health. all three operate on the same note, read the same frontmatter, and together answer one question: is this {DOMAIN:note} ready?
-
-running them separately meant three context windows, three subagent spawns, three rounds of reading the same file. the checks are lightweight enough (combined context ~15-25% of window) that they fit comfortably in one session while staying in the smart zone.
-
-> "the unit of verification is the {DOMAIN:note}, not the check type."
-
-## execution order matters
-
-**Recite MUST run first.** The cold-read prediction test requires forming an honest prediction from title + description BEFORE reading the full note. If validate or review ran first (both read the full note), the prediction would be contaminated. Recite's constraint: predict first, read second.
-
-**Index freshness runs before everything.** The retrieval test in recite depends on semantic search having current data. Without a freshness check, recently created knowledge produce false retrieval failures that obscure actual description quality issues.
-
-After recite reads the full note, validate and review can run in any order since they both need the full content.
-
-## recite: description quality
-
-the testing effect applied to vault quality. read only title + description, predict what the note argues, then check. if your prediction fails, the description fails.
-
-**why this matters:** descriptions are the API of the vault. agents decide whether to load a note based on title + description. a misleading description causes two failure modes:
-- **false positive:** agent reads the note expecting X, wastes context on Y
-- **false negative:** agent skips the note because description doesn't signal relevance
-
-both degrade the vault's value as a knowledge tool.
-
-**retrieval test rationale:** agents find knowledge via semantic search during connect and revisit. testing with BM25 keyword matching tests the wrong retrieval method. full hybrid search with LLM reranking compensates for weak descriptions — too lenient. vector_search tests real semantic findability without hiding bad descriptions.
-
-## validate: schema compliance
-
-checks against the relevant template schema:
-
-| Check | Requirement | Severity |
-|-------|-------------|----------|
-| `description` | Must exist, non-empty | FAIL |
-| `topics` | Must exist, array of wiki links | FAIL |
-| description length | < 200 chars | WARN |
-| description content | Adds info beyond title | WARN |
-| description format | No trailing period | WARN |
-| domain enum fields | Valid values per template `_schema.enums` | WARN |
-| `relevant_notes` format | Array with context phrases | WARN |
-| YAML integrity | Well-formed, `---` delimiters | FAIL |
-| Composability | Title passes "This note argues that [title]" test | WARN |
-
-**FAIL means fix needed. WARN is informational but worth addressing.**
-
-**template discovery:** The skill reads the template for the note type to get its `_schema` block. If no template exists or no `_schema` block is found, fall back to the default checks above.
-
-## review: per-note health
-
-5 focused checks per note (not a full vault-wide audit):
-
-1. **YAML frontmatter** — well-formed, has `---` delimiters, valid parsing
-2. **Description quality** — present, adds info beyond title, not a restatement
-3. **{DOMAIN:topic map} connection** — appears in at least one {DOMAIN:topic map}
-4. **Wiki link count** — >= 2 outgoing links (graph participation threshold)
-5. **Link resolution** — all wiki links point to existing files (full body scan, excluding backtick-wrapped examples)
-
-plus 3 deep-only checks for comprehensive audits:
-6. **Orphan risk** — incoming link count (is anything pointing here?)
-7. **Content staleness** — does the content still seem accurate?
-8. **Bundling** — does the note make multiple distinct claims?
-
-## common failure patterns
-
-| Pattern | Symptom | Fix |
-|---------|---------|-----|
-| Title restated as description | Recite score 1-2, prediction trivially correct but content is richer | Rewrite description to add mechanism/scope |
-| Missing {DOMAIN:topic map} | Review fails topic map check | Add to appropriate {DOMAIN:topic map} or create Topics footer |
-| Dangling links | Review fails link resolution | Remove link, create the target note, or fix the spelling |
-| Sparse note | < 2 outgoing links | Route to /connect for connection finding |
-| Schema drift | Enum values not in template | Update note to use valid values, or propose enum addition |
+**Deep guidance:** `references/verification-rationale.md` — read when diagnosing failures or questioning the method. Contains: the philosophy (why one concern, not three), execution-order rationale, recite/validate/review rationale (descriptions as the vault's API, false-positive/false-negative failure modes, why qmd_vector_search and not BM25/hybrid), the consolidated schema-check table, the 5+3 review check summary, and the common failure patterns table (title-restated descriptions, missing topic maps, dangling links, sparse notes, schema drift — with fixes).
 
 ## batch mode (--all)
 
-When verifying all knowledge:
+When verifying all notes:
 
-1. Discover all knowledge in {DOMAIN:knowledge}/ directory
+1. Discover all notes in knowledge/ directory
 2. For each note, run the full verification pipeline
 3. Produce summary report:
-   - Total knowledge checked
+   - Total notes checked
    - PASS / WARN / FAIL counts per category
    - Top issues grouped by check type
    - Notes needing immediate attention (FAIL items)
    - Pattern analysis across failures
 
-**Performance note:** In batch mode, the recite cold-read test runs honestly for each note. Do not "warm up" by reading multiple knowledge first — each prediction must be genuinely cold.
+**Performance note:** In batch mode, the recite cold-read test runs honestly for each note. Do not "warm up" by reading multiple notes first — each prediction must be genuinely cold.
 
 ## standalone invocation
 
@@ -427,7 +358,7 @@ Run all three checks on a specific note. Full detailed report.
 
 ### /verify --all
 
-Comprehensive audit of all knowledge in {DOMAIN:knowledge}/. Summary table + flagged failures.
+Comprehensive audit of all notes in knowledge/. Summary table + flagged failures.
 
 ### /verify --handoff [note]
 
@@ -448,7 +379,7 @@ Work Done:
 - Description improved: [yes/no]
 
 Files Modified:
-- {DOMAIN:knowledge}/[note].md (description improved, if applicable)
+- knowledge/[note].md (description improved, if applicable)
 - [task file path] (Verify section updated, if applicable)
 
 Learnings:
@@ -472,7 +403,7 @@ When a task file is in context (pipeline execution), update the `## Verify` sect
 
 Recite:
 - Prediction: N/5 — [brief reason]
-- Retrieval: #N via MCP vector_search or CLI vsearch (or "deferred")
+- Retrieval: #N via MCP qmd_vector_search or CLI `qmd query` (or "deferred")
 - Description: [kept/improved — brief note]
 
 Validate:
@@ -483,7 +414,7 @@ Validate:
 
 Review:
 - Frontmatter: PASS
-- {DOMAIN:topic map} connection: PASS ([[topic]])
+- topic map connection: PASS ([[topic]])
 - Wiki links: N outgoing
 - Link resolution: PASS (all resolve)
 

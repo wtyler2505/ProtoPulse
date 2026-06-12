@@ -15,34 +15,19 @@ argument-hint: "N [--parallel] [--batch id] [--type extract] [--dry-run] — N =
 
 Parse arguments:
 - N (required unless --dry-run): number of tasks to process
-- --parallel: concurrent claim workers (max 5) + cross-connect validation
+- --parallel: concurrent claim workers, max 5 (within the project-wide cap of 6 total agents) + cross-connect validation
 - --batch [id]: process only tasks from specific batch
 - --type [type]: process only tasks at a specific phase (extract, create, connect, revisit, verify, enrich)
 - --dry-run: show what would execute without running
 - --handoff: output structured RALPH HANDOFF block at end (for pipeline chaining)
 
-### Step 0: Read Vocabulary
+**Step 0: Read Vocabulary.** Read `ops/derivation-manifest.md` (or fall back to `ops/derivation.md`) for domain vocabulary mapping. All output must use domain-native terms. If neither file exists, use universal terms.
 
-Read `ops/derivation-manifest.md` (or fall back to `ops/derivation.md`) for domain vocabulary mapping. All output must use domain-native terms. If neither file exists, use universal terms.
-
-**START NOW.** Process queue tasks.
-
----
+**START NOW.** Process queue tasks. Deep guidance (mode rationale, architecture, report templates): references/orchestration-modes.md
 
 ## MANDATORY CONSTRAINT: SUBAGENT SPAWNING IS NOT OPTIONAL
 
-**You MUST use the Task tool to spawn a subagent for EVERY task. No exceptions.**
-
-This is not a suggestion. This is not an optimization you can skip for "simple" tasks. The entire architecture depends on fresh context isolation per phase. Executing tasks inline in the lead session:
-- Contaminates context (later tasks run on degraded attention)
-- Skips the handoff protocol (learnings are not captured)
-- Violates the ralph pattern (one phase per context window)
-
-**If you catch yourself about to execute a task directly instead of spawning a subagent, STOP.** Call the Task tool. Every time. For every task. Including create tasks. Including "simple" tasks.
-
-The lead session's ONLY job is: read queue, spawn subagent, evaluate return, update queue, repeat.
-
----
+**You MUST use the Task tool to spawn a subagent for EVERY task. No exceptions** — not for "simple" tasks, not for create tasks, not as an "optimization". Fresh context isolation per phase is the architecture: inline execution contaminates context, skips the handoff protocol, and violates the ralph pattern (one phase per context window). If you catch yourself about to execute a task directly, STOP and call the Task tool. The lead session's ONLY job: read queue, spawn subagent, evaluate return, update queue, repeat. (Full rationale: references/orchestration-modes.md)
 
 ## Phase Configuration
 
@@ -51,32 +36,28 @@ Each phase maps to specific Task tool parameters. Use these EXACTLY when spawnin
 | Phase | Skill Invoked | Purpose |
 |-------|---------------|---------|
 | extract | /extract | Extract claims from source material |
-| create | (inline note creation) | Write the {DOMAIN:note} file |
-| enrich | /enrich | Add content to existing {DOMAIN:note} |
-| connect | /connect | Find connections, update {DOMAIN:topic map}s |
-| revisit | /revisit | Update older {DOMAIN:note_plural} with new connections |
+| create | (inline note creation) | Write the insight file |
+| enrich | task-file instructions (/enrich wraps this) | Add content to existing insight |
+| connect | /connect | Find connections, update topic maps |
+| revisit | /revisit | Update older insights with new connections |
 | verify | /verify | Description quality + schema + health checks |
 
-**All phases use the same subagent configuration:**
-- subagent_type: knowledge-worker (if available) or default
-- mode: dontAsk
-
-Subagents inherit the session model. Users running opus get opus quality on processing phases. Users running sonnet get sonnet everywhere. Fresh context per phase already ensures efficiency — every phase gets full capability in the smart zone.
-
----
+All phases use the same subagent configuration: `subagent_type: general-purpose`, `mode: dontAsk`. Subagents inherit the session model (no per-phase overrides — see references/orchestration-modes.md).
 
 ## Step 1: Read Queue State
 
-Read the queue file. Check these locations in order:
-1. `ops/queue.yaml`
-2. `ops/queue/queue.yaml`
-3. `ops/queue/queue.json`
+Read `ops/queue/queue.json`. Parse it. Identify ALL pending tasks.
 
-Parse the queue. Identify ALL pending tasks.
+**phase_order null-handling (REQUIRED):** If the queue header's `phase_order` is null or missing, use these defaults AND repair the header before processing:
 
-**Queue structure (v2 schema):**
+```bash
+jq '.phase_order = {"claim": ["create","connect","revisit","verify"], "enrichment": ["enrich","connect","revisit","verify"]}' \
+  ops/queue/queue.json > tmp.json && mv tmp.json ops/queue/queue.json
+```
 
-The queue uses `current_phase` and `completed_phases` per task entry:
+These defaults match the machine phase names stored in task `current_phase` / `completed_phases` fields. Never proceed with a null `phase_order` — phase progression (Step 4e) dereferences it.
+
+**Queue structure (v2 schema)** — `current_phase` and `completed_phases` per task entry:
 
 ```yaml
 phase_order:
@@ -105,68 +86,23 @@ If the queue file does not exist or is empty, report: "Queue is empty. Use /seed
 
 ## Step 2: Filter Tasks
 
-Build a list of **actionable tasks** — tasks where `status == "pending"`. Order by position in the tasks array (first = highest priority).
-
-Apply filters:
-- If `--batch` specified: keep only tasks where `batch` matches
-- If `--type` specified: keep only tasks where `current_phase` matches (e.g., `--type connect` finds tasks whose `current_phase` is "connect")
-
-The `phase_order` header defines the phase sequence:
-- `claim`: create -> connect -> revisit -> verify
-- `enrichment`: enrich -> connect -> revisit -> verify
+Build a list of **actionable tasks** — `status == "pending"`, ordered by position in the tasks array (first = highest priority). Apply filters: `--batch` keeps only matching `batch`; `--type` keeps only tasks whose `current_phase` matches (e.g., `--type connect` finds tasks at "connect"). The `phase_order` header defines the sequences: `claim`: create -> connect -> revisit -> verify; `enrichment`: enrich -> connect -> revisit -> verify.
 
 ## Step 3: If --dry-run, Report and Stop
 
-Show this and STOP (do not process):
-
-```
---=={ ralph dry-run }==--
-
-Queue: X total tasks (Y pending, Z done)
-
-Phase distribution:
-  Claims:       {create: N, connect: N, revisit: N, verify: N}
-  Enrichments:  {enrich: N, connect: N, revisit: N, verify: N}
-
-Next tasks to process:
-1. {id} — phase: {current_phase} — {target}
-2. {id} — phase: {current_phase} — {target}
-...
-
-Estimated: ~{N} subagent spawns
-```
-
----
+Show the dry-run report (queue totals, phase distribution, next tasks, estimated subagent spawns) and STOP — do not process. Template: references/orchestration-modes.md §Dry-Run Report Template.
 
 ## Step 4: Process Loop (SERIAL MODE)
 
-**If `--parallel` is set, skip to Step 6 instead.**
-
-Process up to N tasks (default 1). For each iteration:
+**If `--parallel` is set, skip to Step 6 instead.** Process up to N tasks (default 1). For each iteration:
 
 ### 4a. Select Next Task
 
-Pick the first pending task from the filtered list. Read its metadata: `id`, `type`, `file`, `target`, `batch`, `current_phase`, `completed_phases`.
-
-The `current_phase` determines which skill to invoke.
-
-Report:
-```
-=== Processing task {i}/{N}: {id} — phase: {current_phase} ===
-Target: {target}
-File: {file}
-```
+Pick the first pending task from the filtered list. Read its metadata: `id`, `type`, `file`, `target`, `batch`, `current_phase`, `completed_phases`. The `current_phase` determines which skill to invoke. Report the task-selection header (template: references/orchestration-modes.md).
 
 ### 4b. Build Subagent Prompt
 
-Construct a prompt based on `current_phase`. Every prompt MUST include:
-- Reference to the task file path (from queue's `file` field)
-- The task identity (id, current_phase, target)
-- The skill to invoke with `--handoff`
-- `ONE PHASE ONLY` constraint
-- Instruction to output RALPH HANDOFF block
-
-**Phase-specific prompts:**
+Construct a prompt based on `current_phase`. Every prompt MUST include: the task file path (from queue's `file` field), the task identity (id, current_phase, target), the skill to invoke with `--handoff`, the `ONE PHASE ONLY` constraint, and the instruction to output a RALPH HANDOFF block.
 
 For **extract** phase (type=extract tasks only):
 ```
@@ -188,7 +124,7 @@ Read the task file at ops/queue/{FILE} for context.
 You are processing task {ID} from the work queue.
 Phase: create | Target claim: {TARGET}
 
-Create a {DOMAIN:note} for this claim in {DOMAIN:knowledge}/[claim as sentence].md
+Create an insight for this claim in knowledge/[claim as sentence].md
 Follow note design patterns:
 - YAML frontmatter with description (adds info beyond title), topics
 - Body: 150-400 words showing reasoning with connective words
@@ -199,20 +135,17 @@ ONE PHASE ONLY. Do NOT run connect.
 
 For **enrich** phase:
 ```
-Read the task file at ops/queue/{FILE} for context.
-
-You are processing task {ID} from the work queue.
-Phase: enrich | Target: {TARGET}
-
-Run /enrich --handoff using the task file for context.
-The task file specifies which existing {DOMAIN:note} to enrich and what to add.
+Read the enrichment task file at ops/queue/{FILE} and follow its embedded
+instructions: the frontmatter names the target_note and the addition; the
+## Extract Notes section explains what to add and why. Load the target note
+from knowledge/, add the enrichment content, then fill the task file's
+## Enrich section with what was done. Output RALPH HANDOFF.
+(The /enrich skill at .claude/skills/enrich/SKILL.md wraps this workflow —
+invoke /enrich --handoff ops/queue/{FILE} if the Skill tool is available.)
 ONE PHASE ONLY. Do NOT run connect.
 ```
 
-For **connect** phase:
-
-**Build sibling list:** Query the queue for other claims in the same batch where `completed_phases` includes "create" (note already exists). Format as wiki links.
-
+For **connect** phase — first **build sibling list**: query the queue for other claims in the same batch where `completed_phases` includes "create" (note already exists). Format as wiki links.
 ```
 Read the task file at ops/queue/{FILE} for context.
 
@@ -225,16 +158,13 @@ OTHER CLAIMS FROM THIS BATCH (check connections to these alongside regular disco
 {end for, or "None yet" if this is the first claim}
 
 Run /connect --handoff on: {TARGET}
-Use dual discovery: {DOMAIN:topic map} exploration AND semantic search.
+Use dual discovery: topic map exploration AND semantic search.
 Add inline links where genuine connections exist — including sibling claims listed above.
-Update relevant {DOMAIN:topic map} with this {DOMAIN:note}.
+Update relevant topic map with this insight.
 ONE PHASE ONLY. Do NOT run revisit.
 ```
 
-For **revisit** phase:
-
-**Same sibling list** as connect (re-query queue for freshest state):
-
+For **revisit** phase — **same sibling list** as connect (re-query queue for freshest state):
 ```
 Read the task file at ops/queue/{FILE} for context.
 
@@ -247,9 +177,9 @@ OTHER CLAIMS FROM THIS BATCH:
 {end for}
 
 Run /revisit --handoff for: {TARGET}
-This is the BACKWARD pass. Find OLDER {DOMAIN:note_plural} AND sibling claims
-that should reference this {DOMAIN:note} but don't.
-Add inline links FROM older {DOMAIN:note_plural} TO this {DOMAIN:note}.
+This is the BACKWARD pass. Find OLDER insights AND sibling claims
+that should reference this insight but don't.
+Add inline links FROM older insights TO this insight.
 ONE PHASE ONLY. Do NOT run verify.
 ```
 
@@ -264,13 +194,11 @@ Run /verify --handoff on: {TARGET}
 Combined verification: recite (cold-read prediction test), validate (schema check),
 review (per-note health).
 IMPORTANT: Recite runs FIRST — read only title+description, predict content,
-THEN read full {DOMAIN:note}.
+THEN read full insight.
 Final phase for this claim. ONE PHASE ONLY.
 ```
 
 ### 4c. Spawn Subagent (MANDATORY — NEVER SKIP)
-
-Call the Task tool with the constructed prompt:
 
 ```
 Task(
@@ -279,13 +207,9 @@ Task(
 )
 ```
 
-**REPEAT: You MUST call the Task tool here.** Do NOT execute the prompt yourself. Do NOT "optimize" by running the task inline. The Task tool call is the ONLY acceptable action at this step.
-
-Wait for the subagent to complete and capture its return value.
+**REPEAT: You MUST call the Task tool here.** Do NOT execute the prompt yourself. Do NOT "optimize" by running the task inline. The Task tool call is the ONLY acceptable action at this step. Wait for the subagent to complete and capture its return value.
 
 ### 4d. Evaluate Return
-
-When the subagent returns:
 
 1. **Look for RALPH HANDOFF block** — search for `=== RALPH HANDOFF` and `=== END HANDOFF ===` markers
 2. **If handoff found:** Parse the Work Done, Learnings, and Queue Updates sections
@@ -294,116 +218,37 @@ When the subagent returns:
 
 ### 4e. Update Queue (Phase Progression)
 
-After evaluating the return, advance the task to the next phase.
-
-**Phase progression logic:**
-
-Look up `phase_order` from the queue header to determine the next phase. Find `current_phase` in the array. If there is a next phase, advance. If it is the last phase, mark done.
-
-**If NOT the last phase** — advance to next:
-- Set `current_phase` to the next phase in the sequence
-- Append the completed phase to `completed_phases`
-
-**If the last phase** (verify) — mark task done:
-- Set `status: done`
-- Set `completed` to current UTC timestamp
-- Set `current_phase` to null
-- Append the completed phase to `completed_phases`
+Look up `phase_order` from the queue header. Find `current_phase` in the array. **If NOT the last phase:** set `current_phase` to the next phase in the sequence, append the completed phase to `completed_phases`. **If the last phase** (verify): set `status: done`, set `completed` to current UTC timestamp, set `current_phase` to null, append the completed phase to `completed_phases`.
 
 **For extract tasks ONLY:** Re-read the queue after marking done. The extract skill writes new task entries (1 entry per claim/enrichment with `current_phase`/`completed_phases`) to the queue during execution. The lead must pick these up for subsequent iterations.
 
-### 4f. Report Progress
+### 4f. Report Progress, then 4g. Re-filter Tasks
 
-```
-=== Task {id} complete ({i}/{N}) ===
-Phase: {current_phase} -> {next_phase or "done"}
-```
-
-If learnings were captured, show a brief summary.
-If more unblocked tasks exist, show the next one.
-
-### 4g. Re-filter Tasks
-
-Before the next iteration, re-read the queue and re-filter tasks. Phase advancement may have changed eligibility (e.g., after completing a `create` phase, the task is now at `connect` — if filtering by `--type connect`, it becomes eligible).
-
----
+Show the per-task progress report (template: references/orchestration-modes.md): task id, phase transition, captured learnings, next task if any. Then, before the next iteration, re-read the queue and re-filter tasks — phase advancement may have changed eligibility (e.g., after a `create` phase completes, the task is now at `connect`; under `--type connect` it becomes eligible).
 
 ## Step 5: Post-Batch Cross-Connect (Serial Mode)
 
-After advancing a task to "done" (Step 4e), check if ALL tasks in that batch now have `status: "done"`. If yes and the batch has 2 or more completed claims:
+After advancing a task to "done" (Step 4e), check if ALL tasks in that batch now have `status: "done"`. If yes and the batch has 2+ completed claims:
 
-1. **Collect all note paths** from completed batch tasks. For each claim task with `status: "done"`, read the task file's `## Create` section to find the created note path.
-
-2. **Spawn ONE subagent** for cross-connect validation:
-```
-Task(
-  prompt = "You are running post-batch cross-connect validation for batch '{BATCH}'.
-
-Notes created in this batch:
-{list of ALL note titles + paths from completed batch tasks}
-
-Verify sibling connections exist between batch knowledge. Add any that were missed
-because sibling knowledge did not exist yet when the earlier claim's connect ran.
-Check backward link gaps. Output RALPH HANDOFF block when done.",
-  description = "cross-connect: batch {BATCH}"
-)
-```
-
-3. **Parse handoff block**, capture learnings. Include cross-connect results in the final report.
+1. **Collect all note paths**: for each claim task with `status: "done"`, read the task file's `## Create` section to find the created note path.
+2. **Spawn ONE subagent** for cross-connect validation, using the cross-connect prompt template in Step 6d (list ALL note titles + paths from completed batch tasks).
+3. **Parse handoff block**, capture learnings, include cross-connect results in the final report.
 
 **Skip if:** batch has only 1 claim (no siblings) or tasks from the batch are still pending.
 
----
-
 ## Step 6: Parallel Mode (--parallel)
 
-**When `--parallel` flag is present, SKIP Step 4 entirely and use this section instead.**
+**When `--parallel` is present, SKIP Step 4 entirely.** Two-phase design: Phase A spawns concurrent claim workers with sibling awareness; Phase B runs one cross-connect validation pass after all notes exist. Architecture diagram and rationale: references/orchestration-modes.md.
 
-**Incompatible flags:** `--parallel` cannot be combined with `--type`. Parallel mode processes claims end-to-end (all phases). If `--type` is also set, report an error:
-```
-ERROR: --parallel and --type are incompatible. Parallel processes full claim pipelines, not individual phases.
-Use serial mode for per-phase filtering: /ralph N --type connect
-```
-
-### Parallel Architecture
-
-**Two-phase design:** Workers receive sibling claim info upfront so they can link proactively. Phase B validates and catches any gaps.
-
-```
-Ralph Lead (you) — orchestration only
-|
-+-- PHASE A: PARALLEL CLAIM PROCESSING (concurrent)
-|   +-- worker-001: all 4 phases for claim 001 (with sibling awareness)
-|   +-- worker-002: all 4 phases for claim 002 (with sibling awareness)
-|   +-- worker-003: all 4 phases for claim 003 (with sibling awareness)
-|   +-- ...up to 5 concurrent workers
-|
-+-- [semantic search index sync]
-|
-+-- PHASE B: CROSS-CONNECT VALIDATION (one subagent, one pass)
-|   +-- validates sibling links, adds any that workers missed
-|
-+-- CLEANUP + FINAL REPORT
-```
-
-**Why two phases?** Workers have sibling awareness (claim titles in spawn prompt) and link proactively during connect/revisit. But timing means some sibling knowledge may not exist yet during a worker's connect phase. Phase B runs a single cross-connect pass after all knowledge exist.
+**Incompatible flags:** `--parallel` cannot be combined with `--type`. If both are set, report the incompatibility error (exact message: references/orchestration-modes.md) and stop.
 
 ### 6a. Identify Parallelizable Claims
 
-From the filtered queue, find pending claims. A claim is parallelizable when its `status == "pending"`. Cap at 5 concurrent workers (or N, whichever is smaller).
-
-Report:
-```
-=== Parallel Mode ===
-Parallelizable claims: {count}
-Max concurrent workers: {min(count, N, 5)}
-```
+From the filtered queue, find pending claims (`status == "pending"`). Cap at 5 concurrent workers (or N, whichever is smaller) — 5, not 6, because the lead session itself counts against the project-wide cap of 6 total agents. Report the parallel-mode startup header (template: references/orchestration-modes.md).
 
 ### 6b. Spawn Claim Workers
 
-For each parallelizable claim (up to N requested, max 5 concurrent):
-
-Build the worker prompt with sibling awareness:
+For each parallelizable claim (up to N requested, max 5 concurrent), build the worker prompt with sibling awareness:
 
 ```
 You are a claim worker processing claim "{TARGET}" from batch "{BATCH}".
@@ -418,8 +263,8 @@ SIBLING CLAIMS IN THIS BATCH (link to these where genuine connections exist):
 - "{SIBLING_TARGET}" (task file: ops/queue/{SIBLING_FILE})
 {end for}
 
-During REFLECT and REWEAVE, check if your claim genuinely connects to any sibling.
-If a sibling {DOMAIN:note} exists in {DOMAIN:knowledge}/, link to it inline where the
+During CONNECT and REVISIT, check if your claim genuinely connects to any sibling.
+If a sibling insight exists in knowledge/, link to it inline where the
 connection is real. If it does not exist yet (still being created), skip —
 cross-connect will catch it after.
 
@@ -427,48 +272,20 @@ Read the task file for full context. Execute phases from current_phase onwards.
 If completed_phases is not empty, skip those phases (resumption mode).
 
 When complete, update the queue entry to status "done" and report the created
-{DOMAIN:note} title, path, and claim ID. The lead needs this for cross-connect.
+insight title, path, and claim ID. The lead needs this for cross-connect.
 ```
 
-Spawn via Task tool:
-```
-Task(
-  prompt = {the constructed prompt},
-  description = "claim: {short target}" (5 words max)
-)
-```
-
-**Spawn workers in PARALLEL** — launch all Task tool calls in a single message, not sequentially.
+Spawn via `Task(prompt = {the constructed prompt}, description = "claim: {short target}" (5 words max))`. **Spawn workers in PARALLEL** — launch all Task tool calls in a single message, not sequentially.
 
 ### 6c. Monitor Workers (Phase A)
 
-Wait for worker completions. As workers complete:
+Wait for worker completions. As workers complete: parse the completion message (extract created note title and path — needed for Phase B), log learnings, check for issues (failures, skipped phases, resource conflicts). Maintain a list of `{note_title, note_path}` from worker completion messages.
 
-1. **Parse completion message** — extract the created note title and path (needed for Phase B)
-2. **Log any learnings** from the worker's report
-3. **Check for issues** — failures, skipped phases, resource conflicts
-
-**Collect all created knowledge** — maintain a list of `{note_title, note_path}` from worker completion messages. You need this for the cross-connect validation phase.
-
-**Completion gate:** Phase B CANNOT start until ALL spawned workers have reported back (either success or error). Track completions:
-
-```
-Workers spawned: {total_spawned}
-Workers completed: {completion_count}
-Workers with errors: {error_count}
-
-Phase B ready: {completion_count + error_count == total_spawned}
-```
-
-Do NOT proceed to Phase B while any worker is still running.
+**Completion gate:** Phase B CANNOT start until ALL spawned workers have reported back (success or error). Do NOT proceed while any worker is still running. Tracking template: references/orchestration-modes.md.
 
 ### 6d. Cross-Connect Validation (Phase B)
 
-**Light validation pass.** Workers had sibling awareness during Phase A and linked proactively. This phase validates their work and catches gaps.
-
-**Skip if only 1 claim was processed** (no siblings to cross-connect).
-
-Spawn ONE subagent for cross-connect validation:
+**Light validation pass** — workers linked proactively during Phase A; this validates and catches gaps. **Skip if only 1 claim was processed** (no siblings). Spawn ONE subagent:
 
 ```
 Task(
@@ -477,58 +294,22 @@ Task(
 Notes created in this batch:
 {list of ALL newly created note titles with paths from Phase A}
 
-Verify sibling connections exist between these knowledge. Add any connections that
-workers missed because sibling knowledge did not exist yet when a worker's connect ran.
+Verify sibling connections exist between these notes. Add any connections that
+workers missed because sibling notes did not exist yet when a worker's connect ran.
 Check backward link gaps. Output RALPH HANDOFF block when done.",
   description = "cross-connect: batch {BATCH}"
 )
 ```
 
-Parse the handoff block, capture learnings.
-
-Report after Phase B:
-```
-=== Cross-Connect Validation Complete ===
-Sibling connections validated: {count}
-Missing connections added: {count}
-```
+Parse the handoff block, capture learnings. Report the cross-connect completion summary (template: references/orchestration-modes.md).
 
 ### 6e. Cleanup
 
-After Phase B completes (or after Phase A if cross-connect was skipped):
-
-1. Clean any lock files if created
-2. Skip to Step 7 for the final report, noting parallel mode in the output
-
----
+After Phase B (or after Phase A if cross-connect was skipped): clean any lock files if created, then go to Step 7 for the final report, noting parallel mode in the output.
 
 ## Step 7: Final Report
 
-After all iterations (or when no unblocked tasks remain):
-
-```
---=={ ralph }==--
-
-Processed: {count} tasks
-  {breakdown by phase type}
-
-Subagents spawned: {count} (MUST equal tasks processed)
-
-Learnings captured:
-  {list any friction, surprises, methodology insights, or "None"}
-
-Queue state:
-  Pending: {count}
-  Done: {count}
-  Phase distribution: {create: N, connect: N, revisit: N, verify: N}
-
-Next steps:
-  {if more pending tasks}: Run /ralph {remaining} to continue
-  {if batch complete}: Run /archive-batch {batch-id}
-  {if queue empty}: All tasks processed
-```
-
-**Verification:** The "Subagents spawned" count MUST equal "Tasks processed." If it does not, the lead executed tasks inline — this is a process violation. Report it as an error.
+After all iterations (or when no unblocked tasks remain), show the final report — processed count with phase breakdown, subagents spawned (MUST equal tasks processed; a mismatch means inline execution — a process violation to report as an error), learnings captured, queue state, next steps. Full template: references/orchestration-modes.md §Final Report Template.
 
 If `--handoff` flag was set, also output:
 
@@ -551,52 +332,19 @@ Queue Updates:
 === END HANDOFF ===
 ```
 
----
-
 ## Error Recovery
 
-**Subagent crash mid-phase:** The queue still shows `current_phase` at the failed phase. The task file confirms the corresponding section is empty. Re-running `/ralph` picks it up automatically — the task is still pending at that phase.
-
-**Queue corruption:** If the queue file is malformed, report the error and stop. Do NOT attempt to fix it automatically.
-
-**All tasks blocked:** Report which tasks are blocked and why. Suggest remediation.
-
-**Empty queue:** Report "Queue is empty. Use /seed or /pipeline to add sources."
-
----
+**Subagent crash mid-phase:** task is still pending at that phase — re-running `/ralph` picks it up automatically. **Queue corruption:** report and stop; never auto-fix. **All tasks blocked:** report which and why, suggest remediation. **Empty queue:** report "Queue is empty. Use /seed or /pipeline to add sources." Full detail: references/orchestration-modes.md §Error Recovery.
 
 ## Quality Gates
 
-### Gate 1: Subagent Spawned
-Every task MUST be processed via Task tool. If the lead detects it executed a task inline, log this as an error and flag it in the final report.
-
-### Gate 2: Handoff Present
-Every subagent SHOULD return a RALPH HANDOFF block. If missing: log warning, mark task done, continue.
-
-### Gate 3: Extract Yield
-For extract tasks: if zero claims extracted, log as an observation. Do NOT retry automatically.
-
-### Gate 4: Task File Updated
-After each phase, the task file's corresponding section (Create, Reflect, Reweave, Verify) should be filled. If empty after subagent completes, log warning.
-
----
+1. **Subagent Spawned** — every task MUST be processed via Task tool. If the lead detects it executed a task inline, log this as an error and flag it in the final report.
+2. **Handoff Present** — every subagent SHOULD return a RALPH HANDOFF block. If missing: log warning, mark task done, continue.
+3. **Extract Yield** — for extract tasks: if zero claims extracted, log as an observation. Do NOT retry automatically.
+4. **Task File Updated** — after each phase, the task file's corresponding section (Create, Connect, Revisit, Verify) should be filled. If empty after subagent completes, log warning.
 
 ## Critical Constraints
 
-**Never:**
-- Execute tasks inline in the lead session (USE THE TASK TOOL)
-- Process more than one phase per subagent (context contamination)
-- Retry failed tasks automatically without human input
-- Skip queue phase advancement (breaks pipeline state)
-- Process tasks that are not in pending status
-- Run if queue file does not exist or is malformed
-- In parallel mode: combine with --type (incompatible)
+**Never:** execute tasks inline in the lead session (USE THE TASK TOOL); process more than one phase per subagent (context contamination); retry failed tasks automatically without human input; skip queue phase advancement (breaks pipeline state); process tasks that are not in pending status; run if queue file does not exist or is malformed; in parallel mode, combine with --type (incompatible).
 
-**Always:**
-- Spawn a subagent via Task tool for EVERY task (the lead ONLY orchestrates)
-- Include sibling claim titles in connect and revisit prompts
-- Re-read queue after extract tasks (subagent adds new entries)
-- Re-filter tasks between iterations (phase advancement creates new eligibility)
-- Log learnings from handoff blocks
-- Report failures clearly for human review
-- Verify subagent count equals task count in final report
+**Always:** spawn a subagent via Task tool for EVERY task (the lead ONLY orchestrates); include sibling claim titles in connect and revisit prompts; re-read queue after extract tasks (subagent adds new entries); re-filter tasks between iterations (phase advancement creates new eligibility); log learnings from handoff blocks; report failures clearly for human review; verify subagent count equals task count in final report.

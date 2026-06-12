@@ -45,21 +45,21 @@ Configuration options for the query.
 
 ### model
 
-**Type**: `"sonnet" | "haiku" | "opus" | "claude-sonnet-4-5" | "inherit"`
+**Type**: `"sonnet" | "haiku" | "opus" | "claude-sonnet-4-6" | "inherit"`
 **Default**: `"sonnet"`
 
 Model to use for the agent.
 
 ```typescript
 options: {
-  model: "claude-sonnet-4-5"  // Specific version
+  model: "claude-sonnet-4-6"  // Specific version
   model: "haiku"               // Fast
   model: "opus"                // Maximum capability
   model: "inherit"             // Use parent model (subagents)
 }
 ```
 
-### workingDirectory
+### cwd
 
 **Type**: `string`
 **Default**: Current working directory
@@ -68,7 +68,7 @@ Directory where agent operates.
 
 ```typescript
 options: {
-  workingDirectory: "/path/to/project"
+  cwd: "/path/to/project"
 }
 ```
 
@@ -366,7 +366,7 @@ await forkSession(session, "Try GraphQL instead");
 - Use `canUseTool` for fine-grained control
 - Implement error handling for all queries
 - Capture `session_id` for resuming
-- Use `workingDirectory` for clarity
+- Use `cwd` for clarity
 - Test MCP servers independently
 - Monitor tool execution with `tool_call` messages
 
@@ -405,7 +405,7 @@ try {
 ```typescript
 type Options = {
   model?: "sonnet" | "haiku" | "opus" | string;
-  workingDirectory?: string;
+  cwd?: string;
   systemPrompt?: string | { type: 'preset', preset: 'claude_code' };
   allowedTools?: string[];
   disallowedTools?: string[];
@@ -434,4 +434,4 @@ type PermissionDecision =
 ---
 
 **For more details**: See SKILL.md
-**Official docs**: https://docs.claude.com/en/api/agent-sdk/typescript
+**Official docs**: https://platform.claude.com/docs/en/agent-sdk/typescript

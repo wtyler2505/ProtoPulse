@@ -16,8 +16,8 @@ async function basicErrorHandling() {
     const response = query({
       prompt: "Analyze and refactor code",
       options: {
-        model: "claude-sonnet-4-5",
-        workingDirectory: "/path/to/project"
+        model: "claude-sonnet-4-6",
+        cwd: "/path/to/project"
       }
     });
 
@@ -64,7 +64,7 @@ async function retryWithBackoff(
       const response = query({
         prompt,
         options: {
-          model: "claude-sonnet-4-5"
+          model: "claude-sonnet-4-6"
         }
       });
 
@@ -95,7 +95,7 @@ async function gracefulDegradation(prompt: string) {
     const response = query({
       prompt,
       options: {
-        model: "claude-sonnet-4-5",
+        model: "claude-sonnet-4-6",
         allowedTools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
       }
     });
@@ -138,7 +138,7 @@ async function comprehensiveErrorHandling() {
     const response = query({
       prompt: "Complex multi-step task",
       options: {
-        model: "claude-sonnet-4-5",
+        model: "claude-sonnet-4-6",
         permissionMode: "default"
       }
     });

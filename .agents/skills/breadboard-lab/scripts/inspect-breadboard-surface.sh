@@ -8,6 +8,11 @@ echo "Breadboard Lab entrypoints"
 echo
 printf '%s\n' \
   "client/src/components/circuit-editor/BreadboardView.tsx" \
+  "client/src/components/circuit-editor/breadboard-view/BreadboardToolbar.tsx" \
+  "client/src/components/circuit-editor/breadboard-view/BreadboardDialogs.tsx" \
+  "client/src/components/circuit-editor/breadboard-canvas/index.tsx" \
+  "client/src/components/circuit-editor/breadboard-canvas/canvas-helpers.ts" \
+  "client/src/components/circuit-editor/breadboard-components/index.ts" \
   "client/src/components/circuit-editor/BreadboardWorkbenchSidebar.tsx" \
   "client/src/components/circuit-editor/BreadboardBoardAuditPanel.tsx" \
   "client/src/components/circuit-editor/BreadboardPartInspector.tsx" \

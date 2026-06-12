@@ -1,11 +1,11 @@
 ---
 name: vault-source
-description: Print the provenance block of an Ars Contexta vault note in human-readable form. Shows source taxonomy (datasheet / standard / community / vendor-doc / textbook / paper / experiment / ai-suggested / code / other), URL, page, verification date + verifier, reliability tier. Also computes vault-wide provenance coverage (% of notes with citations, breakdown by source kind, unverified-verified notes flagged). Triggers on "/vault-source", "/vault-source [slug]", "show citations for X", "is this note verified", "who verified Y", "provenance coverage report".
-version: "1.0"
+description: Print the provenance block of an Ars Contexta vault note in human-readable form. Shows source taxonomy (datasheet / standard / community / vendor-doc / textbook / paper / experiment / ai-suggested / code / other), URL, page, verification date + verifier, reliability tier. Per-note only — vault-wide provenance COVERAGE reporting lives in /vault-health. Triggers on "/vault-source", "/vault-source [slug]", "show citations for X", "is this note verified", "who verified Y".
+version: "1.1"
 user-invocable: true
 context: fork
 allowed-tools: Read, Grep, Glob, Bash
-argument-hint: "[slug] [--coverage] [--unverified] [--json] [--min-reliability single-source|consensus|authoritative]"
+argument-hint: "[slug] [--unverified] [--json] [--min-reliability single-source|consensus|authoritative]"
 ---
 
 ## EXECUTE NOW
@@ -13,16 +13,17 @@ argument-hint: "[slug] [--coverage] [--unverified] [--json] [--min-reliability s
 **Target: $ARGUMENTS**
 
 Parse flags:
-- `--coverage` — vault-wide provenance report (skip per-note display).
 - `--unverified` — list notes with `confidence: verified` that lack `provenance[]`. These violate T2 schema; should be empty after validate.
 - `--json` — emit JSON instead of human-readable.
 - `--min-reliability <tier>` — filter to notes whose provenance meets a minimum reliability bar.
+
+If the caller asks for vault-wide provenance COVERAGE (a `--coverage`-style report), route them to `/vault-health` — its Provenance-coverage section owns that report (it shells out to this skill's `scripts/source.py --coverage`).
 
 **Execute these steps:**
 
 1. **Resolve target** — if a slug was given, find `knowledge/<slug>.md`. Else (no slug, no flags → require slug).
 2. **Read frontmatter** via T2's `parse-frontmatter.py` helper (falls back to inline YAML parse if unavailable).
-3. **Render** — for a single note: show provenance block as a table. For `--coverage`: tally across all vault notes. For `--unverified`: emit the audit list.
+3. **Render** — for a single note: show provenance block as a table. For `--unverified`: emit the audit list.
 
 **Pipeline discipline** — read-only. No writes to knowledge/, no pipeline changes.
 
@@ -32,7 +33,7 @@ Parse flags:
 
 ## Per-note render (default)
 
-Example output for `/vault-source esp32-gpio12-must-be-low-at-boot-or-module-crashes`:
+**Illustrative** example output for `/vault-source esp32-gpio12-must-be-low-at-boot-or-module-crashes` (the sources, dates, and counts below are invented for shape, not real vault data):
 
 ```
 ## esp32-gpio12-must-be-low-at-boot-or-module-crashes
@@ -57,48 +58,20 @@ Provenance (3 sources):
      https://esp32.com/viewtopic.php?t=23421
 ```
 
-## Coverage mode output
+## Coverage reporting (moved to /vault-health)
 
-`/vault-source --coverage`:
+Vault-wide provenance coverage is a health metric, not a per-note lookup, so it lives
+in `/vault-health` (§Provenance coverage). The implementation remains here:
+`python3 .claude/skills/vault-source/scripts/source.py --coverage [--json]` — that is
+what /vault-health shells out to. Don't re-add a coverage surface to this skill.
 
-```
-## Vault Provenance Coverage — 2026-04-18
-
-Total notes:                 682
-With any provenance:         47 (6.9%) ← low; target 60%+
-Without provenance:          635
-
-Breakdown by source kind (among notes with provenance):
-  📖 datasheet:      18 notes
-  🏛️  standard:       2 notes
-  💬 community:       8 notes
-  📖 vendor-doc:     11 notes
-  📚 textbook:        3 notes
-  📄 paper:           1 note
-  🧪 experiment:      0 notes
-  🤖 ai-suggested:    4 notes ← pending human verification
-  💻 code:            0 notes
-
-Reliability breakdown:
-  authoritative: 29
-  consensus:     12
-  single-source:  5
-  contested:      1
-
-Schema-violating (confidence=verified, no provenance): 0 ← good
-Schema-violating notes (confidence=verified, no verified date): 38
-
-Recommended actions:
-  1. Process 4 ai-suggested notes through /verify for human confirmation
-  2. Add provenance to top-20 most-consumed notes (see T3 backlink index)
-  3. Backfill 38 verified notes with missing verification dates
-```
+Note: coverage math is only meaningful post-migration — at the 2026-06-11 audit only
+~15 notes carried `provenance[]`, so percentages mostly measure migration progress.
 
 ## Integration points
 
 - **T2 frontmatter** — provenance lives in the v2 schema. Source taxonomy enumerated.
-- **T3 backlink index** — coverage report can cross-reference "most-consumed + no provenance" = highest-risk notes.
-- **T7 health report** — provenance coverage feeds the weekly health summary.
+- **T7 `/vault-health`** — owns the vault-wide provenance-coverage report; calls this skill's `scripts/source.py --coverage` and cross-references the T3 backlink index ("most-consumed + no provenance" = highest-risk notes).
 - **T10 extract quality gate** — new notes MUST include provenance when claiming `confidence: verified`; T10 blocks commits that violate.
 - **Hover tooltips (UI)** — `<VaultHoverCard>` renders a small badge based on dominant source kind.
 
@@ -131,4 +104,5 @@ Recommended actions:
 
 ## Version history
 
+- **1.1 (2026-06-11)** — `--coverage` mode moved to `/vault-health` (script implementation stays in `scripts/source.py`); example outputs marked illustrative.
 - **1.0 (2026-04-18)** — initial ship. Depends on T2 v2 schema. Coverage mode + unverified audit.

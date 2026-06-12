@@ -32,3 +32,15 @@ FileScopeMCP-tree.json
 # R4 retro Wave 8 (C12+C23): downloaded Arduino CLI sidecar binaries are
 # fetched per-target at CI build time. Not committed to repo.
 src-tauri/binaries/arduino-cli-*
+packages/*/coverage/
+
+# Playwright MCP browser-verification artifacts (snapshots, console logs)
+.playwright-mcp/
+
+# environment files contain live secrets — never commit (.env.example stays tracked)
+.env
+.env.local
+
+# initref machine/moment-specific artifacts (dna/map stay committed)
+.ref/project-tools.md
+.ref/project-pulse.md

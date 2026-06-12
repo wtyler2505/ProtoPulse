@@ -24,3 +24,4 @@ $1 (optional note-id; if missing, list recent and pick)
 - 0 quota.
 - Promotion criteria (advisory): inform >5 future sessions, fits 150 chars, not greppable in code.
 - nlm note get does NOT exist — Tyler must paste body manually if creating a memory_*.md sub-file alongside.
+- Alias resolution: `pp-memories` is a compatibility alias resolving to `pp-core`; run `nlm alias get pp-memories` before write.

@@ -12,7 +12,7 @@ const anthropic = new Anthropic({
 });
 
 const message = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   messages: [{ role: 'user', content: 'Hello, Claude!' }],
 });
@@ -49,7 +49,7 @@ This skill automatically activates when you mention:
 
 **Models**:
 - claude 3.5 sonnet
-- claude-sonnet-4-5
+- claude-sonnet-4-6
 - claude 3.7 sonnet
 - claude sonnet 4
 - claude opus 4
@@ -147,7 +147,7 @@ This skill automatically activates when you mention:
 | Token counting errors | Too many tokens | references/top-errors.md |
 | System prompt ordering | Prompt ignored | templates/basic-chat.ts |
 | Context window exceeded | Messages too long | references/api-reference.md |
-| Extended thinking wrong model | No thinking blocks | templates/extended-thinking.ts |
+| Thinking budget >= max_tokens | 400 invalid_request_error | templates/extended-thinking.ts |
 | API key exposure | CORS errors | templates/cloudflare-worker.ts |
 | Rate limit tier confusion | Lower than expected | references/rate-limits.md |
 | Beta header missing | Unknown parameter | references/top-errors.md |
@@ -173,29 +173,14 @@ This skill automatically activates when you mention:
 
 ---
 
-## Token Efficiency
-
-**Without this skill:**
-- ~12,000 tokens to explain API integration
-- 2-3 errors during implementation
-- 2+ hours of development time
-
-**With this skill:**
-- ~4,500 tokens (direct to solution)
-- 0 errors (all documented issues prevented)
-- 15-30 minutes to working integration
-
-**Token Savings: ~62%**
-**Error Prevention: 100%** (all 12 documented errors)
-
----
-
 ## File Structure
 
 ```
 claude-api/
-├── SKILL.md (1204 lines)         # Complete API reference
+├── SKILL.md                      # Thin router into shared/ + language dirs
 ├── README.md (this file)         # Auto-trigger keywords
+├── shared/                       # Concept guides (models, errors, caching, tools, agents)
+├── typescript/ python/ curl/ go/ java/ php/ ruby/ csharp/   # Language guides
 ├── templates/ (13 files)         # Production-ready code
 │   ├── basic-chat.ts
 │   ├── streaming-chat.ts
@@ -295,7 +280,7 @@ Deep reasoning for complex problems.
 
 ```typescript
 const stream = anthropic.messages.stream({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   messages: [{ role: 'user', content: 'Hello!' }]
 });
@@ -325,7 +310,7 @@ See: `templates/prompt-caching.ts`
 
 ```typescript
 const finalMessage = await anthropic.beta.messages.toolRunner({
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1000,
   messages: [{ role: 'user', content: 'What is the weather in SF?' }],
   tools: [weatherTool]
@@ -372,12 +357,12 @@ See: `templates/vision-image.ts`
 
 ## Package Versions
 
-**Last Verified**: 2025-10-25
+**Note (2026-06-11):** verify versions via Context7 (`/anthropics/anthropic-sdk-typescript`) before pinning — version pins rot; treat the numbers below as illustrative.
 
 ```json
 {
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.67.0"
+    "@anthropic-ai/sdk": "latest"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -391,41 +376,17 @@ See: `templates/vision-image.ts`
 
 ## Official Documentation
 
-- **API Reference**: https://docs.claude.com/en/api/messages
-- **Prompt Caching**: https://docs.claude.com/en/docs/build-with-claude/prompt-caching
-- **Tool Use**: https://docs.claude.com/en/docs/build-with-claude/tool-use
-- **Vision**: https://docs.claude.com/en/docs/build-with-claude/vision
-- **Rate Limits**: https://docs.claude.com/en/api/rate-limits
-- **Errors**: https://docs.claude.com/en/api/errors
+- **API Reference**: https://platform.claude.com/docs/en/api/messages
+- **Prompt Caching**: https://platform.claude.com/docs/en/build-with-claude/prompt-caching
+- **Tool Use**: https://platform.claude.com/docs/en/build-with-claude/tool-use
+- **Vision**: https://platform.claude.com/docs/en/build-with-claude/vision
+- **Rate Limits**: https://platform.claude.com/docs/en/api/rate-limits
+- **Errors**: https://platform.claude.com/docs/en/api/errors
 - **TypeScript SDK**: https://github.com/anthropics/anthropic-sdk-typescript
 - **Context7**: /anthropics/anthropic-sdk-typescript
+- **Topic URL table**: `shared/live-sources.md`
 
 ---
-
-## Production Validation
-
-✅ All templates tested and working
-✅ All 12 documented errors have solutions
-✅ Prompt caching verified (90% savings confirmed)
-✅ Extended thinking clarified (3.7/4 only)
-✅ Cloudflare Workers + Node.js + Next.js tested
-✅ Rate limits documented (official sources)
-✅ Package versions current (0.67.0)
-
----
-
-## Success Metrics
-
-- **Lines of Code**: 1204 (SKILL.md) + 13 templates + 6 references
-- **Token Savings**: ~62% vs manual integration
-- **Errors Prevented**: 12 documented issues with solutions
-- **Development Time**: 15-30 min with skill vs 2+ hours manual
-- **Platforms**: 3 (Cloudflare Workers, Next.js, Node.js)
-- **Features**: 6 major (streaming, caching, tools, vision, thinking, error handling)
-
----
-
-**This skill is part of Batch 5: AI API/SDK Suite**
 
 **Related Skills**:
 - claude-agent-sdk (for Anthropic Agent SDK)

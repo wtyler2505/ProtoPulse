@@ -14,9 +14,9 @@ Notes:
   - Default mode: --full
   - Default output: current directory (creates ./<skill-name>/)
 
-Examples:
-  ./skills/claude-skills/scripts/create-skill.sh postgresql --full --output skills
-  ./skills/claude-skills/scripts/create-skill.sh my-api --minimal
+Examples (run from the claude-skills skill root):
+  ./scripts/create-skill.sh postgresql --full --output ..
+  ./scripts/create-skill.sh my-api --minimal --output ..
 EOF
 }
 

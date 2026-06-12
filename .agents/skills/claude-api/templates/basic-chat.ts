@@ -8,7 +8,7 @@ const anthropic = new Anthropic({
 async function basicChat() {
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       messages: [
         {
@@ -48,7 +48,7 @@ async function multiTurnChat() {
   });
 
   const response1 = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages,
   });
@@ -66,7 +66,7 @@ async function multiTurnChat() {
   });
 
   const response2 = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages,
   });
@@ -80,7 +80,7 @@ async function multiTurnChat() {
 // System prompt example
 async function chatWithSystemPrompt() {
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     system: 'You are a helpful Python coding assistant. Always provide type hints and docstrings.',
     messages: [

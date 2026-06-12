@@ -5,18 +5,25 @@ const anthropic = new Anthropic({
 });
 
 /**
- * IMPORTANT: Extended thinking is ONLY available in:
- * - Claude 3.7 Sonnet (claude-3-7-sonnet-20250228)
- * - Claude 4 models (Opus 4, Sonnet 4)
+ * Extended thinking — current rules (see shared/models.md for the live catalog):
  *
- * NOT available in Claude 3.5 Sonnet
+ * - Opus 4.6 and Sonnet 4.6: use ADAPTIVE thinking — `thinking: { type: 'adaptive' }`.
+ *   `budget_tokens` is deprecated on these models; the model decides how much to think.
+ * - Older thinking-capable models: `thinking: { type: 'enabled', budget_tokens: N }`
+ *   where N must be >= 1024 and < max_tokens.
+ * - Thinking output arrives as `thinking` content blocks; the text lives in
+ *   `block.thinking` (NOT `block.text`). Blocks also carry a `signature` used for
+ *   verification when you pass them back in multi-turn tool-use conversations.
+ * - Capability check at runtime: query the Models API
+ *   (`client.models.retrieve(id)` → `capabilities.thinking.types.adaptive.supported`).
  */
 
-// Example 1: Basic extended thinking
+// Example 1: Basic adaptive thinking (Sonnet 4.6 / Opus 4.6)
 async function basicExtendedThinking() {
   const message = await anthropic.messages.create({
-    model: 'claude-3-7-sonnet-20250228', // Must use 3.7 or 4.x
-    max_tokens: 4096, // Higher token limit for thinking
+    model: 'claude-sonnet-4-6',
+    max_tokens: 16000,
+    thinking: { type: 'adaptive' },
     messages: [
       {
         role: 'user',
@@ -28,14 +35,13 @@ async function basicExtendedThinking() {
 
   console.log('=== Response with Extended Thinking ===\n');
 
-  // Display thinking blocks separately from answer
   for (const block of message.content) {
     if (block.type === 'thinking') {
-      console.log('🤔 Claude is thinking:');
-      console.log(block.text);
+      console.log('Thinking:');
+      console.log(block.thinking);
       console.log('\n' + '='.repeat(50) + '\n');
     } else if (block.type === 'text') {
-      console.log('💡 Final Answer:');
+      console.log('Final answer:');
       console.log(block.text);
     }
   }
@@ -44,11 +50,13 @@ async function basicExtendedThinking() {
   console.log('Token usage:', message.usage);
 }
 
-// Example 2: Complex problem solving
-async function complexProblemSolving() {
+// Example 2: Budgeted thinking on an older thinking-capable model
+// (only needed for pre-4.6 models — prefer adaptive on current models)
+async function budgetedThinking() {
   const message = await anthropic.messages.create({
-    model: 'claude-3-7-sonnet-20250228',
-    max_tokens: 8192, // Even higher for complex reasoning
+    model: 'claude-opus-4-5', // older model: budget_tokens still applies
+    max_tokens: 16000,
+    thinking: { type: 'enabled', budget_tokens: 8000 }, // >= 1024, < max_tokens
     messages: [
       {
         role: 'user',
@@ -68,51 +76,24 @@ Why is it slow and what's the correct implementation?`,
 
   for (const block of message.content) {
     if (block.type === 'thinking') {
-      console.log('🔍 Debugging process:');
-      console.log(block.text);
+      console.log('Debugging process:');
+      console.log(block.thinking);
       console.log();
     } else if (block.type === 'text') {
-      console.log('✅ Solution:');
+      console.log('Solution:');
       console.log(block.text);
     }
   }
 }
 
-// Example 3: Multi-step reasoning
-async function multiStepReasoning() {
-  const message = await anthropic.messages.create({
-    model: 'claude-3-7-sonnet-20250228',
-    max_tokens: 6144,
-    messages: [
-      {
-        role: 'user',
-        content: `I have a 10-liter jug and a 6-liter jug. How can I measure exactly 8 liters of water?
-        Think through this step by step.`,
-      },
-    ],
-  });
-
-  for (const block of message.content) {
-    if (block.type === 'thinking') {
-      console.log('🧠 Reasoning steps:');
-      console.log(block.text);
-      console.log();
-    } else if (block.type === 'text') {
-      console.log('📝 Final solution:');
-      console.log(block.text);
-    }
-  }
-}
-
-// Example 4: Comparing with and without extended thinking
+// Example 3: Comparing with and without extended thinking (same model)
 async function compareThinkingModes() {
   const problem = 'What is the sum of all prime numbers less than 100?';
 
-  // Without extended thinking (Claude 3.5 Sonnet)
-  console.log('=== Without Extended Thinking (Claude 3.5 Sonnet) ===\n');
+  console.log('=== Without Extended Thinking ===\n');
 
   const response1 = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 2048,
     messages: [{ role: 'user', content: problem }],
   });
@@ -123,29 +104,31 @@ async function compareThinkingModes() {
   }
   console.log('\nTokens used:', response1.usage.input_tokens + response1.usage.output_tokens);
 
-  // With extended thinking (Claude 3.7 Sonnet)
-  console.log('\n\n=== With Extended Thinking (Claude 3.7 Sonnet) ===\n');
+  console.log('\n\n=== With Extended Thinking ===\n');
 
   const response2 = await anthropic.messages.create({
-    model: 'claude-3-7-sonnet-20250228',
-    max_tokens: 4096,
+    model: 'claude-sonnet-4-6',
+    max_tokens: 16000,
+    thinking: { type: 'adaptive' },
     messages: [{ role: 'user', content: problem }],
   });
 
   for (const block of response2.content) {
     if (block.type === 'thinking') {
-      console.log('🤔 Thinking process:');
-      console.log(block.text);
+      console.log('Thinking process:');
+      console.log(block.thinking);
       console.log();
     } else if (block.type === 'text') {
-      console.log('💡 Answer:');
+      console.log('Answer:');
       console.log(block.text);
     }
   }
   console.log('\nTokens used:', response2.usage.input_tokens + response2.usage.output_tokens);
 }
 
-// Example 5: Extended thinking with tools
+// Example 4: Extended thinking with tools
+// IMPORTANT: when continuing a tool-use conversation, pass the assistant's
+// thinking blocks back unmodified (signature included) in the message history.
 async function extendedThinkingWithTools() {
   const tools: Anthropic.Tool[] = [
     {
@@ -173,8 +156,9 @@ async function extendedThinkingWithTools() {
   ];
 
   const response = await anthropic.messages.create({
-    model: 'claude-3-7-sonnet-20250228',
-    max_tokens: 4096,
+    model: 'claude-sonnet-4-6',
+    max_tokens: 16000,
+    thinking: { type: 'adaptive' },
     tools,
     messages,
   });
@@ -183,28 +167,30 @@ async function extendedThinkingWithTools() {
 
   for (const block of response.content) {
     if (block.type === 'thinking') {
-      console.log('🤔 Planning:');
-      console.log(block.text);
+      console.log('Planning:');
+      console.log(block.thinking);
       console.log();
     } else if (block.type === 'tool_use') {
-      console.log('🔧 Tool use:', block.name);
+      console.log('Tool use:', block.name);
       console.log('Parameters:', block.input);
       console.log();
     } else if (block.type === 'text') {
-      console.log('💡 Response:');
+      console.log('Response:');
       console.log(block.text);
     }
   }
 }
 
-// Example 6: Error when using wrong model
-async function demonstrateWrongModelError() {
+// Example 5: Common error — budget_tokens >= max_tokens (older models)
+async function demonstrateBudgetError() {
   try {
-    console.log('=== Attempting extended thinking on Claude 3.5 Sonnet ===\n');
+    console.log('=== budget_tokens must be < max_tokens ===\n');
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929', // Wrong model!
+    await anthropic.messages.create({
+      model: 'claude-opus-4-5',
       max_tokens: 4096,
+      // Invalid: budget meets/exceeds max_tokens → 400 invalid_request_error
+      thinking: { type: 'enabled', budget_tokens: 4096 },
       messages: [
         {
           role: 'user',
@@ -212,109 +198,83 @@ async function demonstrateWrongModelError() {
         },
       ],
     });
-
-    // No thinking blocks will be present
-    const hasThinking = message.content.some(block => block.type === 'thinking');
-
-    if (!hasThinking) {
-      console.log('⚠️ No thinking blocks found!');
-      console.log('Extended thinking is only available in Claude 3.7 Sonnet or Claude 4 models.');
-    }
-
-    for (const block of message.content) {
-      if (block.type === 'text') {
-        console.log('Regular response:', block.text);
-      }
-    }
   } catch (error) {
-    console.error('Error:', error);
-  }
-}
-
-// Example 7: Check model capabilities
-function getModelCapabilities(modelId: string): {
-  supportsExtendedThinking: boolean;
-  contextWindow: number;
-} {
-  const models: Record<
-    string,
-    { supportsExtendedThinking: boolean; contextWindow: number }
-  > = {
-    'claude-sonnet-4-5-20250929': {
-      supportsExtendedThinking: false,
-      contextWindow: 200_000,
-    },
-    'claude-3-7-sonnet-20250228': {
-      supportsExtendedThinking: true,
-      contextWindow: 2_000_000,
-    },
-    'claude-opus-4-20250514': {
-      supportsExtendedThinking: true,
-      contextWindow: 200_000,
-    },
-    'claude-3-5-haiku-20241022': {
-      supportsExtendedThinking: false,
-      contextWindow: 200_000,
-    },
-  };
-
-  return (
-    models[modelId] || {
-      supportsExtendedThinking: false,
-      contextWindow: 200_000,
+    if (error instanceof Anthropic.APIError) {
+      console.log('Expected API error:', error.status, error.message);
+      console.log('Fix: keep budget_tokens >= 1024 and strictly below max_tokens,');
+      console.log('or switch to a 4.6 model with thinking: { type: "adaptive" }.');
+    } else {
+      throw error;
     }
-  );
+  }
 }
 
-// Helper: Validate model for extended thinking
-function validateModelForExtendedThinking(modelId: string): void {
-  const capabilities = getModelCapabilities(modelId);
+// Example 6: Check thinking support at runtime via the Models API
+// (never hardcode capability tables — they rot; see shared/models.md)
+async function modelSupportsThinking(modelId: string): Promise<{
+  adaptive: boolean;
+  enabled: boolean;
+  contextWindow: number;
+}> {
+  const model = await anthropic.models.retrieve(modelId);
+  // `capabilities` is an untyped nested object — check `supported` at the leaf
+  const caps = (model as unknown as {
+    capabilities?: {
+      thinking?: {
+        types?: {
+          adaptive?: { supported?: boolean };
+          enabled?: { supported?: boolean };
+        };
+      };
+    };
+    max_input_tokens?: number;
+  });
 
-  if (!capabilities.supportsExtendedThinking) {
-    throw new Error(
-      `Model ${modelId} does not support extended thinking. Use Claude 3.7 Sonnet or Claude 4 models.`
-    );
+  return {
+    adaptive: caps.capabilities?.thinking?.types?.adaptive?.supported ?? false,
+    enabled: caps.capabilities?.thinking?.types?.enabled?.supported ?? false,
+    contextWindow: caps.max_input_tokens ?? 0,
+  };
+}
+
+async function validateModelForExtendedThinking(modelId: string): Promise<void> {
+  const support = await modelSupportsThinking(modelId);
+
+  if (!support.adaptive && !support.enabled) {
+    throw new Error(`Model ${modelId} does not support extended thinking.`);
   }
 
-  console.log(`✅ Model ${modelId} supports extended thinking`);
-  console.log(`Context window: ${capabilities.contextWindow.toLocaleString()} tokens`);
+  const mode = support.adaptive ? 'adaptive' : 'enabled (budget_tokens)';
+  console.log(`Model ${modelId} supports extended thinking (${mode})`);
+  console.log(`Context window: ${support.contextWindow.toLocaleString()} tokens`);
 }
 
 // Run examples
 if (require.main === module) {
   console.log('=== Extended Thinking Examples ===\n');
 
-  // Validate model first
-  try {
-    validateModelForExtendedThinking('claude-3-7-sonnet-20250228');
-  } catch (error) {
-    console.error(error.message);
-    process.exit(1);
-  }
-
-  basicExtendedThinking()
+  validateModelForExtendedThinking('claude-sonnet-4-6')
+    .then(() => basicExtendedThinking())
     .then(() => {
-      console.log('\n\n=== Complex Problem ===\n');
-      return complexProblemSolving();
+      console.log('\n\n=== Comparison ===\n');
+      return compareThinkingModes();
     })
     .then(() => {
-      console.log('\n\n=== Multi-step Reasoning ===\n');
-      return multiStepReasoning();
+      console.log('\n\n=== Budget Error Demo ===\n');
+      return demonstrateBudgetError();
     })
-    .then(() => {
-      console.log('\n\n=== Wrong Model Demo ===\n');
-      return demonstrateWrongModelError();
-    })
-    .catch(console.error);
+    .catch(error => {
+      console.error(error instanceof Error ? error.message : error);
+      process.exit(1);
+    });
 }
 
 export {
   basicExtendedThinking,
-  complexProblemSolving,
-  multiStepReasoning,
+  budgetedThinking,
   compareThinkingModes,
   extendedThinkingWithTools,
-  demonstrateWrongModelError,
-  getModelCapabilities,
+  demonstrateBudgetError,
+  modelSupportsThinking,
   validateModelForExtendedThinking,
 };

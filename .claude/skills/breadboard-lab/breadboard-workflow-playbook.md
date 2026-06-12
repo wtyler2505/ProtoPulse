@@ -21,7 +21,7 @@ Any step that **breaks flow** (needs guessing, needs reading docs, needs context
 
 1. Is there a pure-lib helper that already computes what you need?
    ```
-   grep -rn "functionName\|featureKeyword" client/src/lib/breadboard-*.ts client/src/lib/circuit-editor/*.ts
+   rg -n "functionName|featureKeyword" client/src/lib/breadboard-*.ts client/src/lib/circuit-editor/ client/src/components/circuit-editor/breadboard-canvas/
    ```
 2. Is there a dialog mounted but under-signposted from `BreadboardView.tsx`?
 3. Is there a child panel whose props support what you want but aren't passed?

@@ -6,7 +6,7 @@ allowed-tools: Bash(nlm:*), Bash(bash:*)
 
 # /pp-archive
 
-Triggers Phase 11 archive hook in single-artifact mode (alias + artifact-id), or sweep mode (no args).
+Triggers the Studio archive hook in single-artifact mode (alias + artifact-id), or sweep mode (no args).
 
 ## Args
 $1 (alias) $2 (artifact-id)

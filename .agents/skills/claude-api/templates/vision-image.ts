@@ -24,7 +24,7 @@ async function analyzeSingleImage(imagePath: string) {
   const mediaType = mediaTypeMap[ext] || 'image/jpeg';
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {
@@ -61,7 +61,7 @@ async function compareImages(image1Path: string, image2Path: string) {
   const image2Data = fs.readFileSync(image2Path).toString('base64');
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {
@@ -119,7 +119,7 @@ async function visionWithTools(imagePath: string) {
   const imageData = fs.readFileSync(imagePath).toString('base64');
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     tools: [searchTool],
     messages: [
@@ -181,7 +181,7 @@ async function multiTurnVision(imagePath: string) {
 
   // First turn
   const response1 = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages,
   });
@@ -199,7 +199,7 @@ async function multiTurnVision(imagePath: string) {
   });
 
   const response2 = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages,
   });
@@ -216,7 +216,7 @@ async function visionWithCaching(imagePath: string) {
 
   // First request - cache the image
   const response1 = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {
@@ -249,7 +249,7 @@ async function visionWithCaching(imagePath: string) {
 
   // Second request - use cached image (within 5 minutes)
   const response2 = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {
@@ -281,7 +281,7 @@ async function visionWithCaching(imagePath: string) {
 async function analyzeImageFromURL(imageUrl: string) {
   // Note: Image must be publicly accessible
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {

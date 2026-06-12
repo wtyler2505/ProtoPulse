@@ -6,6 +6,8 @@ ProtoPulse is an AI-assisted electronics design platform, aiming to evolve into 
 
 Currently, the platform offers an architecture block diagram editor, a component part editor (multi-view: breadboard/schematic/PCB with SVG canvas, parametric generators, validation), Bill of Materials (BOM) generation, design validation, and an AI chat interface with in-app actions. Future phases include AI-powered component generation, import/export (FZPZ/SVG), circuit schematic capture, breadboard/PCB layout, manufacturing output (Gerber, KiCad), and circuit simulation. The project's vision is to streamline the electronics design workflow from concept to manufacturing.
 
+As of 2026-06-10 (Milestone 1 of the engine redesign), the repository contains **two architectures side by side**: the legacy app described below (`client/ server/ shared/` — untouched, still the shipping product) and a greenfield npm-workspaces monorepo at `packages/` (`@protopulse/*`) — the new engine the legacy app will migrate onto in later milestones. See "The Engine Monorepo (packages/)" under System Architecture.
+
 ## User Preferences
 
 - Simple, everyday language
@@ -87,7 +89,7 @@ After any meaningful code change, review and update the following files if affec
 
 ## System Architecture
 
-The application is structured into a frontend, backend, and shared components.
+The **legacy app** (the shipping product) is structured into a frontend, backend, and shared components. The frontend/backend/data sections below describe it.
 
 **Frontend:**
 - Built with React 19, TypeScript, and Vite.
@@ -130,6 +132,13 @@ The application is structured into a frontend, backend, and shared components.
 - **Frontend Development:** Functional components, React Query for server state, Tailwind for styling, `data-testid` for interactive elements.
 - **AI Actions:** Explicit, typed, validated, idempotent, with confirmation UI for destructive actions. AI keys are user-provided and handled securely.
 - **File Organization:** Clear guidelines for placing new database tables, API endpoints, storage methods, shared types, React components, utilities, and views.
+
+**The Engine Monorepo (packages/):**
+- Greenfield npm-workspaces monorepo (`@protopulse/graph`, `parts`, `erc`, `export`, `cli`, `renderer`, `app`, `ai`, `content`) — Milestone 1 of the ground-up redesign, living alongside the legacy app.
+- Core thesis: one canonical design graph, many projections. Every mutation is a typed operation; the design IS its op-log (JSON Lines), the graph a materialized view. Integer-nanometer coordinates, inverse-op undo, O(1) branches, visual diff, three-way merge with conflicts surfaced as data. On-disk format: `.ppx` (spec in `packages/graph/README.md`).
+- `@protopulse/app` is the new schematic editor (dev: `npm run -w @protopulse/app dev`, port 5174). `@protopulse/ai` is a provider-agnostic agent runtime hosting the Draftsman agent (8 tools, Anthropic adapter, browser-direct user key).
+- No database — the engine is file/op-log based. 346 tests, own CI (`.github/workflows/packages-ci.yml`). Commands: `npm run check:packages`, `npm run test:packages`. Golden export files in `tools/golden/` are byte-exact contracts.
+- Simulation, PCB, and hardware comms in the engine are roadmap (v0.2–v0.7), not implemented.
 
 ## External Dependencies
 

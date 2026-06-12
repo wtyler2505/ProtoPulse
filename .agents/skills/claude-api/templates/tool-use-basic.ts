@@ -57,7 +57,7 @@ function executeTimeTool(timezone: string): string {
 // Example 1: Basic tool use detection
 async function basicToolUse() {
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     tools,
     messages: [
@@ -93,7 +93,7 @@ async function toolExecutionLoop(userMessage: string) {
 
   while (true) {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       tools,
       messages,
@@ -168,7 +168,7 @@ async function multipleToolsInOneTurn() {
   ];
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     tools,
     messages,
@@ -205,7 +205,7 @@ async function multipleToolsInOneTurn() {
     messages.push({ role: 'user', content: toolResults });
 
     const finalResponse = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       tools,
       messages,
@@ -226,7 +226,7 @@ async function toolExecutionWithErrorHandling(userMessage: string) {
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       tools,
       messages,
@@ -271,7 +271,7 @@ async function toolExecutionWithErrorHandling(userMessage: string) {
 
       // Get final response
       const finalResponse = await anthropic.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         tools,
         messages,

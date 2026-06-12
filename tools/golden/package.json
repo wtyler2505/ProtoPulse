@@ -1,0 +1,16 @@
+{
+  "name": "tools-golden",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Golden-file tests: known design op-logs -> known exports, byte-exact.",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@protopulse/erc": "*",
+    "@protopulse/export": "*",
+    "@protopulse/graph": "*",
+    "@protopulse/parts": "*"
+  }
+}

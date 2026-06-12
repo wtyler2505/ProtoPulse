@@ -49,7 +49,7 @@ Determine which template applies to the target note:
 1. Check the note's location — knowledge in {DOMAIN:knowledge}/ use the standard note template
 2. Check the `type` field in frontmatter — specialized types may have dedicated templates
 3. Look for a templates directory (check `ops/templates/` or domain-specific path from derivation manifest)
-4. If the template has a `_schema` block, read it — this is the authoritative schema definition
+4. For enum values (`type`, `confidence`) and topics format, the `_schema:` block in `ops/config.yaml` is the authoritative source — `preferred` values pass silently, `accepted_legacy` values WARN (never FAIL). If a template also has a `_schema` block, read it for field requirements
 
 If no template is found, use the default schema checks below.
 
@@ -75,7 +75,7 @@ Run ALL validation checks. Each check produces PASS, WARN, or FAIL.
 | Check | Rule | How to Verify |
 |-------|------|---------------|
 | `description` | Must exist and be non-empty | Check YAML frontmatter for `description:` field with non-empty value |
-| Topics | Must link to at least one {DOMAIN:topic map} | Check for `topics:` in YAML or `Topics:` section in footer. Must contain at least one wiki link |
+| Topics | Must link to at least one {DOMAIN:topic map} | Check for `topics:` in YAML or `Topics:` section in footer. Must contain at least one entry. BOTH formats are valid: bare slug (`- power-systems`, preferred) and wiki link (`- "[[power-systems]]"`, accepted-legacy → WARN, never FAIL) — see `ops/config.yaml` `_schema` |
 
 A missing required field is a hard failure. The note cannot pass validation without these.
 
@@ -115,16 +115,17 @@ Good (adds mechanism):
 
 ### Domain-Specific Enum Checks (WARN if invalid)
 
-If the note has fields with enumerated values, check them against the template's `_schema.enums` block:
+For `type` and `confidence`, check against the `_schema:` block in `ops/config.yaml` (the single source of truth). `preferred` values pass silently; `accepted_legacy` values produce a WARN (never FAIL) suggesting the preferred equivalent. For other enumerated fields, check the template's `_schema.enums` block:
 
 | Field | Expected | Severity |
 |-------|----------|----------|
-| `type` | Values from template enum (e.g., claim, methodology, tension, problem, learning) | WARN |
+| `type` | `ops/config.yaml` `_schema.type` — preferred passes, accepted-legacy WARNs | WARN |
+| `confidence` | `ops/config.yaml` `_schema.confidence` — preferred passes, accepted-legacy WARNs | WARN |
 | `status` | Values from template enum (e.g., preliminary, open, dissolved) | WARN |
 | `classification` | Values from template enum (e.g., open, closed) | WARN |
 | Custom domain fields | Values from template enum | WARN |
 
-If a field has a value not in the enum list, report the invalid value and list the valid options.
+If a field has a value in neither the preferred nor accepted-legacy list, report the invalid value, list the valid options, and name the `ops/config.yaml` `_schema` block.
 
 ### Link Health (WARN per broken link)
 
@@ -211,7 +212,7 @@ PASS:
 
 WARN:
 - relevant_notes: bare link without context phrase for [[note-x]]
-- type: "observation" not in template enum (valid: claim, methodology, tension, problem, learning)
+- type: "observation" not in ops/config.yaml _schema (preferred: claim, pattern, reference, moc, meta; accepted-legacy also OK)
 
 FAIL:
 - (none)
@@ -305,6 +306,6 @@ Overall: PASS (1 warning)
 - check ALL schema requirements, not a subset
 - report specific field values in FAIL/WARN messages (not just "description is weak")
 - suggest concrete fixes for every WARN and FAIL
-- use template `_schema` as the authoritative source when available
+- use the `ops/config.yaml` `_schema` block as the authoritative source for `type`/`confidence` enums and topics format; use template `_schema` for other field requirements
 - fall back to default checks gracefully when no template exists
 - log patterns when running batch validation (recurring issues signal systematic problems)

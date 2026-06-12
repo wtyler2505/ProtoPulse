@@ -1,530 +1,104 @@
 ---
 name: claude-api
 description: |
-  Build with Claude Messages API using structured outputs (v0.69.0+, Nov 2025) for guaranteed JSON schema validation. Covers prompt caching (90% savings), streaming SSE, tool use, model deprecations (3.5/3.7 retired Oct 2025). Use when: building chatbots/agents with validated JSON responses, or troubleshooting rate_limit_error, structured output validation, prompt caching not activating, streaming SSE parsing.
+  Build with the Anthropic Messages API (Claude API): model selection, structured outputs, streaming SSE, tool use / function calling, prompt caching, vision, extended thinking, batches, Files API, Managed Agents, and rate limits — with guides for TypeScript, Python, cURL, Go, Java, PHP, Ruby, and C#. Use when: building chatbots/agents/content tools on the raw API, choosing a model ID, or troubleshooting rate_limit_error (429), overloaded_error (529), structured output validation, prompt caching not activating, or streaming SSE parsing.
 license: MIT
-metadata:
-  version: 2.0.0
-  last_verified: 2025-11-22
-  sdk_version: 0.70.1
-  token_savings: ~48%
-  errors_prevented: 12
-  breaking_changes: Oct 2025 - Claude 3.5/3.7 models retired, Nov 2025 - Structured outputs beta
-  keywords:
-    - claude api
-    - anthropic api
-    - messages api
-    - "@anthropic-ai/sdk"
-    - structured outputs
-    - output_format
-    - strict tool use
-    - json schema validation
-    - claude streaming
-    - prompt caching
-    - cache_control
-    - tool use
-    - vision
-    - extended thinking
-    - claude sonnet 4.5
-    - claude haiku 4.5
-    - claude opus 4
-    - function calling
-    - SSE
-    - rate limits
-    - 429 errors
-    - agent skills api
-    - context management
-    - clear thinking
-    - streaming sse parsing
-    - prompt caching not working
-    - structured output validation
-    - model deprecated
-    - model retired
 ---
 
-# Claude API - Structured Outputs & Error Prevention Guide
+# Claude API — Skill Router
 
-**Package**: @anthropic-ai/sdk@0.70.1 (Nov 20, 2025)
-**Breaking Changes**: Oct 2025 - Claude 3.5/3.7 models retired, Nov 2025 - Structured outputs beta
-**Last Updated**: 2025-11-22
+This SKILL.md is a thin router. The real content lives in `shared/` (concepts), the language directories (code), `templates/` (runnable TypeScript), and `references/` (legacy deep dives). Load only what the task needs.
 
----
+## Hard Rules
 
-## What's New in v0.69.0+ (Nov 2025)
+1. **Never guess model IDs.** Read `shared/models.md` for the current catalog (aliases, full IDs, retirements). For live capability data (context window, max output, thinking/vision/effort support), query the Models API — the discovery pattern is documented at the top of `shared/models.md`.
+2. **Volatile facts (pricing, rate limits, betas, "latest" anything): WebFetch the URL table in `shared/live-sources.md`** instead of trusting cached numbers in this skill.
 
-**Major Features:**
+## Capability Index
 
-### 1. Structured Outputs (v0.69.0, Nov 14, 2025) - CRITICAL ⭐
+| Task | Load |
+|------|------|
+| Pick a model / resolve a model name | `shared/models.md` |
+| Live model capabilities at runtime | `shared/models.md` §Programmatic Model Discovery |
+| HTTP/API error codes and handling | `shared/error-codes.md` |
+| Prompt caching design (cache_control, TTL, breakpoints) | `shared/prompt-caching.md` |
+| Tool use concepts (tool_choice, schemas, results loop) | `shared/tool-use-concepts.md` |
+| Agent architecture on the raw API (tool surface, context, cost) | `shared/agent-design.md` |
+| Fetch current docs (pricing, limits, betas, new features) | `shared/live-sources.md` |
+| Managed Agents (container-backed agent sessions, beta) | `shared/managed-agents-overview.md` → see below |
+| Language-specific code | language dirs → see below |
+| Runnable TypeScript examples | `templates/` |
 
-**Guaranteed JSON schema conformance** - Claude's responses strictly follow your JSON schema with two modes:
+## Shared Concept Guides (`shared/`)
 
-**JSON Outputs (`output_format`)** - For data extraction and formatting:
-```typescript
-import Anthropic from '@anthropic-ai/sdk';
+- `models.md` — model catalog: current (Opus 4.6, Sonnet 4.6, Haiku 4.5), legacy, deprecated, retired; alias resolution table; Models API discovery pattern
+- `error-codes.md` — HTTP error codes, causes, retry guidance
+- `prompt-caching.md` — designing prompt-building code for cache hits
+- `tool-use-concepts.md` — conceptual foundations of tool use
+- `agent-design.md` — decision heuristics for building agents on the API
+- `live-sources.md` — WebFetch URL + extraction-prompt table for platform.claude.com docs
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+### Managed Agents (beta)
 
-const message = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
-  max_tokens: 1024,
-  messages: [{ role: 'user', content: 'Extract contact info: John Doe, john@example.com, 555-1234' }],
-  betas: ['structured-outputs-2025-11-13'],
-  output_format: {
-    type: 'json_schema',
-    json_schema: {
-      name: 'Contact',
-      strict: true,
-      schema: {
-        type: 'object',
-        properties: {
-          name: { type: 'string' },
-          email: { type: 'string' },
-          phone: { type: 'string' }
-        },
-        required: ['name', 'email', 'phone'],
-        additionalProperties: false
-      }
-    }
-  }
-});
+- `shared/managed-agents-overview.md` — what it is, when to use it
+- `shared/managed-agents-core.md` — agents, sessions, lifecycle
+- `shared/managed-agents-api-reference.md` — endpoints and payloads
+- `shared/managed-agents-client-patterns.md` — polling, streaming, resumption
+- `shared/managed-agents-environments.md` — container/workspace configuration
+- `shared/managed-agents-events.md` — event stream reference
+- `shared/managed-agents-tools.md` — tool configuration
+- `shared/managed-agents-onboarding.md` — first-session walkthrough
 
-// Guaranteed valid JSON matching schema
-const contact = JSON.parse(message.content[0].text);
-console.log(contact.name); // "John Doe"
-```
+## Language Guides
 
-**Strict Tool Use (`strict: true`)** - For validated function parameters:
-```typescript
-const message = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
-  max_tokens: 1024,
-  messages: [{ role: 'user', content: 'Get weather for San Francisco' }],
-  betas: ['structured-outputs-2025-11-13'],
-  tools: [{
-    name: 'get_weather',
-    description: 'Get current weather',
-    input_schema: {
-      type: 'object',
-      properties: {
-        location: { type: 'string' },
-        unit: { type: 'string', enum: ['celsius', 'fahrenheit'] }
-      },
-      required: ['location'],
-      additionalProperties: false
-    },
-    strict: true  // ← Guarantees schema compliance
-  }]
-});
-```
+| Language | Messages API | Managed Agents |
+|----------|--------------|----------------|
+| TypeScript | `typescript/claude-api/` (README, streaming, tool-use, batches, files-api) | `typescript/managed-agents/README.md` |
+| Python | `python/claude-api/` (README, streaming, tool-use, batches, files-api) | `python/managed-agents/README.md` |
+| cURL / raw HTTP | `curl/examples.md` | `curl/managed-agents.md` |
+| Go | `go/claude-api.md` | `go/managed-agents/README.md` |
+| Java | `java/claude-api.md` | `java/managed-agents/README.md` |
+| PHP | `php/claude-api.md` | `php/managed-agents/README.md` |
+| Ruby | `ruby/claude-api.md` | `ruby/managed-agents/README.md` |
+| C# | `csharp/claude-api.md` | — |
 
-**Requirements:**
-- **Beta header**: `structured-outputs-2025-11-13` (via `betas` array)
-- **Models**: Claude Sonnet 4.5, Claude Opus 4.1 only
-- **SDK**: v0.69.0+ required
+## Templates (`templates/`)
 
-**Limitations:**
-- ❌ No recursive schemas
-- ❌ No numerical constraints (`minimum`, `maximum`)
-- ❌ Limited regex support (no backreferences/lookahead)
-- ❌ Incompatible with citations and message prefilling
-- ⚠️ Grammar compilation adds latency on first request (cached 24hrs)
+Runnable TypeScript examples: `basic-chat.ts`, `streaming-chat.ts`, `tool-use-basic.ts`, `tool-use-advanced.ts`, `prompt-caching.ts`, `extended-thinking.ts`, `vision-image.ts`, `error-handling.ts`, `nodejs-example.ts`, `nextjs-api-route.ts`, `cloudflare-worker.ts` (+ `wrangler.jsonc`, `package.json`).
 
-**When to Use:**
-- Data extraction from unstructured text
-- API response formatting
-- Agentic workflows requiring validated tool inputs
-- Eliminating JSON parse errors
+## References (`references/`) — legacy deep dives
 
-### 2. Model Changes (Oct 2025) - BREAKING
+`api-reference.md`, `setup-guide.md`, `prompt-caching-guide.md`, `tool-use-patterns.md`, `vision-capabilities.md`, `rate-limits.md`, `top-errors.md`.
 
-**Retired (return errors):**
-- ❌ Claude 3.5 Sonnet (all versions)
-- ❌ Claude 3.7 Sonnet - DEPRECATED (Oct 28, 2025)
+**Warning:** these predate the `shared/` + language-dir content. Cross-check any model ID, capability claim, or pricing figure against `shared/models.md` and `shared/live-sources.md` before relying on it. Prefer `shared/` when both cover a topic.
 
-**Active Models (Nov 2025):**
-
-| Model | ID | Context | Best For | Cost (per MTok) |
-|-------|-----|---------|----------|-----------------|
-| **Claude Sonnet 4.5** | claude-sonnet-4-5-20250929 | 200k | Balanced performance | $3/$15 (in/out) |
-| **Claude Opus 4** | claude-opus-4-20250514 | 200k | Highest capability | $15/$75 |
-| **Claude Haiku 4.5** | claude-3-5-haiku-20241022 | 200k | Near-frontier, fast | $1/$5 |
-
-### 3. Context Management (Oct 28, 2025)
-
-**Clear Thinking Blocks** - Automatic thinking block cleanup:
-```typescript
-const message = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
-  max_tokens: 4096,
-  messages: [{ role: 'user', content: 'Solve complex problem' }],
-  betas: ['clear_thinking_20251015']
-});
-// Thinking blocks automatically managed
-```
-
-### 4. Agent Skills API (Oct 16, 2025)
-
-Pre-built skills for Office files (PowerPoint, Excel, Word, PDF):
-```typescript
-const message = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
-  max_tokens: 1024,
-  messages: [{ role: 'user', content: 'Analyze this spreadsheet' }],
-  betas: ['skills-2025-10-02'],
-  // Requires code execution tool enabled
-});
-```
-
-📚 **Docs**: https://platform.claude.com/docs/en/build-with-claude/structured-outputs
-
----
-
-## Streaming Responses (SSE)
-
-**CRITICAL Error Pattern** - Errors occur AFTER initial 200 response:
-```typescript
-const stream = anthropic.messages.stream({
-  model: 'claude-sonnet-4-5-20250929',
-  max_tokens: 1024,
-  messages: [{ role: 'user', content: 'Hello' }],
-});
-
-stream
-  .on('error', (error) => {
-    // Error can occur AFTER stream starts
-    console.error('Stream error:', error);
-    // Implement fallback or retry logic
-  })
-  .on('abort', (error) => {
-    console.warn('Stream aborted:', error);
-  });
-```
-
-**Why this matters**: Unlike regular HTTP errors, SSE errors happen mid-stream after 200 OK, requiring error event listeners
-
----
-
-## Prompt Caching (⭐ 90% Cost Savings)
-
-**CRITICAL Rule** - `cache_control` MUST be on LAST block:
-```typescript
-const message = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
-  max_tokens: 1024,
-  system: [
-    {
-      type: 'text',
-      text: 'System instructions...',
-    },
-    {
-      type: 'text',
-      text: LARGE_CODEBASE, // 50k tokens
-      cache_control: { type: 'ephemeral' }, // ← MUST be on LAST block
-    },
-  ],
-  messages: [{ role: 'user', content: 'Explain auth module' }],
-});
-
-// Monitor cache usage
-console.log('Cache reads:', message.usage.cache_read_input_tokens);
-console.log('Cache writes:', message.usage.cache_creation_input_tokens);
-```
-
-**Minimum requirements:**
-- Claude Sonnet 4.5: 1,024 tokens minimum
-- Claude Haiku 4.5: 2,048 tokens minimum
-- 5-minute TTL (refreshes on each use)
-- Cache shared only with IDENTICAL content
-
----
-
-## Tool Use (Function Calling)
-
-**CRITICAL Patterns:**
-
-**Strict Tool Use** (with structured outputs):
-```typescript
-const message = await anthropic.messages.create({
-  model: 'claude-sonnet-4-5-20250929',
-  max_tokens: 1024,
-  betas: ['structured-outputs-2025-11-13'],
-  tools: [{
-    name: 'get_weather',
-    description: 'Get weather data',
-    input_schema: {
-      type: 'object',
-      properties: {
-        location: { type: 'string' },
-        unit: { type: 'string', enum: ['celsius', 'fahrenheit'] }
-      },
-      required: ['location'],
-      additionalProperties: false
-    },
-    strict: true  // ← Guarantees schema compliance
-  }],
-  messages: [{ role: 'user', content: 'Weather in NYC?' }]
-});
-```
-
-**Tool Result Pattern** - `tool_use_id` MUST match:
-```typescript
-const toolResults = [];
-for (const block of response.content) {
-  if (block.type === 'tool_use') {
-    const result = await executeToolFunction(block.name, block.input);
-
-    toolResults.push({
-      type: 'tool_result',
-      tool_use_id: block.id,  // ← MUST match tool_use block id
-      content: JSON.stringify(result),
-    });
-  }
-}
-
-messages.push({
-  role: 'user',
-  content: toolResults,
-});
-```
-
-**Error Handling** - Handle tool execution failures:
-```typescript
-try {
-  const result = await executeToolFunction(block.name, block.input);
-  toolResults.push({
-    type: 'tool_result',
-    tool_use_id: block.id,
-    content: JSON.stringify(result),
-  });
-} catch (error) {
-  // Return error to Claude for handling
-  toolResults.push({
-    type: 'tool_result',
-    tool_use_id: block.id,
-    is_error: true,
-    content: `Tool execution failed: ${error.message}`,
-  });
-}
-```
-
----
-
-## Vision (Image Understanding)
-
-**CRITICAL Rules:**
-- **Formats**: JPEG, PNG, WebP, GIF (non-animated)
-- **Max size**: 5MB per image
-- **Base64 overhead**: ~33% size increase
-- **Context impact**: Images count toward token limit
-- **Caching**: Consider for repeated image analysis
-
-**Format validation** - Check before encoding:
-```typescript
-const validFormats = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-if (!validFormats.includes(mimeType)) {
-  throw new Error(`Unsupported format: ${mimeType}`);
-}
-```
-
----
-
-## Extended Thinking Mode
-
-**⚠️ Model Compatibility:**
-- ❌ Claude 3.7 Sonnet - DEPRECATED (Oct 28, 2025)
-- ❌ Claude 3.5 Sonnet - RETIRED (not supported)
-- ✅ Claude Sonnet 4.5 - Extended thinking supported
-- ✅ Claude Opus 4 - Extended thinking supported
-
-**CRITICAL:**
-- Thinking blocks are NOT cacheable
-- Requires higher `max_tokens` (thinking consumes tokens)
-- Check model before expecting thinking blocks
-
----
-
-## Rate Limits
-
-**CRITICAL Pattern** - Respect `retry-after` header with exponential backoff:
-```typescript
-async function makeRequestWithRetry(
-  requestFn: () => Promise<any>,
-  maxRetries = 3,
-  baseDelay = 1000
-): Promise<any> {
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await requestFn();
-    } catch (error) {
-      if (error.status === 429) {
-        // CRITICAL: Use retry-after header if present
-        const retryAfter = error.response?.headers?.['retry-after'];
-        const delay = retryAfter
-          ? parseInt(retryAfter) * 1000
-          : baseDelay * Math.pow(2, attempt);
-
-        console.warn(`Rate limited. Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      } else {
-        throw error;
-      }
-    }
-  }
-  throw new Error('Max retries exceeded');
-}
-```
-
-**Rate limit headers:**
-- `anthropic-ratelimit-requests-limit` - Total RPM allowed
-- `anthropic-ratelimit-requests-remaining` - Remaining requests
-- `anthropic-ratelimit-requests-reset` - Reset timestamp
-
----
-
-## Error Handling
-
-**Common Error Codes:**
+## Error Codes (quick table)
 
 | Status | Error Type | Cause | Solution |
 |--------|-----------|-------|----------|
 | 400 | invalid_request_error | Bad parameters | Validate request body |
 | 401 | authentication_error | Invalid API key | Check env variable |
 | 403 | permission_error | No access to feature | Check account tier |
-| 404 | not_found_error | Invalid endpoint | Check API version |
-| 429 | rate_limit_error | Too many requests | Implement retry logic |
+| 404 | not_found_error | Invalid endpoint/model | Check API version + model ID |
+| 429 | rate_limit_error | Too many requests | Backoff honoring `retry-after` |
 | 500 | api_error | Internal error | Retry with backoff |
 | 529 | overloaded_error | System overloaded | Retry later |
 
-**CRITICAL:**
-- Streaming errors occur AFTER initial 200 response
-- Always implement error event listeners for streams
-- Respect `retry-after` header on 429 errors
-- Have fallback strategies for critical operations
+Full handling guidance: `shared/error-codes.md`.
 
----
+## Evergreen Gotchas
 
-## Known Issues Prevention
-
-This skill prevents **12** documented issues:
-
-### Issue #1: Rate Limit 429 Errors Without Backoff
-**Error**: `429 Too Many Requests: Number of request tokens has exceeded your per-minute rate limit`
-**Source**: https://docs.claude.com/en/api/errors
-**Why It Happens**: Exceeding RPM, TPM, or daily token limits
-**Prevention**: Implement exponential backoff with `retry-after` header respect
-
-### Issue #2: Streaming SSE Parsing Errors
-**Error**: Incomplete chunks, malformed SSE events
-**Source**: Common SDK issue (GitHub #323)
-**Why It Happens**: Network interruptions, improper event parsing
-**Prevention**: Use SDK stream helpers, implement error event listeners
-
-### Issue #3: Prompt Caching Not Activating
-**Error**: High costs despite cache_control blocks
-**Source**: https://platform.claude.com/docs/en/build-with-claude/prompt-caching
-**Why It Happens**: `cache_control` placed incorrectly (must be at END)
-**Prevention**: Always place `cache_control` on LAST block of cacheable content
-
-### Issue #4: Tool Use Response Format Errors
-**Error**: `invalid_request_error: tools[0].input_schema is invalid`
-**Source**: API validation errors
-**Why It Happens**: Invalid JSON Schema, missing required fields
-**Prevention**: Validate schemas with JSON Schema validator, test thoroughly
-
-### Issue #5: Vision Image Format Issues
-**Error**: `invalid_request_error: image source must be base64 or url`
-**Source**: API documentation
-**Why It Happens**: Incorrect encoding, unsupported formats
-**Prevention**: Validate format (JPEG/PNG/WebP/GIF), proper base64 encoding
-
-### Issue #6: Token Counting Mismatches for Billing
-**Error**: Unexpected high costs, context window exceeded
-**Source**: Token counting differences
-**Why It Happens**: Not accounting for special tokens, formatting
-**Prevention**: Use official token counter, monitor usage headers
-
-### Issue #7: System Prompt Ordering Issues
-**Error**: System prompt ignored or overridden
-**Source**: API behavior
-**Why It Happens**: System prompt placed after messages array
-**Prevention**: ALWAYS place system prompt before messages
-
-### Issue #8: Context Window Exceeded (200k)
-**Error**: `invalid_request_error: messages: too many tokens`
-**Source**: Model limits
-**Why It Happens**: Long conversations without pruning
-**Prevention**: Implement message history pruning, use caching
-
-### Issue #9: Extended Thinking on Wrong Model
-**Error**: No thinking blocks in response
-**Source**: Model capabilities
-**Why It Happens**: Using retired/deprecated models (3.5/3.7 Sonnet)
-**Prevention**: Only use extended thinking with Claude Sonnet 4.5 or Claude Opus 4
-
-### Issue #10: API Key Exposure in Client Code
-**Error**: CORS errors, security vulnerability
-**Source**: Security best practices
-**Why It Happens**: Making API calls from browser
-**Prevention**: Server-side only, use environment variables
-
-### Issue #11: Rate Limit Tier Confusion
-**Error**: Lower limits than expected
-**Source**: Account tier system
-**Why It Happens**: Not understanding tier progression
-**Prevention**: Check Console for current tier, auto-scales with usage
-
-### Issue #12: Message Batches Beta Headers Missing
-**Error**: `invalid_request_error: unknown parameter: batches`
-**Source**: Beta API requirements
-**Why It Happens**: Missing `anthropic-beta` header
-**Prevention**: Include `anthropic-beta: message-batches-2024-09-24` header
-
----
+- **Streaming errors arrive AFTER the initial 200** — SSE failures happen mid-stream; always attach `error`/`abort` listeners (or try/catch the iterator), never assume a started stream finishes.
+- **`cache_control` goes on the LAST block** of the cacheable prefix; monitor `usage.cache_read_input_tokens` / `cache_creation_input_tokens` to confirm hits.
+- **`tool_result.tool_use_id` must match the `tool_use` block id**, and tool results go back in a `user`-role message; report tool failures with `is_error: true` rather than swallowing them.
+- **On 429, honor the `retry-after` header** before falling back to exponential backoff; watch the `anthropic-ratelimit-*` response headers.
+- **Server-side only** — never call the API from browser code; keys belong in server environment variables.
+- **Retired models return 404-class errors** — if a request suddenly fails with a model not-found error, check the retirement tables in `shared/models.md`.
 
 ## Official Documentation
 
-- **Claude API**: https://platform.claude.com/docs/en/api
-- **Messages API**: https://platform.claude.com/docs/en/api/messages
-- **Structured Outputs**: https://platform.claude.com/docs/en/build-with-claude/structured-outputs
-- **Prompt Caching**: https://platform.claude.com/docs/en/build-with-claude/prompt-caching
-- **Tool Use**: https://platform.claude.com/docs/en/build-with-claude/tool-use
-- **Vision**: https://platform.claude.com/docs/en/build-with-claude/vision
-- **Rate Limits**: https://platform.claude.com/docs/en/api/rate-limits
-- **Errors**: https://platform.claude.com/docs/en/api/errors
-- **TypeScript SDK**: https://github.com/anthropics/anthropic-sdk-typescript
-- **Context7 Library ID**: /anthropics/anthropic-sdk-typescript
-
----
-
-## Package Versions
-
-**Latest**: @anthropic-ai/sdk@0.70.1 (Nov 20, 2025)
-
-```json
-{
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.70.1"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.3.0",
-    "zod": "^3.23.0"
-  }
-}
-```
-
----
-
-**Token Efficiency**:
-- **Without skill**: ~8,000 tokens (basic setup, streaming, caching, tools, vision, errors)
-- **With skill**: ~4,200 tokens (knowledge gaps + error prevention + critical patterns)
-- **Savings**: ~48% (~3,800 tokens)
-
-**Errors prevented**: 12 documented issues with exact solutions
-**Key value**: Structured outputs (v0.69.0+), model deprecations (Oct 2025), prompt caching edge cases, streaming error patterns, rate limit retry logic
-
----
-
-**Last verified**: 2025-11-22 | **Skill version**: 2.0.0 | **Changes**: Added structured outputs (v0.69.0), updated model table (retired 3.5/3.7), context management, agent skills API. Removed basic tutorials (~380 lines). Focused on knowledge gaps + error prevention + advanced patterns.
+- Claude API: https://platform.claude.com/docs/en/api
+- Messages API: https://platform.claude.com/docs/en/api/messages
+- TypeScript SDK: https://github.com/anthropics/anthropic-sdk-typescript
+- Context7 Library ID: `/anthropics/anthropic-sdk-typescript`
+- Topic-specific URLs (pricing, rate limits, tools, thinking, etc.): `shared/live-sources.md`
