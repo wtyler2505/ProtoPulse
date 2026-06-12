@@ -22,8 +22,9 @@ AGENTS="$ROOT/.agents/skills"
 MODE="${1:---check}"
 [[ "$MODE" == "--check" || "$MODE" == "--fix" ]] || { echo "usage: $0 [--check|--fix]" >&2; exit 2; }
 
-IDENTICAL=(claude-agent-sdk claude-api claude-code claude-extensibility
+IDENTICAL=(claude-agent-sdk claude-api claude-code
            claude-hook-writer claude-settings-audit claude-skills claude-update)
+# claude-extensibility retired 2026-06-11 (absorbed into claude-skills per docs/audits/2026-06-11-skill-audit.md)
 ARSCONTEXTA=(connect extract graph learn next pipeline ralph refactor remember
              rethink revisit seed validate verify)
 # Documented rename map: .claude name -> .agents name (frontmatter keeps the .claude name)
