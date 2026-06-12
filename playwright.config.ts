@@ -24,7 +24,20 @@ export default defineConfig({
     },
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Ensure WebGL renders in headless/CI via ANGLE's SwiftShader software
+        // rasterizer — required for the PP3D-2 non-blank-canvas gate on machines
+        // with no GPU. Additive; harmless for non-WebGL specs.
+        launchOptions: {
+          args: [
+            '--use-gl=angle',
+            '--use-angle=swiftshader',
+            '--enable-unsafe-swiftshader',
+            '--ignore-gpu-blocklist',
+          ],
+        },
+      },
       dependencies: ['setup'],
     },
   ],

@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["client/src/components/views/board-viewer-3d/**/*", "client/src/components/views/BoardViewer3DView.tsx"],
+  "compilerOptions": {
+    "incremental": false
+  }
+}

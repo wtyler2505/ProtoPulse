@@ -31,7 +31,10 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ['e2e/p1-keyboard-nav.spec.ts', 'e2e/p1-viewer-3d-webgl.spec.ts'],
+          defaultProject: 'tsconfig.json',
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -227,6 +230,19 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
       'no-console': 'off',
+    },
+  },
+
+  // ── React Three Fiber scene overrides ───────────────────────────────
+  // R3F renders three.js objects through lowercase intrinsic JSX elements
+  // (<mesh>, <meshStandardMaterial>, …) whose props are three.js property
+  // names (geometry, castShadow, roughness, args, …). eslint-plugin-react's
+  // no-unknown-property rule only knows DOM attributes, so it false-positives
+  // on every R3F element. Scope the rule off to the WebGL viewer scene tree.
+  {
+    files: ['client/src/components/views/board-viewer-3d/**/*.tsx'],
+    rules: {
+      'react/no-unknown-property': 'off',
     },
   },
 
