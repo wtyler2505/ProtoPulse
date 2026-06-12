@@ -59,7 +59,8 @@ jobs:
             file \
             build-essential \
             curl \
-            wget
+            wget \
+            xdg-utils
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
