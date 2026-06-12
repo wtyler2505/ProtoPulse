@@ -63,11 +63,27 @@ import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuSt
  * ROM0/ROM1 ranges refuses loudly, naming the address and the
  * modeled functions (no silent garbage). Interrupt-driven, analog,
  * gptimer-style, and flash-resident firmware patterns run
- * end-to-end — but there are still no RTC/eFuse/SYSTEM registers,
- * no second core, no ADC2/DMA mode, no TIMG0 T1/TIMG1/watchdogs,
- * and no XTAL clock source for the timer (APB only), so full
- * IDF/FreeRTOS firmware does NOT run yet. Loading Intel-HEX refuses
- * with a message.
+ * end-to-end. The RTC/eFuse/SYSTEM register set IDF's startup,
+ * esp_chip_info, and reset-reason paths read is modeled (slice 11):
+ * per-CPU reset causes in RTC_CNTL_RESET_STATE_REG (power-on 1; the
+ * software_reset ROM trap and the OPTIONS0 SW_SYS_RST/SW_PROCPU_RST
+ * write bits set 3/12 per rom/rtc.h), the 48-bit RTC main timer over
+ * the ~136 kHz RC_SLOW clock (TIME_UPDATE-latched LOW0/HIGH0 reads;
+ * the counter restarts at reset — real hardware keeps it),
+ * eFuse BLOCK1 reads serving a documented SYNTHETIC locally-
+ * administered MAC (7A:C0:DE:00:53:33) and wafer version 0 (chip
+ * rev v0.0), and the SYSTEM clock-config registers frozen at the
+ * post-2nd-stage-bootloader state matching the modeled clock
+ * (PLL 480 MHz, CPU 240 MHz, XTAL 40 MHz) — writes to them are
+ * stored but do NOT retune the emulated clock. Reads of any OTHER
+ * register in those three blocks refuse loudly with the address and
+ * the modeled set (a benign zero would silently lie — e.g. "the RTC
+ * watchdog is off"); unmodeled writes there are accepted and
+ * dropped, like the other peripheral blocks. Still missing: second
+ * core, ADC2/DMA mode, TIMG0 T1/TIMG1, every watchdog (RTC and
+ * TIMG), XTAL clock source for the timer (APB only), sleep/wake,
+ * and eFuse programming — so full IDF/FreeRTOS firmware does NOT
+ * run yet. Loading Intel-HEX refuses with a message.
  */
 
 const CLOCK_HZ = 240_000_000;
@@ -219,6 +235,60 @@ const CYCLES_PER_US = CLOCK_HZ / 1_000_000; // 240
  *  not spin forever. */
 const ROM_STR_MAX = 0x10000;
 
+// ── Slice 11: RTC_CNTL / eFuse / SYSTEM ──
+// Bases from reg_base.h (DR_REG_EFUSE_BASE / DR_REG_RTCCNTL_BASE /
+// DR_REG_SYSTEM_BASE); offsets and fields from rtc_cntl_reg.h,
+// efuse_reg.h, system_reg.h — all esp-idf v5.2
+// components/soc/esp32s3/include/soc/. Policy for these three blocks:
+// reads of unmodeled registers REFUSE with a diagnostic (a benign
+// zero would silently lie — 0 in RTC_CNTL_WDTCONFIG0 claims "watchdog
+// off"); unmodeled writes are accepted and dropped, consistent with
+// the other peripheral blocks (a dropped config write cannot steer
+// firmware logic the way a fabricated read can).
+const RTCCNTL_BASE = 0x60008000;
+const RTCCNTL_END = 0x60008800; // SENS sits at +0x800
+const RTC_OPTIONS0 = 0x00; // SW_SYS_RST bit 31, SW_PROCPU_RST bit 5, SW_APPCPU_RST bit 4 (all WO)
+const RTC_TIME_UPDATE = 0x0c; // TIME_UPDATE bit 31 latches the main timer
+const RTC_TIME_LOW0 = 0x10; // latched timer [31:0]
+const RTC_TIME_HIGH0 = 0x14; // latched timer [47:32] in [15:0]
+const RTC_RESET_STATE = 0x38; // RESET_CAUSE_PROCPU [5:0], RESET_CAUSE_APPCPU [11:6]
+const RTC_SW_SYS_RST = 1 << 31;
+const RTC_SW_PROCPU_RST = 1 << 5;
+// Reset causes (esp_rom/include/esp32s3/rom/rtc.h RESET_REASON —
+// static-asserted equal to soc_reset_reason_t, the values
+// esp_rom_get_reset_reason/esp_reset_reason consume):
+const RESET_CAUSE_POWERON = 1; // POWERON_RESET
+const RESET_CAUSE_SW_SYS = 3; // RTC_SW_SYS_RESET — ROM software_reset / SW_SYS_RST
+const RESET_CAUSE_SW_CPU = 12; // RTC_SW_CPU_RESET — SW_PROCPU_RST (esp_restart's path)
+// The RTC main timer counts the ~136 kHz RC_SLOW clock
+// (clk_tree_defs.h SOC_CLK_RC_SLOW_FREQ_APPROX). 48 bits wide.
+const RTC_SLOW_HZ = 136_000;
+
+const EFUSE_BASE = 0x60007000;
+const EFUSE_RD_MAC_SPI_SYS_0 = 0x44; // MAC[31:0]
+const EFUSE_RD_MAC_SPI_SYS_1 = 0x48; // MAC[47:32] in [15:0]
+const EFUSE_RD_MAC_SPI_SYS_2 = 0x4c; // _2.._5: rest of BLOCK1 — wafer
+const EFUSE_RD_MAC_SPI_SYS_5 = 0x58; //   version fields, all 0 → chip rev v0.0
+// SYNTHETIC MAC, documented: 7A:C0:DE:00:53:33 — locally-administered
+// unicast (first octet bit 1 set, bit 0 clear), "C0DE"/"S3" mnemonic.
+// efuse_hal_get_mac byte order: mac[0]=mac_1>>8, mac[1]=mac_1&0xff,
+// mac[2..5]=mac_0 big-endian.
+const EFUSE_MAC_0 = 0xde005333;
+const EFUSE_MAC_1 = 0x00007ac0;
+
+const SYSTEM_BASE = 0x600c0000;
+const SYSTEM_CPU_PER_CONF = 0x10; // CPUPERIOD_SEL [1:0], PLL_FREQ_SEL bit 2
+const SYSTEM_SYSCLK_CONF = 0x60; // PRE_DIV_CNT [9:0], SOC_CLK_SEL [11:10], CLK_XTAL_FREQ [18:12] (RO)
+// The modeled values are the POST-2nd-stage-bootloader state (this
+// core boots app images the way the bootloader leaves the chip, with
+// the PLL already up), not the power-on reset values (XTAL/40 MHz):
+// PLL_FREQ_SEL=1 (480 MHz PLL) + CPUPERIOD_SEL=2 → CPU 240 MHz, and
+// SOC_CLK_SEL=1 (PLL) + PRE_DIV_CNT=1 + CLK_XTAL_FREQ=40 — exactly
+// what rtc_clk_cpu_freq_get derives the modeled 240 MHz from.
+const SYSTEM_CPU_PER_CONF_RESET = 0x6;
+const SYSTEM_SYSCLK_CONF_RESET = (40 << 12) | (1 << 10) | 1; // 0x28401
+const SYSTEM_CLK_XTAL_FREQ_MASK = 0x7f << 12; // RO field — writes can't touch it
+
 const SENS_BASE = 0x60008800;
 const SENS_SAR_MEAS1_CTRL2 = 0x0c;
 const MEAS1_DONE_SAR = 1 << 16;
@@ -296,6 +366,16 @@ export class Esp32s3Core implements McuCore {
   private timgIntRaw = 0;
   private tgT0IntMap = INTMTX_DEFAULT_MAP;
 
+  // RTC/eFuse/SYSTEM state (slice 11). The reset cause survives
+  // reset() — it describes WHY the last reset happened; loadFirmware
+  // sets it back to power-on.
+  private resetCause = RESET_CAUSE_POWERON;
+  private rtcOptions0 = 0; // last write, WO sw-reset bits masked out
+  private rtcTimeLatchLo = 0; // captured by a TIME_UPDATE write
+  private rtcTimeLatchHi = 0;
+  private cpuPerConf = SYSTEM_CPU_PER_CONF_RESET;
+  private sysclkConf = SYSTEM_SYSCLK_CONF_RESET;
+
   // SAR ADC1 oneshot state.
   private meas1Ctrl2 = 0; // the control bits firmware wrote
   private adcData = 0; // latched 12-bit result
@@ -336,6 +416,7 @@ export class Esp32s3Core implements McuCore {
       this.romSegments = [];
       this.entry = IRAM_BASE;
     }
+    this.resetCause = RESET_CAUSE_POWERON; // fresh firmware = fresh power-on
     this.reset();
   }
 
@@ -504,6 +585,13 @@ export class Esp32s3Core implements McuCore {
     this.timgIntEna = 0;
     this.timgIntRaw = 0;
     this.tgT0IntMap = INTMTX_DEFAULT_MAP;
+    // resetCause is deliberately NOT cleared — it reports why this
+    // reset happened (software_reset / SW_*_RST set it before calling).
+    this.rtcOptions0 = 0;
+    this.rtcTimeLatchLo = 0;
+    this.rtcTimeLatchHi = 0;
+    this.cpuPerConf = SYSTEM_CPU_PER_CONF_RESET;
+    this.sysclkConf = SYSTEM_SYSCLK_CONF_RESET;
     this.meas1Ctrl2 = 0;
     this.adcData = 0;
     this.adcDone = false;
@@ -688,6 +776,9 @@ export class Esp32s3Core implements McuCore {
         break;
       }
       case 0x400006d8: // software_reset — never returns; step() resets.
+        // The ROM routine asserts RTC_CNTL_SW_SYS_RST, so the next
+        // boot reads RTC_SW_SYS_RESET (3) in RESET_STATE (rom/rtc.h).
+        this.resetCause = RESET_CAUSE_SW_SYS;
         this.pendingReset = true;
         break;
       case 0x400011e8: { // memset(dst, c, n) → dst
@@ -894,6 +985,44 @@ export class Esp32s3Core implements McuCore {
       }
       return 0;
     }
+    if (addr >= RTCCNTL_BASE && addr < RTCCNTL_END) {
+      const off = addr - RTCCNTL_BASE;
+      if (off === RTC_OPTIONS0) return this.rtcOptions0 >>> 0; // sw-reset bits are WO — they read 0
+      if (off === RTC_TIME_UPDATE) return 0; // the latch completes instantly
+      if (off === RTC_TIME_LOW0) return this.rtcTimeLatchLo >>> 0;
+      if (off === RTC_TIME_HIGH0) return this.rtcTimeLatchHi & 0xffff;
+      if (off === RTC_RESET_STATE) {
+        // Single modeled core, but both cause fields report — IDF's
+        // reset-reason path reads PROCPU [5:0]; APPCPU [11:6] mirrors.
+        return ((this.resetCause << 6) | this.resetCause) >>> 0;
+      }
+      throw new Error(
+        `read of unmodeled RTC_CNTL register 0x${addr.toString(16)} — this core models only ` +
+          `OPTIONS0(+0x0), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), RESET_STATE(+0x38); ` +
+          `a fabricated 0 here would lie (e.g. "RTC watchdog off")`,
+      );
+    }
+    if (addr >= EFUSE_BASE && addr < EFUSE_BASE + 0x1000) {
+      const off = addr - EFUSE_BASE;
+      if (off === EFUSE_RD_MAC_SPI_SYS_0) return EFUSE_MAC_0;
+      if (off === EFUSE_RD_MAC_SPI_SYS_1) return EFUSE_MAC_1;
+      // Rest of BLOCK1: wafer-version/pkg fields all 0 → chip rev v0.0,
+      // which IDF supports (its minimum S3 revision is v0.0).
+      if (off >= EFUSE_RD_MAC_SPI_SYS_2 && off <= EFUSE_RD_MAC_SPI_SYS_5) return 0;
+      throw new Error(
+        `read of unmodeled eFuse register 0x${addr.toString(16)} — this core models only ` +
+          `RD_MAC_SPI_SYS_0..5 (+0x44..+0x58: the synthetic MAC 7A:C0:DE:00:53:33 and chip rev v0.0)`,
+      );
+    }
+    if (addr >= SYSTEM_BASE && addr < SYSTEM_BASE + 0x1000) {
+      const off = addr - SYSTEM_BASE;
+      if (off === SYSTEM_CPU_PER_CONF) return this.cpuPerConf >>> 0;
+      if (off === SYSTEM_SYSCLK_CONF) return this.sysclkConf >>> 0;
+      throw new Error(
+        `read of unmodeled SYSTEM register 0x${addr.toString(16)} — this core models only ` +
+          `CPU_PER_CONF(+0x10) and SYSCLK_CONF(+0x60), frozen at the 240 MHz PLL state`,
+      );
+    }
     throw new Error(`read outside the modeled ESP32-S3 map: 0x${addr.toString(16)}`);
   }
 
@@ -1003,6 +1132,45 @@ export class Esp32s3Core implements McuCore {
           this.adcReads.push({ channel, cycle: this.cpu.cycles });
         }
       }
+      return;
+    }
+    if (addr >= RTCCNTL_BASE && addr < RTCCNTL_END) {
+      const off = addr - RTCCNTL_BASE;
+      if (off === RTC_OPTIONS0) {
+        // The WO software-reset bits act and read back 0; the rest is
+        // stored (cuts: bias/regulator fields have no effect, and
+        // SW_APPCPU_RST is dropped — there is no second core).
+        this.rtcOptions0 = (value & ~(RTC_SW_SYS_RST | RTC_SW_PROCPU_RST)) >>> 0;
+        if ((value & RTC_SW_SYS_RST) !== 0) {
+          this.resetCause = RESET_CAUSE_SW_SYS;
+          this.pendingReset = true;
+        } else if ((value & RTC_SW_PROCPU_RST) !== 0) {
+          this.resetCause = RESET_CAUSE_SW_CPU;
+          this.pendingReset = true;
+        }
+      } else if (off === RTC_TIME_UPDATE) {
+        if ((value & (1 << 31)) !== 0) {
+          // Latch the 48-bit RTC main timer: CPU cycles → RC_SLOW ticks.
+          const ticks = Math.floor((this.cpu.cycles / CLOCK_HZ) * RTC_SLOW_HZ);
+          this.rtcTimeLatchLo = ticks % 0x100000000;
+          this.rtcTimeLatchHi = Math.floor(ticks / 0x100000000) & 0xffff;
+        }
+      }
+      // Other RTC_CNTL writes (WDT config, sleep setup, …) accepted+dropped.
+      return;
+    }
+    if (addr >= EFUSE_BASE && addr < EFUSE_BASE + 0x1000) {
+      throw new Error(`write to eFuse register 0x${addr.toString(16)} — eFuses are read-only in this core (programming is not modeled)`);
+    }
+    if (addr >= SYSTEM_BASE && addr < SYSTEM_BASE + 0x1000) {
+      const off = addr - SYSTEM_BASE;
+      // Stored but inert: the emulated clock is fixed at 240 MHz (cut
+      // stated in the header). CLK_XTAL_FREQ is RO — writes can't touch it.
+      if (off === SYSTEM_CPU_PER_CONF) this.cpuPerConf = value >>> 0;
+      else if (off === SYSTEM_SYSCLK_CONF) {
+        this.sysclkConf = ((value & ~SYSTEM_CLK_XTAL_FREQ_MASK) | (this.sysclkConf & SYSTEM_CLK_XTAL_FREQ_MASK)) >>> 0;
+      }
+      // Other SYSTEM writes (PERIP_CLK_EN, RST_EN, …) accepted+dropped.
       return;
     }
     throw new Error(`write outside the modeled ESP32-S3 map: 0x${addr.toString(16)}`);
