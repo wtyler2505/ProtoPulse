@@ -50,11 +50,6 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["process", "fs", "io-util"] }
 
-# Phase 2.2 (R4 retro): libc for O_NOFOLLOW symlink-refuse semantics in
-# path_validation.rs. Windows uses FILE_FLAG_OPEN_REPARSE_POINT (raw constant).
-[target.'cfg(unix)'.dependencies]
-libc = "0.2"
-
 # tauri-specta: auto-generated TypeScript bindings for #[tauri::command]
 # functions, eliminating IPC contract drift between Rust and the React frontend.
 # Pinned to RC versions per docs/plans/2026-05-10-tauri-v2-desktop-migration.md
@@ -62,6 +57,11 @@ libc = "0.2"
 specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
 specta-typescript = "=0.0.12"
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
+
+# Phase 2.2 (R4 retro): libc for O_NOFOLLOW symlink-refuse semantics in
+# path_validation.rs. Windows uses FILE_FLAG_OPEN_REPARSE_POINT (raw constant).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
