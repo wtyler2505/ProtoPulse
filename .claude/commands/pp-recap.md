@@ -1,7 +1,7 @@
 ---
 description: Synthesize and push a session recap to pp-journal. Sub-args manage Stop-hook draft buffer.
 argument-hint: [apply|discard|edit]
-allowed-tools: Bash(nlm:*), Bash(date:*), Bash(cat:*), Bash(rm:*), Bash(touch:*), Bash(echo:*), Edit, Read
+allowed-tools: Bash(nlm:*), Bash(date:*), Bash(cat:*), Bash(rm:*), Bash(touch:*), Bash(echo:*), Edit, Read, AskUserQuestion
 ---
 
 # /pp-recap
@@ -48,4 +48,5 @@ $1 (one of: apply, discard, edit, or empty)
 
 ## Notes
 - 0 quota cost.
-- The Stop hook (Phase 7) writes the draft. This command pushes/discards/edits it.
+- The Stop hook writes the draft. This command pushes/discards/edits it.
+- Alias resolution: `pp-journal` is a compatibility alias resolving to `pp-core`; run `nlm alias get pp-journal` before write.

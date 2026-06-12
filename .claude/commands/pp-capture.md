@@ -1,7 +1,7 @@
 ---
 description: Capture a session insight to ProtoPulse Memories notebook (pp-memories).
 argument-hint: <insight text>
-allowed-tools: Bash(nlm:*), Bash(date:*), Bash(touch:*), Bash(echo:*)
+allowed-tools: Bash(nlm:*), Bash(date:*), Bash(touch:*), Bash(echo:*), AskUserQuestion
 ---
 
 # /pp-capture
@@ -30,3 +30,4 @@ $ARGUMENTS
 ## Notes
 - 0 quota cost (note creation is free).
 - Note: `nlm note get` doesn't exist — content is write-only via this command. Read access via `nlm cross query --tags pp:active` or `nlm notebook query pp-memories ...`.
+- Alias resolution: `pp-memories` is a compatibility alias resolving to `pp-core`; run `nlm alias get pp-memories` before write.

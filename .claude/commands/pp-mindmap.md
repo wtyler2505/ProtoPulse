@@ -1,17 +1,17 @@
 ---
 description: Generate a mind map for a notebook. Auto-archives to docs/nlm-archive/.
-argument-hint: [alias=pp-codebase] [--title "Topic"]
+argument-hint: [alias=pp-core] [--title "Topic"]
 allowed-tools: Bash(nlm:*), Bash(bash:*)
 ---
 
 # /pp-mindmap
 
 ## Args
-$ARGUMENTS (defaults: alias=pp-codebase)
+$ARGUMENTS (defaults: alias=pp-core)
 
 ## Steps
 1. Auth gate.
-2. Parse args.
+2. Parse args. Validate alias resolves: `nlm alias get <alias>`.
 3. `nlm mindmap create <alias> --title "<title>" --confirm`. Capture artifact-id.
 4. Poll `nlm studio status <alias>` until completed.
 5. Trigger archive: `bash .claude/hooks/pp-nlm-studio-archive.sh <alias> <artifact-id>`.

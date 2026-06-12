@@ -1,7 +1,7 @@
 ---
 description: Append a BL-XXXX iteration decision to pp-backlog (4-field structured note).
 argument-hint: <decision summary> — references BL-XXXX if applicable
-allowed-tools: Bash(nlm:*), Bash(date:*), Bash(touch:*), Bash(echo:*)
+allowed-tools: Bash(nlm:*), Bash(date:*), Bash(touch:*), Bash(echo:*), AskUserQuestion
 ---
 
 # /pp-iter
@@ -34,3 +34,4 @@ $ARGUMENTS
 ## Notes
 - 0 quota cost.
 - BL-XXXX IDs come from `docs/MASTER_BACKLOG.md`. Cross-reference them in $ARGUMENTS so the entry is greppable.
+- Alias resolution: `pp-backlog` is a compatibility alias resolving to `pp-core`; run `nlm alias get pp-backlog` before write.
