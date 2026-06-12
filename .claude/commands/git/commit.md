@@ -6,18 +6,27 @@ allowed-tools: Bash(git:*), Bash(echo:*), Bash(head:*), Bash(wc:*), Bash(test:*)
 
 Create a git commit following the project's established style
 
+## ProtoPulse Conventions (read first)
+
+- **Co-Authored-By footer**: End every Claude-authored commit message with:
+  ```
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  ```
+- **Auto-commit hook**: `.claude/hooks/auto-commit-vault.sh` (PostToolUse) creates `Auto: ...` commits on its own. Don't be surprised by them, don't amend them, and don't imitate their style for real commits.
+- **Pushing is automated**: `~/.claude/scripts/auto-push-protopulse.sh` (cron + Stop hook) handles pushes on main. There is no `/git:push` command — do not push manually unless Tyler asks.
+
 ## Git Expert Integration
 For complex commit scenarios (merge commits, conflict resolution, commit history issues, interactive rebasing), consider using the Task tool with `git-expert` subagent for specialized git expertise.
 
 ## Efficiency Note:
-This command intelligently reuses recent git:status results when available to avoid redundant operations. If you just ran /git:status, the commit process will be faster.
+If a recent message in this session already contains git status/diff analysis, reuse it instead of re-running the commands.
 
 When git conventions are already documented in CLAUDE.md/AGENTS.md, use them directly without verbose explanation.
 
 All git commands are combined into a single bash call for maximum speed.
 
 ## Steps:
-1. Check if the previous message contains git:status results:
+1. Check if a previous message contains recent git status analysis:
    - Look for patterns like "Git Status Analysis", "Modified Files:", "Uncommitted Changes:"
    - If found and recent (within last 2-3 messages): Reuse those results
    - If not found or stale: Run a single combined git command:
@@ -36,9 +45,9 @@ All git commands are combined into a single bash call for maximum speed.
 5. Check if README.md or other documentation needs updating to reflect the changes (see "Documentation Updates" section below)
 6. Run tests and lint commands to ensure code quality (unless just ran before this command)
 7. Stage all relevant files (including any updated documentation)
-8. Create commit with appropriate message matching the project's conventions
+8. Create commit with appropriate message matching the project's conventions, ending with the `Co-Authored-By: Claude <noreply@anthropic.com>` footer
 9. Verify commit succeeded - Report with ✅ success indicator
-10. Check if any post-commit hooks need to be considered (e.g., pushing to remote, creating PR)
+10. Do NOT push — auto-push-protopulse.sh handles pushing on main (cron + Stop hook); only mention a PR if working on a non-main branch
 
 ## Documentation Updates:
 Consider updating relevant documentation when committing changes:

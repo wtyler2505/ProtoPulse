@@ -1,5 +1,5 @@
 ---
-allowed-tools: Read, Write, Grep, Glob, TodoWrite, Task, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, Bash(ls:*), Bash(echo:*), Bash(command:*), Bash(npm:*), Bash(claude:*)
+allowed-tools: Read, Write, Grep, Glob, TodoWrite, Task, mcp__context7__resolve-library-id, mcp__context7__query-docs, Bash(ls:*), Bash(echo:*), Bash(command:*), Bash(npm:*), Bash(claude:*)
 description: Generate a spec file for a new feature or bugfix
 category: validation
 argument-hint: "<feature-or-bugfix-description>"
@@ -8,33 +8,9 @@ argument-hint: "<feature-or-bugfix-description>"
 ## Context
 - Existing specs: !`ls -la specs/ 2>/dev/null || echo "No specs directory found"`
 
-## Optional: Enhanced Library Documentation Support
+## Library Documentation (Context7)
 
-Context7 MCP server provides up-to-date library documentation for better spec creation.
-
-Check if Context7 is available: !`command -v context7-mcp || echo "NOT_INSTALLED"`
-
-If NOT_INSTALLED and the feature involves external libraries, offer to enable Context7:
-```
-████ Optional: Enable Context7 for Enhanced Documentation ████
-
-Context7 provides up-to-date library documentation to improve spec quality.
-This is optional but recommended when working with external libraries.
-
-Would you like me to install Context7 for you? I can:
-  1. Install globally: npm install -g @upstash/context7-mcp
-  2. Add to Claude Code: claude mcp add context7 context7-mcp
-
-Or you can install it manually later if you prefer.
-```
-
-If user agrees to installation:
-- Run: `npm install -g @upstash/context7-mcp`
-- Then run: `claude mcp add context7 context7-mcp`
-- Verify installation and proceed with enhanced documentation support
-
-If user declines or wants to continue without it:
-- Proceed with spec creation using existing knowledge
+Context7 MCP is installed and connected in this project. For any spec touching external libraries, use it — it is mandatory per house rules, not optional (see AGENTS.md §MCP Auto-Routing).
 
 ## FIRST PRINCIPLES PROBLEM ANALYSIS
 
@@ -50,7 +26,7 @@ Before defining any solution, validate the problem from first principles:
 ### Problem Validation Questions
 - **Real vs. Perceived**: Is this solving a real problem that users actually have?
 - **Assumption Audit**: What assumptions about user needs, technical constraints, or business requirements might be wrong?
-- **Value Proposition**: What is the minimum viable solution that delivers core value?
+- **Value Proposition**: What solution fully delivers the core value? (House rule: no MVP framing — this is a personal project with no deadlines; spec the full vision.)
 - **Scope Validation**: Are we solving the right problem, or treating symptoms of a deeper issue?
 
 **CRITICAL: Only proceed if the core problem is clearly defined and validated. If uncertain, request additional context.**
@@ -93,7 +69,7 @@ First, analyze the request to understand:
 
 If the feature involves external libraries or frameworks AND Context7 is available:
 - Use `mcp__context7__resolve-library-id` to find the library
-- Use `mcp__context7__get-library-docs` to get up-to-date documentation
+- Use `mcp__context7__query-docs` to get up-to-date documentation
 - Reference official patterns and best practices from the docs
 
 ## END-TO-END INTEGRATION ANALYSIS
@@ -152,10 +128,7 @@ Then create a spec document that includes:
 12. **Performance Considerations**: Impact on performance and mitigation strategies
 13. **Security Considerations**: Security implications and safeguards
 14. **Documentation**: What documentation needs to be created/updated
-15. **Implementation Phases**:
-    - Phase 1: MVP/Core functionality
-    - Phase 2: Enhanced features (if applicable)
-    - Phase 3: Polish and optimization (if applicable)
+15. **Implementation Order**: Logical build sequence (foundation → features → polish). House rule: every part of the full vision gets specced and built — phases are an ordering device, never a license to ship a cut-down "MVP" and stop.
 16. **Open Questions**: Any unresolved questions or decisions
 17. **References**:
     - Links to related issues, PRs, or documentation
