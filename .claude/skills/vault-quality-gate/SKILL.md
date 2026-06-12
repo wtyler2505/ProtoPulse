@@ -10,6 +10,13 @@ argument-hint: "[note-path] [--ai-review] [--fail-on deterministic|all] [--dry-r
 
 ## EXECUTE NOW
 
+> **⚠️ GATE ROLE ONLY — do NOT run as a vault-wide audit until migration completes.**
+> This skill is `/extract`'s ship-gate for NEW notes, which use the preferred v2
+> values. The live vault (~743 notes) is pre-migration: its accepted-legacy
+> frontmatter (see the `_schema:` block in `ops/config.yaml` — single source of
+> truth) would bounce essentially every pre-T-series note if audited wholesale.
+> Accepted-legacy enum values WARN, never FAIL/bounce.
+
 **Target: $ARGUMENTS**
 
 Parse flags:
@@ -49,7 +56,7 @@ Each rule is pass/fail. Rules fire against frontmatter (via T2's `parse-frontmat
 | `description-not-placeholder` | description is not "TODO", "TBD", "(placeholder)", nor rehash of `name` | error |
 | `topics-present` | `topics` array has ≥1 entry | error |
 | `topics-moc-membership` | at least one topic slug exists as `knowledge/<topic>.md` (unless `type: moc | meta`) | error |
-| `type-valid` | `type` ∈ {claim, pattern, reference, moc, meta} | error |
+| `type-valid` | `type` ∈ preferred {claim, pattern, reference, moc, meta} (error if unknown); accepted-legacy values per `ops/config.yaml` `_schema` → warning only | error / warning |
 | `body-min-length` | body (post-frontmatter) ≥ 200 chars | warning |
 | `body-has-claim-section` | body contains a `## Claim` OR `## Summary` heading OR opens with a declarative sentence | warning |
 | `body-has-evidence-section` | body contains `## Evidence` OR `## Why` OR a Provenance block OR an inline citation (url) | warning |
@@ -85,7 +92,7 @@ Note:
 <FULL_NOTE>
 ```
 
-Call via `claude-code` CLI or direct API. Budget: ≤2000 output tokens per note.
+Call via the `claude` CLI in headless mode (`claude -p "<prompt>"`) or direct API. Budget: ≤2000 output tokens per note.
 
 ## Review stub format
 

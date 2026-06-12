@@ -2,7 +2,7 @@
 name: revisit
 description: Update old knowledge with new connections. The backward pass that /connect doesn't do. Revisit existing knowledge that predate newer related content, add connections, sharpen claims, consider splits. Triggers on "/revisit", "/revisit [note]", "update old knowledge", "backward connections", "revisit knowledge".
 user-invocable: true
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__qmd__search, mcp__qmd__vector_search, mcp__qmd__deep_search, mcp__qmd__status
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__qmd__qmd_search, mcp__qmd__qmd_vector_search, mcp__qmd__qmd_deep_search, mcp__qmd__qmd_status
 context: fork
 ---
 
@@ -118,7 +118,7 @@ Scan for candidates needing reweaving, present ranked list.
 
 ### /revisit --sparse
 
-Process {vocabulary.note_plural} flagged as sparse by /health.
+Process {vocabulary.note_plural} flagged as sparse by arscontexta:health.
 
 ### /revisit --since Nd
 
@@ -174,7 +174,7 @@ From the {vocabulary.note}'s Topics footer, identify which {vocabulary.topic_map
 
 **Three-tier fallback for semantic search:**
 
-**Tier 1 — MCP tools (preferred):** Use `mcp__qmd__deep_search` (hybrid search with expansion + reranking):
+**Tier 1 — MCP tools (preferred):** Use `mcp__qmd__qmd_deep_search` (hybrid search with expansion + reranking):
 - query: "[{vocabulary.note}'s core concepts and mechanisms]"
 - limit: 15
 
@@ -182,7 +182,7 @@ From the {vocabulary.note}'s Topics footer, identify which {vocabulary.topic_map
 ```bash
 LOCKDIR="ops/queue/.locks/qmd.lock"
 while ! mkdir "$LOCKDIR" 2>/dev/null; do sleep 2; done
-qmd query "[note's core concepts]" --collection {vocabulary.notes_collection} --limit 15 2>/dev/null
+qmd query "[note's core concepts]" --collection protopulse-vault --limit 15 2>/dev/null
 rm -rf "$LOCKDIR"
 ```
 
@@ -378,7 +378,12 @@ Vague claims cannot be built on. Sharpen means making the claim more specific an
 | "there are tradeoffs" | "[specific tradeoff]: gaining X costs Y" |
 
 **When sharpening, also update:**
-- Title (if claim changed) — use the rename script if available
+- Title (if claim changed) — rename manually:
+  ```bash
+  git mv "knowledge/old title.md" "knowledge/new title.md"
+  # update every wiki link to the old title
+  rg -lF '[[old title]]' knowledge/ | xargs -r sed -i 's/\[\[old title\]\]/[[new title]]/g'
+  ```
 - Description (must match new claim)
 - Body (reasoning must support sharpened claim)
 
@@ -451,7 +456,11 @@ The enrich phase determined the {vocabulary.note}'s title is too vague after con
 
 1. Read `post_enrich_detail` for the recommended new title
 2. Evaluate: is the suggested title actually better? (sharper claim, more specific, still composable as prose)
-3. If yes and a rename script exists: use it to rename. Otherwise rename manually and update all wiki links.
+3. If yes, rename manually and update all wiki links:
+   ```bash
+   git mv "knowledge/old title.md" "knowledge/new title.md"
+   rg -lF '[[old title]]' knowledge/ | xargs -r sed -i 's/\[\[old title\]\]/[[new title]]/g'
+   ```
 4. Update the {vocabulary.note}'s description to match the new title
 5. Log the rename in the task file Reweave section
 

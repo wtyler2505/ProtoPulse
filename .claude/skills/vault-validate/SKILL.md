@@ -10,6 +10,15 @@ argument-hint: "[file|glob] [--fix] [--json] [--strict] [--fail-on severity]"
 
 ## EXECUTE NOW
 
+> **⚠️ VAULT IS PRE-MIGRATION — READ THIS FIRST**
+> The canonical enum + topics-format policy lives in `ops/config.yaml` under the
+> `_schema:` block — that block is the single source of truth, NOT this skill's
+> JSON schema asset. The live vault (~743 notes) predates the v2 schema: legacy
+> values (`domain-knowledge`, `decision`, `insight`, `proven`, `high`, quoted
+> wiki-link topics, …) are **accepted-legacy** and must **WARN, never FAIL**.
+> Do **NOT** run bulk `--fix` across `knowledge/` — legacy frontmatter is valid
+> as-is until the migration completes. Single-note or small-batch fixes only.
+
 **Target: $ARGUMENTS**
 
 If no target provided, validate all notes under `knowledge/`.
@@ -24,7 +33,7 @@ Strip flags from target before globbing.
 
 **Execute these steps in order:**
 
-1. **Load the schema** — read `${CLAUDE_SKILL_DIR}/assets/frontmatter-v2.schema.json`.
+1. **Load the schema** — read `${CLAUDE_SKILL_DIR}/assets/frontmatter-v2.schema.json` AND the `_schema:` block in `ops/config.yaml`. The config block is canonical: its `preferred` enums match the JSON schema; its `accepted_legacy` enums (and the wiki-link topics format) demote what would be schema errors to warnings.
 2. **Enumerate targets** — glob `target` (default `knowledge/**/*.md`). Exclude `knowledge/index.md` and files under `knowledge/archive/`.
 3. **For each note, parse frontmatter** — extract the YAML block between leading `---` lines. Use `${CLAUDE_SKILL_DIR}/scripts/parse-frontmatter.py` to get a dict.
 4. **Validate against schema** — for each field, check required presence, type, constraint compliance. Collect violations as `{file, field, rule, severity, message}` objects.
@@ -48,6 +57,7 @@ Strip flags from target before globbing.
 ## Schema fields (v2 — upgraded from v1)
 
 Full schema: `${CLAUDE_SKILL_DIR}/assets/frontmatter-v2.schema.json`.
+Canonical enum policy: `ops/config.yaml` `_schema:` block (preferred vs accepted-legacy). Accepted-legacy `type` values: `decision | concept | insight | debt-note | need | domain-knowledge | knowledge-note | knowledge`. Accepted-legacy `confidence` values: `proven | likely | experimental | outdated | high | medium`. Wiki-link topics (`- "[[power-systems]]"`) are accepted-legacy; bare slugs preferred. All accepted-legacy hits are `severity: warning`, never `error`.
 
 ### Required (every note)
 

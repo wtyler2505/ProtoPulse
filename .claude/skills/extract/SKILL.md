@@ -4,7 +4,7 @@ description: Extract structured knowledge from source material. Comprehensive ex
 version: "1.0"
 generated_from: "arscontexta-v1.6"
 user-invocable: true
-allowed-tools: Read, Write, Grep, Glob, mcp__qmd__vector_search
+allowed-tools: Read, Write, Grep, Glob, mcp__qmd__qmd_vector_search
 context: fork
 ---
 
@@ -36,7 +36,7 @@ If these files don't exist (pre-init invocation or standalone use), use universa
 - depth: standard
 - chaining: suggested
 - selectivity: moderate
-- notes folder: `notes/`
+- notes folder: `knowledge/` (the manifest maps `vocabulary.notes` to `knowledge/` — there is no other fallback)
 - inbox folder: `inbox/`
 
 ---
@@ -113,8 +113,8 @@ Parse immediately:
 2. **Source size check:** If source exceeds 2500 lines, STOP. Plan chunks of 350-1200 lines. Process each chunk with fresh context. See "Large Source Handling" section below.
 3. Hunt for insights that serve the domain (see extraction categories below)
 4. For each candidate:
-   - Tier 1 (preferred): use `mcp__qmd__vector_search` with query "[claim as sentence]", collection="{vocabulary.notes_collection}", limit=5
-   - Tier 2 (CLI fallback): `qmd vsearch "[claim as sentence]" --collection {vocabulary.notes_collection} -n 5`
+   - Tier 1 (preferred): use `mcp__qmd__qmd_vector_search` with query "[claim as sentence]", collection="protopulse-vault" (the manifest's `vocabulary.notes_collection`), limit=5
+   - Tier 2 (CLI fallback): `qmd query --collection protopulse-vault "[claim as sentence]" -n 5`
    - Tier 3 fallback if qmd is unavailable: use keyword grep duplicate checks
    - If duplicate exists: evaluate for enrichment or skip
    - Classify as OPEN (needs more investigation) or CLOSED (standalone, ready)
@@ -362,15 +362,15 @@ This is the critical step that prevents over-rejection. Categorize FIRST, then r
 For each candidate, run duplicate detection:
 
 ```
-mcp__qmd__vector_search  query="[proposed claim as sentence]"  collection="{vocabulary.notes_collection}"  limit=5
+mcp__qmd__qmd_vector_search  query="[proposed claim as sentence]"  collection="protopulse-vault"  limit=5
 ```
 If MCP is unavailable, run:
 ```bash
-qmd vsearch "[proposed claim as sentence]" --collection {vocabulary.notes_collection} -n 5
+qmd query --collection protopulse-vault "[proposed claim as sentence]" -n 5
 ```
 If qmd CLI is unavailable, fall back to keyword grep duplicate checks.
 
-**Why `vector_search` (vector semantic) instead of keyword search:** Duplicate detection is where keyword search fails hardest. A claim about "friction in systems" will not find "resistance to change" via keyword matching even though they may be semantic duplicates. Vector search (~5s) catches same-concept-different-words duplicates that keyword search misses entirely. For a batch of 30-50 candidates, this adds ~3 minutes total — worth it to catch duplicates early rather than discovering them during {vocabulary.cmd_reflect}.
+**Why `qmd_vector_search` (vector semantic) instead of keyword search:** Duplicate detection is where keyword search fails hardest. A claim about "friction in systems" will not find "resistance to change" via keyword matching even though they may be semantic duplicates. Vector search (~5s) catches same-concept-different-words duplicates that keyword search misses entirely. For a batch of 30-50 candidates, this adds ~3 minutes total — worth it to catch duplicates early rather than discovering them during {vocabulary.cmd_reflect}.
 
 **Scores are signals, not decisions.** For ANY result with a relevant title or snippet:
 
@@ -477,8 +477,9 @@ Bad: "context management strategies" (topic label, not a claim)
 
 **b. Write the {vocabulary.note}**
 
-> **v2 frontmatter schema (canonical — enforced by `/vault-quality-gate`):**
-> `.claude/skills/vault-validate/assets/frontmatter-v2.schema.json`
+> **Frontmatter schema (canonical): the `_schema` block in `ops/config.yaml`** — the union of v2-preferred and legacy-accepted values, enforced by `/vault-quality-gate`. JSON mirror: `.claude/skills/vault-validate/assets/frontmatter-v2.schema.json`.
+>
+> Extract always writes v2-preferred values. Legacy values in older notes WARN at the gates rather than FAIL — never write them for new notes.
 >
 > Hard rules:
 > - `description` MUST be ≤140 characters (tooltip-grade — it powers `<VaultHoverCard>`)
@@ -1151,7 +1152,7 @@ When processing content, route to the correct skill:
 | {vocabulary.note} just created | /{vocabulary.cmd_reflect} | New {vocabulary.note_plural} need connections |
 | After connecting | /{vocabulary.cmd_reweave} | Old {vocabulary.note_plural} need updating |
 | Quality check | /{vocabulary.cmd_verify} | Combined verification gate |
-| System health | /health | Systematic diagnostics |
+| System health | /arscontexta:health (consumption-focused checks: /vault-health) | Systematic diagnostics |
 
 ## Pipeline Chaining
 

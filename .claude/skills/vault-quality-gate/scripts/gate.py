@@ -38,6 +38,10 @@ WIKILINK_RE = re.compile(r"\[\[([a-z0-9][a-z0-9-]*)\]\]")
 KNOWLEDGE_REF_RE = re.compile(r"knowledge/([a-z0-9][a-z0-9-]*)\.md")
 URL_RE = re.compile(r"https?://[^\s\)]+")
 VALID_TYPES = {"claim", "pattern", "reference", "moc", "meta"}
+# Accepted-legacy type values — generated from ops/config.yaml _schema — keep in sync.
+# Pre-migration vault: these WARN, never fail/bounce.
+ACCEPTED_LEGACY_TYPES = {"decision", "concept", "insight", "debt-note", "need",
+                         "domain-knowledge", "knowledge-note", "knowledge"}
 TODO_MARKERS = re.compile(r"\b(TODO|FIXME|_TBD_|XXX)\b", re.IGNORECASE)
 AUDIENCE_MARKER_RE = re.compile(r"#{2,3}\s+\[(beginner|intermediate|expert)\]", re.MULTILINE)
 
@@ -105,10 +109,18 @@ def run_checks(path: Path, fm: dict, body: str, repo: Path) -> list[dict]:
                 add("topics-moc-membership", "error",
                     "no topic corresponds to an existing MOC (knowledge/<topic>.md)")
 
-    # type
+    # type — preferred (v2) passes; accepted-legacy warns (ops/config.yaml _schema);
+    # unknown errors.
     note_type = fm.get("type")
     if note_type not in VALID_TYPES:
-        add("type-valid", "error", f"type must be one of {sorted(VALID_TYPES)}; got {note_type!r}")
+        if note_type in ACCEPTED_LEGACY_TYPES:
+            add("type-valid", "warning",
+                f"type {note_type!r} is accepted-legacy — prefer one of "
+                f"{sorted(VALID_TYPES)} (see ops/config.yaml _schema)")
+        else:
+            add("type-valid", "error",
+                f"type must be one of {sorted(VALID_TYPES)} (or an accepted-legacy "
+                f"value per ops/config.yaml _schema); got {note_type!r}")
 
     # body length
     if len(body.strip()) < 200:

@@ -4,7 +4,7 @@ description: Extract structured knowledge from source material. Comprehensive ex
 version: "1.0"
 generated_from: "arscontexta-v1.6"
 user-invocable: true
-allowed-tools: Read, Write, Grep, Glob, mcp__qmd__vector_search
+allowed-tools: Read, Write, Grep, Glob, mcp__qmd__qmd_vector_search
 context: fork
 ---
 
@@ -113,8 +113,8 @@ Parse immediately:
 2. **Source size check:** If source exceeds 2500 lines, STOP. Plan chunks of 350-1200 lines. Process each chunk with fresh context. See "Large Source Handling" section below.
 3. Hunt for insights that serve the domain (see extraction categories below)
 4. For each candidate:
-   - Tier 1 (preferred): use `mcp__qmd__vector_search` with query "[claim as sentence]", collection="{vocabulary.notes_collection}", limit=5
-   - Tier 2 (CLI fallback): `qmd vsearch "[claim as sentence]" --collection {vocabulary.notes_collection} -n 5`
+   - Tier 1 (preferred): use `mcp__qmd__qmd_vector_search` with query "[claim as sentence]", collection="protopulse-vault" (the manifest's `vocabulary.notes_collection`), limit=5
+   - Tier 2 (CLI fallback): `qmd query --collection protopulse-vault "[claim as sentence]" -n 5`
    - Tier 3 fallback if qmd is unavailable: use keyword grep duplicate checks
    - If duplicate exists: evaluate for enrichment or skip
    - Classify as OPEN (needs more investigation) or CLOSED (standalone, ready)
@@ -353,15 +353,15 @@ This is the critical step that prevents over-rejection. Categorize FIRST, then r
 For each candidate, run duplicate detection:
 
 ```
-mcp__qmd__vector_search  query="[proposed claim as sentence]"  collection="{vocabulary.notes_collection}"  limit=5
+mcp__qmd__qmd_vector_search  query="[proposed claim as sentence]"  collection="protopulse-vault"  limit=5
 ```
 If MCP is unavailable, run:
 ```bash
-qmd vsearch "[proposed claim as sentence]" --collection {vocabulary.notes_collection} -n 5
+qmd query --collection protopulse-vault "[proposed claim as sentence]" -n 5
 ```
 If qmd CLI is unavailable, fall back to keyword grep duplicate checks.
 
-**Why `vector_search` (vector semantic) instead of keyword search:** Duplicate detection is where keyword search fails hardest. A claim about "friction in systems" will not find "resistance to change" via keyword matching even though they may be semantic duplicates. Vector search (~5s) catches same-concept-different-words duplicates that keyword search misses entirely. For a batch of 30-50 candidates, this adds ~3 minutes total — worth it to catch duplicates early rather than discovering them during {vocabulary.cmd_reflect}.
+**Why `qmd_vector_search` (vector semantic) instead of keyword search:** Duplicate detection is where keyword search fails hardest. A claim about "friction in systems" will not find "resistance to change" via keyword matching even though they may be semantic duplicates. Vector search (~5s) catches same-concept-different-words duplicates that keyword search misses entirely. For a batch of 30-50 candidates, this adds ~3 minutes total — worth it to catch duplicates early rather than discovering them during {vocabulary.cmd_reflect}.
 
 **Scores are signals, not decisions.** For ANY result with a relevant title or snippet:
 
@@ -468,12 +468,38 @@ Bad: "context management strategies" (topic label, not a claim)
 
 **b. Write the {vocabulary.note}**
 
+> **Frontmatter schema (canonical): the `_schema` block in `ops/config.yaml`** — the union of v2-preferred and legacy-accepted values, enforced by `/vault-quality-gate`. JSON mirror: `.claude/skills/vault-validate/assets/frontmatter-v2.schema.json`.
+>
+> Extract always writes v2-preferred values. Legacy values in older knowledge files WARN at the gates rather than FAIL — never write them for new knowledge.
+>
+> Hard rules:
+> - `description` MUST be ≤140 characters (tooltip-grade — it powers `<VaultHoverCard>`)
+> - `type` MUST be one of `{claim, pattern, reference, moc, meta}`. Map nuanced categories:
+>   - methodology / implementation-pattern / architecture-decision / convention / gotcha / ux-pattern → `pattern`
+>   - concept / definition / taxonomy / open-question → `reference`
+>   - tension → `claim`
+>   - topic-map → `moc`
+> - `topics` MUST be an array of bare slugs (NOT wiki-linked). At least one topic MUST resolve to an existing `knowledge/<slug>.md` topic map file.
+> - `confidence: verified` MUST be accompanied by a `provenance` array with at least one source. Use `supported` if you cannot cite.
+
 ```markdown
 ---
-description: [~150 chars elaborating the claim, adds info beyond title]
-type: [claim | methodology | problem | learning | tension]
+name: [file-stem slug — must match filename]
+description: [≤140 chars elaborating the claim, adds info beyond title — tooltip-grade]
+type: claim | pattern | reference | moc | meta
+topics:
+  - [bare-slug-of-existing-topic-map]   # at least one MUST resolve to knowledge/<slug>.md
+  - [additional-bare-slug]             # no [[brackets]], lowercase-kebab-case
+audience:                               # optional; powers progressive disclosure
+  - beginner | intermediate | expert
+confidence: speculative | emerging | supported | verified | established
+provenance:                             # REQUIRED when confidence == verified
+  - source: datasheet | standard | community | vendor-doc | textbook | paper | experiment | code | other
+    url: https://...                    # optional but preferred
+    page: [integer or section id]       # optional
+related:                                # optional; mirrors wiki-links in body
+  - [bare-slug]
 created: YYYY-MM-DD
-[domain-specific fields from derivation-manifest]
 ---
 
 # [prose-as-title proposition]
@@ -485,25 +511,36 @@ Acknowledge uncertainty where appropriate.
 Consider the strongest counterargument.
 Show the path to the conclusion, not just the conclusion.
 
+## Evidence
+
+[Cite primary sources inline or via URL links. If you listed provenance in frontmatter, cross-reference here.]
+
+## Application
+
+[When to use this claim / how it applies in practice. Pedagogy lives here.]
+
 ---
 
-Source: [[source filename]]
+Source: [[source-file-stem]]
 
 Relevant Notes:
-- [[related claim]] — [why it relates: extends, contradicts, builds on]
-
-Topics:
-- [[relevant {vocabulary.topic_map}]]
+- [[related-claim-bare-slug]] — [why it relates: extends, contradicts, builds on]
 ```
 
-**c. Verify before writing**
+**c. Verify before writing (v2-compliance checklist)**
 
-- Title passes the claim test ("this {vocabulary.note} argues that [title]")
-- Description adds information beyond the title (not a restatement)
-- Body shows reasoning, not just assertion
-- At least one relevant {vocabulary.note} connection identified
-- At least one {vocabulary.topic_map} link
-- Source attribution present
+- [ ] Title passes the claim test ("this {vocabulary.note} argues that [title]")
+- [ ] `name` matches the file stem exactly (no extension, no brackets)
+- [ ] `description` is ≤140 chars AND adds information beyond the title (not a restatement)
+- [ ] `type` is one of `{claim, pattern, reference, moc, meta}` (map per table above)
+- [ ] `topics` is an array of bare slugs (no `[[...]]` wrapping)
+- [ ] At least one topic resolves to an existing `knowledge/<topic>.md` file (run `ls knowledge/ | grep -F "<topic>"` to verify)
+- [ ] If `confidence: verified`, `provenance` has ≥1 entry with `source` + ideally `url`
+- [ ] Body has ≥2 cross-links (`[[wiki]]` or `knowledge/<slug>.md`)
+- [ ] Body has either `## Evidence` / `## Why` section OR at least one URL citation OR a provenance entry
+- [ ] Source attribution present
+
+**Fallback if uncertain:** use `type: reference` and `confidence: supported` — these are the safest defaults and won't block the gate.
 
 **d. Create the file**
 
@@ -1106,7 +1143,7 @@ When processing content, route to the correct skill:
 | {vocabulary.note} just created | /{vocabulary.cmd_reflect} | New {vocabulary.note_plural} need connections |
 | After connecting | /{vocabulary.cmd_reweave} | Old {vocabulary.note_plural} need updating |
 | Quality check | /{vocabulary.cmd_verify} | Combined verification gate |
-| System health | /health | Systematic diagnostics |
+| System health | /arscontexta:health (consumption-focused checks: /vault-health) | Systematic diagnostics |
 
 ## Pipeline Chaining
 
@@ -1117,3 +1154,47 @@ After extraction completes, output the next step based on `ops/config.yaml` pipe
 - **automatic:** Queue entries created and processing continues immediately via orchestration
 
 The chaining output uses domain-native command names from the derivation manifest.
+
+---
+
+## Queue-Aware Batch Mode (added 2026-04-19, BL-0855)
+
+When invoked without a specific file (e.g., `/extract --batch` or `/extract --batch --include-user-queue`), consume pending stubs from the queue files in **priority order**:
+
+### Priority ladder
+
+1. **`ops/queue/gap-stubs.md`** (HIGH) — agent-detected gaps surfaced by `/vault-gap`. Trustworthy origin. Process first.
+2. **`ops/queue/user-suggestions.md`** (LOW, gated) — user-submitted suggestions captured by `/vault-inbox`. Each row's corresponding inbox stub has `triage_status: pending-review` and requires **explicit moderation approval** before extraction. Only consumed when `--include-user-queue` is passed.
+
+### Moderation gate for user-suggestions
+
+For every user-suggestion stub before extraction:
+
+1. **Read the inbox stub** referenced in the `inbox_path` column.
+2. **Apply the moderation checklist:**
+   - [ ] Does the suggestion describe a real gap in the vault (not a duplicate, not already covered)?
+   - [ ] Is the topic in-domain for ProtoPulse (EDA/hardware/UI/agent-infra)?
+   - [ ] Does it include enough research context to let `/extract` proceed without hallucination?
+   - [ ] Does `unblocks:` in frontmatter point to a real plan or code path?
+3. **If ALL checkboxes pass:** promote `triage_status: pending-review` → `triage_status: approved`, proceed to extract.
+4. **If ANY checkbox fails:** promote to `triage_status: rejected` with a one-line reason in the stub frontmatter (`rejection_reason:`); skip extraction; leave the queue row marked for human review.
+
+### Post-extract queue update
+
+After extracting a stub, update its queue row status:
+- `gap-stubs.md`: `status: extracted` + `extracted_date`
+- `user-suggestions.md`: `status: extracted` (or `rejected` if moderation blocked it)
+
+Never mutate queue rows mid-batch — collect all state changes, write at the end in a single atomic pass.
+
+### Invocation examples
+
+```bash
+/extract --batch                       # gap-stubs.md only (default — high-trust only)
+/extract --batch --include-user-queue  # gap-stubs.md then user-suggestions.md (with moderation)
+/extract --batch --limit 5             # process at most 5 pending stubs this run
+```
+
+### Non-blocking rule
+
+User-suggestion extraction failures MUST NOT halt gap-stub processing. If a user suggestion fails moderation, log and continue to the next item.

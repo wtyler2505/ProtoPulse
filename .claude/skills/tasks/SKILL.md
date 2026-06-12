@@ -46,7 +46,7 @@ Parse the operation:
 
 **Two systems, one view.**
 
-The task stack (`ops/tasks.md`) and the pipeline queue (`ops/queue/queue.yaml` or `ops/queue/queue.json`) serve different purposes:
+The task stack (`ops/tasks.md`) and the pipeline queue (`ops/queue/queue.json`) serve different purposes:
 
 | System | Purpose | Managed By | Updated By |
 |--------|---------|-----------|------------|
@@ -79,16 +79,13 @@ If `ops/tasks.md` does not exist, note: "No task stack found. Run `/tasks add [d
 
 **Step 2: Read queue state**
 
+Use jq — the queue is structured JSON; do not count with grep.
+
 ```bash
-# Check for queue file (YAML or JSON)
-if [[ -f "ops/queue/queue.yaml" ]]; then
-  QUEUE_FILE="ops/queue/queue.yaml"
-  PENDING_TASKS=$(grep -c 'status: pending' "$QUEUE_FILE" 2>/dev/null || echo 0)
-  DONE_TASKS=$(grep -c 'status: done' "$QUEUE_FILE" 2>/dev/null || echo 0)
-elif [[ -f "ops/queue/queue.json" ]]; then
-  QUEUE_FILE="ops/queue/queue.json"
-  PENDING_TASKS=$(grep -c '"status": "pending"' "$QUEUE_FILE" 2>/dev/null || echo 0)
-  DONE_TASKS=$(grep -c '"status": "done"' "$QUEUE_FILE" 2>/dev/null || echo 0)
+QUEUE_FILE="ops/queue/queue.json"
+if [[ -f "$QUEUE_FILE" ]]; then
+  PENDING_TASKS=$(jq '[.tasks[] | select(.status == "pending")] | length' "$QUEUE_FILE")
+  DONE_TASKS=$(jq '[.tasks[] | select(.status == "done")] | length' "$QUEUE_FILE")
 else
   QUEUE_FILE=""
   PENDING_TASKS=0
@@ -96,22 +93,29 @@ else
 fi
 ```
 
-If a queue file exists, extract pending task details:
-- Task ID
-- Current phase
-- Target (note title)
-- Batch name
+If the queue file exists, extract pending task details (ID, current phase, target, batch) plus age in days — queue rows carry `created` timestamps, so surface how long each task has been pending:
+
+```bash
+NOW=$(date -u +%s)
+jq -r --argjson now "$NOW" '
+  .tasks[] | select(.status == "pending") |
+  [.id,
+   (.current_phase // .type),
+   (.target // .source // "-"),
+   (.batch // "-"),
+   ((($now - (.created | fromdateiso8601)) / 86400 | floor | tostring) + "d")
+  ] | @tsv' "$QUEUE_FILE"
+```
 
 **Step 3: Check for archivable batches**
 
-A batch is archivable when ALL its tasks have `status: done`:
+A batch is archivable when ALL its tasks have `status: done` (or `archived`):
 
 ```bash
-# For each unique batch in the queue, check if all tasks are done
 if [[ -n "$QUEUE_FILE" ]]; then
-  # Extract unique batch names
-  # Check each batch: are all tasks done?
-  # Report archivable batches
+  jq -r '[.tasks[] | select(.batch != null)] | group_by(.batch) |
+         map(select(all(.[]; .status == "done" or .status == "archived"))) |
+         .[] | .[0].batch' "$QUEUE_FILE" | sort -u
 fi
 ```
 
@@ -137,8 +141,8 @@ fi
   Pipeline Queue
   ==============
   Pending: {count} tasks
-    - {task-id}: {current_phase} — {target title} (batch: {batch})
-    - {task-id}: {current_phase} — {target title} (batch: {batch})
+    - {task-id}: {current_phase} — {target title} (batch: {batch}, pending {N}d)
+    - {task-id}: {current_phase} — {target title} (batch: {batch}, pending {N}d)
     ...
 
   Done: {count} tasks
@@ -153,7 +157,8 @@ fi
 |-----------|------|
 | Task stack empty | "No tasks on stack. Use `/tasks add [description]` to add one, or `/next` for suggestions." |
 | Pipeline has pending tasks | "Pipeline has {N} pending tasks. Run /ralph to process them." |
-| Archivable batches exist | "Batch '{name}' is ready to archive. Run /archive-batch {name}." |
+| Pending tasks older than 14 days | "Oldest pending task has sat {N} days — the pipeline may be stalled. Run /ralph N --batch {oldest batch}." |
+| Archivable batches exist | "Batch '{name}' is ready to archive. Use the inline archive procedure in the pipeline skill (Phase 5)." |
 | Both empty | "All clear. Use `/next` to find what to work on." |
 
 ### /tasks add [description]
@@ -313,8 +318,8 @@ The task stack (ops/tasks.md) and pipeline queue coexist but serve different aud
 
 | Aspect | Task Stack | Pipeline Queue |
 |--------|-----------|---------------|
-| File | ops/tasks.md | ops/queue/queue.yaml (or .json) |
-| Format | Markdown checklist | YAML/JSON with phase tracking |
+| File | ops/tasks.md | ops/queue/queue.json |
+| Format | Markdown checklist | JSON with phase tracking |
 | Managed by | User via /tasks | Pipeline skills automatically |
 | Read by | /next (priority #1) | /ralph (phase routing) |
 | Purpose | Human priorities | Automated processing state |

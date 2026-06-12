@@ -1,8 +1,8 @@
 ---
 name: verify
-description: Combined verification — recite (description quality via cold-read prediction) + validate (schema compliance) + review (health checks). Use as a quality gate after creating notes or as periodic maintenance. Triggers on "/verify", "/verify [note]", "verify note quality", "check note health".
+description: Combined verification — recite (description quality via cold-read prediction) + validate (schema compliance) + review (health checks). Use as a quality gate after creating notes or as periodic maintenance. Vault note quality gate — NOT for verifying code changes (use the built-in code-verification `verify` skill for that). Triggers on "/verify", "/verify [note]", "verify note quality", "check note health".
 user-invocable: true
-allowed-tools: Read, Write, Edit, Grep, Glob, mcp__qmd__vector_search
+allowed-tools: Read, Write, Edit, Grep, Glob, mcp__qmd__qmd_vector_search
 context: fork
 ---
 
@@ -72,7 +72,7 @@ ALL FOUR must pass.
 
 Before any retrieval tests, verify the semantic search index is current:
 
-1. Try `mcp__qmd__vector_search` with a simple test query to confirm MCP availability
+1. Try `mcp__qmd__qmd_vector_search` with a simple test query to confirm MCP availability
 2. If MCP is unavailable (tool fails or returns error), try qmd CLI (`qmd status`) to confirm local CLI availability
 3. If either MCP or qmd CLI is available, proceed to Step 1
 4. If neither MCP nor qmd CLI is available: note "retrieval test will be deferred" and proceed — do NOT let index issues block verification
@@ -123,8 +123,8 @@ NOW read the complete note. Compare against your prediction.
 
 Test whether the description enables semantic retrieval:
 
-- Tier 1 (preferred): `mcp__qmd__vector_search` with query = "[the note's description text]", collection = "{vocabulary.notes_collection}", limit = 10
-- Tier 2 (CLI fallback): `qmd vsearch "[the note's description text]" --collection {vocabulary.notes_collection} -n 10`
+- Tier 1 (preferred): `mcp__qmd__qmd_vector_search` with query = "[the note's description text]", collection = "protopulse-vault", limit = 10
+- Tier 2 (CLI fallback): `qmd query "[the note's description text]" --collection protopulse-vault -n 10`
 - Tier 3: if both MCP and qmd CLI are unavailable, report "retrieval test deferred (semantic search unavailable)" — do NOT skip silently
 
 Check where the note appears in results:
@@ -132,7 +132,7 @@ Check where the note appears in results:
 - Position 4-10: adequate but could improve
 - Not in top 10: flag — description may not convey the note's meaning
 
-**Why vector_search specifically:** Agents find notes via semantic search during reflect and reweave. Testing with keyword search tests the wrong retrieval method. Full hybrid search with LLM reranking compensates for weak descriptions — too lenient. vector_search tests real semantic findability without hiding bad descriptions behind reranking.
+**Why qmd_vector_search specifically:** Agents find notes via semantic search during reflect and reweave. Testing with keyword search tests the wrong retrieval method. Full hybrid search with LLM reranking compensates for weak descriptions — too lenient. qmd_vector_search tests real semantic findability without hiding bad descriptions behind reranking.
 
 **6. Draft improved description if needed**
 
@@ -154,10 +154,10 @@ If prediction score < 3:
 ### Step 2: VALIDATE (schema check)
 
 Read the template that applies to this note type. Determine the template by checking:
-- Note location (e.g., insights/ uses the standard note template)
+- Note location (e.g., knowledge/ uses the standard note template)
 - Type field in frontmatter (if present, may indicate a specialized template)
 
-If the vault has templates with `_schema` blocks, read the `_schema` from the relevant template for authoritative field requirements. If no `_schema` exists, use the checks below as defaults.
+If the vault has templates with `_schema` blocks, read the `_schema` from the relevant template for authoritative field requirements. For `type`/`confidence` enums and topics format, the `_schema:` block in `ops/config.yaml` is canonical — preferred values pass, accepted-legacy values WARN (never FAIL). If no `_schema` exists, use the checks below as defaults.
 
 **Required fields (FAIL if missing):**
 
@@ -187,7 +187,7 @@ If the vault has templates with `_schema` blocks, read the `_schema` from the re
 
 **Domain-specific field enums (WARN if invalid):**
 
-If the note has fields with enumerated values (type, category, status, etc.), check them against the template's `_schema.enums` block. Each invalid enum value produces a WARN.
+For `type` and `confidence`, check against the `_schema:` block in `ops/config.yaml` (the single source of truth): `preferred` values pass silently, `accepted_legacy` values produce a WARN (never FAIL). For other enumerated fields (category, status, etc.), check the template's `_schema.enums` block. Each invalid enum value produces a WARN naming the valid options.
 
 **Relevant notes format (WARN if incorrect):**
 
@@ -197,11 +197,13 @@ If the note has fields with enumerated values (type, category, status, etc.), ch
 | Relationship type | Should use standard types: extends, foundation, contradicts, enables, example | INFO |
 | Links exist | Each referenced note must exist as a file | WARN |
 
-**Topics format (FAIL if invalid):**
+**Topics format (per `ops/config.yaml` `_schema` — bare slug preferred, wiki-link accepted-legacy):**
 
 | Constraint | Check | Severity |
 |------------|-------|----------|
-| Format | Array of wiki links: `["[[topic]]"]` | FAIL |
+| Format — bare slug | `topics` entries as bare slugs (`- power-systems`) — preferred | PASS |
+| Format — wiki link | `topics` entries as wiki links (`- "[[power-systems]]"`) — accepted-legacy | WARN (never FAIL) |
+| Format — other | Entry is neither a bare slug nor a wiki link | FAIL |
 | Links exist | Each topic map must exist as a file | WARN |
 
 **Composability (WARN if fails):**
@@ -292,7 +294,7 @@ RECITE:
 VALIDATE:
   Required fields: [PASS/FAIL — detail]
   Description constraints: [PASS/WARN — detail]
-  Topics format: [PASS/FAIL — detail]
+  Topics format: [PASS/WARN/FAIL — detail]
   Optional fields: [PASS/WARN/N/A]
   Relevant notes: [PASS/WARN/N/A]
   Composability: [PASS/WARN]
@@ -357,7 +359,7 @@ the testing effect applied to vault quality. read only title + description, pred
 
 both degrade the vault's value as a knowledge tool.
 
-**retrieval test rationale:** agents find notes via semantic search during reflect and reweave. testing with BM25 keyword matching tests the wrong retrieval method. full hybrid search with LLM reranking compensates for weak descriptions — too lenient. vector_search tests real semantic findability without hiding bad descriptions.
+**retrieval test rationale:** agents find notes via semantic search during reflect and reweave. testing with BM25 keyword matching tests the wrong retrieval method. full hybrid search with LLM reranking compensates for weak descriptions — too lenient. qmd_vector_search tests real semantic findability without hiding bad descriptions.
 
 ## validate: schema compliance
 
@@ -366,11 +368,11 @@ checks against the relevant template schema:
 | Check | Requirement | Severity |
 |-------|-------------|----------|
 | `description` | Must exist, non-empty | FAIL |
-| `topics` | Must exist, array of wiki links | FAIL |
+| `topics` | Must exist; bare slugs preferred, wiki links accepted-legacy (WARN, never FAIL) per `ops/config.yaml` `_schema` | FAIL if missing |
 | description length | < 200 chars | WARN |
 | description content | Adds info beyond title | WARN |
 | description format | No trailing period | WARN |
-| domain enum fields | Valid values per template `_schema.enums` | WARN |
+| domain enum fields | Valid values per `ops/config.yaml` `_schema` (type/confidence) or template `_schema.enums` | WARN |
 | `relevant_notes` format | Array with context phrases | WARN |
 | YAML integrity | Well-formed, `---` delimiters | FAIL |
 | Composability | Title passes "This note argues that [title]" test | WARN |
@@ -408,7 +410,7 @@ plus 3 deep-only checks for comprehensive audits:
 
 When verifying all notes:
 
-1. Discover all notes in insights/ directory
+1. Discover all notes in knowledge/ directory
 2. For each note, run the full verification pipeline
 3. Produce summary report:
    - Total notes checked
@@ -427,7 +429,7 @@ Run all three checks on a specific note. Full detailed report.
 
 ### /verify --all
 
-Comprehensive audit of all notes in insights/. Summary table + flagged failures.
+Comprehensive audit of all notes in knowledge/. Summary table + flagged failures.
 
 ### /verify --handoff [note]
 
@@ -448,7 +450,7 @@ Work Done:
 - Description improved: [yes/no]
 
 Files Modified:
-- insights/[note].md (description improved, if applicable)
+- knowledge/[note].md (description improved, if applicable)
 - [task file path] (Verify section updated, if applicable)
 
 Learnings:
@@ -472,7 +474,7 @@ When a task file is in context (pipeline execution), update the `## Verify` sect
 
 Recite:
 - Prediction: N/5 — [brief reason]
-- Retrieval: #N via MCP vector_search or CLI vsearch (or "deferred")
+- Retrieval: #N via MCP qmd_vector_search or CLI `qmd query` (or "deferred")
 - Description: [kept/improved — brief note]
 
 Validate:

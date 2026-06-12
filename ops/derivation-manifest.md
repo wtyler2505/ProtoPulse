@@ -14,6 +14,7 @@ Machine-readable reference for skills, hooks, and automation.
 | Universal Term | Domain Term | Usage Context |
 |----------------|-------------|---------------|
 | notes | knowledge | Folder name: `knowledge/` |
+| notes_collection | protopulse-vault | qmd collection name: `protopulse-vault` |
 | inbox | inbox | Folder name: `inbox/` |
 | archive | archive | Folder name: `archive/` |
 | note | note | Generic note type |

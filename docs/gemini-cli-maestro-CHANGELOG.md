@@ -1,3 +1,5 @@
+> Preserved from `.agents/skills/gemini-cli-maestro/data/CHANGELOG.md` when the unfinished gemini-cli-maestro skill scaffold was deleted (2026-06-11 skill audit); it logs real Gemini-extension work from 2026-04-12.
+
 # gemini-cli-maestro Maestro - Configuration Changelog
 Tracks all autonomous changes made to the ecosystem.
 

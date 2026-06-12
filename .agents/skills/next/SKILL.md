@@ -128,7 +128,7 @@ Gather all signals. Run independent checks in parallel where possible. Record ea
 | **Tensions** | Count files with `status: pending` or `status: open` in `ops/tensions/` | Count |
 | **Methodology** | Check `ops/methodology/` for recent captures (files modified in last 7 days) | Count of recent, total count |
 | **Health** | Read most recent report in `ops/health/` — note timestamp and issues | Last run date, issue count, any critical issues |
-| **Sessions** | Check `ops/sessions/` for files without `mined: true` in frontmatter | Count of unmined sessions |
+| **Sessions** | Check `ops/sessions/*.json` for files where `.mined` is not `true` (jq) | Count of unmined sessions |
 | **Recent /next** | Read `ops/next-log.md` (if exists) — last 3 recommendations | Previous suggestions to avoid repetition |
 
 **Adaptation rules:**
@@ -140,8 +140,9 @@ Gather all signals. Run independent checks in parallel where possible. Record ea
 
 ```bash
 # Inbox pressure (adapt path to vocabulary)
-INBOX_COUNT=$(find {vocabulary.inbox}/ -name "*.md" -maxdepth 2 2>/dev/null | wc -l | tr -d ' ')
-OLDEST_INBOX=$(find {vocabulary.inbox}/ -name "*.md" -maxdepth 2 -exec stat -f "%m %N" {} \; 2>/dev/null | sort -n | head -1)
+INBOX_COUNT=$(find {vocabulary.inbox}/ -maxdepth 2 -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+# GNU stat (Linux) first, BSD stat (macOS) fallback
+OLDEST_INBOX=$( (find {vocabulary.inbox}/ -maxdepth 2 -name "*.md" -exec stat -c "%Y %n" {} \; 2>/dev/null || find {vocabulary.inbox}/ -maxdepth 2 -name "*.md" -exec stat -f "%m %N" {} \; 2>/dev/null) | sort -n | head -1)
 
 # Note count
 NOTE_COUNT=$(ls -1 {vocabulary.knowledge}/*.md 2>/dev/null | wc -l | tr -d ' ')
@@ -152,8 +153,15 @@ OBS_COUNT=$(grep -rl '^status: pending' ops/observations/ 2>/dev/null | wc -l | 
 # Pending tensions
 TENSION_COUNT=$(grep -rl '^status: pending\|^status: open' ops/tensions/ 2>/dev/null | wc -l | tr -d ' ')
 
-# Unmined sessions
-SESSION_COUNT=$(grep -rL '^mined: true' ops/sessions/*.md 2>/dev/null | wc -l | tr -d ' ')
+# Unmined sessions (sessions are JSON with a top-level "mined" key)
+SESSION_COUNT=$(jq -s '[.[] | select(.mined != true)] | length' ops/sessions/*.json 2>/dev/null || echo 0)
+
+# Pipeline stall: age in days of the oldest pending queue task
+OLDEST_PENDING_DAYS=$(jq -r --argjson now "$(date -u +%s)" \
+  '[.tasks[] | select(.status == "pending") | .created | fromdateiso8601] | min // empty | (($now - .) / 86400 | floor)' \
+  ops/queue/queue.json 2>/dev/null)
+OLDEST_PENDING_BATCH=$(jq -r '[.tasks[] | select(.status == "pending")] | sort_by(.created) | .[0].batch // empty' \
+  ops/queue/queue.json 2>/dev/null)
 ```
 
 ---
@@ -165,7 +173,7 @@ Evaluate every signal against consequence speed — how fast does inaction degra
 | Speed | Signals | Threshold | Why This Priority |
 |-------|---------|-----------|-------------------|
 | **Session** | Inbox > 5 items, orphan knowledge (any), dangling links (any), 10+ pending observations, 5+ pending tensions, unprocessed sessions > 3 | Immediate — these degrade work quality right now | Orphans are invisible to traversal. Dangling links confuse navigation. Inbox pressure means lost ideas. Observation/tension thresholds mean the system is accumulating unprocessed friction. |
-| **Multi-session** | Pipeline queue backlog > 10, research gaps identified in goals, stale knowledge > 10, inbox items aging > 7 days, methodology captures > 5 in same category | Soon — these compound over days | Unfinished pipeline batches block downstream connections. Stale knowledge represent decaying knowledge. Aging inbox means capture is outpacing processing. |
+| **Multi-session** | Pipeline queue backlog > 10, pipeline stalled (pending tasks with no progress > 14 days), research gaps identified in goals, stale knowledge > 10, inbox items aging > 7 days, methodology captures > 5 in same category | Soon — these compound over days | Unfinished pipeline batches block downstream connections. A stalled queue means extraction happened but the knowledge never got connected. Stale knowledge represent decaying knowledge. Aging inbox means capture is outpacing processing. |
 | **Slow** | Health check not run in 14+ days, {DOMAIN:topic map} oversized (>40 knowledge), link density below 2.0 average, low note count relative to time | Background — annoying but not blocking | These are maintenance tasks. Important for long-term health but not urgent. |
 
 **Threshold rule:** 10+ pending observations OR 5+ pending tensions is ALWAYS session-priority. Recommend {DOMAIN:rethink} in this case.
@@ -209,7 +217,7 @@ If no task stack items, pick the highest-impact session-priority signal:
 
 | Signal | Recommendation | Rationale Template |
 |--------|---------------|-------------------|
-| Dangling links / orphans | /health or specific fix command | "You have [N] orphan knowledge invisible to traversal. Connecting them increases graph density and retrieval quality." |
+| Dangling links / orphans | arscontexta:health or specific fix command | "You have [N] orphan knowledge invisible to traversal. Connecting them increases graph density and retrieval quality." |
 | 10+ observations or 5+ tensions | /{DOMAIN:rethink} | "[N] pending observations have accumulated. Pattern detection requires processing this backlog to evolve the system." |
 | Inbox > 5 items | /{DOMAIN:extract} [specific file] | "Your inbox has [N] items (oldest: [age]). [File X] has the highest connection potential based on [reason]." |
 | Unprocessed sessions > 3 | /remember --mine-sessions | "[N] sessions have uncaptured friction patterns. Mining them prevents methodology regressions." |
@@ -223,6 +231,7 @@ If no session-priority items:
 | Signal | Recommendation | Rationale Template |
 |--------|---------------|-------------------|
 | Queue backlog > 10 | /ralph [N] | "[N] pipeline tasks are pending. Your newest {DOMAIN:knowledge} lack connections, which means they can't participate in synthesis." |
+| Pipeline stalled (OLDEST_PENDING_DAYS > 14) | /ralph N --batch [OLDEST_PENDING_BATCH] | "[N] tasks have been pending for [OLDEST_PENDING_DAYS] days with no phase progress — the pipeline is stalled, not just backlogged. Starting with the oldest batch ([batch]) restarts throughput where it stopped." |
 | Stale knowledge > 10 | /{DOMAIN:revisit} [specific note] | "[N] knowledge haven't been touched since [date]. [Note X] has the most connections and would benefit most from updating." |
 | Research gaps | /{DOMAIN:extract} [file aligned with goals] | "Your goals mention [topic] but your graph has few knowledge there. [Inbox item] addresses this gap." |
 | Methodology convergence | /{DOMAIN:rethink} | "[N] methodology captures in the [category] area suggest a pattern worth elevating." |
@@ -235,7 +244,7 @@ If nothing pressing:
 
 | Signal | Recommendation | Rationale Template |
 |--------|---------------|-------------------|
-| No recent health check | /health | "Last health check was [date]. Running one now catches structural issues before they compound." |
+| No recent health check | arscontexta:health | "Last health check was [date]. Running one now catches structural issues before they compound." |
 | Topic map oversized | Restructuring suggestion | "[Topic map X] has [N] knowledge. Splitting into sub-topic-maps improves navigation and reduces cognitive load." |
 | Low link density | /{DOMAIN:revisit} on lowest-density note | "Your graph has an average link density of [N]. Reweaving sparse knowledge increases traversal paths." |
 

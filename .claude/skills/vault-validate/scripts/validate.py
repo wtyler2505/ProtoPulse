@@ -49,6 +49,17 @@ SCHEMA_PATH = SKILL_DIR / "assets" / "frontmatter-v2.schema.json"
 FRONTMATTER_RE = re.compile(r"^(---\s*\n)(.*?)(\n---\s*)(?:\n|$)", re.DOTALL)
 SEVERITY_ORDER = {"info": 0, "warning": 1, "error": 2}
 
+# Accepted-legacy enum values — generated from ops/config.yaml _schema — keep in sync.
+# The vault is PRE-MIGRATION: these values exist in the live 743-note vault and
+# demote what would be schema enum errors to warnings (WARN, never FAIL).
+ACCEPTED_LEGACY = {
+    "type": {"decision", "concept", "insight", "debt-note", "need",
+             "domain-knowledge", "knowledge-note", "knowledge"},
+    "confidence": {"proven", "likely", "experimental", "outdated", "high", "medium"},
+}
+# Accepted-legacy topics format: quoted wiki-link entries like "[[power-systems]]".
+WIKI_LINK_TOPIC_RE = re.compile(r"^\[\[[^\[\]]+\]\]$")
+
 
 @dataclass
 class Violation:
@@ -121,9 +132,23 @@ def validate_one(path: Path, schema: dict, existing_slugs: set[str]) -> NoteVali
         v = jsonschema.Draft202012Validator(schema)
         for err in v.iter_errors(data):
             field_path = ".".join(str(p) for p in err.absolute_path) or "<root>"
+            severity, rule, message = "error", "schema", err.message
+            top_field = err.absolute_path[0] if err.absolute_path else None
+            # Accepted-legacy demotions (ops/config.yaml _schema — keep in sync):
+            # legacy enum values and wiki-link topics WARN, never FAIL.
+            if (err.validator == "enum" and top_field in ACCEPTED_LEGACY
+                    and err.instance in ACCEPTED_LEGACY[top_field]):
+                severity, rule = "warning", "accepted-legacy"
+                message = (f"{top_field}={err.instance!r} is accepted-legacy — "
+                           f"prefer a v2 value (see ops/config.yaml _schema)")
+            elif (err.validator == "pattern" and top_field == "topics"
+                    and isinstance(err.instance, str)
+                    and WIKI_LINK_TOPIC_RE.match(err.instance)):
+                severity, rule = "warning", "accepted-legacy"
+                message = (f"wiki-link topic {err.instance!r} is accepted-legacy — "
+                           f"prefer a bare slug (see ops/config.yaml _schema)")
             nv.violations.append(Violation(
-                str(path), field_path, "schema", "error",
-                err.message,
+                str(path), field_path, rule, severity, message,
             ))
     else:
         # Minimal fallback: check required fields only
