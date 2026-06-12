@@ -118,7 +118,14 @@ describe('WireLayer', () => {
 
   it('renders animated wire with sim current label when live', () => {
     const states = new Map<string, WireVisualState>([
-      ['10', { currentMagnitude: 0.02, currentDirection: 1, animationSpeed: 4, intensity: 1 } as WireVisualState],
+      ['10', {
+        currentMagnitude: 0.02,
+        currentDirection: 1,
+        animationSpeed: 4,
+        intensity: 1,
+        sourceVoltage: 5,
+        targetVoltage: 0,
+      } as WireVisualState],
     ]);
     renderSvg(<WireLayer {...baseProps} isLive wireVisualStates={states} />);
     expect(screen.getByTestId('wire-animated-1')).toBeDefined();
