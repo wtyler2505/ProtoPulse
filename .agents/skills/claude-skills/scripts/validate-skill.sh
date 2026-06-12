@@ -8,13 +8,16 @@ Usage:
   validate-skill.sh <skill-dir> [--strict]
 
 What it does:
-  - Validates SKILL.md YAML frontmatter (name/description)
+  - Validates SKILL.md YAML frontmatter against the current Claude Code spec
+    (description recommended; invocation-control fields like
+    disable-model-invocation, user-invocable, context: fork, agent,
+    allowed-tools, model, effort, paths are accepted and value-checked)
   - Performs lightweight structural checks
   - In --strict mode, enforces the recommended section layout
 
-Examples:
-  ./skills/claude-skills/scripts/validate-skill.sh skills/postgresql
-  ./skills/claude-skills/scripts/validate-skill.sh skills/my-skill --strict
+Examples (run from the claude-skills skill root):
+  ./scripts/validate-skill.sh ../postgresql
+  ./scripts/validate-skill.sh ../my-skill --strict
 EOF
 }
 
@@ -119,15 +122,69 @@ description="$(
   '
 )"
 
-[[ -n "$name" ]] || die "Missing frontmatter field: name"
-[[ -n "$description" ]] || die "Missing frontmatter field: description"
+# Per the current Claude Code spec (code.claude.com/docs/en/skills), all
+# frontmatter fields are optional; the /command comes from the directory name.
+# This repo still requires a decidable description.
 
-if [[ ! "$name" =~ ^[a-z][a-z0-9-]*$ ]]; then
-  die "Invalid name: '$name' (expected ^[a-z][a-z0-9-]*$)"
+if [[ ! "$base_name" =~ ^[a-z][a-z0-9-]*$ ]]; then
+  die "Invalid skill directory name: '$base_name' (expected ^[a-z][a-z0-9-]*$; it is the /command)"
 fi
 
-if [[ "$strict" -eq 1 && "$name" != "$base_name" ]]; then
-  die "Strict mode: frontmatter name ('$name') must match directory name ('$base_name')"
+if [[ -z "$description" ]]; then
+  if [[ "$strict" -eq 1 ]]; then
+    die "Strict mode: missing frontmatter field: description"
+  fi
+  warn "Missing recommended frontmatter field: description (Claude cannot auto-load this skill reliably)"
+fi
+
+if [[ -n "$name" && "$name" != "$base_name" ]]; then
+  warn "Frontmatter name ('$name') differs from directory name ('$base_name'); 'name' is display-only, the /command stays '$base_name'"
+fi
+
+# -------------------- Frontmatter field validation --------------------
+
+# Known fields from the current Claude Code skill spec. Unknown top-level keys
+# are warnings (typos), never errors.
+known_fields="name description when_to_use argument-hint arguments disable-model-invocation user-invocable allowed-tools disallowed-tools model effort context agent hooks paths shell license version author metadata"
+
+while IFS= read -r key; do
+  [[ -n "$key" ]] || continue
+  found=0
+  for k in $known_fields; do
+    if [[ "$key" == "$k" ]]; then found=1; break; fi
+  done
+  if [[ "$found" -eq 0 ]]; then
+    warn "Unknown frontmatter field: '$key' (not in the current Claude Code skill spec)"
+  fi
+done < <(printf "%s\n" "$frontmatter" | awk -F: '/^[A-Za-z][A-Za-z0-9_-]*:/ { print $1 }')
+
+get_field() {
+  printf "%s\n" "$frontmatter" | awk -F: -v f="$1" '
+    tolower($1) == f {
+      sub(/^[^:]*:[[:space:]]*/, "", $0)
+      gsub(/[[:space:]]+$/, "", $0)
+      gsub(/^["'\'']|["'\'']$/, "", $0)
+      print
+      exit
+    }
+  '
+}
+
+for bool_field in disable-model-invocation user-invocable; do
+  val="$(get_field "$bool_field")"
+  if [[ -n "$val" && "$val" != "true" && "$val" != "false" ]]; then
+    die "Invalid value for '$bool_field': '$val' (expected true or false)"
+  fi
+done
+
+ctx="$(get_field "context")"
+if [[ -n "$ctx" && "$ctx" != "fork" ]]; then
+  die "Invalid value for 'context': '$ctx' (only 'fork' is supported)"
+fi
+
+agent_val="$(get_field "agent")"
+if [[ -n "$agent_val" && -z "$ctx" ]]; then
+  warn "'agent' is set but 'context: fork' is not; 'agent' only applies to forked skills"
 fi
 
 # -------------------- Strip fenced code blocks for section checks --------------------

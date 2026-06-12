@@ -141,7 +141,7 @@ Suggestion: seed stub; consumer will need vault content.
 
 - **T1 `/vault-gap`** — this skill invokes `/vault-gap` (when `--auto-seed-gaps`) for missing/thin tasks. Each invocation passes `--origin-plan <plan-file> --origin-task <task-id>`.
 - **T2 `/vault-validate`** — before citing a slug in the report, optionally validate it (skipped by default to keep scans fast).
-- **T15 `/vault-extract-priority`** — gap-seeds written by auto-seed-gaps land in `ops/queue/gap-stubs.md`, which T15 will priority-rank for `/extract`.
+- **Extract-queue prioritization** — gap-seeds written by auto-seed-gaps land in `ops/queue/gap-stubs.md`; `/extract` orders them via the demand-scoring formula in vault-gap §Prioritization (the standalone /vault-extract-priority skill is retired).
 - **Plan research logs** — the report is designed to paste directly.
 
 ## Rate limits + performance

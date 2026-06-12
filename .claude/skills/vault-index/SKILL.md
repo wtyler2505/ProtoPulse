@@ -122,7 +122,7 @@ A backlink is stale when the referencing plan or code file hasn't been touched i
 - **T2 `/vault-validate`** — consumes `broken_references[]` for CI reporting.
 - **T7 `/vault-health`** — consumes `stats`, `orphans`, and stale counts.
 - **T12 traceability panel** — reads `notes[<slug>]` directly for UI display.
-- **T15 `/vault-extract-priority`** — uses `referenced_by_plans` count for demand ranking.
+- **Extract-queue prioritization (vault-gap §Prioritization)** — uses `referenced_by_plans` count for demand ranking (formerly the retired /vault-extract-priority skill).
 - **Pre-commit hook** — recommended: run `/vault-index --rebuild --json > /dev/null && git add ops/index/plan-vault-backlinks.json` when touching knowledge/ or plans.
 
 ## Anti-patterns

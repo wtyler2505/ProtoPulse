@@ -83,7 +83,11 @@ Before writing code, answer these questions:
 - `SessionEnd` - When Claude Code exits (cleanup, persist state)
 - `Notification` - During alerts (desktop notifications, logging)
 - `Stop` / `SubagentStop` - When responses finish (cleanup, summary)
+- `SubagentStart` - When a subagent/teammate spawns (inject context, log dispatch)
 - `PreCompact` - Before context compaction (save important context)
+- `PostCompact` - After context compaction (re-inject critical context, verify state)
+- `TaskCompleted` - When a task on the task list completes (notify, chain follow-up work)
+- `TeammateIdle` - When an agent-team teammate goes idle (assign next task, alert lead)
 
 **Common mistake:** Using PostToolUse for validation (too late—tool already ran). Use PreToolUse to block operations.
 
@@ -256,7 +260,7 @@ fi
 
 **Why this matters**: Exit 1 only logs errors. Exit 2 is required to block in PreToolUse hooks.
 
-**For exit code patterns**: Load `references/hook-templates.md` for complete hook response patterns.
+**For exit code patterns**: Load `references/code-templates.md` for complete hook response patterns.
 
 ---
 

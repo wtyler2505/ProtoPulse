@@ -228,7 +228,7 @@ def move_to_review(path: Path, findings: list[dict], repo: Path) -> tuple[Path, 
     lines.append("")
     lines.append("## Fix protocol\n")
     lines.append(f"1. Edit `inbox/review/{path.name}` to address each blocking error.")
-    lines.append(f"2. Re-run: `python3 .claude/skills/vault-quality-gate/scripts/gate.py inbox/review/{path.name}`")
+    lines.append(f"2. Re-run: `python3 .claude/skills/vault-validate/scripts/gate.py inbox/review/{path.name}`")
     lines.append(f"3. On PASS: `mv inbox/review/{path.name} knowledge/{path.name} && rm inbox/review/{path.stem}.review.md`")
     lines.append(f"4. Commit with the gate pass message in the commit body.\n")
     dest_review.write_text("\n".join(lines), encoding="utf-8")

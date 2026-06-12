@@ -477,7 +477,7 @@ Bad: "context management strategies" (topic label, not a claim)
 
 **b. Write the {vocabulary.note}**
 
-> **Frontmatter schema (canonical): the `_schema` block in `ops/config.yaml`** — the union of v2-preferred and legacy-accepted values, enforced by `/vault-quality-gate`. JSON mirror: `.claude/skills/vault-validate/assets/frontmatter-v2.schema.json`.
+> **Frontmatter schema (canonical): the `_schema` block in `ops/config.yaml`** — the union of v2-preferred and legacy-accepted values, enforced by `/vault-validate --mode gate` (formerly `/vault-quality-gate`, now merged into vault-validate). JSON mirror: `.claude/skills/vault-validate/assets/frontmatter-v2.schema.json`.
 >
 > Extract always writes v2-preferred values. Legacy values in older notes WARN at the gates rather than FAIL — never write them for new notes.
 >
@@ -1173,7 +1173,7 @@ When invoked without a specific file (e.g., `/extract --batch` or `/extract --ba
 ### Priority ladder
 
 1. **`ops/queue/gap-stubs.md`** (HIGH) — agent-detected gaps surfaced by `/vault-gap`. Trustworthy origin. Process first.
-2. **`ops/queue/user-suggestions.md`** (LOW, gated) — user-submitted suggestions captured by `/vault-inbox`. Each row's corresponding inbox stub has `triage_status: pending-review` and requires **explicit moderation approval** before extraction. Only consumed when `--include-user-queue` is passed.
+2. **`ops/queue/user-suggestions.md`** (LOW, gated) — user-submitted suggestions captured by `/vault-gap --source user` (formerly `/vault-inbox`, now merged into vault-gap). Each row's corresponding inbox stub has `triage_status: pending-review` and requires **explicit moderation approval** before extraction. Only consumed when `--include-user-queue` is passed.
 
 ### Moderation gate for user-suggestions
 

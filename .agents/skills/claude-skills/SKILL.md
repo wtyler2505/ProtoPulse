@@ -1,6 +1,6 @@
 ---
 name: claude-skills
-description: "Claude Skills meta-skill: extract domain material (docs/APIs/code/specs) into a reusable Skill (SKILL.md + references/scripts/assets), and refactor existing Skills for clarity, activation reliability, and quality gates."
+description: "Author Claude Code skills and subagents: create or refactor SKILL.md with the current frontmatter spec (description, disable-model-invocation, user-invocable, context: fork, allowed-tools, model), design reliable activation triggers, scaffold references/scripts/assets, and run the quality gate + validator. Use when creating, editing, merging, validating, or debugging skills or agents."
 ---
 
 # Claude Skills Meta-Skill
@@ -10,15 +10,18 @@ Turn scattered domain material into a Skill that is reusable, maintainable, and 
 - `references/` for long-form evidence and navigation
 - optional `scripts/` and `assets/` for scaffolding and templates
 
+Also covers subagent authoring — see `references/agents.md`.
+
 ## When to Use This Skill
 
 Trigger this meta-skill when you need to:
 - Create a new Skill from scratch from docs/specs/repos
 - Refactor an existing Skill (too long, unclear, inconsistent, misfires)
 - Design reliable activation (frontmatter + triggers + boundaries)
-- Extract a clean Quick Reference from large material
+- Configure invocation control (`disable-model-invocation`, `user-invocable`, `context: fork`)
+- Create or edit a subagent in `.claude/agents/` (see `references/agents.md`)
 - Split long content into navigable `references/`
-- Add a quality gate and a validator
+- Add a quality gate and run the validator
 
 ## Not For / Boundaries
 
@@ -26,18 +29,21 @@ This meta-skill is NOT:
 - A domain Skill by itself (it builds domain Skills)
 - A license to invent external facts (if the material does not prove it, say so and add a verification path)
 - A substitute for required inputs (if inputs are missing, ask 1-3 questions before proceeding)
+- About output styles: **output styles are deprecated in Claude Code — do not author new ones; use skills or CLAUDE.md instead.**
 
 ## Quick Reference
 
-### Deliverables (What You Must Produce)
+### Where Skills Live
 
-Your output MUST include:
-1. A concrete directory layout (typically `skills/<skill-name>/`)
-2. An actionable `SKILL.md` with decidable triggers, boundaries, and reproducible examples
-3. Long-form docs moved to `references/` with a `references/index.md`
-4. A pre-delivery checklist (Quality Gate)
+| Location | Path | Scope |
+|----------|------|-------|
+| Personal | `~/.claude/skills/<name>/SKILL.md` | All your projects |
+| Project | `.claude/skills/<name>/SKILL.md` | This project only |
+| Plugin | `<plugin>/skills/<name>/SKILL.md` | Where plugin is enabled (`plugin:skill` namespace) |
 
-### Recommended Layout (Minimal -> Full)
+The **directory name** is the command you type (`/deploy-staging` from `.claude/skills/deploy-staging/`). The frontmatter `name` is only a display label, except for a plugin-root SKILL.md where it sets the command name. Files in `.claude/commands/` still work and support the same frontmatter; on a name collision the skill wins.
+
+### Recommended Layout
 
 ```
 skill-name/
@@ -48,146 +54,116 @@ skill-name/
 `-- assets/               # Optional: templates/configs/static assets
 ```
 
-The truly minimal version is just `SKILL.md` (you can add `references/` later).
+### Frontmatter Spec (Current — code.claude.com/docs/en/skills)
 
-### YAML Frontmatter (Required)
+All fields are optional; `description` is strongly recommended.
+
+| Field | Semantics |
+|-------|-----------|
+| `name` | Display name in skill listings; defaults to directory name. Does NOT change the `/command` (except plugin-root SKILL.md). |
+| `description` | What + when. Claude uses it to decide when to auto-load the skill. Combined with `when_to_use`, truncated at 1,536 chars in the listing — put the key use case first. |
+| `when_to_use` | Extra trigger phrases/examples, appended to `description` in the listing. |
+| `argument-hint` | Autocomplete hint, e.g. `[issue-number]`. |
+| `arguments` | Named positional args for `$name` substitution (space-separated string or YAML list). |
+| `disable-model-invocation` | `true` = only the user can invoke via `/name`; description leaves Claude's context. Use for side-effect workflows (deploy, commit). Default `false`. |
+| `user-invocable` | `false` = hidden from the `/` menu; only Claude invokes. Use for background knowledge. Default `true`. |
+| `allowed-tools` | Tools pre-approved (no permission prompt) while the skill is active; does not restrict other tools. E.g. `Bash(git add *) Bash(git commit *)`. |
+| `disallowed-tools` | Tools removed from the pool while the skill is active; clears on your next message. |
+| `model` | Model override for the rest of the current turn (`sonnet`, `opus`, `haiku`, `inherit`). |
+| `effort` | Effort override while active: `low`, `medium`, `high`, `xhigh`, `max`. |
+| `context` | `fork` = run in an isolated subagent; the SKILL.md content becomes the subagent's prompt. Only for skills with explicit task instructions. |
+| `agent` | Subagent type when `context: fork` (`Explore`, `Plan`, `general-purpose`, or a custom agent). Default `general-purpose`. |
+| `hooks` | Hooks scoped to this skill's lifecycle. |
+| `paths` | Glob patterns; auto-load the skill only when working with matching files. |
+| `shell` | `bash` (default) or `powershell` for `` !`cmd` `` injection blocks. |
+
+Invocation matrix:
+
+| Frontmatter | You invoke | Claude invokes | Description in context |
+|---|---|---|---|
+| (default) | Yes | Yes | Always |
+| `disable-model-invocation: true` | Yes | No | No |
+| `user-invocable: false` | No | Yes | Always |
+
+**Example — user-only deploy command:**
 
 ```yaml
 ---
-name: skill-name
-description: "What it does + when to use (activation triggers)."
+description: Deploy the application to production
+disable-model-invocation: true
+allowed-tools: Bash(npm run deploy *)
 ---
+Deploy $ARGUMENTS to production: run tests, build, push, verify.
 ```
 
-Frontmatter rules:
-- `name` MUST match `^[a-z][a-z0-9-]*$` and SHOULD match the directory name
-- `description` MUST be decidable (not "helps with X") and include concrete trigger keywords
+**Example — forked read-only research skill:**
 
-### Minimal `SKILL.md` Skeleton (Copy/Paste)
-
-```markdown
+```yaml
 ---
-name: my-skill
-description: "[Domain] capability: includes [capability 1], [capability 2]. Use when [decidable triggers]."
+description: Research a topic thoroughly across the codebase
+context: fork
+agent: Explore
 ---
-
-# my-skill Skill
-
-One sentence that states the boundary and the deliverable.
-
-## When to Use This Skill
-
-Trigger when any of these applies:
-- [Trigger 1: concrete task/keyword]
-- [Trigger 2]
-- [Trigger 3]
-
-## Not For / Boundaries
-
-- What this skill will not do (prevents misfires and over-promising)
-- Required inputs; ask 1-3 questions if missing
-
-## Quick Reference
-
-### Common Patterns
-
-**Pattern 1:** one-line explanation
-```text
-[command/snippet you can paste and run]
+Research $ARGUMENTS: find relevant files, read them, report with file paths.
 ```
 
-## Examples
+### Dynamic Content
 
-### Example 1
-- Input:
-- Steps:
-- Expected output / acceptance:
-
-### Example 2
-
-### Example 3
-
-## References
-
-- `references/index.md`: navigation
-- `references/...`: long-form docs split by topic
-
-## Maintenance
-
-- Sources: docs/repos/specs (do not invent)
-- Last updated: YYYY-MM-DD
-- Known limits: what is explicitly out of scope
-```
+- Substitutions: `$ARGUMENTS`, `$ARGUMENTS[N]` / `$N`, `$name` (with `arguments:`), `${CLAUDE_SKILL_DIR}`, `${CLAUDE_SESSION_ID}`
+- `` !`command` `` at line start runs before Claude sees the content; output is inlined (preprocessing — Claude never executes it). Multi-line: fenced block opened with ```` ```! ````.
+- Use `${CLAUDE_SKILL_DIR}/scripts/...` to reference bundled scripts portably.
 
 ### Authoring Rules (Non-negotiable)
 
-1. Quick Reference is for short, directly usable patterns
-   - Keep it <= 20 patterns when possible.
-   - Anything that needs paragraphs of explanation goes to `references/`.
-2. Activation must be decidable
-   - Frontmatter `description` should say "what + when" with concrete keywords.
-   - "When to Use" must list specific tasks/inputs/goals, not vague help text.
-   - "Not For / Boundaries" is mandatory for reliability.
-3. No bluffing on external details
-   - If the material does not prove it, say so and include a verification path.
+1. Quick Reference is for short, directly usable patterns (<= 20 when possible); paragraphs go to `references/`.
+2. Activation must be decidable: `description` says "what + when" with concrete keywords; "When to Use" lists specific tasks; "Not For / Boundaries" is mandatory.
+3. Keep SKILL.md under 500 lines; invoked skill content stays in context for the rest of the session, so every line is a recurring token cost.
+4. No bluffing on external details — include a verification path for anything unproven.
 
 ### Workflow (Material -> Skill)
 
-Do not skip steps:
-1. Scope: write MUST/SHOULD/NEVER (three sentences total is fine)
-2. Extract patterns: pick 10-20 high-frequency patterns (commands/snippets/flows)
+1. Scope: write MUST/SHOULD/NEVER (three sentences is fine)
+2. Extract patterns: 10-20 high-frequency patterns (commands/snippets/flows)
 3. Add examples: >= 3 end-to-end examples (input -> steps -> acceptance)
-4. Define boundaries: what is out-of-scope + required inputs
-5. Split references: move long text into `references/` + write `references/index.md`
+4. Define boundaries + invocation control (who invokes, fork or inline)
+5. Split references: long text into `references/` + `references/index.md`
 6. Apply the gate: run the checklist and the validator
 
 ### Quality Gate (Pre-delivery Checklist)
 
-Minimum checks (see `references/quality-checklist.md` for the full version):
-1. `name` matches `^[a-z][a-z0-9-]*$` and matches the directory name
+Minimum checks (full version: `references/quality-checklist.md`):
+1. Directory name matches `^[a-z][a-z0-9-]*$` (it IS the command name)
 2. `description` states "what + when" with concrete trigger keywords
-3. Has "When to Use This Skill" with decidable triggers
-4. Has "Not For / Boundaries" to reduce misfires
-5. Quick Reference is <= 20 patterns and each is directly usable
-6. Has >= 3 reproducible examples
-7. Long content is in `references/` and `references/index.md` is navigable
-8. Uncertain claims include a verification path (no bluffing)
-9. Reads like an operator's manual, not a documentation dump
+3. Invocation-control fields match intent (side effects => `disable-model-invocation: true`)
+4. Has "When to Use" + "Not For / Boundaries"
+5. Quick Reference <= 20 patterns, each directly usable; >= 3 reproducible examples
+6. Long content in `references/` with a navigable `references/index.md`
+7. SKILL.md under 500 lines; no secrets; uncertain claims have a verification path
 
-Validate locally:
+Validate (scripts live under this skill's own directory):
 
 ```bash
-# From repo root (basic validation)
-./skills/claude-skills/scripts/validate-skill.sh skills/<skill-name>
-
-# From repo root (strict validation)
-./skills/claude-skills/scripts/validate-skill.sh skills/<skill-name> --strict
-
-# From skills/claude-skills/ (basic validation)
+# From this skill's root (.claude/skills/claude-skills/)
 ./scripts/validate-skill.sh ../<skill-name>
-
-# From skills/claude-skills/ (strict validation)
 ./scripts/validate-skill.sh ../<skill-name> --strict
+
+# From anywhere, via the skill-dir variable
+${CLAUDE_SKILL_DIR}/scripts/validate-skill.sh .claude/skills/<skill-name> --strict
 ```
 
 ### Tools & Templates
 
-Generate a new Skill skeleton:
-
 ```bash
-# From repo root (generate into ./skills/)
-./skills/claude-skills/scripts/create-skill.sh my-skill --full --output skills
-
-# From skills/claude-skills/ (generate into ../ i.e. ./skills/)
+# Scaffold a new skill next to this one (run from this skill's root)
 ./scripts/create-skill.sh my-skill --full --output ..
-
-# Minimal skeleton
-./skills/claude-skills/scripts/create-skill.sh my-skill --minimal --output skills
+./scripts/create-skill.sh my-skill --minimal --output ..
 ```
 
-Templates:
-- `assets/template-minimal.md`
-- `assets/template-complete.md`
+Templates: `assets/template-minimal.md`, `assets/template-complete.md`
+
+### Subagents
+
+Agents live in `.claude/agents/*.md` (project) or `~/.claude/agents/*.md` (user) with `name`, `description`, `tools`, `model`, `skills` frontmatter. Full authoring guide: `references/agents.md`.
 
 ## Examples
 
@@ -195,49 +171,42 @@ Templates:
 
 - Input: an official doc/spec + 2-3 real code samples + common failure modes
 - Steps:
-  1. Run `create-skill.sh` to scaffold `skills/<skill-name>/`
-  2. Write frontmatter `description` as "what + when"
-  3. Extract 10-20 high-frequency patterns into Quick Reference
-  4. Add >= 3 end-to-end examples with acceptance criteria
-  5. Put long content into `references/` and wire `references/index.md`
-  6. Run `validate-skill.sh --strict` and iterate
+  1. `./scripts/create-skill.sh <skill-name> --full --output ..`
+  2. Write frontmatter `description` as "what + when"; pick invocation control
+  3. Extract 10-20 patterns into Quick Reference; add >= 3 examples
+  4. Move long content into `references/` and wire `references/index.md`
+  5. `./scripts/validate-skill.sh ../<skill-name> --strict` and iterate
+- Acceptance: validator passes strict mode; skill activates on its trigger phrases
 
 ### Example 2: Refactor a "Doc Dump" Skill
 
 - Input: an existing `SKILL.md` with long pasted documentation
-- Steps:
-  1. Identify which parts are patterns vs. long-form explanation
-  2. Move long-form text into `references/` (split by topic)
-  3. Rewrite Quick Reference as short copy/paste patterns
-  4. Add or fix Examples until they are reproducible
-  5. Add "Not For / Boundaries" to reduce misfires
+- Steps: separate patterns from long-form text; move long-form into `references/`; rewrite Quick Reference as paste-able patterns; fix Examples; add "Not For / Boundaries"
+- Acceptance: SKILL.md < 500 lines, validator passes
 
-### Example 3: Validate and Gate a Skill
+### Example 3: Lock Down a Side-Effect Workflow
 
-- Input: `skills/<skill-name>/`
-- Steps:
-  1. Run `validate-skill.sh` (non-strict) to get warnings
-  2. Fix frontmatter/name mismatches and missing sections
-  3. Run `validate-skill.sh --strict` to enforce the spec
-  4. Run the scoring rubric in `references/quality-checklist.md` before shipping
+- Input: a skill that deploys or commits
+- Steps: add `disable-model-invocation: true`; scope `allowed-tools` to exactly the needed commands (e.g. `Bash(git commit *)`); re-validate
+- Acceptance: skill no longer appears in Claude's auto-invocation context; `/name` still works
 
 ## References
 
 Local docs:
-- `references/index.md`
-- `references/skill-spec.md`
-- `references/quality-checklist.md`
-- `references/anti-patterns.md`
-- `references/README.md` (upstream official reference)
+- `references/index.md` — navigation
+- `references/skill-spec.md` — normative spec for this repo's skills
+- `references/quality-checklist.md` — gate checklist + scoring
+- `references/anti-patterns.md` — failure modes
+- `references/agents.md` — subagent authoring guide
+- `references/README.md` — upstream overview
 
 External (official):
-- https://support.claude.com/en/articles/12512176-what-are-skills
-- https://support.claude.com/en/articles/12512180-using-skills-in-claude
-- https://support.claude.com/en/articles/12512198-creating-custom-skills
-- https://docs.claude.com/en/api/skills-guide
+- https://code.claude.com/docs/en/skills (canonical frontmatter spec)
+- https://code.claude.com/docs/en/sub-agents
+- https://agentskills.io (open Agent Skills standard)
 
 ## Maintenance
 
-- Sources: local spec files in `skills/claude-skills/references/` + upstream official docs in `references/README.md`
-- Last updated: 2025-12-14
-- Known limits: `validate-skill.sh` is heuristic; strict mode assumes the recommended section headings
+- Sources: code.claude.com/docs/en/skills (fetched 2026-06-11) + local references
+- Last updated: 2026-06-11
+- Known limits: `validate-skill.sh` is heuristic; strict mode assumes the recommended section headings. Output styles intentionally not covered (deprecated).
