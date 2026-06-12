@@ -31,7 +31,10 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ['e2e/p1-keyboard-nav.spec.ts', 'e2e/p1-viewer-3d-webgl.spec.ts'],
+          defaultProject: 'tsconfig.json',
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },

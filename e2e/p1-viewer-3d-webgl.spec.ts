@@ -15,11 +15,13 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { test, expect } from '@playwright/test';
+
+import { expect, test } from '@playwright/test';
+
 import {
-  pixelVariance,
-  measureNonBlankCanvas,
   DEFAULT_VARIANCE_THRESHOLD,
+  measureNonBlankCanvas,
+  pixelVariance,
 } from './canvas-variance';
 
 // ---------------------------------------------------------------------------
@@ -63,7 +65,7 @@ test.describe('non-blank-canvas helper @unit', () => {
 /** Read the persisted e2e session id out of the saved auth storage state. */
 function sessionIdFromStorageState(): string {
   const state = JSON.parse(readFileSync('e2e/.auth-state.json', 'utf8')) as {
-    origins?: Array<{ localStorage?: Array<{ name: string; value: string }> }>;
+    origins?: { localStorage?: { name: string; value: string }[] }[];
   };
   for (const origin of state.origins ?? []) {
     const entry = origin.localStorage?.find((e) => /session/i.test(e.name));

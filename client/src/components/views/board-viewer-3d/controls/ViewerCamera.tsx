@@ -37,7 +37,12 @@ export const ViewerCamera = forwardRef<CameraControlsImpl | null, ViewerCameraPr
     const controlsRef = useRef<CameraControlsImpl | null>(null);
     const savedHome = useRef(false);
 
-    useImperativeHandle(ref, () => controlsRef.current!, []);
+    useImperativeHandle(ref, () => {
+      if (controlsRef.current === null) {
+        throw new Error('Camera controls are not mounted');
+      }
+      return controlsRef.current;
+    }, []);
 
     // Capture the post-`<Bounds fit>` pose as the saved "home" state exactly
     // once, on the first rest after mount.

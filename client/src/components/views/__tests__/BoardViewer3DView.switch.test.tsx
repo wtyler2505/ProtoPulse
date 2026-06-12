@@ -11,12 +11,15 @@
  * path mounts: Canvas, CameraControls, GizmoHelper/GizmoViewcube, Bounds.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
+
 import { QueryClientProvider } from '@tanstack/react-query';
-import { createTestQueryClient } from '@/test-utils/createTestQueryClient';
+import { render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+
+import BoardViewer3DView from '@/components/views/BoardViewer3DView';
 import { ProjectIdProvider } from '@/lib/contexts/project-id-context';
+import { createTestQueryClient } from '@/test-utils/createTestQueryClient';
 
 // ---------------------------------------------------------------------------
 // Mocks — board-viewer data hook (CSS path needs it; reuse the shape from the
@@ -60,12 +63,10 @@ vi.mock('@/lib/pcb/footprint-library', () => ({
 
 // R3F: Canvas → div; passthrough children so we can assert nested testids.
 vi.mock('@react-three/fiber', () => ({
-  Canvas: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) =>
-    React.createElement(
-      'div',
-      { 'data-testid': (props['data-testid'] as string) ?? 'three-canvas' },
-      children,
-    ),
+  Canvas: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => {
+    const testId = typeof props['data-testid'] === 'string' ? props['data-testid'] : 'three-canvas';
+    return React.createElement('div', { 'data-testid': testId }, children);
+  },
   useThree: () => ({ camera: {}, scene: {}, gl: { setClearColor: vi.fn() } }),
   useFrame: vi.fn(),
   extend: vi.fn(),
@@ -83,8 +84,6 @@ vi.mock('@/components/views/board-viewer-3d/scene/BoardScene', () => ({
   BoardScene: () => React.createElement('div', { 'data-testid': 'board-scene' },
     React.createElement('div', { 'data-testid': 'gizmo-viewcube' })),
 }));
-
-import BoardViewer3DView from '@/components/views/BoardViewer3DView';
 
 function renderWith(engine?: 'css' | 'webgl') {
   const qc = createTestQueryClient();

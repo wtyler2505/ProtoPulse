@@ -23,8 +23,12 @@
  *   - BL-0869: breadboard tie-points intentionally not tab-stops (Phase 7).
  *   - BL-0870: 3D viewer / canvas views — keyboard story deferred (pointer-only today).
  */
-import { test, expect, type Page } from '@playwright/test';
-import { tabThrough, assertNoKeyboardTrap, type FocusStop } from './keyboard-helpers';
+import { expect, test } from '@playwright/test';
+
+import { assertNoKeyboardTrap, tabThrough } from './keyboard-helpers';
+
+import type { FocusStop } from './keyboard-helpers';
+import type { Page } from '@playwright/test';
 
 test.use({ storageState: 'e2e/.auth-state.json' });
 

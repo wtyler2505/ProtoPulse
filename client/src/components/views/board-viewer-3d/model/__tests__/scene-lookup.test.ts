@@ -291,9 +291,12 @@ describe('selectionBounds', () => {
   it('swaps the footprint AABB for a 90° rotated component', () => {
     const model = makeModel({ components: [makeComponent({ rotationDeg: 90 })] });
     const b = selectionBounds(model, SEL_COMPONENT);
+    if (b === null) {
+      throw new Error('expected component bounds');
+    }
     // bodyW=6/bodyD=4 swap: half-extents become 2 and 3.
-    expect(b!.max.x - b!.min.x).toBeCloseTo(4);
-    expect(b!.max.z - b!.min.z).toBeCloseTo(6);
+    expect(b.max.x - b.min.x).toBeCloseTo(4);
+    expect(b.max.z - b.min.z).toBeCloseTo(6);
   });
 
   it('bounds a trace by its points expanded by half the width', () => {

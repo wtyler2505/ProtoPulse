@@ -29,6 +29,7 @@ import type {
   SceneComponent,
   SceneModel,
   SceneSelection,
+  SceneTrace,
 } from '../model/scene-model';
 
 
@@ -175,7 +176,7 @@ function Traces({ model, ...handlers }: { model: SceneModel } & PickHandlers) {
     () =>
       model.traces
         .map((t) => ({ trace: t, geometry: buildTraceGeometry(t) }))
-        .filter((e): e is { trace: (typeof model.traces)[number]; geometry: THREE.BufferGeometry } =>
+        .filter((e): e is { trace: SceneTrace; geometry: THREE.BufferGeometry } =>
           e.geometry !== null,
         ),
     [model.traces],
