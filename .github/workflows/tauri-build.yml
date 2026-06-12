@@ -117,7 +117,7 @@ jobs:
           # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tauriScript: npm run tauri --
+          tauriScript: npm run tauri
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
           tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
           releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('ProtoPulse {0} (dev preview)', github.ref_name) || '' }}
