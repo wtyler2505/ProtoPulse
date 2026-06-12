@@ -1,10 +1,12 @@
 ---
-description: Multi-aspect code review using parallel code-review-expert agents
+description: Multi-aspect code review (/multi-review) using parallel code-review-expert agents
 allowed-tools: Task, Bash(git status:*), Bash(git diff:*), Bash(git log:*)
 argument-hint: '[what to review] - e.g., "recent changes", "src/components", "*.ts files", "PR #123"'
 ---
 
-# Code Review
+# Multi-Review
+
+> **Renamed** from `/code-review` → `/multi-review` (2026-06-12 slash-command audit) to unshadow the built-in `/code-review` command (Claude Code's ultra cloud review). Use the built-in `/code-review` for diff-focused bug review; use this command for parallel multi-aspect review by `code-review-expert` agents.
 
 ## Current Repository State
 !`git status --short && echo "---" && git diff --stat && echo "---" && git log --oneline -5`

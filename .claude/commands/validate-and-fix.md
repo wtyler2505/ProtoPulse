@@ -8,20 +8,28 @@ allowed-tools: Bash, Task, TodoWrite, Read, Edit, MultiEdit
 
 Run quality checks and automatically fix discovered issues using parallel execution.
 
+## House Rule: Errors Are Errors
+
+**Fix ALL of them before moving on.** Never dismiss any error as "pre-existing" or "unrelated." If any check below reports errors, the command is not done until every one is fixed.
+
 ## Process
 
 ### 1. SYSTEMATIC PRIORITY-BASED ANALYSIS
 
-#### Command Discovery
-First, discover what validation commands are available:
+#### Known Validation Commands (run these first)
+ProtoPulse's canonical quality gates — all must pass clean:
+1. `npm run check` — TypeScript typecheck (legacy app)
+2. `npm run check:packages` — typecheck the `packages/` engine workspaces
+3. `npm test` — full test suite
+4. `npx eslint .` — lint
+
+Also available: `npx prettier --write .` for formatting fixes, `npm run test:packages` for engine tests.
+
+#### Discovery Fallback
+Only if the known commands above are missing or the project layout has changed, discover commands:
 1. Check AGENTS.md/CLAUDE.md for documented build/test/lint commands
 2. Examine package.json scripts section for available commands
-3. Look for common patterns in scripts:
-   - Linting: "lint", "eslint", "lint:fix", "check:lint", "lint:js"
-   - Type checking: "typecheck", "type-check", "tsc", "check:types", "types"
-   - Testing: "test", "test:unit", "jest", "check:test", "test:all"
-   - Formatting: "format", "prettier", "fmt", "format:fix"
-   - Build: "build", "compile", "build:prod"
+3. Look for common patterns in scripts (lint, typecheck, test, format, build)
 4. Check README.md for any additional validation instructions
 
 #### Discovery with Immediate Categorization

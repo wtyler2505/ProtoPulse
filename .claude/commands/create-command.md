@@ -9,6 +9,8 @@ Create a new Claude Code slash command based on the user's requirements: $ARGUME
 
 For complete slash command documentation, see: https://docs.claude.com/en/docs/claude-code/slash-commands
 
+> **Primary reference:** the `slash-commands-mastery` skill covers the full slash-command lifecycle (frontmatter schema, `$ARGUMENTS`, `!`-prefixed bash context, `@` file references, namespacing, troubleshooting) in depth — load it for anything beyond the quick templates below. This command is the hands-on scaffolder; the skill is the authority.
+
 First, ask the user to specify the command type:
 - **project** - Add to current project's `.claude/commands/` directory (shared with team)
 - **personal** - Add to user's `~/.claude/commands/` directory (personal use only)
