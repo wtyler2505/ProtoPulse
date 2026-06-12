@@ -14,6 +14,7 @@ import {
   ADDI_N,
   AND,
   assembleXtensa,
+  type XtInstr,
   BEQZ,
   BEQZ_N_TO,
   BLT,
@@ -1325,7 +1326,7 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
    *  `trigger` (a software reset of some flavor); a non-power-on cause
    *  halts. Each test then sees uart [1] from the first boot and the
    *  new cause from the second. */
-  const causeRoundTrip = (literals: number[], trigger: number[]): Uint8Array =>
+  const causeRoundTrip = (literals: number[], trigger: XtInstr[]): Uint8Array =>
     assembleXtensa(ESP32S3_IRAM_BASE, [RTC_RESET_STATE, UART, ...literals], [
       ADDI(3, 1, -16),
       S32I(1, 3, 4),
