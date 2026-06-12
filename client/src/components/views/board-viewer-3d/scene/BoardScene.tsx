@@ -13,21 +13,27 @@
  * honest.
  */
 
+import { useEffect, useMemo, useRef } from 'react';
+import type { Ref } from 'react';
+
 import { Bounds, Bvh, useBounds } from '@react-three/drei';
-import { useEffect } from 'react';
 import * as THREE from 'three';
 
 import { ViewCube } from '../controls/ViewCube';
 import { ViewerCamera } from '../controls/ViewerCamera';
 import { selectionBounds } from '../model/scene-lookup';
+import { explodedLift, splitModelBySide } from '../tools/exploded-view';
+import { useExplodedView } from '../tools/useExplodedView';
 
-import type { SceneModel, SceneSelection } from '../model/scene-model';
+
 
 import { BoardSubstrate, DEFAULT_BOARD } from './BoardSubstrate';
 import { SceneModelView } from './SceneModelView';
 import { SelectionHighlight } from './SelectionHighlight';
 
 import type { BoardSubstrateProps } from './BoardSubstrate';
+import type { SceneModel, SceneSelection } from '../model/scene-model';
+import type { CameraControlsImpl } from '@react-three/drei';
 
 export interface BoardSceneProps {
   /** Board dimensions (defaults to schema board defaults). Ignored when `model` is given. */
@@ -42,6 +48,53 @@ export interface BoardSceneProps {
   onFocus?: (selection: SceneSelection) => void;
   /** Increment to animate the camera onto the current selection. */
   focusNonce?: number;
+  /** Exploded-view target factor: 0 = assembled, 1 = fully exploded (PP3D-8). */
+  explodeTarget?: number;
+  /** Camera-controls rig, exposed for the toolbar/keyboard layer (PP3D-8). */
+  controlsRef?: Ref<CameraControlsImpl | null>;
+}
+
+/**
+ * Renders the SceneModel split into per-side groups so the exploded view can
+ * lift the top/bottom content along the board normal via group refs — no
+ * per-frame React re-render (PP3D-8). Vias stay fixed (they span the board).
+ */
+function ExplodedSceneModel({
+  model,
+  explodeTarget,
+  onPick,
+  onFocus,
+}: {
+  model: SceneModel;
+  explodeTarget: number;
+  onPick?: (selection: SceneSelection) => void;
+  onFocus?: (selection: SceneSelection) => void;
+}) {
+  const topRef = useRef<THREE.Group>(null);
+  const bottomRef = useRef<THREE.Group>(null);
+  const split = useMemo(() => splitModelBySide(model), [model]);
+  const thicknessMm = model.board.thicknessMm;
+
+  useExplodedView(explodeTarget, (factor) => {
+    if (topRef.current) {
+      topRef.current.position.y = explodedLift('top', factor, thicknessMm);
+    }
+    if (bottomRef.current) {
+      bottomRef.current.position.y = explodedLift('bottom', factor, thicknessMm);
+    }
+  });
+
+  return (
+    <>
+      <group ref={topRef} name="explode-top">
+        <SceneModelView model={split.top} onPick={onPick} onFocus={onFocus} />
+      </group>
+      <group ref={bottomRef} name="explode-bottom">
+        <SceneModelView model={split.bottom} onPick={onPick} onFocus={onFocus} />
+      </group>
+      <SceneModelView model={split.fixed} onPick={onPick} onFocus={onFocus} />
+    </>
+  );
 }
 
 /**
@@ -112,6 +165,8 @@ export function BoardScene({
   onPick,
   onFocus,
   focusNonce = 0,
+  explodeTarget = 0,
+  controlsRef,
 }: BoardSceneProps) {
   const dims: BoardSubstrateProps = model
     ? {
@@ -145,7 +200,12 @@ export function BoardScene({
         <Bvh firstHitOnly>
           <BoardSubstrate {...dims} />
           {model && !model.isEmpty ? (
-            <SceneModelView model={model} onPick={onPick} onFocus={onFocus} />
+            <ExplodedSceneModel
+              model={model}
+              explodeTarget={explodeTarget}
+              onPick={onPick}
+              onFocus={onFocus}
+            />
           ) : (
             <PlaceholderComponents thicknessMm={thicknessMm} />
           )}
@@ -157,7 +217,10 @@ export function BoardScene({
       {model ? <SelectionHighlight model={model} selection={selection} /> : null}
 
       {/* CAD navigation. */}
-      <ViewerCamera maxDistance={Math.max(dims.widthMm ?? 100, dims.heightMm ?? 80) * 8} />
+      <ViewerCamera
+        ref={controlsRef}
+        maxDistance={Math.max(dims.widthMm ?? 100, dims.heightMm ?? 80) * 8}
+      />
       <ViewCube />
     </>
   );

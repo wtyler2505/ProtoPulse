@@ -143,11 +143,15 @@ test.describe('Keyboard nav — Core Design Views', () => {
     await runKeyboardKernel(page, 'component_editor');
   });
 
-  // 3D viewer is a Three.js canvas — keyboard navigation is deferred (BL-0870).
-  // Pointer-only today; adding WASD/arrow-nav requires a dedicated camera
-  // controller. Skipped rather than failed per Plan 03 Phase 6 "don't be
-  // perfectionist" policy.
-  test.skip('viewer_3d — canvas-only, keyboard story deferred (BL-0870)', () => {});
+  // BL-0870 / PP3D-8: the 3D viewer now has a real keyboard story — a
+  // focusable preset/flip/home/explode toolbar plus a focusable viewport
+  // (role="application") with arrow-orbit/dolly/preset key bindings and an
+  // aria-live announcer (WebGLBoardViewer) alongside the CSS engine's
+  // labelled view controls.
+  test('viewer_3d', async ({ page }) => {
+    await openView(page, 'viewer_3d');
+    await runKeyboardKernel(page, 'viewer_3d');
+  });
 });
 
 // ---------------------------------------------------------------------------
