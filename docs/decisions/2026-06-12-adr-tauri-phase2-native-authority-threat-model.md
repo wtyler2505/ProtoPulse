@@ -79,3 +79,9 @@ and closes the remaining plan deliverables: the Rust-side regression test
   reintroduces process authority and needs its own scoped shell permissions.
 - A workflow genuinely needs fs access outside the current scope roots —
   expand via new scoped allow entries, never by broadening to `$HOME/**`.
+- Build note (2026-06-12): `src-tauri/Cargo.lock` is gitignored, and a fresh
+  resolve pulls `time` 0.3.45+ whose new blanket `From` impl conflicts with
+  `tauri-utils` 2.9.2 generic impls (E0119). Local workaround applied:
+  `cargo update -p plist --precise 1.7.4 && cargo update -p serde_with --precise 3.15.1 && cargo update -p time --precise 0.3.44`.
+  Drop the pins when tauri-utils ships a fix, and consider committing
+  Cargo.lock for application-build reproducibility.

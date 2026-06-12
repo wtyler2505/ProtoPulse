@@ -14,6 +14,7 @@ import {
   ADDI_N,
   AND,
   assembleXtensa,
+  type XtInstr,
   BEQZ,
   BEQZ_N_TO,
   BLT,
@@ -1298,5 +1299,216 @@ describe('Esp32s3Core — ROM functions (slice 10)', () => {
     const c = core(image);
     expect(() => c.step(50)).toThrow(/ROM address 0x40001000/);
     expect(() => c.step(50)).toThrow(/ets_delay_us/); // the diagnostic lists what IS modeled
+  });
+});
+
+describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
+  // REAL register addresses, pinned independently of the implementation,
+  // from esp-idf v5.2 components/soc/esp32s3/include/soc/:
+  //   reg_base.h     — DR_REG_EFUSE_BASE 0x60007000, DR_REG_RTCCNTL_BASE
+  //                    0x60008000, DR_REG_SYSTEM_BASE 0x600C0000
+  //   rtc_cntl_reg.h — OPTIONS0 +0x0, TIME_UPDATE +0xC, TIME_LOW0 +0x10,
+  //                    TIME_HIGH0 +0x14, RESET_STATE +0x38
+  //   efuse_reg.h    — RD_MAC_SPI_SYS_0 +0x44, _1 +0x48
+  //   system_reg.h   — CPU_PER_CONF +0x10, SYSCLK_CONF +0x60
+  // Reset causes from esp_rom/include/esp32s3/rom/rtc.h: POWERON_RESET=1,
+  // RTC_SW_SYS_RESET=3, RTC_SW_CPU_RESET=12.
+  const RTC_OPTIONS0 = 0x60008000;
+  const RTC_TIME_UPDATE = 0x6000800c;
+  const RTC_RESET_STATE = 0x60008038;
+  const EFUSE_MAC0 = 0x60007044;
+  const EFUSE_MAC1 = 0x60007048;
+  const SYS_CPU_PER_CONF = 0x600c0010;
+  const SYS_SYSCLK_CONF = 0x600c0060;
+  const SOFTWARE_RESET = 0x400006d8;
+
+  /** Firmware: tx RESET_CAUSE_PROCPU, then if it reads power-on (1) do
+   *  `trigger` (a software reset of some flavor); a non-power-on cause
+   *  halts. Each test then sees uart [1] from the first boot and the
+   *  new cause from the second. */
+  const causeRoundTrip = (literals: number[], trigger: XtInstr[]): Uint8Array =>
+    assembleXtensa(ESP32S3_IRAM_BASE, [RTC_RESET_STATE, UART, ...literals], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(2, 0), // RESET_STATE
+      L32I(4, 2, 0),
+      MOVI(5, 0x3f),
+      AND(4, 4, 5), // RESET_CAUSE_PROCPU [5:0]
+      L32R(6, 1),
+      S32I(4, 6, 0), // tx the cause
+      ADDI(5, 4, -1),
+      BNEZ_TO(5, 10 + trigger.length), // not power-on → halt
+      ...trigger,
+      J_TO(10 + trigger.length), // halt: J self
+    ]);
+
+  it('software_reset (slice 10) flips the reset cause from POWERON(1) to RTC_SW_SYS_RESET(3)', () => {
+    const image = causeRoundTrip([SOFTWARE_RESET], [
+      L32R(8, 2),
+      CALLXN(2, 8), // never returns — step() resets
+    ]);
+    const c = core(image);
+    c.step(10_000); // boot 1: tx 1, reset
+    expect([...c.drainUart()]).toEqual([]); // reset cleared the tx fifo mid-flight
+    c.step(200); // boot 2: tx 3, halt
+    expect([...c.drainUart()]).toEqual([3]);
+  });
+
+  it('RESET_STATE reports the cause for BOTH CPUs (APPCPU field [11:6] mirrors PROCPU)', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [RTC_RESET_STATE, UART], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(2, 0),
+      L32I(4, 2, 0),
+      L32R(6, 1),
+      S32I(4, 6, 0), // tx low byte: (appcpu<<6 | procpu) & 0xff = 0x41 at power-on
+      J_TO(6),
+    ]);
+    const c = core(image);
+    c.step(60);
+    expect([...c.drainUart()]).toEqual([0x41]); // 1<<6 | 1
+  });
+
+  it('writing RTC_CNTL_SW_SYS_RST (OPTIONS0 bit 31) resets with cause 3', () => {
+    const image = causeRoundTrip([RTC_OPTIONS0], [
+      L32R(8, 2),
+      MOVI(9, 1),
+      SLLI(9, 9, 31),
+      S32I(9, 8, 0), // OPTIONS0 ← SW_SYS_RST
+    ]);
+    const c = core(image);
+    c.step(10_000);
+    c.step(200);
+    expect([...c.drainUart()]).toEqual([3]);
+  });
+
+  it('writing RTC_CNTL_SW_PROCPU_RST (OPTIONS0 bit 5) resets with cause RTC_SW_CPU_RESET(12)', () => {
+    const image = causeRoundTrip([RTC_OPTIONS0], [
+      L32R(8, 2),
+      MOVI(9, 1 << 5),
+      S32I(9, 8, 0),
+    ]);
+    const c = core(image);
+    c.step(10_000);
+    c.step(200);
+    expect([...c.drainUart()]).toEqual([12]);
+  });
+
+  it('the RTC slow-clock counter ticks at 136 kHz and latches on TIME_UPDATE', () => {
+    // ets_delay_us(1000) jumps CCOUNT by 240_000 cycles; the 48-bit RTC
+    // main timer then reads 1000 µs × 136 kHz = 136 ticks.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [RTC_TIME_UPDATE, UART, 0x40000600], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(2, 0), // TIME_UPDATE
+      L32I(4, 2, 4), // TIME_LOW0 (no update yet — must read the 0 latch)
+      L32R(6, 1),
+      S32I(4, 6, 0), // tx 0
+      L32R(8, 2),
+      MOVI(10, 1000),
+      CALLXN(2, 8), // ets_delay_us(1000)
+      MOVI(9, 1),
+      SLLI(9, 9, 31),
+      S32I(9, 2, 0), // TIME_UPDATE ← bit 31: latch now
+      L32I(4, 2, 4), // TIME_LOW0
+      S32I(4, 6, 0), // tx 136
+      L32I(4, 2, 8), // TIME_HIGH0
+      S32I(4, 6, 0), // tx 0
+      J_TO(16),
+    ]);
+    const c = core(image);
+    c.step(250_000);
+    expect([...c.drainUart()]).toEqual([0, 136, 0]);
+  });
+
+  it('eFuse MAC registers serve the documented synthetic MAC 7A:C0:DE:00:53:33', () => {
+    // efuse_hal_get_mac order: mac[0]=mac_1>>8, mac[1]=mac_1, mac[2..5]=mac_0
+    // big-endian — so mac_0 = 0xDE005333, mac_1 = 0x00007AC0.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [EFUSE_MAC0, EFUSE_MAC1, UART], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(2, 0),
+      L32I(4, 2, 0), // MAC_0
+      L32R(6, 2),
+      S32I(4, 6, 0), // tx 0x33 (tx masks to the low byte)
+      SRAI(5, 4, 8),
+      S32I(5, 6, 0), // tx 0x53
+      SRAI(5, 4, 16),
+      S32I(5, 6, 0), // tx 0x00
+      SRAI(5, 4, 24),
+      S32I(5, 6, 0), // tx 0xde
+      L32R(2, 1),
+      L32I(4, 2, 0), // MAC_1
+      S32I(4, 6, 0), // tx 0xc0
+      SRAI(5, 4, 8),
+      S32I(5, 6, 0), // tx 0x7a
+      J_TO(17),
+    ]);
+    const c = core(image);
+    c.step(120);
+    expect([...c.drainUart()]).toEqual([0x33, 0x53, 0x00, 0xde, 0xc0, 0x7a]);
+  });
+
+  it('eFuse wafer-version words (RD_MAC_SPI_SYS_2..5) read 0 — chip revision v0.0', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [0x6000704c, 0x60007058, UART], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(2, 0),
+      L32I(4, 2, 0),
+      L32R(6, 2),
+      S32I(4, 6, 0),
+      L32R(2, 1),
+      L32I(4, 2, 0),
+      S32I(4, 6, 0),
+      J_TO(9),
+    ]);
+    const c = core(image);
+    c.step(60);
+    expect([...c.drainUart()]).toEqual([0, 0]);
+  });
+
+  it('SYSTEM clock-config registers describe the modeled post-bootloader 240 MHz PLL state', () => {
+    // CPU_PER_CONF: PLL_FREQ_SEL=1 (480 MHz PLL), CPUPERIOD_SEL=2 (240 MHz) → 0x6.
+    // SYSCLK_CONF: CLK_XTAL_FREQ=40 [18:12], SOC_CLK_SEL=1 (PLL) [11:10],
+    // PRE_DIV_CNT=1 [9:0] → 0x28401.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [SYS_CPU_PER_CONF, SYS_SYSCLK_CONF, UART], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(2, 0),
+      L32I(4, 2, 0),
+      L32R(6, 2),
+      S32I(4, 6, 0), // tx 0x06
+      L32R(2, 1),
+      L32I(4, 2, 0),
+      S32I(4, 6, 0), // tx 0x01 (PRE_DIV_CNT)
+      SRAI(5, 4, 10),
+      S32I(5, 6, 0), // tx 0xa1 = CLK_XTAL_FREQ<<2 | SOC_CLK_SEL = 40<<2|1
+      J_TO(11),
+    ]);
+    const c = core(image);
+    c.step(80);
+    expect([...c.drainUart()]).toEqual([0x06, 0x01, 0xa1]);
+  });
+
+  it('a read of an unmodeled RTC_CNTL register halts with a diagnostic naming it', () => {
+    // 0x60008090 is RTC_CNTL_WDTCONFIG0_REG territory — reading 0 there
+    // would silently claim "watchdog off", so the core refuses instead.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [0x60008090], [
+      L32R(2, 0),
+      L32I(4, 2, 0),
+      J_TO(2),
+    ]);
+    const c = core(image);
+    expect(() => c.step(50)).toThrow(/0x60008090/);
+    expect(() => c.step(50)).toThrow(/RESET_STATE/); // lists what IS modeled
+  });
+
+  it('eFuse and unmodeled SYSTEM reads refuse too; eFuse writes always refuse', () => {
+    const rd = (addr: number): Esp32s3Core =>
+      core(assembleXtensa(ESP32S3_IRAM_BASE, [addr], [L32R(2, 0), L32I(4, 2, 0), J_TO(2)]));
+    expect(() => rd(0x60007000).step(50)).toThrow(/0x60007000/); // EFUSE_PGM_DATA0
+    expect(() => rd(0x600c0018).step(50)).toThrow(/0x600c0018/); // SYSTEM_PERIP_CLK_EN0
+    const wr = core(assembleXtensa(ESP32S3_IRAM_BASE, [EFUSE_MAC0], [L32R(2, 0), S32I(2, 2, 0), J_TO(2)]));
+    expect(() => wr.step(50)).toThrow(/read-only/);
   });
 });

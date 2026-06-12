@@ -8,7 +8,12 @@
  * BreadboardCanvas — interactive SVG canvas for the breadboard editor.
  *
  * Extracted from BreadboardView.tsx (audit #32, phase 1).
- * Phase 2 (W1.12b) will split this into sub-files.
+ * Phase 2 (W1.12b): SVG render layers split into sub-files —
+ * WireLayer.tsx (wires + wire-in-progress), OverlayLayer.tsx (keyboard
+ * cursor, simulation states, pin highlight), CoachLayer.tsx (coach overlays),
+ * alongside the earlier CanvasToolbar / WireColorMenu / CanvasCoordinateReadout /
+ * CanvasEmptyGuidance / useCanvasViewport / canvas-helpers extractions.
+ * This file keeps the state machine, data wiring, and event handlers.
  */
 
 import '../breadboard-animations.css';
@@ -63,12 +68,10 @@ import {
   getStarterRefDesPrefix,
   getCoachHookupColor,
 } from '../useBreadboardCoachPlan';
-import { BreadboardCoachPlanOverlay, BreadboardPinAnchorOverlay } from '../BreadboardCoachOverlay';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { generateRefDes, nextRefdes } from '@/lib/circuit-editor/ref-des';
-import { cn } from '@/lib/utils';
 import {
   BB,
   type ColumnLetter,
@@ -93,8 +96,6 @@ import {
   type WireEndpointMeta,
 } from '@/lib/circuit-editor/bench-surface-model';
 import { UndoRedoStack } from '@/lib/undo-redo';
-import { formatSIValue } from '@/lib/simulation/visual-state';
-import type { WireVisualState } from '@/lib/simulation/visual-state';
 import { useCanvasAnnouncer } from '@/lib/use-canvas-announcer';
 import { getCanvasAriaLabel, getActionAnnouncement, getToolChangeAnnouncement, getZoomAnnouncement } from '@/lib/canvas-accessibility';
 import {
@@ -111,6 +112,9 @@ import { CanvasToolbar } from './CanvasToolbar';
 import { CanvasCoordinateReadout } from './CanvasCoordinateReadout';
 import { WireColorMenu } from './WireColorMenu';
 import { CanvasEmptyGuidance } from './CanvasEmptyGuidance';
+import { WireLayer } from './WireLayer';
+import { OverlayLayer } from './OverlayLayer';
+import { CoachLayer } from './CoachLayer';
 import { useCanvasViewport } from './useCanvasViewport';
 import { logger } from '@/lib/logger';
 
