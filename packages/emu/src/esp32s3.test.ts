@@ -1437,15 +1437,20 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
   //                    0x60008000, DR_REG_SYSTEM_BASE 0x600C0000
   //   rtc_cntl_reg.h — OPTIONS0 +0x0, TIME_UPDATE +0xC, TIME_LOW0 +0x10,
   //                    TIME_HIGH0 +0x14, RESET_STATE +0x38
-  //   efuse_reg.h    — RD_MAC_SPI_SYS_0 +0x44, _1 +0x48
+  //   efuse_reg.h    — PGM_DATA0 +0x0, RD_MAC_SPI_SYS_0 +0x44, _1 +0x48,
+  //                    CONF +0x1CC, CMD +0x1D4, INT_* +0x1D8..0x1E4
   //   system_reg.h   — CPU_PER_CONF +0x10, SYSCLK_CONF +0x60
   // Reset causes from esp_rom/include/esp32s3/rom/rtc.h: POWERON_RESET=1,
   // RTC_SW_SYS_RESET=3, RTC_SW_CPU_RESET=12.
   const RTC_OPTIONS0 = 0x60008000;
   const RTC_TIME_UPDATE = 0x6000800c;
   const RTC_RESET_STATE = 0x60008038;
+  const EFUSE_BASE = 0x60007000;
   const EFUSE_MAC0 = 0x60007044;
   const EFUSE_MAC1 = 0x60007048;
+  const EFUSE_WRITE_OP_CODE = 0x5a5a;
+  const EFUSE_PGM_DONE = 1 << 1;
+  const EFUSE_BLK2_PGM_CMD = (2 << 2) | EFUSE_PGM_DONE;
   const SYS_CPU_PER_CONF = 0x600c0010;
   const SYS_SYSCLK_CONF = 0x600c0060;
   const SOFTWARE_RESET = 0x400006d8;
@@ -1595,6 +1600,44 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([0, 0]);
   });
 
+  it('eFuse programming command burns staged one-way bits and exposes PGM_DONE status', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [EFUSE_BASE, UART, 0xa5, EFUSE_WRITE_OP_CODE, EFUSE_BLK2_PGM_CMD, EFUSE_PGM_DONE, 0x50],
+      [
+        L32R(2, 0), // a2 = EFUSE base
+        L32R(6, 1), // a6 = UART
+        L32R(3, 2),
+        S32I(3, 2, 0x00), // PGM_DATA0 = 0xa5
+        L32R(3, 3),
+        S32I(3, 2, 0x1cc), // CONF = WRITE_OP_CODE
+        L32R(3, 4),
+        S32I(3, 2, 0x1d4), // CMD = BLK2 + PGM_CMD
+        L32I(4, 2, 0x5c), // BLK2 word0
+        S32I(4, 6, 0), // tx 0xa5
+        L32I(4, 2, 0x00), // PGM_DATA0 clears after burn
+        S32I(4, 6, 0), // tx 0x00
+        L32R(3, 5),
+        S32I(3, 2, 0x1e0), // INT_ENA = PGM_DONE
+        L32I(4, 2, 0x1dc), // INT_ST = RAW & ENA
+        S32I(4, 6, 0), // tx 0x02
+        S32I(3, 2, 0x1e4), // INT_CLR = PGM_DONE
+        L32I(4, 2, 0x1dc),
+        S32I(4, 6, 0), // tx 0x00
+        L32R(3, 6),
+        S32I(3, 2, 0x00), // second burn ORs 0x50 into existing 0xa5
+        L32R(3, 4),
+        S32I(3, 2, 0x1d4),
+        L32I(4, 2, 0x5c),
+        S32I(4, 6, 0), // tx 0xf5
+        J_TO(25),
+      ],
+    );
+    const c = core(image);
+    c.step(180);
+    expect([...c.drainUart()]).toEqual([0xa5, 0x00, 0x02, 0x00, 0xf5]);
+  });
+
   it('SYSTEM clock-config registers describe the modeled post-bootloader 240 MHz PLL state', () => {
     // CPU_PER_CONF: PLL_FREQ_SEL=1 (480 MHz PLL), CPUPERIOD_SEL=2 (240 MHz) → 0x6.
     // SYSCLK_CONF: CLK_XTAL_FREQ=40 [18:12], SOC_CLK_SEL=1 (PLL) [11:10],
@@ -1631,13 +1674,13 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect(() => c.step(50)).toThrow(/RESET_STATE/); // lists what IS modeled
   });
 
-  it('eFuse and unmodeled SYSTEM reads refuse too; eFuse writes always refuse', () => {
+  it('unmodeled eFuse/SYSTEM reads refuse, and direct eFuse readback writes refuse', () => {
     const rd = (addr: number): Esp32s3Core =>
       core(assembleXtensa(ESP32S3_IRAM_BASE, [addr], [L32R(2, 0), L32I(4, 2, 0), J_TO(2)]));
-    expect(() => rd(0x60007000).step(50)).toThrow(/0x60007000/); // EFUSE_PGM_DATA0
+    expect(() => rd(0x60007194).step(50)).toThrow(/0x60007194/); // gap after RD_REPEAT_ERR4
     expect(() => rd(0x600c0018).step(50)).toThrow(/0x600c0018/); // SYSTEM_PERIP_CLK_EN0
     const wr = core(assembleXtensa(ESP32S3_IRAM_BASE, [EFUSE_MAC0], [L32R(2, 0), S32I(2, 2, 0), J_TO(2)]));
-    expect(() => wr.step(50)).toThrow(/read-only/);
+    expect(() => wr.step(50)).toThrow(/read-only.*PGM_DATA/);
   });
 });
 

@@ -444,11 +444,24 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       DSCR_EMPTY while the original frame remains intact. Honest cut:
       this is starvation visibility, not the full ESP-IDF driver pool
       model; flush policy and real backpressure timing remain open
+- [x] ESP32-S3 core slice 19 — eFuse programming substrate
+      (landed 2026-06-12): eFuse BLOCK0..10 readback is modeled, with
+      BLOCK1 still serving the documented synthetic MAC and v0.0 chip
+      revision. PGM_DATA0..7, PGM_CHECK_VALUE0..2, CONF, CMD,
+      INT_RAW/ST/ENA/CLR, and timing/control registers now match the
+      ESP-IDF v5.2 ESP32-S3 register shape closely enough for
+      firmware to stage writes, issue CMD.PGM_CMD for a selected
+      block, observe PGM_DONE, and read back one-way ORed eFuse bits.
+      Proven by hand-assembled firmware that burns BLK2 word 0,
+      verifies program-register clear, clears PGM_DONE, then burns a
+      second value to prove one-way OR semantics. Cuts: no read/write
+      protection policy, no RS-code validation, and no security-key
+      side effects yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
-      sleep/wake, eFuse programming, interrupt delivery still outside
-      the currently modeled sources, and remaining peripherals —
-      walked openly, slice by slice
+      sleep/wake, interrupt delivery still outside the currently
+      modeled sources, and remaining peripherals — walked openly,
+      slice by slice
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 

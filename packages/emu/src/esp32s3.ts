@@ -73,10 +73,13 @@ import type { XtensaBus } from './xtensa.js';
  * write bits set 3/12 per rom/rtc.h), the 48-bit RTC main timer over
  * the ~136 kHz RC_SLOW clock (TIME_UPDATE-latched LOW0/HIGH0 reads;
  * the counter restarts at reset — real hardware keeps it),
- * eFuse BLOCK1 reads serving a documented SYNTHETIC locally-
- * administered MAC (7A:C0:DE:00:53:33) and wafer version 0 (chip
- * rev v0.0), and the SYSTEM clock-config registers frozen at the
- * post-2nd-stage-bootloader state matching the modeled clock
+ * eFuse BLOCK0..10 reads, BLOCK1 serving a documented SYNTHETIC
+ * locally-administered MAC (7A:C0:DE:00:53:33) and wafer version 0
+ * (chip rev v0.0), a minimal programming controller (PGM_DATA0..7,
+ * CONF, CMD, INT_RAW/ST/ENA/CLR) whose burn command ORs staged
+ * one-way bits into the selected block, and the SYSTEM clock-config
+ * registers frozen at the post-2nd-stage-bootloader state matching
+ * the modeled clock
  * (PLL 480 MHz, CPU 240 MHz, XTAL 40 MHz) — writes to them are
  * stored but do NOT retune the emulated clock. Reads of any OTHER
  * register in those three blocks refuse loudly with the address and
@@ -153,8 +156,8 @@ import type { XtensaBus } from './xtensa.js';
  * DSCR_EMPTY instead of disappearing silently after the DMA-owned
  * pool is exhausted. Cuts: no descriptor rings beyond simple
  * next-pointer advancement, no driver-pool flush/backpressure timing.
- * Still missing: sleep/wake and eFuse programming — so full
- * IDF/FreeRTOS firmware does NOT run yet.
+ * Still missing: sleep/wake — so full IDF/FreeRTOS firmware does
+ * NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -395,10 +398,47 @@ const RESET_CAUSE_TG1WDT_CPU = 17; // TG1WDT_CPU_RESET
 const RTC_SLOW_HZ = 136_000;
 
 const EFUSE_BASE = 0x60007000;
-const EFUSE_RD_MAC_SPI_SYS_0 = 0x44; // MAC[31:0]
-const EFUSE_RD_MAC_SPI_SYS_1 = 0x48; // MAC[47:32] in [15:0]
-const EFUSE_RD_MAC_SPI_SYS_2 = 0x4c; // _2.._5: rest of BLOCK1 — wafer
-const EFUSE_RD_MAC_SPI_SYS_5 = 0x58; //   version fields, all 0 → chip rev v0.0
+const EFUSE_PGM_DATA_0 = 0x00;
+const EFUSE_PGM_DATA_WORDS = 8;
+const EFUSE_PGM_CHECK_VALUE_0 = 0x20;
+const EFUSE_PGM_CHECK_WORDS = 3;
+const EFUSE_RD_WR_DIS = 0x2c;
+const EFUSE_RD_REPEAT_DATA_4 = 0x40;
+const EFUSE_RD_MAC_SPI_SYS_0 = 0x44; // BLOCK1 word 0: MAC[31:0]
+const EFUSE_RD_MAC_SPI_SYS_5 = 0x58; // BLOCK1 word 5: wafer/pkg/cal fields
+const EFUSE_RD_SYS_PART1_DATA_0 = 0x5c; // BLK2 starts here; BLK2..10 are 8 words each
+const EFUSE_RD_SYS_PART2_DATA_7 = 0x178;
+const EFUSE_RD_REPEAT_ERR_0 = 0x17c;
+const EFUSE_RD_REPEAT_ERR_4 = 0x190;
+const EFUSE_RD_RS_ERR_0 = 0x1c0;
+const EFUSE_RD_RS_ERR_1 = 0x1c4;
+const EFUSE_CLK = 0x1c8;
+const EFUSE_CONF = 0x1cc;
+const EFUSE_STATUS = 0x1d0;
+const EFUSE_CMD = 0x1d4;
+const EFUSE_INT_RAW = 0x1d8;
+const EFUSE_INT_ST = 0x1dc;
+const EFUSE_INT_ENA = 0x1e0;
+const EFUSE_INT_CLR = 0x1e4;
+const EFUSE_DAC_CONF = 0x1e8;
+const EFUSE_RD_TIM_CONF = 0x1ec;
+const EFUSE_WR_TIM_CONF1 = 0x1f4;
+const EFUSE_WR_TIM_CONF2 = 0x1f8;
+const EFUSE_DATE = 0x1fc;
+const EFUSE_WRITE_OP_CODE = 0x5a5a;
+const EFUSE_READ_OP_CODE = 0x5aa5;
+const EFUSE_READ_CMD = 1 << 0;
+const EFUSE_PGM_CMD = 1 << 1;
+const EFUSE_BLK_NUM_SHIFT = 2;
+const EFUSE_BLK_NUM_MASK = 0xf << EFUSE_BLK_NUM_SHIFT;
+const EFUSE_DONE_INTS = EFUSE_READ_CMD | EFUSE_PGM_CMD;
+const EFUSE_BLOCK_COUNT = 11;
+const EFUSE_BLOCK_WORDS = 8;
+const EFUSE_DAC_CONF_RESET = (0xff << 9) | 28;
+const EFUSE_RD_TIM_CONF_RESET = 18 << 24;
+const EFUSE_WR_TIM_CONF1_RESET = 10368 << 8;
+const EFUSE_WR_TIM_CONF2_RESET = 400;
+const EFUSE_DATE_RESET = 34_607_760;
 // SYNTHETIC MAC, documented: 7A:C0:DE:00:53:33 — locally-administered
 // unicast (first octet bit 1 set, bit 0 clear), "C0DE"/"S3" mnemonic.
 // efuse_hal_get_mac byte order: mac[0]=mac_1>>8, mac[1]=mac_1&0xff,
@@ -674,6 +714,13 @@ const freshGdmaRx = (): GdmaRxChannel => ({
   started: false,
 });
 
+const freshEfuseBlocks = (): number[][] => {
+  const blocks = Array.from({ length: EFUSE_BLOCK_COUNT }, () => Array(EFUSE_BLOCK_WORDS).fill(0) as number[]);
+  blocks[1]![0] = EFUSE_MAC_0;
+  blocks[1]![1] = EFUSE_MAC_1;
+  return blocks;
+};
+
 /** GPIO0-48; bank 0 covers 0-31, bank 1 covers 32-48. */
 const PIN_COUNT = 49;
 
@@ -740,6 +787,17 @@ export class Esp32s3Core implements McuCore {
   private rtcTimeLatchHi = 0;
   private cpuPerConf = SYSTEM_CPU_PER_CONF_RESET;
   private sysclkConf = SYSTEM_SYSCLK_CONF_RESET;
+  private efuseBlocks = freshEfuseBlocks();
+  private efusePgmData = Array(EFUSE_PGM_DATA_WORDS).fill(0) as number[];
+  private efusePgmCheck = Array(EFUSE_PGM_CHECK_WORDS).fill(0) as number[];
+  private efuseClk = 0;
+  private efuseConf = 0;
+  private efuseIntRaw = 0;
+  private efuseIntEna = 0;
+  private efuseDacConf = EFUSE_DAC_CONF_RESET;
+  private efuseRdTimConf = EFUSE_RD_TIM_CONF_RESET;
+  private efuseWrTimConf1 = EFUSE_WR_TIM_CONF1_RESET;
+  private efuseWrTimConf2 = EFUSE_WR_TIM_CONF2_RESET;
 
   // SAR ADC1/ADC2 oneshot state.
   private meas1Ctrl2 = 0; // the control bits firmware wrote
@@ -983,6 +1041,37 @@ export class Esp32s3Core implements McuCore {
     return this.active === this.cpu1 ? this.core1Epoch + this.cpu1.cycles : this.cpu.cycles;
   }
 
+  private efuseReadWord(off: number): number | null {
+    if ((off & 3) !== 0) return null;
+    if (off >= EFUSE_RD_WR_DIS && off <= EFUSE_RD_REPEAT_DATA_4) {
+      return this.efuseBlocks[0]?.[(off - EFUSE_RD_WR_DIS) >> 2] ?? 0;
+    }
+    if (off >= EFUSE_RD_MAC_SPI_SYS_0 && off <= EFUSE_RD_MAC_SPI_SYS_5) {
+      return this.efuseBlocks[1]?.[(off - EFUSE_RD_MAC_SPI_SYS_0) >> 2] ?? 0;
+    }
+    if (off >= EFUSE_RD_SYS_PART1_DATA_0 && off <= EFUSE_RD_SYS_PART2_DATA_7) {
+      const rel = off - EFUSE_RD_SYS_PART1_DATA_0;
+      const block = 2 + (rel >> 5);
+      const word = (rel & 0x1f) >> 2;
+      return this.efuseBlocks[block]?.[word] ?? 0;
+    }
+    return null;
+  }
+
+  private efuseProgramBlock(block: number): void {
+    if (block < 0 || block >= EFUSE_BLOCK_COUNT) {
+      throw new Error(`eFuse program command selected invalid block ${String(block)}; expected 0..10`);
+    }
+    const words = block < 2 ? 6 : EFUSE_BLOCK_WORDS;
+    const target = this.efuseBlocks[block]!;
+    for (let i = 0; i < words; i++) {
+      target[i] = ((target[i] ?? 0) | (this.efusePgmData[i] ?? 0)) >>> 0;
+    }
+    this.efusePgmData.fill(0);
+    this.efusePgmCheck.fill(0);
+    this.efuseIntRaw |= EFUSE_PGM_CMD;
+  }
+
   private sampleAdc(channel: number): number {
     const cycle = this.now();
     const volts = this.sampler ? this.sampler(channel, cycle) : 0;
@@ -1218,6 +1307,16 @@ export class Esp32s3Core implements McuCore {
     this.rtcTimeLatchHi = 0;
     this.cpuPerConf = SYSTEM_CPU_PER_CONF_RESET;
     this.sysclkConf = SYSTEM_SYSCLK_CONF_RESET;
+    this.efusePgmData.fill(0);
+    this.efusePgmCheck.fill(0);
+    this.efuseClk = 0;
+    this.efuseConf = 0;
+    this.efuseIntRaw = 0;
+    this.efuseIntEna = 0;
+    this.efuseDacConf = EFUSE_DAC_CONF_RESET;
+    this.efuseRdTimConf = EFUSE_RD_TIM_CONF_RESET;
+    this.efuseWrTimConf1 = EFUSE_WR_TIM_CONF1_RESET;
+    this.efuseWrTimConf2 = EFUSE_WR_TIM_CONF2_RESET;
     this.meas1Ctrl2 = 0;
     this.meas2Ctrl2 = 0;
     this.adcData = 0;
@@ -1842,14 +1941,34 @@ export class Esp32s3Core implements McuCore {
     }
     if (addr >= EFUSE_BASE && addr < EFUSE_BASE + 0x1000) {
       const off = addr - EFUSE_BASE;
-      if (off === EFUSE_RD_MAC_SPI_SYS_0) return EFUSE_MAC_0;
-      if (off === EFUSE_RD_MAC_SPI_SYS_1) return EFUSE_MAC_1;
-      // Rest of BLOCK1: wafer-version/pkg fields all 0 → chip rev v0.0,
-      // which IDF supports (its minimum S3 revision is v0.0).
-      if (off >= EFUSE_RD_MAC_SPI_SYS_2 && off <= EFUSE_RD_MAC_SPI_SYS_5) return 0;
+      if (off >= EFUSE_PGM_DATA_0 && off < EFUSE_PGM_DATA_0 + EFUSE_PGM_DATA_WORDS * 4 && (off & 3) === 0) {
+        return this.efusePgmData[(off - EFUSE_PGM_DATA_0) >> 2] ?? 0;
+      }
+      if (off >= EFUSE_PGM_CHECK_VALUE_0 && off < EFUSE_PGM_CHECK_VALUE_0 + EFUSE_PGM_CHECK_WORDS * 4 && (off & 3) === 0) {
+        return this.efusePgmCheck[(off - EFUSE_PGM_CHECK_VALUE_0) >> 2] ?? 0;
+      }
+      const efuseWord = this.efuseReadWord(off);
+      if (efuseWord !== null) return efuseWord >>> 0;
+      if (off >= EFUSE_RD_REPEAT_ERR_0 && off <= EFUSE_RD_REPEAT_ERR_4 && (off & 3) === 0) return 0;
+      if (off >= EFUSE_RD_RS_ERR_0 && off <= EFUSE_RD_RS_ERR_1 && (off & 3) === 0) return 0;
+      if (off === EFUSE_CLK) return this.efuseClk >>> 0;
+      if (off === EFUSE_CONF) return this.efuseConf >>> 0;
+      if (off === EFUSE_STATUS) return 0;
+      if (off === EFUSE_CMD) return 0; // READ_CMD/PGM_CMD are self-clearing in this model.
+      if (off === EFUSE_INT_RAW) return this.efuseIntRaw >>> 0;
+      if (off === EFUSE_INT_ST) return (this.efuseIntRaw & this.efuseIntEna) >>> 0;
+      if (off === EFUSE_INT_ENA) return this.efuseIntEna >>> 0;
+      if (off === EFUSE_INT_CLR) return 0;
+      if (off === EFUSE_DAC_CONF) return this.efuseDacConf >>> 0;
+      if (off === EFUSE_RD_TIM_CONF) return this.efuseRdTimConf >>> 0;
+      if (off === EFUSE_WR_TIM_CONF1) return this.efuseWrTimConf1 >>> 0;
+      if (off === EFUSE_WR_TIM_CONF2) return this.efuseWrTimConf2 >>> 0;
+      if (off === EFUSE_DATE) return EFUSE_DATE_RESET;
       throw new Error(
         `read of unmodeled eFuse register 0x${addr.toString(16)} — this core models only ` +
-          `RD_MAC_SPI_SYS_0..5 (+0x44..+0x58: the synthetic MAC 7A:C0:DE:00:53:33 and chip rev v0.0)`,
+          `PGM_DATA0..7(+0x0..+0x1c), BLOCK0..10 readback (+0x2c..+0x178), ` +
+          `the programming command/interrupt/timing regs (+0x1c8..+0x1fc), ` +
+          `and BLOCK1's synthetic MAC 7A:C0:DE:00:53:33`,
       );
     }
     if (addr >= SYSTEM_BASE && addr < SYSTEM_BASE + 0x1000) {
@@ -2155,7 +2274,63 @@ export class Esp32s3Core implements McuCore {
       return;
     }
     if (addr >= EFUSE_BASE && addr < EFUSE_BASE + 0x1000) {
-      throw new Error(`write to eFuse register 0x${addr.toString(16)} — eFuses are read-only in this core (programming is not modeled)`);
+      const off = addr - EFUSE_BASE;
+      const v = value >>> 0;
+      if (off >= EFUSE_PGM_DATA_0 && off < EFUSE_PGM_DATA_0 + EFUSE_PGM_DATA_WORDS * 4 && (off & 3) === 0) {
+        this.efusePgmData[(off - EFUSE_PGM_DATA_0) >> 2] = v;
+        return;
+      }
+      if (off >= EFUSE_PGM_CHECK_VALUE_0 && off < EFUSE_PGM_CHECK_VALUE_0 + EFUSE_PGM_CHECK_WORDS * 4 && (off & 3) === 0) {
+        this.efusePgmCheck[(off - EFUSE_PGM_CHECK_VALUE_0) >> 2] = v;
+        return;
+      }
+      if (off === EFUSE_CLK) {
+        this.efuseClk = v;
+        return;
+      }
+      if (off === EFUSE_CONF) {
+        this.efuseConf = v & 0xffff;
+        return;
+      }
+      if (off === EFUSE_CMD) {
+        if ((v & EFUSE_READ_CMD) !== 0 && this.efuseConf === EFUSE_READ_OP_CODE) this.efuseIntRaw |= EFUSE_READ_CMD;
+        if ((v & EFUSE_PGM_CMD) !== 0 && this.efuseConf === EFUSE_WRITE_OP_CODE) {
+          this.efuseProgramBlock((v & EFUSE_BLK_NUM_MASK) >>> EFUSE_BLK_NUM_SHIFT);
+        }
+        return;
+      }
+      if (off === EFUSE_INT_RAW) {
+        this.efuseIntRaw |= v & EFUSE_DONE_INTS;
+        return;
+      }
+      if (off === EFUSE_INT_ENA) {
+        this.efuseIntEna = v & EFUSE_DONE_INTS;
+        return;
+      }
+      if (off === EFUSE_INT_CLR) {
+        this.efuseIntRaw &= ~(v & EFUSE_DONE_INTS);
+        return;
+      }
+      if (off === EFUSE_DAC_CONF) {
+        this.efuseDacConf = v;
+        return;
+      }
+      if (off === EFUSE_RD_TIM_CONF) {
+        this.efuseRdTimConf = v;
+        return;
+      }
+      if (off === EFUSE_WR_TIM_CONF1) {
+        this.efuseWrTimConf1 = v;
+        return;
+      }
+      if (off === EFUSE_WR_TIM_CONF2) {
+        this.efuseWrTimConf2 = v;
+        return;
+      }
+      if (off === EFUSE_DATE) return;
+      throw new Error(
+        `write to read-only or unmodeled eFuse register 0x${addr.toString(16)} — program fuses via PGM_DATA0..7 plus CMD.PGM_CMD`,
+      );
     }
     if (addr >= SYSTEM_BASE && addr < SYSTEM_BASE + 0x1000) {
       const off = addr - SYSTEM_BASE;
