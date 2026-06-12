@@ -435,11 +435,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       and returns to read the DMA frame. Cuts: no driver-pool/
       backpressure timing, only simple next-pointer descriptor
       advancement
+- [x] ESP32-S3 core slice 18 — GDMA descriptor-starvation visibility
+      (landed 2026-06-12): ADC continuous samples that arrive after
+      the DMA-owned descriptor pool is exhausted now latch
+      IN_DSCR_EMPTY instead of disappearing silently. Proven by
+      hand-assembled firmware that fills a one-frame descriptor,
+      clears DONE/SUC_EOF, triggers another ADC sample, and observes
+      DSCR_EMPTY while the original frame remains intact. Honest cut:
+      this is starvation visibility, not the full ESP-IDF driver pool
+      model; flush policy and real backpressure timing remain open
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
-      firmware: GDMA driver-pool/backpressure behavior, sleep/wake,
-      eFuse programming, interrupt delivery still outside the currently
-      modeled sources, and remaining peripherals — walked openly, slice
-      by slice
+      firmware: GDMA driver-pool flush policy/backpressure timing,
+      sleep/wake, eFuse programming, interrupt delivery still outside
+      the currently modeled sources, and remaining peripherals —
+      walked openly, slice by slice
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 

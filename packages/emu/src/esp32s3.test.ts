@@ -2247,6 +2247,58 @@ describe('Esp32s3Core — ADC continuous GDMA frames (slice 16)', () => {
     expect([...c.drainUart()]).toEqual([0x48, 0x48, 4, 4, 3]);
   });
 
+  it('reports descriptor starvation when ADC continuous data arrives after the pool is exhausted', () => {
+    const desc4BytesDma = 0x80000004;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [DESC, BUF, desc4BytesDma, GDMA, DESC_LINK_START, APB_SARADC, ADC1_CH2_PATTERN, UART],
+      [
+        L32R(2, 0), // descriptor
+        L32R(3, 1), // buffer
+        L32R(4, 2), // owner=DMA, size=4 bytes
+        S32I(4, 2, 0),
+        S32I(3, 2, 4),
+        MOVI(5, 0),
+        S32I(5, 2, 8), // next = NULL
+
+        L32R(6, 3), // GDMA
+        MOVI(7, ADC_DAC_PERI),
+        S32I(7, 6, 0x48),
+        L32R(7, 4),
+        S32I(7, 6, 0x20),
+
+        L32R(8, 5), // APB_SARADC
+        L32R(9, 6),
+        S32I(9, 8, 0x18),
+        MOVI(10, 2),
+        S32I(10, 8, 0x00), // sample 1 fills the only descriptor
+        MOVI(10, 0),
+        S32I(10, 8, 0x00),
+        MOVI(11, 3),
+        S32I(11, 6, 0x14), // clear DONE | SUC_EOF before probing starvation
+        MOVI(10, 2),
+        S32I(10, 8, 0x00), // sample 2 arrives while no descriptor is DMA-owned
+
+        L32R(12, 7), // UART
+        L32I(11, 6, 0x08),
+        S32I(11, 12, 0), // GDMA INT_RAW = DSCR_EMPTY
+        L32I(11, 2, 0),
+        SRLI(11, 11, 12),
+        S32I(11, 12, 0), // descriptor length remains 4
+        L32I(11, 3, 0),
+        SRLI(11, 11, 8),
+        S32I(11, 12, 0), // original sample survived; second was not written over it
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.setAdcSampler((channel) => (channel === 2 ? 1.65 : 0));
+    c.step(500);
+
+    expect([...c.drainUart()]).toEqual([16, 4, 0x48]);
+    expect(c.drainAdcReads().map((r) => r.channel)).toEqual([2, 2]);
+  });
+
   it('routes GDMA RX DONE/SUC_EOF through the interrupt matrix to a level-1 handler', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

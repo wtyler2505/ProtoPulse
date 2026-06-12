@@ -149,9 +149,11 @@ import type { XtensaBus } from './xtensa.js';
  * length/owner/SUC_EOF, and raises the RX DONE/SUC_EOF raw bits.
  * The GDMA RX interrupt matrix route is modeled for core 0 too, so
  * RX DONE/SUC_EOF can wake level-1 handlers through
- * DMA_IN_CHn_INT_MAP. Cuts: no descriptor rings beyond simple
- * next-pointer advancement, no overflow/backpressure timing. Still
- * missing: sleep/wake and eFuse programming — so full
+ * DMA_IN_CHn_INT_MAP. Descriptor-starved ADC conversions now latch
+ * DSCR_EMPTY instead of disappearing silently after the DMA-owned
+ * pool is exhausted. Cuts: no descriptor rings beyond simple
+ * next-pointer advancement, no driver-pool flush/backpressure timing.
+ * Still missing: sleep/wake and eFuse programming — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
@@ -620,6 +622,7 @@ interface GdmaRxChannel {
   map: number;
   offset: number;
   active: boolean;
+  started: boolean;
 }
 
 const freshGpTimer = (): GpTimer => ({
@@ -668,6 +671,7 @@ const freshGdmaRx = (): GdmaRxChannel => ({
   map: INTMTX_DEFAULT_MAP,
   offset: 0,
   active: false,
+  started: false,
 });
 
 /** GPIO0-48; bank 0 covers 0-31, bank 1 covers 32-48. */
@@ -1077,6 +1081,7 @@ export class Esp32s3Core implements McuCore {
     ch.errEofDesc = desc >>> 0;
     ch.intRaw |= GDMA_IN_DSCR_ERR_INT;
     ch.active = false;
+    ch.started = false;
     ch.offset = 0;
     this.recomputeIrq();
   }
@@ -1086,12 +1091,15 @@ export class Esp32s3Core implements McuCore {
     ch.currentDesc = desc >>> 0;
     ch.offset = 0;
     ch.active = desc !== 0;
+    ch.started = ch.active;
     if (!ch.active) ch.intRaw |= GDMA_IN_DSCR_EMPTY_INT;
     this.recomputeIrq();
   }
 
   private gdmaPushAdcWord(word: number): void {
-    const ch = this.gdmaRx.find((rx) => rx.active && rx.periSel === GDMA_PERI_ADC_DAC);
+    const ch =
+      this.gdmaRx.find((rx) => rx.active && rx.periSel === GDMA_PERI_ADC_DAC) ??
+      this.gdmaRx.find((rx) => rx.started && rx.periSel === GDMA_PERI_ADC_DAC);
     if (ch === undefined) return;
     this.gdmaPushRxWord(ch, word >>> 0);
     this.recomputeIrq();
@@ -1999,6 +2007,7 @@ export class Esp32s3Core implements McuCore {
         ch.conf0 = v;
         if ((v & GDMA_IN_RST) !== 0) {
           ch.active = false;
+          ch.started = false;
           ch.offset = 0;
           ch.currentDesc = 0;
           ch.intRaw = 0;
@@ -2016,6 +2025,7 @@ export class Esp32s3Core implements McuCore {
         ch.inLink = v & (GDMA_INLINK_ADDR_MASK | GDMA_INLINK_AUTO_RET);
         if ((v & GDMA_INLINK_STOP) !== 0) {
           ch.active = false;
+          ch.started = false;
           ch.offset = 0;
           this.recomputeIrq();
         }
