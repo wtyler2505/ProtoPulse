@@ -2108,9 +2108,11 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
 
 describe('Esp32s3Core — ADC continuous GDMA frames (slice 16)', () => {
   const GDMA = 0x6003f000;
+  const INTMTX = 0x600c2000;
   const APB_SARADC = 0x60040000;
   const DESC = ESP32S3_DRAM_BASE + 0x1000;
   const BUF = ESP32S3_DRAM_BASE + 0x1040;
+  const SCRATCH = ESP32S3_DRAM_BASE + 0x1080;
   const DESC_LINK_START = (DESC & 0x000f_ffff) | (1 << 22) | (1 << 20);
   const DESC_8_BYTES_DMA = 0x80000008;
   const ADC_DAC_PERI = 8;
@@ -2166,5 +2168,82 @@ describe('Esp32s3Core — ADC continuous GDMA frames (slice 16)', () => {
 
     expect([...c.drainUart()]).toEqual([0x48, 0x48, 8, 3]);
     expect(c.drainAdcReads().map((r) => r.channel)).toEqual([2, 2]);
+  });
+
+  it('routes GDMA RX DONE/SUC_EOF through the interrupt matrix to a level-1 handler', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [DESC, BUF, DESC_8_BYTES_DMA, GDMA, DESC_LINK_START, APB_SARADC, ADC1_CH2_PATTERN, UART, SCRATCH, ESP32S3_IRAM_BASE, INTMTX],
+      [
+        L32R(13, 8), // scratch
+        MOVI(14, 0),
+        S32I(14, 13, 0), // irq counter = 0
+        L32R(14, 9),
+        WSR(14, SR.VECBASE),
+
+        L32R(2, 0), // descriptor
+        L32R(3, 1), // buffer
+        L32R(4, 2), // owner=DMA, size=8 bytes
+        S32I(4, 2, 0),
+        S32I(3, 2, 4),
+        MOVI(5, 0),
+        S32I(5, 2, 8),
+
+        L32R(6, 3), // GDMA
+        MOVI(7, ADC_DAC_PERI),
+        S32I(7, 6, 0x48), // IN_PERI_SEL_CH0 = ADC_DAC
+        MOVI(7, 3),
+        S32I(7, 6, 0x10), // IN_INT_ENA: DONE | SUC_EOF
+        L32R(15, 10), // interrupt matrix
+        MOVI(7, 0),
+        S32I(7, 15, 0x108), // DMA_IN_CH0 -> CPU line 0
+        MOVI(7, 1),
+        WSR(7, SR.INTENABLE),
+        RSIL(12, 0),
+        L32R(7, 4),
+        S32I(7, 6, 0x20), // IN_LINK_CH0 = desc | START
+
+        L32R(8, 5), // APB_SARADC
+        L32R(9, 6),
+        S32I(9, 8, 0x18), // ADC1 channel 2 pattern
+        MOVI(10, 2),
+        S32I(10, 8, 0x00),
+        MOVI(10, 0),
+        S32I(10, 8, 0x00),
+        MOVI(10, 2),
+        S32I(10, 8, 0x00), // second sample completes descriptor, raises GDMA IRQ
+
+        MOVI(11, 1),
+        L32I(4, 13, 0),
+        BNE(4, 11, BR(-2)),
+        L32R(12, 7), // UART
+        S32I(4, 12, 0), // counter = 1
+        L32I(4, 6, 0x08),
+        S32I(4, 12, 0), // raw bits after ISR clear = 0
+        L32I(4, 3, 0),
+        SRLI(4, 4, 8),
+        S32I(4, 12, 0), // frame survived in DMA buffer
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 8), // scratch
+        S32I(3, 2, 8),
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0),
+        L32R(3, 3), // GDMA
+        MOVI(4, 3),
+        S32I(4, 3, 0x14), // clear DONE | SUC_EOF
+        L32I(3, 2, 8),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.setAdcSampler((channel) => (channel === 2 ? 1.65 : 0));
+    c.step(600);
+
+    expect([...c.drainUart()]).toEqual([1, 0, 0x48]);
   });
 });

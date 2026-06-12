@@ -147,9 +147,11 @@ import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuSt
  * IN_PERI_SEL is ADC_DAC consumes APB_SARADC result words into the
  * real 12-byte DMA descriptor format in SRAM, updates descriptor
  * length/owner/SUC_EOF, and raises the RX DONE/SUC_EOF raw bits.
- * Cuts: no GDMA interrupt-matrix route yet, no descriptor rings
- * beyond simple next-pointer advancement, no overflow/backpressure
- * timing. Still missing: sleep/wake and eFuse programming — so full
+ * The GDMA RX interrupt matrix route is modeled for core 0 too, so
+ * RX DONE/SUC_EOF can wake level-1 handlers through
+ * DMA_IN_CHn_INT_MAP. Cuts: no descriptor rings beyond simple
+ * next-pointer advancement, no overflow/backpressure timing. Still
+ * missing: sleep/wake and eFuse programming — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
@@ -206,7 +208,7 @@ const UART_TX_DONE_INT = 1 << 14;
 // The interrupt matrix (reg_base.h DR_REG_INTERRUPT_BASE +
 // interrupt_core0_reg.h): each peripheral source has a 5-bit map
 // register selecting which CPU interrupt line it drives. Only the
-// two modeled sources' maps are wired; both reset to 16 — a line the
+// modeled sources' maps are wired; all reset to 16 — a line the
 // CPU never dispatches, so unmapped sources stay silent (matching
 // the headers' reset value).
 const INTMTX_BASE = 0x600c2000;
@@ -216,6 +218,7 @@ const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
 // TG_T0 +0xC8, TG_T1 +0xCC, TG_WDT +0xD0, TG1_T0 +0xD4, TG1_T1
 // +0xD8, TG1_WDT +0xDC — group-major, [t0, t1, wdt] within a group.
 const INTMTX_TG_MAPS = 0x0c8;
+const INTMTX_GDMA_IN_MAPS = 0x108; // DMA_IN_CH0..4 at +0x108..+0x118
 const INTMTX_DEFAULT_MAP = 16;
 
 // Timer groups 0 and 1 (timer_group_reg.h; flow per hal timer_ll.h
@@ -614,6 +617,7 @@ interface GdmaRxChannel {
   weight: number;
   pri: number;
   periSel: number;
+  map: number;
   offset: number;
   active: boolean;
 }
@@ -661,6 +665,7 @@ const freshGdmaRx = (): GdmaRxChannel => ({
   weight: 0x0f00,
   pri: 0,
   periSel: GDMA_PERI_NONE,
+  map: INTMTX_DEFAULT_MAP,
   offset: 0,
   active: false,
 });
@@ -1073,6 +1078,7 @@ export class Esp32s3Core implements McuCore {
     ch.intRaw |= GDMA_IN_DSCR_ERR_INT;
     ch.active = false;
     ch.offset = 0;
+    this.recomputeIrq();
   }
 
   private gdmaStart(ch: GdmaRxChannel): void {
@@ -1081,12 +1087,14 @@ export class Esp32s3Core implements McuCore {
     ch.offset = 0;
     ch.active = desc !== 0;
     if (!ch.active) ch.intRaw |= GDMA_IN_DSCR_EMPTY_INT;
+    this.recomputeIrq();
   }
 
   private gdmaPushAdcWord(word: number): void {
     const ch = this.gdmaRx.find((rx) => rx.active && rx.periSel === GDMA_PERI_ADC_DAC);
     if (ch === undefined) return;
     this.gdmaPushRxWord(ch, word >>> 0);
+    this.recomputeIrq();
   }
 
   private gdmaPushRxWord(ch: GdmaRxChannel, word: number): void {
@@ -1094,6 +1102,7 @@ export class Esp32s3Core implements McuCore {
     if (desc === 0) {
       ch.intRaw |= GDMA_IN_DSCR_EMPTY_INT;
       ch.active = false;
+      this.recomputeIrq();
       return;
     }
     let dw0 = this.sramU32(desc);
@@ -1108,6 +1117,7 @@ export class Esp32s3Core implements McuCore {
       if (next === 0) {
         ch.intRaw |= GDMA_IN_DSCR_EMPTY_INT;
         ch.active = false;
+        this.recomputeIrq();
         return;
       }
       ch.descBf1 = ch.descBf0;
@@ -1417,6 +1427,9 @@ export class Esp32s3Core implements McuCore {
         if ((pending & (1 << i)) !== 0) mask |= 1 << ((grp.maps[i] ?? INTMTX_DEFAULT_MAP) & 31);
       }
     }
+    for (const ch of this.gdmaRx) {
+      if ((ch.intRaw & ch.intEna) !== 0) mask |= 1 << (ch.map & 31);
+    }
     this.cpu.setExtInt(mask);
   }
 
@@ -1692,6 +1705,9 @@ export class Esp32s3Core implements McuCore {
         const idx = (off - INTMTX_TG_MAPS) >> 2; // group-major [t0,t1,wdt]
         return this.timg[idx < 3 ? 0 : 1]?.maps[idx % 3] ?? INTMTX_DEFAULT_MAP;
       }
+      if (off >= INTMTX_GDMA_IN_MAPS && off < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (off & 3) === 0) {
+        return this.gdmaRx[(off - INTMTX_GDMA_IN_MAPS) >> 2]?.map ?? INTMTX_DEFAULT_MAP;
+      }
       return INTMTX_DEFAULT_MAP; // unmodeled sources sit at their reset map
     }
     if (addr >= TIMG0_BASE && addr < TIMG1_BASE + 0x1000) {
@@ -1907,6 +1923,9 @@ export class Esp32s3Core implements McuCore {
         const idx = (off - INTMTX_TG_MAPS) >> 2;
         const grp = this.timg[idx < 3 ? 0 : 1];
         if (grp !== undefined) grp.maps[idx % 3] = value & 0x1f;
+      } else if (off >= INTMTX_GDMA_IN_MAPS && off < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (off & 3) === 0) {
+        const ch = this.gdmaRx[(off - INTMTX_GDMA_IN_MAPS) >> 2];
+        if (ch !== undefined) ch.map = value & 0x1f;
       }
       // Map writes for unmodeled sources are accepted and dropped —
       // those sources never assert, so the mapping is moot.
@@ -1983,15 +2002,22 @@ export class Esp32s3Core implements McuCore {
           ch.offset = 0;
           ch.currentDesc = 0;
           ch.intRaw = 0;
+          this.recomputeIrq();
         }
       } else if (off === GDMA_IN_CONF1) ch.conf1 = v;
-      else if (off === GDMA_IN_INT_ENA) ch.intEna = v;
-      else if (off === GDMA_IN_INT_CLR) ch.intRaw &= ~v;
+      else if (off === GDMA_IN_INT_ENA) {
+        ch.intEna = v;
+        this.recomputeIrq();
+      } else if (off === GDMA_IN_INT_CLR) {
+        ch.intRaw &= ~v;
+        this.recomputeIrq();
+      }
       else if (off === GDMA_IN_LINK) {
         ch.inLink = v & (GDMA_INLINK_ADDR_MASK | GDMA_INLINK_AUTO_RET);
         if ((v & GDMA_INLINK_STOP) !== 0) {
           ch.active = false;
           ch.offset = 0;
+          this.recomputeIrq();
         }
         if ((v & (GDMA_INLINK_START | GDMA_INLINK_RESTART)) !== 0) this.gdmaStart(ch);
       } else if (off === GDMA_IN_WEIGHT) ch.weight = v & 0x0f00;

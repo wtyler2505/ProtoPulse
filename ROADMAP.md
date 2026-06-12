@@ -421,14 +421,25 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       (12-bit data, 4-bit channel, unit bit). Proven by hand-
       assembled firmware that builds a descriptor, starts GDMA, runs
       two ADC1 channel-2 conversions, and reads the frame back from
-      the DMA buffer. Cuts: no GDMA interrupt-matrix route yet, no
-      driver-pool/backpressure timing, only simple next-pointer
-      descriptor advancement
+      the DMA buffer. Cut at landing: no GDMA interrupt-matrix route
+      yet; slice 17 fills that wakeup path
+- [x] ESP32-S3 core slice 17 — GDMA RX interrupt delivery for ADC
+      continuous mode (landed 2026-06-12): DMA_IN_CH0..4 interrupt-
+      matrix map registers at 0x600C2108..0x600C2118 now feed enabled
+      GDMA RX raw bits into the same level-1 external line surface as
+      GPIO/UART/TIMG. GDMA IN_INT_ENA/CLR and in-link errors recompute
+      the CPU line mask, so RX DONE/SUC_EOF can vector firmware into a
+      handler. Proven by hand-assembled firmware that maps DMA_IN_CH0
+      to CPU line 0, enables DONE|SUC_EOF, completes an ADC continuous
+      descriptor, increments an ISR counter, clears GDMA raw status,
+      and returns to read the DMA frame. Cuts: no driver-pool/
+      backpressure timing, only simple next-pointer descriptor
+      advancement
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
-      firmware: GDMA interrupt delivery/driver-pool behavior,
-      sleep/wake, eFuse programming, interrupt delivery still outside
-      the currently modeled sources, and remaining peripherals —
-      walked openly, slice by slice
+      firmware: GDMA driver-pool/backpressure behavior, sleep/wake,
+      eFuse programming, interrupt delivery still outside the currently
+      modeled sources, and remaining peripherals — walked openly, slice
+      by slice
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 
