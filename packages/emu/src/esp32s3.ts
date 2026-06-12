@@ -107,11 +107,37 @@ import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuSt
  * atomic/exclusive-access modeling (the ISA subset has none), and
  * raw (non-ROM) core-1 programs get a SYNTHETIC reset SP 16 KiB
  * below the DRAM top (real code sets its own stack immediately).
- * Still missing: ADC2/DMA mode, TIMG0 T1/TIMG1, every watchdog
- * (RTC and TIMG), XTAL clock source for the timer (APB only),
- * sleep/wake, and eFuse programming — so full IDF/FreeRTOS
- * firmware does NOT run yet. Loading Intel-HEX refuses with a
- * message.
+ * ALL FOUR general-purpose timers run (slice 13): the slice-8 T0
+ * model generalized to T0/T1 in both TIMG0 and TIMG1 (T1's block is
+ * T0's at +0x24; TIMG1's base is 0x60020000 — reg_base.h), each with
+ * its own interrupt-matrix map (TG_T0/T1 +0xC8/0xCC, TG1_T0/T1
+ * +0xD4/0xD8). The WATCHDOGS are modeled too (slice 13) — the MWDT
+ * in each TIMG group (WDTCONFIG0..5 +0x48..0x5C, WDTFEED +0x60,
+ * WDTWPROTECT +0x64) and the RTC_CNTL RWDT (WDTCONFIG0..4
+ * +0x98..0xA8, WDTFEED +0xAC bit 31, WDTWPROTECT +0xB0), both gated
+ * by the 0x50D83AA1 write-protect key (registers reset UNLOCKED,
+ * like hardware; a wrong key silently drops config writes, exactly
+ * the behavior wdt_hal relies on). Stages expire cumulatively from
+ * the last feed; actions per hal/wdt_types.h — 1 raises the group's
+ * WDT interrupt (bit 2, via TG_WDT/TG1_WDT maps +0xD0/0xDC), 2
+ * resets the CPU, 3 the system, 4 (RWDT only) system+RTC — with the
+ * real rom/rtc.h causes in RESET_STATE: TG0WDT 7/11, TG1WDT 8/17,
+ * RTCWDT 9/13/16. MWDTs count APB/CLK_PRESCALE ticks; the RWDT
+ * counts the modeled ~136 kHz RC_SLOW clock. Watchdog cuts, stated
+ * plainly: stage-N CPU-reset ignores the PROCPU/APPCPU_RESET_EN
+ * routing bits and always resets the PRO CPU (whole machine, like
+ * SW_PROCPU_RST); the RWDT's stage-0 eFuse tick multiplier
+ * (rwdt_ll.h writes timeout>>1) is NOT applied — CONFIG registers
+ * hold raw ticks; FLASHBOOT_MOD_EN bits are stored but INERT (this
+ * core boots post-bootloader with the flashboot watchdogs already
+ * quiesced, so raw test images aren't killed before they can
+ * configure anything — IDF startup's disable writes still land on
+ * real modeled registers); the RWDT INT stage action advances the
+ * stage but raises no CPU interrupt (the RTC interrupt block is not
+ * modeled); SUPER_WDT, sleep pause, and XTAL clock sources are out
+ * of scope. Still missing: ADC2/DMA mode, sleep/wake, and eFuse
+ * programming — so full IDF/FreeRTOS firmware does NOT run yet.
+ * Loading Intel-HEX refuses with a message.
  */
 
 const CLOCK_HZ = 240_000_000;
@@ -172,16 +198,21 @@ const UART_TX_DONE_INT = 1 << 14;
 const INTMTX_BASE = 0x600c2000;
 const INTMTX_GPIO_MAP = 0x040; // INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG
 const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
-const INTMTX_TG_T0_MAP = 0x0c8; // INTERRUPT_CORE0_TG_T0_INT_MAP_REG (TIMG0 T0)
+// The six TIMG sources sit contiguously (interrupt_core0_reg.h):
+// TG_T0 +0xC8, TG_T1 +0xCC, TG_WDT +0xD0, TG1_T0 +0xD4, TG1_T1
+// +0xD8, TG1_WDT +0xDC — group-major, [t0, t1, wdt] within a group.
+const INTMTX_TG_MAPS = 0x0c8;
 const INTMTX_DEFAULT_MAP = 16;
 
-// Timer group 0, timer 0 (timer_group_reg.h; flow per hal timer_ll.h
-// and the gptimer driver): the 54-bit general-purpose timer counting
-// APB ticks (80 MHz — soc.h APB_CLK_FREQ) through a 16-bit prescaler
-// (field value 0 means 65536; the HAL only programs 2..65536). The
+// Timer groups 0 and 1 (timer_group_reg.h; flow per hal timer_ll.h
+// and the gptimer driver): each group has two 54-bit general-purpose
+// timers counting APB ticks (80 MHz — soc.h APB_CLK_FREQ) through a
+// 16-bit prescaler (field value 0 means 65536; the HAL only programs
+// 2..65536). T1's register block is T0's shifted by +0x24. The
 // alarm-enable bit is cleared BY HARDWARE when the alarm fires —
 // gptimer's ISR re-arms it for periodic use.
 const TIMG0_BASE = 0x6001f000;
+const TIMG1_BASE = 0x60020000; // reg_base.h DR_REG_TIMERGROUP1_BASE
 const TIMG_T0CONFIG = 0x00; // EN 31, INCREASE 30, AUTORELOAD 29, DIVIDER [28:13], ALARM_EN 10
 const TIMG_T0LO = 0x04;
 const TIMG_T0HI = 0x08;
@@ -191,18 +222,60 @@ const TIMG_T0ALARMHI = 0x14;
 const TIMG_T0LOADLO = 0x18;
 const TIMG_T0LOADHI = 0x1c;
 const TIMG_T0LOAD = 0x20;
-const TIMG_INT_ENA = 0x70; // T0 is bit 0 in all four
+const TIMG_T1_SHIFT = 0x24; // T1CONFIG..T1LOAD = T0's offsets + 0x24
+const TIMG_INT_ENA = 0x70; // bits: T0=0, T1=1, WDT=2 in all four
 const TIMG_INT_RAW = 0x74;
 const TIMG_INT_ST = 0x78;
 const TIMG_INT_CLR = 0x7c;
-const T0_EN = 1 << 31;
-const T0_INCREASE = 1 << 30;
-const T0_AUTORELOAD = 1 << 29;
-const T0_ALARM_EN = 1 << 10;
-const T0_ARMED = T0_EN | T0_ALARM_EN;
+const T_EN = 1 << 31;
+const T_INCREASE = 1 << 30;
+const T_AUTORELOAD = 1 << 29;
+const T_ALARM_EN = 1 << 10;
+const T_ARMED = T_EN | T_ALARM_EN;
 /** CPU cycles per APB tick: 240 MHz over 80 MHz. */
 const CYCLES_PER_APB = 3;
-const T0_MASK = 2 ** 54; // the counter is 54 bits wide
+const T_MASK = 2 ** 54; // the counters are 54 bits wide
+
+// ── Slice 13: watchdogs ──
+// MWDT — one per TIMG group (timer_group_reg.h): WDTCONFIG0 +0x48
+// (EN 31, STG0..3 at [30:29]/[28:27]/[26:25]/[24:23],
+// FLASHBOOT_MOD_EN 14 — reset 1, stored but inert here),
+// WDTCONFIG1 +0x4C (CLK_PRESCALE [31:16], reset 1 — the MWDT clock
+// is APB/prescale), WDTCONFIG2..5 +0x50..0x5C (stage0..3 timeouts in
+// MWDT ticks), WDTFEED +0x60 ("write any value" feeds), WDTWPROTECT
+// +0x64 (TIMG_WDT_WKEY_VALUE 0x50D83AA1; resets UNLOCKED — the key
+// itself — so boot code can configure before protecting). Config
+// writes under a wrong key are silently ignored, like hardware.
+const TIMG_WDTCONFIG0 = 0x48;
+const TIMG_WDTCONFIG1 = 0x4c;
+const TIMG_WDTCONFIG2 = 0x50; // ..+0x5C: stage0..3
+const TIMG_WDTFEED = 0x60;
+const TIMG_WDTWPROTECT = 0x64;
+const WDT_WKEY = 0x50d83aa1; // TIMG_WDT_WKEY_VALUE = RWDT_LL_WDT_WKEY_VALUE
+const WDT_EN = 1 << 31;
+const TIMG_WDT_INT = 1 << 2; // INT_* bit 2
+const MWDT_CONFIG0_RESET = 1 << 14; // FLASHBOOT_MOD_EN (inert cut)
+const MWDT_CONFIG1_RESET = 1 << 16; // CLK_PRESCALE = 1
+// Stage actions (hal/wdt_types.h wdt_stage_action_t):
+const WDT_STAGE_INT = 1;
+const WDT_STAGE_RESET_CPU = 2;
+const WDT_STAGE_RESET_SYSTEM = 3;
+const WDT_STAGE_RESET_RTC = 4; // RWDT only
+// RWDT — RTC_CNTL (rtc_cntl_reg.h): WDTCONFIG0 +0x98 (EN 31, STG0..3
+// at [30:28]/[27:25]/[24:22]/[21:19] — 3-bit fields, since action 4
+// exists), WDTCONFIG1..4 +0x9C..0xA8 (stage0..3 timeouts in RTC-slow
+// ticks — the modeled ~136 kHz RC_SLOW; the eFuse stage-0 tick
+// multiplier rwdt_ll.h compensates for is NOT modeled, raw ticks),
+// WDTFEED +0xAC (bit 31), WDTWPROTECT +0xB0 (same 0x50D83AA1 key —
+// hal/esp32s3/include/hal/rwdt_ll.h). Reset value keeps the header's
+// FLASHBOOT_MOD_EN(12)/PAUSE_IN_SLP(9)/reset-length defaults, all
+// inert here.
+const RTC_WDTCONFIG0 = 0x98;
+const RTC_WDTCONFIG1 = 0x9c; // ..+0xA8: stage0..3
+const RTC_WDTFEED = 0xac;
+const RTC_WDTWPROTECT = 0xb0;
+const RTC_WDT_FEED_BIT = 1 << 31; // RTC_CNTL_RTC_WDT_FEED
+const RWDT_CONFIG0_RESET = ((1 << 16) | (1 << 13) | (1 << 12) | (1 << 9)) >>> 0;
 
 // SAR ADC1 oneshot path (sens_reg.h; flow per hal/esp32s3/adc_ll.h —
 // the same register dance adc_oneshot_ll_* and analogRead perform):
@@ -289,6 +362,14 @@ const RTC_SW_PROCPU_RST = 1 << 5;
 const RESET_CAUSE_POWERON = 1; // POWERON_RESET
 const RESET_CAUSE_SW_SYS = 3; // RTC_SW_SYS_RESET — ROM software_reset / SW_SYS_RST
 const RESET_CAUSE_SW_CPU = 12; // RTC_SW_CPU_RESET — SW_PROCPU_RST (esp_restart's path)
+// Watchdog reset causes (same rom/rtc.h enum — slice 13):
+const RESET_CAUSE_TG0WDT_SYS = 7; // TG0WDT_SYS_RESET
+const RESET_CAUSE_TG1WDT_SYS = 8; // TG1WDT_SYS_RESET
+const RESET_CAUSE_RTCWDT_SYS = 9; // RTCWDT_SYS_RESET
+const RESET_CAUSE_TG0WDT_CPU = 11; // TG0WDT_CPU_RESET
+const RESET_CAUSE_RTCWDT_CPU = 13; // RTCWDT_CPU_RESET
+const RESET_CAUSE_RTCWDT_RTC = 16; // RTCWDT_RTC_RESET
+const RESET_CAUSE_TG1WDT_CPU = 17; // TG1WDT_CPU_RESET
 // The RTC main timer counts the ~136 kHz RC_SLOW clock
 // (clk_tree_defs.h SOC_CLK_RC_SLOW_FREQ_APPROX). 48 bits wide.
 const RTC_SLOW_HZ = 136_000;
@@ -381,6 +462,71 @@ interface LoadedSegment {
   data: Uint8Array;
 }
 
+/** One 54-bit general-purpose timer (T0 or T1 of either group). The
+ *  counter is virtual: `base` is its value at core-0 cycle `sync`,
+ *  and the live value derives from elapsed cycles. */
+interface GpTimer {
+  config: number;
+  base: number;
+  sync: number;
+  latchLo: number; // captured by an UPDATE write
+  latchHi: number;
+  alarmLo: number;
+  alarmHi: number;
+  loadLo: number;
+  loadHi: number;
+}
+
+/** One watchdog (MWDT or RWDT). `epoch` is the core-0 cycle of the
+ *  last feed; `handled` counts stages already expired since then. */
+interface Watchdog {
+  config0: number;
+  config1: number; // MWDT only: CLK_PRESCALE [31:16]
+  timeouts: number[]; // stage0..3, in WDT ticks
+  wprotect: number; // last WPROTECT write; === WDT_WKEY means unlocked
+  epoch: number;
+  handled: number;
+}
+
+/** One TIMG group: two timers, one MWDT, the shared INT_* regs, and
+ *  the group's three interrupt-matrix maps [t0, t1, wdt]. */
+interface TimgGroup {
+  timers: GpTimer[];
+  wdt: Watchdog;
+  intEna: number;
+  intRaw: number;
+  maps: number[];
+}
+
+const freshGpTimer = (): GpTimer => ({
+  config: 0,
+  base: 0,
+  sync: 0,
+  latchLo: 0,
+  latchHi: 0,
+  alarmLo: 0,
+  alarmHi: 0,
+  loadLo: 0,
+  loadHi: 0,
+});
+
+const freshWatchdog = (config0Reset: number, config1Reset: number): Watchdog => ({
+  config0: config0Reset,
+  config1: config1Reset,
+  timeouts: [0, 0, 0, 0],
+  wprotect: WDT_WKEY, // hardware resets UNLOCKED (WPROTECT holds the key)
+  epoch: 0,
+  handled: 0,
+});
+
+const freshTimgGroup = (): TimgGroup => ({
+  timers: [freshGpTimer(), freshGpTimer()],
+  wdt: freshWatchdog(MWDT_CONFIG0_RESET, MWDT_CONFIG1_RESET),
+  intEna: 0,
+  intRaw: 0,
+  maps: [INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP],
+});
+
 /** GPIO0-48; bank 0 covers 0-31, bank 1 covers 32-48. */
 const PIN_COUNT = 49;
 
@@ -428,21 +574,13 @@ export class Esp32s3Core implements McuCore {
   private gpioIntMap = INTMTX_DEFAULT_MAP;
   private uartIntMap = INTMTX_DEFAULT_MAP;
 
-  // TIMG0 T0 state. The counter is virtual: t0Base is its value at
-  // cpu cycle t0Sync, and the live value derives from elapsed cycles
-  // — no per-cycle bookkeeping.
-  private t0Config = 0;
-  private t0Base = 0;
-  private t0Sync = 0;
-  private t0LatchLo = 0; // captured by a T0UPDATE write
-  private t0LatchHi = 0;
-  private t0AlarmLo = 0;
-  private t0AlarmHi = 0;
-  private t0LoadLo = 0;
-  private t0LoadHi = 0;
-  private timgIntEna = 0;
-  private timgIntRaw = 0;
-  private tgT0IntMap = INTMTX_DEFAULT_MAP;
+  // TIMG0/TIMG1 state (slices 8 + 13): per-group timers, MWDT, INT_*
+  // regs and matrix maps. Counters are virtual — derived from elapsed
+  // core-0 cycles, no per-cycle bookkeeping.
+  private timg: TimgGroup[] = [freshTimgGroup(), freshTimgGroup()];
+  // The RTC watchdog (slice 13) — config1 unused (no prescaler; it
+  // counts the modeled ~136 kHz RC_SLOW clock directly).
+  private rwdt: Watchdog = freshWatchdog(RWDT_CONFIG0_RESET, 0);
 
   // RTC/eFuse/SYSTEM state (slice 11). The reset causes survive
   // reset() — they describe WHY the last reset happened; loadFirmware
@@ -607,7 +745,15 @@ export class Esp32s3Core implements McuCore {
           this.core1Epoch = this.cpu.cycles - this.cpu1.cycles;
         }
       }
-      if ((this.t0Config & T0_ARMED) === T0_ARMED) this.checkT0Alarm();
+      this.checkTimersAndWdts();
+      if (this.pendingReset) {
+        // A watchdog stage bit (slice 13) — same shape as the
+        // software_reset path above.
+        const consumed = this.cpu.cycles - start;
+        const resetEvents = this.events;
+        this.reset();
+        return { cycles: consumed, events: resetEvents };
+      }
     }
     const events = this.events;
     this.events = [];
@@ -712,18 +858,8 @@ export class Esp32s3Core implements McuCore {
     this.uartRxThrhd = 96;
     this.gpioIntMap = INTMTX_DEFAULT_MAP;
     this.uartIntMap = INTMTX_DEFAULT_MAP;
-    this.t0Config = 0;
-    this.t0Base = 0;
-    this.t0Sync = 0;
-    this.t0LatchLo = 0;
-    this.t0LatchHi = 0;
-    this.t0AlarmLo = 0;
-    this.t0AlarmHi = 0;
-    this.t0LoadLo = 0;
-    this.t0LoadHi = 0;
-    this.timgIntEna = 0;
-    this.timgIntRaw = 0;
-    this.tgT0IntMap = INTMTX_DEFAULT_MAP;
+    this.timg = [freshTimgGroup(), freshTimgGroup()];
+    this.rwdt = freshWatchdog(RWDT_CONFIG0_RESET, 0);
     // resetCause/appResetCause are deliberately NOT cleared — they
     // report why this reset happened (software_reset / SW_*_RST set
     // them before calling).
@@ -763,47 +899,132 @@ export class Esp32s3Core implements McuCore {
     return gpio;
   }
 
-  private t0Divider(): number {
-    const field = (this.t0Config >>> 13) & 0xffff;
+  private timerDivider(t: GpTimer): number {
+    const field = (t.config >>> 13) & 0xffff;
     return field === 0 ? 65536 : field; // 0 means 65536, per the HAL
   }
 
   /** The live 54-bit counter, derived from elapsed CPU cycles. */
-  private t0Value(): number {
-    if ((this.t0Config & T0_EN) === 0) return this.t0Base;
-    const ticks = Math.floor((this.cpu.cycles - this.t0Sync) / (CYCLES_PER_APB * this.t0Divider()));
-    const delta = (this.t0Config & T0_INCREASE) !== 0 ? ticks : -ticks;
+  private timerValue(t: GpTimer): number {
+    if ((t.config & T_EN) === 0) return t.base;
+    const ticks = Math.floor((this.cpu.cycles - t.sync) / (CYCLES_PER_APB * this.timerDivider(t)));
+    const delta = (t.config & T_INCREASE) !== 0 ? ticks : -ticks;
     // NOT the usual ((x % M) + M) % M: adding 2^54 to a small positive
     // value rounds it away (the float ulp at 2^54 is 4). Only add the
     // modulus when the value is actually negative.
-    let v = (this.t0Base + delta) % T0_MASK;
-    if (v < 0) v += T0_MASK;
+    let v = (t.base + delta) % T_MASK;
+    if (v < 0) v += T_MASK;
     return v;
   }
 
-  /** Freeze the counter into t0Base — required before any config
+  /** Freeze the counter into base — required before any config
    *  change so old-divider time doesn't replay under the new one. */
-  private t0Resync(): void {
-    this.t0Base = this.t0Value();
-    this.t0Sync = this.cpu.cycles;
+  private timerResync(t: GpTimer): void {
+    t.base = this.timerValue(t);
+    t.sync = this.cpu.cycles;
   }
 
   /** Alarm comparator, run after every instruction while armed. On a
    *  hit: latch the raw interrupt, auto-disable the alarm (the
    *  hardware behavior gptimer's ISR re-arms around), auto-reload if
    *  configured. */
-  private checkT0Alarm(): void {
-    const alarm = this.t0AlarmHi * 0x100000000 + this.t0AlarmLo;
-    const value = this.t0Value();
-    const hit = (this.t0Config & T0_INCREASE) !== 0 ? value >= alarm : value <= alarm;
+  private checkAlarm(grp: TimgGroup, ti: number): void {
+    const t = grp.timers[ti];
+    if (t === undefined) return;
+    const alarm = t.alarmHi * 0x100000000 + t.alarmLo;
+    const value = this.timerValue(t);
+    const hit = (t.config & T_INCREASE) !== 0 ? value >= alarm : value <= alarm;
     if (!hit) return;
-    this.timgIntRaw |= 1;
-    this.t0Config &= ~T0_ALARM_EN;
-    if ((this.t0Config & T0_AUTORELOAD) !== 0) {
-      this.t0Base = (this.t0LoadHi * 0x100000000 + this.t0LoadLo) % T0_MASK;
-      this.t0Sync = this.cpu.cycles;
+    grp.intRaw |= 1 << ti;
+    t.config &= ~T_ALARM_EN;
+    if ((t.config & T_AUTORELOAD) !== 0) {
+      t.base = (t.loadHi * 0x100000000 + t.loadLo) % T_MASK;
+      t.sync = this.cpu.cycles;
     }
     this.recomputeIrq();
+  }
+
+  /** Walk a watchdog's stages against elapsed ticks since the last
+   *  feed, firing each newly-expired stage's action via `fire`. If
+   *  all four stages expire without a reset, the hardware wraps to
+   *  stage 0 — modeled as a self-feed. */
+  private runWdtStages(w: Watchdog, ticks: number, fire: (stage: number) => void): void {
+    let cum = 0;
+    for (let s = 0; s < 4; s++) {
+      cum += w.timeouts[s] ?? 0;
+      if (ticks < cum) return;
+      if (s < w.handled) continue;
+      w.handled = s + 1;
+      fire(s);
+      if (this.pendingReset) return;
+    }
+    w.epoch = this.cpu.cycles;
+    w.handled = 0;
+  }
+
+  /** One MWDT (group g): counts APB/CLK_PRESCALE ticks. Stage actions
+   *  per hal/wdt_types.h; CPU resets ignore the PROCPU/APPCPU routing
+   *  bits and reset the PRO CPU (whole machine) — stated cut. */
+  private checkMwdt(g: number): void {
+    const grp = this.timg[g];
+    if (grp === undefined) return;
+    const w = grp.wdt;
+    const prescale = ((w.config1 >>> 16) & 0xffff) || 1;
+    const ticks = Math.floor((this.cpu.cycles - w.epoch) / (CYCLES_PER_APB * prescale));
+    this.runWdtStages(w, ticks, (s) => {
+      const action = (w.config0 >>> (29 - 2 * s)) & 3;
+      if (action === WDT_STAGE_INT) {
+        grp.intRaw |= TIMG_WDT_INT;
+        this.recomputeIrq();
+      } else if (action === WDT_STAGE_RESET_CPU) {
+        this.resetCause = g === 1 ? RESET_CAUSE_TG1WDT_CPU : RESET_CAUSE_TG0WDT_CPU;
+        this.pendingReset = true;
+      } else if (action === WDT_STAGE_RESET_SYSTEM) {
+        const cause = g === 1 ? RESET_CAUSE_TG1WDT_SYS : RESET_CAUSE_TG0WDT_SYS;
+        this.resetCause = cause;
+        this.appResetCause = cause; // system reset hits both cores
+        this.pendingReset = true;
+      }
+      // action 0 (off): the stage still consumes its timeout slot.
+    });
+  }
+
+  /** The RWDT: counts the modeled ~136 kHz RC_SLOW clock. 3-bit stage
+   *  fields; action 4 (reset RTC) exists here. INT stages advance the
+   *  stage but raise no CPU interrupt (the RTC interrupt block is not
+   *  modeled — stated cut). */
+  private checkRwdt(): void {
+    const w = this.rwdt;
+    const ticks = Math.floor(((this.cpu.cycles - w.epoch) * RTC_SLOW_HZ) / CLOCK_HZ);
+    this.runWdtStages(w, ticks, (s) => {
+      const action = (w.config0 >>> (28 - 3 * s)) & 7;
+      if (action === WDT_STAGE_RESET_CPU) {
+        this.resetCause = RESET_CAUSE_RTCWDT_CPU;
+        this.pendingReset = true;
+      } else if (action === WDT_STAGE_RESET_SYSTEM || action === WDT_STAGE_RESET_RTC) {
+        const cause = action === WDT_STAGE_RESET_RTC ? RESET_CAUSE_RTCWDT_RTC : RESET_CAUSE_RTCWDT_SYS;
+        this.resetCause = cause;
+        this.appResetCause = cause;
+        this.pendingReset = true;
+      }
+    });
+  }
+
+  /** Per-instruction tick of every armed timer alarm and enabled
+   *  watchdog — all on core 0's timeline, the SoC timebase. */
+  private checkTimersAndWdts(): void {
+    for (let g = 0; g < 2; g++) {
+      const grp = this.timg[g];
+      if (grp === undefined) continue;
+      for (let ti = 0; ti < 2; ti++) {
+        if (((grp.timers[ti]?.config ?? 0) & T_ARMED) === T_ARMED) this.checkAlarm(grp, ti);
+      }
+      if ((grp.wdt.config0 & WDT_EN) !== 0) {
+        this.checkMwdt(g);
+        if (this.pendingReset) return;
+      }
+    }
+    if ((this.rwdt.config0 & WDT_EN) !== 0) this.checkRwdt();
   }
 
   /** UART0's raw interrupt bits: RXFIFO_FULL tracks the live FIFO
@@ -841,11 +1062,16 @@ export class Esp32s3Core implements McuCore {
       }
     }
     const uartPending = (this.uartIntRaw() & this.uartIntEna) !== 0;
-    const timgPending = (this.timgIntRaw & this.timgIntEna & 1) !== 0;
     let mask = 0;
     if (gpioPending) mask |= 1 << (this.gpioIntMap & 31);
     if (uartPending) mask |= 1 << (this.uartIntMap & 31);
-    if (timgPending) mask |= 1 << (this.tgT0IntMap & 31);
+    // Each TIMG source (T0/T1/WDT × both groups) drives its own map.
+    for (const grp of this.timg) {
+      const pending = grp.intRaw & grp.intEna & 7;
+      for (let i = 0; i < 3; i++) {
+        if ((pending & (1 << i)) !== 0) mask |= 1 << ((grp.maps[i] ?? INTMTX_DEFAULT_MAP) & 31);
+      }
+    }
     this.cpu.setExtInt(mask);
   }
 
@@ -1117,22 +1343,43 @@ export class Esp32s3Core implements McuCore {
       const off = addr - INTMTX_BASE;
       if (off === INTMTX_GPIO_MAP) return this.gpioIntMap;
       if (off === INTMTX_UART_MAP) return this.uartIntMap;
-      if (off === INTMTX_TG_T0_MAP) return this.tgT0IntMap;
+      if (off >= INTMTX_TG_MAPS && off < INTMTX_TG_MAPS + 24 && (off & 3) === 0) {
+        const idx = (off - INTMTX_TG_MAPS) >> 2; // group-major [t0,t1,wdt]
+        return this.timg[idx < 3 ? 0 : 1]?.maps[idx % 3] ?? INTMTX_DEFAULT_MAP;
+      }
       return INTMTX_DEFAULT_MAP; // unmodeled sources sit at their reset map
     }
-    if (addr >= TIMG0_BASE && addr < TIMG0_BASE + 0x1000) {
-      const off = addr - TIMG0_BASE;
-      if (off === TIMG_T0CONFIG) return this.t0Config >>> 0;
-      if (off === TIMG_T0LO) return this.t0LatchLo >>> 0;
-      if (off === TIMG_T0HI) return this.t0LatchHi >>> 0;
-      if (off === TIMG_T0UPDATE) return 0; // capture completes instantly
-      if (off === TIMG_T0ALARMLO) return this.t0AlarmLo >>> 0;
-      if (off === TIMG_T0ALARMHI) return this.t0AlarmHi >>> 0;
-      if (off === TIMG_T0LOADLO) return this.t0LoadLo >>> 0;
-      if (off === TIMG_T0LOADHI) return this.t0LoadHi >>> 0;
-      if (off === TIMG_INT_ENA) return this.timgIntEna;
-      if (off === TIMG_INT_RAW) return this.timgIntRaw;
-      if (off === TIMG_INT_ST) return this.timgIntRaw & this.timgIntEna;
+    if (addr >= TIMG0_BASE && addr < TIMG1_BASE + 0x1000) {
+      // TIMG0 and TIMG1 are contiguous 4 KiB blocks (slice 13).
+      const g = addr >= TIMG1_BASE ? 1 : 0;
+      const grp = this.timg[g];
+      const off = addr - (g === 1 ? TIMG1_BASE : TIMG0_BASE);
+      if (grp === undefined) return 0;
+      if (off < TIMG_WDTCONFIG0) {
+        const ti = off >= TIMG_T1_SHIFT ? 1 : 0;
+        const t = grp.timers[ti];
+        const toff = off - ti * TIMG_T1_SHIFT;
+        if (t === undefined) return 0;
+        if (toff === TIMG_T0CONFIG) return t.config >>> 0;
+        if (toff === TIMG_T0LO) return t.latchLo >>> 0;
+        if (toff === TIMG_T0HI) return t.latchHi >>> 0;
+        if (toff === TIMG_T0UPDATE) return 0; // capture completes instantly
+        if (toff === TIMG_T0ALARMLO) return t.alarmLo >>> 0;
+        if (toff === TIMG_T0ALARMHI) return t.alarmHi >>> 0;
+        if (toff === TIMG_T0LOADLO) return t.loadLo >>> 0;
+        if (toff === TIMG_T0LOADHI) return t.loadHi >>> 0;
+        return 0; // LOAD is write-only
+      }
+      if (off === TIMG_WDTCONFIG0) return grp.wdt.config0 >>> 0;
+      if (off === TIMG_WDTCONFIG1) return grp.wdt.config1 >>> 0;
+      if (off >= TIMG_WDTCONFIG2 && off < TIMG_WDTFEED && (off & 3) === 0) {
+        return (grp.wdt.timeouts[(off - TIMG_WDTCONFIG2) >> 2] ?? 0) >>> 0;
+      }
+      if (off === TIMG_WDTFEED) return 0; // write-only
+      if (off === TIMG_WDTWPROTECT) return grp.wdt.wprotect >>> 0;
+      if (off === TIMG_INT_ENA) return grp.intEna;
+      if (off === TIMG_INT_RAW) return grp.intRaw;
+      if (off === TIMG_INT_ST) return grp.intRaw & grp.intEna;
       return 0;
     }
     if (addr >= SENS_BASE && addr < SENS_BASE + 0x400) {
@@ -1154,10 +1401,17 @@ export class Esp32s3Core implements McuCore {
         return ((this.appResetCause << 6) | this.resetCause) >>> 0;
       }
       if (off === RTC_SW_CPU_STALL) return this.rtcSwCpuStall >>> 0;
+      // The RWDT block (slice 13) — modeled for real now.
+      if (off === RTC_WDTCONFIG0) return this.rwdt.config0 >>> 0;
+      if (off >= RTC_WDTCONFIG1 && off < RTC_WDTFEED && (off & 3) === 0) {
+        return (this.rwdt.timeouts[(off - RTC_WDTCONFIG1) >> 2] ?? 0) >>> 0;
+      }
+      if (off === RTC_WDTFEED) return 0; // the feed bit reads back 0
+      if (off === RTC_WDTWPROTECT) return this.rwdt.wprotect >>> 0;
       throw new Error(
         `read of unmodeled RTC_CNTL register 0x${addr.toString(16)} — this core models only ` +
-          `OPTIONS0(+0x0), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), RESET_STATE(+0x38), SW_CPU_STALL(+0xbc); ` +
-          `a fabricated 0 here would lie (e.g. "RTC watchdog off")`,
+          `OPTIONS0(+0x0), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), RESET_STATE(+0x38), ` +
+          `the RWDT block (+0x98..+0xb0), SW_CPU_STALL(+0xbc); a fabricated 0 here would lie`,
       );
     }
     if (addr >= EFUSE_BASE && addr < EFUSE_BASE + 0x1000) {
@@ -1247,32 +1501,70 @@ export class Esp32s3Core implements McuCore {
       const off = addr - INTMTX_BASE;
       if (off === INTMTX_GPIO_MAP) this.gpioIntMap = value & 0x1f;
       else if (off === INTMTX_UART_MAP) this.uartIntMap = value & 0x1f;
-      else if (off === INTMTX_TG_T0_MAP) this.tgT0IntMap = value & 0x1f;
+      else if (off >= INTMTX_TG_MAPS && off < INTMTX_TG_MAPS + 24 && (off & 3) === 0) {
+        const idx = (off - INTMTX_TG_MAPS) >> 2;
+        const grp = this.timg[idx < 3 ? 0 : 1];
+        if (grp !== undefined) grp.maps[idx % 3] = value & 0x1f;
+      }
       // Map writes for unmodeled sources are accepted and dropped —
       // those sources never assert, so the mapping is moot.
       this.recomputeIrq();
       return;
     }
-    if (addr >= TIMG0_BASE && addr < TIMG0_BASE + 0x1000) {
-      const off = addr - TIMG0_BASE;
+    if (addr >= TIMG0_BASE && addr < TIMG1_BASE + 0x1000) {
+      const g = addr >= TIMG1_BASE ? 1 : 0;
+      const grp = this.timg[g];
+      const off = addr - (g === 1 ? TIMG1_BASE : TIMG0_BASE);
       const v = value >>> 0;
-      if (off === TIMG_T0CONFIG) {
-        this.t0Resync(); // freeze under the OLD divider/EN first
-        this.t0Config = v | 0;
-      } else if (off === TIMG_T0UPDATE) {
-        const val = this.t0Value();
-        this.t0LatchLo = val % 0x100000000;
-        this.t0LatchHi = Math.floor(val / 0x100000000);
-      } else if (off === TIMG_T0ALARMLO) this.t0AlarmLo = v;
-      else if (off === TIMG_T0ALARMHI) this.t0AlarmHi = v & 0x3fffff;
-      else if (off === TIMG_T0LOADLO) this.t0LoadLo = v;
-      else if (off === TIMG_T0LOADHI) this.t0LoadHi = v & 0x3fffff;
-      else if (off === TIMG_T0LOAD) {
-        // Any write reloads the counter from {LOADHI, LOADLO}.
-        this.t0Base = (this.t0LoadHi * 0x100000000 + this.t0LoadLo) % T0_MASK;
-        this.t0Sync = this.cpu.cycles;
-      } else if (off === TIMG_INT_ENA) this.timgIntEna = v;
-      else if (off === TIMG_INT_CLR) this.timgIntRaw &= ~v;
+      if (grp === undefined) return;
+      if (off < TIMG_WDTCONFIG0) {
+        const ti = off >= TIMG_T1_SHIFT ? 1 : 0;
+        const t = grp.timers[ti];
+        const toff = off - ti * TIMG_T1_SHIFT;
+        if (t === undefined) return;
+        if (toff === TIMG_T0CONFIG) {
+          this.timerResync(t); // freeze under the OLD divider/EN first
+          t.config = v | 0;
+        } else if (toff === TIMG_T0UPDATE) {
+          const val = this.timerValue(t);
+          t.latchLo = val % 0x100000000;
+          t.latchHi = Math.floor(val / 0x100000000);
+        } else if (toff === TIMG_T0ALARMLO) t.alarmLo = v;
+        else if (toff === TIMG_T0ALARMHI) t.alarmHi = v & 0x3fffff;
+        else if (toff === TIMG_T0LOADLO) t.loadLo = v;
+        else if (toff === TIMG_T0LOADHI) t.loadHi = v & 0x3fffff;
+        else if (toff === TIMG_T0LOAD) {
+          // Any write reloads the counter from {LOADHI, LOADLO}.
+          t.base = (t.loadHi * 0x100000000 + t.loadLo) % T_MASK;
+          t.sync = this.cpu.cycles;
+        }
+        this.recomputeIrq();
+        return;
+      }
+      if (off === TIMG_WDTWPROTECT) {
+        grp.wdt.wprotect = v; // only the key value unlocks
+      } else if (off >= TIMG_WDTCONFIG0 && off <= TIMG_WDTFEED) {
+        // MWDT config space — silently ignored while write-protected,
+        // exactly the gate wdt_hal opens with the 0x50D83AA1 key.
+        if (grp.wdt.wprotect === WDT_WKEY) {
+          if (off === TIMG_WDTCONFIG0) {
+            grp.wdt.config0 = v;
+            grp.wdt.epoch = this.cpu.cycles; // config restarts the count
+            grp.wdt.handled = 0;
+          } else if (off === TIMG_WDTCONFIG1) {
+            grp.wdt.config1 = v;
+            grp.wdt.epoch = this.cpu.cycles;
+            grp.wdt.handled = 0;
+          } else if (off === TIMG_WDTFEED) {
+            // "Write any value to feed" — timer_group_reg.h.
+            grp.wdt.epoch = this.cpu.cycles;
+            grp.wdt.handled = 0;
+          } else {
+            grp.wdt.timeouts[(off - TIMG_WDTCONFIG2) >> 2] = v;
+          }
+        }
+      } else if (off === TIMG_INT_ENA) grp.intEna = v;
+      else if (off === TIMG_INT_CLR) grp.intRaw &= ~v;
       this.recomputeIrq();
       return;
     }
@@ -1325,8 +1617,28 @@ export class Esp32s3Core implements McuCore {
           this.rtcTimeLatchLo = ticks % 0x100000000;
           this.rtcTimeLatchHi = Math.floor(ticks / 0x100000000) & 0xffff;
         }
+      } else if (off === RTC_WDTWPROTECT) {
+        this.rwdt.wprotect = value >>> 0;
+      } else if (off >= RTC_WDTCONFIG0 && off <= RTC_WDTFEED) {
+        // RWDT config space (slice 13) — same silent-drop gate as the
+        // MWDTs while protected (rwdt_ll.h uses the same key).
+        if (this.rwdt.wprotect === WDT_WKEY) {
+          if (off === RTC_WDTCONFIG0) {
+            this.rwdt.config0 = value >>> 0;
+            this.rwdt.epoch = this.cpu.cycles;
+            this.rwdt.handled = 0;
+          } else if (off === RTC_WDTFEED) {
+            // rwdt_ll_feed sets bit 31 (RTC_CNTL_RTC_WDT_FEED).
+            if ((value & RTC_WDT_FEED_BIT) !== 0) {
+              this.rwdt.epoch = this.cpu.cycles;
+              this.rwdt.handled = 0;
+            }
+          } else {
+            this.rwdt.timeouts[(off - RTC_WDTCONFIG1) >> 2] = value >>> 0;
+          }
+        }
       }
-      // Other RTC_CNTL writes (WDT config, sleep setup, …) accepted+dropped.
+      // Other RTC_CNTL writes (sleep setup, bias, …) accepted+dropped.
       return;
     }
     if (addr >= EFUSE_BASE && addr < EFUSE_BASE + 0x1000) {

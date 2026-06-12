@@ -1745,3 +1745,236 @@ describe('Esp32s3Core — second core (slice 12)', () => {
     expect([...c.drainUart()]).toEqual([12, 1]);
   });
 });
+
+describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
+  // REAL register addresses, pinned independently of the implementation,
+  // from esp-idf v5.2 components/soc/esp32s3/include/soc/:
+  //   reg_base.h        — DR_REG_TIMERGROUP0_BASE 0x6001F000,
+  //                       DR_REG_TIMERGROUP1_BASE 0x60020000
+  //   timer_group_reg.h — T1CONFIG +0x24..T1LOAD +0x44 (T0's layout +0x24);
+  //                       WDTCONFIG0 +0x48, WDTCONFIG1 +0x4C (CLK_PRESCALE
+  //                       [31:16]), WDTCONFIG2..5 +0x50..0x5C (stage0..3
+  //                       timeouts), WDTFEED +0x60 (any write feeds),
+  //                       WDTWPROTECT +0x64, TIMG_WDT_WKEY_VALUE 0x50D83AA1;
+  //                       INT_* bits: T0=0, T1=1, WDT=2
+  //   rtc_cntl_reg.h    — RTC_CNTL_WDTCONFIG0 +0x98 (EN 31, STG0 [30:28]),
+  //                       WDTCONFIG1..4 +0x9C..0xA8 (stage0..3 timeouts in
+  //                       RTC-slow ticks), WDTFEED +0xAC, WDTWPROTECT +0xB0
+  //                       (same 0x50D83AA1 key — hal/esp32s3 rwdt_ll.h)
+  //   interrupt_core0_reg.h — TG1_T1_INT_MAP +0x0D8
+  // Stage actions (hal/wdt_types.h): 0 off, 1 interrupt, 2 reset CPU,
+  // 3 reset system, 4 reset RTC (RWDT only). Reset causes
+  // (esp_rom/include/esp32s3/rom/rtc.h): TG0WDT_SYS_RESET=7,
+  // TG1WDT_SYS_RESET=8, RTCWDT_SYS_RESET=9, RTCWDT_RTC_RESET=16.
+  const SCRATCH = 0x3fc88000 + 0xa00;
+  const TIMG0 = 0x6001f000;
+  const TIMG1 = 0x60020000;
+  const INTMTX = 0x600c2000;
+  const RTC_RESET_STATE = 0x60008038;
+  const RTCCNTL = 0x60008000;
+  const WDT_KEY = 0x50d83aa1;
+  // T1CONFIG: EN | INCREASE | divider 2 | AUTORELOAD off | ALARM_EN.
+  const T1_CFG_ONESHOT = (0x80000000 | 0x40000000 | (2 << 13) | (1 << 10)) >>> 0;
+  // MWDT CONFIG0: EN (31) | STG0 = reset-system (3 << 29).
+  const MWDT_EN_STG0_SYS = (0x80000000 | (3 << 29)) >>> 0;
+  // RWDT CONFIG0: EN (31) | STG0 = reset-system (3 << 28).
+  const RWDT_EN_STG0_SYS = (0x80000000 | (3 << 28)) >>> 0;
+
+  /** Same shape as the slice-11 helper: tx RESET_CAUSE_PROCPU, then on
+   *  power-on (1) run `trigger` and fall into a self-loop halt; a
+   *  non-power-on cause halts straight away. */
+  const causeRoundTrip = (literals: number[], trigger: XtInstr[]): Uint8Array =>
+    assembleXtensa(ESP32S3_IRAM_BASE, [RTC_RESET_STATE, UART, ...literals], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(2, 0), // RESET_STATE
+      L32I(4, 2, 0),
+      MOVI(5, 0x3f),
+      AND(4, 4, 5), // RESET_CAUSE_PROCPU [5:0]
+      L32R(6, 1),
+      S32I(4, 6, 0), // tx the cause
+      ADDI(5, 4, -1),
+      BNEZ_TO(5, 10 + trigger.length), // not power-on → halt
+      ...trigger,
+      J_TO(10 + trigger.length), // halt: J self
+    ]);
+
+  it('TIMG1 T1 fires through the matrix on its own line, independent of TIMG0 T0', () => {
+    // The slice-8 one-shot dance, transplanted to group 1 / timer 1:
+    // T1 register block at +0x24, INT bit 1, TG1_T1 map at +0x0D8.
+    // TIMG0's INT_RAW must stay 0 throughout — nothing leaks across.
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [UART, SCRATCH, ESP32S3_IRAM_BASE, TIMG1, INTMTX, T1_CFG_ONESHOT, TIMG0],
+      [
+        L32R(2, 0), // a2 = UART
+        L32R(3, 1), // a3 = SCRATCH
+        MOVI(4, 0),
+        S32I(4, 3, 0), // counter = 0
+        L32R(5, 2),
+        WSR(5, SR.VECBASE),
+        L32R(6, 3), // a6 = TIMG1
+        MOVI(7, 0),
+        S32I(7, 6, 0x3c), // T1LOADLO = 0
+        S32I(7, 6, 0x40), // T1LOADHI = 0
+        S32I(7, 6, 0x44), // T1LOAD — counter ← 0
+        MOVI(7, 30),
+        S32I(7, 6, 0x34), // T1ALARMLO = 30 ticks
+        MOVI(7, 0),
+        S32I(7, 6, 0x38), // T1ALARMHI = 0
+        MOVI(7, 2),
+        S32I(7, 6, 0x70), // INT_ENA = T1 (bit 1)
+        L32R(8, 4),
+        MOVI(7, 2),
+        S32I(7, 8, 0xd8), // TG1_T1 source → CPU line 2
+        MOVI(7, 4),
+        WSR(7, SR.INTENABLE), // 1 << 2
+        L32R(7, 5),
+        S32I(7, 6, 0x24), // T1CONFIG — armed, one-shot
+        RSIL(9, 0),
+        MOVI(10, 600),
+        ADDI(10, 10, -1),
+        BNEZ(10, BR(-2)), // burn far past the alarm
+        L32R(11, 6), // a11 = TIMG0
+        L32I(12, 11, 0x74),
+        S32I(12, 2, 0x00), // tx TIMG0 INT_RAW — must be 0
+        L32I(4, 3, 0),
+        S32I(4, 2, 0x00), // tx the count — exactly 1
+        J(BR(-1)),
+        PAD_TO(0x340),
+        // handler: counter++, INT_CLR(T1) — no re-arm (one-shot).
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 1),
+        S32I(3, 2, 8),
+        S32I(4, 2, 12),
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0),
+        L32R(3, 3), // a3 = TIMG1
+        MOVI(4, 2),
+        S32I(4, 3, 0x7c), // INT_CLR = T1
+        L32I(4, 2, 12),
+        L32I(3, 2, 8),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(2_500);
+    expect([...c.drainUart()]).toEqual([0, 1]);
+  });
+
+  it('MWDT config writes are ignored while write-protected; the 0x50D83AA1 key unlocks', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [TIMG0, WDT_KEY, UART], [
+      L32R(2, 0), // a2 = TIMG0
+      L32R(3, 1), // a3 = key
+      L32R(4, 2), // a4 = UART
+      MOVI(5, 77),
+      S32I(5, 2, 0x50), // WDTCONFIG2 ← 77 (unprotected at reset, like hardware)
+      MOVI(6, 0),
+      S32I(6, 2, 0x64), // WDTWPROTECT ← 0: protect
+      MOVI(5, 50),
+      S32I(5, 2, 0x50), // ignored — protected
+      L32I(7, 2, 0x50),
+      S32I(7, 4, 0), // tx 77
+      S32I(3, 2, 0x64), // WDTWPROTECT ← key: unlock
+      MOVI(5, 50),
+      S32I(5, 2, 0x50), // sticks now
+      L32I(7, 2, 0x50),
+      S32I(7, 4, 0), // tx 50
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    c.step(200);
+    expect([...c.drainUart()]).toEqual([77, 50]);
+  });
+
+  it('an enabled, unfed MWDT0 stage-0 system reset reboots with cause TG0WDT_SYS_RESET (7)', () => {
+    const image = causeRoundTrip([TIMG0, WDT_KEY, MWDT_EN_STG0_SYS], [
+      L32R(8, 2), // a8 = TIMG0
+      L32R(9, 3), // a9 = key
+      S32I(9, 8, 0x64), // unlock (reset state is unlocked; explicit like wdt_hal)
+      MOVI(10, 10),
+      S32I(10, 8, 0x50), // WDTCONFIG2: stage0 = 10 ticks
+      MOVI(10, 1),
+      SLLI(10, 10, 16),
+      S32I(10, 8, 0x4c), // WDTCONFIG1: prescale 1 (80 MHz MWDT clock)
+      L32R(10, 4),
+      S32I(10, 8, 0x48), // WDTCONFIG0: EN | STG0=reset-system — then spin
+    ]);
+    const c = core(image);
+    c.step(10_000); // boot 1: tx 1, then the WDT bites mid-spin
+    c.step(500); // boot 2: tx the cause, halt
+    expect([...c.drainUart()]).toEqual([7]);
+  });
+
+  it('feeding WDTFEED inside the loop holds the reset off', () => {
+    const image = causeRoundTrip([TIMG0, WDT_KEY, MWDT_EN_STG0_SYS], [
+      L32R(8, 2),
+      L32R(9, 3),
+      S32I(9, 8, 0x64),
+      MOVI(10, 10),
+      S32I(10, 8, 0x50), // stage0 = 10 ticks (30 CPU cycles)
+      MOVI(10, 1),
+      SLLI(10, 10, 16),
+      S32I(10, 8, 0x4c),
+      L32R(10, 4),
+      S32I(10, 8, 0x48), // armed
+      MOVI(10, 200), // 200 × (feed every ~3 cycles) ≫ 10-tick timeout
+      S32I(9, 8, 0x60), // WDTFEED — any write feeds
+      ADDI(10, 10, -1),
+      BNEZ(10, BR(-3)),
+      MOVI(10, 0),
+      S32I(10, 8, 0x48), // cleanup: disarm before the unfed halt spin
+      L32R(11, 1), // UART
+      MOVI(12, 42),
+      S32I(12, 11, 0), // tx 42 — still on boot 1
+    ]);
+    const c = core(image);
+    c.step(10_000);
+    expect([...c.drainUart()]).toEqual([1, 42]);
+  });
+
+  it("IDF's disable sequence (key, WDTCONFIG0=0, re-protect) silences an armed MWDT for good", () => {
+    const image = causeRoundTrip([TIMG0, WDT_KEY, MWDT_EN_STG0_SYS], [
+      L32R(8, 2),
+      L32R(9, 3),
+      S32I(9, 8, 0x64),
+      MOVI(10, 10),
+      S32I(10, 8, 0x50),
+      MOVI(10, 1),
+      SLLI(10, 10, 16),
+      S32I(10, 8, 0x4c),
+      L32R(10, 4),
+      S32I(10, 8, 0x48), // armed — and now the wdt_hal disable dance:
+      MOVI(10, 0),
+      S32I(10, 8, 0x48), // WDTCONFIG0 ← 0 (still unlocked)
+      S32I(10, 8, 0x64), // WDTWPROTECT ← 0: re-protect
+      MOVI(10, 200),
+      ADDI(10, 10, -1),
+      BNEZ(10, BR(-2)), // burn far past the dead timeout — no feeds
+      L32R(11, 1),
+      MOVI(12, 99),
+      S32I(12, 11, 0), // tx 99 — never rebooted
+    ]);
+    const c = core(image);
+    c.step(10_000);
+    expect([...c.drainUart()]).toEqual([1, 99]);
+  });
+
+  it('an unfed RWDT reboots with its own cause, RTCWDT_SYS_RESET (9)', () => {
+    const image = causeRoundTrip([RTCCNTL, WDT_KEY, RWDT_EN_STG0_SYS], [
+      L32R(8, 2), // a8 = RTC_CNTL
+      L32R(9, 3),
+      S32I(9, 8, 0xb0), // RTC_CNTL_WDTWPROTECT ← key
+      MOVI(10, 2),
+      S32I(10, 8, 0x9c), // WDTCONFIG1: stage0 = 2 RTC-slow ticks (~3530 cycles)
+      L32R(10, 4),
+      S32I(10, 8, 0x98), // WDTCONFIG0: EN | STG0=reset-system — then spin
+    ]);
+    const c = core(image);
+    c.step(20_000); // boot 1: tx 1, RWDT bites
+    c.step(500); // boot 2: tx the cause
+    expect([...c.drainUart()]).toEqual([9]);
+  });
+});
