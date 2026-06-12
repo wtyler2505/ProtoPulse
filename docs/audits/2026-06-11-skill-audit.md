@@ -334,3 +334,148 @@ Recs: mention `npm run tauri:dev` sibling; add `logs` action; note the `dev:clie
 - **Already covered (no recommendation):** Context7/qmd/Memory/Chrome MCP routing (AGENTS.md), auto-commit + auto-push (hooks/cron), typecheck + test-background enforcement (hooks), NLM pipeline (Codex-owned, healthy per audit).
 - **New automation actually warranted:** (1) `scripts/sync-skills.sh` + hook/cron — kills the 15-skill drift class permanently. (2) Single-source schema (`ops/config.yaml` `_schema`) consumed by hook + validators. (3) vault-index rebuild registration (pre-commit or auto-commit hook path). (4) A skill-lint pass (empty dirs, placeholders, name/dir mismatch, dangling symlinks) — runnable inside sync-skills.
 - **Verification trail:** every stale-ref claim above was checked against live repo state by the auditing agents (rg/fd/ls/jq probes; live CLI probes for nlm/qmd; tool-list cross-checks for MCP names). Skills NOT audited: the `arscontexta:*` plugin namespace, superpowers plugin internals, and global skills with no ProtoPulse usage evidence.
+
+---
+
+# Master Verdict Index — all 72 skills
+
+Verdicts: **KEEP** (healthy, minor updates) · **FIX** (works, has verified defects) · **FIX-NOW** (actively breaking/misleading) · **MERGE** (fold into named target) · **RETIRE** (delete) · **DECIDE** (binary go/no-go needed).
+
+## Globals (~/.claude/skills/) — 14
+| Skill | Verdict | #1 fix |
+|---|---|---|
+| agent-teams | FIX | re-verify experimental-flag prereq + limitations; drop foreign example |
+| claude-codex-routing | FIX-NOW | collapse to alias + archive; banner the flowchart; fix global CLAUDE.md pointer |
+| nlm-skill | FIX | stray code fence L124; soften "ASK the user"; document `nlm label` |
+| using-tmux-for-interactive-commands | KEEP | canonicalize vs `~/.agents` fork (symlink one side) |
+| claude-md-mastery | FIX-NOW | invert the wrong "@path is not an import" claim |
+| claude-automation-recommender | KEEP | add ToolSearch/skillOverrides levers |
+| clearthought-mastery | FIX-NOW | allowed-tools → single `mcp__clear-thought__clear_thought` |
+| context7-mcp | DECIDE | delete (3rd copy of same instructions) or make canonical w/ call caps |
+| codex-mastery | FIX | version/model refresh w/ changelog citations; mark routing skill legacy |
+| codex-tmux-teaming | FIX | re-example Codex/Gemini-first; register `TEAM_DONE.md`; unpin model |
+| chromedevtools-mastery | FIX | add DevTools-vs-Claude-in-Chrome disambiguation table |
+| notebooklm-knowledge-builder | FIX-NOW | `nlm auth status`→`login --check`; `note add`→`note create`; jurisdiction guard |
+| claude-in-notebooklm | FIX | split 1,414 lines → ~150 core + references/ |
+| skill-sync-workflow | FIX-NOW | de-OmniTrek (parameterize) and point at ProtoPulse |
+
+## Ars Contexta core (.claude/skills/) — 18
+| Skill | Verdict | #1 fix |
+|---|---|---|
+| extract | FIX | qmd names + collection placeholder; split 1,208 lines |
+| graph | FIX | large-vault fast path; resolve phantom helper scripts |
+| learn | FIX | re-cascade tools (exa absent); routing note vs /pp-research |
+| next | FIX | Linux `stat` fallback; sessions signal → .json; add pipeline_stalled rec |
+| pipeline | FIX | promote inline archive (phantom /archive-batch); captures/→inbox/ |
+| remember | FIX | methodology MOC path; session mining → JSON + sidecar |
+| rethink | FIX | create missing MOCs; namespace arscontexta:* commands |
+| revisit | FIX | qmd allowed-tools; shared dual-discovery ref |
+| seed | FIX-NOW | claim-number collision (scan live NNN files + queue.json) |
+| ship | FIX-NOW | Stage 2 blocked by own hook; add check:/test:packages; repo-check matches wrong name |
+| stats | FIX | format-agnostic topic count; own the history file |
+| status | MERGE | → one skill with resume; parse MASTER_BACKLOG; add Engine line |
+| tasks | FIX | jq over grep; surface task age |
+| validate | MERGE | → verify + vault-validate (anchor on v2 schema asset) |
+| verify | FIX-NOW | gate FAILs extract's mandated output; qmd vsearch; name collides w/ built-in |
+| connect | FIX | qmd allowed-tools + collection; move example galleries to references/ |
+| resume | MERGE | → status; add packages/ scan; read .ref/project-dna.md step 0 |
+| ralph | FIX-NOW | `phase_order: null` dereference; phantom /enrich blocks 26 live tasks |
+
+## claude-* meta (.claude/skills/) — 13
+| Skill | Verdict | #1 fix |
+|---|---|---|
+| ask-claude | RETIRE | dead OMX paths; built-ins cover it |
+| claude-agent-sdk | FIX-NOW | `workingDirectory`→`cwd` (verify via Context7) |
+| claude-api | FIX | rewire SKILL.md into its own fresh shared/ tree; purge 2025 tables |
+| claude-automation-recommender (project) | RETIRE | delete the dangling tracked symlink |
+| claude-code | RETIRE | or shrink to ~100-line tmux-orchestration recipe |
+| "claude code guide" | RETIRE | spec-violating name; collides with built-in agent |
+| claude-cookbooks | RETIRE | retired model IDs in every snippet; → pointer in claude-api |
+| claude-devfleet | RETIRE | documents absent infrastructure |
+| claude-extensibility | MERGE | + claude-skills → one current-spec authoring skill |
+| claude-hook-writer | FIX | add 4 missing hook events; fix internal ref; dedupe vs hooks-mastery |
+| claude-settings-audit | MERGE | de-Sentry → reference under automation-recommender |
+| claude-skills | MERGE | + claude-extensibility; update validator to current spec |
+| claude-update | KEEP | prune 4 phantom rows; mark notebooklm.md Codex-owned |
+
+## Domain + .agents-unique — 11
+| Skill | Verdict | #1 fix |
+|---|---|---|
+| breadboard-lab | FIX-NOW | rewrite architecture map (post-extraction layout); engine jurisdiction section |
+| pp-knowledge (Codex) | KEEP | add engine-redesign routing row |
+| pp-nlm-operator (Codex) | KEEP | mark legacy populate-* scripts retired |
+| refactor | FIX | vendor interaction-constraints.md; Linux sed; "NOT for code" trigger |
+| ars-stats | FIX | sync via rename map; default the large-vault path |
+| ars-tasks | FIX | sync via rename map; note MASTER_BACKLOG relationship |
+| claude-code-maestro | FIX | fix fictional log-autopsy script; raw_docs refresh cadence; relocate 57k vendored lines |
+| gemini-cli-maestro | DECIDE | finish ([Domain] placeholders trigger + mislead) or delete; keep CHANGELOG |
+| screenshot-capture-super | RETIRE | empty dir, no SKILL.md |
+| scribe-mastery | KEEP | state Gemini-only /scribe:* commands; ship or drop styleguide.md |
+| universal-skill-builder | FIX | encode dual-tree sync policy; lint empty dirs + name mismatches |
+
+## vault-* + audit/dev trio (.claude/skills/) — 16
+| Skill | Verdict | #1 fix |
+|---|---|---|
+| vault-audience | MERGE | validation → vault-validate; rewrite UI contract to shipped component |
+| vault-extract-priority | DECIDE | wire into /extract for real, or retire (nothing invokes it) |
+| vault-gap | KEEP | reconcile queue contract; absorb vault-inbox as --source user |
+| vault-health | FIX | nonexistent rebuild-index.sh; install cron or cut section; dedupe 4-way |
+| vault-inbox | MERGE | → vault-gap; move unshipped HTTP spec to a plan doc |
+| vault-index | FIX | add packages/** + docs/plans/** scan roots; register rebuilds |
+| vault-prefetch | DECIDE | register hook + add consumer, or retire (fully dead wiring) |
+| vault-quality-gate | MERGE | + vault-validate → one engine (lint/gate modes) |
+| vault-source | FIX | fold --coverage into vault-health; keep per-note renderer |
+| vault-suggest-for-plan | FIX | extend extraction to docs/plans template |
+| vault-teach | FIX | re-base staging signals on fields that exist; fix 500-wpm constant |
+| vault-validate | FIX-NOW | schema schism epicenter — reconcile enums first, loud pre-migration banner |
+| checklist-update | FIX | format-detect + bail; add trigger phrases |
+| fix-audit-failures | FIX-NOW | 3 wrong view→file rows; resolve via ViewRenderer.tsx |
+| devserver | KEEP | cleanest skill audited; add tauri:dev + logs action |
+| visual-audit | FIX | derive 36 views from ViewMode union; add UI Container Rule checks |
+
+**Tally:** KEEP 8 · FIX 33 · FIX-NOW 12 · MERGE 10 · RETIRE 7 · DECIDE 4 (govern by the go/no-go question named in each row, not by default).
+
+---
+
+# Codex-Trio Contradiction Matrix (from the globals audit)
+
+| Claim | claude-codex-routing (legacy body) | codex-gemini-routing (successor, .agents) | codex-tmux-teaming (real, .agents) | codex-mastery |
+|---|---|---|---|---|
+| Is Claude on the team? | Header: NO (alias) / Body: YES — self-contradictory | No — Codex/Gemini-first | Grok-first framing (also off-protocol) | Silent; still links routing as live |
+| Agent cap | Max 6, explicit | "Tyler's agent cap" — no number | "N/6" — agrees with 6 | Not mentioned |
+| Single-task channels | CODEX_HANDOFF / CODEX_DONE | Same + GROK_* / GEMINI_* | GROK_HANDOFF + **TEAM_DONE** (unregistered) | N/A |
+| Campaign channels | COLLAB_HANDOFF_R\<N\> / COLLAB_RESPONSE_R\<N\> | COLLAB_RESPONSE_**\<AGENT\>**_R\<N\> + COLLAB_SYNTHESIS_R\<N\> — divergent | Defers to routing | N/A |
+| SIGNOFF vocab | Claude\|Codex\|both | Codex\|Grok\|Gemini\|multiple | "SIGNOFF: Codex" | N/A |
+| Codex Context7 | Broken — probe-and-fallback | "Use Context7 or official docs" — ignores broken state | Silent | Silent |
+| Dispatch command | `codex exec --sandbox workspace-write -C` | Same | Interactive TUI via tmux (complementary) | Same — consistent |
+| Models | N/A | N/A | Pins gpt-5.1-codex-max (stale) | "0.63.0 stable, Nov 2025" (stale) |
+
+Resolution owner: the successor skill (codex-gemini-routing) should declare canonical channel names, the numeric cap, and the Codex-Context7 probe rule; the other three point at it.
+
+---
+
+# Execution Roadmap — four waves
+
+**Wave 1 — Unblock (do first; everything downstream reads these):**
+1. Schema reconciliation: one enum source in `ops/config.yaml`, consumed by validate-note.sh + merged validate/gate + core validate/verify; dry-run `remediate-v2-frontmatter.py`, then run via pipeline.
+2. qmd central repair: define `notes_collection: protopulse-vault`; fix `mcp__qmd__qmd_*` names + `vsearch`→`query` across extract/verify/connect/revisit/seed.
+3. Queue unblock: ralph null-`phase_order` fallback + queue-header repair; create `/enrich` (spec in the 26 task files) or inline; fix seed's claim-number scan.
+4. Dead-weight sweep: delete ask-claude, "claude code guide", claude-cookbooks, claude-devfleet, screenshot-capture-super, the dangling claude-automation-recommender symlink; decide gemini-cli-maestro.
+
+**Wave 2 — Correctness (verified-wrong content):**
+5. breadboard-lab map rewrite + Legacy-vs-Engine jurisdiction section.
+6. claude-meta copy-paste bugs: agent-sdk `cwd`, claude-api model table + rewire into shared/, clearthought allowed-tools, claude-md-mastery @import claim, notebooklm-knowledge-builder commands.
+7. Audit-trio view model: derive from ViewMode union (36 views); fix fix-audit-failures' 3 wrong rows; add UI Container Rule checks to visual-audit.
+8. Engine-awareness: check:/test:packages in ship/status; packages/ in resume + vault-index + vault-prefetch scan roots; docs/plans/ in scanners.
+
+**Wave 3 — Infrastructure (make automation real):**
+9. `scripts/sync-skills.sh` (adapt skill-sync-workflow): identical-class rsync + manifest vocabulary transform + rename map + lint pass; hook or cron it.
+10. Dead-wiring go/no-go: vault-prefetch (register + consumer, or retire); vault-health cron; vault-index rebuild registration; vault-extract-priority (wire or retire).
+11. Merges: vault-validate+quality-gate; vault-inbox→vault-gap; claude-skills+claude-extensibility (current frontmatter spec); claude-settings-audit→automation-recommender; status+resume.
+
+**Wave 4 — Polish (token economy + freshness):**
+12. Progressive-disclosure splits: extract, connect, rethink, revisit, ralph, graph, remember, verify (+ claude-in-notebooklm, nlm-skill core) with shared references/ for the 2-6x duplicated blocks.
+13. Version refreshes with citations: codex-mastery, codex-tmux-teaming, claude-agent-sdk; collapse claude-codex-routing to alias+archive and update the global CLAUDE.md routing section.
+14. Description-quality pass: add WHEN/trigger phrases to ship, status, resume, checklist-update, fix-audit-failures, visual-audit; negative trigger on refactor; rename or disambiguate verify.
+
+*Report complete. Audited 2026-06-11 against main `20cad8f6` by five parallel read-only auditors; compiled by the session that performed the same day's remote-sync reset.*
