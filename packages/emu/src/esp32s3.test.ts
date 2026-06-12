@@ -1142,3 +1142,161 @@ describe('Esp32s3Core — MOVSP + ESP-IDF app images (slice 5)', () => {
     expect([...c.drainUart()]).toEqual([21, 0x11, 0x44]);
   });
 });
+
+describe('Esp32s3Core — ROM functions (slice 10)', () => {
+  // REAL mask-ROM entry addresses, pinned here independently of the
+  // implementation, from esp-idf v5.2:
+  //   components/esp_rom/esp32s3/ld/esp32s3.rom.ld
+  //   components/esp_rom/esp32s3/ld/esp32s3.rom.newlib.ld
+  const ETS_PRINTF = 0x400005d0;
+  const ETS_DELAY_US = 0x40000600;
+  const UART_TX_ONE_CHAR = 0x40000648;
+  const SOFTWARE_RESET = 0x400006d8;
+  const ROM_MEMSET = 0x400011e8;
+  const ROM_MEMCPY = 0x400011f4;
+  const ROM_STRLEN = 0x40001248;
+  const SCRATCH = 0x3fc88000 + 0x500;
+
+  it('CALL8 to ets_delay_us burns us·240 cycles and resumes after the windowed return', () => {
+    // IO5 goes high, ets_delay_us(10) runs, IO5 goes low — the two
+    // cycle-stamped edges must straddle 10 µs at 240 MHz (2400 cycles)
+    // plus only a handful of call/stub instructions.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [GPIO, 1 << 5, ETS_DELAY_US], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4), // base save area, like every windowed crt0 here
+      L32R(2, 0),
+      L32R(4, 1),
+      S32I(4, 2, 0x24), // enable IO5 (driven low — first drive, no edge)
+      S32I(4, 2, 0x08), // IO5 high
+      L32R(8, 2), // a8 = ets_delay_us
+      MOVI(10, 10), // arg: 10 µs
+      CALLXN(2, 8), // call8 into ROM
+      S32I(4, 2, 0x0c), // IO5 low — only reached if the RETW worked
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    const io5 = c.step(3_000).events.filter((e) => e.pin === 'IO5');
+    expect(io5.map((e) => e.level)).toEqual([1, 0]);
+    const span = (io5[1]?.cycle ?? 0) - (io5[0]?.cycle ?? 0);
+    expect(span).toBeGreaterThanOrEqual(2_400);
+    expect(span).toBeLessThan(2_420); // delay + call overhead only
+  });
+
+  it('uart_tx_one_char pushes to the UART0 tx queue and returns 0', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, UART_TX_ONE_CHAR], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(2, 0),
+      L32R(8, 1),
+      MOVI(10, 0x41), // 'A'
+      CALLXN(2, 8),
+      S32I(10, 2, 0x00), // tx the return value (0) through the FIFO
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    c.step(60);
+    expect([...c.drainUart()]).toEqual([0x41, 0]);
+  });
+
+  it('ets_printf formats register varargs to UART0 and returns the count', () => {
+    // "n=%d!\n" packed little-endian into the literal pool: the pool
+    // starts at base+4, so the string lives at IRAM_BASE+4.
+    const fmt0 = 0x64253d6e; // 'n' '=' '%' 'd'
+    const fmt1 = 0x00000a21; // '!' '\n' NUL
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [fmt0, fmt1, ETS_PRINTF, ESP32S3_IRAM_BASE + 4, UART],
+      [
+        ADDI(3, 1, -16),
+        S32I(1, 3, 4),
+        L32R(8, 2), // a8 = ets_printf
+        L32R(10, 3), // arg0: the format string
+        MOVI(11, 42), // arg1
+        CALLXN(2, 8),
+        L32R(2, 4),
+        S32I(10, 2, 0x00), // tx the return value (6 chars written)
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(120);
+    const text = 'n=42!\n';
+    expect([...c.drainUart()]).toEqual([...[...text].map((ch) => ch.charCodeAt(0)), text.length]);
+  });
+
+  it('memset and memcpy ROM exports mutate DRAM and return dst', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [ROM_MEMSET, ROM_MEMCPY, SCRATCH, UART], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(5, 2), // a5 = SCRATCH
+      L32R(8, 0),
+      MOV_N(10, 5),
+      MOVI(11, 0x5a),
+      MOVI(12, 4),
+      CALLXN(2, 8), // memset(SCRATCH, 0x5a, 4)
+      L32R(8, 1),
+      ADDI(10, 5, 8),
+      MOV_N(11, 5),
+      MOVI(12, 4),
+      CALLXN(2, 8), // memcpy(SCRATCH+8, SCRATCH, 4)
+      L32R(2, 3),
+      L32I(4, 5, 8),
+      S32I(4, 2, 0x00), // tx 0x5a — the copy of the fill landed
+      SUB(6, 10, 5),
+      S32I(6, 2, 0x00), // tx 8 — memcpy returned dst
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    c.step(120);
+    expect([...c.drainUart()]).toEqual([0x5a, 8]);
+  });
+
+  it('strlen ROM export walks memory to the NUL', () => {
+    // "Hi!" at IRAM_BASE+4 (the first pool literal).
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [0x00216948, ROM_STRLEN, ESP32S3_IRAM_BASE + 4, UART], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(8, 1),
+      L32R(10, 2),
+      CALLXN(2, 8),
+      L32R(2, 3),
+      S32I(10, 2, 0x00), // tx 3
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    c.step(60);
+    expect([...c.drainUart()]).toEqual([3]);
+  });
+
+  it('software_reset performs a power-on reset and ends the step() call', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, SOFTWARE_RESET], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(2, 0),
+      MOVI(3, 0x21),
+      S32I(3, 2, 0x00), // tx '!' (dropped by the reset — power-on clears it)
+      L32R(8, 1),
+      CALLXN(2, 8), // never returns
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    const res = c.step(10_000);
+    expect(res.cycles).toBeLessThan(10_000); // returned early at the reset
+    expect(c.inspect().pc).toBe(ESP32S3_IRAM_BASE); // back at the entry point
+    expect(c.inspect().cycles).toBe(0);
+    expect([...c.drainUart()]).toEqual([]); // peripheral state cleared too
+  });
+
+  it('an unmodeled ROM address halts with a diagnostic naming it', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [0x40001000], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(8, 0),
+      CALLXN(2, 8),
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    expect(() => c.step(50)).toThrow(/ROM address 0x40001000/);
+    expect(() => c.step(50)).toThrow(/ets_delay_us/); // the diagnostic lists what IS modeled
+  });
+});
