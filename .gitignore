@@ -40,3 +40,7 @@ packages/*/coverage/
 # environment files contain live secrets — never commit (.env.example stays tracked)
 .env
 .env.local
+
+# initref machine/moment-specific artifacts (dna/map stay committed)
+.ref/project-tools.md
+.ref/project-pulse.md

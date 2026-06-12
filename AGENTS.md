@@ -37,7 +37,7 @@ Every session follows: **Orient → Work → Persist**
 ## The Engine Redesign (packages/)
 Milestone 1 of the ground-up redesign ("the vision", three volumes) landed: a greenfield npm-workspaces monorepo at `packages/` (`@protopulse/*`) living **alongside** the legacy app (`client/ server/ shared/` — untouched, still the shipping product). The legacy app migrates onto the new engine in later milestones.
 
-**What lives there:** `graph` (the core — one canonical design graph; every mutation is a typed op; the design IS its op-log, the graph is a materialized view), `parts`, `erc`, `export`, `cli`, `renderer`, `app` (new schematic editor), `ai` (provider-agnostic agent runtime + the Draftsman), `content`. 346 tests, own CI (`.github/workflows/packages-ci.yml`). Overview: `packages/README.md`.
+**What lives there:** `graph` (the core — one canonical design graph; every mutation is a typed op; the design IS its op-log, the graph is a materialized view), `parts`, `erc`, `export`, `cli`, `renderer`, `app` (new schematic editor), `ai` (provider-agnostic agent runtime + the Draftsman), `content` — plus `sim`, `emu`, `cosim`, `drc`, `route`, `review`, `relay` (16 packages total). 1,377 tests as of 2026-06-11, own CI (`.github/workflows/packages-ci.yml`). Overview: `packages/README.md`.
 
 **Jurisdiction / contracts:**
 - Golden files in `tools/golden/` and the `.ppx` on-disk format (spec: `packages/graph/README.md`) are **contracts**. Never re-freeze goldens casually — deliberate changes only, via `tools/golden/update-golden.ts`.
@@ -48,7 +48,7 @@ Milestone 1 of the ground-up redesign ("the vision", three volumes) landed: a gr
 **Key commands:**
 ```bash
 npm run check:packages           # typecheck all packages
-npm run test:packages            # all 346 package tests
+npm run test:packages            # all package tests (1,377 as of 2026-06-11)
 npm run -w @protopulse/app dev   # new editor on http://localhost:5174
 npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
 ```
@@ -200,3 +200,7 @@ ProtoPulse's evolving knowledge is consolidated (2026-05-09) into **2 active hub
 When friction occurs:
 1. Use /remember to capture it as an observation in ops/observations/
 2. If the same friction occurs 3+ times, propose updating this context file.
+
+## Project Reference
+**STOP. Before broad repo orientation or "current state" claims:**
+→ Read `.ref/project-dna.md` for project navigation context. Read `.ref/project-map.md` for structural details.
