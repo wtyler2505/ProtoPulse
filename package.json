@@ -32,7 +32,8 @@
     "db:studio": "drizzle-kit studio",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:prepare-sidecars": "tsx scripts/tauri/prepare-arduino-sidecar.ts"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.1",

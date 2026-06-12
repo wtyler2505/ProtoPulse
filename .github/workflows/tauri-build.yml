@@ -86,7 +86,9 @@ jobs:
         run: npm ci
 
       - name: TypeScript check
-        run: npm run check
+        run: npx tsc
+        env:
+          NODE_OPTIONS: --max-old-space-size=16384
 
       - name: Frontend build (Vite + esbuild server)
         run: npm run build
