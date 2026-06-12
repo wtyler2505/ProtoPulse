@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-write-user-setting"
+description = "Enables the write_user_setting command without any pre-configured scope."
+commands.allow = ["write_user_setting"]
+
+[[permission]]
+identifier = "deny-write-user-setting"
+description = "Denies the write_user_setting command without any pre-configured scope."
+commands.deny = ["write_user_setting"]
