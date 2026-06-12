@@ -1354,7 +1354,7 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([3]);
   });
 
-  it('RESET_STATE reports the cause for BOTH CPUs (APPCPU field [11:6] mirrors PROCPU)', () => {
+  it('RESET_STATE reports the cause for BOTH CPUs (per-core fields; both POWERON at power-on)', () => {
     const image = assembleXtensa(ESP32S3_IRAM_BASE, [RTC_RESET_STATE, UART], [
       ADDI(3, 1, -16),
       S32I(1, 3, 4),
@@ -1510,5 +1510,238 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect(() => rd(0x600c0018).step(50)).toThrow(/0x600c0018/); // SYSTEM_PERIP_CLK_EN0
     const wr = core(assembleXtensa(ESP32S3_IRAM_BASE, [EFUSE_MAC0], [L32R(2, 0), S32I(2, 2, 0), J_TO(2)]));
     expect(() => wr.step(50)).toThrow(/read-only/);
+  });
+});
+
+describe('Esp32s3Core — second core (slice 12)', () => {
+  // REAL register addresses/bits, pinned independently of the
+  // implementation, from esp-idf v5.2:
+  //   system_reg.h    — SYSTEM_CORE_1_CONTROL_0_REG = SYSTEM_BASE+0x0
+  //                     (RUNSTALL bit 0, CLKGATE_EN bit 1, RESETING
+  //                     bit 2 — default 1), CONTROL_1 +0x4 (MESSAGE)
+  //   rtc_cntl_reg.h  — OPTIONS0 SW_STALL_APPCPU_C0 [1:0],
+  //                     SW_CPU_STALL_REG +0xBC, APPCPU_C1 [25:20]
+  //   esp32s3.rom.ld  — ets_set_appcpu_boot_addr = 0x40000720
+  //   cpu_start.c     — start_other_core: unstall → CLKGATE_EN set,
+  //                     RUNSTALL clear, RESETING pulse → boot addr.
+  const SYS = 0x600c0000;
+  const RTC = 0x60008000;
+  const SET_BOOT = 0x40000720;
+  const CORE1_ENTRY = ESP32S3_IRAM_BASE + 0x400;
+
+  it('core 1 is held in reset at power-on — boot address alone starts nothing', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [SET_BOOT, CORE1_ENTRY, GPIO, 1 << 7], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(8, 0),
+      L32R(10, 1),
+      CALLXN(2, 8), // ets_set_appcpu_boot_addr(CORE1_ENTRY) — but RESETING is still 1
+      J_TO(5),
+      PAD_TO(0x400),
+      // core 1 (never released): would toggle IO7 forever
+      L32R(2, 2),
+      L32R(3, 3),
+      S32I(3, 2, 0x24), // ENABLE_W1TS
+      S32I(3, 2, 0x08),
+      S32I(3, 2, 0x0c),
+      J_TO(10),
+    ]);
+    const c = core(image);
+    const { events } = c.step(2_000);
+    expect(events.filter((e) => e.pin === 'IO7')).toEqual([]);
+  });
+
+  it("IDF's release sequence (unstall → clkgate/runstall/reset pulse → boot addr) starts core 1", () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTC, SYS, SET_BOOT, CORE1_ENTRY, GPIO, 1 << 7, UART],
+      [
+        ADDI(3, 1, -16),
+        S32I(1, 3, 4),
+        // esp_cpu_unstall(1): clear the split 0x86 stall code.
+        L32R(4, 0),
+        MOVI(5, 0),
+        S32I(5, 4, 0), // OPTIONS0 ← 0 (SW_STALL_APPCPU_C0 [1:0] clear)
+        S32I(5, 4, 0xbc), // SW_CPU_STALL ← 0 (APPCPU_C1 [25:20] clear)
+        // start_other_core's SYSTEM dance:
+        L32R(4, 1),
+        L32I(6, 4, 0), // read CONTROL_0 — RESETING (bit 2) set at power-on
+        L32R(9, 6),
+        S32I(6, 9, 0), // tx 0x04
+        MOVI(7, 6),
+        S32I(7, 4, 0), // CLKGATE_EN | RESETING
+        MOVI(7, 2),
+        S32I(7, 4, 0), // clear RESETING — core 1 released, parked in ROM
+        L32R(8, 2),
+        L32R(10, 3),
+        CALLXN(2, 8), // ets_set_appcpu_boot_addr(CORE1_ENTRY) → core 1 starts
+        J_TO(17),
+        PAD_TO(0x400),
+        // core 1: toggle IO7 forever (core 0 never touches IO7)
+        L32R(2, 4),
+        L32R(3, 5),
+        S32I(3, 2, 0x24),
+        S32I(3, 2, 0x08),
+        S32I(3, 2, 0x0c),
+        J_TO(22),
+      ],
+    );
+    const c = core(image);
+    const { events } = c.step(2_000);
+    expect([...c.drainUart()]).toEqual([0x04]); // power-on CONTROL_0 = RESETING
+    const io7 = events.filter((e) => e.pin === 'IO7');
+    expect(io7.length).toBeGreaterThan(3);
+    expect(io7[0]?.level).toBe(1); // W1TS first, strict alternation after
+    for (let i = 1; i < io7.length; i++) expect(io7[i]?.level).toBe(1 - (io7[i - 1]?.level ?? 0));
+  });
+
+  it('both cores run interleaved — two GPIOs toggle with overlapping cycle stamps', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [SYS, SET_BOOT, CORE1_ENTRY, GPIO, 1 << 5, 1 << 7],
+      [
+        ADDI(3, 1, -16),
+        S32I(1, 3, 4),
+        L32R(4, 0),
+        MOVI(7, 6),
+        S32I(7, 4, 0),
+        MOVI(7, 2),
+        S32I(7, 4, 0),
+        L32R(8, 1),
+        L32R(10, 2),
+        CALLXN(2, 8),
+        // core 0: toggle IO5 forever
+        L32R(2, 3),
+        L32R(3, 4),
+        S32I(3, 2, 0x24),
+        S32I(3, 2, 0x08),
+        S32I(3, 2, 0x0c),
+        J_TO(13),
+        PAD_TO(0x400),
+        // core 1: toggle IO7 forever
+        L32R(2, 3),
+        L32R(3, 5),
+        S32I(3, 2, 0x24),
+        S32I(3, 2, 0x08),
+        S32I(3, 2, 0x0c),
+        J_TO(20),
+      ],
+    );
+    const c = core(image);
+    const { events } = c.step(2_000);
+    const io5 = events.filter((e) => e.pin === 'IO5');
+    const io7 = events.filter((e) => e.pin === 'IO7');
+    expect(io5.length).toBeGreaterThan(3);
+    expect(io7.length).toBeGreaterThan(3);
+    // Interleaved, not sequential: each stream starts before the other ends.
+    expect(io7[0]!.cycle).toBeLessThan(io5[io5.length - 1]!.cycle);
+    expect(io5[0]!.cycle).toBeLessThan(io7[io7.length - 1]!.cycle);
+  });
+
+  it("per-core CCOMPARE0 interrupts don't cross-fire (separate VECBASE/INTENABLE/CCOUNT)", () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [SYS, SET_BOOT, CORE1_ENTRY, GPIO, 1 << 5, 1 << 7, ESP32S3_IRAM_BASE, CORE1_ENTRY],
+      [
+        ADDI(3, 1, -16),
+        S32I(1, 3, 4),
+        L32R(4, 0),
+        MOVI(7, 6),
+        S32I(7, 4, 0),
+        MOVI(7, 2),
+        S32I(7, 4, 0),
+        L32R(8, 1),
+        L32R(10, 2),
+        CALLXN(2, 8),
+        // core 0: arm its core timer ~256 cycles out; ISR raises IO5.
+        L32R(2, 3),
+        L32R(3, 4),
+        S32I(3, 2, 0x24), // enable IO5 (drives 0)
+        L32R(5, 6),
+        WSR(5, SR.VECBASE),
+        MOVI(6, 64),
+        WSR(6, SR.INTENABLE),
+        RSR(7, SR.CCOUNT),
+        ADDMI(7, 7, 256),
+        WSR(7, SR.CCOMPARE0),
+        RSIL(8, 0),
+        J_TO(21),
+        PAD_TO(0x340), // core 0's level-1 vector
+        L32R(2, 3),
+        L32R(3, 4),
+        S32I(3, 2, 0x08), // IO5 ← 1, exactly once
+        RSR(4, SR.CCOMPARE0),
+        ADDMI(4, 4, 32512), // re-arm far past the test horizon
+        WSR(4, SR.CCOMPARE0),
+        RFE(),
+        PAD_TO(0x400),
+        // core 1: same shape, ~512 cycles out on ITS OWN CCOUNT; ISR raises IO7.
+        L32R(2, 3),
+        L32R(3, 5),
+        S32I(3, 2, 0x24),
+        L32R(5, 7),
+        WSR(5, SR.VECBASE),
+        MOVI(6, 64),
+        WSR(6, SR.INTENABLE),
+        RSR(7, SR.CCOUNT),
+        ADDMI(7, 7, 512),
+        WSR(7, SR.CCOMPARE0),
+        RSIL(8, 0),
+        J_TO(41),
+        PAD_TO(0x740), // core 1's vector: VECBASE(0x400) + 0x340
+        L32R(2, 3),
+        L32R(3, 5),
+        S32I(3, 2, 0x08),
+        RSR(4, SR.CCOMPARE0),
+        ADDMI(4, 4, 32512),
+        WSR(4, SR.CCOMPARE0),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    const { events } = c.step(1_500);
+    const io5 = events.filter((e) => e.pin === 'IO5');
+    const io7 = events.filter((e) => e.pin === 'IO7');
+    // Each timer fires exactly once, on its own core, on its own schedule.
+    expect(io5.map((e) => e.level)).toEqual([1]);
+    expect(io7.map((e) => e.level)).toEqual([1]);
+    expect(io7[0]!.cycle - io5[0]!.cycle).toBeGreaterThan(150);
+  });
+
+  it('SW_APPCPU_RST sets the APPCPU reset cause (12) while PROCPU keeps power-on (1)', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [SYS, SET_BOOT, CORE1_ENTRY, RTC, UART],
+      [
+        ADDI(3, 1, -16),
+        S32I(1, 3, 4),
+        L32R(4, 0),
+        MOVI(7, 6),
+        S32I(7, 4, 0),
+        MOVI(7, 2),
+        S32I(7, 4, 0),
+        L32R(8, 1),
+        L32R(10, 2),
+        CALLXN(2, 8), // core 1 running
+        L32R(4, 3),
+        MOVI(5, 1 << 4),
+        S32I(5, 4, 0), // OPTIONS0 ← SW_APPCPU_RST: resets core 1 only
+        L32I(6, 4, 0x38), // RESET_STATE
+        L32R(9, 4),
+        SRLI(7, 6, 6),
+        MOVI(8, 0x3f),
+        AND(7, 7, 8),
+        S32I(7, 9, 0), // tx RESET_CAUSE_APPCPU [11:6] = 12
+        MOVI(8, 0x3f),
+        AND(6, 6, 8),
+        S32I(6, 9, 0), // tx RESET_CAUSE_PROCPU [5:0] = 1
+        J_TO(22),
+        PAD_TO(0x400),
+        J_TO(24), // core 1: park
+      ],
+    );
+    const c = core(image);
+    c.step(2_000);
+    expect([...c.drainUart()]).toEqual([12, 1]);
   });
 });

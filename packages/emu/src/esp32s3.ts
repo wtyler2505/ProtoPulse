@@ -22,7 +22,7 @@ import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuSt
  * (tx bytes land in drainUart; uartWrite feeds RXFIFO_CNT and FIFO
  * reads).
  *
- * Honest cuts, stated plainly: SINGLE core (the S3 has two);
+ * Honest cuts, stated plainly:
  * 1 instruction = 1 cycle at 240 MHz (no memory-wait, cache, or
  * spill/fill timing); one 480 KB SRAM window mapped at both its
  * instruction-bus and data-bus addresses (no SRAM0/cache regions).
@@ -79,11 +79,39 @@ import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuSt
  * register in those three blocks refuse loudly with the address and
  * the modeled set (a benign zero would silently lie — e.g. "the RTC
  * watchdog is off"); unmodeled writes there are accepted and
- * dropped, like the other peripheral blocks. Still missing: second
- * core, ADC2/DMA mode, TIMG0 T1/TIMG1, every watchdog (RTC and
- * TIMG), XTAL clock source for the timer (APB only), sleep/wake,
- * and eFuse programming — so full IDF/FreeRTOS firmware does NOT
- * run yet. Loading Intel-HEX refuses with a message.
+ * dropped, like the other peripheral blocks. BOTH Xtensa cores run
+ * (slice 12): the APP CPU is a second XtensaCpu on the same bus,
+ * held exactly the way real silicon holds it at power-on
+ * (SYSTEM_CORE_1_CONTROL_0's RESETING bit resets to 1, CLKGATE_EN
+ * to 0 — system_reg.h) and released by IDF's start_other_core
+ * sequence (cpu_start.c): esp_cpu_unstall(1) clearing the split
+ * 0x86 stall code (RTC OPTIONS0 SW_STALL_APPCPU_C0 [1:0] +
+ * SW_CPU_STALL_REG APPCPU_C1 [25:20]), CLKGATE_EN set, RUNSTALL
+ * cleared, RESETING pulsed, then the ets_set_appcpu_boot_addr ROM
+ * trap (0x40000720, esp32s3.rom.ld) — core 1 stays parked until
+ * that address is non-zero, the net effect of the real ROM's wait
+ * loop, then starts there with CCOUNT 0. INTERLEAVE POLICY:
+ * lockstep per instruction — core 0 (the SoC timebase; all shared
+ * timers count its cycles) steps one instruction, then core 1 steps
+ * until its shared-timeline cycle count (release epoch + own
+ * cycles) catches up; 1 instr = 1 cycle on both, so they alternate.
+ * While gated/stalled, core 1's timeline slides forward without
+ * executing. All SR state (PS, INTENABLE/INTERRUPT, CCOUNT/
+ * CCOMPARE0, VECBASE, windows) lives per-XtensaCpu, so per-core
+ * timer interrupts cannot cross-fire. OPTIONS0's SW_APPCPU_RST
+ * resets core 1 alone (cause 12 in RESET_STATE's APPCPU [11:6];
+ * the boot address survives, like the real ROM's, so it restarts).
+ * Core-1 cuts: NO peripheral interrupts route to it (only the
+ * CORE0 interrupt-matrix maps are modeled; FROM_CPU cross-core
+ * software interrupts are not), no per-core cache/TRAX, no
+ * atomic/exclusive-access modeling (the ISA subset has none), and
+ * raw (non-ROM) core-1 programs get a SYNTHETIC reset SP 16 KiB
+ * below the DRAM top (real code sets its own stack immediately).
+ * Still missing: ADC2/DMA mode, TIMG0 T1/TIMG1, every watchdog
+ * (RTC and TIMG), XTAL clock source for the timer (APB only),
+ * sleep/wake, and eFuse programming — so full IDF/FreeRTOS
+ * firmware does NOT run yet. Loading Intel-HEX refuses with a
+ * message.
  */
 
 const CLOCK_HZ = 240_000_000;
@@ -221,6 +249,7 @@ const ROM_FNS: Record<number, string> = {
   0x40000600: 'ets_delay_us', // = esp_rom_delay_us
   0x40000648: 'uart_tx_one_char',
   0x400006d8: 'software_reset',
+  0x40000720: 'ets_set_appcpu_boot_addr', // slice 12 — releases core 1
   0x400011e8: 'memset',
   0x400011f4: 'memcpy',
   0x40001248: 'strlen',
@@ -289,6 +318,37 @@ const SYSTEM_CPU_PER_CONF_RESET = 0x6;
 const SYSTEM_SYSCLK_CONF_RESET = (40 << 12) | (1 << 10) | 1; // 0x28401
 const SYSTEM_CLK_XTAL_FREQ_MASK = 0x7f << 12; // RO field — writes can't touch it
 
+// ── Slice 12: the second core (APP CPU) ──
+// SYSTEM_CORE_1_CONTROL_0_REG sits at DR_REG_SYSTEM_BASE + 0x0
+// (system_reg.h, esp-idf v5.2): RUNSTALL bit 0 (default 0),
+// CLKGATE_EN bit 1 (default 0), RESETING bit 2 — the header's own
+// spelling — default 1, i.e. core 1 is held in reset at power-on.
+// CONTROL_1 (+0x4) is the 32-bit MESSAGE scratch word. IDF's
+// start_other_core (esp_system/port/cpu_start.c) releases it:
+// esp_cpu_unstall(1) → CLKGATE_EN set, RUNSTALL cleared, RESETING
+// pulsed 1→0 → ets_set_appcpu_boot_addr(call_start_cpu1). The real
+// ROM parks core 1 in a wait loop until that boot address is
+// non-zero, then jumps to it — modeled as: core 1 starts executing
+// at the stored address once all release conditions hold.
+const SYSTEM_CORE_1_CTRL0 = 0x0;
+const SYSTEM_CORE_1_CTRL1 = 0x4;
+const CORE1_RUNSTALL = 1 << 0;
+const CORE1_CLKGATE_EN = 1 << 1;
+const CORE1_RESETING = 1 << 2;
+// esp_cpu_unstall/stall drive a split stall code (0x86 = stalled):
+// C0 [1:0] of RTC_CNTL_OPTIONS0 (=0x2) + C1 [25:20] of
+// RTC_CNTL_SW_CPU_STALL_REG at +0xBC (=0x21), per rtc_cntl_reg.h
+// and esp_hw_support/cpu.c.
+const RTC_SW_CPU_STALL = 0xbc;
+const RTC_SW_APPCPU_RST = 1 << 4; // OPTIONS0 bit 4, WO — resets core 1 only
+const STALL_APPCPU_C0_MASK = 0x3; // OPTIONS0 [1:0]
+const STALL_C0_CODE = 0x2;
+const STALL_C1_CODE = 0x21;
+/** SYNTHETIC reset SP for raw core-1 programs — 16 KiB below the
+ *  DRAM top so it cannot collide with core 0's reset stack (real
+ *  call_start_cpu1 establishes its own stack immediately). */
+const CORE1_RESET_SP = 0x4000;
+
 const SENS_BASE = 0x60008800;
 const SENS_SAR_MEAS1_CTRL2 = 0x0c;
 const MEAS1_DONE_SAR = 1 << 16;
@@ -334,7 +394,25 @@ export class Esp32s3Core implements McuCore {
   private romSegments: LoadedSegment[] = [];
   private entry = IRAM_BASE;
   private sram = new Uint8Array(SRAM_BYTES);
+  /** PRO CPU (core 0) — the SoC timebase: TIMG/RTC timers and step()
+   *  budgets count ITS cycles. */
   private cpu: XtensaCpu;
+  /** APP CPU (core 1) — slice 12. Shares the bus; all SR/interrupt
+   *  state is per-XtensaCpu instance. */
+  private cpu1: XtensaCpu;
+  /** Whichever core is currently executing — event timestamps and ROM
+   *  traps resolve against it. */
+  private active: XtensaCpu;
+
+  // Core-1 release state (slice 12).
+  private core1Ctrl0 = CORE1_RESETING; // power-on: held in reset
+  private core1Msg = 0; // CONTROL_1 MESSAGE scratch
+  private rtcSwCpuStall = 0; // RTC_CNTL_SW_CPU_STALL_REG
+  private appBootAddr = 0; // ets_set_appcpu_boot_addr's stored address
+  private core1Started = false;
+  /** Core 0 cycle at which core 1 last (re)started — its shared-
+   *  timeline position is core1Epoch + cpu1.cycles. */
+  private core1Epoch = 0;
 
   // GPIO matrix state (two 32-bit banks each).
   private out = [0, 0];
@@ -366,10 +444,12 @@ export class Esp32s3Core implements McuCore {
   private timgIntRaw = 0;
   private tgT0IntMap = INTMTX_DEFAULT_MAP;
 
-  // RTC/eFuse/SYSTEM state (slice 11). The reset cause survives
-  // reset() — it describes WHY the last reset happened; loadFirmware
-  // sets it back to power-on.
+  // RTC/eFuse/SYSTEM state (slice 11). The reset causes survive
+  // reset() — they describe WHY the last reset happened; loadFirmware
+  // sets them back to power-on. appResetCause is core 1's own field
+  // (RESET_STATE's APPCPU [11:6] — slice 12).
   private resetCause = RESET_CAUSE_POWERON;
+  private appResetCause = RESET_CAUSE_POWERON;
   private rtcOptions0 = 0; // last write, WO sw-reset bits masked out
   private rtcTimeLatchLo = 0; // captured by a TIME_UPDATE write
   private rtcTimeLatchHi = 0;
@@ -395,6 +475,8 @@ export class Esp32s3Core implements McuCore {
 
   constructor() {
     this.cpu = new XtensaCpu(this.bus());
+    this.cpu1 = new XtensaCpu(this.bus());
+    this.active = this.cpu;
   }
 
   loadFirmware(image: Uint8Array | string): void {
@@ -494,6 +576,7 @@ export class Esp32s3Core implements McuCore {
     const start = this.cpu.cycles;
     const target = start + maxCycles;
     while (this.cpu.cycles < target) {
+      this.active = this.cpu;
       this.cpu.step();
       if (this.pendingReset) {
         // software_reset ROM trap: a power-on reset that ends this
@@ -502,6 +585,27 @@ export class Esp32s3Core implements McuCore {
         const resetEvents = this.events;
         this.reset();
         return { cycles: consumed, events: resetEvents };
+      }
+      // Lockstep interleave (slice 12): core 1 catches up to core 0's
+      // timeline — 1 instr = 1 cycle on both, so they alternate.
+      if (this.core1Started) {
+        if (this.core1Runnable()) {
+          this.active = this.cpu1;
+          while (this.core1Epoch + this.cpu1.cycles < this.cpu.cycles) {
+            this.cpu1.step();
+            if (this.pendingReset) {
+              const consumed = this.cpu.cycles - start;
+              const resetEvents = this.events;
+              this.reset();
+              return { cycles: consumed, events: resetEvents };
+            }
+          }
+          this.active = this.cpu;
+        } else {
+          // Gated/stalled: core 1's timeline slides forward without
+          // executing, so a later release doesn't burst-replay it.
+          this.core1Epoch = this.cpu.cycles - this.cpu1.cycles;
+        }
       }
       if ((this.t0Config & T0_ARMED) === T0_ARMED) this.checkT0Alarm();
     }
@@ -553,7 +657,42 @@ export class Esp32s3Core implements McuCore {
 
   inspect(): McuState {
     // No SREG on Xtensa — reported as 0; sp is a1 by call0 convention.
+    // Reports the PRO CPU (core 0) — the SoC timebase.
     return { pc: this.cpu.pc, cycles: this.cpu.cycles, sreg: 0, sp: this.cpu.a(1) };
+  }
+
+  /** The shared-timeline cycle of the currently-executing core — the
+   *  timestamp domain for pin events and ADC reads. Core 0's counter
+   *  IS the timeline; core 1's position is its release epoch plus its
+   *  own cycles (lockstep keeps them within one cycle). */
+  private now(): number {
+    return this.active === this.cpu1 ? this.core1Epoch + this.cpu1.cycles : this.cpu.cycles;
+  }
+
+  /** esp_cpu_stall's split 0x86 code, both halves present. */
+  private core1RtcStalled(): boolean {
+    return (
+      (this.rtcOptions0 & STALL_APPCPU_C0_MASK) === STALL_C0_CODE &&
+      ((this.rtcSwCpuStall >>> 20) & 0x3f) === STALL_C1_CODE
+    );
+  }
+
+  /** Clock on, not run-stalled, not in reset, not RTC-stalled. */
+  private core1Runnable(): boolean {
+    if ((this.core1Ctrl0 & CORE1_CLKGATE_EN) === 0) return false;
+    if ((this.core1Ctrl0 & (CORE1_RUNSTALL | CORE1_RESETING)) !== 0) return false;
+    return !this.core1RtcStalled();
+  }
+
+  /** Start (or restart) core 1 at the stored boot address once every
+   *  release condition holds — the net effect of the real ROM's
+   *  "wait until the boot address is non-zero, then jump" loop.
+   *  Called whenever any release input changes. */
+  private maybeStartCore1(): void {
+    if (this.core1Started || this.appBootAddr === 0 || !this.core1Runnable()) return;
+    this.cpu1.reset(this.appBootAddr, DRAM_BASE + SRAM_BYTES - CORE1_RESET_SP);
+    this.core1Epoch = this.cpu.cycles;
+    this.core1Started = true;
   }
 
   /** Power-on reset: machine + peripheral state cleared, firmware kept. */
@@ -585,9 +724,16 @@ export class Esp32s3Core implements McuCore {
     this.timgIntEna = 0;
     this.timgIntRaw = 0;
     this.tgT0IntMap = INTMTX_DEFAULT_MAP;
-    // resetCause is deliberately NOT cleared — it reports why this
-    // reset happened (software_reset / SW_*_RST set it before calling).
+    // resetCause/appResetCause are deliberately NOT cleared — they
+    // report why this reset happened (software_reset / SW_*_RST set
+    // them before calling).
     this.rtcOptions0 = 0;
+    this.core1Ctrl0 = CORE1_RESETING; // core 1 back to held-in-reset
+    this.core1Msg = 0;
+    this.rtcSwCpuStall = 0;
+    this.appBootAddr = 0; // cpu_start.c zeroes it early in boot too
+    this.core1Started = false;
+    this.core1Epoch = 0;
     this.rtcTimeLatchLo = 0;
     this.rtcTimeLatchHi = 0;
     this.cpuPerConf = SYSTEM_CPU_PER_CONF_RESET;
@@ -602,6 +748,8 @@ export class Esp32s3Core implements McuCore {
     this.txBuffer = [];
     this.pendingReset = false;
     this.cpu = new XtensaCpu(this.bus());
+    this.cpu1 = new XtensaCpu(this.bus());
+    this.active = this.cpu;
     // SP at the top of the DRAM window, like a bare-metal crt0 would.
     this.cpu.reset(this.entry, DRAM_BASE + SRAM_BYTES);
   }
@@ -714,7 +862,7 @@ export class Esp32s3Core implements McuCore {
       const level: DigitalLevel = ((this.out[bank] ?? 0) & bit) !== 0 ? 1 : 0;
       const prev = this.driven[gpio];
       if (prev !== undefined && prev !== level) {
-        this.events.push({ pin: esp32s3PinId(gpio), level, cycle: this.cpu.cycles });
+        this.events.push({ pin: esp32s3PinId(gpio), level, cycle: this.now() });
       }
       this.driven[gpio] = level;
     }
@@ -752,13 +900,14 @@ export class Esp32s3Core implements McuCore {
     return v >>> 0;
   }
 
-  /** Write the trap's return value into the callee window's a2. */
+  /** Write the trap's return value into the callee window's a2 — of
+   *  whichever core took the trap (either core may call ROM). */
   private romRet(v: number): void {
-    this.cpu.phys[(this.cpu.windowBase * 4 + 2) & (this.cpu.phys.length - 1)] = v | 0;
+    this.active.phys[(this.active.windowBase * 4 + 2) & (this.active.phys.length - 1)] = v | 0;
   }
 
   private romTrap(fn: number): void {
-    const arg = (i: number): number => this.cpu.a(2 + i);
+    const arg = (i: number): number => this.active.a(2 + i);
     switch (fn) {
       case 0x400005d0: // ets_printf
         this.romRet(this.romPrintf());
@@ -766,7 +915,8 @@ export class Esp32s3Core implements McuCore {
       case 0x40000600: // ets_delay_us — burn cycles at the modeled 240 MHz.
         // One jump, not a loop: a CCOMPARE0 equality strictly inside
         // the skipped span is missed (honest cut — the header says so).
-        this.cpu.cycles += (arg(0) >>> 0) * CYCLES_PER_US;
+        // Burns the CALLING core's cycles.
+        this.active.cycles += (arg(0) >>> 0) * CYCLES_PER_US;
         break;
       case 0x40000648: { // uart_tx_one_char — returns 0 (OK)
         this.txBuffer.push(arg(0) & 0xff);
@@ -777,9 +927,17 @@ export class Esp32s3Core implements McuCore {
       }
       case 0x400006d8: // software_reset — never returns; step() resets.
         // The ROM routine asserts RTC_CNTL_SW_SYS_RST, so the next
-        // boot reads RTC_SW_SYS_RESET (3) in RESET_STATE (rom/rtc.h).
+        // boot reads RTC_SW_SYS_RESET (3) in RESET_STATE (rom/rtc.h)
+        // — a system reset, so BOTH cause fields read 3.
         this.resetCause = RESET_CAUSE_SW_SYS;
+        this.appResetCause = RESET_CAUSE_SW_SYS;
         this.pendingReset = true;
+        break;
+      case 0x40000720: // ets_set_appcpu_boot_addr(addr) — slice 12.
+        // The real ROM stores it where core 1's wait loop polls;
+        // here it's the last release condition for core 1.
+        this.appBootAddr = arg(0) >>> 0;
+        this.maybeStartCore1();
         break;
       case 0x400011e8: { // memset(dst, c, n) → dst
         const dst = arg(0) >>> 0;
@@ -822,13 +980,13 @@ export class Esp32s3Core implements McuCore {
       if (argIdx >= 5) {
         throw new Error('ets_printf trap supports at most 5 varargs (register args a3..a7 — stack varargs are not modeled)');
       }
-      return this.cpu.a(3 + argIdx++) | 0;
+      return this.active.a(3 + argIdx++) | 0;
     };
     const out: number[] = [];
     const emitStr = (str: string): void => {
       for (let i = 0; i < str.length; i++) out.push(str.charCodeAt(i) & 0xff);
     };
-    let p = this.cpu.a(2) >>> 0;
+    let p = this.active.a(2) >>> 0;
     for (let guard = 0; ; guard++) {
       if (guard > ROM_STR_MAX) {
         throw new Error('ets_printf trap: format string has no NUL within 64 KiB — bad pointer?');
@@ -992,13 +1150,13 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_TIME_LOW0) return this.rtcTimeLatchLo >>> 0;
       if (off === RTC_TIME_HIGH0) return this.rtcTimeLatchHi & 0xffff;
       if (off === RTC_RESET_STATE) {
-        // Single modeled core, but both cause fields report — IDF's
-        // reset-reason path reads PROCPU [5:0]; APPCPU [11:6] mirrors.
-        return ((this.resetCause << 6) | this.resetCause) >>> 0;
+        // Per-core cause fields (slice 12): PROCPU [5:0], APPCPU [11:6].
+        return ((this.appResetCause << 6) | this.resetCause) >>> 0;
       }
+      if (off === RTC_SW_CPU_STALL) return this.rtcSwCpuStall >>> 0;
       throw new Error(
         `read of unmodeled RTC_CNTL register 0x${addr.toString(16)} — this core models only ` +
-          `OPTIONS0(+0x0), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), RESET_STATE(+0x38); ` +
+          `OPTIONS0(+0x0), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), RESET_STATE(+0x38), SW_CPU_STALL(+0xbc); ` +
           `a fabricated 0 here would lie (e.g. "RTC watchdog off")`,
       );
     }
@@ -1016,11 +1174,13 @@ export class Esp32s3Core implements McuCore {
     }
     if (addr >= SYSTEM_BASE && addr < SYSTEM_BASE + 0x1000) {
       const off = addr - SYSTEM_BASE;
+      if (off === SYSTEM_CORE_1_CTRL0) return this.core1Ctrl0 >>> 0;
+      if (off === SYSTEM_CORE_1_CTRL1) return this.core1Msg >>> 0;
       if (off === SYSTEM_CPU_PER_CONF) return this.cpuPerConf >>> 0;
       if (off === SYSTEM_SYSCLK_CONF) return this.sysclkConf >>> 0;
       throw new Error(
         `read of unmodeled SYSTEM register 0x${addr.toString(16)} — this core models only ` +
-          `CPU_PER_CONF(+0x10) and SYSCLK_CONF(+0x60), frozen at the 240 MHz PLL state`,
+          `CORE_1_CONTROL_0/1(+0x0/+0x4), CPU_PER_CONF(+0x10) and SYSCLK_CONF(+0x60), frozen at the 240 MHz PLL state`,
       );
     }
     throw new Error(`read outside the modeled ESP32-S3 map: 0x${addr.toString(16)}`);
@@ -1126,10 +1286,10 @@ export class Esp32s3Core implements McuCore {
         if ((value & MEAS1_START_SAR) !== 0 && (prev & MEAS1_START_SAR) === 0) {
           const enPad = (value >>> 19) & 0xfff;
           const channel = enPad === 0 ? 0 : 31 - Math.clz32(enPad & -enPad);
-          const volts = this.sampler ? this.sampler(channel, this.cpu.cycles) : 0;
+          const volts = this.sampler ? this.sampler(channel, this.now()) : 0;
           this.adcData = Math.min(ADC_MAX, Math.max(0, Math.round((volts / ADC_VREF) * ADC_MAX)));
           this.adcDone = true;
-          this.adcReads.push({ channel, cycle: this.cpu.cycles });
+          this.adcReads.push({ channel, cycle: this.now() });
         }
       }
       return;
@@ -1137,17 +1297,27 @@ export class Esp32s3Core implements McuCore {
     if (addr >= RTCCNTL_BASE && addr < RTCCNTL_END) {
       const off = addr - RTCCNTL_BASE;
       if (off === RTC_OPTIONS0) {
-        // The WO software-reset bits act and read back 0; the rest is
-        // stored (cuts: bias/regulator fields have no effect, and
-        // SW_APPCPU_RST is dropped — there is no second core).
-        this.rtcOptions0 = (value & ~(RTC_SW_SYS_RST | RTC_SW_PROCPU_RST)) >>> 0;
+        // The WO software-reset bits act and read back 0; the rest —
+        // including the SW_STALL_APPCPU_C0 [1:0] half of the stall
+        // code — is stored (cut: bias/regulator fields are inert).
+        this.rtcOptions0 = (value & ~(RTC_SW_SYS_RST | RTC_SW_PROCPU_RST | RTC_SW_APPCPU_RST)) >>> 0;
         if ((value & RTC_SW_SYS_RST) !== 0) {
           this.resetCause = RESET_CAUSE_SW_SYS;
+          this.appResetCause = RESET_CAUSE_SW_SYS; // system reset hits both cores
           this.pendingReset = true;
         } else if ((value & RTC_SW_PROCPU_RST) !== 0) {
           this.resetCause = RESET_CAUSE_SW_CPU;
           this.pendingReset = true;
+        } else if ((value & RTC_SW_APPCPU_RST) !== 0) {
+          // Resets core 1 ALONE: back to the ROM park, then straight
+          // to the still-stored boot address (real ROM behavior).
+          this.appResetCause = RESET_CAUSE_SW_CPU;
+          this.core1Started = false;
         }
+        this.maybeStartCore1(); // stall-code half may have changed
+      } else if (off === RTC_SW_CPU_STALL) {
+        this.rtcSwCpuStall = value >>> 0;
+        this.maybeStartCore1();
       } else if (off === RTC_TIME_UPDATE) {
         if ((value & (1 << 31)) !== 0) {
           // Latch the 48-bit RTC main timer: CPU cycles → RC_SLOW ticks.
@@ -1164,6 +1334,22 @@ export class Esp32s3Core implements McuCore {
     }
     if (addr >= SYSTEM_BASE && addr < SYSTEM_BASE + 0x1000) {
       const off = addr - SYSTEM_BASE;
+      if (off === SYSTEM_CORE_1_CTRL0) {
+        // Core 1's release bits (slice 12). A RESETING rising edge
+        // resets core 1 — it re-parks and restarts at the stored boot
+        // address when released again.
+        const prev = this.core1Ctrl0;
+        this.core1Ctrl0 = value & (CORE1_RUNSTALL | CORE1_CLKGATE_EN | CORE1_RESETING);
+        if ((this.core1Ctrl0 & CORE1_RESETING) !== 0 && (prev & CORE1_RESETING) === 0) {
+          this.core1Started = false;
+        }
+        this.maybeStartCore1();
+        return;
+      }
+      if (off === SYSTEM_CORE_1_CTRL1) {
+        this.core1Msg = value >>> 0; // MESSAGE scratch word
+        return;
+      }
       // Stored but inert: the emulated clock is fixed at 240 MHz (cut
       // stated in the header). CLK_XTAL_FREQ is RO — writes can't touch it.
       if (off === SYSTEM_CPU_PER_CONF) this.cpuPerConf = value >>> 0;
