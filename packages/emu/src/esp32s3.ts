@@ -289,6 +289,10 @@ const LEDC_INT_ENA = 0x0c8;
 const LEDC_INT_CLR = 0x0cc;
 const LEDC_CONF = 0x0d0;
 const LEDC_DATE = 0x0fc;
+const LEDC_APB_CLK_SEL_MASK = 0x3;
+const LEDC_APB_CLK_SEL_APB = 1;
+const LEDC_APB_CLK_SEL_RC_FAST = 2;
+const LEDC_APB_CLK_SEL_XTAL = 3;
 const LEDC_CLK_EN = 1 << 31;
 const LEDC_DUTY_MASK = 0x7ffff;
 const LEDC_HPOINT_MASK = 0x3fff;
@@ -1739,6 +1743,18 @@ export class Esp32s3Core implements McuCore {
     return Math.max(1, 1 << this.ledcTimerResolution(t));
   }
 
+  private ledcClockRatio(): readonly [number, number] {
+    switch (this.ledcConf & LEDC_APB_CLK_SEL_MASK) {
+      case LEDC_APB_CLK_SEL_XTAL:
+        return [1, 6]; // 40 MHz XTAL over the modeled 240 MHz CPU clock
+      case LEDC_APB_CLK_SEL_RC_FAST:
+        return [7, 96]; // 17.5 MHz RC_FAST over the modeled 240 MHz CPU clock
+      case LEDC_APB_CLK_SEL_APB:
+      default:
+        return [1, CYCLES_PER_APB]; // 80 MHz APB over the modeled 240 MHz CPU clock
+    }
+  }
+
   private ledcTimerRunning(t: LedcTimer): boolean {
     return (this.ledcConf & LEDC_CLK_EN) !== 0 && (t.conf & (LEDC_TIMER_RST | LEDC_TIMER_PAUSE)) === 0;
   }
@@ -1746,7 +1762,8 @@ export class Esp32s3Core implements McuCore {
   private ledcTimerTicks(t: LedcTimer): number {
     if (!this.ledcTimerRunning(t)) return 0;
     const divider = this.ledcTimerDivider(t);
-    return Math.floor(((this.cpu.cycles - t.sync) * LEDC_DIV_ONE) / (CYCLES_PER_APB * divider));
+    const [clockNumerator, clockDenominator] = this.ledcClockRatio();
+    return Math.floor(((this.cpu.cycles - t.sync) * clockNumerator * LEDC_DIV_ONE) / (clockDenominator * divider));
   }
 
   private ledcTimerTotal(t: LedcTimer): number {
@@ -2496,11 +2513,12 @@ export class Esp32s3Core implements McuCore {
         this.recomputeIrq();
       } else if (off === LEDC_CONF) {
         const prev = this.ledcConf;
-        if ((prev & LEDC_CLK_EN) !== (v & LEDC_CLK_EN)) {
+        const clockChanged = (prev & (LEDC_CLK_EN | LEDC_APB_CLK_SEL_MASK)) !== (v & (LEDC_CLK_EN | LEDC_APB_CLK_SEL_MASK));
+        if (clockChanged) {
           for (const timer of this.ledcTimers) this.ledcTimerResync(timer);
         }
         this.ledcConf = v;
-        if ((prev & LEDC_CLK_EN) !== (v & LEDC_CLK_EN)) {
+        if (clockChanged) {
           for (const ch of this.ledcChannels) this.ledcChannelOvfResync(ch);
         }
       }

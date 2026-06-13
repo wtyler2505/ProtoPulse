@@ -74,6 +74,7 @@ const UART = ESP32S3_UART0_BASE;
 const LEDC = 0x60019000;
 const GPIO_FUNC5_OUT_SEL_CFG = GPIO + 0x568;
 const LEDC_CLK_EN = 0x80000000;
+const LEDC_APB_CLK_SEL_XTAL = 3;
 const LEDC_TIMER0_2BIT_DIV1 = (256 << 4) | 2;
 const LEDC_TIMER0_8BIT_DIV1 = (256 << 4) | 8;
 const LEDC_DUTY_START = 0x80000000;
@@ -206,6 +207,64 @@ describe('Esp32s3Core', () => {
       halfPeriods.add((tail[i]?.cycle ?? 0) - (tail[i - 1]?.cycle ?? 0));
     }
     expect([...halfPeriods]).toEqual([6]);
+  });
+
+  it('uses LEDC shared clock source selection for timer speed and readback', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        LEDC,
+        GPIO,
+        GPIO_FUNC5_OUT_SEL_CFG,
+        ESP32S3_UART0_BASE,
+        LEDC_CLK_EN | LEDC_APB_CLK_SEL_XTAL,
+        LEDC_TIMER0_2BIT_DIV1,
+        2 << 4,
+        LEDC_DUTY_START,
+        1 << 5,
+        LEDC_LS_SIG_OUT0,
+      ],
+      [
+        L32R(2, 0), // LEDC
+        L32R(3, 4),
+        S32I(3, 2, 0xd0), // CONF.CLK_EN + apb_clk_sel = XTAL
+        L32I(4, 2, 0xd0),
+        MOVI(5, 3),
+        AND(4, 4, 5),
+        L32R(5, 3),
+        S32I(4, 5, 0), // UART: prove apb_clk_sel readback
+
+        L32R(3, 5),
+        S32I(3, 2, 0xa0), // TIMER0: 2-bit resolution, divider=1.0
+        L32R(3, 6),
+        S32I(3, 2, 0x08), // CH0 duty = 2 / 4
+        L32R(3, 7),
+        S32I(3, 2, 0x0c), // ledc_update_duty: DUTY_START
+        MOVI(3, LEDC_SIG_OUT_EN),
+        S32I(3, 2, 0x00), // CH0 SIG_OUT_EN, timer 0
+
+        L32R(4, 1), // GPIO
+        L32R(5, 8),
+        S32I(5, 4, 0x24), // enable IO5
+        L32R(6, 2),
+        L32R(7, 9),
+        S32I(7, 6, 0x00), // GPIO matrix: IO5 <- LEDC_LS_SIG_OUT0
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    const { events } = c.step(520);
+    const io5 = events.filter((e) => e.pin === 'IO5');
+
+    expect([...c.drainUart()]).toEqual([LEDC_APB_CLK_SEL_XTAL]);
+    expect(io5.length).toBeGreaterThan(20);
+    const tail = io5.slice(-12);
+    const halfPeriods = new Set<number>();
+    for (let i = 1; i < tail.length; i++) {
+      expect(tail[i]?.level).toBe(tail[i - 1]?.level === 1 ? 0 : 1);
+      halfPeriods.add((tail[i]?.cycle ?? 0) - (tail[i - 1]?.cycle ?? 0));
+    }
+    expect([...halfPeriods]).toEqual([12]);
   });
 
   it('reports LEDC duty readback with ESP-IDF integer-duty semantics', () => {

@@ -560,6 +560,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       INT_CLR in the ISR, and reports three interrupts over UART. Cuts:
       no fade engine, clock-source switching, sleep behavior, or
       high-level driver API shim yet
+- [x] ESP32-S3 core slice 29 — LEDC shared clock-source selection
+      (landed 2026-06-13): the shared low-speed LEDC clock selector in
+      `LEDC_CONF.apb_clk_sel` now preserves APB/RC_FAST/XTAL writes,
+      reads back like ESP-IDF's `ledc_ll_get_slow_clk_sel`, and drives
+      the timer counter rate for all low-speed timers. Clock-source
+      changes resync timer and channel overflow epochs so elapsed time
+      from the old source is not replayed under the new source. Proven
+      by hand-assembled firmware that selects XTAL, reads back selector
+      value 3 over UART, and observes the same 2-bit PWM configuration
+      double its half-period from APB's 6 cycles to XTAL's 12 cycles.
+      Cuts: no fade engine, sleep behavior, or high-level driver API
+      shim yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
