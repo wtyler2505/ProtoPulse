@@ -935,6 +935,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       and reports dispatch, approach count, and cleared INT_ST over
       UART. Cuts: no capacitive accumulation math, sleep-pad proximity
       count behavior, debounce/smooth data, or proximity count rollover
+- [x] ESP32-S3 core slice 59 — ULP timer-period sleep wake source
+      (landed 2026-06-13): RTC_CNTL_ULP_CP_TIMER.ULP_CP_SLP_TIMER_EN
+      now arms a virtual RTC-slow-clock ULP timer, and
+      ULP_CP_TIMER_1.SLP_CYCLE controls its period like ESP-IDF
+      `ulp_set_wakeup_period()` / `ulp_run()`. Each expiry produces the
+      existing synthetic ULP WAKE, latching RTC_CNTL_ULP_CP_INT and
+      recording RTC_ULP_TRIG_EN as the sleep wake source when armed.
+      Proven by hand-assembled firmware that maps RTC_CORE, arms ULP
+      wake, sets a one-slow-clock period, enters RTC sleep, waits for
+      the timer, clears ULP/SLP_WAKEUP raw in the ISR, stops the timer,
+      and reports ULP_TRIG_EN plus cleared INT_ST over UART. Cuts: no
+      real ULP instruction execution, ULP memory model, GPIO wake, or
+      COCPU_DONE state machine
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

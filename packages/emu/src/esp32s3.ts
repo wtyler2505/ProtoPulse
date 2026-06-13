@@ -208,12 +208,14 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * their RTC-domain interrupt producers. Touch one-shot scans also wake
  * RTC sleep when RTC_TOUCH_TRIG_EN is armed. ULP force-start/start-top
  * synthetic WAKEs latch RTC_CNTL_ULP_CP_INT and wake sleep when
- * RTC_ULP_TRIG_EN is armed. COCPU_SW_INT_TRIGGER wakes RTC sleep when
- * RTC_COCPU_TRIG_EN is armed. SENS_SAR_COCPU_STATE.DBG_TRIGGER models
- * a synthetic COCPU trap producer, latching RTC_CNTL_COCPU_TRAP_INT and
- * waking RTC sleep when RTC_COCPU_TRAP_TRIG_EN is armed. Touch scans
- * with a nonzero timeout budget below the synthetic measurement cost
- * latch RTC_CNTL_TOUCH_TIMEOUT_INT. Touch proximity pads accumulate
+ * RTC_ULP_TRIG_EN is armed; the ULP sleep timer also schedules that
+ * synthetic WAKE from ULP_CP_TIMER_1.SLP_CYCLE while enabled.
+ * COCPU_SW_INT_TRIGGER wakes RTC sleep when RTC_COCPU_TRIG_EN is armed.
+ * SENS_SAR_COCPU_STATE.DBG_TRIGGER models a synthetic COCPU trap
+ * producer, latching RTC_CNTL_COCPU_TRAP_INT and waking RTC sleep when
+ * RTC_COCPU_TRAP_TRIG_EN is armed. Touch scans with a nonzero timeout
+ * budget below the synthetic measurement cost latch
+ * RTC_CNTL_TOUCH_TIMEOUT_INT. Touch proximity pads accumulate
  * deterministic approach counts and latch TOUCH_APPROACH_LOOP_DONE when
  * they reach the configured total scan count.
  * Cuts: no driver ringbuffer API yet.
@@ -568,6 +570,9 @@ const RTC_SWD_CONF_RESET = 300 << 18;
 const RTC_ULP_CP_TIMER_RESET = 0;
 const RTC_ULP_CP_CTRL_RESET = ((512 << 11) | 512) >>> 0;
 const RTC_ULP_CP_TIMER_1_RESET = 200 << 8;
+const RTC_ULP_CP_SLP_TIMER_EN = 1 << 31;
+const RTC_ULP_CP_TIMER_SLP_CYCLE_SHIFT = 8;
+const RTC_ULP_CP_TIMER_SLP_CYCLE_MASK = 0x00ff_ffff;
 const RTC_ULP_CP_START_TOP = 1 << 31;
 const RTC_ULP_CP_FORCE_START_TOP = 1 << 30;
 const RTC_ULP_CP_RESET = 1 << 29;
@@ -1442,6 +1447,7 @@ export class Esp32s3Core implements McuCore {
   private rtcUlpCpTimer = RTC_ULP_CP_TIMER_RESET;
   private rtcUlpCpCtrl = RTC_ULP_CP_CTRL_RESET;
   private rtcUlpCpTimer1 = RTC_ULP_CP_TIMER_1_RESET;
+  private rtcUlpTimerStartTick: number | null = null;
   private cocpuTrap = false;
   private rtcCoreIntMaps = freshInterruptMapPair();
   private rtcTimeLatchLo = 0; // captured by a TIME_UPDATE write
@@ -2267,6 +2273,7 @@ export class Esp32s3Core implements McuCore {
     this.rtcUlpCpTimer = RTC_ULP_CP_TIMER_RESET;
     this.rtcUlpCpCtrl = RTC_ULP_CP_CTRL_RESET;
     this.rtcUlpCpTimer1 = RTC_ULP_CP_TIMER_1_RESET;
+    this.rtcUlpTimerStartTick = null;
     this.cocpuTrap = false;
     this.rtcCoreIntMaps = freshInterruptMapPair();
     this.rtcTimeLatchLo = 0;
@@ -2524,6 +2531,32 @@ export class Esp32s3Core implements McuCore {
     this.recomputeIrq();
   }
 
+  private ulpTimerPeriodTicks(): number {
+    const field = (this.rtcUlpCpTimer1 >>> RTC_ULP_CP_TIMER_SLP_CYCLE_SHIFT) & RTC_ULP_CP_TIMER_SLP_CYCLE_MASK;
+    return Math.max(1, field);
+  }
+
+  private armUlpTimer(): void {
+    this.rtcUlpTimerStartTick = this.rtcTicks();
+    this.checkRtcUlpTimer();
+  }
+
+  private checkRtcUlpTimer(): void {
+    if ((this.rtcUlpCpTimer & RTC_ULP_CP_SLP_TIMER_EN) === 0) {
+      this.rtcUlpTimerStartTick = null;
+      return;
+    }
+    if (this.rtcUlpTimerStartTick === null) {
+      this.rtcUlpTimerStartTick = this.rtcTicks();
+      return;
+    }
+    const now = this.rtcTicks();
+    const period = this.ulpTimerPeriodTicks();
+    if (now - this.rtcUlpTimerStartTick < period) return;
+    this.rtcUlpTimerStartTick = now;
+    this.triggerUlpWake();
+  }
+
   private triggerCocpuTrap(): void {
     this.cocpuTrap = true;
     this.rtcIntRaw |= RTC_COCPU_TRAP_INT;
@@ -2562,6 +2595,7 @@ export class Esp32s3Core implements McuCore {
     }
     if ((this.rwdt.config0 & WDT_EN) !== 0) this.checkRwdt();
     this.checkRtcSleepTimer();
+    this.checkRtcUlpTimer();
     this.checkLedcTimers();
     this.checkRmt();
   }
@@ -4624,7 +4658,13 @@ export class Esp32s3Core implements McuCore {
           this.recomputeIrq();
         }
       } else if (off === RTC_ULP_CP_TIMER) {
+        const prev = this.rtcUlpCpTimer;
         this.rtcUlpCpTimer = value >>> 0;
+        const enabled = (this.rtcUlpCpTimer & RTC_ULP_CP_SLP_TIMER_EN) !== 0;
+        const wasEnabled = (prev & RTC_ULP_CP_SLP_TIMER_EN) !== 0;
+        if (enabled && !wasEnabled) this.armUlpTimer();
+        else if (!enabled) this.rtcUlpTimerStartTick = null;
+        else this.recomputeIrq();
       } else if (off === RTC_ULP_CP_CTRL) {
         const prev = this.rtcUlpCpCtrl;
         this.rtcUlpCpCtrl = (value & ~RTC_ULP_CP_MEM_OFFST_CLR) >>> 0;
@@ -4705,6 +4745,7 @@ export class Esp32s3Core implements McuCore {
         this.recomputeIrq();
       } else if (off === RTC_ULP_CP_TIMER_1) {
         this.rtcUlpCpTimer1 = value >>> 0;
+        if ((this.rtcUlpCpTimer & RTC_ULP_CP_SLP_TIMER_EN) !== 0) this.armUlpTimer();
       }
       // Other RTC_CNTL writes (sleep setup, bias, …) accepted+dropped.
       return;
