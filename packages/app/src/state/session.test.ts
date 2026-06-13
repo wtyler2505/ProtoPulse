@@ -1,5 +1,5 @@
 import { SCHEMATIC_GRID  } from '@protopulse/graph';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createSessionStore, getDiffDelta, getGraph, getOpCount } from './session.js';
 
@@ -25,13 +25,19 @@ describe('session dispatch / undo / redo', () => {
   });
 
   it('rejects ops that fail to apply and leaves the log clean', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const store = createSessionStore();
-    const ok = store.getState().dispatch([
-      { kind: 'move_symbol', componentId: 'ghost', at: { x: 0, y: 0 }, rot: 0, mirror: false },
-    ]);
-    expect(ok).toBe(false);
-    expect(getOpCount(store.getState())).toBe(0);
-    expect(store.getState().canUndo).toBe(false);
+    try {
+      const ok = store.getState().dispatch([
+        { kind: 'move_symbol', componentId: 'ghost', at: { x: 0, y: 0 }, rot: 0, mirror: false },
+      ]);
+      expect(ok).toBe(false);
+      expect(warn).toHaveBeenCalledWith('dispatch rejected: component ghost not found');
+      expect(getOpCount(store.getState())).toBe(0);
+      expect(store.getState().canUndo).toBe(false);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('undo/redo round-trips a batch as one unit', () => {
@@ -84,7 +90,10 @@ describe('session dispatch / undo / redo', () => {
     const core = store.getState().core;
     const ops = core.log.opsFor(store.getState().branch);
     expect(ops.length).toBe(2);
-    expect(ops[1]!.lamport).toBeGreaterThan(ops[0]!.lamport);
+    const first = ops[0];
+    const second = ops[1];
+    if (first === undefined || second === undefined) throw new Error('expected undo to append a second op');
+    expect(second.lamport).toBeGreaterThan(first.lamport);
   });
 });
 
@@ -118,7 +127,7 @@ describe('branches and diff', () => {
     store.getState().setDiffAgainst('main');
     const delta = getDiffDelta(store.getState());
     expect(delta).not.toBeNull();
-    expect(delta!.components.added).toEqual(['r2']);
+    expect(delta?.components.added).toEqual(['r2']);
 
     store.getState().setDiffAgainst(null);
     expect(getDiffDelta(store.getState())).toBeNull();
@@ -180,15 +189,21 @@ describe('replay (time-travel)', () => {
   });
 
   it('the session is read-only while replaying', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const store = createSessionStore();
-    threeOps(store);
-    store.getState().setReplayIndex(1);
-    expect(store.getState().dispatch(placeResistor('r4', 'R4', 30 * G))).toBe(false);
-    expect(getOpCount(store.getState())).toBe(3);
-    store.getState().undo();
-    expect(getOpCount(store.getState())).toBe(3); // no inverse appended
-    store.getState().redo();
-    expect(getOpCount(store.getState())).toBe(3);
+    try {
+      threeOps(store);
+      store.getState().setReplayIndex(1);
+      expect(store.getState().dispatch(placeResistor('r4', 'R4', 30 * G))).toBe(false);
+      expect(warn).toHaveBeenCalledWith('dispatch ignored: the session is replaying history (read-only)');
+      expect(getOpCount(store.getState())).toBe(3);
+      store.getState().undo();
+      expect(getOpCount(store.getState())).toBe(3); // no inverse appended
+      store.getState().redo();
+      expect(getOpCount(store.getState())).toBe(3);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('entering replay drops the selection (past graphs may lack it)', () => {

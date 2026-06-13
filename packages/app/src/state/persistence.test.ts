@@ -43,8 +43,9 @@ describe('bundle round trip', () => {
     expect(decoded.head).toBe('experiment');
     expect(decoded.designId).toBe(s.designId);
     expect(decoded.branches.map((b) => b.name).sort()).toEqual(['experiment', 'main']);
-    const main = decoded.branches.find((b) => b.name === 'main')!;
-    const exp = decoded.branches.find((b) => b.name === 'experiment')!;
+    const main = decoded.branches.find((b) => b.name === 'main');
+    const exp = decoded.branches.find((b) => b.name === 'experiment');
+    if (main === undefined || exp === undefined) throw new Error('expected main and experiment branches');
     expect(main.ops.length).toBe(1);
     expect(exp.base).toEqual({ branch: 'main', opCount: 1 });
     expect(exp.ops.length).toBe(1);
@@ -66,7 +67,10 @@ describe('bundle round trip', () => {
       { kind: 'set_component_props', id: 'r1', props: { value: '10k' } },
     ]);
     const ops = store2.getState().core.log.opsFor('main');
-    expect(ops[1]!.lamport).toBeGreaterThan(ops[0]!.lamport);
+    const first = ops[0];
+    const second = ops[1];
+    if (first === undefined || second === undefined) throw new Error('expected imported and new ops');
+    expect(second.lamport).toBeGreaterThan(first.lamport);
   });
 });
 
@@ -83,7 +87,13 @@ describe('saveBundle / loadBundle', () => {
     const storage = fakeStorage();
     expect(loadBundle(storage)).toBeNull();
     storage.setItem(STORAGE_KEY, '{not json');
-    expect(loadBundle(storage)).toBeNull();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      expect(loadBundle(storage)).toBeNull();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('saved design is unreadable'), expect.any(SyntaxError));
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 
@@ -143,6 +153,6 @@ describe('loadFixture', () => {
     const fixture = loadFixture();
     expect(() => decodeBundle(encodeBundle(fixture))).not.toThrow();
     expect(fixture.head).toBe('main');
-    expect(fixture.branches[0]!.ops).toEqual([]);
+    expect(fixture.branches.at(0)?.ops).toEqual([]);
   });
 });

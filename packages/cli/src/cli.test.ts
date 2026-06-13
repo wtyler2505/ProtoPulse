@@ -23,13 +23,13 @@ afterAll(() => {
   rmSync(tmp, { recursive: true, force: true });
 });
 
-function run(args: string[]): { status: number; stdout: string } {
+function run(args: string[]): { status: number; stdout: string; stderr: string } {
   try {
-    const stdout = execFileSync('node', [bin, ...args], { encoding: 'utf8' });
-    return { status: 0, stdout };
+    const stdout = execFileSync('node', [bin, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    return { status: 0, stdout, stderr: '' };
   } catch (err) {
-    const e = err as { status?: number; stdout?: string };
-    return { status: e.status ?? -1, stdout: e.stdout ?? '' };
+    const e = err as { status?: number; stdout?: string | Buffer; stderr?: string | Buffer };
+    return { status: e.status ?? -1, stdout: String(e.stdout ?? ''), stderr: String(e.stderr ?? '') };
   }
 }
 
