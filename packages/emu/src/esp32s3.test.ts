@@ -71,6 +71,13 @@ import type { XtInstr } from './xtensa-asm.js';
 
 const GPIO = ESP32S3_GPIO_BASE;
 const UART = ESP32S3_UART0_BASE;
+const LEDC = 0x60019000;
+const GPIO_FUNC5_OUT_SEL_CFG = GPIO + 0x568;
+const LEDC_CLK_EN = 0x80000000;
+const LEDC_TIMER0_2BIT_DIV1 = (256 << 4) | 2;
+const LEDC_DUTY_START = 0x80000000;
+const LEDC_SIG_OUT_EN = 1 << 2;
+const LEDC_LS_SIG_OUT0 = 73;
 
 function core(image: Uint8Array): Esp32s3Core {
   const c = new Esp32s3Core();
@@ -156,6 +163,67 @@ describe('Esp32s3Core', () => {
     c.setPin('IO4', 0);
     const low = c.step(200).events.filter((e) => e.pin === 'IO6');
     expect(low[0]?.level).toBe(0);
+  });
+
+  it('routes LEDC channel 0 PWM through the GPIO matrix to IO5', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [LEDC, GPIO, GPIO_FUNC5_OUT_SEL_CFG, LEDC_CLK_EN, LEDC_TIMER0_2BIT_DIV1, 2 << 4, LEDC_DUTY_START, 1 << 5, LEDC_LS_SIG_OUT0],
+      [
+        L32R(2, 0), // LEDC
+        L32R(3, 3),
+        S32I(3, 2, 0xd0), // CONF.CLK_EN
+        L32R(3, 4),
+        S32I(3, 2, 0xa0), // TIMER0: 2-bit resolution, divider=1.0
+        L32R(3, 5),
+        S32I(3, 2, 0x08), // CH0 duty = 2 / 4, driver style (duty << 4)
+        L32R(3, 6),
+        S32I(3, 2, 0x0c), // ledc_update_duty: DUTY_START
+        MOVI(3, LEDC_SIG_OUT_EN),
+        S32I(3, 2, 0x00), // CH0 SIG_OUT_EN, timer 0
+
+        L32R(4, 1), // GPIO
+        L32R(5, 7),
+        S32I(5, 4, 0x24), // enable IO5
+        L32R(6, 2),
+        L32R(7, 8),
+        S32I(7, 6, 0x00), // GPIO matrix: IO5 <- LEDC_LS_SIG_OUT0
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    const { events } = c.step(260);
+    const io5 = events.filter((e) => e.pin === 'IO5');
+
+    expect(io5.length).toBeGreaterThan(20);
+    const tail = io5.slice(-12);
+    for (let i = 1; i < tail.length; i++) {
+      expect(tail[i]?.level).toBe(tail[i - 1]?.level === 1 ? 0 : 1);
+    }
+    const halfPeriods = new Set<number>();
+    for (let i = 1; i < tail.length; i++) {
+      halfPeriods.add((tail[i]?.cycle ?? 0) - (tail[i - 1]?.cycle ?? 0));
+    }
+    expect([...halfPeriods]).toEqual([6]);
+  });
+
+  it('reports LEDC duty readback with ESP-IDF integer-duty semantics', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [LEDC, UART, 3 << 4, LEDC_DUTY_START], [
+      L32R(2, 0), // LEDC
+      L32R(3, 2),
+      S32I(3, 2, 0x08), // ledc_hal_set_duty_int_part(..., 3) writes 3 << 4
+      L32R(3, 3),
+      S32I(3, 2, 0x0c), // ledc_update_duty applies it to DUTY_R
+      L32I(4, 2, 0x10),
+      SRLI(4, 4, 4),
+      L32R(5, 1),
+      S32I(4, 5, 0),
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    c.step(80);
+
+    expect([...c.drainUart()]).toEqual([3]);
   });
 
   it('high-bank pins (IO33 via OUT1/ENABLE1) emit events too', () => {

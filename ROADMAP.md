@@ -511,6 +511,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       for both policies. Cuts: host-side policy knob only — full
       esp_adc driver ringbuffer/callback behavior still belongs with
       unmodified IDF/FreeRTOS bring-up
+- [x] ESP32-S3 core slice 25 — LEDC low-speed PWM first cut
+      (landed 2026-06-13): LEDC's low-speed register block at
+      0x60019000 now models the one-group ESP32-S3 shape: 8
+      channels, 4 timers, driver-style duty writes (`duty << 4`),
+      duty-start readback, timer divider/resolution counters, and GPIO
+      matrix output routing via LEDC_LS_SIG_OUT0..7. Proven by
+      hand-assembled firmware that routes channel 0 through
+      GPIO_FUNC5_OUT_SEL_CFG and observes cycle-stamped 50% PWM edges
+      on IO5, plus a readback test for ESP-IDF integer-duty semantics.
+      Cuts: no fade engine, LEDC interrupts, clock-source switching,
+      sleep behavior, or high-level driver API shim yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

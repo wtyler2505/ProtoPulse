@@ -208,6 +208,11 @@ const GPIO_STATUS1 = 0x50; // GPIO32-48
 const GPIO_STATUS1_W1TS = 0x54;
 const GPIO_STATUS1_W1TC = 0x58;
 const GPIO_PIN0 = 0x74; // GPIO_PINn at +4·n: INT_TYPE [9:7], INT_ENA [17:13]
+const GPIO_FUNC0_OUT_SEL_CFG = 0x554; // GPIO_FUNCn_OUT_SEL_CFG at +4·n
+const GPIO_FUNC_OUT_SEL_RESET = 0x100;
+const GPIO_FUNC_OUT_SEL_MASK = 0x1ff;
+const GPIO_FUNC_OUT_INV_SEL = 1 << 9;
+const GPIO_FUNC_OUT_CFG_MASK = 0xfff;
 
 // GPIO_PINn INT_TYPE values (hal/gpio_types.h, written verbatim by
 // gpio_ll_set_intr_type): 0 off, 1 posedge, 2 negedge, 3 anyedge,
@@ -242,6 +247,46 @@ const INTMTX_TG_MAPS = 0x0c8;
 const INTMTX_APB_ADC_MAP = 0x104; // INTERRUPT_CORE0_APB_ADC_INT_MAP_REG
 const INTMTX_GDMA_IN_MAPS = 0x108; // DMA_IN_CH0..4 at +0x108..+0x118
 const INTMTX_DEFAULT_MAP = 16;
+
+// LEDC low-speed PWM (ledc_reg.h / ledc_ll.h). ESP32-S3 has one
+// low-speed group: 8 channels, 4 timers. The driver writes the integer
+// duty part as duty << 4 and starts output by setting SIG_OUT_EN then
+// DUTY_START.
+const LEDC_BASE = 0x60019000;
+const LEDC_CHANNELS = 8;
+const LEDC_TIMERS = 4;
+const LEDC_CH_STRIDE = 0x14;
+const LEDC_CH_CONF0 = 0x00;
+const LEDC_CH_HPOINT = 0x04;
+const LEDC_CH_DUTY = 0x08;
+const LEDC_CH_CONF1 = 0x0c;
+const LEDC_CH_DUTY_R = 0x10;
+const LEDC_CH_SIG_OUT_EN = 1 << 2;
+const LEDC_CH_IDLE_LV = 1 << 3;
+const LEDC_CH_PARA_UP = 1 << 4;
+const LEDC_CH_DUTY_START = 1 << 31;
+const LEDC_LSTIMER_CONF = 0x0a0;
+const LEDC_LSTIMER_VALUE = 0x0a4;
+const LEDC_LSTIMER_STRIDE = 0x08;
+const LEDC_TIMER_DUTY_RES_MASK = 0x0f;
+const LEDC_TIMER_CLK_DIV_SHIFT = 4;
+const LEDC_TIMER_CLK_DIV_MASK = 0x3ffff;
+const LEDC_TIMER_PAUSE = 1 << 22;
+const LEDC_TIMER_RST = 1 << 23;
+const LEDC_TIMER_PARA_UP = 1 << 25;
+const LEDC_INT_RAW = 0x0c0;
+const LEDC_INT_ST = 0x0c4;
+const LEDC_INT_ENA = 0x0c8;
+const LEDC_INT_CLR = 0x0cc;
+const LEDC_CONF = 0x0d0;
+const LEDC_DATE = 0x0fc;
+const LEDC_CLK_EN = 1 << 31;
+const LEDC_DUTY_MASK = 0x7ffff;
+const LEDC_HPOINT_MASK = 0x3fff;
+const LEDC_SIGNAL_BASE = 73; // GPIO matrix LEDC_LS_SIG_OUT0_IDX
+const LEDC_DIV_FRAC_BITS = 8;
+const LEDC_DIV_ONE = 1 << LEDC_DIV_FRAC_BITS;
+const LEDC_DATE_RESET = 0x19040200;
 
 // Timer groups 0 and 1 (timer_group_reg.h; flow per hal timer_ll.h
 // and the gptimer driver): each group has two 54-bit general-purpose
@@ -673,6 +718,20 @@ interface TimgGroup {
   maps: number[];
 }
 
+interface LedcTimer {
+  conf: number;
+  base: number;
+  sync: number;
+}
+
+interface LedcChannel {
+  conf0: number;
+  hpoint: number;
+  duty: number;
+  conf1: number;
+  dutyRead: number;
+}
+
 interface GdmaRxChannel {
   conf0: number;
   conf1: number;
@@ -720,6 +779,20 @@ const freshTimgGroup = (): TimgGroup => ({
   intEna: 0,
   intRaw: 0,
   maps: [INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP],
+});
+
+const freshLedcTimer = (): LedcTimer => ({
+  conf: LEDC_TIMER_RST,
+  base: 0,
+  sync: 0,
+});
+
+const freshLedcChannel = (): LedcChannel => ({
+  conf0: 0,
+  hpoint: 0,
+  duty: 0,
+  conf1: 1 << 30,
+  dutyRead: 0,
 });
 
 const freshGdmaRx = (): GdmaRxChannel => ({
@@ -790,6 +863,15 @@ export class Esp32s3Core implements McuCore {
   private inLevels = [0, 0];
   private gpioStatus = [0, 0]; // latched interrupt status per bank
   private pinCfg = new Int32Array(PIN_COUNT); // GPIO_PINn registers
+  private gpioFuncOut = new Int32Array(PIN_COUNT).fill(GPIO_FUNC_OUT_SEL_RESET);
+
+  // LEDC low-speed group state. Counters are virtual, like TIMG:
+  // `base` is the timer counter at core-0 cycle `sync`.
+  private ledcTimers: LedcTimer[] = Array.from({ length: LEDC_TIMERS }, freshLedcTimer);
+  private ledcChannels: LedcChannel[] = Array.from({ length: LEDC_CHANNELS }, freshLedcChannel);
+  private ledcConf = 0;
+  private ledcIntRaw = 0;
+  private ledcIntEna = 0;
 
   // UART0 interrupt state + the interrupt matrix maps.
   private uartIntEna = 0;
@@ -1007,6 +1089,7 @@ export class Esp32s3Core implements McuCore {
         }
       }
       this.checkTimersAndWdts();
+      this.syncPins();
       const timedReset = this.consumePendingReset(start);
       if (timedReset !== null) {
         // A watchdog stage bit (slice 13) — same shape as the
@@ -1407,6 +1490,12 @@ export class Esp32s3Core implements McuCore {
     this.inLevels = [0, 0];
     this.gpioStatus = [0, 0];
     this.pinCfg.fill(0);
+    this.gpioFuncOut.fill(GPIO_FUNC_OUT_SEL_RESET);
+    this.ledcTimers = Array.from({ length: LEDC_TIMERS }, freshLedcTimer);
+    this.ledcChannels = Array.from({ length: LEDC_CHANNELS }, freshLedcChannel);
+    this.ledcConf = 0;
+    this.ledcIntRaw = 0;
+    this.ledcIntEna = 0;
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
@@ -1622,6 +1711,46 @@ export class Esp32s3Core implements McuCore {
     return raw;
   }
 
+  private ledcTimerDivider(t: LedcTimer): number {
+    return ((t.conf >>> LEDC_TIMER_CLK_DIV_SHIFT) & LEDC_TIMER_CLK_DIV_MASK) || LEDC_DIV_ONE;
+  }
+
+  private ledcTimerResolution(t: LedcTimer): number {
+    return t.conf & LEDC_TIMER_DUTY_RES_MASK;
+  }
+
+  private ledcTimerPeriod(t: LedcTimer): number {
+    return Math.max(1, 1 << this.ledcTimerResolution(t));
+  }
+
+  private ledcTimerCounter(t: LedcTimer): number {
+    if ((this.ledcConf & LEDC_CLK_EN) === 0 || (t.conf & (LEDC_TIMER_RST | LEDC_TIMER_PAUSE)) !== 0) return 0;
+    const divider = this.ledcTimerDivider(t);
+    const ticks = Math.floor(((this.cpu.cycles - t.sync) * LEDC_DIV_ONE) / (CYCLES_PER_APB * divider));
+    return (t.base + ticks) % this.ledcTimerPeriod(t);
+  }
+
+  private ledcTimerResync(t: LedcTimer): void {
+    t.base = this.ledcTimerCounter(t);
+    t.sync = this.cpu.cycles;
+  }
+
+  private ledcSignalLevel(signal: number): DigitalLevel | null {
+    const chIndex = signal - LEDC_SIGNAL_BASE;
+    const ch = this.ledcChannels[chIndex];
+    if (ch === undefined) return null;
+    if ((ch.conf0 & LEDC_CH_SIG_OUT_EN) === 0) return (ch.conf0 & LEDC_CH_IDLE_LV) !== 0 ? 1 : 0;
+    const timer = this.ledcTimers[ch.conf0 & 0x3];
+    if (timer === undefined) return 0;
+    const period = this.ledcTimerPeriod(timer);
+    const duty = Math.min(period, ch.dutyRead >>> 4);
+    if (duty <= 0) return 0;
+    if (duty >= period) return 1;
+    const counter = this.ledcTimerCounter(timer);
+    const phase = (counter - (ch.hpoint % period) + period) % period;
+    return phase < duty ? 1 : 0;
+  }
+
   /** Re-derive the interrupt matrix's output and drive the CPU's
    *  level-triggered external lines. Called whenever any modeled
    *  interrupt source's inputs change. */
@@ -1675,7 +1804,10 @@ export class Esp32s3Core implements McuCore {
         this.driven[gpio] = undefined;
         continue;
       }
-      const level: DigitalLevel = ((this.out[bank] ?? 0) & bit) !== 0 ? 1 : 0;
+      const cfg = this.gpioFuncOut[gpio] ?? GPIO_FUNC_OUT_SEL_RESET;
+      const routed = this.ledcSignalLevel(cfg & GPIO_FUNC_OUT_SEL_MASK);
+      let level: DigitalLevel = routed ?? (((this.out[bank] ?? 0) & bit) !== 0 ? 1 : 0);
+      if (routed !== null && (cfg & GPIO_FUNC_OUT_INV_SEL) !== 0) level = level === 1 ? 0 : 1;
       const prev = this.driven[gpio];
       if (prev !== undefined && prev !== level) {
         this.events.push({ pin: esp32s3PinId(gpio), level, cycle: this.now() });
@@ -1910,6 +2042,9 @@ export class Esp32s3Core implements McuCore {
       if (off >= GPIO_PIN0 && off < GPIO_PIN0 + 4 * PIN_COUNT && (off & 3) === 0) {
         return (this.pinCfg[(off - GPIO_PIN0) >> 2] ?? 0) >>> 0;
       }
+      if (off >= GPIO_FUNC0_OUT_SEL_CFG && off < GPIO_FUNC0_OUT_SEL_CFG + 4 * PIN_COUNT && (off & 3) === 0) {
+        return (this.gpioFuncOut[(off - GPIO_FUNC0_OUT_SEL_CFG) >> 2] ?? GPIO_FUNC_OUT_SEL_RESET) >>> 0;
+      }
       return 0;
     }
     if (addr >= UART0_BASE && addr < UART0_BASE + 0x1000) {
@@ -1942,6 +2077,35 @@ export class Esp32s3Core implements McuCore {
         return this.gdmaRx[(off - INTMTX_GDMA_IN_MAPS) >> 2]?.map ?? INTMTX_DEFAULT_MAP;
       }
       return INTMTX_DEFAULT_MAP; // unmodeled sources sit at their reset map
+    }
+    if (addr >= LEDC_BASE && addr < LEDC_BASE + 0x1000) {
+      const off = addr - LEDC_BASE;
+      if (off < LEDC_CH_STRIDE * LEDC_CHANNELS) {
+        const ch = this.ledcChannels[Math.floor(off / LEDC_CH_STRIDE)];
+        const toff = off % LEDC_CH_STRIDE;
+        if (ch === undefined) return 0;
+        if (toff === LEDC_CH_CONF0) return ch.conf0 >>> 0;
+        if (toff === LEDC_CH_HPOINT) return ch.hpoint >>> 0;
+        if (toff === LEDC_CH_DUTY) return ch.duty >>> 0;
+        if (toff === LEDC_CH_CONF1) return ch.conf1 >>> 0;
+        if (toff === LEDC_CH_DUTY_R) return ch.dutyRead >>> 0;
+        return 0;
+      }
+      if (off >= LEDC_LSTIMER_CONF && off < LEDC_LSTIMER_CONF + LEDC_TIMERS * LEDC_LSTIMER_STRIDE) {
+        const timer = this.ledcTimers[Math.floor((off - LEDC_LSTIMER_CONF) / LEDC_LSTIMER_STRIDE)];
+        const toff = (off - LEDC_LSTIMER_CONF) % LEDC_LSTIMER_STRIDE;
+        if (timer === undefined) return 0;
+        if (toff === 0) return timer.conf >>> 0;
+        if (toff === LEDC_LSTIMER_VALUE - LEDC_LSTIMER_CONF) return this.ledcTimerCounter(timer) >>> 0;
+        return 0;
+      }
+      if (off === LEDC_INT_RAW) return this.ledcIntRaw >>> 0;
+      if (off === LEDC_INT_ST) return (this.ledcIntRaw & this.ledcIntEna) >>> 0;
+      if (off === LEDC_INT_ENA) return this.ledcIntEna >>> 0;
+      if (off === LEDC_INT_CLR) return 0;
+      if (off === LEDC_CONF) return this.ledcConf >>> 0;
+      if (off === LEDC_DATE) return LEDC_DATE_RESET;
+      return 0;
     }
     if (addr >= TIMG0_BASE && addr < TIMG1_BASE + 0x1000) {
       // TIMG0 and TIMG1 are contiguous 4 KiB blocks (slice 13).
@@ -2146,6 +2310,8 @@ export class Esp32s3Core implements McuCore {
       else if (off === GPIO_STATUS1_W1TC) this.gpioStatus[1] = ((this.gpioStatus[1] ?? 0) & ~v) >>> 0;
       else if (off >= GPIO_PIN0 && off < GPIO_PIN0 + 4 * PIN_COUNT && (off & 3) === 0) {
         this.pinCfg[(off - GPIO_PIN0) >> 2] = v | 0;
+      } else if (off >= GPIO_FUNC0_OUT_SEL_CFG && off < GPIO_FUNC0_OUT_SEL_CFG + 4 * PIN_COUNT && (off & 3) === 0) {
+        this.gpioFuncOut[(off - GPIO_FUNC0_OUT_SEL_CFG) >> 2] = (v & GPIO_FUNC_OUT_CFG_MASK) | 0;
       }
       this.syncPins();
       this.recomputeIrq();
@@ -2185,6 +2351,49 @@ export class Esp32s3Core implements McuCore {
       // Map writes for unmodeled sources are accepted and dropped —
       // those sources never assert, so the mapping is moot.
       this.recomputeIrq();
+      return;
+    }
+    if (addr >= LEDC_BASE && addr < LEDC_BASE + 0x1000) {
+      const off = addr - LEDC_BASE;
+      const v = value >>> 0;
+      if (off < LEDC_CH_STRIDE * LEDC_CHANNELS) {
+        const chIndex = Math.floor(off / LEDC_CH_STRIDE);
+        const ch = this.ledcChannels[chIndex];
+        const toff = off % LEDC_CH_STRIDE;
+        if (ch === undefined) return;
+        if (toff === LEDC_CH_CONF0) ch.conf0 = (v & ~LEDC_CH_PARA_UP) >>> 0;
+        else if (toff === LEDC_CH_HPOINT) ch.hpoint = v & LEDC_HPOINT_MASK;
+        else if (toff === LEDC_CH_DUTY) ch.duty = v & LEDC_DUTY_MASK;
+        else if (toff === LEDC_CH_CONF1) {
+          ch.conf1 = v;
+          if ((v & LEDC_CH_DUTY_START) !== 0) {
+            ch.dutyRead = ch.duty;
+            this.ledcIntRaw |= 1 << (4 + chIndex);
+          }
+        }
+        this.syncPins();
+        return;
+      }
+      if (off >= LEDC_LSTIMER_CONF && off < LEDC_LSTIMER_CONF + LEDC_TIMERS * LEDC_LSTIMER_STRIDE) {
+        const timer = this.ledcTimers[Math.floor((off - LEDC_LSTIMER_CONF) / LEDC_LSTIMER_STRIDE)];
+        const toff = (off - LEDC_LSTIMER_CONF) % LEDC_LSTIMER_STRIDE;
+        if (timer === undefined) return;
+        if (toff === 0) {
+          this.ledcTimerResync(timer);
+          if ((v & LEDC_TIMER_RST) !== 0) {
+            timer.base = 0;
+            timer.sync = this.cpu.cycles;
+          }
+          timer.conf = (v & ~LEDC_TIMER_PARA_UP) >>> 0;
+        }
+        this.syncPins();
+        return;
+      }
+      if (off === LEDC_INT_ENA) this.ledcIntEna = v;
+      else if (off === LEDC_INT_CLR) this.ledcIntRaw &= ~v;
+      else if (off === LEDC_CONF) this.ledcConf = v;
+      else if (off === LEDC_DATE) return;
+      this.syncPins();
       return;
     }
     if (addr >= TIMG0_BASE && addr < TIMG1_BASE + 0x1000) {
