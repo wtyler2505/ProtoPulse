@@ -208,15 +208,16 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * their RTC-domain interrupt producers. Touch one-shot scans also wake
  * RTC sleep when RTC_TOUCH_TRIG_EN is armed. ULP force-start/start-top
  * synthetic WAKEs latch RTC_CNTL_ULP_CP_INT and wake sleep when
- * RTC_ULP_TRIG_EN is armed.
+ * RTC_ULP_TRIG_EN is armed. COCPU_SW_INT_TRIGGER wakes RTC sleep when
+ * RTC_COCPU_TRIG_EN is armed.
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
  * instruction execution, and the remaining RTC interrupt producers
  * beyond RWDT/COCPU/brownout/XTAL32K-dead/SUPER_WDT/SARADC/TSENS/
- * touch done-scan-active/wake/ULP wake paths — so full IDF/FreeRTOS
- * firmware does NOT run yet.
+ * touch done-scan-active/wake/ULP wake/COCPU wake paths — so full
+ * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -703,6 +704,7 @@ const RTC_INT_ENA_W1TS = 0x138;
 const RTC_INT_ENA_W1TC = 0x13c;
 const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
 const RTC_ULP_TRIG_EN = 1 << 9;
+const RTC_COCPU_TRIG_EN = 1 << 11;
 const RTC_XTAL32K_DEAD_TRIG_EN = 1 << 12;
 const RTC_XTAL32K_WDT_EN = 1 << 0;
 const RTC_XTAL32K_WDT_RESET = 1 << 2;
@@ -4570,6 +4572,7 @@ export class Esp32s3Core implements McuCore {
         this.rtcCocpuCtrl = (value & ~RTC_COCPU_SW_INT_TRIGGER) >>> 0;
         if ((value & RTC_COCPU_SW_INT_TRIGGER) !== 0) {
           this.rtcIntRaw |= RTC_COCPU_INT;
+          this.latchRtcWakeupSource(RTC_COCPU_TRIG_EN);
           this.recomputeIrq();
         }
       } else if (off === RTC_BROWN_OUT) {

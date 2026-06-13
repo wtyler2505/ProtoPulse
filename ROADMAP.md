@@ -887,6 +887,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       raw, and reports ULP_TRIG_EN plus cleared INT_ST over UART. Cuts:
       no real ULP instruction execution, ULP memory model, GPIO wake,
       timer-period scheduling, or COCPU trap path
+- [x] ESP32-S3 core slice 55 — COCPU software interrupt sleep wake
+      source (landed 2026-06-13): the existing COCPU_SW_INT_TRIGGER
+      path now also calls the RTC wake-source latch, so when RTC sleep is
+      active and WAKEUP_STATE arms RTC_COCPU_TRIG_EN, the software
+      interrupt clears sleep, records SLP_WAKEUP_CAUSE bit 11, latches
+      SLP_WAKEUP_INT, and wakes through RTC_CORE alongside
+      RTC_CNTL_COCPU_INT. Proven by hand-assembled firmware that arms
+      COCPU wake, enters RTC sleep, writes COCPU_SW_INT_TRIGGER with
+      interrupts masked until WAITI(0), lets the RTC_CORE ISR clear
+      COCPU/SLP_WAKEUP raw, and reports COCPU_TRIG_EN plus cleared
+      INT_ST over UART. Cuts: no real COCPU execution, COCPU_DONE state
+      machine, trap/debug flow, or COCPU_TRAP_TRIG_EN path
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
