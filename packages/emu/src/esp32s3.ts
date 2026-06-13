@@ -205,14 +205,15 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * supports the documented feed/flag-clear pulses, and reports reset
  * cause 18 when firmware has not selected BYPASS_RST. RTC SARADC1/2
  * oneshot completions, TSENS raw reads, and touch one-shot scans latch
- * their RTC-domain interrupt producers.
+ * their RTC-domain interrupt producers. Touch one-shot scans also wake
+ * RTC sleep when RTC_TOUCH_TRIG_EN is armed.
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
- * gating, full touch sleep/proximity/timeout behavior, and the remaining
- * RTC interrupt producers beyond RWDT/COCPU/brownout/XTAL32K-dead/
- * SUPER_WDT/SARADC/TSENS/touch done-scan-active paths — so full
- * IDF/FreeRTOS firmware does NOT run yet.
+ * gating, full touch deep-sleep/proximity/timeout behavior, and the
+ * remaining RTC interrupt producers beyond RWDT/COCPU/brownout/
+ * XTAL32K-dead/SUPER_WDT/SARADC/TSENS/touch done-scan-active/wake paths
+ * — so full IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -859,6 +860,7 @@ const RTC_TOUCH_SLP_TIMER_EN = 1 << 13;
 const RTC_TOUCH_SLP_CHANNEL_CLR = 1 << 23;
 const RTC_TOUCH_SCAN_PAD_MAP_SHIFT = 10;
 const RTC_TOUCH_SCAN_PAD_MAP_MASK = 0x7fff << RTC_TOUCH_SCAN_PAD_MAP_SHIFT;
+const RTC_TOUCH_TRIG_EN = 1 << 8;
 const TOUCH_CHANNEL_MASK = 0x7fff;
 const TOUCH_CHANNEL_COUNT = 15;
 const SENS_SAR_TOUCH_CONF = 0x5c;
@@ -1785,6 +1787,7 @@ export class Esp32s3Core implements McuCore {
     }
 
     this.rtcIntRaw |= RTC_TOUCH_DONE_INT | RTC_TOUCH_SCAN_DONE_INT;
+    this.latchRtcWakeupSource(RTC_TOUCH_TRIG_EN);
     this.recomputeIrq();
   }
 

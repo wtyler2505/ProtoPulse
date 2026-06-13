@@ -862,6 +862,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       over UART. Cuts: no capacitive physics, debounce/filter math,
       proximity loop, timeout producer, or full touch sleep/deep-sleep
       wake policy
+- [x] ESP32-S3 core slice 53 — RTC touch one-shot wake source
+      recording (landed 2026-06-13): touch one-shot scans now call the
+      existing RTC wake-source latch, so when STATE0.SLEEP_EN is set and
+      WAKEUP_STATE arms RTC_TOUCH_TRIG_EN, the scan clears sleep,
+      records SLP_WAKEUP_CAUSE bit 8, latches SLP_WAKEUP_INT, and wakes
+      through RTC_CORE alongside the touch done/scan/active interrupt
+      bits. Proven by hand-assembled firmware that arms touch wake,
+      enters RTC sleep, triggers TOUCH_START_EN with interrupts masked
+      until WAITI(0), lets the RTC_CORE ISR clear touch/SLP_WAKEUP raw,
+      and reports TOUCH_TRIG_EN plus cleared INT_ST over UART. Cuts:
+      still no capacitive physics, full touch deep-sleep pad policy,
+      proximity loop, timeout producer, or debounce/filter math
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
