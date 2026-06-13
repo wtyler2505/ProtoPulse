@@ -874,6 +874,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       and reports TOUCH_TRIG_EN plus cleared INT_ST over UART. Cuts:
       still no capacitive physics, full touch deep-sleep pad policy,
       proximity loop, timeout producer, or debounce/filter math
+- [x] ESP32-S3 core slice 54 — synthetic ULP WAKE interrupt and sleep
+      wake source (landed 2026-06-13): RTC ULP timer/control registers
+      ULP_CP_TIMER (+0xfc), ULP_CP_CTRL (+0x100), and ULP_CP_TIMER_1
+      (+0x134) now round-trip enough for ULP setup, and ULP_CP_START_TOP
+      or ULP_CP_FORCE_START_TOP acts as a deterministic ULP WAKE
+      producer. It latches RTC_CNTL_ULP_CP_INT (bit 5), records
+      SLP_WAKEUP_CAUSE bit 9 when WAKEUP_STATE arms RTC_ULP_TRIG_EN, and
+      wakes through RTC_CORE. Proven by hand-assembled firmware that arms
+      ULP wake, enters RTC sleep, writes FORCE_START_TOP with interrupts
+      masked until WAITI(0), lets the RTC_CORE ISR clear ULP/SLP_WAKEUP
+      raw, and reports ULP_TRIG_EN plus cleared INT_ST over UART. Cuts:
+      no real ULP instruction execution, ULP memory model, GPIO wake,
+      timer-period scheduling, or COCPU trap path
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

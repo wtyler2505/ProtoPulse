@@ -3992,6 +3992,65 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('ULP force-start wakes RTC sleep with the ULP wake source recorded', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // esp_sleep_enable_ulp_wakeup() arms the ULP wake source, soc/rtc.h
+    // defines RTC_ULP_TRIG_EN as BIT(9), and rtc_cntl_reg.h exposes
+    // ULP_CP_CTRL.FORCE_START_TOP plus RTC_CNTL_ULP_CP_INT at bit 5.
+    const RTC_ULP_CP_INT = 1 << 5;
+    const RTC_SLP_WAKEUP_INT = 1;
+    const RTC_ULP_TRIG_EN = 1 << 9;
+    const rtcIntMask = RTC_ULP_CP_INT | RTC_SLP_WAKEUP_INT;
+    const wakeupUlp = RTC_ULP_TRIG_EN << 15;
+    const sleepEn = 0x80000000;
+    const ulpForceStart = 1 << 30;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, rtcIntMask, wakeupUlp, sleepEn, ulpForceStart],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        MOVI(5, 1),
+        S32I(5, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(6, 3),
+        WSR(6, SR.VECBASE),
+        MOVI(5, 2),
+        WSR(5, SR.INTENABLE),
+        L32R(5, 4),
+        S32I(5, 2, 0x4c), // clear stale ULP/SLP_WAKEUP raw bits
+        S32I(5, 2, 0x40), // enable ULP and SLP_WAKEUP raw bits
+        L32R(5, 5),
+        S32I(5, 2, 0x3c), // WAKEUP_STATE ULP wake source
+        L32R(5, 6),
+        S32I(5, 2, 0x18), // STATE0.SLEEP_EN
+        RSIL(12, 12), // hold the pending RTC_CORE interrupt until WAITI lowers INTLEVEL
+        L32R(5, 7),
+        S32I(5, 2, 0x100), // ULP_CP_CTRL.FORCE_START_TOP synthetic WAKE
+        WAITI(0),
+        L32I(5, 2, 0x130), // SLP_WAKEUP_CAUSE
+        SRLI(5, 5, 9),
+        L32R(6, 2),
+        S32I(5, 6, 0), // tx 1: ULP_TRIG_EN recorded
+        L32I(5, 2, 0x48),
+        S32I(5, 6, 0), // tx 0: RTC INT_ST clear after ISR
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 4),
+        S32I(3, 2, 0x4c), // clear ULP/SLP_WAKEUP raw bits
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('a read of an unmodeled RTC_CNTL register halts with a diagnostic naming it', () => {
     // 0x60008090 is RTC_CNTL_WDTCONFIG0_REG territory — reading 0 there
     // would silently claim "watchdog off", so the core refuses instead.

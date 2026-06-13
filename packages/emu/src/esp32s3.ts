@@ -206,14 +206,17 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * cause 18 when firmware has not selected BYPASS_RST. RTC SARADC1/2
  * oneshot completions, TSENS raw reads, and touch one-shot scans latch
  * their RTC-domain interrupt producers. Touch one-shot scans also wake
- * RTC sleep when RTC_TOUCH_TRIG_EN is armed.
+ * RTC sleep when RTC_TOUCH_TRIG_EN is armed. ULP force-start/start-top
+ * synthetic WAKEs latch RTC_CNTL_ULP_CP_INT and wake sleep when
+ * RTC_ULP_TRIG_EN is armed.
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
- * gating, full touch deep-sleep/proximity/timeout behavior, and the
- * remaining RTC interrupt producers beyond RWDT/COCPU/brownout/
- * XTAL32K-dead/SUPER_WDT/SARADC/TSENS/touch done-scan-active/wake paths
- * — so full IDF/FreeRTOS firmware does NOT run yet.
+ * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
+ * instruction execution, and the remaining RTC interrupt producers
+ * beyond RWDT/COCPU/brownout/XTAL32K-dead/SUPER_WDT/SARADC/TSENS/
+ * touch done-scan-active/wake/ULP wake paths — so full IDF/FreeRTOS
+ * firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -541,7 +544,10 @@ const RTC_WDTFEED = 0xac;
 const RTC_WDTWPROTECT = 0xb0;
 const RTC_SWD_CONF = 0xb4;
 const RTC_SWD_WPROTECT = 0xb8;
+const RTC_ULP_CP_TIMER = 0xfc;
+const RTC_ULP_CP_CTRL = 0x100;
 const RTC_COCPU_CTRL = 0x104;
+const RTC_ULP_CP_TIMER_1 = 0x134;
 const RTC_BROWN_OUT = 0xe8;
 const RTC_WDT_FEED_BIT = 1 << 31; // RTC_CNTL_RTC_WDT_FEED
 const RTC_SWD_WKEY = 0x8f1d312a;
@@ -552,6 +558,13 @@ const RTC_SWD_BYPASS_RST = 1 << 17;
 const RTC_SWD_FEED_INT = 1 << 1;
 const RTC_SWD_RESET_FLAG = 1 << 0;
 const RTC_SWD_CONF_RESET = 300 << 18;
+const RTC_ULP_CP_TIMER_RESET = 0;
+const RTC_ULP_CP_CTRL_RESET = ((512 << 11) | 512) >>> 0;
+const RTC_ULP_CP_TIMER_1_RESET = 200 << 8;
+const RTC_ULP_CP_START_TOP = 1 << 31;
+const RTC_ULP_CP_FORCE_START_TOP = 1 << 30;
+const RTC_ULP_CP_RESET = 1 << 29;
+const RTC_ULP_CP_MEM_OFFST_CLR = 1 << 22;
 const RTC_COCPU_SW_INT_TRIGGER = 1 << 26;
 const RTC_BROWN_OUT_DET = 1 << 31;
 const RTC_BROWN_OUT_ENA = 1 << 30;
@@ -662,6 +675,7 @@ const RTC_SLP_WAKEUP_INT = 1 << 0;
 const RTC_SLP_REJECT_INT = 1 << 1;
 const RTC_WDT_INT = 1 << 3;
 const RTC_TOUCH_SCAN_DONE_INT = 1 << 4;
+const RTC_ULP_CP_INT = 1 << 5;
 const RTC_TOUCH_DONE_INT = 1 << 6;
 const RTC_TOUCH_ACTIVE_INT = 1 << 7;
 const RTC_TOUCH_INACTIVE_INT = 1 << 8;
@@ -688,6 +702,7 @@ const RTC_SLP_WAKEUP_CAUSE = 0x130;
 const RTC_INT_ENA_W1TS = 0x138;
 const RTC_INT_ENA_W1TC = 0x13c;
 const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
+const RTC_ULP_TRIG_EN = 1 << 9;
 const RTC_XTAL32K_DEAD_TRIG_EN = 1 << 12;
 const RTC_XTAL32K_WDT_EN = 1 << 0;
 const RTC_XTAL32K_WDT_RESET = 1 << 2;
@@ -1400,6 +1415,9 @@ export class Esp32s3Core implements McuCore {
   private xtal32kDead = false;
   private rtcSwdConf = RTC_SWD_CONF_RESET;
   private rtcSwdWprotect = RTC_SWD_WKEY;
+  private rtcUlpCpTimer = RTC_ULP_CP_TIMER_RESET;
+  private rtcUlpCpCtrl = RTC_ULP_CP_CTRL_RESET;
+  private rtcUlpCpTimer1 = RTC_ULP_CP_TIMER_1_RESET;
   private rtcCoreIntMaps = freshInterruptMapPair();
   private rtcTimeLatchLo = 0; // captured by a TIME_UPDATE write
   private rtcTimeLatchHi = 0;
@@ -2196,6 +2214,9 @@ export class Esp32s3Core implements McuCore {
     this.rtcXtal32kConf = RTC_XTAL32K_CONF_RESET;
     this.rtcSwdConf = RTC_SWD_CONF_RESET;
     this.rtcSwdWprotect = RTC_SWD_WKEY;
+    this.rtcUlpCpTimer = RTC_ULP_CP_TIMER_RESET;
+    this.rtcUlpCpCtrl = RTC_ULP_CP_CTRL_RESET;
+    this.rtcUlpCpTimer1 = RTC_ULP_CP_TIMER_1_RESET;
     this.rtcCoreIntMaps = freshInterruptMapPair();
     this.rtcTimeLatchLo = 0;
     this.rtcTimeLatchHi = 0;
@@ -2441,6 +2462,12 @@ export class Esp32s3Core implements McuCore {
     }
     this.rtcIntRaw |= RTC_XTAL32K_DEAD_INT;
     this.latchRtcWakeupSource(RTC_XTAL32K_DEAD_TRIG_EN);
+    this.recomputeIrq();
+  }
+
+  private triggerUlpWake(): void {
+    this.rtcIntRaw |= RTC_ULP_CP_INT;
+    this.latchRtcWakeupSource(RTC_ULP_TRIG_EN);
     this.recomputeIrq();
   }
 
@@ -3867,6 +3894,8 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_WDTWPROTECT) return this.rwdt.wprotect >>> 0;
       if (off === RTC_SWD_CONF) return (this.rtcSwdConf & ~(RTC_SWD_FEED | RTC_SWD_RST_FLAG_CLR)) >>> 0;
       if (off === RTC_SWD_WPROTECT) return this.rtcSwdWprotect >>> 0;
+      if (off === RTC_ULP_CP_TIMER) return this.rtcUlpCpTimer >>> 0;
+      if (off === RTC_ULP_CP_CTRL) return (this.rtcUlpCpCtrl & ~(RTC_ULP_CP_FORCE_START_TOP | RTC_ULP_CP_MEM_OFFST_CLR)) >>> 0;
       if (off === RTC_COCPU_CTRL) return (this.rtcCocpuCtrl & ~RTC_COCPU_SW_INT_TRIGGER) >>> 0;
       if (off === RTC_BROWN_OUT) return (this.rtcBrownOut & ~RTC_BROWN_OUT_CNT_CLR) >>> 0;
       if (off === RTC_XTAL32K_CONF) return this.rtcXtal32kConf >>> 0;
@@ -3881,16 +3910,17 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_TOUCH_DAC1) return this.rtcTouchDac1 >>> 0;
       if (off === RTC_SLP_REJECT_CAUSE) return this.rtcRejectCause >>> 0;
       if (off === RTC_SLP_WAKEUP_CAUSE) return this.rtcWakeupCause >>> 0;
+      if (off === RTC_ULP_CP_TIMER_1) return this.rtcUlpCpTimer1 >>> 0;
       if (off === RTC_INT_ENA_W1TS || off === RTC_INT_ENA_W1TC) return 0;
       throw new Error(
         `read of unmodeled RTC_CNTL register 0x${addr.toString(16)} — this core models only ` +
           `OPTIONS0(+0x0), SLP_TIMER0/1(+0x4/+0x8), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), ` +
           `STATE0(+0x18), RESET_STATE(+0x38), WAKEUP_STATE(+0x3c), INT_* (+0x40..+0x4c), ` +
           `EXT_XTL_CONF(+0x60), ` +
-          `the RWDT block (+0x98..+0xb0), SWD(+0xb4/+0xb8), SW_CPU_STALL(+0xbc), COCPU_CTRL(+0x104), ` +
+          `the RWDT block (+0x98..+0xb0), SWD(+0xb4/+0xb8), SW_CPU_STALL(+0xbc), ULP_CP_TIMER/CTRL(+0xfc/+0x100), COCPU_CTRL(+0x104), ` +
           `BROWN_OUT(+0xe8), XTAL32K_CONF(+0xf8), ` +
           `TOUCH_CTRL1/2(+0x108/+0x10c), TOUCH_SCAN/SLP/APPROACH/FILTER/TIMEOUT(+0x110..+0x124), TOUCH_DAC/DAC1(+0x14c/+0x150), ` +
-          `sleep reject/wakeup causes (+0x128/+0x130); ` +
+          `sleep reject/wakeup causes (+0x128/+0x130), ULP_CP_TIMER_1(+0x134); ` +
           `a fabricated 0 here would lie`,
       );
     }
@@ -4520,6 +4550,20 @@ export class Esp32s3Core implements McuCore {
           }
           this.recomputeIrq();
         }
+      } else if (off === RTC_ULP_CP_TIMER) {
+        this.rtcUlpCpTimer = value >>> 0;
+      } else if (off === RTC_ULP_CP_CTRL) {
+        const prev = this.rtcUlpCpCtrl;
+        this.rtcUlpCpCtrl = (value & ~RTC_ULP_CP_MEM_OFFST_CLR) >>> 0;
+        if ((value & RTC_ULP_CP_RESET) !== 0) {
+          this.rtcIntRaw &= ~RTC_ULP_CP_INT;
+        }
+        const start = (value & RTC_ULP_CP_START_TOP) !== 0 && (prev & RTC_ULP_CP_START_TOP) === 0;
+        if (start || (value & RTC_ULP_CP_FORCE_START_TOP) !== 0) {
+          this.triggerUlpWake();
+        } else {
+          this.recomputeIrq();
+        }
       } else if (off === RTC_COCPU_CTRL) {
         // COCPU_SW_INT_TRIGGER is a write-only pulse; the rest of the
         // register is stored so IDF startup can round-trip inert fields.
@@ -4581,6 +4625,8 @@ export class Esp32s3Core implements McuCore {
       } else if (off === RTC_INT_ENA_W1TC) {
         this.rtcIntEna = (this.rtcIntEna & ~value) >>> 0;
         this.recomputeIrq();
+      } else if (off === RTC_ULP_CP_TIMER_1) {
+        this.rtcUlpCpTimer1 = value >>> 0;
       }
       // Other RTC_CNTL writes (sleep setup, bias, …) accepted+dropped.
       return;
