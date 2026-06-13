@@ -489,6 +489,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       timer, returns through RFE, and only then emits the post-WAITI
       UART byte. Cuts: level-1 wakeups only; no light/deep sleep
       register policy, clock gating, or RTC wake sources yet
+- [x] ESP32-S3 core slice 23 — GDMA RX pool backpressure recovery
+      (landed 2026-06-13): CPU-owned descriptors in an ADC continuous
+      circular pool now behave like driver-pool backpressure instead
+      of fatal descriptor errors: the channel latches DSCR_EMPTY,
+      parks without dropping its current descriptor, and resumes when
+      firmware returns OWNER_DMA before the next sample. Proven by
+      hand-assembled firmware that fills a circular descriptor, hits
+      DSCR_EMPTY while firmware owns it, restores DMA ownership, and
+      observes the next sample overwrite the DMA buffer cleanly.
+      Cuts: instant sample-time pressure; no timed flush/drop policy
+      or esp_adc_continuous_flush_pool policy knob yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

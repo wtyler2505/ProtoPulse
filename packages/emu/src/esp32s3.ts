@@ -159,8 +159,9 @@ import type { XtensaBus } from './xtensa.js';
  * DMA_IN_CHn_INT_MAP. Descriptor-starved ADC conversions now latch
  * DSCR_EMPTY instead of disappearing silently after the DMA-owned
  * pool is exhausted. CPU WAITI now parks until modeled level-1
- * interrupts wake it. Cuts: no descriptor rings beyond simple
- * next-pointer advancement, no driver-pool flush/backpressure timing.
+ * interrupts wake it. CPU-owned descriptors now model driver-pool
+ * backpressure: they latch DSCR_EMPTY, park the channel, and resume
+ * when firmware returns ownership. Cuts: no timed flush/drop policy.
  * Still missing: full light/deep sleep register policy — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
@@ -1227,6 +1228,13 @@ export class Esp32s3Core implements McuCore {
     this.recomputeIrq();
   }
 
+  private gdmaParkDscrEmpty(ch: GdmaRxChannel): void {
+    ch.intRaw |= GDMA_IN_DSCR_EMPTY_INT;
+    ch.active = false;
+    ch.offset = 0;
+    this.recomputeIrq();
+  }
+
   private gdmaStart(ch: GdmaRxChannel): void {
     const desc = this.gdmaDescriptorAddress(ch.inLink);
     ch.currentDesc = desc >>> 0;
@@ -1256,8 +1264,12 @@ export class Esp32s3Core implements McuCore {
     }
     let dw0 = this.sramU32(desc);
     const size = dw0 & GDMA_DESC_SIZE_MASK;
-    if (size < ADC_DIGI_RESULT_BYTES || (dw0 & GDMA_DESC_OWNER_DMA) === 0) {
+    if (size < ADC_DIGI_RESULT_BYTES) {
       this.gdmaMarkDscrErr(ch, desc);
+      return;
+    }
+    if ((dw0 & GDMA_DESC_OWNER_DMA) === 0) {
+      this.gdmaParkDscrEmpty(ch);
       return;
     }
     const buffer = this.sramU32(desc + 4);
@@ -1275,8 +1287,12 @@ export class Esp32s3Core implements McuCore {
       ch.currentDesc = desc;
       ch.offset = 0;
       dw0 = this.sramU32(desc);
-      if ((dw0 & GDMA_DESC_OWNER_DMA) === 0 || (dw0 & GDMA_DESC_SIZE_MASK) < ADC_DIGI_RESULT_BYTES) {
+      if ((dw0 & GDMA_DESC_SIZE_MASK) < ADC_DIGI_RESULT_BYTES) {
         this.gdmaMarkDscrErr(ch, desc);
+        return;
+      }
+      if ((dw0 & GDMA_DESC_OWNER_DMA) === 0) {
+        this.gdmaParkDscrEmpty(ch);
         return;
       }
     }
