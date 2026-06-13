@@ -719,6 +719,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       no driver ringbuffer API shim, no TX live refill/`gdma_append`
       timing, and no additional RMT error taxonomy beyond memory full /
       APB read overflow yet
+- [x] ESP32-S3 core slice 42 — RMT TX direct-memory live refill
+      (landed 2026-06-13): direct-memory TX writes now update the
+      active channel memory image and rebuild the not-yet-transmitted
+      waveform, so a threshold/refill ISR can change future symbols
+      while the current transmission keeps running. The APB write cursor
+      also wraps when `MEM_TX_WRAP_EN` is set, matching the refill style
+      used around ping-pong RMT memory. Proven by hand-assembled firmware
+      that starts CH0 from two direct-memory symbols, waits for the
+      first `TX_THR_EVENT`, resets the APB write cursor, rewrites the
+      future slot, and verifies IO5 holds high until the refilled
+      symbol's delayed TX_END edge instead of taking the original early
+      low edge. Cuts: no driver ringbuffer API shim and no additional
+      RMT error taxonomy beyond existing memory/APB overflow flags yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

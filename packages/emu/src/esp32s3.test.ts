@@ -442,6 +442,91 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([2, 1, 2]);
   });
 
+  it('applies RMT TX direct-memory refills while the waveform is in flight', () => {
+    const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB | RMT_SYS_APB_FIFO_MASK;
+    const rmtCh0Conf = (1 << 8) | (1 << 16) | RMT_IDLE_OUT_EN | RMT_MEM_TX_WRAP_EN;
+    const symbol0 = 2 | (1 << 15) | (2 << 16); // high 2 ticks, low 2 ticks
+    const placeholder = 80 | (1 << 15) | (20 << 16); // high, then low
+    const refilled = (80 | (1 << 15) | (20 << 16) | (1 << 31)) >>> 0; // stay high until TX_END
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        RMT,
+        GPIO,
+        GPIO_FUNC5_OUT_SEL_CFG,
+        UART,
+        rmtSysConf,
+        rmtCh0Conf | RMT_MEM_RD_RST | RMT_APB_MEM_RST,
+        symbol0,
+        placeholder,
+        rmtCh0Conf,
+        1,
+        RMT_CH0_TX_THR_EVENT | RMT_CH0_TX_END,
+        1 << 5,
+        RMT_SIG_OUT0,
+        rmtCh0Conf | RMT_TX_START,
+        0xff,
+        RMT_CH0_TX_THR_EVENT,
+        rmtCh0Conf | RMT_APB_MEM_RST,
+        refilled,
+        RMT_CH0_TX_END,
+      ],
+      [
+        L32R(2, 0), // RMT
+        L32R(3, 4),
+        S32I(3, 2, 0xc0), // SYS_CONF: APB direct-memory mode + clock on
+        L32R(3, 5),
+        S32I(3, 2, 0x20), // CH0CONF0: memory read/APB cursor reset
+        L32R(3, 6),
+        S32I(3, 2, 0x00), // initial symbol 0
+        L32R(3, 7),
+        S32I(3, 2, 0x00), // placeholder symbol 1
+        L32R(3, 9),
+        S32I(3, 2, RMT_CH0_TX_LIM), // threshold after symbol 0
+        L32R(3, 10),
+        S32I(3, 2, 0x78), // enable TX_THR_EVENT | TX_END
+
+        L32R(4, 1), // GPIO
+        L32R(5, 11),
+        S32I(5, 4, 0x24), // enable IO5
+        L32R(6, 2),
+        L32R(7, 12),
+        S32I(7, 6, 0x00), // GPIO matrix: IO5 <- RMT_SIG_OUT0
+
+        L32R(3, 13),
+        S32I(3, 2, 0x20), // tx_start
+        L32R(10, 15),
+        L32R(12, 3), // UART
+        L32I(8, 2, 0x70), // wait for first TX_THR_EVENT
+        AND(11, 8, 10),
+        BEQZ(11, BR(-3)),
+        MOVI(11, 1),
+        S32I(11, 12, 0x00),
+        L32R(3, 16),
+        S32I(3, 2, 0x20), // reset APB write cursor only
+        L32R(3, 6),
+        S32I(3, 2, 0x00), // preserve already-sent slot 0
+        L32R(3, 17),
+        S32I(3, 2, 0x00), // refill future slot 1
+        S32I(10, 2, 0x7c), // clear TX_THR_EVENT
+        L32R(10, 18),
+        L32I(8, 2, 0x70), // wait for TX_END
+        AND(11, 8, 10),
+        BEQZ(11, BR(-3)),
+        MOVI(11, 2),
+        S32I(11, 12, 0x00),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    const { events } = c.step(900);
+    const io5 = events.filter((e) => e.pin === 'IO5');
+
+    expect(io5.map((e) => e.level)).toEqual([1, 0, 1, 0]);
+    expect(io5.slice(1).map((e, i) => e.cycle - (io5[i]?.cycle ?? 0))).toEqual([6, 6, 300]);
+    expect([...c.drainUart()]).toEqual([1, 2]);
+  });
+
   it('feeds RMT channel 3 TX from GDMA OUT descriptors', () => {
     const desc = ESP32S3_DRAM_BASE + 0x1200;
     const buf = ESP32S3_DRAM_BASE + 0x1240;

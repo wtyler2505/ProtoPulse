@@ -178,18 +178,20 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * direct-memory TX path behind SYS_CONF.APB_FIFO_MASK with CHnSTATUS
  * write-cursor/read-cursor visibility. TX threshold events re-arm by
  * symbol count after firmware clears INT_RAW, giving the driver refill
- * loop a real interrupt cadence. RMT RX channel 0..3 now captures GPIO
+ * loop a real interrupt cadence, and direct-memory writes rebuild the
+ * not-yet-transmitted waveform so refill ISRs can mutate future
+ * symbols. RMT RX channel 0..3 now captures GPIO
  * input-matrix edges into CH4..CH7 APB FIFO symbols, honoring RX
  * limit/threshold and idle completion; RX carrier demodulation honors
  * CHmCONF0 carrier enable/polarity and CHm_RX_CARRIER_RM thresholds so
- * short carrier gaps collapse back into one base pulse. RMT TX channel
- * 3 can source symbols from GDMA OUT descriptors when DMA access is
- * enabled, and RMT RX channel 3 can write captured symbols into GDMA IN
- * descriptors, continuing across linked descriptors so partial-receive
- * callbacks can be modeled before the final idle EOF.
- * Cuts: no live mutation of an already-built TX waveform from a refill
- * ISR, RX direct-memory/wrap APB readback path, or driver ringbuffer
- * API yet.
+ * short carrier gaps collapse back into one base pulse. RX direct-memory
+ * reads expose CH4..CH7STATUS cursor/error bits and wrap writes when
+ * MEM_RX_WRAP_EN is set. RMT TX channel 3 can source symbols from GDMA
+ * OUT descriptors when DMA access is enabled, and RMT RX channel 3 can
+ * write captured symbols into GDMA IN descriptors, continuing across
+ * linked descriptors so partial-receive callbacks can be modeled before
+ * the final idle EOF.
+ * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
@@ -2379,11 +2381,16 @@ export class Esp32s3Core implements McuCore {
     }
     const capacity = this.rmtTxMemoryCapacity(ch);
     if (ch.apbWriteCursor >= capacity) {
-      ch.apbWriteError = true;
-      return;
+      if ((ch.conf0 & RMT_MEM_TX_WRAP_EN) === 0) {
+        ch.apbWriteError = true;
+        return;
+      }
+      ch.apbWriteCursor = 0;
     }
     ch.memory[ch.apbWriteCursor] = value >>> 0;
     ch.apbWriteCursor++;
+    if (ch.apbWriteCursor >= capacity && (ch.conf0 & RMT_MEM_TX_WRAP_EN) !== 0) ch.apbWriteCursor = 0;
+    if (ch.active) this.rmtBuildTxWaveform(channel, ch);
   }
 
   private rmtTxDmaMode(chIndex: number, ch: RmtTxChannel): boolean {
@@ -2749,10 +2756,7 @@ export class Esp32s3Core implements McuCore {
     ch.loopFired = false;
   }
 
-  private rmtStartTx(chIndex: number): void {
-    const ch = this.rmtTx[chIndex];
-    if (ch === undefined) return;
-    this.rmtIntRaw &= ~((1 << chIndex) | (1 << (8 + chIndex)) | (1 << (12 + chIndex)));
+  private rmtBuildTxWaveform(chIndex: number, ch: RmtTxChannel): void {
     const cyclesPerTick = this.rmtCyclesPerTick(ch);
     const sourceSymbols = this.rmtTxSourceSymbols(chIndex, ch);
     const segments: RmtTxSegment[] = [];
@@ -2776,14 +2780,21 @@ export class Esp32s3Core implements McuCore {
         symbolEndCycles.push(elapsed);
       }
     }
-    if (!this.rmtDirectMemoryMode() && !this.rmtTxDmaMode(chIndex, ch)) ch.fifo = [];
-    ch.startCycle = this.cpu.cycles;
     ch.durationCycles = elapsed;
     ch.segments = segments;
     ch.symbolEndCycles = symbolEndCycles;
+  }
+
+  private rmtStartTx(chIndex: number): void {
+    const ch = this.rmtTx[chIndex];
+    if (ch === undefined) return;
+    this.rmtIntRaw &= ~((1 << chIndex) | (1 << (8 + chIndex)) | (1 << (12 + chIndex)));
+    this.rmtBuildTxWaveform(chIndex, ch);
+    if (!this.rmtDirectMemoryMode() && !this.rmtTxDmaMode(chIndex, ch)) ch.fifo = [];
+    ch.startCycle = this.cpu.cycles;
     ch.nextThresholdSymbol = this.rmtTxLimit(ch);
     ch.loopFired = false;
-    ch.active = segments.length > 0;
+    ch.active = ch.segments.length > 0;
     if (!ch.active) this.rmtIntRaw |= 1 << chIndex;
     this.recomputeIrq();
   }
