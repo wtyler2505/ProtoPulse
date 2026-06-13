@@ -204,15 +204,15 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * SUPER_WDT also records its RTC reset flag/feed-interrupt bits,
  * supports the documented feed/flag-clear pulses, and reports reset
  * cause 18 when firmware has not selected BYPASS_RST. RTC SARADC1/2
- * oneshot completions and TSENS raw reads latch their RTC-domain
- * interrupt producers when their SENS interrupt-enable bits are set.
+ * oneshot completions, TSENS raw reads, and touch one-shot scans latch
+ * their RTC-domain interrupt producers.
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
- * gating, and the remaining RTC interrupt producers beyond RWDT/COCPU/
- * brownout/XTAL32K-dead/SUPER_WDT/SARADC/TSENS, especially touch RTC-
- * domain wake/interrupt paths — so full IDF/FreeRTOS firmware does NOT
- * run yet.
+ * gating, full touch sleep/proximity/timeout behavior, and the remaining
+ * RTC interrupt producers beyond RWDT/COCPU/brownout/XTAL32K-dead/
+ * SUPER_WDT/SARADC/TSENS/touch done-scan-active paths — so full
+ * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -660,6 +660,10 @@ const RTC_WAKEUP_STATE_RESET = 0x000c << RTC_WAKEUP_ENA_SHIFT; // rtc_cntl_reg.h
 const RTC_SLP_WAKEUP_INT = 1 << 0;
 const RTC_SLP_REJECT_INT = 1 << 1;
 const RTC_WDT_INT = 1 << 3;
+const RTC_TOUCH_SCAN_DONE_INT = 1 << 4;
+const RTC_TOUCH_DONE_INT = 1 << 6;
+const RTC_TOUCH_ACTIVE_INT = 1 << 7;
+const RTC_TOUCH_INACTIVE_INT = 1 << 8;
 const RTC_BROWN_OUT_INT = 1 << 9;
 const RTC_SARADC1_INT = 1 << 11;
 const RTC_TSENS_INT = 1 << 12;
@@ -667,7 +671,16 @@ const RTC_COCPU_INT = 1 << 13;
 const RTC_SARADC2_INT = 1 << 14;
 const RTC_SWD_INT = 1 << 15;
 const RTC_XTAL32K_DEAD_INT = 1 << 16;
+const RTC_TOUCH_TIMEOUT_INT = 1 << 18;
+const RTC_TOUCH_APPROACH_LOOP_DONE_INT = 1 << 20;
 const RTC_MAIN_TIMER_INT = 1 << 10;
+const RTC_TOUCH_INT_MASK =
+  RTC_TOUCH_SCAN_DONE_INT |
+  RTC_TOUCH_DONE_INT |
+  RTC_TOUCH_ACTIVE_INT |
+  RTC_TOUCH_INACTIVE_INT |
+  RTC_TOUCH_TIMEOUT_INT |
+  RTC_TOUCH_APPROACH_LOOP_DONE_INT;
 const RTC_XTAL32K_CONF = 0xf8;
 const RTC_SLP_REJECT_CAUSE = 0x128;
 const RTC_SLP_WAKEUP_CAUSE = 0x130;
@@ -822,6 +835,49 @@ const ADC_MAX = 4095;
 // The McuCore ADC sampler/read-log surface is one-dimensional. Keep
 // ADC1 as 0..9, expose ADC2 as 10..19 (ADC2 channel n = GPIO n+11).
 const ADC2_SAMPLER_CHANNEL_BASE = 10;
+
+const RTC_TOUCH_CTRL1 = 0x108;
+const RTC_TOUCH_CTRL2 = 0x10c;
+const RTC_TOUCH_SCAN_CTRL = 0x110;
+const RTC_TOUCH_SLP_THRES = 0x114;
+const RTC_TOUCH_APPROACH = 0x118;
+const RTC_TOUCH_FILTER_CTRL = 0x11c;
+const RTC_TOUCH_TIMEOUT_CTRL = 0x124;
+const RTC_TOUCH_DAC = 0x14c;
+const RTC_TOUCH_DAC1 = 0x150;
+const RTC_TOUCH_CTRL1_RESET = ((0x1000 << 16) | 0x100) >>> 0;
+const RTC_TOUCH_CTRL2_RESET = ((4 << 17) | (1 << 14) | (3 << 6) | (3 << 2)) >>> 0;
+const RTC_TOUCH_SCAN_CTRL_RESET = ((0xf << 28) | (1 << 8) | 2) >>> 0;
+const RTC_TOUCH_SLP_THRES_RESET = 0xf << 27;
+const RTC_TOUCH_APPROACH_RESET = 80 << 24;
+const RTC_TOUCH_FILTER_CTRL_RESET =
+  ((1 << 31) | (1 << 28) | (3 << 25) | (1 << 23) | (1 << 21) | (1 << 19) | (5 << 15) | (1 << 11)) >>> 0;
+const RTC_TOUCH_TIMEOUT_CTRL_RESET = ((1 << 22) | 0x3fffff) >>> 0;
+const RTC_TOUCH_RESET = 1 << 29;
+const RTC_TOUCH_START_EN = 1 << 15;
+const RTC_TOUCH_SLP_TIMER_EN = 1 << 13;
+const RTC_TOUCH_SLP_CHANNEL_CLR = 1 << 23;
+const RTC_TOUCH_SCAN_PAD_MAP_SHIFT = 10;
+const RTC_TOUCH_SCAN_PAD_MAP_MASK = 0x7fff << RTC_TOUCH_SCAN_PAD_MAP_SHIFT;
+const TOUCH_CHANNEL_MASK = 0x7fff;
+const TOUCH_CHANNEL_COUNT = 15;
+const SENS_SAR_TOUCH_CONF = 0x5c;
+const SENS_TOUCH_DENOISE_END = 1 << 18;
+const SENS_TOUCH_UNIT_END = 1 << 19;
+const SENS_TOUCH_STATUS_CLR = 1 << 15;
+const SENS_TOUCH_OUTEN_MASK = TOUCH_CHANNEL_MASK;
+const SENS_TOUCH_CONF_RESET = ((0xf << 28) | (0xf << 24) | (0xf << 20) | SENS_TOUCH_OUTEN_MASK) >>> 0;
+const SENS_SAR_TOUCH_THRES1 = 0x64;
+const SENS_TOUCH_THRES_COUNT = 14;
+const SENS_TOUCH_THRES_MASK = 0x003f_ffff;
+const SENS_SAR_TOUCH_CHN_ST = 0x9c;
+const SENS_TOUCH_MEAS_DONE = 1 << 31;
+const SENS_TOUCH_CHANNEL_CLR_MASK = TOUCH_CHANNEL_MASK << 15;
+const SENS_SAR_TOUCH_STATUS0 = 0xa0;
+const SENS_SAR_TOUCH_STATUS_STRIDE = 4;
+const SENS_TOUCH_SCAN_CURR_SHIFT = 22;
+const SENS_TOUCH_DATA_MASK = 0x003f_ffff;
+const SENS_TOUCH_DEFAULT_DATA = 2048;
 
 // APB_SARADC digital controller (reg_base.h / apb_saradc_reg.h).
 // Paired below with the first GDMA RX descriptor path for ADC
@@ -1366,6 +1422,21 @@ export class Esp32s3Core implements McuCore {
   private sarReader2Ctrl = SENS_SAR_READER2_CTRL_RESET;
   private tsensCtrl = SENS_TSENS_CTRL_RESET;
   private tsensCtrl2 = SENS_TSENS_CTRL2_RESET;
+  private rtcTouchCtrl1 = RTC_TOUCH_CTRL1_RESET;
+  private rtcTouchCtrl2 = RTC_TOUCH_CTRL2_RESET;
+  private rtcTouchScanCtrl = RTC_TOUCH_SCAN_CTRL_RESET;
+  private rtcTouchSlpThres = RTC_TOUCH_SLP_THRES_RESET;
+  private rtcTouchApproach = RTC_TOUCH_APPROACH_RESET;
+  private rtcTouchFilterCtrl = RTC_TOUCH_FILTER_CTRL_RESET;
+  private rtcTouchTimeoutCtrl = RTC_TOUCH_TIMEOUT_CTRL_RESET;
+  private rtcTouchDac = 0;
+  private rtcTouchDac1 = 0;
+  private sensTouchConf = SENS_TOUCH_CONF_RESET;
+  private touchThresholds = Array(SENS_TOUCH_THRES_COUNT).fill(0) as number[];
+  private touchData = Array(TOUCH_CHANNEL_COUNT).fill(0) as number[];
+  private touchMeasDone = false;
+  private touchActiveMask = 0;
+  private touchScanCurr = 0;
   private adcData = 0; // ADC1 latched 12-bit result
   private adc2Data = 0;
   private adcDone = false; // ADC1 done bit
@@ -1691,6 +1762,29 @@ export class Esp32s3Core implements McuCore {
       this.adc2Done = true;
       if ((this.sarReader2Ctrl & SENS_SAR2_INT_EN) !== 0) this.rtcIntRaw |= RTC_SARADC2_INT;
     }
+    this.recomputeIrq();
+  }
+
+  private runTouchMeasurement(): void {
+    const scanMask = ((this.rtcTouchScanCtrl & RTC_TOUCH_SCAN_PAD_MAP_MASK) >>> RTC_TOUCH_SCAN_PAD_MAP_SHIFT) & TOUCH_CHANNEL_MASK;
+    const outMask = this.sensTouchConf & SENS_TOUCH_OUTEN_MASK;
+    const enabled = scanMask & outMask;
+    const channel = enabled === 0 ? 0 : 31 - Math.clz32(enabled & -enabled);
+    this.touchScanCurr = channel & 0xf;
+    this.touchMeasDone = true;
+    this.touchData[channel] = SENS_TOUCH_DEFAULT_DATA;
+
+    const threshold = channel > 0 ? (this.touchThresholds[channel - 1] ?? 0) : 0;
+    const nextActive = threshold !== 0 && SENS_TOUCH_DEFAULT_DATA >= threshold ? 1 << channel : 0;
+    if (nextActive !== 0) {
+      this.touchActiveMask |= nextActive;
+      this.rtcIntRaw |= RTC_TOUCH_ACTIVE_INT;
+    } else if (this.touchActiveMask !== 0) {
+      this.touchActiveMask = 0;
+      this.rtcIntRaw |= RTC_TOUCH_INACTIVE_INT;
+    }
+
+    this.rtcIntRaw |= RTC_TOUCH_DONE_INT | RTC_TOUCH_SCAN_DONE_INT;
     this.recomputeIrq();
   }
 
@@ -2120,6 +2214,21 @@ export class Esp32s3Core implements McuCore {
     this.sarReader2Ctrl = SENS_SAR_READER2_CTRL_RESET;
     this.tsensCtrl = SENS_TSENS_CTRL_RESET;
     this.tsensCtrl2 = SENS_TSENS_CTRL2_RESET;
+    this.rtcTouchCtrl1 = RTC_TOUCH_CTRL1_RESET;
+    this.rtcTouchCtrl2 = RTC_TOUCH_CTRL2_RESET;
+    this.rtcTouchScanCtrl = RTC_TOUCH_SCAN_CTRL_RESET;
+    this.rtcTouchSlpThres = RTC_TOUCH_SLP_THRES_RESET;
+    this.rtcTouchApproach = RTC_TOUCH_APPROACH_RESET;
+    this.rtcTouchFilterCtrl = RTC_TOUCH_FILTER_CTRL_RESET;
+    this.rtcTouchTimeoutCtrl = RTC_TOUCH_TIMEOUT_CTRL_RESET;
+    this.rtcTouchDac = 0;
+    this.rtcTouchDac1 = 0;
+    this.sensTouchConf = SENS_TOUCH_CONF_RESET;
+    this.touchThresholds = Array(SENS_TOUCH_THRES_COUNT).fill(0) as number[];
+    this.touchData = Array(TOUCH_CHANNEL_COUNT).fill(0) as number[];
+    this.touchMeasDone = false;
+    this.touchActiveMask = 0;
+    this.touchScanCurr = 0;
     this.adcData = 0;
     this.adc2Data = 0;
     this.adcDone = false;
@@ -3679,6 +3788,23 @@ export class Esp32s3Core implements McuCore {
       }
       if (off === SENS_SAR_TSENS_CTRL) return this.tsensCtrl >>> 0;
       if (off === SENS_SAR_TSENS_CTRL2) return this.tsensCtrl2 >>> 0;
+      if (off === SENS_SAR_TOUCH_CONF) {
+        let v = this.sensTouchConf & ~(SENS_TOUCH_DENOISE_END | SENS_TOUCH_UNIT_END | SENS_TOUCH_STATUS_CLR);
+        if (this.touchMeasDone) v |= SENS_TOUCH_DENOISE_END | SENS_TOUCH_UNIT_END;
+        return v >>> 0;
+      }
+      if (off >= SENS_SAR_TOUCH_THRES1 && off < SENS_SAR_TOUCH_THRES1 + SENS_TOUCH_THRES_COUNT * 4 && (off & 3) === 0) {
+        return (this.touchThresholds[(off - SENS_SAR_TOUCH_THRES1) >> 2] ?? 0) >>> 0;
+      }
+      if (off === SENS_SAR_TOUCH_CHN_ST) {
+        return ((this.touchMeasDone ? SENS_TOUCH_MEAS_DONE : 0) | (this.touchActiveMask & TOUCH_CHANNEL_MASK)) >>> 0;
+      }
+      if (off >= SENS_SAR_TOUCH_STATUS0 && off < SENS_SAR_TOUCH_STATUS0 + TOUCH_CHANNEL_COUNT * SENS_SAR_TOUCH_STATUS_STRIDE && (off & 3) === 0) {
+        const channel = (off - SENS_SAR_TOUCH_STATUS0) / SENS_SAR_TOUCH_STATUS_STRIDE;
+        const data = this.touchData[channel] ?? 0;
+        if (channel === 0) return ((this.touchScanCurr << SENS_TOUCH_SCAN_CURR_SHIFT) | (data & SENS_TOUCH_DATA_MASK)) >>> 0;
+        return data & SENS_TOUCH_DATA_MASK;
+      }
       return 0;
     }
     if (addr >= APB_SARADC_BASE && addr < APB_SARADC_BASE + 0x400) {
@@ -3741,6 +3867,15 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_COCPU_CTRL) return (this.rtcCocpuCtrl & ~RTC_COCPU_SW_INT_TRIGGER) >>> 0;
       if (off === RTC_BROWN_OUT) return (this.rtcBrownOut & ~RTC_BROWN_OUT_CNT_CLR) >>> 0;
       if (off === RTC_XTAL32K_CONF) return this.rtcXtal32kConf >>> 0;
+      if (off === RTC_TOUCH_CTRL1) return this.rtcTouchCtrl1 >>> 0;
+      if (off === RTC_TOUCH_CTRL2) return this.rtcTouchCtrl2 >>> 0;
+      if (off === RTC_TOUCH_SCAN_CTRL) return this.rtcTouchScanCtrl >>> 0;
+      if (off === RTC_TOUCH_SLP_THRES) return this.rtcTouchSlpThres >>> 0;
+      if (off === RTC_TOUCH_APPROACH) return this.rtcTouchApproach >>> 0;
+      if (off === RTC_TOUCH_FILTER_CTRL) return this.rtcTouchFilterCtrl >>> 0;
+      if (off === RTC_TOUCH_TIMEOUT_CTRL) return this.rtcTouchTimeoutCtrl >>> 0;
+      if (off === RTC_TOUCH_DAC) return this.rtcTouchDac >>> 0;
+      if (off === RTC_TOUCH_DAC1) return this.rtcTouchDac1 >>> 0;
       if (off === RTC_SLP_REJECT_CAUSE) return this.rtcRejectCause >>> 0;
       if (off === RTC_SLP_WAKEUP_CAUSE) return this.rtcWakeupCause >>> 0;
       if (off === RTC_INT_ENA_W1TS || off === RTC_INT_ENA_W1TC) return 0;
@@ -3751,6 +3886,7 @@ export class Esp32s3Core implements McuCore {
           `EXT_XTL_CONF(+0x60), ` +
           `the RWDT block (+0x98..+0xb0), SWD(+0xb4/+0xb8), SW_CPU_STALL(+0xbc), COCPU_CTRL(+0x104), ` +
           `BROWN_OUT(+0xe8), XTAL32K_CONF(+0xf8), ` +
+          `TOUCH_CTRL1/2(+0x108/+0x10c), TOUCH_SCAN/SLP/APPROACH/FILTER/TIMEOUT(+0x110..+0x124), TOUCH_DAC/DAC1(+0x14c/+0x150), ` +
           `sleep reject/wakeup causes (+0x128/+0x130); ` +
           `a fabricated 0 here would lie`,
       );
@@ -4219,6 +4355,16 @@ export class Esp32s3Core implements McuCore {
         }
       } else if (off === SENS_SAR_TSENS_CTRL2) {
         this.tsensCtrl2 = value >>> 0;
+      } else if (off === SENS_SAR_TOUCH_CONF) {
+        if ((value & SENS_TOUCH_STATUS_CLR) !== 0) {
+          this.touchActiveMask = 0;
+        }
+        this.sensTouchConf = (value & ~(SENS_TOUCH_DENOISE_END | SENS_TOUCH_UNIT_END | SENS_TOUCH_STATUS_CLR)) >>> 0;
+      } else if (off >= SENS_SAR_TOUCH_THRES1 && off < SENS_SAR_TOUCH_THRES1 + SENS_TOUCH_THRES_COUNT * 4 && (off & 3) === 0) {
+        this.touchThresholds[(off - SENS_SAR_TOUCH_THRES1) >> 2] = value & SENS_TOUCH_THRES_MASK;
+      } else if (off === SENS_SAR_TOUCH_CHN_ST) {
+        const clear = (value & SENS_TOUCH_CHANNEL_CLR_MASK) >>> 15;
+        if (clear !== 0) this.touchActiveMask &= ~clear;
       }
       return;
     }
@@ -4391,6 +4537,41 @@ export class Esp32s3Core implements McuCore {
         this.updateBrownoutDetector();
       } else if (off === RTC_XTAL32K_CONF) {
         this.rtcXtal32kConf = value >>> 0;
+      } else if (off === RTC_TOUCH_CTRL1) {
+        this.rtcTouchCtrl1 = value >>> 0;
+      } else if (off === RTC_TOUCH_CTRL2) {
+        const prev = this.rtcTouchCtrl2;
+        this.rtcTouchCtrl2 = value >>> 0;
+        if ((value & RTC_TOUCH_RESET) !== 0) {
+          this.touchMeasDone = false;
+          this.touchActiveMask = 0;
+          this.touchScanCurr = 0;
+          this.touchData.fill(0);
+          this.rtcIntRaw &= ~RTC_TOUCH_INT_MASK;
+        }
+        const startPulse = (value & RTC_TOUCH_START_EN) !== 0 && (prev & RTC_TOUCH_START_EN) === 0;
+        const timerStart = (value & RTC_TOUCH_SLP_TIMER_EN) !== 0 && (prev & RTC_TOUCH_SLP_TIMER_EN) === 0;
+        if (startPulse || timerStart) this.runTouchMeasurement();
+        this.recomputeIrq();
+      } else if (off === RTC_TOUCH_SCAN_CTRL) {
+        this.rtcTouchScanCtrl = value >>> 0;
+      } else if (off === RTC_TOUCH_SLP_THRES) {
+        this.rtcTouchSlpThres = value >>> 0;
+      } else if (off === RTC_TOUCH_APPROACH) {
+        this.rtcTouchApproach = (value & ~RTC_TOUCH_SLP_CHANNEL_CLR) >>> 0;
+        if ((value & RTC_TOUCH_SLP_CHANNEL_CLR) !== 0) {
+          this.touchMeasDone = false;
+          this.touchScanCurr = 0;
+          this.touchData.fill(0);
+        }
+      } else if (off === RTC_TOUCH_FILTER_CTRL) {
+        this.rtcTouchFilterCtrl = value >>> 0;
+      } else if (off === RTC_TOUCH_TIMEOUT_CTRL) {
+        this.rtcTouchTimeoutCtrl = value >>> 0;
+      } else if (off === RTC_TOUCH_DAC) {
+        this.rtcTouchDac = value >>> 0;
+      } else if (off === RTC_TOUCH_DAC1) {
+        this.rtcTouchDac1 = value >>> 0;
       } else if (off === RTC_INT_ENA_W1TS) {
         this.rtcIntEna = (this.rtcIntEna | value) >>> 0;
         this.recomputeIrq();

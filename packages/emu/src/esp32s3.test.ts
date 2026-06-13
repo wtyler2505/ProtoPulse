@@ -3852,6 +3852,80 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('touch one-shot scans route done/scan/active through RTC_CORE', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // touch_ll_trigger_oneshot_measurement() pulses TOUCH_START_EN,
+    // touch_ll_is_measure_done() reads SENS_TOUCH_MEAS_DONE, and
+    // touch_ll_intr_* map done/scan/active to RTC_CNTL bits 6/4/7.
+    const SENS = 0x60008800;
+    const SCRATCH = ESP32S3_DRAM_BASE + 0xa40;
+    const TOUCH_INTS = (1 << 4) | (1 << 6) | (1 << 7);
+    const TOUCH_SCAN_PAD1 = ((0xf << 28) | (1 << 11) | (1 << 8) | 2) >>> 0;
+    const TOUCH_CTRL2_START = ((4 << 17) | (1 << 16) | (1 << 15) | (1 << 14) | (3 << 6) | (3 << 2)) >>> 0;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, SENS, SCRATCH, TOUCH_INTS, TOUCH_SCAN_PAD1, TOUCH_CTRL2_START, 1, 0xff],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        L32R(4, 4), // a4 = SENS
+        L32R(5, 2), // a5 = UART
+        L32R(8, 5), // a8 = ISR counter scratch
+        MOVI(6, 0),
+        S32I(6, 8, 0),
+        MOVI(6, 1),
+        S32I(6, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(6, 3),
+        WSR(6, SR.VECBASE),
+        MOVI(6, 2),
+        WSR(6, SR.INTENABLE),
+        L32R(6, 6),
+        S32I(6, 2, 0x4c), // clear stale touch raw bits
+        S32I(6, 2, 0x40), // enable touch done/scan/active raw bits
+        L32R(6, 7),
+        S32I(6, 2, 0x110), // TOUCH_SCAN_CTRL: scan pad 1
+        L32R(6, 9),
+        S32I(6, 4, 0x64), // TOUCH_THRES1: make pad 1 active
+        RSIL(12, 0),
+        L32R(6, 8),
+        S32I(6, 2, 0x10c), // TOUCH_CTRL2.TOUCH_START_EN software trigger
+        MOVI(9, 1),
+        L32I(6, 8, 0),
+        BNE(6, 9, BR(-2)),
+        L32I(6, 4, 0x9c), // TOUCH_CHN_ST: MEAS_DONE + active mask
+        SRLI(7, 6, 15),
+        SRLI(7, 7, 15),
+        SRLI(7, 7, 1),
+        S32I(7, 5, 0), // tx 1: measure done
+        L32I(6, 4, 0xa4), // TOUCH_STATUS1: pad 1 raw data
+        SRLI(6, 6, 8),
+        L32R(7, 10),
+        AND(6, 6, 7),
+        S32I(6, 5, 0), // tx 8: high byte of stable raw data 2048
+        L32I(6, 2, 0x48),
+        S32I(6, 5, 0), // tx 0: RTC INT_ST clear after ISR
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(10, 0),
+        L32R(11, 5),
+        L32I(12, 11, 0),
+        ADDI(12, 12, 1),
+        S32I(12, 11, 0), // scratch++ proves RTC_CORE dispatched
+        L32I(12, 10, 0x48),
+        S32I(12, 10, 0x4c), // clear touch raw bits that reached INT_ST
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 8, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('a read of an unmodeled RTC_CNTL register halts with a diagnostic naming it', () => {
     // 0x60008090 is RTC_CNTL_WDTCONFIG0_REG territory — reading 0 there
     // would silently claim "watchdog off", so the core refuses instead.

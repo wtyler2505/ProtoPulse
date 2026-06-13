@@ -847,6 +847,21 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       the RTC_CORE ISR clear TSENS raw, and reports READY, raw output,
       and cleared INT_ST over UART. Cuts: no calibrated temperature
       conversion, I2C SAR DAC range modeling, or touch RTC producer path
+- [x] ESP32-S3 core slice 52 — RTC touch one-shot done/scan/active
+      delivery through RTC_CORE (landed 2026-06-13): RTC touch control
+      registers TOUCH_CTRL1/2, SCAN_CTRL, SLP_THRES, APPROACH, FILTER,
+      TIMEOUT, and DAC/DAC1 now round-trip enough for touch LL setup;
+      SENS touch config, thresholds, channel status, and pad-status
+      reads expose a deterministic software-triggered scan. A
+      TOUCH_START_EN one-shot latches measurement-done, scan-done, and
+      threshold-driven active RTC raw bits, which flow through
+      RTC_CNTL INT_RAW/ST/ENA/CLR and RTC_CORE. Proven by hand-assembled
+      firmware that maps RTC_CORE to level-1 line 1, enables touch
+      done/scan/active raw delivery, scans pad 1, clears the ISR-seen
+      bits, and reports MEAS_DONE, stable pad data, and cleared INT_ST
+      over UART. Cuts: no capacitive physics, debounce/filter math,
+      proximity loop, timeout producer, or full touch sleep/deep-sleep
+      wake policy
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
