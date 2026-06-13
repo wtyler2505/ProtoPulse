@@ -4116,6 +4116,95 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('touch one-shot scans route proximity loop-done through RTC_CORE', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // touch_ll_set_proximity_sensing_channel() writes SENS_TOUCH_APPROACH_PAD0,
+    // touch_ll_proximity_set_total_scan_times() writes TOUCH_APPROACH_MEAS_TIME,
+    // and touch_ll_intr_* maps proximity-measure-done to RTC_CNTL bit 20.
+    const SENS = 0x60008800;
+    const SCRATCH = ESP32S3_DRAM_BASE + 0xa60;
+    const RTC_TOUCH_PROX_DONE_INT = 1 << 20;
+    const TOUCH_SCAN_PAD1 = ((0xf << 28) | (1 << 11) | (1 << 8) | 2) >>> 0;
+    const TOUCH_CTRL2_START = ((4 << 17) | (1 << 16) | (1 << 15) | (1 << 14) | (3 << 6) | (3 << 2)) >>> 0;
+    const TOUCH_CONF_PROX_PAD1 = ((1 << 28) | (0xf << 24) | (0xf << 20) | 0x7fff) >>> 0;
+    const TOUCH_APPROACH_ONCE = 1 << 24;
+    const BYTE_MASK = 0xff;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        RTCCNTL,
+        INTMTX,
+        UART,
+        ESP32S3_IRAM_BASE,
+        SENS,
+        SCRATCH,
+        RTC_TOUCH_PROX_DONE_INT,
+        TOUCH_SCAN_PAD1,
+        TOUCH_CTRL2_START,
+        TOUCH_CONF_PROX_PAD1,
+        TOUCH_APPROACH_ONCE,
+        BYTE_MASK,
+      ],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        L32R(4, 4), // a4 = SENS
+        L32R(5, 2), // a5 = UART
+        L32R(8, 5), // a8 = ISR counter scratch
+        MOVI(6, 0),
+        S32I(6, 8, 0),
+        MOVI(6, 1),
+        S32I(6, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(6, 3),
+        WSR(6, SR.VECBASE),
+        MOVI(6, 2),
+        WSR(6, SR.INTENABLE),
+        L32R(6, 6),
+        S32I(6, 2, 0x4c), // clear stale TOUCH_APPROACH_LOOP_DONE raw
+        S32I(6, 2, 0x40), // enable TOUCH_APPROACH_LOOP_DONE raw
+        L32R(6, 9),
+        S32I(6, 4, 0x5c), // SENS_TOUCH_APPROACH_PAD0 = pad 1
+        L32R(6, 10),
+        S32I(6, 2, 0x118), // TOUCH_APPROACH_MEAS_TIME = 1
+        L32R(6, 7),
+        S32I(6, 2, 0x110), // TOUCH_SCAN_CTRL: scan pad 1
+        RSIL(12, 0),
+        L32R(6, 8),
+        S32I(6, 2, 0x10c), // TOUCH_CTRL2.TOUCH_START_EN software trigger
+        MOVI(9, 1),
+        L32I(6, 8, 0),
+        BNE(6, 9, BR(-2)),
+        S32I(6, 5, 0), // tx 1: RTC_CORE dispatched
+        L32I(6, 4, 0xe0), // SENS_SAR_TOUCH_APPR_STATUS
+        SRLI(6, 6, 15),
+        SRLI(6, 6, 1),
+        L32R(7, 11),
+        AND(6, 6, 7),
+        S32I(6, 5, 0), // tx 1: approach pad0 count
+        L32I(6, 2, 0x48),
+        S32I(6, 5, 0), // tx 0: RTC INT_ST clear after ISR
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(10, 0),
+        L32R(11, 5),
+        L32I(12, 11, 0),
+        ADDI(12, 12, 1),
+        S32I(12, 11, 0), // scratch++ proves RTC_CORE dispatched
+        L32I(12, 10, 0x48),
+        S32I(12, 10, 0x4c), // clear proximity-loop raw that reached INT_ST
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 1, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('touch one-shot scans wake RTC sleep with the touch wake source recorded', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // soc/rtc.h defines RTC_TOUCH_TRIG_EN as BIT(8), and sleep_modes

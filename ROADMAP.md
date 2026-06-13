@@ -922,6 +922,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       and reports dispatch plus cleared INT_ST over UART. Cuts: no
       cycle-accurate capacitive timing, timeout side effects beyond the
       raw interrupt, or proximity-loop counter/status modeling
+- [x] ESP32-S3 core slice 58 — touch proximity loop-done RTC producer
+      (landed 2026-06-13): SENS_TOUCH_APPROACH_PAD0..2 configuration,
+      SENS_SAR_TOUCH_APPR_STATUS readback, and TOUCH_APPROACH_MEAS_TIME
+      now model deterministic proximity scan counts. A synthetic touch
+      scan of a configured proximity pad increments the matching count
+      and latches RTC_CNTL_TOUCH_APPROACH_LOOP_DONE_INT (bit 20) once
+      the configured total scan count is reached. Proven by
+      hand-assembled firmware that maps approach pad0 to touch channel
+      1, sets total scans to one, enables only proximity-loop done,
+      triggers TOUCH_START_EN, lets the RTC_CORE ISR clear proximity raw,
+      and reports dispatch, approach count, and cleared INT_ST over
+      UART. Cuts: no capacitive accumulation math, sleep-pad proximity
+      count behavior, debounce/smooth data, or proximity count rollover
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
