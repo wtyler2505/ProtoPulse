@@ -148,9 +148,9 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * quiesced, so raw test images aren't killed before they can
  * configure anything — IDF startup's disable writes still land on
  * real modeled registers); the RWDT INT stage action advances the
- * stage but raises no CPU interrupt (the RTC interrupt block is not
- * modeled); SUPER_WDT, sleep pause, and XTAL clock sources are out
- * of scope. The APB_SARADC digital-controller register substrate is
+ * stage but is not wired to the RTC_CORE interrupt source yet;
+ * SUPER_WDT, sleep pause, and XTAL clock sources are out of scope.
+ * The APB_SARADC digital-controller register substrate is
  * modeled (slice 15): CTRL/CTRL2, packed pattern tables, DATA_STATUS,
  * DMA_CONF storage, ADC1/ADC2 done interrupts, and the two ESP-IDF
  * digital monitor threshold comparators; timer/start triggers complete
@@ -192,9 +192,15 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * OUT descriptors when DMA access is enabled, and RMT RX channel 3 can
  * write captured symbols into GDMA IN descriptors, continuing across
  * linked descriptors so partial-receive callbacks can be modeled before
- * the final idle EOF.
+ * the final idle EOF. The first RTC sleep/wake path is modeled too:
+ * SLP_TIMER0/1 arm the RTC main-timer alarm, STATE0.SLEEP_EN enters the
+ * sleep state, WAKEUP_STATE's TIMER_TRIG source records
+ * SLP_WAKEUP_CAUSE, and the RTC_CORE interrupt-matrix source wakes
+ * WAITI through the normal level-1 path.
  * Cuts: no driver ringbuffer API yet.
- * Still missing: full light/deep sleep register policy — so full
+ * Still missing: full light/deep sleep register policy, non-timer wake
+ * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
+ * gating, and the remaining RTC interrupt producers — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
@@ -269,6 +275,7 @@ const INTMTX_CORE1_OFFSET = 0x800;
 const INTMTX_GPIO_MAP = 0x040; // INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG
 const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
 const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
+const INTMTX_RTC_CORE_MAP = 0x09c; // INTERRUPT_CORE0_RTC_CORE_INTR_MAP_REG
 const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
 // The six TIMG sources sit contiguously (interrupt_core0_reg.h):
 // TG_T0 +0xC8, TG_T1 +0xCC, TG_WDT +0xD0, TG1_T0 +0xD4, TG1_T1
@@ -597,12 +604,37 @@ const ROM_STR_MAX = 0x10000;
 const RTCCNTL_BASE = 0x60008000;
 const RTCCNTL_END = 0x60008800; // SENS sits at +0x800
 const RTC_OPTIONS0 = 0x00; // SW_SYS_RST bit 31, SW_PROCPU_RST bit 5, SW_APPCPU_RST bit 4 (all WO)
+const RTC_SLP_TIMER0 = 0x04; // SLP_VAL_LO [31:0]
+const RTC_SLP_TIMER1 = 0x08; // SLP_VAL_HI [15:0], MAIN_TIMER_ALARM_EN bit 16 (WO)
 const RTC_TIME_UPDATE = 0x0c; // TIME_UPDATE bit 31 latches the main timer
 const RTC_TIME_LOW0 = 0x10; // latched timer [31:0]
 const RTC_TIME_HIGH0 = 0x14; // latched timer [47:32] in [15:0]
+const RTC_STATE0 = 0x18; // SLEEP_EN/SLP_WAKEUP/SLP_REJECT status and command bits
 const RTC_RESET_STATE = 0x38; // RESET_CAUSE_PROCPU [5:0], RESET_CAUSE_APPCPU [11:6]
+const RTC_WAKEUP_STATE = 0x3c; // WAKEUP_ENA [31:15], raw trigger bitmap
+const RTC_INT_ENA = 0x40;
+const RTC_INT_RAW = 0x44;
+const RTC_INT_ST = 0x48;
+const RTC_INT_CLR = 0x4c;
 const RTC_SW_SYS_RST = 1 << 31;
 const RTC_SW_PROCPU_RST = 1 << 5;
+const RTC_MAIN_TIMER_ALARM_EN = 1 << 16;
+const RTC_SLP_VAL_HI_MASK = 0xffff;
+const RTC_SLEEP_EN = 1 << 31;
+const RTC_SLP_WAKEUP = 1 << 29;
+const RTC_SLP_REJECT_CAUSE_CLR = 1 << 1;
+const RTC_SW_CPU_INT = 1 << 0;
+const RTC_WAKEUP_ENA_SHIFT = 15;
+const RTC_WAKEUP_ENA_MASK = 0x1ffff;
+const RTC_WAKEUP_STATE_RESET = 0x000c << RTC_WAKEUP_ENA_SHIFT; // rtc_cntl_reg.h default: 17'b1100
+const RTC_SLP_WAKEUP_INT = 1 << 0;
+const RTC_SLP_REJECT_INT = 1 << 1;
+const RTC_MAIN_TIMER_INT = 1 << 10;
+const RTC_SLP_REJECT_CAUSE = 0x128;
+const RTC_SLP_WAKEUP_CAUSE = 0x130;
+const RTC_INT_ENA_W1TS = 0x138;
+const RTC_INT_ENA_W1TC = 0x13c;
+const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
 // Reset causes (esp_rom/include/esp32s3/rom/rtc.h RESET_REASON —
 // static-asserted equal to soc_reset_reason_t, the values
 // esp_rom_get_reset_reason/esp_reset_reason consume):
@@ -1233,6 +1265,16 @@ export class Esp32s3Core implements McuCore {
   private resetCause = RESET_CAUSE_POWERON;
   private appResetCause = RESET_CAUSE_POWERON;
   private rtcOptions0 = 0; // last write, WO sw-reset bits masked out
+  private rtcSleepTimerLo = 0;
+  private rtcSleepTimerHi = 0;
+  private rtcMainTimerAlarmArmed = false;
+  private rtcState0 = 0;
+  private rtcWakeupState = RTC_WAKEUP_STATE_RESET;
+  private rtcIntRaw = 0;
+  private rtcIntEna = 0;
+  private rtcRejectCause = 0;
+  private rtcWakeupCause = 0;
+  private rtcCoreIntMaps = freshInterruptMapPair();
   private rtcTimeLatchLo = 0; // captured by a TIME_UPDATE write
   private rtcTimeLatchHi = 0;
   private cpuPerConf = SYSTEM_CPU_PER_CONF_RESET;
@@ -1953,6 +1995,16 @@ export class Esp32s3Core implements McuCore {
     this.core1Epoch = 0;
     this.fromCpuIntRaw.fill(0);
     this.fromCpuIntMaps = Array.from({ length: SYSTEM_CPU_INTR_FROM_CPU_COUNT }, freshInterruptMapPair);
+    this.rtcSleepTimerLo = 0;
+    this.rtcSleepTimerHi = 0;
+    this.rtcMainTimerAlarmArmed = false;
+    this.rtcState0 = 0;
+    this.rtcWakeupState = RTC_WAKEUP_STATE_RESET;
+    this.rtcIntRaw = 0;
+    this.rtcIntEna = 0;
+    this.rtcRejectCause = 0;
+    this.rtcWakeupCause = 0;
+    this.rtcCoreIntMaps = freshInterruptMapPair();
     this.rtcTimeLatchLo = 0;
     this.rtcTimeLatchHi = 0;
     this.cpuPerConf = SYSTEM_CPU_PER_CONF_RESET;
@@ -2125,6 +2177,31 @@ export class Esp32s3Core implements McuCore {
     });
   }
 
+  private rtcTicks(): number {
+    return Math.floor((this.cpu.cycles * RTC_SLOW_HZ) / CLOCK_HZ);
+  }
+
+  private rtcSleepAlarmTarget(): number {
+    return this.rtcSleepTimerHi * 0x100000000 + this.rtcSleepTimerLo;
+  }
+
+  private rtcWakeupEnabledSources(): number {
+    return (this.rtcWakeupState >>> RTC_WAKEUP_ENA_SHIFT) & RTC_WAKEUP_ENA_MASK;
+  }
+
+  private checkRtcSleepTimer(): void {
+    if (!this.rtcMainTimerAlarmArmed) return;
+    if (this.rtcTicks() < this.rtcSleepAlarmTarget()) return;
+    this.rtcMainTimerAlarmArmed = false;
+    this.rtcIntRaw |= RTC_MAIN_TIMER_INT;
+    if ((this.rtcState0 & RTC_SLEEP_EN) !== 0 && (this.rtcWakeupEnabledSources() & RTC_TIMER_TRIG_EN) !== 0) {
+      this.rtcState0 = (this.rtcState0 & ~RTC_SLEEP_EN) | RTC_SLP_WAKEUP;
+      this.rtcWakeupCause |= RTC_TIMER_TRIG_EN;
+      this.rtcIntRaw |= RTC_SLP_WAKEUP_INT;
+    }
+    this.recomputeIrq();
+  }
+
   /** Per-instruction tick of every armed timer alarm and enabled
    *  watchdog — all on core 0's timeline, the SoC timebase. */
   private checkTimersAndWdts(): void {
@@ -2140,6 +2217,7 @@ export class Esp32s3Core implements McuCore {
       }
     }
     if ((this.rwdt.config0 & WDT_EN) !== 0) this.checkRwdt();
+    this.checkRtcSleepTimer();
     this.checkLedcTimers();
     this.checkRmt();
   }
@@ -2948,6 +3026,7 @@ export class Esp32s3Core implements McuCore {
     const ledcPending = (this.ledcIntRaw & this.ledcIntEna) !== 0;
     const rmtPending = (this.rmtIntRaw & this.rmtIntEna) !== 0;
     const apbAdcPending = (this.apbSaradcIntRaw & this.apbSaradcIntEna) !== 0;
+    const rtcPending = (this.rtcIntRaw & this.rtcIntEna) !== 0;
     const masks: InterruptMapPair = [0, 0];
     const raise = (maps: InterruptMapPair): void => {
       masks[0] |= 1 << (maps[0] & 31);
@@ -2958,6 +3037,7 @@ export class Esp32s3Core implements McuCore {
     if (ledcPending) raise(this.ledcIntMaps);
     if (rmtPending) raise(this.rmtIntMaps);
     if (apbAdcPending) raise(this.apbSaradcIntMaps);
+    if (rtcPending) raise(this.rtcCoreIntMaps);
     for (let i = 0; i < SYSTEM_CPU_INTR_FROM_CPU_COUNT; i++) {
       const maps = this.fromCpuIntMaps[i];
       if ((this.fromCpuIntRaw[i] ?? 0) !== 0 && maps !== undefined) raise(maps);
@@ -3262,6 +3342,7 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_GPIO_MAP) return this.gpioIntMaps[core];
       if (sourceOff === INTMTX_UART_MAP) return this.uartIntMaps[core];
       if (sourceOff === INTMTX_LEDC_MAP) return this.ledcIntMaps[core];
+      if (sourceOff === INTMTX_RTC_CORE_MAP) return this.rtcCoreIntMaps[core];
       if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
       if (sourceOff >= INTMTX_TG_MAPS && sourceOff < INTMTX_TG_MAPS + 24 && (sourceOff & 3) === 0) {
         const idx = (sourceOff - INTMTX_TG_MAPS) >> 2; // group-major [t0,t1,wdt]
@@ -3482,13 +3563,21 @@ export class Esp32s3Core implements McuCore {
     if (addr >= RTCCNTL_BASE && addr < RTCCNTL_END) {
       const off = addr - RTCCNTL_BASE;
       if (off === RTC_OPTIONS0) return this.rtcOptions0 >>> 0; // sw-reset bits are WO — they read 0
+      if (off === RTC_SLP_TIMER0) return this.rtcSleepTimerLo >>> 0;
+      if (off === RTC_SLP_TIMER1) return this.rtcSleepTimerHi & RTC_SLP_VAL_HI_MASK;
       if (off === RTC_TIME_UPDATE) return 0; // the latch completes instantly
       if (off === RTC_TIME_LOW0) return this.rtcTimeLatchLo >>> 0;
       if (off === RTC_TIME_HIGH0) return this.rtcTimeLatchHi & 0xffff;
+      if (off === RTC_STATE0) return (this.rtcState0 & ~(RTC_SLP_REJECT_CAUSE_CLR | RTC_SW_CPU_INT)) >>> 0;
       if (off === RTC_RESET_STATE) {
         // Per-core cause fields (slice 12): PROCPU [5:0], APPCPU [11:6].
         return ((this.appResetCause << 6) | this.resetCause) >>> 0;
       }
+      if (off === RTC_WAKEUP_STATE) return this.rtcWakeupState >>> 0;
+      if (off === RTC_INT_ENA) return this.rtcIntEna >>> 0;
+      if (off === RTC_INT_RAW) return this.rtcIntRaw >>> 0;
+      if (off === RTC_INT_ST) return (this.rtcIntRaw & this.rtcIntEna) >>> 0;
+      if (off === RTC_INT_CLR) return 0;
       if (off === RTC_SW_CPU_STALL) return this.rtcSwCpuStall >>> 0;
       // The RWDT block (slice 13) — modeled for real now.
       if (off === RTC_WDTCONFIG0) return this.rwdt.config0 >>> 0;
@@ -3497,10 +3586,15 @@ export class Esp32s3Core implements McuCore {
       }
       if (off === RTC_WDTFEED) return 0; // the feed bit reads back 0
       if (off === RTC_WDTWPROTECT) return this.rwdt.wprotect >>> 0;
+      if (off === RTC_SLP_REJECT_CAUSE) return this.rtcRejectCause >>> 0;
+      if (off === RTC_SLP_WAKEUP_CAUSE) return this.rtcWakeupCause >>> 0;
+      if (off === RTC_INT_ENA_W1TS || off === RTC_INT_ENA_W1TC) return 0;
       throw new Error(
         `read of unmodeled RTC_CNTL register 0x${addr.toString(16)} — this core models only ` +
-          `OPTIONS0(+0x0), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), RESET_STATE(+0x38), ` +
-          `the RWDT block (+0x98..+0xb0), SW_CPU_STALL(+0xbc); a fabricated 0 here would lie`,
+          `OPTIONS0(+0x0), SLP_TIMER0/1(+0x4/+0x8), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), ` +
+          `STATE0(+0x18), RESET_STATE(+0x38), WAKEUP_STATE(+0x3c), INT_* (+0x40..+0x4c), ` +
+          `the RWDT block (+0x98..+0xb0), SW_CPU_STALL(+0xbc), sleep reject/wakeup causes (+0x128/+0x130); ` +
+          `a fabricated 0 here would lie`,
       );
     }
     if (addr >= EFUSE_BASE && addr < EFUSE_BASE + 0x1000) {
@@ -3622,6 +3716,7 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_GPIO_MAP) this.gpioIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_UART_MAP) this.uartIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_LEDC_MAP) this.ledcIntMaps[core] = value & 0x1f;
+      else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;
       else if (sourceOff >= INTMTX_TG_MAPS && sourceOff < INTMTX_TG_MAPS + 24 && (sourceOff & 3) === 0) {
         const idx = (sourceOff - INTMTX_TG_MAPS) >> 2;
@@ -4021,13 +4116,40 @@ export class Esp32s3Core implements McuCore {
           this.core1Started = false;
         }
         this.maybeStartCore1(); // stall-code half may have changed
+      } else if (off === RTC_SLP_TIMER0) {
+        this.rtcSleepTimerLo = value >>> 0;
+      } else if (off === RTC_SLP_TIMER1) {
+        this.rtcSleepTimerHi = value & RTC_SLP_VAL_HI_MASK;
+        if ((value & RTC_MAIN_TIMER_ALARM_EN) !== 0) {
+          this.rtcMainTimerAlarmArmed = true;
+          this.checkRtcSleepTimer();
+        }
+      } else if (off === RTC_STATE0) {
+        if ((value & RTC_SLP_REJECT_CAUSE_CLR) !== 0) {
+          this.rtcRejectCause = 0;
+          this.rtcIntRaw &= ~RTC_SLP_REJECT_INT;
+        }
+        this.rtcState0 = (value & ~(RTC_SLP_REJECT_CAUSE_CLR | RTC_SW_CPU_INT)) >>> 0;
+        if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcSleepTimer();
+        this.recomputeIrq();
       } else if (off === RTC_SW_CPU_STALL) {
         this.rtcSwCpuStall = value >>> 0;
         this.maybeStartCore1();
+      } else if (off === RTC_WAKEUP_STATE) {
+        this.rtcWakeupState = value >>> 0;
+      } else if (off === RTC_INT_ENA) {
+        this.rtcIntEna = value >>> 0;
+        this.recomputeIrq();
+      } else if (off === RTC_INT_RAW) {
+        this.rtcIntRaw = value >>> 0;
+        this.recomputeIrq();
+      } else if (off === RTC_INT_CLR) {
+        this.rtcIntRaw &= ~value;
+        this.recomputeIrq();
       } else if (off === RTC_TIME_UPDATE) {
         if ((value & (1 << 31)) !== 0) {
           // Latch the 48-bit RTC main timer: CPU cycles → RC_SLOW ticks.
-          const ticks = Math.floor((this.cpu.cycles / CLOCK_HZ) * RTC_SLOW_HZ);
+          const ticks = this.rtcTicks();
           this.rtcTimeLatchLo = ticks % 0x100000000;
           this.rtcTimeLatchHi = Math.floor(ticks / 0x100000000) & 0xffff;
         }
@@ -4051,6 +4173,12 @@ export class Esp32s3Core implements McuCore {
             this.rwdt.timeouts[(off - RTC_WDTCONFIG1) >> 2] = value >>> 0;
           }
         }
+      } else if (off === RTC_INT_ENA_W1TS) {
+        this.rtcIntEna = (this.rtcIntEna | value) >>> 0;
+        this.recomputeIrq();
+      } else if (off === RTC_INT_ENA_W1TC) {
+        this.rtcIntEna = (this.rtcIntEna & ~value) >>> 0;
+        this.recomputeIrq();
       }
       // Other RTC_CNTL writes (sleep setup, bias, …) accepted+dropped.
       return;

@@ -743,6 +743,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       latch in the APP CPU ISR and reports over UART. Cuts: no
       higher-level FreeRTOS yield/IPI scheduling semantics yet; this is
       the hardware delivery substrate
+- [x] ESP32-S3 core slice 44 — RTC sleep timer wakeups
+      (landed 2026-06-13): RTC_CNTL SLP_TIMER0/1, STATE0.SLEEP_EN,
+      WAKEUP_STATE timer source bits, SLP_WAKEUP_CAUSE, INT_RAW/ST/ENA/
+      CLR, INT_ENA_W1TS/W1TC, and the RTC_CORE interrupt-matrix source
+      now provide the first sleep/wake substrate. Firmware can park in
+      WAITI after arming the RTC main timer and wake through the normal
+      level-1 interrupt path when RTC_TIMER_TRIG_EN fires. Proven by
+      hand-assembled firmware that maps RTC_CORE to line 1, enables the
+      MAIN_TIMER and SLP_WAKEUP raw sources, sets STATE0.SLEEP_EN, waits,
+      clears the RTC raw bits in the ISR, and reports the timer wake
+      cause over UART. Cuts: timer wake only; no wake-stub/deep-sleep
+      reset behavior, clock/power-domain gating, non-timer wake sources,
+      or RWDT INT-stage delivery through RTC_CORE yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

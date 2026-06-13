@@ -3125,9 +3125,11 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
   //   system_reg.h   — CPU_PER_CONF +0x10, SYSCLK_CONF +0x60
   // Reset causes from esp_rom/include/esp32s3/rom/rtc.h: POWERON_RESET=1,
   // RTC_SW_SYS_RESET=3, RTC_SW_CPU_RESET=12.
+  const RTCCNTL = 0x60008000;
   const RTC_OPTIONS0 = 0x60008000;
   const RTC_TIME_UPDATE = 0x6000800c;
   const RTC_RESET_STATE = 0x60008038;
+  const INTMTX = 0x600c2000;
   const EFUSE_BASE = 0x60007000;
   const EFUSE_MAC0 = 0x60007044;
   const EFUSE_MAC1 = 0x60007048;
@@ -3342,6 +3344,63 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     const c = core(image);
     c.step(80);
     expect([...c.drainUart()]).toEqual([0x06, 0x01, 0xa1]);
+  });
+
+  it('RTC sleep timer wakes WAITI through the RTC core interrupt matrix', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // rtc_cntl_reg.h: SLP_TIMER0 +0x04, SLP_TIMER1 +0x08,
+    // STATE0 +0x18, WAKEUP_STATE +0x3c, INT_* +0x40..0x4c,
+    // SLP_WAKEUP_CAUSE +0x130. interrupt_core0_reg.h maps RTC_CORE at
+    // +0x09c. soc/rtc.h defines RTC_TIMER_TRIG_EN as BIT(3).
+    const rtcTimerTrig = 1 << 3;
+    const wakeupTimer = rtcTimerTrig << 15;
+    const rtcIntMask = (1 << 10) | 1; // MAIN_TIMER_INT | SLP_WAKEUP_INT
+    const sleepEn = 0x80000000;
+    const mainTimerAlarmEn = 1 << 16;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, wakeupTimer, rtcIntMask, sleepEn, mainTimerAlarmEn],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        MOVI(4, 1),
+        S32I(4, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(5, 3),
+        WSR(5, SR.VECBASE),
+        MOVI(4, 2),
+        WSR(4, SR.INTENABLE),
+        RSIL(8, 0),
+        L32R(4, 5),
+        S32I(4, 2, 0x4c), // clear stale MAIN_TIMER/SLP_WAKEUP raw bits
+        S32I(4, 2, 0x40), // enable both RTC raw sources
+        L32R(4, 4),
+        S32I(4, 2, 0x3c), // WAKEUP_STATE timer wake source
+        MOVI(4, 1),
+        S32I(4, 2, 0x04), // target RTC slow-clock tick 1
+        L32R(4, 7),
+        S32I(4, 2, 0x08), // arm RTC main timer alarm, high bits = 0
+        L32R(4, 6),
+        S32I(4, 2, 0x18), // STATE0.SLEEP_EN
+        WAITI(0),
+        L32I(4, 2, 0x130), // SLP_WAKEUP_CAUSE raw trigger bitmap
+        L32R(5, 2),
+        S32I(4, 5, 0), // tx RTC_TIMER_TRIG_EN (0x08)
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 5),
+        S32I(3, 2, 0x4c), // clear MAIN_TIMER/SLP_WAKEUP so it does not re-fire
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(5_000);
+    expect([...c.drainUart()]).toEqual([rtcTimerTrig]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
   });
 
   it('a read of an unmodeled RTC_CNTL register halts with a diagnostic naming it', () => {
