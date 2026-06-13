@@ -325,6 +325,8 @@ const RMT_INT_RAW = 0x70;
 const RMT_INT_ST = 0x74;
 const RMT_INT_ENA = 0x78;
 const RMT_INT_CLR = 0x7c;
+const RMT_CH_TX_LIM = 0x0a0;
+const RMT_CH_TX_LIM_STRIDE = 0x04;
 const RMT_SYS_CONF = 0x0c0;
 const RMT_TX_SIM = 0x0c4;
 const RMT_REF_CNT_RST = 0x0c8;
@@ -332,6 +334,7 @@ const RMT_DATE = 0x0cc;
 const RMT_TX_START = 1 << 0;
 const RMT_MEM_RD_RST = 1 << 1;
 const RMT_APB_MEM_RST = 1 << 2;
+const RMT_TX_CONTI_MODE = 1 << 3;
 const RMT_TX_STOP = 1 << 7;
 const RMT_DIV_CNT_SHIFT = 8;
 const RMT_DIV_CNT_MASK = 0xff;
@@ -355,6 +358,13 @@ const RMT_CLK_EN = 1 << 31;
 const RMT_SYS_CONF_RESET = (1 << RMT_SYS_SCLK_DIV_NUM_SHIFT) | (RMT_SYS_SCLK_SEL_APB << RMT_SYS_SCLK_SEL_SHIFT) | RMT_SYS_SCLK_ACTIVE;
 const RMT_SIGNAL_BASE = 81;
 const RMT_DATE_RESET = 0x02100001;
+const RMT_TX_LIM_MASK = 0x1ff;
+const RMT_TX_LIM_RESET = 128;
+const RMT_TX_LOOP_NUM_SHIFT = 9;
+const RMT_TX_LOOP_NUM_MASK = 0x3ff;
+const RMT_TX_LOOP_CNT_EN = 1 << 19;
+const RMT_LOOP_COUNT_RESET = 1 << 20;
+const RMT_LOOP_STOP_EN = 1 << 21;
 
 // Timer groups 0 and 1 (timer_group_reg.h; flow per hal timer_ll.h
 // and the gptimer driver): each group has two 54-bit general-purpose
@@ -816,11 +826,15 @@ interface RmtTxSegment {
 
 interface RmtTxChannel {
   conf0: number;
+  txLim: number;
   fifo: number[];
   startCycle: number;
   durationCycles: number;
   segments: RmtTxSegment[];
+  symbolEndCycles: number[];
   active: boolean;
+  thresholdFired: boolean;
+  loopFired: boolean;
 }
 
 interface GdmaRxChannel {
@@ -891,11 +905,15 @@ const freshLedcChannel = (): LedcChannel => ({
 
 const freshRmtTxChannel = (): RmtTxChannel => ({
   conf0: RMT_TX_CONF0_RESET,
+  txLim: RMT_TX_LIM_RESET,
   fifo: [],
   startCycle: 0,
   durationCycles: 0,
   segments: [],
+  symbolEndCycles: [],
   active: false,
+  thresholdFired: false,
+  loopFired: false,
 });
 
 const freshGdmaRx = (): GdmaRxChannel => ({
@@ -2059,14 +2077,18 @@ export class Esp32s3Core implements McuCore {
     ch.startCycle = this.cpu.cycles;
     ch.durationCycles = 0;
     ch.segments = [];
+    ch.symbolEndCycles = [];
+    ch.thresholdFired = false;
+    ch.loopFired = false;
   }
 
   private rmtStartTx(chIndex: number): void {
     const ch = this.rmtTx[chIndex];
     if (ch === undefined) return;
-    this.rmtIntRaw &= ~(1 << chIndex);
+    this.rmtIntRaw &= ~((1 << chIndex) | (1 << (8 + chIndex)) | (1 << (12 + chIndex)));
     const cyclesPerTick = this.rmtCyclesPerTick(ch);
     const segments: RmtTxSegment[] = [];
+    const symbolEndCycles: number[] = [];
     let elapsed = 0;
     if (cyclesPerTick !== null) {
       for (const symbol of ch.fifo) {
@@ -2077,18 +2099,37 @@ export class Esp32s3Core implements McuCore {
         if (duration0 === 0) break;
         elapsed += duration0 * cyclesPerTick;
         segments.push({ endCycle: elapsed, level: level0 });
-        if (duration1 === 0) break;
+        if (duration1 === 0) {
+          symbolEndCycles.push(elapsed);
+          break;
+        }
         elapsed += duration1 * cyclesPerTick;
         segments.push({ endCycle: elapsed, level: level1 });
+        symbolEndCycles.push(elapsed);
       }
     }
     ch.fifo = [];
     ch.startCycle = this.cpu.cycles;
     ch.durationCycles = elapsed;
     ch.segments = segments;
+    ch.symbolEndCycles = symbolEndCycles;
+    ch.thresholdFired = false;
+    ch.loopFired = false;
     ch.active = segments.length > 0;
     if (!ch.active) this.rmtIntRaw |= 1 << chIndex;
     this.recomputeIrq();
+  }
+
+  private rmtTxLimit(ch: RmtTxChannel): number {
+    return ch.txLim & RMT_TX_LIM_MASK;
+  }
+
+  private rmtTxLoopNumber(ch: RmtTxChannel): number {
+    return (ch.txLim >>> RMT_TX_LOOP_NUM_SHIFT) & RMT_TX_LOOP_NUM_MASK;
+  }
+
+  private rmtTxLoopEnabled(ch: RmtTxChannel): boolean {
+    return (ch.conf0 & RMT_TX_CONTI_MODE) !== 0;
   }
 
   private checkRmt(): void {
@@ -2096,7 +2137,42 @@ export class Esp32s3Core implements McuCore {
     for (let i = 0; i < RMT_TX_CHANNELS; i++) {
       const ch = this.rmtTx[i];
       if (ch === undefined || !ch.active) continue;
-      if (this.cpu.cycles - ch.startCycle < ch.durationCycles) continue;
+      const elapsed = this.cpu.cycles - ch.startCycle;
+      const limit = this.rmtTxLimit(ch);
+      if (!ch.thresholdFired && limit > 0 && limit <= ch.symbolEndCycles.length) {
+        const thresholdCycle = ch.symbolEndCycles[limit - 1] ?? Number.POSITIVE_INFINITY;
+        if (elapsed >= thresholdCycle) {
+          ch.thresholdFired = true;
+          this.rmtIntRaw |= 1 << (8 + i);
+          changed = true;
+        }
+      }
+
+      if (ch.durationCycles <= 0) {
+        ch.active = false;
+        this.rmtIntRaw |= 1 << i;
+        changed = true;
+        continue;
+      }
+
+      if (this.rmtTxLoopEnabled(ch)) {
+        const completedLoops = Math.floor(elapsed / ch.durationCycles);
+        const loopNumber = this.rmtTxLoopNumber(ch);
+        const countDone = (ch.txLim & RMT_TX_LOOP_CNT_EN) !== 0 && loopNumber > 0 && completedLoops >= loopNumber;
+        if (countDone && !ch.loopFired) {
+          ch.loopFired = true;
+          this.rmtIntRaw |= 1 << (12 + i);
+          changed = true;
+        }
+        if (countDone && (ch.txLim & RMT_LOOP_STOP_EN) !== 0) {
+          ch.active = false;
+          this.rmtIntRaw |= 1 << i;
+          changed = true;
+        }
+        continue;
+      }
+
+      if (elapsed < ch.durationCycles) continue;
       ch.active = false;
       this.rmtIntRaw |= 1 << i;
       changed = true;
@@ -2109,7 +2185,8 @@ export class Esp32s3Core implements McuCore {
     const ch = this.rmtTx[chIndex];
     if (ch === undefined) return null;
     if (!ch.active) return this.rmtIdleLevel(ch);
-    const elapsed = Math.max(0, this.cpu.cycles - ch.startCycle);
+    let elapsed = Math.max(0, this.cpu.cycles - ch.startCycle);
+    if (this.rmtTxLoopEnabled(ch) && ch.durationCycles > 0) elapsed %= ch.durationCycles;
     for (const segment of ch.segments) {
       if (elapsed < segment.endCycle) return segment.level;
     }
@@ -2463,6 +2540,9 @@ export class Esp32s3Core implements McuCore {
       if (off === RMT_INT_ST) return (this.rmtIntRaw & this.rmtIntEna) >>> 0;
       if (off === RMT_INT_ENA) return this.rmtIntEna >>> 0;
       if (off === RMT_INT_CLR) return 0;
+      if (off >= RMT_CH_TX_LIM && off < RMT_CH_TX_LIM + RMT_TX_CHANNELS * RMT_CH_TX_LIM_STRIDE && (off & 3) === 0) {
+        return this.rmtTx[(off - RMT_CH_TX_LIM) >> 2]?.txLim ?? RMT_TX_LIM_RESET;
+      }
       if (off === RMT_SYS_CONF) return this.rmtSysConf >>> 0;
       if (off === RMT_TX_SIM || off === RMT_REF_CNT_RST) return 0;
       if (off === RMT_DATE) return RMT_DATE_RESET;
@@ -2765,6 +2845,16 @@ export class Esp32s3Core implements McuCore {
       } else if (off === RMT_INT_CLR) {
         this.rmtIntRaw &= ~v;
         this.recomputeIrq();
+      } else if (off >= RMT_CH_TX_LIM && off < RMT_CH_TX_LIM + RMT_TX_CHANNELS * RMT_CH_TX_LIM_STRIDE && (off & 3) === 0) {
+        const ch = this.rmtTx[(off - RMT_CH_TX_LIM) >> 2];
+        if (ch !== undefined) {
+          ch.txLim = (v & ~RMT_LOOP_COUNT_RESET) >>> 0;
+          if ((v & RMT_LOOP_COUNT_RESET) !== 0) {
+            ch.startCycle = this.cpu.cycles;
+            ch.thresholdFired = false;
+            ch.loopFired = false;
+          }
+        }
       } else if (off === RMT_SYS_CONF) {
         this.rmtSysConf = v;
       } else if (off === RMT_REF_CNT_RST) {

@@ -606,6 +606,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       bit 0 back over UART. Cuts: no RMT RX, DMA/direct-memory mode,
       carrier modulation, loop mode, threshold events, or high-level
       driver queue shim yet
+- [x] ESP32-S3 core slice 33 — RMT TX threshold + finite loop events
+      (landed 2026-06-13): TX channels now expose `CHn_TX_LIM`
+      read/write state, latch `TX_THR_EVENT` when the programmed symbol
+      threshold is reached, and model finite `TX_CONTI_MODE` loop
+      counting with `TX_LOOP` plus loop-stop autostop into `TX_END`.
+      Proven by hand-assembled firmware that loops one RMT symbol twice,
+      routes it to IO5, observes the repeated waveform, and reads
+      TX_END/TX_THR_EVENT/TX_LOOP raw bits back over UART. Cuts: no RMT
+      RX, DMA/direct-memory mode, carrier modulation, threshold refill
+      queue shim, or repeated threshold relatching after firmware clears
+      the raw bit mid-transmission yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
