@@ -547,6 +547,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       engine, channel overflow-count interrupts (`BIT(12 + channel)`),
       clock-source switching, sleep behavior, or high-level driver API
       shim yet
+- [x] ESP32-S3 core slice 28 — LEDC channel overflow-count IRQs
+      (landed 2026-06-13): low-speed channel overflow-count bits
+      `LEDC_OVF_CNT_LSCHn_INT_RAW` (`BIT(12 + channel)`) now latch when
+      an enabled channel's selected timer crosses its programmed
+      overflow-count threshold. CONF0 writes model ESP-IDF's
+      `ovf_num = max_count - 1`, `ovf_cnt_en`, and write-only
+      `ovf_cnt_rst`; timer/global-clock changes resync channel counters
+      so stale elapsed time is not replayed. Proven by hand-assembled
+      firmware that maps LEDC to CPU line 0, enables channel-0
+      overflow-count interrupts every two timer overflows, clears
+      INT_CLR in the ISR, and reports three interrupts over UART. Cuts:
+      no fade engine, clock-source switching, sleep behavior, or
+      high-level driver API shim yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

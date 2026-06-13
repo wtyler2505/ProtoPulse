@@ -265,6 +265,12 @@ const LEDC_CH_DUTY_R = 0x10;
 const LEDC_CH_SIG_OUT_EN = 1 << 2;
 const LEDC_CH_IDLE_LV = 1 << 3;
 const LEDC_CH_PARA_UP = 1 << 4;
+const LEDC_CH_TIMER_SEL_MASK = 0x3;
+const LEDC_CH_OVF_NUM_SHIFT = 5;
+const LEDC_CH_OVF_NUM_MASK = 0x3ff;
+const LEDC_CH_OVF_CNT_EN = 1 << 15;
+const LEDC_CH_OVF_CNT_RST = 1 << 16;
+const LEDC_CH_OVF_CNT_RST_ST = 1 << 17;
 const LEDC_CH_DUTY_START = 1 << 31;
 const LEDC_LSTIMER_CONF = 0x0a0;
 const LEDC_LSTIMER_VALUE = 0x0a4;
@@ -276,6 +282,7 @@ const LEDC_TIMER_PAUSE = 1 << 22;
 const LEDC_TIMER_RST = 1 << 23;
 const LEDC_TIMER_PARA_UP = 1 << 25;
 const LEDC_LSTIMER_OVF_INT_BASE = 0;
+const LEDC_OVF_CNT_INT_BASE = 12;
 const LEDC_INT_RAW = 0x0c0;
 const LEDC_INT_ST = 0x0c4;
 const LEDC_INT_ENA = 0x0c8;
@@ -733,6 +740,7 @@ interface LedcChannel {
   duty: number;
   conf1: number;
   dutyRead: number;
+  ovfSerial: number;
 }
 
 interface GdmaRxChannel {
@@ -797,6 +805,7 @@ const freshLedcChannel = (): LedcChannel => ({
   duty: 0,
   conf1: 1 << 30,
   dutyRead: 0,
+  ovfSerial: 0,
 });
 
 const freshGdmaRx = (): GdmaRxChannel => ({
@@ -1760,6 +1769,25 @@ export class Esp32s3Core implements McuCore {
     t.ovfSerial = this.ledcTimerOverflowSerial(t);
   }
 
+  private ledcChannelTimer(ch: LedcChannel): LedcTimer | undefined {
+    return this.ledcTimers[ch.conf0 & LEDC_CH_TIMER_SEL_MASK];
+  }
+
+  private ledcChannelOverflowThreshold(ch: LedcChannel): number {
+    return (((ch.conf0 >>> LEDC_CH_OVF_NUM_SHIFT) & LEDC_CH_OVF_NUM_MASK) + 1) >>> 0;
+  }
+
+  private ledcChannelOvfResync(ch: LedcChannel): void {
+    const timer = this.ledcChannelTimer(ch);
+    ch.ovfSerial = timer === undefined ? 0 : this.ledcTimerOverflowSerial(timer);
+  }
+
+  private ledcChannelsOvfResyncForTimer(timerIndex: number): void {
+    for (const ch of this.ledcChannels) {
+      if ((ch.conf0 & LEDC_CH_TIMER_SEL_MASK) === timerIndex) this.ledcChannelOvfResync(ch);
+    }
+  }
+
   private checkLedcTimers(): void {
     let changed = false;
     for (let i = 0; i < LEDC_TIMERS; i++) {
@@ -1771,6 +1799,23 @@ export class Esp32s3Core implements McuCore {
       this.ledcIntRaw |= 1 << (LEDC_LSTIMER_OVF_INT_BASE + i);
       changed = true;
     }
+    for (let i = 0; i < LEDC_CHANNELS; i++) {
+      const ch = this.ledcChannels[i];
+      if (ch === undefined || (ch.conf0 & LEDC_CH_OVF_CNT_EN) === 0) continue;
+      const timer = this.ledcChannelTimer(ch);
+      if (timer === undefined || !this.ledcTimerRunning(timer)) continue;
+      const serial = this.ledcTimerOverflowSerial(timer);
+      if (serial < ch.ovfSerial) {
+        ch.ovfSerial = serial;
+        continue;
+      }
+      const elapsed = serial - ch.ovfSerial;
+      const threshold = this.ledcChannelOverflowThreshold(ch);
+      if (elapsed < threshold) continue;
+      ch.ovfSerial += Math.floor(elapsed / threshold) * threshold;
+      this.ledcIntRaw |= 1 << (LEDC_OVF_CNT_INT_BASE + i);
+      changed = true;
+    }
     if (changed) this.recomputeIrq();
   }
 
@@ -1779,7 +1824,7 @@ export class Esp32s3Core implements McuCore {
     const ch = this.ledcChannels[chIndex];
     if (ch === undefined) return null;
     if ((ch.conf0 & LEDC_CH_SIG_OUT_EN) === 0) return (ch.conf0 & LEDC_CH_IDLE_LV) !== 0 ? 1 : 0;
-    const timer = this.ledcTimers[ch.conf0 & 0x3];
+    const timer = this.ledcChannelTimer(ch);
     if (timer === undefined) return 0;
     const period = this.ledcTimerPeriod(timer);
     const duty = Math.min(period, ch.dutyRead >>> 4);
@@ -2404,7 +2449,14 @@ export class Esp32s3Core implements McuCore {
         const ch = this.ledcChannels[chIndex];
         const toff = off % LEDC_CH_STRIDE;
         if (ch === undefined) return;
-        if (toff === LEDC_CH_CONF0) ch.conf0 = (v & ~LEDC_CH_PARA_UP) >>> 0;
+        if (toff === LEDC_CH_CONF0) {
+          const prev = ch.conf0;
+          ch.conf0 = (v & ~(LEDC_CH_PARA_UP | LEDC_CH_OVF_CNT_RST | LEDC_CH_OVF_CNT_RST_ST)) >>> 0;
+          const enabled = (ch.conf0 & LEDC_CH_OVF_CNT_EN) !== 0;
+          const wasEnabled = (prev & LEDC_CH_OVF_CNT_EN) !== 0;
+          const timerChanged = (prev & LEDC_CH_TIMER_SEL_MASK) !== (ch.conf0 & LEDC_CH_TIMER_SEL_MASK);
+          if ((v & LEDC_CH_OVF_CNT_RST) !== 0 || timerChanged || (!wasEnabled && enabled)) this.ledcChannelOvfResync(ch);
+        }
         else if (toff === LEDC_CH_HPOINT) ch.hpoint = v & LEDC_HPOINT_MASK;
         else if (toff === LEDC_CH_DUTY) ch.duty = v & LEDC_DUTY_MASK;
         else if (toff === LEDC_CH_CONF1) {
@@ -2419,7 +2471,8 @@ export class Esp32s3Core implements McuCore {
         return;
       }
       if (off >= LEDC_LSTIMER_CONF && off < LEDC_LSTIMER_CONF + LEDC_TIMERS * LEDC_LSTIMER_STRIDE) {
-        const timer = this.ledcTimers[Math.floor((off - LEDC_LSTIMER_CONF) / LEDC_LSTIMER_STRIDE)];
+        const timerIndex = Math.floor((off - LEDC_LSTIMER_CONF) / LEDC_LSTIMER_STRIDE);
+        const timer = this.ledcTimers[timerIndex];
         const toff = (off - LEDC_LSTIMER_CONF) % LEDC_LSTIMER_STRIDE;
         if (timer === undefined) return;
         if (toff === 0) {
@@ -2429,6 +2482,8 @@ export class Esp32s3Core implements McuCore {
             timer.sync = this.cpu.cycles;
           }
           timer.conf = (v & ~LEDC_TIMER_PARA_UP) >>> 0;
+          timer.ovfSerial = this.ledcTimerOverflowSerial(timer);
+          this.ledcChannelsOvfResyncForTimer(timerIndex);
         }
         this.syncPins();
         return;
@@ -2445,6 +2500,9 @@ export class Esp32s3Core implements McuCore {
           for (const timer of this.ledcTimers) this.ledcTimerResync(timer);
         }
         this.ledcConf = v;
+        if ((prev & LEDC_CLK_EN) !== (v & LEDC_CLK_EN)) {
+          for (const ch of this.ledcChannels) this.ledcChannelOvfResync(ch);
+        }
       }
       else if (off === LEDC_DATE) return;
       this.syncPins();
