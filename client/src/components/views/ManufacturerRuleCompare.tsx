@@ -179,7 +179,11 @@ function ManufacturerRuleCompareInner({ currentRules, onApplyRules }: Manufactur
           Compare with:
         </span>
         <Select value={selectedMfg} onValueChange={setSelectedMfg}>
-          <SelectTrigger data-testid="mfg-select" className="h-7 text-xs flex-1 max-w-[200px]">
+          <SelectTrigger
+            aria-label="Manufacturer rule set"
+            data-testid="mfg-select"
+            className="h-7 text-xs flex-1 max-w-[200px]"
+          >
             <SelectValue placeholder="Select manufacturer..." />
           </SelectTrigger>
           <SelectContent>

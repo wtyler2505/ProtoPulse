@@ -97,10 +97,22 @@ export default function CircuitCodeView() {
       {/* Main split: code editor | schematic preview */}
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         <ResizablePanel defaultSize={50} minSize={25}>
-          <CodeEditor ref={editorRef} value={code} onChange={handleCodeChange} errors={errors} />
+          <CodeEditor
+            ref={editorRef}
+            value={code}
+            onChange={handleCodeChange}
+            errors={errors}
+            ariaLabel="Circuit code editor"
+          />
         </ResizablePanel>
 
-        <ResizableHandle withHandle />
+        <ResizableHandle
+          withHandle
+          aria-label="Resize code editor and schematic preview panels"
+          aria-valuemin={25}
+          aria-valuemax={75}
+          aria-valuenow={50}
+        />
 
         <ResizablePanel defaultSize={50} minSize={25}>
           <SchematicPreview layout={layout} isEvaluating={isEvaluating} />

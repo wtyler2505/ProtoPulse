@@ -97,6 +97,7 @@ export interface CodeEditorProps {
   readOnly?: boolean;
   className?: string;
   customExtensions?: Extension[];
+  ariaLabel?: string;
 }
 
 export interface CodeEditorHandle {
@@ -109,7 +110,16 @@ export interface CodeEditorHandle {
 // ---------------------------------------------------------------------------
 
 const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEditor(
-  { value, onChange, language = 'javascript', errors, readOnly = false, className, customExtensions = [] },
+  {
+    value,
+    onChange,
+    language = 'javascript',
+    errors,
+    readOnly = false,
+    className,
+    customExtensions = [],
+    ariaLabel = 'Code editor',
+  },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -168,6 +178,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
       keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
       readOnlyCompartment.current.of(EditorState.readOnly.of(readOnly)),
       linterCompartment.current.of(buildDiagnostics(errors)),
+      EditorView.contentAttributes.of({ 'aria-label': ariaLabel }),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           onChangeRef.current(update.state.doc.toString());

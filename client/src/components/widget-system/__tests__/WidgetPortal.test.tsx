@@ -74,6 +74,8 @@ describe('WidgetPortal', () => {
   });
 
   it('skips unknown definitions without crashing', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
     render(
       <WidgetPortal
         instances={[makeInstance({ defId: 'missing' }), makeInstance({ instanceId: 'inst-2' })]}
@@ -85,6 +87,8 @@ describe('WidgetPortal', () => {
 
     expect(screen.getByText('hello content')).toBeInTheDocument();
     expect(document.querySelector('[data-widget-def="missing"]')).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith('WidgetPortal: unknown widget definition "missing" — skipped');
+    warnSpy.mockRestore();
   });
 
   it('contains a throwing widget so sibling widgets survive', () => {

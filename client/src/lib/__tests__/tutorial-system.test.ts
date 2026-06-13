@@ -6,28 +6,10 @@ import type { Tutorial, TutorialProgress, TutorialStep } from '../tutorial-syste
 // Test setup
 // ---------------------------------------------------------------------------
 
-vi.stubGlobal('crypto', { randomUUID: vi.fn(() => `uuid-${Math.random().toString(36).slice(2, 10)}`) });
-
-const store: Record<string, string> = {};
-vi.stubGlobal('localStorage', {
-  getItem: vi.fn((key: string) => store[key] ?? null),
-  setItem: vi.fn((key: string, val: string) => {
-    store[key] = val;
-  }),
-  removeItem: vi.fn((key: string) => {
-    delete store[key];
-  }),
-  clear: vi.fn(() => {
-    for (const k of Object.keys(store)) {
-      delete store[k];
-    }
-  }),
-});
-
-function clearStore(): void {
-  for (const k of Object.keys(store)) {
-    delete store[k];
-  }
+function installTutorialGlobals(): void {
+  vi.stubGlobal('crypto', {
+    randomUUID: vi.fn(() => `uuid-${Math.random().toString(36).slice(2, 10)}`),
+  });
 }
 
 function makeTestTutorial(overrides: Partial<Omit<Tutorial, 'id'>> = {}): Omit<Tutorial, 'id'> {
@@ -49,8 +31,9 @@ function makeTestTutorial(overrides: Partial<Omit<Tutorial, 'id'>> = {}): Omit<T
 }
 
 beforeEach(() => {
+  installTutorialGlobals();
+  localStorage.clear();
   TutorialSystem.resetForTesting();
-  clearStore();
 });
 
 // ---------------------------------------------------------------------------
@@ -941,7 +924,7 @@ describe('localStorage Persistence', () => {
   it('should save to localStorage on state change', () => {
     const system = TutorialSystem.getInstance();
     system.startTutorial('welcome');
-    expect(localStorage.setItem).toHaveBeenCalledWith('protopulse-tutorials', expect.any(String));
+    expect(localStorage.getItem('protopulse-tutorials')).toEqual(expect.any(String));
   });
 
   it('should restore progress from localStorage', () => {
@@ -959,7 +942,7 @@ describe('localStorage Persistence', () => {
   });
 
   it('should handle corrupt localStorage data gracefully', () => {
-    store['protopulse-tutorials'] = 'not valid json';
+    localStorage.setItem('protopulse-tutorials', 'not valid json');
     const system = TutorialSystem.getInstance();
     // Should not throw, and should have built-in tutorials
     expect(system.getAllTutorials().length).toBeGreaterThanOrEqual(5);

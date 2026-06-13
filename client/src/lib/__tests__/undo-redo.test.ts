@@ -390,6 +390,13 @@ describe('UndoRedoProvider + useUndoRedo', () => {
     return createElement(UndoRedoProvider, null, children);
   }
 
+  async function flushAsyncStackUpdate(run: () => void): Promise<void> {
+    await act(async () => {
+      run();
+      await Promise.resolve();
+    });
+  }
+
   it('provides initial empty state', () => {
     const { result } = renderHook(() => useUndoRedo(), { wrapper });
 
@@ -418,7 +425,7 @@ describe('UndoRedoProvider + useUndoRedo', () => {
       result.current.push(makeCommand({ description: 'op-1' }));
     });
 
-    act(() => {
+    await flushAsyncStackUpdate(() => {
       result.current.undo();
     });
 
@@ -430,7 +437,7 @@ describe('UndoRedoProvider + useUndoRedo', () => {
     });
     expect(result.current.canUndo).toBe(false);
 
-    act(() => {
+    await flushAsyncStackUpdate(() => {
       result.current.redo();
     });
 
@@ -488,6 +495,13 @@ describe('keyboard shortcuts', () => {
     return createElement(UndoRedoProvider, null, children);
   }
 
+  async function dispatchShortcut(event: KeyboardEvent): Promise<void> {
+    await act(async () => {
+      window.dispatchEvent(event);
+      await Promise.resolve();
+    });
+  }
+
   it('Ctrl+Z triggers undo when not in an input', async () => {
     const cmd = makeCommand({ description: 'shortcut test' });
     const { result } = renderHook(() => useUndoRedo(), { wrapper });
@@ -496,13 +510,11 @@ describe('keyboard shortcuts', () => {
       result.current.push(cmd);
     });
 
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
+    await dispatchShortcut(new KeyboardEvent('keydown', {
         key: 'z',
         ctrlKey: true,
         bubbles: true,
-      }));
-    });
+    }));
 
     await vi.waitFor(() => {
       expect(cmd.undo).toHaveBeenCalledOnce();
@@ -518,27 +530,23 @@ describe('keyboard shortcuts', () => {
     });
 
     // First undo
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
+    await dispatchShortcut(new KeyboardEvent('keydown', {
         key: 'z',
         ctrlKey: true,
         bubbles: true,
-      }));
-    });
+    }));
 
     await vi.waitFor(() => {
       expect(cmd.undo).toHaveBeenCalledOnce();
     });
 
     // Then redo
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
+    await dispatchShortcut(new KeyboardEvent('keydown', {
         key: 'z',
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
-      }));
-    });
+    }));
 
     await vi.waitFor(() => {
       expect(cmd.execute).toHaveBeenCalledOnce();

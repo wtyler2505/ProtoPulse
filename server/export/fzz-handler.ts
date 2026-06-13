@@ -14,6 +14,11 @@ import JSZip from 'jszip';
 
 const MAX_FZZ_FILES = 100;
 const MAX_FZZ_UNCOMPRESSED_SIZE = 50 * 1024 * 1024; // 50 MB
+const ZIP_EOCD_SIGNATURE = 0x06054b50;
+const ZIP_CENTRAL_DIRECTORY_SIGNATURE = 0x02014b50;
+const ZIP64_EXTRA_FIELD_ID = 0x0001;
+const ZIP_MAX_COMMENT_LENGTH = 0xffff;
+const ZIP32_MAX_SIZE = 0xffffffff;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -136,6 +141,83 @@ function stableId(input: string): string {
     hash = hash & hash; // Convert to 32bit integer
   }
   return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
+function readZip64UncompressedSize(extra: Buffer): number | null {
+  let offset = 0;
+  while (offset + 4 <= extra.length) {
+    const headerId = extra.readUInt16LE(offset);
+    const dataSize = extra.readUInt16LE(offset + 2);
+    offset += 4;
+    const nextOffset = offset + dataSize;
+    if (nextOffset > extra.length) return null;
+    if (headerId === ZIP64_EXTRA_FIELD_ID) {
+      if (dataSize < 8) return null;
+      const value = extra.readBigUInt64LE(offset);
+      return value > BigInt(Number.MAX_SAFE_INTEGER)
+        ? Number.MAX_SAFE_INTEGER
+        : Number(value);
+    }
+    offset = nextOffset;
+  }
+  return null;
+}
+
+function getZipCentralDirectoryUncompressedSize(buffer: Buffer): number | null {
+  if (buffer.length < 22) return null;
+
+  const minEocdOffset = Math.max(0, buffer.length - 22 - ZIP_MAX_COMMENT_LENGTH);
+  for (let eocdOffset = buffer.length - 22; eocdOffset >= minEocdOffset; eocdOffset--) {
+    if (buffer.readUInt32LE(eocdOffset) !== ZIP_EOCD_SIGNATURE) continue;
+
+    const entryCount = buffer.readUInt16LE(eocdOffset + 10);
+    const centralDirectorySize = buffer.readUInt32LE(eocdOffset + 12);
+    const centralDirectoryOffset = buffer.readUInt32LE(eocdOffset + 16);
+    if (
+      entryCount === 0xffff ||
+      centralDirectorySize === ZIP32_MAX_SIZE ||
+      centralDirectoryOffset === ZIP32_MAX_SIZE
+    ) {
+      return null;
+    }
+    if (centralDirectoryOffset + centralDirectorySize > eocdOffset) return null;
+
+    let cursor = centralDirectoryOffset;
+    let total = 0;
+    for (let entryIndex = 0; entryIndex < entryCount; entryIndex++) {
+      if (cursor + 46 > buffer.length) return null;
+      if (buffer.readUInt32LE(cursor) !== ZIP_CENTRAL_DIRECTORY_SIGNATURE) return null;
+
+      const compressedSize = buffer.readUInt32LE(cursor + 20);
+      let uncompressedSize = buffer.readUInt32LE(cursor + 24);
+      const fileNameLength = buffer.readUInt16LE(cursor + 28);
+      const extraLength = buffer.readUInt16LE(cursor + 30);
+      const commentLength = buffer.readUInt16LE(cursor + 32);
+      const fileNameStart = cursor + 46;
+      const fileNameEnd = fileNameStart + fileNameLength;
+      const extraStart = fileNameEnd;
+      const extraEnd = extraStart + extraLength;
+      const nextCursor = extraEnd + commentLength;
+      if (nextCursor > buffer.length) return null;
+
+      if (uncompressedSize === ZIP32_MAX_SIZE || compressedSize === ZIP32_MAX_SIZE) {
+        const zip64Size = readZip64UncompressedSize(buffer.subarray(extraStart, extraEnd));
+        if (zip64Size === null) return null;
+        uncompressedSize = zip64Size;
+      }
+
+      const filename = buffer.toString('utf8', fileNameStart, fileNameEnd);
+      if (!filename.endsWith('/')) {
+        total += uncompressedSize;
+        if (total > MAX_FZZ_UNCOMPRESSED_SIZE) return total;
+      }
+      cursor = nextCursor;
+    }
+
+    return total;
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -636,6 +718,14 @@ export interface FzzImportResult {
 }
 
 export async function importFzz(buffer: Buffer): Promise<FzzImportResult> {
+  const centralDirectoryUncompressedSize = getZipCentralDirectoryUncompressedSize(buffer);
+  if (
+    centralDirectoryUncompressedSize !== null &&
+    centralDirectoryUncompressedSize > MAX_FZZ_UNCOMPRESSED_SIZE
+  ) {
+    throw new Error(`FZZ archive uncompressed content too large (max ${String(MAX_FZZ_UNCOMPRESSED_SIZE / 1024 / 1024)}MB)`);
+  }
+
   const zip = await JSZip.loadAsync(buffer);
   const warnings: string[] = [];
 

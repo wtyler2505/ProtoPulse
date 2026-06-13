@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SerialLogger } from '../serial-logger';
+import { logger as appLogger } from '@/lib/logger';
 
 describe('SerialLogger', () => {
   let logger: SerialLogger;
@@ -95,6 +96,8 @@ describe('SerialLogger', () => {
   // -----------------------------------------------------------------------
 
   it('auto-stops when size exceeds 50MB', () => {
+    const warnSpy = vi.spyOn(appLogger, 'warn').mockImplementation(() => {});
+
     logger.startRecording();
     const listener = vi.fn();
     logger.subscribe(listener);
@@ -108,6 +111,8 @@ describe('SerialLogger', () => {
     // Now one more byte should trigger auto-stop
     logger.appendData('x');
     expect(logger.isRecording()).toBe(false);
+    expect(warnSpy).toHaveBeenCalledWith('SerialLogger: Recording exceeded 50MB. Auto-stopping.');
+    warnSpy.mockRestore();
   });
 
   // -----------------------------------------------------------------------

@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactElement, ReactNode } from 'react';
 import type { CircuitInstanceRow } from '@shared/schema';
@@ -1181,7 +1181,10 @@ describe('BreadboardView — drag-to-place', () => {
     });
     Object.defineProperty(event, 'clientX', { value: 200 });
     Object.defineProperty(event, 'clientY', { value: 200 });
-    const prevented = !canvas.dispatchEvent(event);
+    let prevented = false;
+    act(() => {
+      prevented = !canvas.dispatchEvent(event);
+    });
     // preventDefault was called → event default was prevented
     expect(prevented).toBe(true);
   });
@@ -1338,7 +1341,9 @@ describe('BreadboardView — empty state', () => {
     hooksModule.useCircuitDesigns = vi.fn().mockReturnValue({ data: [], isLoading: false });
 
     render(<BreadboardView />);
-    fireEvent.click(screen.getByTestId('button-create-first-breadboard-circuit'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('button-create-first-breadboard-circuit'));
+    });
 
     expect(mockCreateCircuitDesign.mutateAsync).toHaveBeenCalledWith({
       projectId: 1,

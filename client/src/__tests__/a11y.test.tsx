@@ -27,11 +27,12 @@
  */
 
 import { describe, it, expect, vi, beforeAll } from 'vitest';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import type { AxeResults, Result } from 'axe-core';
 import React from 'react';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 expect.extend(toHaveNoViolations);
 
@@ -69,10 +70,26 @@ vi.mock('@/lib/contexts/project-meta-context', () => ({
   ProjectMetaProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@/lib/project-context', () => ({
-  useProjectMeta: () => ({ activeView: 'dashboard', setActiveView: vi.fn() }),
-  ProjectMetaProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
+vi.mock('@/lib/project-context', () => {
+  const outputState = { outputLogs: [], addOutputLog: vi.fn(), clearOutputLogs: vi.fn() };
+  return {
+    useProjectMeta: () => ({
+      activeView: 'dashboard',
+      projectName: 'Test',
+      projectDescription: '',
+      seeded: true,
+      setActiveView: vi.fn(),
+    }),
+    useBom: () => ({
+      bom: [],
+      bomSettings: { maxCost: 50, batchSize: 1000, inStockOnly: true, manufacturingDate: new Date() },
+      setBomSettings: vi.fn(), addBomItem: vi.fn(), deleteBomItem: vi.fn(), updateBomItem: vi.fn(),
+    }),
+    useOutput: () => outputState,
+    useProjectId: () => 1,
+    ProjectMetaProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  };
+});
 
 vi.mock('@/lib/contexts/bom-context', () => ({
   useBom: () => ({
@@ -88,7 +105,7 @@ vi.mock('@/lib/contexts/validation-context', () => ({
 }));
 
 vi.mock('@/lib/contexts/history-context', () => ({
-  useHistory: () => ({ entries: [], addEntry: vi.fn(), clearHistory: vi.fn() }),
+  useHistory: () => ({ history: [], entries: [], addEntry: vi.fn(), clearHistory: vi.fn() }),
   HistoryProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
@@ -100,10 +117,46 @@ vi.mock('@/lib/contexts/simulation-context', () => ({
   SimulationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@/lib/contexts/arduino-context', () => ({
-  useArduino: () => ({ connected: false, port: null, baudRate: 9600, logs: [] }),
-  ArduinoProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
+vi.mock('@/lib/contexts/arduino-context', () => {
+  const arduinoState = {
+    connected: false,
+    port: null,
+    baudRate: 9600,
+    logs: [],
+    health: { status: 'unavailable' },
+    workspace: null,
+    files: [],
+    jobs: [],
+    profiles: [],
+    installedLibraries: [],
+    installedCores: [],
+    isHealthLoading: false,
+    isFilesLoading: false,
+    isLibrariesLoading: false,
+    isCoresLoading: false,
+    readFile: vi.fn().mockResolvedValue(''),
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    createFile: vi.fn().mockResolvedValue(undefined),
+    compileJob: vi.fn().mockResolvedValue(undefined),
+    uploadJob: vi.fn().mockResolvedValue(undefined),
+    cancelJob: vi.fn().mockResolvedValue(undefined),
+    downloadArtifact: vi.fn().mockResolvedValue(undefined),
+    updateProfile: vi.fn().mockResolvedValue(undefined),
+    searchLibraries: vi.fn().mockResolvedValue([]),
+    installLibrary: vi.fn().mockResolvedValue({ success: true, output: '' }),
+    uninstallLibrary: vi.fn().mockResolvedValue({ success: true, output: '' }),
+    listBoards: vi.fn().mockResolvedValue([]),
+    searchCores: vi.fn().mockResolvedValue([]),
+    installCore: vi.fn().mockResolvedValue({ success: true, output: '' }),
+    uninstallCore: vi.fn().mockResolvedValue({ success: true, output: '' }),
+    refreshLibraries: vi.fn(),
+    refreshCores: vi.fn(),
+  };
+  return {
+    useArduino: () => arduinoState,
+    ArduinoProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  };
+});
 
 vi.mock('@/lib/contexts/project-id-context', () => ({
   useProjectId: () => 1,
@@ -150,6 +203,81 @@ vi.mock('@/lib/parts/parts-catalog-context', () => ({
   usePartsCatalog: () => ({ parts: [], isLoading: false, error: null, refetch: vi.fn() }),
   PartsCatalogProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
+
+vi.mock('@/lib/circuit-editor/hooks', () => {
+  const emptyQuery = {
+    data: [],
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  };
+  const mutation = {
+    mutate: vi.fn(),
+    mutateAsync: vi.fn().mockResolvedValue(undefined),
+    isPending: false,
+  };
+  return {
+    useCircuitDesigns: () => emptyQuery,
+    useCircuitInstances: () => emptyQuery,
+    useCircuitNets: () => emptyQuery,
+    useCircuitWires: () => emptyQuery,
+    useCreateCircuitDesign: () => mutation,
+    useCreateCircuitInstance: () => mutation,
+    useExpandArchitecture: () => mutation,
+    useGenerateCircuitWithAi: () => mutation,
+    usePushToPcb: () => mutation,
+    useSimulationScenarios: () => emptyQuery,
+    useCreateSimulationScenario: () => mutation,
+    useUpdateSimulationScenario: () => mutation,
+    useDeleteSimulationScenario: () => mutation,
+  };
+});
+
+vi.mock('@/lib/component-editor/hooks', () => {
+  const emptyPartsQuery = {
+    data: [],
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  };
+  const mutation = {
+    mutate: vi.fn(),
+    mutateAsync: vi.fn().mockResolvedValue(undefined),
+    isPending: false,
+  };
+  return {
+    useComponentParts: () => emptyPartsQuery,
+    useComponentPart: () => emptyPartsQuery,
+    useComponentPartByNodeId: () => emptyPartsQuery,
+    useCreateComponentPart: () => mutation,
+    useUpdateComponentPart: () => mutation,
+    useDeleteComponentPart: () => mutation,
+    usePublishToLibrary: () => mutation,
+    useGenerateExactComponentPart: () => mutation,
+    useVerifyComponentPart: () => mutation,
+    useForkLibraryEntry: () => mutation,
+    useLibraryEntries: () => ({
+      data: { entries: [], total: 0 },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    }),
+  };
+});
+
+vi.mock('@/lib/circuit-dsl/use-circuit-evaluator', () => {
+  const evaluator = {
+    ir: null,
+    error: null,
+    isEvaluating: false,
+    evaluate: vi.fn(),
+    reset: vi.fn(),
+  };
+  return { useCircuitEvaluator: () => evaluator };
+});
 
 vi.mock('@/lib/dnd-context', () => ({
   DndProviderWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -298,9 +426,54 @@ type ViewResult =
   | { id: string; status: 'render-failed'; error: string };
 
 const results: ViewResult[] = [];
+const A11Y_TEST_TIMEOUT_MS = 45_000;
+
+type MessageHandler = ((e: MessageEvent) => void) | null;
+
+class MockWorker {
+  onmessage: MessageHandler = null;
+  onerror: ((e: ErrorEvent) => void) | null = null;
+
+  postMessage = vi.fn();
+  terminate = vi.fn();
+  addEventListener = vi.fn();
+  removeEventListener = vi.fn();
+  dispatchEvent = vi.fn(() => true);
+}
+
+function installBrowserGlobals(): void {
+  vi.stubGlobal('Worker', MockWorker);
+  vi.stubGlobal(
+    'URL',
+    new Proxy(globalThis.URL ?? {}, {
+      get(target, prop) {
+        if (prop === 'createObjectURL') {
+          return () => 'blob:mock-worker-url';
+        }
+        if (prop === 'revokeObjectURL') {
+          return () => undefined;
+        }
+        return Reflect.get(target, prop) as unknown;
+      },
+    }),
+  );
+  vi.stubGlobal('Blob', class MockBlob {
+    constructor(public parts: string[], public options?: BlobPropertyBag) {}
+  });
+}
+
+async function settleReactWork(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve();
+  });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
 
 // Set a reasonable timeout; axe analysis can be slow across 26 views.
 beforeAll(() => {
+  installBrowserGlobals();
   // Stub matchMedia, ResizeObserver, IntersectionObserver used by various views.
   if (!globalThis.matchMedia) {
     globalThis.matchMedia = ((query: string) => ({
@@ -334,12 +507,21 @@ describe('a11y — workspace views (finding #343)', () => {
       const Component = mod.default;
       const qc = makeClient();
       let container: HTMLElement;
+      let renderResult: ReturnType<typeof render> | undefined;
       try {
-        const renderResult = render(
-          <QueryClientProvider client={qc}>
-            <Component {...(entry.props ?? {})} />
-          </QueryClientProvider>,
-        );
+        await act(async () => {
+          renderResult = render(
+            <TooltipProvider>
+              <QueryClientProvider client={qc}>
+                <Component {...(entry.props ?? {})} />
+              </QueryClientProvider>
+            </TooltipProvider>,
+          );
+        });
+        await settleReactWork();
+        if (!renderResult) {
+          throw new Error(`Failed to create render result for ${entry.id}`);
+        }
         container = renderResult.container;
       } catch (err) {
         results.push({ id: entry.id, status: 'render-failed', error: String(err) });
@@ -354,6 +536,10 @@ describe('a11y — workspace views (finding #343)', () => {
         results.push({ id: entry.id, status: 'render-failed', error: `axe failure: ${String(err)}` });
         expect.soft(false, `axe threw on ${entry.id}: ${String(err)}`).toBe(true);
         return;
+      } finally {
+        renderResult?.unmount();
+        qc.clear();
+        await settleReactWork();
       }
 
       results.push({ id: entry.id, status: 'rendered', violations: axeResults.violations });
@@ -369,7 +555,7 @@ describe('a11y — workspace views (finding #343)', () => {
         );
       }
       expect(bad).toEqual([]);
-    });
+    }, A11Y_TEST_TIMEOUT_MS);
   }
 
   it('prints a per-view a11y summary', () => {

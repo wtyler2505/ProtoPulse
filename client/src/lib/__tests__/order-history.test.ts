@@ -577,7 +577,9 @@ describe('useOrderHistory', () => {
     });
     // updateTracking is not exposed through the hook — verify via manager
     const mgr = OrderHistoryManager.getInstance();
-    mgr.updateTracking(1, orderId!, 'TRK-HOOK', 'https://track.example.com');
+    act(() => {
+      mgr.updateTracking(1, orderId!, 'TRK-HOOK', 'https://track.example.com');
+    });
     // Re-render to pick up change
     const { result: result2 } = renderHook(() => useOrderHistory(1));
     expect(result2.current.orders[0].trackingNumber).toBe('TRK-HOOK');

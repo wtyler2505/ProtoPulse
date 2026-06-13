@@ -112,7 +112,10 @@ export default function ArduinoToolbar({
 
         <div className="flex items-center gap-2">
           <Select value={selectedProfileId} onValueChange={onProfileChange}>
-            <SelectTrigger className="h-8 w-44 text-[11px] bg-background/50 border-border/50">
+            <SelectTrigger
+              aria-label="Arduino build profile"
+              className="h-8 w-44 text-[11px] bg-background/50 border-border/50"
+            >
               <Cpu className="w-3.5 h-3.5 mr-1.5 shrink-0" />
               <SelectValue placeholder="Select Profile" />
             </SelectTrigger>

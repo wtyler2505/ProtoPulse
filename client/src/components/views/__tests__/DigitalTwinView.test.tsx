@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 import DigitalTwinView from '../DigitalTwinView';
 import { DeviceShadow } from '@/lib/digital-twin/device-shadow';
 import type { TelemetryManifest, TelemetryFrame } from '@/lib/digital-twin/telemetry-protocol';
@@ -38,6 +38,7 @@ describe('DigitalTwinView', () => {
   });
 
   afterEach(() => {
+    cleanup();
     DeviceShadow.resetInstance();
   });
 

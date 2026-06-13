@@ -279,12 +279,26 @@ describe('AI circuit tools: mutation guards reject cross-project circuitId', () 
     // ctx.storage with params.circuitId must call the guard first.
     const fs = require('node:fs') as typeof import('node:fs');
     const path = require('node:path') as typeof import('node:path');
-    const src: string = fs.readFileSync(
-      path.join(__dirname, '..', 'ai-tools', 'circuit.ts'),
+    const sharedSrc: string = fs.readFileSync(
+      path.join(__dirname, '..', 'ai-tools', 'circuit', 'shared.ts'),
       'utf8',
     );
+    const guardedModules = [
+      'schematic.ts',
+      'pcb.ts',
+      'pcb-advanced.ts',
+      'pcb-autoroute.ts',
+    ];
+    const src = guardedModules
+      .map((fileName) =>
+        fs.readFileSync(
+          path.join(__dirname, '..', 'ai-tools', 'circuit', fileName),
+          'utf8',
+        ),
+      )
+      .join('\n');
     // Guard function exists
-    expect(src).toMatch(/async function guardCircuitInProject/);
+    expect(sharedSrc).toMatch(/async function guardCircuitInProject/);
     // At minimum 8 guard invocations — one per executor we audited
     const guardMatches = src.match(/guardCircuitInProject\(params\.circuitId, ctx\)/g) ?? [];
     expect(guardMatches.length).toBeGreaterThanOrEqual(8);

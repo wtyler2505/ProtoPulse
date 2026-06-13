@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import StarterCircuitsPanel from '../StarterCircuitsPanel';
 import { PENDING_STARTER_CIRCUIT_LAUNCH_KEY } from '@/lib/starter-circuit-launch';
 import {
@@ -323,7 +323,9 @@ describe('StarterCircuitsPanel', () => {
     fireEvent.click(screen.getByTestId(`starter-expand-${firstCircuit.id}`));
 
     const copyBtn = screen.getByTestId(`starter-copy-${firstCircuit.id}`);
-    fireEvent.click(copyBtn);
+    await act(async () => {
+      fireEvent.click(copyBtn);
+    });
 
     expect(mockWriteText).toHaveBeenCalledWith(firstCircuit.arduinoCode);
   });

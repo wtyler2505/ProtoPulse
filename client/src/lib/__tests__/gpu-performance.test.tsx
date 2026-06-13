@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { cleanup, render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   classifyGpuTier,
@@ -482,6 +482,7 @@ describe('useOptimizedBlur', () => {
   });
 
   afterEach(() => {
+    cleanup();
     _resetCache();
     document.documentElement.classList.remove('reduced-motion');
     document.documentElement.classList.remove('reduce-blur');
@@ -721,9 +722,7 @@ describe('useOptimizedBlur', () => {
 
     expect(screen.getByTestId('dyn-enabled').textContent).toBe('true');
 
-    await act(async () => {
-      await user.click(screen.getByTestId('dyn-disable'));
-    });
+    await user.click(screen.getByTestId('dyn-disable'));
 
     expect(screen.getByTestId('dyn-enabled').textContent).toBe('false');
     expect(screen.getByTestId('dyn-reason').textContent).toBe('user-override');
@@ -752,9 +751,7 @@ describe('useOptimizedBlur', () => {
 
     expect(screen.getByTestId('dyn2-enabled').textContent).toBe('false');
 
-    await act(async () => {
-      await user.click(screen.getByTestId('dyn2-enable'));
-    });
+    await user.click(screen.getByTestId('dyn2-enable'));
 
     expect(screen.getByTestId('dyn2-enabled').textContent).toBe('true');
   });

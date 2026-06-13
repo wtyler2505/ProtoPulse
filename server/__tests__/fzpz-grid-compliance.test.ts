@@ -35,7 +35,7 @@ describe('snapToFritzingGrid', () => {
 
   it('handles negative values', () => {
     // Math.round(-1/9) = -0, -0*9 = -0; use toEqual for -0/+0 equivalence
-    expect(snapToFritzingGrid(-1) === 0 || snapToFritzingGrid(-1) === -0).toBe(true);
+    expect(Math.abs(snapToFritzingGrid(-1))).toBe(0);
     expect(snapToFritzingGrid(-5)).toBe(-9);
     expect(snapToFritzingGrid(-9)).toBe(-9);
   });

@@ -51,7 +51,7 @@ vi.mock('@/components/ui/button', () => ({
 }));
 
 vi.mock('@/components/ui/collapsible', () => ({
-  Collapsible: ({ children, ...props }: Record<string, unknown>) => <div {...props}>{children as React.ReactNode}</div>,
+  Collapsible: ({ children, onOpenChange: _onOpenChange, ...props }: Record<string, unknown>) => <div {...props}>{children as React.ReactNode}</div>,
   CollapsibleTrigger: ({ children }: Record<string, unknown>) => <>{children as React.ReactNode}</>,
   CollapsibleContent: ({ children }: Record<string, unknown>) => <div>{children as React.ReactNode}</div>,
 }));

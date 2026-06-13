@@ -35,6 +35,7 @@ function textResponse(body: string, status = 200): Response {
 describe('useVaultQuickFetch', () => {
   beforeEach(() => {
     mockFetch.mockReset();
+    vi.stubGlobal('fetch', mockFetch);
   });
 
   it('disables the query when slug is null/undefined', () => {

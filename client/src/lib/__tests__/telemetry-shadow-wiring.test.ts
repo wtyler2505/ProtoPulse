@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { cleanup, renderHook, act } from '@testing-library/react';
 import { TelemetryShadowBridge, useTelemetryShadowBridge } from '../telemetry-shadow-bridge';
 import type { BridgeState } from '../telemetry-shadow-bridge';
 import { DeviceShadow } from '../digital-twin/device-shadow';
@@ -60,6 +60,7 @@ describe('TelemetryShadowBridge — wiring integration', () => {
   });
 
   afterEach(() => {
+    cleanup();
     TelemetryShadowBridge.resetInstance();
     DeviceShadow.resetInstance();
     vi.useRealTimers();

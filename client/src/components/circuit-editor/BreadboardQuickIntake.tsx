@@ -59,6 +59,7 @@ export default function BreadboardQuickIntake({ onAdd, onScan, scanResult }: Bre
     >
       <div className="flex items-center gap-2">
         <Input
+          aria-label="Quick intake part name"
           placeholder="Part name"
           value={partName}
           onChange={(e) => { setPartName(e.target.value); }}
@@ -78,6 +79,7 @@ export default function BreadboardQuickIntake({ onAdd, onScan, scanResult }: Bre
       </div>
       <div className="flex items-center gap-2">
         <Input
+          aria-label="Quick intake quantity"
           data-testid="quick-intake-quantity"
           type="number"
           min={1}

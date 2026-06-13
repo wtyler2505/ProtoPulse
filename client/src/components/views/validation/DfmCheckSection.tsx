@@ -46,7 +46,11 @@ export function DfmCheckSection({
       <div className="flex items-center gap-2">
         <Label className="text-xs text-muted-foreground flex-shrink-0">Fab:</Label>
         <Select value={selectedFab} onValueChange={setSelectedFab}>
-          <SelectTrigger data-testid="dfm-fab-select" className="h-7 text-xs flex-1">
+          <SelectTrigger
+            aria-label="Fab house"
+            data-testid="dfm-fab-select"
+            className="h-7 text-xs flex-1"
+          >
             <SelectValue placeholder="Select fab house..." />
           </SelectTrigger>
           <SelectContent>

@@ -144,8 +144,6 @@ class MockAudioContext {
   });
 }
 
-vi.stubGlobal('AudioContext', MockAudioContext);
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -323,6 +321,7 @@ describe('VoiceAIManager', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.stubGlobal('AudioContext', MockAudioContext);
     VoiceAIManager.resetInstance();
     setupMediaDevices();
     mockGetUserMedia.mockClear();

@@ -36,6 +36,53 @@ import { safeCompareAdminKey } from '../routes/admin';
 import { escapeLikeWildcards } from '../storage/utils';
 import { importFzz } from '../export/fzz-handler';
 
+function makeZipWithOversizedCentralDirectoryEntry(): Buffer {
+  const filename = Buffer.from('big.fzp');
+  const uncompressedSize = 51 * 1024 * 1024;
+
+  const localHeader = Buffer.alloc(30 + filename.length);
+  localHeader.writeUInt32LE(0x04034b50, 0);
+  localHeader.writeUInt16LE(20, 4);
+  localHeader.writeUInt16LE(0, 6);
+  localHeader.writeUInt16LE(0, 8);
+  localHeader.writeUInt32LE(0, 10);
+  localHeader.writeUInt32LE(0, 14);
+  localHeader.writeUInt32LE(0, 18);
+  localHeader.writeUInt32LE(uncompressedSize, 22);
+  localHeader.writeUInt16LE(filename.length, 26);
+  localHeader.writeUInt16LE(0, 28);
+  filename.copy(localHeader, 30);
+
+  const centralDirectory = Buffer.alloc(46 + filename.length);
+  centralDirectory.writeUInt32LE(0x02014b50, 0);
+  centralDirectory.writeUInt16LE(20, 4);
+  centralDirectory.writeUInt16LE(20, 6);
+  centralDirectory.writeUInt16LE(0, 8);
+  centralDirectory.writeUInt16LE(0, 10);
+  centralDirectory.writeUInt32LE(0, 12);
+  centralDirectory.writeUInt32LE(0, 16);
+  centralDirectory.writeUInt32LE(0, 20);
+  centralDirectory.writeUInt32LE(uncompressedSize, 24);
+  centralDirectory.writeUInt16LE(filename.length, 28);
+  centralDirectory.writeUInt16LE(0, 30);
+  centralDirectory.writeUInt16LE(0, 32);
+  centralDirectory.writeUInt32LE(0, 38);
+  centralDirectory.writeUInt32LE(0, 42);
+  filename.copy(centralDirectory, 46);
+
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(0, 4);
+  eocd.writeUInt16LE(0, 6);
+  eocd.writeUInt16LE(1, 8);
+  eocd.writeUInt16LE(1, 10);
+  eocd.writeUInt32LE(centralDirectory.length, 12);
+  eocd.writeUInt32LE(localHeader.length, 16);
+  eocd.writeUInt16LE(0, 20);
+
+  return Buffer.concat([localHeader, centralDirectory, eocd]);
+}
+
 /* ------------------------------------------------------------------ */
 /*  BL-0002: PUBLIC_PATHS no longer includes /api/seed                */
 /* ------------------------------------------------------------------ */
@@ -173,17 +220,10 @@ describe('BL-0070: FZZ ZIP bomb protection', () => {
   });
 
   it('rejects archive with oversized uncompressed content', async () => {
-    const zip = new JSZip();
-    // Create multiple .fzp files whose combined size exceeds 50MB
-    // Each file is ~6MB, 9 files = ~54MB total > 50MB limit
-    const chunkContent = 'x'.repeat(6 * 1024 * 1024);
-    for (let i = 0; i < 9; i++) {
-      zip.file(`big-${String(i)}.fzp`, chunkContent);
-    }
-    const buffer = Buffer.from(await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }));
+    const buffer = makeZipWithOversizedCentralDirectoryEntry();
 
     await expect(importFzz(buffer)).rejects.toThrow(/uncompressed content too large/);
-  }, 60_000);
+  });
 });
 
 /* ------------------------------------------------------------------ */
