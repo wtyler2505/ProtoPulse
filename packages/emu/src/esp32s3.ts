@@ -203,13 +203,16 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * can wake light-sleep via the RTC_XTAL32K_DEAD_TRIG_EN wake source too.
  * SUPER_WDT also records its RTC reset flag/feed-interrupt bits,
  * supports the documented feed/flag-clear pulses, and reports reset
- * cause 18 when firmware has not selected BYPASS_RST.
+ * cause 18 when firmware has not selected BYPASS_RST. RTC SARADC1/2
+ * oneshot completions latch the RTC-domain SARADC interrupt producers
+ * too when their SENS reader interrupt-enable bits are set.
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, and the remaining RTC interrupt producers beyond RWDT/COCPU/
- * brownout/XTAL32K-dead/SUPER_WDT, such as touch and SARADC RTC-domain
- * wake/interrupt paths — so full IDF/FreeRTOS firmware does NOT run yet.
+ * brownout/XTAL32K-dead/SUPER_WDT/SARADC, such as touch and TSENS RTC-
+ * domain wake/interrupt paths — so full IDF/FreeRTOS firmware does NOT
+ * run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -658,7 +661,9 @@ const RTC_SLP_WAKEUP_INT = 1 << 0;
 const RTC_SLP_REJECT_INT = 1 << 1;
 const RTC_WDT_INT = 1 << 3;
 const RTC_BROWN_OUT_INT = 1 << 9;
+const RTC_SARADC1_INT = 1 << 11;
 const RTC_COCPU_INT = 1 << 13;
+const RTC_SARADC2_INT = 1 << 14;
 const RTC_SWD_INT = 1 << 15;
 const RTC_XTAL32K_DEAD_INT = 1 << 16;
 const RTC_MAIN_TIMER_INT = 1 << 10;
@@ -789,12 +794,18 @@ const STALL_C1_CODE = 0x21;
 const CORE1_RESET_SP = 0x4000;
 
 const SENS_BASE = 0x60008800;
+const SENS_SAR_READER1_CTRL = 0x00;
 const SENS_SAR_MEAS1_CTRL2 = 0x0c;
+const SENS_SAR_READER2_CTRL = 0x24;
 const SENS_SAR_MEAS2_CTRL2 = 0x30;
+const SENS_SAR1_INT_EN = 1 << 29;
 const MEAS1_DONE_SAR = 1 << 16;
 const MEAS1_START_SAR = 1 << 17;
+const SENS_SAR2_INT_EN = 1 << 30;
 const MEAS2_DONE_SAR = 1 << 16;
 const MEAS2_START_SAR = 1 << 17;
+const SENS_SAR_READER1_CTRL_RESET = (SENS_SAR1_INT_EN | (1 << 18) | 2) >>> 0;
+const SENS_SAR_READER2_CTRL_RESET = (SENS_SAR2_INT_EN | (1 << 18) | (1 << 16) | 2) >>> 0;
 // 12-bit result. Attenuation is not modeled: full scale is the 3.3 V
 // supply, quantized like the RP2040 core does.
 const ADC_VREF = 3.3;
@@ -1342,6 +1353,8 @@ export class Esp32s3Core implements McuCore {
   // SAR ADC1/ADC2 oneshot state.
   private meas1Ctrl2 = 0; // the control bits firmware wrote
   private meas2Ctrl2 = 0;
+  private sarReader1Ctrl = SENS_SAR_READER1_CTRL_RESET;
+  private sarReader2Ctrl = SENS_SAR_READER2_CTRL_RESET;
   private adcData = 0; // ADC1 latched 12-bit result
   private adc2Data = 0;
   private adcDone = false; // ADC1 done bit
@@ -1661,10 +1674,13 @@ export class Esp32s3Core implements McuCore {
     if (unit === 1) {
       this.adcData = data;
       this.adcDone = true;
+      if ((this.sarReader1Ctrl & SENS_SAR1_INT_EN) !== 0) this.rtcIntRaw |= RTC_SARADC1_INT;
     } else {
       this.adc2Data = data;
       this.adc2Done = true;
+      if ((this.sarReader2Ctrl & SENS_SAR2_INT_EN) !== 0) this.rtcIntRaw |= RTC_SARADC2_INT;
     }
+    this.recomputeIrq();
   }
 
   private apbSaradcPattern(unit: 1 | 2): number {
@@ -2089,6 +2105,8 @@ export class Esp32s3Core implements McuCore {
     this.efuseWrTimConf2 = EFUSE_WR_TIM_CONF2_RESET;
     this.meas1Ctrl2 = 0;
     this.meas2Ctrl2 = 0;
+    this.sarReader1Ctrl = SENS_SAR_READER1_CTRL_RESET;
+    this.sarReader2Ctrl = SENS_SAR_READER2_CTRL_RESET;
     this.adcData = 0;
     this.adc2Data = 0;
     this.adcDone = false;
@@ -3634,11 +3652,13 @@ export class Esp32s3Core implements McuCore {
     }
     if (addr >= SENS_BASE && addr < SENS_BASE + 0x400) {
       const off = addr - SENS_BASE;
+      if (off === SENS_SAR_READER1_CTRL) return this.sarReader1Ctrl >>> 0;
       if (off === SENS_SAR_MEAS1_CTRL2) {
         let v = this.meas1Ctrl2 & ~(MEAS1_DONE_SAR | 0xffff);
         if (this.adcDone) v |= MEAS1_DONE_SAR | (this.adcData & 0xfff);
         return v >>> 0;
       }
+      if (off === SENS_SAR_READER2_CTRL) return this.sarReader2Ctrl >>> 0;
       if (off === SENS_SAR_MEAS2_CTRL2) {
         let v = this.meas2Ctrl2 & ~(MEAS2_DONE_SAR | 0xffff);
         if (this.adc2Done) v |= MEAS2_DONE_SAR | (this.adc2Data & 0xfff);
@@ -4151,7 +4171,9 @@ export class Esp32s3Core implements McuCore {
     }
     if (addr >= SENS_BASE && addr < SENS_BASE + 0x400) {
       const off = addr - SENS_BASE;
-      if (off === SENS_SAR_MEAS1_CTRL2) {
+      if (off === SENS_SAR_READER1_CTRL) {
+        this.sarReader1Ctrl = value >>> 0;
+      } else if (off === SENS_SAR_MEAS1_CTRL2) {
         const prev = this.meas1Ctrl2;
         this.meas1Ctrl2 = value >>> 0;
         // adc_oneshot_ll_start pulses MEAS1_START_SAR low then high —
@@ -4160,6 +4182,8 @@ export class Esp32s3Core implements McuCore {
         if ((value & MEAS1_START_SAR) !== 0 && (prev & MEAS1_START_SAR) === 0) {
           this.runSarAdcConversion(1, value);
         }
+      } else if (off === SENS_SAR_READER2_CTRL) {
+        this.sarReader2Ctrl = value >>> 0;
       } else if (off === SENS_SAR_MEAS2_CTRL2) {
         const prev = this.meas2Ctrl2;
         this.meas2Ctrl2 = value >>> 0;

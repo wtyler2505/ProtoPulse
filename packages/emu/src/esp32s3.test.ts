@@ -3682,6 +3682,108 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([18]);
   });
 
+  it('SARADC1/2 RTC-domain conversions route through RTC_CORE', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // sens_reg.h has SENS_SAR1_INT_EN bit 29, SENS_SAR2_INT_EN bit 30,
+    // MEASx_START_SAR bit 17, and MEASx_DONE_SAR bit 16. rtc_cntl_reg.h
+    // routes SARADC1/SARADC2 into RTC_CNTL INT bits 11 and 14.
+    const SENS = 0x60008800;
+    const SCRATCH = ESP32S3_DRAM_BASE + 0xa00;
+    const RTC_SARADC1_INT = 1 << 11;
+    const RTC_SARADC2_INT = 1 << 14;
+    const CTRL_ADC1_CH3 = (0x80000000 | (1 << 18) | (1 << (19 + 3))) >>> 0;
+    const CTRL_ADC1_CH3_START = (CTRL_ADC1_CH3 | (1 << 17)) >>> 0;
+    const CTRL_ADC2_CH4 = (0x80000000 | (1 << 18) | (1 << (19 + 4))) >>> 0;
+    const CTRL_ADC2_CH4_START = (CTRL_ADC2_CH4 | (1 << 17)) >>> 0;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        RTCCNTL,
+        INTMTX,
+        UART,
+        ESP32S3_IRAM_BASE,
+        SENS,
+        SCRATCH,
+        RTC_SARADC1_INT,
+        CTRL_ADC1_CH3,
+        CTRL_ADC1_CH3_START,
+        RTC_SARADC2_INT,
+        CTRL_ADC2_CH4,
+        CTRL_ADC2_CH4_START,
+      ],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        L32R(4, 4), // a4 = SENS
+        L32R(5, 2), // a5 = UART
+        L32R(8, 5), // a8 = ISR counter scratch
+        MOVI(6, 0),
+        S32I(6, 8, 0),
+        MOVI(6, 1),
+        S32I(6, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(6, 3),
+        WSR(6, SR.VECBASE),
+        MOVI(6, 2),
+        WSR(6, SR.INTENABLE),
+        L32R(6, 6),
+        S32I(6, 2, 0x4c), // clear stale SARADC1 raw
+        S32I(6, 2, 0x40), // enable SARADC1 raw
+        RSIL(12, 0),
+        L32R(6, 7),
+        S32I(6, 4, 0x0c), // ADC1 start low
+        L32R(6, 8),
+        S32I(6, 4, 0x0c), // ADC1 start 0->1, ISR increments scratch
+        MOVI(9, 1),
+        L32I(6, 8, 0),
+        BNE(6, 9, BR(-2)),
+        L32I(6, 4, 0x0c), // MEAS1_DONE_SAR
+        SRAI(6, 6, 16),
+        MOVI(7, 1),
+        AND(6, 6, 7),
+        S32I(6, 5, 0), // tx 1: ADC1 done
+        L32I(6, 2, 0x48),
+        S32I(6, 5, 0), // tx 0: RTC INT_ST clear after ISR
+
+        MOVI(6, 0),
+        S32I(6, 8, 0),
+        L32R(6, 9),
+        S32I(6, 2, 0x4c), // clear stale SARADC2 raw
+        S32I(6, 2, 0x40), // enable SARADC2 raw
+        L32R(6, 10),
+        S32I(6, 4, 0x30), // ADC2 start low
+        L32R(6, 11),
+        S32I(6, 4, 0x30), // ADC2 start 0->1, ISR increments scratch
+        MOVI(9, 1),
+        L32I(6, 8, 0),
+        BNE(6, 9, BR(-2)),
+        L32I(6, 4, 0x30), // MEAS2_DONE_SAR
+        SRAI(6, 6, 16),
+        AND(6, 6, 7),
+        S32I(6, 5, 0), // tx 1: ADC2 done
+        L32I(6, 2, 0x48),
+        S32I(6, 5, 0), // tx 0: RTC INT_ST clear after ISR
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(10, 0),
+        L32R(11, 5),
+        L32I(12, 11, 0),
+        ADDI(12, 12, 1),
+        S32I(12, 11, 0), // scratch++ proves RTC_CORE dispatched
+        L32I(12, 10, 0x48),
+        S32I(12, 10, 0x4c), // clear the enabled RTC raw producer
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_500);
+    expect([...c.drainUart()]).toEqual([1, 0, 1, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('a read of an unmodeled RTC_CNTL register halts with a diagnostic naming it', () => {
     // 0x60008090 is RTC_CNTL_WDTCONFIG0_REG territory — reading 0 there
     // would silently claim "watchdog off", so the core refuses instead.

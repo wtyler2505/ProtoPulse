@@ -822,6 +822,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       and separately verifies the reset-cause path. Cuts: no timed SWD
       countdown, auto-feed cadence, or remaining RTC producers like
       touch and SARADC RTC-domain yet
+- [x] ESP32-S3 core slice 50 — RTC SARADC1/2 interrupt delivery through
+      RTC_CORE (landed 2026-06-13): SENS_SAR_READER1_CTRL (+0x00) and
+      SENS_SAR_READER2_CTRL (+0x24) now preserve their documented reset
+      interrupt-enable bits, and RTC-domain SENS_SAR_MEAS1/2_CTRL2
+      oneshot completions latch RTC_CNTL_SARADC1_INT (bit 11) or
+      RTC_CNTL_SARADC2_INT (bit 14). Those raw bits flow through
+      RTC_CNTL INT_RAW/ST/ENA/CLR and the RTC_CORE interrupt-matrix
+      source. Proven by hand-assembled firmware that maps RTC_CORE to
+      level-1 line 1, enables SARADC1 then SARADC2 raw delivery, starts
+      each SENS RTC conversion, lets the RTC_CORE ISR clear the enabled
+      raw source, and reports both MEASx_DONE_SAR and cleared INT_ST
+      over UART. Cuts: no SAR threshold/sleep-policy modeling, no
+      TSENS RTC interrupt path, and touch remains separate
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
