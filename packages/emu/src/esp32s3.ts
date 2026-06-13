@@ -3,6 +3,13 @@ import { XtensaCpu } from './xtensa.js';
 import type { AdcReadRequest, AdcSampler, DigitalLevel, McuCore, McuState, McuStepResult, PinEvent } from './types.js';
 import type { XtensaBus } from './xtensa.js';
 
+export interface Esp32s3AdcContinuousOverflowEvent {
+  cycle: number;
+  descriptor: number;
+  frameWord: number;
+  policy: 'drop-new' | 'flush-old';
+}
+
 /**
  * ESP32-S3 v0 — a from-scratch Xtensa LX7 core, the first slice of the
  * "no off-the-shelf JS emulator" epic. Every address and encoding is
@@ -160,8 +167,11 @@ import type { XtensaBus } from './xtensa.js';
  * DSCR_EMPTY instead of disappearing silently after the DMA-owned
  * pool is exhausted. CPU WAITI now parks until modeled level-1
  * interrupts wake it. CPU-owned descriptors now model driver-pool
- * backpressure: they latch DSCR_EMPTY, park the channel, and resume
- * when firmware returns ownership. Cuts: no timed flush/drop policy.
+ * backpressure: by default they latch DSCR_EMPTY and drop the new
+ * sample until firmware returns ownership; an emulator-side
+ * setAdcContinuousFlushPool(true) knob mirrors ESP-IDF's flush_pool
+ * policy by recycling the CPU-owned frame and overwriting old data.
+ * Cuts: no timed pressure model or driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
@@ -846,6 +856,8 @@ export class Esp32s3Core implements McuCore {
   private apbSaradcClkmConf = APB_SARADC_CLKM_CONF_RESET;
   private apbSaradcDataStatus = [0, 0];
   private gdmaRx: GdmaRxChannel[] = Array.from({ length: GDMA_RX_CHANNELS }, freshGdmaRx);
+  private adcContinuousFlushPool = false;
+  private adcContinuousOverflows: Esp32s3AdcContinuousOverflowEvent[] = [];
   /** Bench wiring — survives reset(), like loaded firmware. */
   private sampler: AdcSampler | null = null;
   /** Last driven level per pin; undefined while not output-enabled. */
@@ -1048,6 +1060,16 @@ export class Esp32s3Core implements McuCore {
     return out;
   }
 
+  setAdcContinuousFlushPool(enabled: boolean): void {
+    this.adcContinuousFlushPool = enabled;
+  }
+
+  drainAdcContinuousOverflows(): Esp32s3AdcContinuousOverflowEvent[] {
+    const out = this.adcContinuousOverflows;
+    this.adcContinuousOverflows = [];
+    return out;
+  }
+
   inspect(): McuState {
     // No SREG on Xtensa — reported as 0; sp is a1 by call0 convention.
     // Reports the PRO CPU (core 0) — the SoC timebase.
@@ -1228,11 +1250,38 @@ export class Esp32s3Core implements McuCore {
     this.recomputeIrq();
   }
 
-  private gdmaParkDscrEmpty(ch: GdmaRxChannel): void {
+  private gdmaParkDscrEmpty(ch: GdmaRxChannel, desc?: number, word?: number): void {
+    if (desc !== undefined && word !== undefined) {
+      this.adcContinuousOverflows.push({
+        cycle: this.now(),
+        descriptor: desc >>> 0,
+        frameWord: word >>> 0,
+        policy: 'drop-new',
+      });
+    }
     ch.intRaw |= GDMA_IN_DSCR_EMPTY_INT;
     ch.active = false;
     ch.offset = 0;
     this.recomputeIrq();
+  }
+
+  private gdmaHandleCpuOwnedDescriptor(ch: GdmaRxChannel, desc: number, dw0: number, word: number): number | null {
+    if (!this.adcContinuousFlushPool) {
+      this.gdmaParkDscrEmpty(ch, desc, word);
+      return null;
+    }
+
+    this.adcContinuousOverflows.push({
+      cycle: this.now(),
+      descriptor: desc >>> 0,
+      frameWord: word >>> 0,
+      policy: 'flush-old',
+    });
+    const recycledDw0 = (dw0 & ~(GDMA_DESC_LENGTH_MASK | GDMA_DESC_SUC_EOF)) | GDMA_DESC_OWNER_DMA;
+    this.setSramU32(desc, recycledDw0 >>> 0);
+    ch.active = true;
+    ch.offset = 0;
+    return recycledDw0 >>> 0;
   }
 
   private gdmaStart(ch: GdmaRxChannel): void {
@@ -1263,16 +1312,17 @@ export class Esp32s3Core implements McuCore {
       return;
     }
     let dw0 = this.sramU32(desc);
-    const size = dw0 & GDMA_DESC_SIZE_MASK;
+    let size = dw0 & GDMA_DESC_SIZE_MASK;
     if (size < ADC_DIGI_RESULT_BYTES) {
       this.gdmaMarkDscrErr(ch, desc);
       return;
     }
     if ((dw0 & GDMA_DESC_OWNER_DMA) === 0) {
-      this.gdmaParkDscrEmpty(ch);
-      return;
+      const recycled = this.gdmaHandleCpuOwnedDescriptor(ch, desc, dw0, word);
+      if (recycled === null) return;
+      dw0 = recycled;
     }
-    const buffer = this.sramU32(desc + 4);
+    let buffer = this.sramU32(desc + 4);
     if (ch.offset + ADC_DIGI_RESULT_BYTES > size) {
       const next = this.sramU32(desc + 8);
       if (next === 0) {
@@ -1287,14 +1337,17 @@ export class Esp32s3Core implements McuCore {
       ch.currentDesc = desc;
       ch.offset = 0;
       dw0 = this.sramU32(desc);
-      if ((dw0 & GDMA_DESC_SIZE_MASK) < ADC_DIGI_RESULT_BYTES) {
+      size = dw0 & GDMA_DESC_SIZE_MASK;
+      if (size < ADC_DIGI_RESULT_BYTES) {
         this.gdmaMarkDscrErr(ch, desc);
         return;
       }
       if ((dw0 & GDMA_DESC_OWNER_DMA) === 0) {
-        this.gdmaParkDscrEmpty(ch);
-        return;
+        const recycled = this.gdmaHandleCpuOwnedDescriptor(ch, desc, dw0, word);
+        if (recycled === null) return;
+        dw0 = recycled;
       }
+      buffer = this.sramU32(desc + 4);
     }
     this.setSramU32(buffer + ch.offset, word);
     ch.offset += ADC_DIGI_RESULT_BYTES;
@@ -1409,6 +1462,7 @@ export class Esp32s3Core implements McuCore {
     this.apbSaradcClkmConf = APB_SARADC_CLKM_CONF_RESET;
     this.apbSaradcDataStatus = [0, 0];
     this.gdmaRx = Array.from({ length: GDMA_RX_CHANNELS }, freshGdmaRx);
+    this.adcContinuousOverflows = [];
     this.driven.fill(undefined);
     this.events = [];
     this.rxQueue = [];

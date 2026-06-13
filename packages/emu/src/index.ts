@@ -37,6 +37,7 @@ export { parseIntelHex } from './intel-hex.js';
 export { Rp2040Core, RP2040_CLOCK_HZ } from './rp2040.js';
 export {
   Esp32s3Core,
+  type Esp32s3AdcContinuousOverflowEvent,
   esp32s3PinId,
   ESP32S3_IRAM_BASE,
   ESP32S3_DRAM_BASE,

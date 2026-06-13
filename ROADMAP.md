@@ -500,6 +500,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       observes the next sample overwrite the DMA buffer cleanly.
       Cuts: instant sample-time pressure; no timed flush/drop policy
       or esp_adc_continuous_flush_pool policy knob yet
+- [x] ESP32-S3 core slice 24 — ADC continuous overflow policy knob
+      (landed 2026-06-13): the emulator now exposes
+      setAdcContinuousFlushPool(true) to mirror ESP-IDF's
+      `adc_continuous_handle_cfg_t.flags.flush_pool`: the default
+      policy records a drop-new overflow event and leaves old frame
+      data intact; flush mode records a flush-old overflow event,
+      recycles the CPU-owned GDMA frame, and overwrites it with the
+      new ADC sample. Proven by hand-assembled circular-pool firmware
+      for both policies. Cuts: host-side policy knob only — full
+      esp_adc driver ringbuffer/callback behavior still belongs with
+      unmodified IDF/FreeRTOS bring-up
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
