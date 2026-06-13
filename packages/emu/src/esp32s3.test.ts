@@ -115,11 +115,13 @@ const RMT_RX_EN = 1;
 const RMT_MEM_WR_RST = 1 << 1;
 const RMT_APB_MEM_RST = 1 << 2;
 const RMT_MEM_OWNER_RX = 1 << 3;
+const RMT_MEM_RX_WRAP_EN = 1 << 13;
 const RMT_RX_CONF_UPDATE = 1 << 15;
 const RMT_CH0_TX_END = 1;
 const RMT_CH0_TX_THR_EVENT = 1 << 8;
 const RMT_CH0_TX_LOOP = 1 << 12;
 const RMT_CH3_TX_END = 1 << 3;
+const RMT_CH4_STATUS = 0x60;
 const RMT_CH4_RX_END = 1 << 16;
 const RMT_CH4_RX_THR_EVENT = 1 << 24;
 const GDMA_OUT_CH0_INT_RAW = 0x68;
@@ -784,6 +786,83 @@ describe('Esp32s3Core', () => {
     c.step(300);
 
     expect([...c.drainUart()]).toEqual([1, 1, 4, 1, 4, 0]);
+  });
+
+  it('wraps RMT RX direct memory and reports APB read/write offsets', () => {
+    const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB | RMT_SYS_APB_FIFO_MASK;
+    const rxConf0 = 1 | (200 << 8) | (1 << 24); // divider 1, long idle, one 48-symbol memory block
+    const rxConf1Reset = RMT_MEM_OWNER_RX | RMT_MEM_RX_WRAP_EN | RMT_MEM_WR_RST | RMT_APB_MEM_RST | RMT_RX_CONF_UPDATE;
+    const rxConf1Start = RMT_MEM_OWNER_RX | RMT_MEM_RX_WRAP_EN | RMT_RX_EN | RMT_RX_CONF_UPDATE;
+    const gpioInRoute = 4 | GPIO_SIG_IN_SEL; // IO4 -> RMT_SIG_IN0
+    const literals = [
+      RMT,
+      GPIO_FUNC81_IN_SEL_CFG,
+      UART,
+      rmtSysConf,
+      rxConf0,
+      gpioInRoute,
+      rxConf1Reset,
+      rxConf1Start,
+      RMT_CH4_RX_END,
+      0xff,
+    ];
+    const code: XtInstr[] = [
+      L32R(2, 0), // RMT
+      L32R(3, 3),
+      S32I(3, 2, 0xc0), // SYS_CONF: direct-memory APB path, APB clock source
+      L32R(3, 4),
+      S32I(3, 2, 0x30), // CH4CONF0: RX divider + idle threshold
+      L32R(4, 1),
+      L32R(5, 5),
+      S32I(5, 4, 0x00), // GPIO input matrix: RMT_SIG_IN0 <- IO4
+      L32R(3, 6),
+      S32I(3, 2, 0x34), // reset RX write/APB pointers while keeping wrap configured
+      L32R(3, 8),
+      S32I(3, 2, 0x78), // enable RX_END
+      L32R(3, 7),
+      S32I(3, 2, 0x34), // rx_en + wrap + conf_update
+    ];
+    const poll = code.length;
+    code.push(
+      L32I(8, 2, 0x70), // INT_RAW
+      L32R(10, 8), // RMT_CH4_RX_END
+      AND(9, 8, 10),
+      BEQZ_TO(9, poll),
+      L32R(12, 2), // UART
+      L32R(10, 9), // 0xff
+      L32I(8, 2, RMT_CH4_STATUS),
+      AND(11, 8, 10),
+      S32I(11, 12, 0x00), // CH4 write offset low byte: base 192 + wrapped cursor 1
+      L32I(8, 2, 0x10), // CH4DATA direct-memory slot 0
+      AND(11, 8, 10),
+      S32I(11, 12, 0x00), // wrapped duration0 low byte
+      SRLI(11, 8, 8),
+      SRLI(11, 11, 8),
+      AND(11, 11, 10),
+      S32I(11, 12, 0x00), // wrapped duration1 low byte
+      L32I(8, 2, RMT_CH4_STATUS),
+      SRLI(11, 8, 11),
+      AND(11, 11, 10),
+      S32I(11, 12, 0x00), // CH4 APB read offset low byte: base 192 + cursor 1
+      J(BR(-1)),
+    );
+    const c = core(assembleXtensa(ESP32S3_IRAM_BASE, literals, code));
+    c.setPin('IO4', 0);
+    c.step(120);
+    c.setPin('IO4', 1);
+    c.step(6);
+    c.setPin('IO4', 0);
+    c.step(9);
+    c.setPin('IO4', 1);
+    for (let i = 0; i < 48; i++) {
+      c.step(3);
+      c.setPin('IO4', 0);
+      c.step(3);
+      c.setPin('IO4', 1);
+    }
+    c.step(900);
+
+    expect([...c.drainUart()]).toEqual([193, 1, 1, 193]);
   });
 
   it('captures RMT RX channel 3 symbols through GDMA IN descriptors', () => {

@@ -410,6 +410,7 @@ const RMT_MEM_OWNER_RX = 1 << 3;
 const RMT_RX_FILTER_EN = 1 << 4;
 const RMT_RX_FILTER_THRES_SHIFT = 5;
 const RMT_RX_FILTER_THRES_MASK = 0xff;
+const RMT_MEM_RX_WRAP_EN = 1 << 13;
 const RMT_RX_CONF_UPDATE = 1 << 15;
 const RMT_RX_CONF1_WT_MASK = RMT_MEM_WR_RST | RMT_RX_APB_MEM_RST | (1 << 14) | RMT_RX_CONF_UPDATE;
 const RMT_RX_CONF1_RESET = RMT_MEM_OWNER_RX | (15 << RMT_RX_FILTER_THRES_SHIFT);
@@ -948,7 +949,11 @@ interface RmtRxChannel {
   rxLim: number;
   carrierRm: number;
   memory: number[];
+  writeCursor: number;
   readCursor: number;
+  capturedSymbols: number;
+  memoryFull: boolean;
+  apbReadError: boolean;
   pending: RmtRxHalfPulse | null;
   active: boolean;
   started: boolean;
@@ -1067,7 +1072,11 @@ const freshRmtRxChannel = (): RmtRxChannel => ({
   rxLim: RMT_RX_LIM_RESET,
   carrierRm: RMT_RX_CARRIER_RM_RESET,
   memory: [],
+  writeCursor: 0,
   readCursor: 0,
+  capturedSymbols: 0,
+  memoryFull: false,
+  apbReadError: false,
   pending: null,
   active: false,
   started: false,
@@ -2496,6 +2505,35 @@ export class Esp32s3Core implements McuCore {
     return Math.max(1, blocks) * RMT_RX_SYMBOLS_PER_BLOCK;
   }
 
+  private rmtRxMemoryBase(chIndex: number): number {
+    return (chIndex + RMT_TX_CHANNELS) * RMT_RX_SYMBOLS_PER_BLOCK;
+  }
+
+  private rmtRxStatusWord(chIndex: number, ch: RmtRxChannel): number {
+    const base = this.rmtRxMemoryBase(chIndex);
+    const writeAddr = (base + ch.writeCursor) & 0x3ff;
+    const readAddr = (base + ch.readCursor) & 0x3ff;
+    const state = ch.active ? 1 : 0;
+    return (
+      writeAddr |
+      (readAddr << 11) |
+      ((state & 0x07) << 22) |
+      ((ch.memoryFull ? 1 : 0) << 26) |
+      ((ch.apbReadError ? 1 : 0) << 27)
+    );
+  }
+
+  private rmtReadRxData(ch: RmtRxChannel): number {
+    const capacity = this.rmtRxMemoryCapacity(ch);
+    if (this.rmtDirectMemoryMode() && ch.readCursor >= capacity) {
+      ch.apbReadError = true;
+      return 0;
+    }
+    const value = ch.memory[ch.readCursor] ?? 0;
+    ch.readCursor++;
+    return value >>> 0;
+  }
+
   private rmtRxLimit(ch: RmtRxChannel): number {
     return ch.rxLim & RMT_RX_LIM_MASK;
   }
@@ -2504,9 +2542,11 @@ export class Esp32s3Core implements McuCore {
     return chIndex === RMT_RX_CHANNELS - 1 && (ch.conf0 & RMT_RX_DMA_ACCESS_EN) !== 0;
   }
 
-  private rmtResetRx(ch: RmtRxChannel): void {
+  private rmtResetRxWriter(ch: RmtRxChannel): void {
     ch.memory = [];
-    ch.readCursor = 0;
+    ch.writeCursor = 0;
+    ch.capturedSymbols = 0;
+    ch.memoryFull = false;
     ch.pending = null;
     ch.started = false;
     ch.rawCycle = this.cpu.cycles;
@@ -2514,6 +2554,11 @@ export class Esp32s3Core implements McuCore {
     ch.lastCycle = this.cpu.cycles;
     ch.lastLevel = 0;
     ch.thresholdFired = false;
+  }
+
+  private rmtResetRxApbReader(ch: RmtRxChannel): void {
+    ch.readCursor = 0;
+    ch.apbReadError = false;
   }
 
   private rmtStartRx(chIndex: number): void {
@@ -2545,19 +2590,27 @@ export class Esp32s3Core implements McuCore {
       ch.pending = half;
       return false;
     }
-    const capacity = this.rmtRxMemoryCapacity(ch);
-    if (ch.memory.length >= capacity) {
-      ch.active = false;
-      this.rmtIntRaw |= 1 << (RMT_RX_ERR_INT_BASE + chIndex);
-      return true;
-    }
     const first = ch.pending;
     ch.pending = null;
     const symbol = (first.duration | (first.level << 15) | (half.duration << 16) | (half.level << 31)) >>> 0;
     if (this.rmtRxDmaMode(chIndex, ch)) return this.gdmaPushRmtRxWord(symbol);
-    ch.memory.push(symbol);
+    const capacity = this.rmtRxMemoryCapacity(ch);
+    if (ch.writeCursor >= capacity) {
+      if ((ch.conf1 & RMT_MEM_RX_WRAP_EN) === 0) {
+        ch.memoryFull = true;
+        ch.active = false;
+        this.rmtIntRaw |= 1 << (RMT_RX_ERR_INT_BASE + chIndex);
+        return true;
+      }
+      ch.writeCursor = 0;
+    }
+    ch.memory[ch.writeCursor] = symbol;
+    ch.writeCursor++;
+    ch.capturedSymbols++;
+    if (ch.writeCursor >= capacity && (ch.conf1 & RMT_MEM_RX_WRAP_EN) !== 0) ch.writeCursor = 0;
+    if (ch.writeCursor >= capacity) ch.memoryFull = true;
     const limit = this.rmtRxLimit(ch);
-    if (!ch.thresholdFired && limit > 0 && ch.memory.length >= limit) {
+    if (!ch.thresholdFired && limit > 0 && ch.capturedSymbols >= limit) {
       ch.thresholdFired = true;
       this.rmtIntRaw |= 1 << (RMT_RX_THR_INT_BASE + chIndex);
       return true;
@@ -3186,7 +3239,7 @@ export class Esp32s3Core implements McuCore {
         if (channel < RMT_TX_CHANNELS) return 0;
         const ch = this.rmtRx[channel - RMT_TX_CHANNELS];
         if (ch === undefined) return 0;
-        return (ch.memory[ch.readCursor++] ?? 0) >>> 0;
+        return this.rmtReadRxData(ch);
       }
       if (off >= RMT_CHCONF0 && off < RMT_CHCONF0 + RMT_TX_CHANNELS * RMT_CHCONF0_STRIDE && (off & 3) === 0) {
         return this.rmtTx[(off - RMT_CHCONF0) >> 2]?.conf0 ?? 0;
@@ -3200,6 +3253,15 @@ export class Esp32s3Core implements McuCore {
       if (off >= RMT_CHSTATUS && off < RMT_CHSTATUS + RMT_TX_CHANNELS * RMT_CHSTATUS_STRIDE && (off & 3) === 0) {
         const ch = this.rmtTx[(off - RMT_CHSTATUS) >> 2];
         return ch === undefined ? 0 : this.rmtTxStatusWord(ch) >>> 0;
+      }
+      if (
+        off >= RMT_CHSTATUS + RMT_TX_CHANNELS * RMT_CHSTATUS_STRIDE &&
+        off < RMT_CHSTATUS + (RMT_TX_CHANNELS + RMT_RX_CHANNELS) * RMT_CHSTATUS_STRIDE &&
+        (off & 3) === 0
+      ) {
+        const chIndex = (off - RMT_CHSTATUS - RMT_TX_CHANNELS * RMT_CHSTATUS_STRIDE) >> 2;
+        const ch = this.rmtRx[chIndex];
+        return ch === undefined ? 0 : this.rmtRxStatusWord(chIndex, ch) >>> 0;
       }
       if (off === RMT_INT_RAW) return this.rmtIntRaw >>> 0;
       if (off === RMT_INT_ST) return (this.rmtIntRaw & this.rmtIntEna) >>> 0;
@@ -3554,7 +3616,8 @@ export class Esp32s3Core implements McuCore {
         if (ch !== undefined) {
           const wasEnabled = (ch.conf1 & RMT_RX_EN) !== 0;
           ch.conf1 = (v & ~RMT_RX_CONF1_WT_MASK) >>> 0;
-          if ((v & (RMT_MEM_WR_RST | RMT_RX_APB_MEM_RST)) !== 0) this.rmtResetRx(ch);
+          if ((v & RMT_MEM_WR_RST) !== 0) this.rmtResetRxWriter(ch);
+          if ((v & RMT_RX_APB_MEM_RST) !== 0) this.rmtResetRxApbReader(ch);
           const nowEnabled = (ch.conf1 & RMT_RX_EN) !== 0;
           if (nowEnabled && !wasEnabled) this.rmtStartRx(chIndex);
           if (!nowEnabled && wasEnabled) this.rmtStopRx(ch);

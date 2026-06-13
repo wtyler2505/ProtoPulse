@@ -707,6 +707,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       status over UART. Cuts: no RX direct-memory/wrap APB readback
       path, no driver ringbuffer API shim, and no TX live
       refill/`gdma_append` timing yet
+- [x] ESP32-S3 core slice 41 — RMT RX direct-memory wrap readback
+      (landed 2026-06-13): RX channels now keep hardware-style memory
+      write/read cursors, honor `CHmCONF1.MEM_RX_WRAP_EN`, expose
+      `CH4..CH7STATUS` RX write/APB-read offsets plus memory/read-error
+      flags, and read `CH4..CH7DATA` from the APB direct-memory image
+      when `SYS_CONF.APB_FIFO_MASK` is set. Proven by hand-assembled
+      firmware that routes IO4 into RMT RX channel 0, fills one 48-symbol
+      block, wraps one extra symbol into slot 0, reads it back through
+      `CH4DATA`, and verifies both CH4 status cursors over UART. Cuts:
+      no driver ringbuffer API shim, no TX live refill/`gdma_append`
+      timing, and no additional RMT error taxonomy beyond memory full /
+      APB read overflow yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
