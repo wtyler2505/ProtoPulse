@@ -180,14 +180,16 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * symbol count after firmware clears INT_RAW, giving the driver refill
  * loop a real interrupt cadence. RMT RX channel 0..3 now captures GPIO
  * input-matrix edges into CH4..CH7 APB FIFO symbols, honoring RX
- * limit/threshold and idle completion. RMT TX channel 3 can source
- * symbols from GDMA OUT descriptors when DMA access is enabled, and
- * RMT RX channel 3 can write captured symbols into GDMA IN descriptors,
- * continuing across linked descriptors so partial-receive callbacks can
- * be modeled before the final idle EOF.
+ * limit/threshold and idle completion; RX carrier demodulation honors
+ * CHmCONF0 carrier enable/polarity and CHm_RX_CARRIER_RM thresholds so
+ * short carrier gaps collapse back into one base pulse. RMT TX channel
+ * 3 can source symbols from GDMA OUT descriptors when DMA access is
+ * enabled, and RMT RX channel 3 can write captured symbols into GDMA IN
+ * descriptors, continuing across linked descriptors so partial-receive
+ * callbacks can be modeled before the final idle EOF.
  * Cuts: no live mutation of an already-built TX waveform from a refill
- * ISR, RX carrier demodulation, RX direct-memory/wrap APB readback path,
- * or driver ringbuffer API yet.
+ * ISR, RX direct-memory/wrap APB readback path, or driver ringbuffer
+ * API yet.
  * Still missing: full light/deep sleep register policy — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
@@ -417,9 +419,15 @@ const RMT_RX_IDLE_THRES_MASK = 0x7fff;
 const RMT_RX_DMA_ACCESS_EN = 1 << 23;
 const RMT_RX_MEM_SIZE_SHIFT = 24;
 const RMT_RX_MEM_SIZE_MASK = 0x0f;
+const RMT_RX_CARRIER_EN = 1 << 28;
+const RMT_RX_CARRIER_OUT_LV = 1 << 29;
 const RMT_RX_CONF0_RESET = 2 | (RMT_RX_IDLE_THRES_MASK << RMT_RX_IDLE_THRES_SHIFT) | (1 << RMT_RX_MEM_SIZE_SHIFT) | (1 << 28) | (1 << 29);
 const RMT_RX_LIM_MASK = 0x1ff;
 const RMT_RX_LIM_RESET = 128;
+const RMT_CH_RX_CARRIER_RM = 0x90;
+const RMT_CH_RX_CARRIER_RM_STRIDE = 0x04;
+const RMT_RX_CARRIER_RM_RESET = 0;
+const RMT_RX_CARRIER_THRES_MASK = 0xffff;
 const RMT_RX_END_INT_BASE = 16;
 const RMT_RX_ERR_INT_BASE = 20;
 const RMT_RX_THR_INT_BASE = 24;
@@ -938,11 +946,14 @@ interface RmtRxChannel {
   conf0: number;
   conf1: number;
   rxLim: number;
+  carrierRm: number;
   memory: number[];
   readCursor: number;
   pending: RmtRxHalfPulse | null;
   active: boolean;
   started: boolean;
+  rawCycle: number;
+  rawLevel: DigitalLevel;
   lastCycle: number;
   lastLevel: DigitalLevel;
   thresholdFired: boolean;
@@ -1054,11 +1065,14 @@ const freshRmtRxChannel = (): RmtRxChannel => ({
   conf0: RMT_RX_CONF0_RESET,
   conf1: RMT_RX_CONF1_RESET,
   rxLim: RMT_RX_LIM_RESET,
+  carrierRm: RMT_RX_CARRIER_RM_RESET,
   memory: [],
   readCursor: 0,
   pending: null,
   active: false,
   started: false,
+  rawCycle: 0,
+  rawLevel: 0,
   lastCycle: 0,
   lastLevel: 0,
   thresholdFired: false,
@@ -2443,7 +2457,7 @@ export class Esp32s3Core implements McuCore {
     return ((this.inLevels[bank] ?? 0) & bit) !== 0 ? 1 : 0;
   }
 
-  private rmtRxInputLevel(rxIndex: number): DigitalLevel | null {
+  private rmtRawRxInputLevel(rxIndex: number): DigitalLevel | null {
     const cfg = this.gpioFuncIn[RMT_SIGNAL_BASE + rxIndex] ?? 0;
     if ((cfg & GPIO_SIG_IN_SEL) === 0) return null;
     const gpio = cfg & GPIO_FUNC_IN_SEL_MASK;
@@ -2451,6 +2465,26 @@ export class Esp32s3Core implements McuCore {
     let level = this.gpioPadLevel(gpio);
     if ((cfg & GPIO_FUNC_IN_INV_SEL) !== 0) level = level === 1 ? 0 : 1;
     return level;
+  }
+
+  private rmtRxCarrierEnabled(ch: RmtRxChannel): boolean {
+    return (ch.conf0 & RMT_RX_CARRIER_EN) !== 0;
+  }
+
+  private rmtRxCarrierActiveLevel(ch: RmtRxChannel): DigitalLevel {
+    return (ch.conf0 & RMT_RX_CARRIER_OUT_LV) !== 0 ? 1 : 0;
+  }
+
+  private rmtRxCarrierThreshold(ch: RmtRxChannel, level: DigitalLevel): number {
+    const active = this.rmtRxCarrierActiveLevel(ch);
+    const raw = level === active ? (ch.carrierRm >>> 16) & RMT_RX_CARRIER_THRES_MASK : ch.carrierRm & RMT_RX_CARRIER_THRES_MASK;
+    return raw + 1;
+  }
+
+  private rmtRxTicksBetween(ch: RmtRxChannel, start: number, end: number): number | null {
+    const cyclesPerTick = this.rmtRxCyclesPerTick(ch);
+    if (cyclesPerTick === null) return null;
+    return Math.max(0, Math.round((end - start) / cyclesPerTick));
   }
 
   private rmtRxIdleThreshold(ch: RmtRxChannel): number {
@@ -2475,6 +2509,8 @@ export class Esp32s3Core implements McuCore {
     ch.readCursor = 0;
     ch.pending = null;
     ch.started = false;
+    ch.rawCycle = this.cpu.cycles;
+    ch.rawLevel = 0;
     ch.lastCycle = this.cpu.cycles;
     ch.lastLevel = 0;
     ch.thresholdFired = false;
@@ -2488,8 +2524,10 @@ export class Esp32s3Core implements McuCore {
     ch.started = false;
     ch.pending = null;
     ch.thresholdFired = false;
+    ch.rawCycle = this.cpu.cycles;
+    ch.rawLevel = this.rmtRawRxInputLevel(chIndex) ?? 0;
     ch.lastCycle = this.cpu.cycles;
-    ch.lastLevel = this.rmtRxInputLevel(chIndex) ?? 0;
+    ch.lastLevel = ch.rawLevel;
     this.recomputeIrq();
   }
 
@@ -2550,14 +2588,72 @@ export class Esp32s3Core implements McuCore {
     return changed;
   }
 
+  private rmtMaybeFlushRxCarrierGap(chIndex: number, now: number): boolean {
+    const ch = this.rmtRx[chIndex];
+    if (ch === undefined || !ch.active || !this.rmtRxCarrierEnabled(ch)) return false;
+    const active = this.rmtRxCarrierActiveLevel(ch);
+    if (ch.rawLevel === active || ch.lastLevel !== active) return false;
+    const gapTicks = this.rmtRxTicksBetween(ch, ch.rawCycle, now);
+    if (gapTicks === null || gapTicks <= this.rmtRxCarrierThreshold(ch, ch.rawLevel)) return false;
+    return this.rmtCaptureRxEdge(chIndex, ch.rawLevel, ch.rawCycle);
+  }
+
+  private rmtCaptureCarrierAwareRxEdge(chIndex: number, rawLevel: DigitalLevel, now: number): boolean {
+    const ch = this.rmtRx[chIndex];
+    if (ch === undefined || !ch.active) return false;
+    if (!this.rmtRxCarrierEnabled(ch)) {
+      ch.rawLevel = rawLevel;
+      ch.rawCycle = now;
+      return this.rmtCaptureRxEdge(chIndex, rawLevel, now);
+    }
+
+    const previousRawLevel = ch.rawLevel;
+    const previousRawCycle = ch.rawCycle;
+    const active = this.rmtRxCarrierActiveLevel(ch);
+
+    if (!ch.started) {
+      ch.rawLevel = rawLevel;
+      ch.rawCycle = now;
+      if (rawLevel !== active) return false;
+      return this.rmtCaptureRxEdge(chIndex, rawLevel, now);
+    }
+
+    if (rawLevel !== active) {
+      ch.rawLevel = rawLevel;
+      ch.rawCycle = now;
+      return false;
+    }
+
+    let changed = false;
+    if (previousRawLevel !== active) {
+      const gapTicks = this.rmtRxTicksBetween(ch, previousRawCycle, now);
+      if (gapTicks !== null && gapTicks > this.rmtRxCarrierThreshold(ch, previousRawLevel)) {
+        changed = this.rmtCaptureRxEdge(chIndex, previousRawLevel, previousRawCycle) || changed;
+      }
+    }
+
+    ch.rawLevel = rawLevel;
+    ch.rawCycle = now;
+
+    if (previousRawLevel !== active) {
+      const gapTicks = this.rmtRxTicksBetween(ch, previousRawCycle, now);
+      if (gapTicks !== null && gapTicks <= this.rmtRxCarrierThreshold(ch, previousRawLevel)) return changed;
+    }
+    return this.rmtCaptureRxEdge(chIndex, rawLevel, now) || changed;
+  }
+
   private captureRmtRxInputs(): boolean {
     let changed = false;
     const now = this.cpu.cycles;
     for (let i = 0; i < RMT_RX_CHANNELS; i++) {
       const ch = this.rmtRx[i];
-      const level = this.rmtRxInputLevel(i);
-      if (ch === undefined || level === null || !ch.active || level === ch.lastLevel) continue;
-      changed = this.rmtCaptureRxEdge(i, level, now) || changed;
+      const level = this.rmtRawRxInputLevel(i);
+      if (ch === undefined || level === null || !ch.active) continue;
+      if (level === ch.rawLevel) {
+        changed = this.rmtMaybeFlushRxCarrierGap(i, now) || changed;
+        continue;
+      }
+      changed = this.rmtCaptureCarrierAwareRxEdge(i, level, now) || changed;
     }
     return changed;
   }
@@ -2664,7 +2760,7 @@ export class Esp32s3Core implements McuCore {
       if (idleThreshold === 0) continue;
       const idleTicks = Math.floor((now - ch.lastCycle) / cyclesPerTick);
       if (idleTicks < idleThreshold) continue;
-      const level = this.rmtRxInputLevel(i) ?? ch.lastLevel;
+      const level = ch.lastLevel;
       const dmaMode = this.rmtRxDmaMode(i, ch);
       changed = this.rmtPushRxHalf(i, Math.min(idleTicks, RMT_RX_IDLE_THRES_MASK), level) || changed;
       ch.active = false;
@@ -3112,6 +3208,9 @@ export class Esp32s3Core implements McuCore {
       if (off >= RMT_CH_CARRIER_DUTY && off < RMT_CH_CARRIER_DUTY + RMT_TX_CHANNELS * RMT_CH_CARRIER_DUTY_STRIDE && (off & 3) === 0) {
         return this.rmtTx[(off - RMT_CH_CARRIER_DUTY) >> 2]?.carrierDuty ?? RMT_CARRIER_DUTY_RESET;
       }
+      if (off >= RMT_CH_RX_CARRIER_RM && off < RMT_CH_RX_CARRIER_RM + RMT_RX_CHANNELS * RMT_CH_RX_CARRIER_RM_STRIDE && (off & 3) === 0) {
+        return this.rmtRx[(off - RMT_CH_RX_CARRIER_RM) >> 2]?.carrierRm ?? RMT_RX_CARRIER_RM_RESET;
+      }
       if (off >= RMT_CH_TX_LIM && off < RMT_CH_TX_LIM + RMT_TX_CHANNELS * RMT_CH_TX_LIM_STRIDE && (off & 3) === 0) {
         return this.rmtTx[(off - RMT_CH_TX_LIM) >> 2]?.txLim ?? RMT_TX_LIM_RESET;
       }
@@ -3469,6 +3568,9 @@ export class Esp32s3Core implements McuCore {
       } else if (off >= RMT_CH_CARRIER_DUTY && off < RMT_CH_CARRIER_DUTY + RMT_TX_CHANNELS * RMT_CH_CARRIER_DUTY_STRIDE && (off & 3) === 0) {
         const ch = this.rmtTx[(off - RMT_CH_CARRIER_DUTY) >> 2];
         if (ch !== undefined) ch.carrierDuty = v;
+      } else if (off >= RMT_CH_RX_CARRIER_RM && off < RMT_CH_RX_CARRIER_RM + RMT_RX_CHANNELS * RMT_CH_RX_CARRIER_RM_STRIDE && (off & 3) === 0) {
+        const ch = this.rmtRx[(off - RMT_CH_RX_CARRIER_RM) >> 2];
+        if (ch !== undefined) ch.carrierRm = v;
       } else if (off >= RMT_CH_TX_LIM && off < RMT_CH_TX_LIM + RMT_TX_CHANNELS * RMT_CH_TX_LIM_STRIDE && (off & 3) === 0) {
         const ch = this.rmtTx[(off - RMT_CH_TX_LIM) >> 2];
         if (ch !== undefined) {

@@ -694,6 +694,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       ownership handback over UART. Cuts: no RX carrier demodulation,
       no RX direct-memory/wrap APB readback path, no driver ringbuffer
       API shim, and no TX live refill/`gdma_append` timing yet
+- [x] ESP32-S3 core slice 40 — RMT RX carrier demodulation first cut
+      (landed 2026-06-13): RMT RX channels now keep raw input level
+      separate from demodulated level, honor CHmCONF0 carrier
+      enable/polarity bits, expose CH4..CH7_RX_CARRIER_RM low/high
+      threshold registers, and collapse short carrier gaps on the
+      configured active level back into one captured base pulse. Proven
+      by hand-assembled firmware that routes IO4 to RMT RX channel 0,
+      enables high-level carrier demodulation, programs carrier-remove
+      thresholds, feeds a carrier-mark burst with short low gaps, and
+      verifies one demodulated high/low symbol plus RX threshold/end
+      status over UART. Cuts: no RX direct-memory/wrap APB readback
+      path, no driver ringbuffer API shim, and no TX live
+      refill/`gdma_append` timing yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
