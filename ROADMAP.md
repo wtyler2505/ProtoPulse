@@ -639,6 +639,21 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       stays unmodulated. Cuts: no RMT DMA/direct-memory mode, RX carrier
       demodulation, threshold refill queue shim, or repeated threshold
       relatching after raw clear yet
+- [x] ESP32-S3 core slice 36 — RMT APB direct-memory TX + threshold
+      rearm (landed 2026-06-13): TX channels now honor
+      `SYS_CONF.APB_FIFO_MASK` as the hardware APB direct-memory path,
+      keep per-channel APB write cursors, expose `CHnSTATUS`
+      read/write cursor bits plus APB write overflow status, and start
+      TX from the channel memory image instead of the FIFO when direct
+      mode is enabled. TX threshold interrupts now advance by sent
+      symbol count, so firmware can clear `TX_THR_EVENT` and observe a
+      later threshold crossing in the same transmission. Proven by
+      hand-assembled firmware that writes two CH0 symbols through direct
+      memory mode, reads back APB write cursor 2, routes CH0 to IO5,
+      clears the first threshold raw bit, and observes the second
+      threshold event over UART. Cuts: no TX GDMA channel-3 path, no
+      live mutation of an already-built TX waveform from a refill ISR,
+      no RX direct-memory/wrap path, and no RX carrier demodulation yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

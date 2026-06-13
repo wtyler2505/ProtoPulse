@@ -87,15 +87,19 @@ const LEDC_DUTY_INC = 1 << 30;
 const LEDC_SIG_OUT_EN = 1 << 2;
 const LEDC_LS_SIG_OUT0 = 73;
 const RMT_CLK_EN = 0x80000000;
+const RMT_SYS_APB_FIFO_MASK = 1;
 const RMT_SCLK_ACTIVE = 1 << 26;
 const RMT_SCLK_SEL_APB = 1 << 24;
 const RMT_TX_START = 1;
+const RMT_MEM_RD_RST = 1 << 1;
+const RMT_MEM_TX_WRAP_EN = 1 << 4;
 const RMT_TX_CONTI_MODE = 1 << 3;
 const RMT_IDLE_OUT_EN = 1 << 6;
 const RMT_CARRIER_EFF_EN = 1 << 20;
 const RMT_CARRIER_EN = 1 << 21;
 const RMT_CARRIER_OUT_LV = 1 << 22;
 const RMT_CH0_CARRIER_DUTY = 0x80;
+const RMT_CH0_STATUS = 0x50;
 const RMT_CH0_TX_LIM = 0xa0;
 const RMT_CH4_RX_LIM = 0xb0;
 const RMT_SIG_OUT0 = 81;
@@ -326,6 +330,86 @@ describe('Esp32s3Core', () => {
     expect(carrier.map((e) => e.level)).toEqual([1, 0, 1, 0, 1, 0, 1, 0]);
     expect(carrier.slice(1).map((e, i) => e.cycle - (carrier[i]?.cycle ?? 0))).toEqual([3, 3, 3, 3, 3, 3, 3]);
     expect(io5.length).toBe(8);
+  });
+
+  it('transmits from RMT APB direct memory and rearms TX threshold after clear', () => {
+    const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB | RMT_SYS_APB_FIFO_MASK;
+    const rmtCh0Conf = (1 << 8) | (1 << 16) | RMT_IDLE_OUT_EN | RMT_MEM_TX_WRAP_EN;
+    const symbol0 = 2 | (1 << 15) | (2 << 16); // high 2 ticks, low 2 ticks
+    const symbol1 = 1 | (1 << 15) | (1 << 16); // high 1 tick, low 1 tick
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        RMT,
+        GPIO,
+        GPIO_FUNC5_OUT_SEL_CFG,
+        UART,
+        rmtSysConf,
+        rmtCh0Conf | RMT_MEM_RD_RST | RMT_APB_MEM_RST,
+        symbol0,
+        symbol1,
+        rmtCh0Conf,
+        1,
+        RMT_CH0_TX_THR_EVENT | RMT_CH0_TX_END,
+        1 << 5,
+        RMT_SIG_OUT0,
+        rmtCh0Conf | RMT_TX_START,
+        0xff,
+        RMT_CH0_TX_THR_EVENT,
+      ],
+      [
+        L32R(2, 0), // RMT
+        L32R(3, 4),
+        S32I(3, 2, 0xc0), // SYS_CONF: APB direct-memory mode + clock on
+        L32R(3, 5),
+        S32I(3, 2, 0x20), // CH0CONF0: memory read/APB cursor reset
+        L32R(3, 6),
+        S32I(3, 2, 0x00), // CH0DATA direct-memory symbol 0
+        L32R(3, 7),
+        S32I(3, 2, 0x00), // CH0DATA direct-memory symbol 1
+        L32I(8, 2, RMT_CH0_STATUS),
+        SRLI(8, 8, 11),
+        L32R(10, 14),
+        AND(8, 8, 10),
+        L32R(9, 3), // UART
+        S32I(8, 9, 0x00), // APB write cursor == 2
+        L32R(3, 9),
+        S32I(3, 2, RMT_CH0_TX_LIM), // threshold every one symbol
+        L32R(3, 10),
+        S32I(3, 2, 0x78), // enable TX_THR_EVENT | TX_END
+
+        L32R(4, 1), // GPIO
+        L32R(5, 11),
+        S32I(5, 4, 0x24), // enable IO5
+        L32R(6, 2),
+        L32R(7, 12),
+        S32I(7, 6, 0x00), // GPIO matrix: IO5 <- RMT_SIG_OUT0
+
+        L32R(3, 13),
+        S32I(3, 2, 0x20), // tx_start
+        L32R(10, 15),
+        L32R(12, 3), // UART
+        L32I(8, 2, 0x70), // wait for first TX_THR_EVENT
+        AND(11, 8, 10),
+        BEQZ(11, BR(-3)),
+        MOVI(11, 1),
+        S32I(11, 12, 0x00),
+        S32I(10, 2, 0x7c), // clear TX_THR_EVENT
+        L32I(8, 2, 0x70), // wait for the next threshold crossing
+        AND(11, 8, 10),
+        BEQZ(11, BR(-3)),
+        MOVI(11, 2),
+        S32I(11, 12, 0x00),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    const { events } = c.step(520);
+    const io5 = events.filter((e) => e.pin === 'IO5');
+
+    expect(io5.map((e) => e.level)).toEqual([1, 0, 1, 0]);
+    expect(io5.slice(1).map((e, i) => e.cycle - (io5[i]?.cycle ?? 0))).toEqual([6, 6, 3]);
+    expect([...c.drainUart()]).toEqual([2, 1, 2]);
   });
 
   it('latches RMT TX threshold and finite-loop interrupts', () => {

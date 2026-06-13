@@ -174,12 +174,15 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * RMT channel-0..3 TX now has APB FIFO symbol writes, channel/group
  * dividers for APB/XTAL/RC_FAST clocks, GPIO-matrix output signals
  * 81..84, idle level, TX stop/start/end, TX threshold, finite loop
- * interrupts, and group-clock-based TX carrier modulation. RMT RX
- * channel 0..3 now captures GPIO input-matrix edges into CH4..CH7 APB
- * FIFO symbols, honoring RX limit/threshold and idle completion. Cuts:
- * no RMT DMA, direct memory mode, RX carrier demodulation,
- * RX partial-buffer wrapping, threshold refill queue shim, or driver
- * ringbuffer API yet.
+ * interrupts, group-clock-based TX carrier modulation, and the APB
+ * direct-memory TX path behind SYS_CONF.APB_FIFO_MASK with CHnSTATUS
+ * write-cursor/read-cursor visibility. TX threshold events re-arm by
+ * symbol count after firmware clears INT_RAW, giving the driver refill
+ * loop a real interrupt cadence. RMT RX channel 0..3 now captures GPIO
+ * input-matrix edges into CH4..CH7 APB FIFO symbols, honoring RX
+ * limit/threshold and idle completion. Cuts: no RMT GDMA, live mutation
+ * of an already-built TX waveform from a refill ISR, RX carrier
+ * demodulation, RX partial-buffer wrapping, or driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
@@ -333,6 +336,8 @@ const RMT_CHCONF0_STRIDE = 0x04;
 const RMT_CHMCONF0 = 0x30;
 const RMT_CHMCONF_STRIDE = 0x08;
 const RMT_CHMCONF1 = 0x34;
+const RMT_CHSTATUS = 0x50;
+const RMT_CHSTATUS_STRIDE = 0x04;
 const RMT_INT_RAW = 0x70;
 const RMT_INT_ST = 0x74;
 const RMT_INT_ENA = 0x78;
@@ -351,11 +356,14 @@ const RMT_TX_START = 1 << 0;
 const RMT_MEM_RD_RST = 1 << 1;
 const RMT_APB_MEM_RST = 1 << 2;
 const RMT_TX_CONTI_MODE = 1 << 3;
+const RMT_MEM_TX_WRAP_EN = 1 << 4;
 const RMT_TX_STOP = 1 << 7;
 const RMT_DIV_CNT_SHIFT = 8;
 const RMT_DIV_CNT_MASK = 0xff;
 const RMT_IDLE_OUT_LV = 1 << 5;
 const RMT_IDLE_OUT_EN = 1 << 6;
+const RMT_MEM_SIZE_SHIFT = 16;
+const RMT_MEM_SIZE_MASK = 0x0f;
 const RMT_CARRIER_EFF_EN = 1 << 20;
 const RMT_CARRIER_EN = 1 << 21;
 const RMT_CARRIER_OUT_LV = 1 << 22;
@@ -375,6 +383,7 @@ const RMT_SYS_SCLK_SEL_RC_FAST = 2;
 const RMT_SYS_SCLK_SEL_XTAL = 3;
 const RMT_SYS_SCLK_ACTIVE = 1 << 26;
 const RMT_CLK_EN = 1 << 31;
+const RMT_SYS_APB_FIFO_MASK = 1 << 0;
 const RMT_SYS_CONF_RESET = (1 << RMT_SYS_SCLK_DIV_NUM_SHIFT) | (RMT_SYS_SCLK_SEL_APB << RMT_SYS_SCLK_SEL_SHIFT) | RMT_SYS_SCLK_ACTIVE;
 const RMT_SIGNAL_BASE = 81;
 const RMT_DATE_RESET = 0x02100001;
@@ -407,6 +416,7 @@ const RMT_RX_END_INT_BASE = 16;
 const RMT_RX_ERR_INT_BASE = 20;
 const RMT_RX_THR_INT_BASE = 24;
 const RMT_RX_SYMBOLS_PER_BLOCK = 48;
+const RMT_TX_SYMBOLS_PER_BLOCK = 48;
 
 // Timer groups 0 and 1 (timer_group_reg.h; flow per hal timer_ll.h
 // and the gptimer driver): each group has two 54-bit general-purpose
@@ -871,12 +881,15 @@ interface RmtTxChannel {
   txLim: number;
   carrierDuty: number;
   fifo: number[];
+  memory: number[];
+  apbWriteCursor: number;
+  apbWriteError: boolean;
   startCycle: number;
   durationCycles: number;
   segments: RmtTxSegment[];
   symbolEndCycles: number[];
   active: boolean;
-  thresholdFired: boolean;
+  nextThresholdSymbol: number;
   loopFired: boolean;
 }
 
@@ -970,12 +983,15 @@ const freshRmtTxChannel = (): RmtTxChannel => ({
   txLim: RMT_TX_LIM_RESET,
   carrierDuty: RMT_CARRIER_DUTY_RESET,
   fifo: [],
+  memory: [],
+  apbWriteCursor: 0,
+  apbWriteError: false,
   startCycle: 0,
   durationCycles: 0,
   segments: [],
   symbolEndCycles: [],
   active: false,
-  thresholdFired: false,
+  nextThresholdSymbol: 0,
   loopFired: false,
 });
 
@@ -2156,6 +2172,80 @@ export class Esp32s3Core implements McuCore {
     return Math.max(1, groupCycles * this.rmtChannelDivider(ch));
   }
 
+  private rmtDirectMemoryMode(): boolean {
+    return (this.rmtSysConf & RMT_SYS_APB_FIFO_MASK) !== 0;
+  }
+
+  private rmtTxMemoryCapacity(ch: RmtTxChannel): number {
+    const blockCount = (ch.conf0 >>> RMT_MEM_SIZE_SHIFT) & RMT_MEM_SIZE_MASK;
+    return Math.max(1, blockCount) * RMT_TX_SYMBOLS_PER_BLOCK;
+  }
+
+  private rmtWriteTxData(channel: number, value: number): void {
+    const ch = this.rmtTx[channel];
+    if (ch === undefined) return;
+    if (!this.rmtDirectMemoryMode()) {
+      ch.fifo.push(value >>> 0);
+      return;
+    }
+    const capacity = this.rmtTxMemoryCapacity(ch);
+    if (ch.apbWriteCursor >= capacity) {
+      ch.apbWriteError = true;
+      return;
+    }
+    ch.memory[ch.apbWriteCursor] = value >>> 0;
+    ch.apbWriteCursor++;
+  }
+
+  private rmtTxSourceSymbols(ch: RmtTxChannel): number[] {
+    if (!this.rmtDirectMemoryMode()) return ch.fifo;
+    const capacity = this.rmtTxMemoryCapacity(ch);
+    const symbols: number[] = [];
+    for (let i = 0; i < capacity; i++) symbols.push(ch.memory[i] ?? 0);
+    return symbols;
+  }
+
+  private rmtTxSentSymbols(ch: RmtTxChannel, elapsedCycles: number): number {
+    if (ch.symbolEndCycles.length === 0 || ch.durationCycles <= 0) return 0;
+    let loops = 0;
+    let elapsed = Math.max(0, elapsedCycles);
+    if (this.rmtTxLoopEnabled(ch)) {
+      loops = Math.floor(elapsed / ch.durationCycles);
+      elapsed %= ch.durationCycles;
+    }
+    let sentInLoop = 0;
+    for (const endCycle of ch.symbolEndCycles) {
+      if (elapsed < endCycle) break;
+      sentInLoop++;
+    }
+    return loops * ch.symbolEndCycles.length + sentInLoop;
+  }
+
+  private rmtTxThresholdCycle(ch: RmtTxChannel, symbolNumber: number): number | null {
+    if (symbolNumber <= 0 || ch.symbolEndCycles.length === 0 || ch.durationCycles <= 0) return null;
+    const perLoop = ch.symbolEndCycles.length;
+    const zeroBased = symbolNumber - 1;
+    const loops = Math.floor(zeroBased / perLoop);
+    if (!this.rmtTxLoopEnabled(ch) && loops > 0) return null;
+    const index = zeroBased % perLoop;
+    return loops * ch.durationCycles + (ch.symbolEndCycles[index] ?? 0);
+  }
+
+  private rmtTxStatusWord(ch: RmtTxChannel): number {
+    const elapsed = this.cpu.cycles - ch.startCycle;
+    const readCursor = ch.active ? this.rmtTxSentSymbols(ch, elapsed) : 0;
+    const state = ch.active ? 1 : 0;
+    const drainedPastMemory = this.rmtTxMemoryCapacity(ch) <= readCursor;
+    const memEmpty = ch.active && !this.rmtTxLoopEnabled(ch) && drainedPastMemory && (ch.conf0 & RMT_MEM_TX_WRAP_EN) === 0 ? 1 : 0;
+    return (
+      (readCursor & 0x3ff) |
+      ((ch.apbWriteCursor & 0x3ff) << 11) |
+      ((state & 0x07) << 22) |
+      (memEmpty << 25) |
+      ((ch.apbWriteError ? 1 : 0) << 26)
+    );
+  }
+
   private rmtRxDivider(ch: RmtRxChannel): number {
     const raw = ch.conf0 & RMT_RX_DIV_CNT_MASK;
     return raw === 0 ? 256 : raw;
@@ -2323,7 +2413,7 @@ export class Esp32s3Core implements McuCore {
     ch.durationCycles = 0;
     ch.segments = [];
     ch.symbolEndCycles = [];
-    ch.thresholdFired = false;
+    ch.nextThresholdSymbol = 0;
     ch.loopFired = false;
   }
 
@@ -2332,11 +2422,12 @@ export class Esp32s3Core implements McuCore {
     if (ch === undefined) return;
     this.rmtIntRaw &= ~((1 << chIndex) | (1 << (8 + chIndex)) | (1 << (12 + chIndex)));
     const cyclesPerTick = this.rmtCyclesPerTick(ch);
+    const sourceSymbols = this.rmtTxSourceSymbols(ch);
     const segments: RmtTxSegment[] = [];
     const symbolEndCycles: number[] = [];
     let elapsed = 0;
     if (cyclesPerTick !== null) {
-      for (const symbol of ch.fifo) {
+      for (const symbol of sourceSymbols) {
         const duration0 = symbol & 0x7fff;
         const level0 = ((symbol >>> 15) & 1) as DigitalLevel;
         const duration1 = (symbol >>> 16) & 0x7fff;
@@ -2353,12 +2444,12 @@ export class Esp32s3Core implements McuCore {
         symbolEndCycles.push(elapsed);
       }
     }
-    ch.fifo = [];
+    if (!this.rmtDirectMemoryMode()) ch.fifo = [];
     ch.startCycle = this.cpu.cycles;
     ch.durationCycles = elapsed;
     ch.segments = segments;
     ch.symbolEndCycles = symbolEndCycles;
-    ch.thresholdFired = false;
+    ch.nextThresholdSymbol = this.rmtTxLimit(ch);
     ch.loopFired = false;
     ch.active = segments.length > 0;
     if (!ch.active) this.rmtIntRaw |= 1 << chIndex;
@@ -2403,11 +2494,12 @@ export class Esp32s3Core implements McuCore {
       if (ch === undefined || !ch.active) continue;
       const elapsed = this.cpu.cycles - ch.startCycle;
       const limit = this.rmtTxLimit(ch);
-      if (!ch.thresholdFired && limit > 0 && limit <= ch.symbolEndCycles.length) {
-        const thresholdCycle = ch.symbolEndCycles[limit - 1] ?? Number.POSITIVE_INFINITY;
-        if (elapsed >= thresholdCycle) {
-          ch.thresholdFired = true;
-          this.rmtIntRaw |= 1 << (8 + i);
+      const thresholdBit = 1 << (8 + i);
+      if (limit > 0 && ch.nextThresholdSymbol > 0 && (this.rmtIntRaw & thresholdBit) === 0) {
+        const thresholdCycle = this.rmtTxThresholdCycle(ch, ch.nextThresholdSymbol);
+        if (thresholdCycle !== null && elapsed >= thresholdCycle) {
+          this.rmtIntRaw |= thresholdBit;
+          ch.nextThresholdSymbol += limit;
           changed = true;
         }
       }
@@ -2818,6 +2910,10 @@ export class Esp32s3Core implements McuCore {
       if (off >= RMT_CHMCONF1 && off < RMT_CHMCONF1 + RMT_RX_CHANNELS * RMT_CHMCONF_STRIDE && (off - RMT_CHMCONF1) % RMT_CHMCONF_STRIDE === 0) {
         return this.rmtRx[(off - RMT_CHMCONF1) / RMT_CHMCONF_STRIDE]?.conf1 ?? RMT_RX_CONF1_RESET;
       }
+      if (off >= RMT_CHSTATUS && off < RMT_CHSTATUS + RMT_TX_CHANNELS * RMT_CHSTATUS_STRIDE && (off & 3) === 0) {
+        const ch = this.rmtTx[(off - RMT_CHSTATUS) >> 2];
+        return ch === undefined ? 0 : this.rmtTxStatusWord(ch) >>> 0;
+      }
       if (off === RMT_INT_RAW) return this.rmtIntRaw >>> 0;
       if (off === RMT_INT_ST) return (this.rmtIntRaw & this.rmtIntEna) >>> 0;
       if (off === RMT_INT_ENA) return this.rmtIntEna >>> 0;
@@ -3121,13 +3217,17 @@ export class Esp32s3Core implements McuCore {
       const v = value >>> 0;
       if (off >= RMT_CHDATA && off < RMT_CHDATA + (RMT_TX_CHANNELS + RMT_RX_CHANNELS) * RMT_CHDATA_STRIDE && (off & 3) === 0) {
         const channel = (off - RMT_CHDATA) >> 2;
-        if (channel < RMT_TX_CHANNELS) this.rmtTx[channel]?.fifo.push(v);
+        if (channel < RMT_TX_CHANNELS) this.rmtWriteTxData(channel, v);
       } else if (off >= RMT_CHCONF0 && off < RMT_CHCONF0 + RMT_TX_CHANNELS * RMT_CHCONF0_STRIDE && (off & 3) === 0) {
         const chIndex = (off - RMT_CHCONF0) >> 2;
         const ch = this.rmtTx[chIndex];
         if (ch !== undefined) {
           ch.conf0 = (v & ~RMT_TX_CONF0_WT_MASK) >>> 0;
-          if ((v & RMT_APB_MEM_RST) !== 0) ch.fifo = [];
+          if ((v & RMT_APB_MEM_RST) !== 0) {
+            ch.fifo = [];
+            ch.apbWriteCursor = 0;
+            ch.apbWriteError = false;
+          }
           if ((v & RMT_TX_STOP) !== 0) this.rmtStopTx(ch);
           if ((v & RMT_TX_START) !== 0) this.rmtStartTx(chIndex);
         }
@@ -3160,7 +3260,7 @@ export class Esp32s3Core implements McuCore {
           ch.txLim = (v & ~RMT_LOOP_COUNT_RESET) >>> 0;
           if ((v & RMT_LOOP_COUNT_RESET) !== 0) {
             ch.startCycle = this.cpu.cycles;
-            ch.thresholdFired = false;
+            ch.nextThresholdSymbol = this.rmtTxLimit(ch);
             ch.loopFired = false;
           }
         }
