@@ -777,7 +777,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       COCPU trigger, clears COCPU raw in the PRO CPU ISR, and reports
       that INT_ST is clear. Cuts: no ULP/RISC-V coprocessor execution,
       COCPU_DONE/TRAP modeling, or remaining RTC producers like touch,
-      brownout, SARADC RTC-domain, XTAL32K dead, and SUPER_WDT yet
+      SARADC RTC-domain, XTAL32K dead, and SUPER_WDT yet
+- [x] ESP32-S3 core slice 47 — RTC brownout interrupt delivery through
+      RTC_CORE (landed 2026-06-13): RTC_CNTL_BROWN_OUT_REG (+0xe8)
+      now round-trips the brownout policy bits, exposes BROWN_OUT_DET
+      as detector readback, treats CNT_CLR as write-only, and lets a
+      host-injected brownout trip latch RTC_CNTL_BROWN_OUT_INT (bit 9)
+      through RTC_CNTL INT_RAW/ST/ENA/CLR and the RTC_CORE interrupt-
+      matrix source. Proven by hand-assembled firmware that maps
+      RTC_CORE to level-1 line 1, enables the BROWN_OUT raw source,
+      parks in WAITI, receives a host detector trip, clears BROWN_OUT
+      raw in the ISR, and reports both detector readback and cleared
+      INT_ST over UART. Cuts: no analog threshold modeling, delayed
+      INT_WAIT/RST_WAIT timing, or remaining RTC producers like touch,
+      SARADC RTC-domain, XTAL32K dead, and SUPER_WDT yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

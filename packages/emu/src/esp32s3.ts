@@ -196,12 +196,14 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * SLP_TIMER0/1 arm the RTC main-timer alarm, STATE0.SLEEP_EN enters the
  * sleep state, WAKEUP_STATE's TIMER_TRIG source records
  * SLP_WAKEUP_CAUSE, and the RTC_CORE interrupt-matrix source wakes
- * WAITI through the normal level-1 path.
+ * WAITI through the normal level-1 path. RWDT stage-0 INT,
+ * COCPU_SW_INT_TRIGGER, and host-injected brownout detector trips also
+ * latch their RTC_CNTL INT_* bits and route through RTC_CORE.
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
- * gating, and the remaining RTC interrupt producers beyond RWDT/COCPU — so
- * full IDF/FreeRTOS firmware does NOT run yet.
+ * gating, and the remaining RTC interrupt producers beyond RWDT/COCPU/
+ * brownout — so full IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -528,8 +530,14 @@ const RTC_WDTCONFIG1 = 0x9c; // ..+0xA8: stage0..3
 const RTC_WDTFEED = 0xac;
 const RTC_WDTWPROTECT = 0xb0;
 const RTC_COCPU_CTRL = 0x104;
+const RTC_BROWN_OUT = 0xe8;
 const RTC_WDT_FEED_BIT = 1 << 31; // RTC_CNTL_RTC_WDT_FEED
 const RTC_COCPU_SW_INT_TRIGGER = 1 << 26;
+const RTC_BROWN_OUT_DET = 1 << 31;
+const RTC_BROWN_OUT_ENA = 1 << 30;
+const RTC_BROWN_OUT_CNT_CLR = 1 << 29;
+const RTC_BROWN_OUT_RST_ENA = 1 << 26;
+const RTC_BROWN_OUT_RESET = (RTC_BROWN_OUT_ENA | (0x3ff << 16) | (1 << 4)) >>> 0;
 const RWDT_CONFIG0_RESET = ((1 << 16) | (1 << 13) | (1 << 12) | (1 << 9)) >>> 0;
 
 // SAR ADC1/ADC2 oneshot paths (sens_reg.h; flow per
@@ -632,6 +640,7 @@ const RTC_WAKEUP_STATE_RESET = 0x000c << RTC_WAKEUP_ENA_SHIFT; // rtc_cntl_reg.h
 const RTC_SLP_WAKEUP_INT = 1 << 0;
 const RTC_SLP_REJECT_INT = 1 << 1;
 const RTC_WDT_INT = 1 << 3;
+const RTC_BROWN_OUT_INT = 1 << 9;
 const RTC_COCPU_INT = 1 << 13;
 const RTC_MAIN_TIMER_INT = 1 << 10;
 const RTC_SLP_REJECT_CAUSE = 0x128;
@@ -651,6 +660,7 @@ const RESET_CAUSE_TG1WDT_SYS = 8; // TG1WDT_SYS_RESET
 const RESET_CAUSE_RTCWDT_SYS = 9; // RTCWDT_SYS_RESET
 const RESET_CAUSE_TG0WDT_CPU = 11; // TG0WDT_CPU_RESET
 const RESET_CAUSE_RTCWDT_CPU = 13; // RTCWDT_CPU_RESET
+const RESET_CAUSE_BROWNOUT = 15; // RTCWDT_BROWN_OUT_RESET
 const RESET_CAUSE_RTCWDT_RTC = 16; // RTCWDT_RTC_RESET
 const RESET_CAUSE_TG1WDT_CPU = 17; // TG1WDT_CPU_RESET
 // The RTC main timer counts the ~136 kHz RC_SLOW clock
@@ -1279,6 +1289,8 @@ export class Esp32s3Core implements McuCore {
   private rtcRejectCause = 0;
   private rtcWakeupCause = 0;
   private rtcCocpuCtrl = 0;
+  private rtcBrownOut = RTC_BROWN_OUT_RESET;
+  private brownoutDetected = false;
   private rtcCoreIntMaps = freshInterruptMapPair();
   private rtcTimeLatchLo = 0; // captured by a TIME_UPDATE write
   private rtcTimeLatchHi = 0;
@@ -1538,6 +1550,11 @@ export class Esp32s3Core implements McuCore {
     const out = this.adcContinuousOverflows;
     this.adcContinuousOverflows = [];
     return out;
+  }
+
+  setBrownoutDetected(detected: boolean): void {
+    this.brownoutDetected = detected;
+    this.updateBrownoutDetector();
   }
 
   inspect(): McuState {
@@ -2010,6 +2027,7 @@ export class Esp32s3Core implements McuCore {
     this.rtcRejectCause = 0;
     this.rtcWakeupCause = 0;
     this.rtcCocpuCtrl = 0;
+    this.rtcBrownOut = RTC_BROWN_OUT_RESET;
     this.rtcCoreIntMaps = freshInterruptMapPair();
     this.rtcTimeLatchLo = 0;
     this.rtcTimeLatchHi = 0;
@@ -2206,6 +2224,22 @@ export class Esp32s3Core implements McuCore {
       this.rtcState0 = (this.rtcState0 & ~RTC_SLEEP_EN) | RTC_SLP_WAKEUP;
       this.rtcWakeupCause |= RTC_TIMER_TRIG_EN;
       this.rtcIntRaw |= RTC_SLP_WAKEUP_INT;
+    }
+    this.recomputeIrq();
+  }
+
+  private updateBrownoutDetector(): void {
+    if (!this.brownoutDetected || (this.rtcBrownOut & RTC_BROWN_OUT_ENA) === 0) {
+      this.rtcBrownOut &= ~RTC_BROWN_OUT_DET;
+      this.recomputeIrq();
+      return;
+    }
+    this.rtcBrownOut |= RTC_BROWN_OUT_DET;
+    this.rtcIntRaw |= RTC_BROWN_OUT_INT;
+    if ((this.rtcBrownOut & RTC_BROWN_OUT_RST_ENA) !== 0) {
+      this.resetCause = RESET_CAUSE_BROWNOUT;
+      this.appResetCause = RESET_CAUSE_BROWNOUT;
+      this.pendingReset = true;
     }
     this.recomputeIrq();
   }
@@ -3595,6 +3629,7 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_WDTFEED) return 0; // the feed bit reads back 0
       if (off === RTC_WDTWPROTECT) return this.rwdt.wprotect >>> 0;
       if (off === RTC_COCPU_CTRL) return (this.rtcCocpuCtrl & ~RTC_COCPU_SW_INT_TRIGGER) >>> 0;
+      if (off === RTC_BROWN_OUT) return (this.rtcBrownOut & ~RTC_BROWN_OUT_CNT_CLR) >>> 0;
       if (off === RTC_SLP_REJECT_CAUSE) return this.rtcRejectCause >>> 0;
       if (off === RTC_SLP_WAKEUP_CAUSE) return this.rtcWakeupCause >>> 0;
       if (off === RTC_INT_ENA_W1TS || off === RTC_INT_ENA_W1TC) return 0;
@@ -3603,6 +3638,7 @@ export class Esp32s3Core implements McuCore {
           `OPTIONS0(+0x0), SLP_TIMER0/1(+0x4/+0x8), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), ` +
           `STATE0(+0x18), RESET_STATE(+0x38), WAKEUP_STATE(+0x3c), INT_* (+0x40..+0x4c), ` +
           `the RWDT block (+0x98..+0xb0), SW_CPU_STALL(+0xbc), COCPU_CTRL(+0x104), ` +
+          `BROWN_OUT(+0xe8), ` +
           `sleep reject/wakeup causes (+0x128/+0x130); ` +
           `a fabricated 0 here would lie`,
       );
@@ -4191,6 +4227,16 @@ export class Esp32s3Core implements McuCore {
           this.rtcIntRaw |= RTC_COCPU_INT;
           this.recomputeIrq();
         }
+      } else if (off === RTC_BROWN_OUT) {
+        // BROWN_OUT_DET is read-only detector state and CNT_CLR is a
+        // write-only pulse; the rest of the policy bits round-trip so
+        // IDF's brownout LL can configure interrupt-vs-reset behavior.
+        const det = this.rtcBrownOut & RTC_BROWN_OUT_DET;
+        this.rtcBrownOut = ((value & ~(RTC_BROWN_OUT_DET | RTC_BROWN_OUT_CNT_CLR)) | det) >>> 0;
+        if ((value & RTC_BROWN_OUT_CNT_CLR) !== 0 && !this.brownoutDetected) {
+          this.rtcBrownOut &= ~RTC_BROWN_OUT_DET;
+        }
+        this.updateBrownoutDetector();
       } else if (off === RTC_INT_ENA_W1TS) {
         this.rtcIntEna = (this.rtcIntEna | value) >>> 0;
         this.recomputeIrq();
