@@ -968,6 +968,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       clears the bits, and verifies the status clears. Cuts: no real
       ULP RISC-V instruction execution, monitor state, COCPU start/
       switch timing, or debug-PC/EOI behavior
+- [x] ESP32-S3 core slice 62 — ULP GPIO wake control readback
+      (landed 2026-06-13): RTC_CNTL_ULP_CP_TIMER now preserves the
+      documented GPIO_WAKEUP_ENA bit and PC_INIT field while treating
+      GPIO_WAKEUP_CLR as a write-only pulse, matching Espressif's
+      register policy and `ulp_riscv_config_wakeup_source(GPIO)` setup
+      path. Proven by hand-assembled firmware that writes ENA plus the
+      WO clear pulse, reads ULP_CP_TIMER back, reports that bit29 is set
+      while bit30 is clear, and verifies the PC_INIT low byte survives.
+      Cuts: no real RTC GPIO edge/level wake routing or GPIO wake-status
+      latch yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

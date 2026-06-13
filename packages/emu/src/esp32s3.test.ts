@@ -4455,6 +4455,35 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('ULP GPIO wake clear is a write-only pulse while enable reads back', () => {
+    // Source-checked against ESP-IDF release/v5.5: RTC_CNTL_ULP_CP_TIMER
+    // marks GPIO_WAKEUP_CLR as WO, while GPIO_WAKEUP_ENA and PC_INIT are R/W.
+    const gpioWakeClear = 1 << 30;
+    const gpioWakeEnable = 1 << 29;
+    const pcInit = 0x55;
+    const timerValue = gpioWakeClear | gpioWakeEnable | pcInit;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, UART, timerValue, 3],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 2),
+        S32I(3, 2, 0xfc), // ULP_CP_TIMER: write ENA plus WO CLR pulse
+        L32I(4, 2, 0xfc),
+        SRAI(5, 4, 29),
+        L32R(6, 3),
+        AND(5, 5, 6),
+        L32R(7, 1),
+        S32I(5, 7, 0), // tx 1: bit29 set and bit30 clear after readback
+        S32I(4, 7, 0), // tx 0x55: PC_INIT low bits preserved
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(500);
+    expect([...c.drainUart()]).toEqual([1, pcInit]);
+  });
+
   it('a read of an unmodeled RTC_CNTL register halts with a diagnostic naming it', () => {
     // 0x60008090 is RTC_CNTL_WDTCONFIG0_REG territory — reading 0 there
     // would silently claim "watchdog off", so the core refuses instead.

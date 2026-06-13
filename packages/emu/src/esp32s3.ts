@@ -211,9 +211,11 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * RTC_ULP_TRIG_EN is armed; the ULP sleep timer also schedules that
  * synthetic WAKE from ULP_CP_TIMER_1.SLP_CYCLE while enabled, and
  * LOW_POWER_ST exposes the main idle/sleep + ready-for-wakeup bits ULP
- * WAKE examples poll. COCPU_DONE/SHUT_RESET_EN now reflect through
- * LOW_POWER_ST's COCPU done/sleep bits. COCPU_SW_INT_TRIGGER wakes RTC
- * sleep when RTC_COCPU_TRIG_EN is armed. SENS_SAR_COCPU_STATE.DBG_TRIGGER
+ * WAKE examples poll, and ULP_CP_TIMER readback preserves GPIO_WAKEUP_ENA
+ * while treating GPIO_WAKEUP_CLR as a write-only pulse. COCPU_DONE/
+ * SHUT_RESET_EN now reflect through LOW_POWER_ST's COCPU done/sleep bits.
+ * COCPU_SW_INT_TRIGGER wakes RTC sleep when RTC_COCPU_TRIG_EN is armed.
+ * SENS_SAR_COCPU_STATE.DBG_TRIGGER
  * models a synthetic COCPU trap producer, latching RTC_CNTL_COCPU_TRAP_INT
  * and waking RTC sleep when RTC_COCPU_TRAP_TRIG_EN is armed. Touch scans
  * with a nonzero timeout budget below the synthetic measurement cost latch
@@ -573,6 +575,7 @@ const RTC_ULP_CP_TIMER_RESET = 0;
 const RTC_ULP_CP_CTRL_RESET = ((512 << 11) | 512) >>> 0;
 const RTC_ULP_CP_TIMER_1_RESET = 200 << 8;
 const RTC_ULP_CP_SLP_TIMER_EN = 1 << 31;
+const RTC_ULP_CP_GPIO_WAKEUP_CLR = 1 << 30;
 const RTC_ULP_CP_TIMER_SLP_CYCLE_SHIFT = 8;
 const RTC_ULP_CP_TIMER_SLP_CYCLE_MASK = 0x00ff_ffff;
 const RTC_ULP_CP_START_TOP = 1 << 31;
@@ -4679,7 +4682,7 @@ export class Esp32s3Core implements McuCore {
         }
       } else if (off === RTC_ULP_CP_TIMER) {
         const prev = this.rtcUlpCpTimer;
-        this.rtcUlpCpTimer = value >>> 0;
+        this.rtcUlpCpTimer = (value & ~RTC_ULP_CP_GPIO_WAKEUP_CLR) >>> 0;
         const enabled = (this.rtcUlpCpTimer & RTC_ULP_CP_SLP_TIMER_EN) !== 0;
         const wasEnabled = (prev & RTC_ULP_CP_SLP_TIMER_EN) !== 0;
         if (enabled && !wasEnabled) this.armUlpTimer();
