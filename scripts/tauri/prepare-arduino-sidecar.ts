@@ -56,6 +56,8 @@ interface SidecarAssetSpec {
  * runtime, so version drift = test drift. R4 retro Wave 8 verified 2026-05-12.
  */
 const ARDUINO_CLI_VERSION = "1.4.1";
+const DOWNLOAD_ATTEMPTS = 3;
+const DOWNLOAD_RETRY_DELAY_MS = 5_000;
 
 /**
  * Target-triple → arduino-cli release asset + pinned SHA256.
@@ -136,9 +138,43 @@ function getTargetTriple(): string {
   return out;
 }
 
+function waitForRetry(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function getExitStatus(error: unknown): number | undefined {
+  return typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    typeof error.status === "number"
+    ? error.status
+    : undefined;
+}
+
 function downloadAsset(url: string, dest: string): void {
   console.log(`[arduino-sidecar] downloading ${url}`);
-  execSync(`curl -fL -o "${dest}" "${url}"`, { stdio: "inherit" });
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= DOWNLOAD_ATTEMPTS; attempt += 1) {
+    try {
+      execSync(`curl -fL -o "${dest}" "${url}"`, { stdio: "inherit" });
+      return;
+    } catch (error) {
+      lastError = error;
+      const exitStatus = getExitStatus(error);
+      console.warn(
+        `[arduino-sidecar] download attempt ${attempt}/${DOWNLOAD_ATTEMPTS} failed` +
+          (exitStatus === undefined ? "" : ` (exit ${exitStatus})`),
+      );
+
+      if (attempt < DOWNLOAD_ATTEMPTS) {
+        rmSync(dest, { force: true });
+        waitForRetry(DOWNLOAD_RETRY_DELAY_MS * attempt);
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 function verifySha256(filePath: string, expectedHex: string): void {
