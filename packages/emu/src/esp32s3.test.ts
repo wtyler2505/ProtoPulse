@@ -3382,6 +3382,7 @@ describe('Esp32s3Core — second core (slice 12)', () => {
   const RTC = 0x60008000;
   const SET_BOOT = 0x40000720;
   const CORE1_ENTRY = ESP32S3_IRAM_BASE + 0x400;
+  const INTMTX_CORE1 = 0x600c2800;
 
   it('core 1 is held in reset at power-on — boot address alone starts nothing', () => {
     const image = assembleXtensa(ESP32S3_IRAM_BASE, [SET_BOOT, CORE1_ENTRY, GPIO, 1 << 7], [
@@ -3570,6 +3571,60 @@ describe('Esp32s3Core — second core (slice 12)', () => {
     const [io7Timer] = io7;
     if (io5Timer === undefined || io7Timer === undefined) throw new Error('expected one timer event per core');
     expect(io7Timer.cycle - io5Timer.cycle).toBeGreaterThan(150);
+  });
+
+  it('routes UART0 peripheral interrupts to APP CPU through core-1 matrix maps', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [SYS, SET_BOOT, CORE1_ENTRY, UART, INTMTX_CORE1],
+      [
+        ADDI(3, 1, -16),
+        S32I(1, 3, 4),
+        // Release core 1 and point the ROM park loop at CORE1_ENTRY.
+        L32R(4, 0),
+        MOVI(7, 6),
+        S32I(7, 4, 0),
+        MOVI(7, 2),
+        S32I(7, 4, 0),
+        L32R(8, 1),
+        L32R(10, 2),
+        CALLXN(2, 8),
+        // UART0: any received byte raises RXFIFO_FULL.
+        L32R(2, 3),
+        MOVI(3, 0),
+        S32I(3, 2, 0x24),
+        MOVI(3, 1),
+        S32I(3, 2, 0x0c),
+        // INTERRUPT_CORE1_UART_INTR_MAP_REG = DR_REG_INTERRUPT_BASE + 0x86C.
+        L32R(5, 4),
+        MOVI(3, 1),
+        S32I(3, 5, 0x6c),
+        J_TO(21),
+        PAD_TO(0x400),
+        // core 1: wait for UART0 on external level-1 CPU line 1.
+        L32R(2, 3),
+        L32R(5, 2),
+        WSR(5, SR.VECBASE),
+        MOVI(3, 2),
+        WSR(3, SR.INTENABLE),
+        RSIL(8, 0),
+        WAITI(0),
+        J(BR(-1)),
+        PAD_TO(0x740),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 3),
+        L32I(3, 2, 0x00),
+        S32I(3, 2, 0x00),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(500);
+    expect([...c.drainUart()]).toEqual([]);
+    c.uartWrite(0x42);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([0x42]);
   });
 
   it('SW_APPCPU_RST sets the APPCPU reset cause (12) while PROCPU keeps power-on (1)', () => {

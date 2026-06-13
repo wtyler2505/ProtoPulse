@@ -114,9 +114,8 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * timer interrupts cannot cross-fire. OPTIONS0's SW_APPCPU_RST
  * resets core 1 alone (cause 12 in RESET_STATE's APPCPU [11:6];
  * the boot address survives, like the real ROM's, so it restarts).
- * Core-1 cuts: NO peripheral interrupts route to it (only the
- * CORE0 interrupt-matrix maps are modeled; FROM_CPU cross-core
- * software interrupts are not), no per-core cache/TRAX, no
+ * Core-1 cuts: FROM_CPU cross-core software interrupts are not
+ * modeled, no per-core cache/TRAX, no
  * atomic/exclusive-access modeling (the ISA subset has none), and
  * raw (non-ROM) core-1 programs get a SYNTHETIC reset SP 16 KiB
  * below the DRAM top (real code sets its own stack immediately).
@@ -257,12 +256,13 @@ const UART_RXFIFO_FULL_INT = 1 << 0;
 const UART_TX_DONE_INT = 1 << 14;
 
 // The interrupt matrix (reg_base.h DR_REG_INTERRUPT_BASE +
-// interrupt_core0_reg.h): each peripheral source has a 5-bit map
-// register selecting which CPU interrupt line it drives. Only the
-// modeled sources' maps are wired; all reset to 16 — a line the
-// CPU never dispatches, so unmapped sources stay silent (matching
-// the headers' reset value).
+// interrupt_core0_reg.h / interrupt_core1_reg.h): each peripheral
+// source has a 5-bit map register per CPU core selecting which CPU
+// interrupt line it drives. Only the modeled sources' maps are wired;
+// all reset to 16 — a line the CPU never dispatches, so unmapped
+// sources stay silent (matching the headers' reset value).
 const INTMTX_BASE = 0x600c2000;
+const INTMTX_CORE1_OFFSET = 0x800;
 const INTMTX_GPIO_MAP = 0x040; // INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG
 const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
 const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
@@ -275,6 +275,15 @@ const INTMTX_APB_ADC_MAP = 0x104; // INTERRUPT_CORE0_APB_ADC_INT_MAP_REG
 const INTMTX_GDMA_IN_MAPS = 0x108; // DMA_IN_CH0..4 at +0x108..+0x118
 const INTMTX_GDMA_OUT_MAPS = 0x11c; // DMA_OUT_CH0..4 at +0x11C..+0x12C
 const INTMTX_DEFAULT_MAP = 16;
+type InterruptCore = 0 | 1;
+type InterruptMapPair = [number, number];
+type TimgMapSet = [[number, number, number], [number, number, number]];
+
+const freshInterruptMapPair = (): InterruptMapPair => [INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP];
+const freshTimgMapSet = (): TimgMapSet => [
+  [INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP],
+  [INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP],
+];
 
 // LEDC low-speed PWM (ledc_reg.h / ledc_ll.h). ESP32-S3 has one
 // low-speed group: 8 channels, 4 timers. The driver writes the integer
@@ -886,13 +895,13 @@ interface Watchdog {
 }
 
 /** One TIMG group: two timers, one MWDT, the shared INT_* regs, and
- *  the group's three interrupt-matrix maps [t0, t1, wdt]. */
+ *  per-core interrupt-matrix maps [t0, t1, wdt]. */
 interface TimgGroup {
   timers: GpTimer[];
   wdt: Watchdog;
   intEna: number;
   intRaw: number;
-  maps: number[];
+  maps: TimgMapSet;
 }
 
 interface LedcTimer {
@@ -980,7 +989,7 @@ interface GdmaRxChannel {
   weight: number;
   pri: number;
   periSel: number;
-  map: number;
+  maps: InterruptMapPair;
   offset: number;
   active: boolean;
   started: boolean;
@@ -1000,7 +1009,7 @@ interface GdmaTxChannel {
   weight: number;
   pri: number;
   periSel: number;
-  map: number;
+  maps: InterruptMapPair;
   active: boolean;
   started: boolean;
 }
@@ -1031,7 +1040,7 @@ const freshTimgGroup = (): TimgGroup => ({
   wdt: freshWatchdog(MWDT_CONFIG0_RESET, MWDT_CONFIG1_RESET),
   intEna: 0,
   intRaw: 0,
-  maps: [INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP, INTMTX_DEFAULT_MAP],
+  maps: freshTimgMapSet(),
 });
 
 const freshLedcTimer = (): LedcTimer => ({
@@ -1103,7 +1112,7 @@ const freshGdmaRx = (): GdmaRxChannel => ({
   weight: 0x0f00,
   pri: 0,
   periSel: GDMA_PERI_NONE,
-  map: INTMTX_DEFAULT_MAP,
+  maps: freshInterruptMapPair(),
   offset: 0,
   active: false,
   started: false,
@@ -1123,7 +1132,7 @@ const freshGdmaTx = (): GdmaTxChannel => ({
   weight: 0x0f00,
   pri: 0,
   periSel: GDMA_PERI_NONE,
-  map: INTMTX_DEFAULT_MAP,
+  maps: freshInterruptMapPair(),
   active: false,
   started: false,
 });
@@ -1186,20 +1195,20 @@ export class Esp32s3Core implements McuCore {
   private ledcConf = 0;
   private ledcIntRaw = 0;
   private ledcIntEna = 0;
-  private ledcIntMap = INTMTX_DEFAULT_MAP;
+  private ledcIntMaps = freshInterruptMapPair();
   private rmtTx: RmtTxChannel[] = Array.from({ length: RMT_TX_CHANNELS }, freshRmtTxChannel);
   private rmtRx: RmtRxChannel[] = Array.from({ length: RMT_RX_CHANNELS }, freshRmtRxChannel);
   private rmtSysConf = RMT_SYS_CONF_RESET;
   private rmtIntRaw = 0;
   private rmtIntEna = 0;
-  private rmtIntMap = INTMTX_DEFAULT_MAP;
+  private rmtIntMaps = freshInterruptMapPair();
 
   // UART0 interrupt state + the interrupt matrix maps.
   private uartIntEna = 0;
   private uartTxDone = false; // latched TX_DONE raw bit
   private uartRxThrhd = 96; // CONF1 RXFIFO_FULL_THRHD reset value
-  private gpioIntMap = INTMTX_DEFAULT_MAP;
-  private uartIntMap = INTMTX_DEFAULT_MAP;
+  private gpioIntMaps = freshInterruptMapPair();
+  private uartIntMaps = freshInterruptMapPair();
 
   // TIMG0/TIMG1 state (slices 8 + 13): per-group timers, MWDT, INT_*
   // regs and matrix maps. Counters are virtual — derived from elapsed
@@ -1254,7 +1263,7 @@ export class Esp32s3Core implements McuCore {
   private apbSaradcThres = [0, 0, 0];
   private apbSaradcIntEna = 0;
   private apbSaradcIntRaw = 0;
-  private apbSaradcIntMap = INTMTX_DEFAULT_MAP;
+  private apbSaradcIntMaps = freshInterruptMapPair();
   private apbSaradcDmaConf = 0xff;
   private apbSaradcClkmConf = APB_SARADC_CLKM_CONF_RESET;
   private apbSaradcDataStatus = [0, 0];
@@ -1910,18 +1919,18 @@ export class Esp32s3Core implements McuCore {
     this.ledcConf = 0;
     this.ledcIntRaw = 0;
     this.ledcIntEna = 0;
-    this.ledcIntMap = INTMTX_DEFAULT_MAP;
+    this.ledcIntMaps = freshInterruptMapPair();
     this.rmtTx = Array.from({ length: RMT_TX_CHANNELS }, freshRmtTxChannel);
     this.rmtRx = Array.from({ length: RMT_RX_CHANNELS }, freshRmtRxChannel);
     this.rmtSysConf = RMT_SYS_CONF_RESET;
     this.rmtIntRaw = 0;
     this.rmtIntEna = 0;
-    this.rmtIntMap = INTMTX_DEFAULT_MAP;
+    this.rmtIntMaps = freshInterruptMapPair();
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
-    this.gpioIntMap = INTMTX_DEFAULT_MAP;
-    this.uartIntMap = INTMTX_DEFAULT_MAP;
+    this.gpioIntMaps = freshInterruptMapPair();
+    this.uartIntMaps = freshInterruptMapPair();
     this.timg = [freshTimgGroup(), freshTimgGroup()];
     this.rwdt = freshWatchdog(RWDT_CONFIG0_RESET, 0);
     // resetCause/appResetCause are deliberately NOT cleared — they
@@ -1967,7 +1976,7 @@ export class Esp32s3Core implements McuCore {
     this.apbSaradcThres = [0, 0, 0];
     this.apbSaradcIntEna = 0;
     this.apbSaradcIntRaw = 0;
-    this.apbSaradcIntMap = INTMTX_DEFAULT_MAP;
+    this.apbSaradcIntMaps = freshInterruptMapPair();
     this.apbSaradcDmaConf = 0xff;
     this.apbSaradcClkmConf = APB_SARADC_CLKM_CONF_RESET;
     this.apbSaradcDataStatus = [0, 0];
@@ -2929,26 +2938,34 @@ export class Esp32s3Core implements McuCore {
     const ledcPending = (this.ledcIntRaw & this.ledcIntEna) !== 0;
     const rmtPending = (this.rmtIntRaw & this.rmtIntEna) !== 0;
     const apbAdcPending = (this.apbSaradcIntRaw & this.apbSaradcIntEna) !== 0;
-    let mask = 0;
-    if (gpioPending) mask |= 1 << (this.gpioIntMap & 31);
-    if (uartPending) mask |= 1 << (this.uartIntMap & 31);
-    if (ledcPending) mask |= 1 << (this.ledcIntMap & 31);
-    if (rmtPending) mask |= 1 << (this.rmtIntMap & 31);
-    if (apbAdcPending) mask |= 1 << (this.apbSaradcIntMap & 31);
+    const masks: InterruptMapPair = [0, 0];
+    const raise = (maps: InterruptMapPair): void => {
+      masks[0] |= 1 << (maps[0] & 31);
+      masks[1] |= 1 << (maps[1] & 31);
+    };
+    if (gpioPending) raise(this.gpioIntMaps);
+    if (uartPending) raise(this.uartIntMaps);
+    if (ledcPending) raise(this.ledcIntMaps);
+    if (rmtPending) raise(this.rmtIntMaps);
+    if (apbAdcPending) raise(this.apbSaradcIntMaps);
     // Each TIMG source (T0/T1/WDT × both groups) drives its own map.
     for (const grp of this.timg) {
       const pending = grp.intRaw & grp.intEna & 7;
       for (let i = 0; i < 3; i++) {
-        if ((pending & (1 << i)) !== 0) mask |= 1 << ((grp.maps[i] ?? INTMTX_DEFAULT_MAP) & 31);
+        if ((pending & (1 << i)) === 0) continue;
+        for (const core of [0, 1] as const) {
+          masks[core] |= 1 << ((grp.maps[core][i] ?? INTMTX_DEFAULT_MAP) & 31);
+        }
       }
     }
     for (const ch of this.gdmaRx) {
-      if ((ch.intRaw & ch.intEna) !== 0) mask |= 1 << (ch.map & 31);
+      if ((ch.intRaw & ch.intEna) !== 0) raise(ch.maps);
     }
     for (const ch of this.gdmaTx) {
-      if ((ch.intRaw & ch.intEna) !== 0) mask |= 1 << (ch.map & 31);
+      if ((ch.intRaw & ch.intEna) !== 0) raise(ch.maps);
     }
-    this.cpu.setExtInt(mask);
+    this.cpu.setExtInt(masks[0]);
+    this.cpu1.setExtInt(masks[1]);
   }
 
   /** Re-derive driven levels after any OUT/ENABLE change; emit edges. */
@@ -3226,20 +3243,22 @@ export class Esp32s3Core implements McuCore {
     }
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
-      if (off === INTMTX_GPIO_MAP) return this.gpioIntMap;
-      if (off === INTMTX_UART_MAP) return this.uartIntMap;
-      if (off === INTMTX_LEDC_MAP) return this.ledcIntMap;
-      if (off === INTMTX_RMT_MAP) return this.rmtIntMap;
-      if (off >= INTMTX_TG_MAPS && off < INTMTX_TG_MAPS + 24 && (off & 3) === 0) {
-        const idx = (off - INTMTX_TG_MAPS) >> 2; // group-major [t0,t1,wdt]
-        return this.timg[idx < 3 ? 0 : 1]?.maps[idx % 3] ?? INTMTX_DEFAULT_MAP;
+      const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
+      const sourceOff = off - core * INTMTX_CORE1_OFFSET;
+      if (sourceOff === INTMTX_GPIO_MAP) return this.gpioIntMaps[core];
+      if (sourceOff === INTMTX_UART_MAP) return this.uartIntMaps[core];
+      if (sourceOff === INTMTX_LEDC_MAP) return this.ledcIntMaps[core];
+      if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
+      if (sourceOff >= INTMTX_TG_MAPS && sourceOff < INTMTX_TG_MAPS + 24 && (sourceOff & 3) === 0) {
+        const idx = (sourceOff - INTMTX_TG_MAPS) >> 2; // group-major [t0,t1,wdt]
+        return this.timg[idx < 3 ? 0 : 1]?.maps[core][idx % 3] ?? INTMTX_DEFAULT_MAP;
       }
-      if (off === INTMTX_APB_ADC_MAP) return this.apbSaradcIntMap;
-      if (off >= INTMTX_GDMA_IN_MAPS && off < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (off & 3) === 0) {
-        return this.gdmaRx[(off - INTMTX_GDMA_IN_MAPS) >> 2]?.map ?? INTMTX_DEFAULT_MAP;
+      if (sourceOff === INTMTX_APB_ADC_MAP) return this.apbSaradcIntMaps[core];
+      if (sourceOff >= INTMTX_GDMA_IN_MAPS && sourceOff < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (sourceOff & 3) === 0) {
+        return this.gdmaRx[(sourceOff - INTMTX_GDMA_IN_MAPS) >> 2]?.maps[core] ?? INTMTX_DEFAULT_MAP;
       }
-      if (off >= INTMTX_GDMA_OUT_MAPS && off < INTMTX_GDMA_OUT_MAPS + GDMA_CHANNELS * 4 && (off & 3) === 0) {
-        return this.gdmaTx[(off - INTMTX_GDMA_OUT_MAPS) >> 2]?.map ?? INTMTX_DEFAULT_MAP;
+      if (sourceOff >= INTMTX_GDMA_OUT_MAPS && sourceOff < INTMTX_GDMA_OUT_MAPS + GDMA_CHANNELS * 4 && (sourceOff & 3) === 0) {
+        return this.gdmaTx[(sourceOff - INTMTX_GDMA_OUT_MAPS) >> 2]?.maps[core] ?? INTMTX_DEFAULT_MAP;
       }
       return INTMTX_DEFAULT_MAP; // unmodeled sources sit at their reset map
     }
@@ -3577,22 +3596,24 @@ export class Esp32s3Core implements McuCore {
     }
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
-      if (off === INTMTX_GPIO_MAP) this.gpioIntMap = value & 0x1f;
-      else if (off === INTMTX_UART_MAP) this.uartIntMap = value & 0x1f;
-      else if (off === INTMTX_LEDC_MAP) this.ledcIntMap = value & 0x1f;
-      else if (off === INTMTX_RMT_MAP) this.rmtIntMap = value & 0x1f;
-      else if (off >= INTMTX_TG_MAPS && off < INTMTX_TG_MAPS + 24 && (off & 3) === 0) {
-        const idx = (off - INTMTX_TG_MAPS) >> 2;
+      const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
+      const sourceOff = off - core * INTMTX_CORE1_OFFSET;
+      if (sourceOff === INTMTX_GPIO_MAP) this.gpioIntMaps[core] = value & 0x1f;
+      else if (sourceOff === INTMTX_UART_MAP) this.uartIntMaps[core] = value & 0x1f;
+      else if (sourceOff === INTMTX_LEDC_MAP) this.ledcIntMaps[core] = value & 0x1f;
+      else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;
+      else if (sourceOff >= INTMTX_TG_MAPS && sourceOff < INTMTX_TG_MAPS + 24 && (sourceOff & 3) === 0) {
+        const idx = (sourceOff - INTMTX_TG_MAPS) >> 2;
         const grp = this.timg[idx < 3 ? 0 : 1];
-        if (grp !== undefined) grp.maps[idx % 3] = value & 0x1f;
-      } else if (off === INTMTX_APB_ADC_MAP) {
-        this.apbSaradcIntMap = value & 0x1f;
-      } else if (off >= INTMTX_GDMA_IN_MAPS && off < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (off & 3) === 0) {
-        const ch = this.gdmaRx[(off - INTMTX_GDMA_IN_MAPS) >> 2];
-        if (ch !== undefined) ch.map = value & 0x1f;
-      } else if (off >= INTMTX_GDMA_OUT_MAPS && off < INTMTX_GDMA_OUT_MAPS + GDMA_CHANNELS * 4 && (off & 3) === 0) {
-        const ch = this.gdmaTx[(off - INTMTX_GDMA_OUT_MAPS) >> 2];
-        if (ch !== undefined) ch.map = value & 0x1f;
+        if (grp !== undefined) grp.maps[core][idx % 3] = value & 0x1f;
+      } else if (sourceOff === INTMTX_APB_ADC_MAP) {
+        this.apbSaradcIntMaps[core] = value & 0x1f;
+      } else if (sourceOff >= INTMTX_GDMA_IN_MAPS && sourceOff < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (sourceOff & 3) === 0) {
+        const ch = this.gdmaRx[(sourceOff - INTMTX_GDMA_IN_MAPS) >> 2];
+        if (ch !== undefined) ch.maps[core] = value & 0x1f;
+      } else if (sourceOff >= INTMTX_GDMA_OUT_MAPS && sourceOff < INTMTX_GDMA_OUT_MAPS + GDMA_CHANNELS * 4 && (sourceOff & 3) === 0) {
+        const ch = this.gdmaTx[(sourceOff - INTMTX_GDMA_OUT_MAPS) >> 2];
+        if (ch !== undefined) ch.maps[core] = value & 0x1f;
       }
       // Map writes for unmodeled sources are accepted and dropped —
       // those sources never assert, so the mapping is moot.
