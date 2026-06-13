@@ -325,6 +325,7 @@ describe('StarterCircuitsPanel', () => {
     const copyBtn = screen.getByTestId(`starter-copy-${firstCircuit.id}`);
     await act(async () => {
       fireEvent.click(copyBtn);
+      await Promise.resolve();
     });
 
     expect(mockWriteText).toHaveBeenCalledWith(firstCircuit.arduinoCode);

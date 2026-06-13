@@ -1343,6 +1343,7 @@ describe('BreadboardView — empty state', () => {
     render(<BreadboardView />);
     await act(async () => {
       fireEvent.click(screen.getByTestId('button-create-first-breadboard-circuit'));
+      await Promise.resolve();
     });
 
     expect(mockCreateCircuitDesign.mutateAsync).toHaveBeenCalledWith({

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SerialLogger } from '../serial-logger';
+
 import { logger as appLogger } from '@/lib/logger';
+
+import { SerialLogger } from '../serial-logger';
 
 describe('SerialLogger', () => {
   let logger: SerialLogger;
@@ -96,7 +98,7 @@ describe('SerialLogger', () => {
   // -----------------------------------------------------------------------
 
   it('auto-stops when size exceeds 50MB', () => {
-    const warnSpy = vi.spyOn(appLogger, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(appLogger, 'warn').mockImplementation(() => undefined);
 
     logger.startRecording();
     const listener = vi.fn();

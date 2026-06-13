@@ -26,13 +26,17 @@
  *   ProtoPulse's control.
  */
 
-import { describe, it, expect, vi, beforeAll } from 'vitest';
-import { act, render } from '@testing-library/react';
+import type React from 'react';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import type { AxeResults, Result } from 'axe-core';
-import React from 'react';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
+
 import { TooltipProvider } from '@/components/ui/tooltip';
+
+import type { AxeResults, Result } from 'axe-core';
+
 
 expect.extend(toHaveNoViolations);
 
@@ -358,8 +362,20 @@ vi.mock('@monaco-editor/react', () => ({
 }));
 
 // xterm
-vi.mock('@xterm/xterm', () => ({ Terminal: class { open() {} write() {} dispose() {} } }));
-vi.mock('xterm', () => ({ Terminal: class { open() {} write() {} dispose() {} } }));
+vi.mock('@xterm/xterm', () => ({
+  Terminal: class {
+    open = vi.fn();
+    write = vi.fn();
+    dispose = vi.fn();
+  },
+}));
+vi.mock('xterm', () => ({
+  Terminal: class {
+    open = vi.fn();
+    write = vi.fn();
+    dispose = vi.fn();
+  },
+}));
 
 // ───────────────────────── Harness ─────────────────────────
 
@@ -445,7 +461,7 @@ function installBrowserGlobals(): void {
   vi.stubGlobal('Worker', MockWorker);
   vi.stubGlobal(
     'URL',
-    new Proxy(globalThis.URL ?? {}, {
+    new Proxy(globalThis.URL, {
       get(target, prop) {
         if (prop === 'createObjectURL') {
           return () => 'blob:mock-worker-url';
@@ -475,20 +491,26 @@ async function settleReactWork(): Promise<void> {
 beforeAll(() => {
   installBrowserGlobals();
   // Stub matchMedia, ResizeObserver, IntersectionObserver used by various views.
-  if (!globalThis.matchMedia) {
-    globalThis.matchMedia = ((query: string) => ({
-      matches: false, media: query, onchange: null,
-      addListener: vi.fn(), removeListener: vi.fn(),
-      addEventListener: vi.fn(), removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })) as unknown as typeof globalThis.matchMedia;
+  vi.stubGlobal('matchMedia', ((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener: vi.fn(), removeListener: vi.fn(),
+    addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })) as unknown as typeof globalThis.matchMedia);
+  class RO {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
   }
-  class RO { observe() {} unobserve() {} disconnect() {} }
-  globalThis.ResizeObserver ??= RO as unknown as typeof ResizeObserver;
-  globalThis.IntersectionObserver ??= class {
-    observe() {} unobserve() {} disconnect() {} takeRecords() { return []; }
+  class IO {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn(() => []);
     root = null; rootMargin = ''; thresholds = [];
-  } as unknown as typeof IntersectionObserver;
+  }
+  vi.stubGlobal('ResizeObserver', RO);
+  vi.stubGlobal('IntersectionObserver', IO);
 });
 
 describe('a11y — workspace views (finding #343)', () => {
@@ -517,6 +539,7 @@ describe('a11y — workspace views (finding #343)', () => {
               </QueryClientProvider>
             </TooltipProvider>,
           );
+          await Promise.resolve();
         });
         await settleReactWork();
         if (!renderResult) {
@@ -537,7 +560,7 @@ describe('a11y — workspace views (finding #343)', () => {
         expect.soft(false, `axe threw on ${entry.id}: ${String(err)}`).toBe(true);
         return;
       } finally {
-        renderResult?.unmount();
+        renderResult.unmount();
         qc.clear();
         await settleReactWork();
       }
@@ -548,7 +571,6 @@ describe('a11y — workspace views (finding #343)', () => {
         (v) => v.impact === 'critical' || v.impact === 'serious',
       );
       if (bad.length > 0) {
-        // eslint-disable-next-line no-console
         console.error(
           `[a11y] ${entry.id} — ${bad.length} serious/critical violations:`,
           bad.map((b) => `${b.id} (${b.impact}): ${b.description}`),
@@ -571,7 +593,6 @@ describe('a11y — workspace views (finding #343)', () => {
       }, {});
       return `${r.id}: ${JSON.stringify(counts)}`;
     });
-    // eslint-disable-next-line no-console
     console.log(['[a11y summary]', ...summary].join('\n  '));
     expect(results.length).toBeGreaterThan(0);
   });
