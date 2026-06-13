@@ -209,12 +209,13 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * RTC sleep when RTC_TOUCH_TRIG_EN is armed. ULP force-start/start-top
  * synthetic WAKEs latch RTC_CNTL_ULP_CP_INT and wake sleep when
  * RTC_ULP_TRIG_EN is armed; the ULP sleep timer also schedules that
- * synthetic WAKE from ULP_CP_TIMER_1.SLP_CYCLE while enabled.
- * COCPU_SW_INT_TRIGGER wakes RTC sleep when RTC_COCPU_TRIG_EN is armed.
- * SENS_SAR_COCPU_STATE.DBG_TRIGGER models a synthetic COCPU trap
- * producer, latching RTC_CNTL_COCPU_TRAP_INT and waking RTC sleep when
- * RTC_COCPU_TRAP_TRIG_EN is armed. Touch scans with a nonzero timeout
- * budget below the synthetic measurement cost latch
+ * synthetic WAKE from ULP_CP_TIMER_1.SLP_CYCLE while enabled, and
+ * LOW_POWER_ST exposes the main idle/sleep + ready-for-wakeup bits ULP
+ * WAKE examples poll. COCPU_SW_INT_TRIGGER wakes RTC sleep when
+ * RTC_COCPU_TRIG_EN is armed. SENS_SAR_COCPU_STATE.DBG_TRIGGER models
+ * a synthetic COCPU trap producer, latching RTC_CNTL_COCPU_TRAP_INT and
+ * waking RTC sleep when RTC_COCPU_TRAP_TRIG_EN is armed. Touch scans
+ * with a nonzero timeout budget below the synthetic measurement cost latch
  * RTC_CNTL_TOUCH_TIMEOUT_INT. Touch proximity pads accumulate
  * deterministic approach counts and latch TOUCH_APPROACH_LOOP_DONE when
  * they reach the configured total scan count.
@@ -710,10 +711,14 @@ const RTC_TOUCH_INT_MASK =
   RTC_TOUCH_TIMEOUT_INT |
   RTC_TOUCH_APPROACH_LOOP_DONE_INT;
 const RTC_XTAL32K_CONF = 0xf8;
+const RTC_LOW_POWER_ST = 0xd0;
 const RTC_SLP_REJECT_CAUSE = 0x128;
 const RTC_SLP_WAKEUP_CAUSE = 0x130;
 const RTC_INT_ENA_W1TS = 0x138;
 const RTC_INT_ENA_W1TC = 0x13c;
+const RTC_MAIN_STATE_IN_IDLE = 1 << 27;
+const RTC_MAIN_STATE_IN_SLP = 1 << 26;
+const RTC_RDY_FOR_WAKEUP = 1 << 19;
 const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
 const RTC_ULP_TRIG_EN = 1 << 9;
 const RTC_COCPU_TRIG_EN = 1 << 11;
@@ -2479,6 +2484,11 @@ export class Esp32s3Core implements McuCore {
     return this.rtcSleepTimerHi * 0x100000000 + this.rtcSleepTimerLo;
   }
 
+  private rtcLowPowerStatus(): number {
+    if ((this.rtcState0 & RTC_SLEEP_EN) !== 0) return RTC_MAIN_STATE_IN_SLP | RTC_RDY_FOR_WAKEUP;
+    return RTC_MAIN_STATE_IN_IDLE;
+  }
+
   private rtcWakeupEnabledSources(): number {
     return (this.rtcWakeupState >>> RTC_WAKEUP_ENA_SHIFT) & RTC_WAKEUP_ENA_MASK;
   }
@@ -4000,6 +4010,7 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_ULP_CP_TIMER) return this.rtcUlpCpTimer >>> 0;
       if (off === RTC_ULP_CP_CTRL) return (this.rtcUlpCpCtrl & ~(RTC_ULP_CP_FORCE_START_TOP | RTC_ULP_CP_MEM_OFFST_CLR)) >>> 0;
       if (off === RTC_COCPU_CTRL) return (this.rtcCocpuCtrl & ~RTC_COCPU_SW_INT_TRIGGER) >>> 0;
+      if (off === RTC_LOW_POWER_ST) return this.rtcLowPowerStatus();
       if (off === RTC_BROWN_OUT) return (this.rtcBrownOut & ~RTC_BROWN_OUT_CNT_CLR) >>> 0;
       if (off === RTC_XTAL32K_CONF) return this.rtcXtal32kConf >>> 0;
       if (off === RTC_TOUCH_CTRL1) return this.rtcTouchCtrl1 >>> 0;
@@ -4020,7 +4031,8 @@ export class Esp32s3Core implements McuCore {
           `OPTIONS0(+0x0), SLP_TIMER0/1(+0x4/+0x8), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), ` +
           `STATE0(+0x18), RESET_STATE(+0x38), WAKEUP_STATE(+0x3c), INT_* (+0x40..+0x4c), ` +
           `EXT_XTL_CONF(+0x60), ` +
-          `the RWDT block (+0x98..+0xb0), SWD(+0xb4/+0xb8), SW_CPU_STALL(+0xbc), ULP_CP_TIMER/CTRL(+0xfc/+0x100), COCPU_CTRL(+0x104), ` +
+          `the RWDT block (+0x98..+0xb0), SWD(+0xb4/+0xb8), SW_CPU_STALL(+0xbc), LOW_POWER_ST(+0xd0), ` +
+          `ULP_CP_TIMER/CTRL(+0xfc/+0x100), COCPU_CTRL(+0x104), ` +
           `BROWN_OUT(+0xe8), XTAL32K_CONF(+0xf8), ` +
           `TOUCH_CTRL1/2(+0x108/+0x10c), TOUCH_SCAN/SLP/APPROACH/FILTER/TIMEOUT(+0x110..+0x124), TOUCH_DAC/DAC1(+0x14c/+0x150), ` +
           `sleep reject/wakeup causes (+0x128/+0x130), ULP_CP_TIMER_1(+0x134); ` +

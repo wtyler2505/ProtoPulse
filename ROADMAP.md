@@ -948,6 +948,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       and reports ULP_TRIG_EN plus cleared INT_ST over UART. Cuts: no
       real ULP instruction execution, ULP memory model, GPIO wake, or
       COCPU_DONE state machine
+- [x] ESP32-S3 core slice 60 — RTC low-power status for ULP WAKE
+      polling (landed 2026-06-13): RTC_CNTL_LOW_POWER_ST now exposes
+      MAIN_STATE_IN_IDLE while the modeled main CPU is awake, and
+      MAIN_STATE_IN_SLP plus RDY_FOR_WAKEUP after STATE0.SLEEP_EN.
+      This gives future ULP WAKE instruction work truthful status bits
+      for the exact polling pattern in Espressif's ULP examples. Proven
+      by hand-assembled firmware that reads LOW_POWER_ST before and
+      after entering RTC sleep and reports the expected idle/sleep/
+      ready bit pattern over UART. Cuts: no full RTC power-state
+      sequencer, wait-for-XTAL/PLL/8M substates, or COCPU state bits yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -3407,6 +3407,34 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('RTC low-power status reports idle, sleep, and ready-for-wakeup bits', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // ULP WAKE examples poll RTC_CNTL_LOW_POWER_ST.RDY_FOR_WAKEUP
+    // before waking a sleeping main CPU, or MAIN_STATE_IN_IDLE when the
+    // main CPU is not asleep.
+    const sleepEn = 0x80000000;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, UART, sleepEn],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(6, 1), // a6 = UART
+        L32I(4, 2, 0xd0), // LOW_POWER_ST while awake
+        SRAI(4, 4, 27),
+        S32I(4, 6, 0), // tx 1: MAIN_STATE_IN_IDLE
+        L32R(4, 2),
+        S32I(4, 2, 0x18), // STATE0.SLEEP_EN
+        L32I(5, 2, 0xd0), // LOW_POWER_ST while sleeping
+        SRAI(5, 5, 19),
+        S32I(5, 6, 0), // tx 0x81: MAIN_STATE_IN_SLP + RDY_FOR_WAKEUP
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(80);
+    expect([...c.drainUart()]).toEqual([1, 0x81]);
+  });
+
   it('COCPU software trigger wakes WAITI through the RTC core interrupt matrix', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // rtc_cntl_reg.h has COCPU_CTRL +0x104, COCPU_SW_INT_TRIGGER
