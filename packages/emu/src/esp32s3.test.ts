@@ -3784,6 +3784,74 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('TSENS raw reads route through RTC_CORE', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // temperature_sensor_ll_get_temperature_raw() sets TSENS_DUMP_OUT,
+    // waits for TSENS_READY, then reads TSENS_OUT. rtc_cntl_reg.h routes
+    // TSENS into RTC_CNTL INT bit 12.
+    const SENS = 0x60008800;
+    const SCRATCH = ESP32S3_DRAM_BASE + 0xa20;
+    const RTC_TSENS_INT = 1 << 12;
+    const TSENS_DUMP_OUT = (1 << 24) | (1 << 12) | (6 << 14);
+    const BYTE_MASK = 0xff;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, SENS, SCRATCH, RTC_TSENS_INT, TSENS_DUMP_OUT, BYTE_MASK],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        L32R(4, 4), // a4 = SENS
+        L32R(5, 2), // a5 = UART
+        L32R(8, 5), // a8 = ISR counter scratch
+        MOVI(6, 0),
+        S32I(6, 8, 0),
+        MOVI(6, 1),
+        S32I(6, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(6, 3),
+        WSR(6, SR.VECBASE),
+        MOVI(6, 2),
+        WSR(6, SR.INTENABLE),
+        L32R(6, 6),
+        S32I(6, 2, 0x4c), // clear stale TSENS raw
+        S32I(6, 2, 0x40), // enable TSENS raw
+        RSIL(12, 0),
+        L32R(6, 7),
+        S32I(6, 4, 0x50), // TSENS_DUMP_OUT: conversion/read completes immediately
+        MOVI(9, 1),
+        L32I(6, 8, 0),
+        BNE(6, 9, BR(-2)),
+        L32I(6, 4, 0x50), // TSENS_READY + TSENS_OUT
+        SRLI(7, 6, 8),
+        MOVI(10, 1),
+        AND(7, 7, 10),
+        S32I(7, 5, 0), // tx 1: ready
+        L32R(7, 8),
+        AND(6, 6, 7),
+        S32I(6, 5, 0), // tx raw output byte
+        L32I(6, 2, 0x48),
+        S32I(6, 5, 0), // tx 0: RTC INT_ST clear after ISR
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(10, 0),
+        L32R(11, 5),
+        L32I(12, 11, 0),
+        ADDI(12, 12, 1),
+        S32I(12, 11, 0), // scratch++ proves RTC_CORE dispatched
+        L32I(12, 10, 0x48),
+        S32I(12, 10, 0x4c), // clear TSENS raw
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 128, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('a read of an unmodeled RTC_CNTL register halts with a diagnostic naming it', () => {
     // 0x60008090 is RTC_CNTL_WDTCONFIG0_REG territory — reading 0 there
     // would silently claim "watchdog off", so the core refuses instead.

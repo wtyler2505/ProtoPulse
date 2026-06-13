@@ -835,6 +835,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       raw source, and reports both MEASx_DONE_SAR and cleared INT_ST
       over UART. Cuts: no SAR threshold/sleep-policy modeling, no
       TSENS RTC interrupt path, and touch remains separate
+- [x] ESP32-S3 core slice 51 — RTC TSENS interrupt delivery through
+      RTC_CORE (landed 2026-06-13): SENS_SAR_TSENS_CTRL (+0x50) and
+      TSENS_CTRL2 (+0x54) now round-trip the temperature-sensor control
+      fields, TSENS_DUMP_OUT completes immediately with READY plus a
+      stable raw output byte, and TSENS_INT_EN latches RTC_CNTL_TSENS_INT
+      (bit 12). The raw bit flows through RTC_CNTL INT_RAW/ST/ENA/CLR
+      and the RTC_CORE interrupt-matrix source. Proven by hand-assembled
+      firmware that maps RTC_CORE to level-1 line 1, enables TSENS raw
+      delivery, writes the LL-style TSENS_DUMP_OUT control value, lets
+      the RTC_CORE ISR clear TSENS raw, and reports READY, raw output,
+      and cleared INT_ST over UART. Cuts: no calibrated temperature
+      conversion, I2C SAR DAC range modeling, or touch RTC producer path
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -204,13 +204,13 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * SUPER_WDT also records its RTC reset flag/feed-interrupt bits,
  * supports the documented feed/flag-clear pulses, and reports reset
  * cause 18 when firmware has not selected BYPASS_RST. RTC SARADC1/2
- * oneshot completions latch the RTC-domain SARADC interrupt producers
- * too when their SENS reader interrupt-enable bits are set.
+ * oneshot completions and TSENS raw reads latch their RTC-domain
+ * interrupt producers when their SENS interrupt-enable bits are set.
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, and the remaining RTC interrupt producers beyond RWDT/COCPU/
- * brownout/XTAL32K-dead/SUPER_WDT/SARADC, such as touch and TSENS RTC-
+ * brownout/XTAL32K-dead/SUPER_WDT/SARADC/TSENS, especially touch RTC-
  * domain wake/interrupt paths — so full IDF/FreeRTOS firmware does NOT
  * run yet.
  * Loading Intel-HEX refuses with a message.
@@ -662,6 +662,7 @@ const RTC_SLP_REJECT_INT = 1 << 1;
 const RTC_WDT_INT = 1 << 3;
 const RTC_BROWN_OUT_INT = 1 << 9;
 const RTC_SARADC1_INT = 1 << 11;
+const RTC_TSENS_INT = 1 << 12;
 const RTC_COCPU_INT = 1 << 13;
 const RTC_SARADC2_INT = 1 << 14;
 const RTC_SWD_INT = 1 << 15;
@@ -798,6 +799,8 @@ const SENS_SAR_READER1_CTRL = 0x00;
 const SENS_SAR_MEAS1_CTRL2 = 0x0c;
 const SENS_SAR_READER2_CTRL = 0x24;
 const SENS_SAR_MEAS2_CTRL2 = 0x30;
+const SENS_SAR_TSENS_CTRL = 0x50;
+const SENS_SAR_TSENS_CTRL2 = 0x54;
 const SENS_SAR1_INT_EN = 1 << 29;
 const MEAS1_DONE_SAR = 1 << 16;
 const MEAS1_START_SAR = 1 << 17;
@@ -806,6 +809,12 @@ const MEAS2_DONE_SAR = 1 << 16;
 const MEAS2_START_SAR = 1 << 17;
 const SENS_SAR_READER1_CTRL_RESET = (SENS_SAR1_INT_EN | (1 << 18) | 2) >>> 0;
 const SENS_SAR_READER2_CTRL_RESET = (SENS_SAR2_INT_EN | (1 << 18) | (1 << 16) | 2) >>> 0;
+const SENS_TSENS_DUMP_OUT = 1 << 24;
+const SENS_TSENS_INT_EN = 1 << 12;
+const SENS_TSENS_READY = 1 << 8;
+const SENS_TSENS_CTRL_RESET = (SENS_TSENS_INT_EN | (6 << 14)) >>> 0;
+const SENS_TSENS_CTRL2_RESET = ((1 << 14) | 2) >>> 0;
+const SENS_TSENS_DEFAULT_OUT = 128;
 // 12-bit result. Attenuation is not modeled: full scale is the 3.3 V
 // supply, quantized like the RP2040 core does.
 const ADC_VREF = 3.3;
@@ -1355,6 +1364,8 @@ export class Esp32s3Core implements McuCore {
   private meas2Ctrl2 = 0;
   private sarReader1Ctrl = SENS_SAR_READER1_CTRL_RESET;
   private sarReader2Ctrl = SENS_SAR_READER2_CTRL_RESET;
+  private tsensCtrl = SENS_TSENS_CTRL_RESET;
+  private tsensCtrl2 = SENS_TSENS_CTRL2_RESET;
   private adcData = 0; // ADC1 latched 12-bit result
   private adc2Data = 0;
   private adcDone = false; // ADC1 done bit
@@ -2107,6 +2118,8 @@ export class Esp32s3Core implements McuCore {
     this.meas2Ctrl2 = 0;
     this.sarReader1Ctrl = SENS_SAR_READER1_CTRL_RESET;
     this.sarReader2Ctrl = SENS_SAR_READER2_CTRL_RESET;
+    this.tsensCtrl = SENS_TSENS_CTRL_RESET;
+    this.tsensCtrl2 = SENS_TSENS_CTRL2_RESET;
     this.adcData = 0;
     this.adc2Data = 0;
     this.adcDone = false;
@@ -3664,6 +3677,8 @@ export class Esp32s3Core implements McuCore {
         if (this.adc2Done) v |= MEAS2_DONE_SAR | (this.adc2Data & 0xfff);
         return v >>> 0;
       }
+      if (off === SENS_SAR_TSENS_CTRL) return this.tsensCtrl >>> 0;
+      if (off === SENS_SAR_TSENS_CTRL2) return this.tsensCtrl2 >>> 0;
       return 0;
     }
     if (addr >= APB_SARADC_BASE && addr < APB_SARADC_BASE + 0x400) {
@@ -4192,6 +4207,18 @@ export class Esp32s3Core implements McuCore {
         if ((value & MEAS2_START_SAR) !== 0 && (prev & MEAS2_START_SAR) === 0) {
           this.runSarAdcConversion(2, value);
         }
+      } else if (off === SENS_SAR_TSENS_CTRL) {
+        const ro = this.tsensCtrl & (SENS_TSENS_READY | 0xff);
+        this.tsensCtrl = ((value & ~(SENS_TSENS_READY | 0xff)) | ro) >>> 0;
+        if ((value & SENS_TSENS_DUMP_OUT) !== 0) {
+          this.tsensCtrl = ((this.tsensCtrl & ~0xff) | SENS_TSENS_READY | SENS_TSENS_DEFAULT_OUT) >>> 0;
+          if ((this.tsensCtrl & SENS_TSENS_INT_EN) !== 0) {
+            this.rtcIntRaw |= RTC_TSENS_INT;
+            this.recomputeIrq();
+          }
+        }
+      } else if (off === SENS_SAR_TSENS_CTRL2) {
+        this.tsensCtrl2 = value >>> 0;
       }
       return;
     }
