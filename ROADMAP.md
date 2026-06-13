@@ -681,6 +681,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       receive callback flow, no carrier demodulation, no RX
       direct-memory/wrap APB readback path, and no driver ringbuffer API
       shim yet
+- [x] ESP32-S3 core slice 39 — RMT RX GDMA partial receive descriptors
+      (landed 2026-06-13): the RMT RX DMA path now continues across
+      linked GDMA IN descriptors after a full descriptor latches
+      `DONE|SUC_EOF`, lets firmware clear the first callback raw bits,
+      keeps receiving into the next descriptor, and finalizes the
+      partially filled tail descriptor on idle EOF. Proven by hand-
+      assembled firmware that arms two descriptors on RMT RX channel 3,
+      captures one symbol into the first descriptor, clears GDMA raw
+      status while RX remains armed, captures a second symbol into the
+      second descriptor, and verifies the final partial length and
+      ownership handback over UART. Cuts: no RX carrier demodulation,
+      no RX direct-memory/wrap APB readback path, no driver ringbuffer
+      API shim, and no TX live refill/`gdma_append` timing yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

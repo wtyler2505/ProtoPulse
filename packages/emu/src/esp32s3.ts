@@ -182,10 +182,12 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * input-matrix edges into CH4..CH7 APB FIFO symbols, honoring RX
  * limit/threshold and idle completion. RMT TX channel 3 can source
  * symbols from GDMA OUT descriptors when DMA access is enabled, and
- * RMT RX channel 3 can write captured symbols into GDMA IN descriptors.
+ * RMT RX channel 3 can write captured symbols into GDMA IN descriptors,
+ * continuing across linked descriptors so partial-receive callbacks can
+ * be modeled before the final idle EOF.
  * Cuts: no live mutation of an already-built TX waveform from a refill
- * ISR, RX carrier demodulation, RX partial-buffer wrapping, or driver
- * ringbuffer API yet.
+ * ISR, RX carrier demodulation, RX direct-memory/wrap APB readback path,
+ * or driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
