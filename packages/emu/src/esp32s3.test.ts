@@ -3468,6 +3468,38 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([3, 0]);
   });
 
+  it('COCPU control exposes documented reset timing fields', () => {
+    // Source-checked against ESP-IDF release/v5.5 rtc_cntl_reg.h:
+    // COCPU_SEL defaults high, SHUT_2_CLK_DIS defaults 40,
+    // START_2_INTR_EN defaults 16, and START_2_RESET_DIS defaults 8.
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, UART, 0x3f, 0xff, 1],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32I(4, 2, 0x104), // COCPU_CTRL reset value
+        L32R(7, 1),
+        S32I(4, 7, 0), // tx 0x10: START_2_RESET_DIS low byte
+        SRAI(5, 4, 7),
+        L32R(6, 2),
+        AND(5, 5, 6),
+        S32I(5, 7, 0), // tx 16: START_2_INTR_EN
+        SRAI(5, 4, 14),
+        L32R(6, 3),
+        AND(5, 5, 6),
+        S32I(5, 7, 0), // tx 40: SHUT_2_CLK_DIS
+        SRAI(5, 4, 23),
+        L32R(6, 4),
+        AND(5, 5, 6),
+        S32I(5, 7, 0), // tx 1: COCPU_SEL
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(500);
+    expect([...c.drainUart()]).toEqual([0x10, 16, 40, 1]);
+  });
+
   it('COCPU software trigger wakes WAITI through the RTC core interrupt matrix', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // rtc_cntl_reg.h has COCPU_CTRL +0x104, COCPU_SW_INT_TRIGGER

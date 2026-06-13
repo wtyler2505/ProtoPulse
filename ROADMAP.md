@@ -978,6 +978,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       while bit30 is clear, and verifies the PC_INIT low byte survives.
       Cuts: no real RTC GPIO edge/level wake routing or GPIO wake-status
       latch yet
+- [x] ESP32-S3 core slice 63 — COCPU_CTRL reset field fidelity
+      (landed 2026-06-13): RTC_CNTL_COCPU_CTRL now resets with the
+      documented COCPU_SEL bit plus SHUT_2_CLK_DIS, START_2_INTR_EN,
+      and START_2_RESET_DIS timing defaults instead of zeroing the
+      whole register. This keeps ESP-IDF-style read/modify/write helpers
+      from accidentally losing the reset policy while setting COCPU
+      control pulses. Proven by hand-assembled firmware that reads
+      COCPU_CTRL at reset and reports START_2_RESET_DIS, START_2_INTR_EN,
+      SHUT_2_CLK_DIS, and COCPU_SEL over UART. Cuts: no real COCPU
+      timing/state sequencer, clock-gate timing, or reset-delay behavior
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

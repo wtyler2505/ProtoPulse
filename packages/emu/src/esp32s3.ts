@@ -212,8 +212,9 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * synthetic WAKE from ULP_CP_TIMER_1.SLP_CYCLE while enabled, and
  * LOW_POWER_ST exposes the main idle/sleep + ready-for-wakeup bits ULP
  * WAKE examples poll, and ULP_CP_TIMER readback preserves GPIO_WAKEUP_ENA
- * while treating GPIO_WAKEUP_CLR as a write-only pulse. COCPU_DONE/
- * SHUT_RESET_EN now reflect through LOW_POWER_ST's COCPU done/sleep bits.
+ * while treating GPIO_WAKEUP_CLR as a write-only pulse. COCPU_CTRL keeps
+ * the documented reset timing fields/COCPU_SEL bit while COCPU_DONE/
+ * SHUT_RESET_EN reflect through LOW_POWER_ST's COCPU done/sleep bits.
  * COCPU_SW_INT_TRIGGER wakes RTC sleep when RTC_COCPU_TRIG_EN is armed.
  * SENS_SAR_COCPU_STATE.DBG_TRIGGER
  * models a synthetic COCPU trap producer, latching RTC_CNTL_COCPU_TRAP_INT
@@ -585,6 +586,7 @@ const RTC_ULP_CP_MEM_OFFST_CLR = 1 << 22;
 const RTC_COCPU_DONE = 1 << 25;
 const RTC_COCPU_SHUT_RESET_EN = 1 << 22;
 const RTC_COCPU_SW_INT_TRIGGER = 1 << 26;
+const RTC_COCPU_CTRL_RESET = ((1 << 23) | (40 << 14) | (16 << 7) | (8 << 1)) >>> 0;
 const RTC_BROWN_OUT_DET = 1 << 31;
 const RTC_BROWN_OUT_ENA = 1 << 30;
 const RTC_BROWN_OUT_CNT_CLR = 1 << 29;
@@ -1449,7 +1451,7 @@ export class Esp32s3Core implements McuCore {
   private rtcIntEna = 0;
   private rtcRejectCause = 0;
   private rtcWakeupCause = 0;
-  private rtcCocpuCtrl = 0;
+  private rtcCocpuCtrl = RTC_COCPU_CTRL_RESET;
   private rtcBrownOut = RTC_BROWN_OUT_RESET;
   private brownoutDetected = false;
   private rtcExtXtlConf = RTC_EXT_XTL_CONF_RESET;
@@ -2277,7 +2279,7 @@ export class Esp32s3Core implements McuCore {
     this.rtcIntEna = 0;
     this.rtcRejectCause = 0;
     this.rtcWakeupCause = 0;
-    this.rtcCocpuCtrl = 0;
+    this.rtcCocpuCtrl = RTC_COCPU_CTRL_RESET;
     this.rtcBrownOut = RTC_BROWN_OUT_RESET;
     this.rtcExtXtlConf = RTC_EXT_XTL_CONF_RESET;
     this.rtcXtal32kConf = RTC_XTAL32K_CONF_RESET;
