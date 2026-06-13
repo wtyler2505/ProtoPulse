@@ -147,9 +147,9 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * core boots post-bootloader with the flashboot watchdogs already
  * quiesced, so raw test images aren't killed before they can
  * configure anything — IDF startup's disable writes still land on
- * real modeled registers); the RWDT INT stage action advances the
- * stage but is not wired to the RTC_CORE interrupt source yet;
- * SUPER_WDT, sleep pause, and XTAL clock sources are out of scope.
+ * real modeled registers); the RWDT INT stage action now latches
+ * RTC_WDT_INT via the RTC_CORE interrupt source. SUPER_WDT, sleep
+ * pause, and XTAL clock sources are out of scope.
  * The APB_SARADC digital-controller register substrate is
  * modeled (slice 15): CTRL/CTRL2, packed pattern tables, DATA_STATUS,
  * DMA_CONF storage, ADC1/ADC2 done interrupts, and the two ESP-IDF
@@ -200,7 +200,7 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
- * gating, and the remaining RTC interrupt producers — so full
+ * gating, and the remaining RTC interrupt producers beyond RWDT — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
@@ -629,6 +629,7 @@ const RTC_WAKEUP_ENA_MASK = 0x1ffff;
 const RTC_WAKEUP_STATE_RESET = 0x000c << RTC_WAKEUP_ENA_SHIFT; // rtc_cntl_reg.h default: 17'b1100
 const RTC_SLP_WAKEUP_INT = 1 << 0;
 const RTC_SLP_REJECT_INT = 1 << 1;
+const RTC_WDT_INT = 1 << 3;
 const RTC_MAIN_TIMER_INT = 1 << 10;
 const RTC_SLP_REJECT_CAUSE = 0x128;
 const RTC_SLP_WAKEUP_CAUSE = 0x130;
@@ -2157,15 +2158,17 @@ export class Esp32s3Core implements McuCore {
   }
 
   /** The RWDT: counts the modeled ~136 kHz RC_SLOW clock. 3-bit stage
-   *  fields; action 4 (reset RTC) exists here. INT stages advance the
-   *  stage but raise no CPU interrupt (the RTC interrupt block is not
-   *  modeled — stated cut). */
+   *  fields; action 4 (reset RTC) exists here. INT stages latch
+   *  RTC_CNTL_WDT_INT and route through RTC_CORE when enabled. */
   private checkRwdt(): void {
     const w = this.rwdt;
     const ticks = Math.floor(((this.cpu.cycles - w.epoch) * RTC_SLOW_HZ) / CLOCK_HZ);
     this.runWdtStages(w, ticks, (s) => {
       const action = (w.config0 >>> (28 - 3 * s)) & 7;
-      if (action === WDT_STAGE_RESET_CPU) {
+      if (action === WDT_STAGE_INT) {
+        this.rtcIntRaw |= RTC_WDT_INT;
+        this.recomputeIrq();
+      } else if (action === WDT_STAGE_RESET_CPU) {
         this.resetCause = RESET_CAUSE_RTCWDT_CPU;
         this.pendingReset = true;
       } else if (action === WDT_STAGE_RESET_SYSTEM || action === WDT_STAGE_RESET_RTC) {

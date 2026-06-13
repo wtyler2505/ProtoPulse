@@ -754,8 +754,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       MAIN_TIMER and SLP_WAKEUP raw sources, sets STATE0.SLEEP_EN, waits,
       clears the RTC raw bits in the ISR, and reports the timer wake
       cause over UART. Cuts: timer wake only; no wake-stub/deep-sleep
-      reset behavior, clock/power-domain gating, non-timer wake sources,
-      or RWDT INT-stage delivery through RTC_CORE yet
+      reset behavior, clock/power-domain gating, or non-timer wake sources yet
+- [x] ESP32-S3 core slice 45 — RWDT interrupt delivery through RTC_CORE
+      (landed 2026-06-13): an RWDT stage configured with
+      WDT_STAGE_ACTION_INT now latches RTC_CNTL_WDT_INT (bit 3), flows
+      through RTC_CNTL INT_RAW/ST/ENA/CLR, and wakes the CPU through the
+      RTC_CORE interrupt-matrix source. Proven by hand-assembled
+      firmware that arms RWDT stage 0 as an interrupt, maps RTC_CORE to
+      level-1 line 1, parks in WAITI, clears RTC_WDT in the ISR, feeds
+      RWDT afterward, and reports that INT_ST is clear while the reset
+      cause remains POWERON. Cuts: no SUPER_WDT, sleep-pause clock
+      policy, XTAL clock source, or remaining RTC interrupt producers yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

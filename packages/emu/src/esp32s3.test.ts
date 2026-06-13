@@ -3814,6 +3814,8 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
   const MWDT_EN_STG0_SYS = (0x80000000 | (3 << 29)) >>> 0;
   // RWDT CONFIG0: EN (31) | STG0 = reset-system (3 << 28).
   const RWDT_EN_STG0_SYS = (0x80000000 | (3 << 28)) >>> 0;
+  // RWDT CONFIG0: EN (31) | STG0 = interrupt (1 << 28).
+  const RWDT_EN_STG0_INT = (0x80000000 | (1 << 28)) >>> 0;
 
   /** Same shape as the slice-11 helper: tx RESET_CAUSE_PROCPU, then on
    *  power-on (1) run `trigger` and fall into a self-loop halt; a
@@ -4011,6 +4013,64 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
     c.step(20_000); // boot 1: tx 1, RWDT bites
     c.step(500); // boot 2: tx the cause
     expect([...c.drainUart()]).toEqual([9]);
+  });
+
+  it('an RWDT stage-0 interrupt wakes WAITI through RTC_CORE without rebooting', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // rtc_cntl_reg.h has RTC_CNTL_WDT_INT_* at bit 3 and WDTCONFIG0
+    // +0x98 / WDTCONFIG1 +0x9c; interrupt_core0_reg.h maps RTC_CORE
+    // at +0x09c; rwdt_ll.h clears the status through int_clr.rtc_wdt.
+    const RTC_WDT_INT = 1 << 3;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, WDT_KEY, RWDT_EN_STG0_INT, INTMTX, ESP32S3_IRAM_BASE, UART, RTC_WDT_INT, RTC_RESET_STATE, 0x80000000],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = WDT key
+        S32I(3, 2, 0xb0), // unlock RWDT
+        MOVI(4, 2),
+        S32I(4, 2, 0x9c), // WDTCONFIG1: stage0 = 2 RTC-slow ticks
+        L32R(5, 3), // a5 = interrupt matrix
+        MOVI(4, 1),
+        S32I(4, 5, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(6, 4),
+        WSR(6, SR.VECBASE),
+        MOVI(4, 2),
+        WSR(4, SR.INTENABLE),
+        RSIL(8, 0),
+        L32R(4, 6),
+        S32I(4, 2, 0x4c), // clear stale RTC_WDT raw
+        S32I(4, 2, 0x40), // enable RTC_WDT interrupt
+        L32R(4, 2),
+        S32I(4, 2, 0x98), // arm RWDT stage0 interrupt
+        WAITI(0),
+        L32I(4, 2, 0x48), // INT_ST after handler clear
+        L32R(5, 5),
+        S32I(4, 5, 0), // tx 0: status is clear
+        L32R(5, 7),
+        L32I(4, 5, 0),
+        MOVI(6, 0x3f),
+        AND(4, 4, 6),
+        L32R(6, 8),
+        S32I(6, 2, 0xac), // feed RWDT so later steps do not advance to reset stage
+        L32R(5, 5),
+        S32I(4, 5, 0), // tx RESET_CAUSE_PROCPU = POWERON(1), not RTCWDT
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 6),
+        S32I(3, 2, 0x4c), // clear RTC_WDT raw so it does not re-fire
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(12_000);
+    expect([...c.drainUart()]).toEqual([0, 1]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
   });
 });
 
