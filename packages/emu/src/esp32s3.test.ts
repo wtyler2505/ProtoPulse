@@ -3531,6 +3531,72 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('COCPU debug trigger wakes RTC sleep with the trap wake source recorded', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // sens_reg.h exposes SENS_SAR_COCPU_STATE (+0xe4),
+    // SENS_COCPU_DBG_TRIGGER (bit 25), and SENS_COCPU_TRAP (bit 29).
+    // rtc_cntl_reg.h exposes RTC_CNTL_COCPU_TRAP_INT at bit 17, while
+    // soc/rtc.h exposes RTC_COCPU_TRAP_TRIG_EN as wake source bit 13.
+    const SENS = 0x60008800;
+    const RTC_COCPU_TRAP_INT = 1 << 17;
+    const RTC_SLP_WAKEUP_INT = 1;
+    const RTC_COCPU_TRAP_TRIG_EN = 1 << 13;
+    const SENS_COCPU_DBG_TRIGGER = 1 << 25;
+    const rtcIntMask = RTC_COCPU_TRAP_INT | RTC_SLP_WAKEUP_INT;
+    const wakeupTrap = RTC_COCPU_TRAP_TRIG_EN << 15;
+    const sleepEn = 0x80000000;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, SENS, rtcIntMask, wakeupTrap, sleepEn, SENS_COCPU_DBG_TRIGGER],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        L32R(4, 4), // a4 = SENS
+        MOVI(5, 1),
+        S32I(5, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(6, 3),
+        WSR(6, SR.VECBASE),
+        MOVI(5, 2),
+        WSR(5, SR.INTENABLE),
+        L32R(5, 5),
+        S32I(5, 2, 0x4c), // clear stale COCPU_TRAP/SLP_WAKEUP raw bits
+        S32I(5, 2, 0x40), // enable COCPU_TRAP and SLP_WAKEUP raw bits
+        L32R(5, 6),
+        S32I(5, 2, 0x3c), // WAKEUP_STATE COCPU_TRAP wake source
+        L32R(5, 7),
+        S32I(5, 2, 0x18), // STATE0.SLEEP_EN
+        RSIL(12, 12), // hold pending RTC_CORE interrupt until WAITI lowers INTLEVEL
+        L32R(5, 8),
+        S32I(5, 4, 0xe4), // SENS_SAR_COCPU_STATE.SENS_COCPU_DBG_TRIGGER
+        WAITI(0),
+        L32I(5, 2, 0x130), // SLP_WAKEUP_CAUSE
+        SRLI(5, 5, 13),
+        L32R(6, 2),
+        S32I(5, 6, 0), // tx 1: RTC_COCPU_TRAP_TRIG_EN recorded
+        L32I(5, 4, 0xe4), // SENS_SAR_COCPU_STATE
+        SRLI(5, 5, 15),
+        SRLI(5, 5, 14),
+        S32I(5, 6, 0), // tx 1: SENS_COCPU_TRAP readback
+        L32I(5, 2, 0x48),
+        S32I(5, 6, 0), // tx 0: RTC INT_ST clear after ISR
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 5),
+        S32I(3, 2, 0x4c), // clear COCPU_TRAP/SLP_WAKEUP raw bits
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 1, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('brownout detector trips wake WAITI through the RTC core interrupt matrix', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // rtc_cntl_reg.h has BROWN_OUT +0xe8, BROWN_OUT_DET bit 31,

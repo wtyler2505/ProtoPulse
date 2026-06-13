@@ -899,6 +899,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       COCPU/SLP_WAKEUP raw, and reports COCPU_TRIG_EN plus cleared
       INT_ST over UART. Cuts: no real COCPU execution, COCPU_DONE state
       machine, trap/debug flow, or COCPU_TRAP_TRIG_EN path
+- [x] ESP32-S3 core slice 56 — COCPU trap/debug sleep wake source
+      (landed 2026-06-13): SENS_SAR_COCPU_STATE (+0xe4) now treats
+      SENS_COCPU_DBG_TRIGGER as a write-only synthetic trap producer,
+      exposes sticky SENS_COCPU_TRAP readback, latches
+      RTC_CNTL_COCPU_TRAP_INT (bit 17), and wakes RTC sleep through
+      RTC_COCPU_TRAP_TRIG_EN (bit 13) when armed. Proven by
+      hand-assembled firmware that arms COCPU_TRAP wake, enters RTC
+      sleep, writes DBG_TRIGGER with interrupts masked until WAITI(0),
+      lets the RTC_CORE ISR clear COCPU_TRAP/SLP_WAKEUP raw, and reports
+      COCPU_TRAP_TRIG_EN, trap-state readback, and cleared INT_ST over
+      UART. Cuts: no real COCPU execution, COCPU_DONE state machine,
+      EBREAK/EOI/debug-PC modeling, or trap clear semantics beyond reset
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

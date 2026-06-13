@@ -209,15 +209,17 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * RTC sleep when RTC_TOUCH_TRIG_EN is armed. ULP force-start/start-top
  * synthetic WAKEs latch RTC_CNTL_ULP_CP_INT and wake sleep when
  * RTC_ULP_TRIG_EN is armed. COCPU_SW_INT_TRIGGER wakes RTC sleep when
- * RTC_COCPU_TRIG_EN is armed.
+ * RTC_COCPU_TRIG_EN is armed. SENS_SAR_COCPU_STATE.DBG_TRIGGER models
+ * a synthetic COCPU trap producer, latching RTC_CNTL_COCPU_TRAP_INT and
+ * waking RTC sleep when RTC_COCPU_TRAP_TRIG_EN is armed.
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
  * instruction execution, and the remaining RTC interrupt producers
  * beyond RWDT/COCPU/brownout/XTAL32K-dead/SUPER_WDT/SARADC/TSENS/
- * touch done-scan-active/wake/ULP wake/COCPU wake paths — so full
- * IDF/FreeRTOS firmware does NOT run yet.
+ * touch done-scan-active/wake/ULP wake/COCPU wake/COCPU trap paths —
+ * so full IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -687,6 +689,7 @@ const RTC_COCPU_INT = 1 << 13;
 const RTC_SARADC2_INT = 1 << 14;
 const RTC_SWD_INT = 1 << 15;
 const RTC_XTAL32K_DEAD_INT = 1 << 16;
+const RTC_COCPU_TRAP_INT = 1 << 17;
 const RTC_TOUCH_TIMEOUT_INT = 1 << 18;
 const RTC_TOUCH_APPROACH_LOOP_DONE_INT = 1 << 20;
 const RTC_MAIN_TIMER_INT = 1 << 10;
@@ -706,6 +709,7 @@ const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/incl
 const RTC_ULP_TRIG_EN = 1 << 9;
 const RTC_COCPU_TRIG_EN = 1 << 11;
 const RTC_XTAL32K_DEAD_TRIG_EN = 1 << 12;
+const RTC_COCPU_TRAP_TRIG_EN = 1 << 13;
 const RTC_XTAL32K_WDT_EN = 1 << 0;
 const RTC_XTAL32K_WDT_RESET = 1 << 2;
 const RTC_EXT_XTL_CONF_RESET = ((3 << 17) | (3 << 13) | (3 << 10) | (1 << 7)) >>> 0;
@@ -832,6 +836,7 @@ const SENS_SAR_READER2_CTRL = 0x24;
 const SENS_SAR_MEAS2_CTRL2 = 0x30;
 const SENS_SAR_TSENS_CTRL = 0x50;
 const SENS_SAR_TSENS_CTRL2 = 0x54;
+const SENS_SAR_COCPU_STATE = 0xe4;
 const SENS_SAR1_INT_EN = 1 << 29;
 const MEAS1_DONE_SAR = 1 << 16;
 const MEAS1_START_SAR = 1 << 17;
@@ -846,6 +851,8 @@ const SENS_TSENS_READY = 1 << 8;
 const SENS_TSENS_CTRL_RESET = (SENS_TSENS_INT_EN | (6 << 14)) >>> 0;
 const SENS_TSENS_CTRL2_RESET = ((1 << 14) | 2) >>> 0;
 const SENS_TSENS_DEFAULT_OUT = 128;
+const SENS_COCPU_TRAP = 1 << 29;
+const SENS_COCPU_DBG_TRIGGER = 1 << 25;
 // 12-bit result. Attenuation is not modeled: full scale is the 3.3 V
 // supply, quantized like the RP2040 core does.
 const ADC_VREF = 3.3;
@@ -1420,6 +1427,7 @@ export class Esp32s3Core implements McuCore {
   private rtcUlpCpTimer = RTC_ULP_CP_TIMER_RESET;
   private rtcUlpCpCtrl = RTC_ULP_CP_CTRL_RESET;
   private rtcUlpCpTimer1 = RTC_ULP_CP_TIMER_1_RESET;
+  private cocpuTrap = false;
   private rtcCoreIntMaps = freshInterruptMapPair();
   private rtcTimeLatchLo = 0; // captured by a TIME_UPDATE write
   private rtcTimeLatchHi = 0;
@@ -2219,6 +2227,7 @@ export class Esp32s3Core implements McuCore {
     this.rtcUlpCpTimer = RTC_ULP_CP_TIMER_RESET;
     this.rtcUlpCpCtrl = RTC_ULP_CP_CTRL_RESET;
     this.rtcUlpCpTimer1 = RTC_ULP_CP_TIMER_1_RESET;
+    this.cocpuTrap = false;
     this.rtcCoreIntMaps = freshInterruptMapPair();
     this.rtcTimeLatchLo = 0;
     this.rtcTimeLatchHi = 0;
@@ -2470,6 +2479,13 @@ export class Esp32s3Core implements McuCore {
   private triggerUlpWake(): void {
     this.rtcIntRaw |= RTC_ULP_CP_INT;
     this.latchRtcWakeupSource(RTC_ULP_TRIG_EN);
+    this.recomputeIrq();
+  }
+
+  private triggerCocpuTrap(): void {
+    this.cocpuTrap = true;
+    this.rtcIntRaw |= RTC_COCPU_TRAP_INT;
+    this.latchRtcWakeupSource(RTC_COCPU_TRAP_TRIG_EN);
     this.recomputeIrq();
   }
 
@@ -3820,6 +3836,7 @@ export class Esp32s3Core implements McuCore {
       }
       if (off === SENS_SAR_TSENS_CTRL) return this.tsensCtrl >>> 0;
       if (off === SENS_SAR_TSENS_CTRL2) return this.tsensCtrl2 >>> 0;
+      if (off === SENS_SAR_COCPU_STATE) return this.cocpuTrap ? SENS_COCPU_TRAP : 0;
       if (off === SENS_SAR_TOUCH_CONF) {
         let v = this.sensTouchConf & ~(SENS_TOUCH_DENOISE_END | SENS_TOUCH_UNIT_END | SENS_TOUCH_STATUS_CLR);
         if (this.touchMeasDone) v |= SENS_TOUCH_DENOISE_END | SENS_TOUCH_UNIT_END;
@@ -4390,6 +4407,10 @@ export class Esp32s3Core implements McuCore {
         }
       } else if (off === SENS_SAR_TSENS_CTRL2) {
         this.tsensCtrl2 = value >>> 0;
+      } else if (off === SENS_SAR_COCPU_STATE) {
+        if ((value & SENS_COCPU_DBG_TRIGGER) !== 0) {
+          this.triggerCocpuTrap();
+        }
       } else if (off === SENS_SAR_TOUCH_CONF) {
         if ((value & SENS_TOUCH_STATUS_CLR) !== 0) {
           this.touchActiveMask = 0;
