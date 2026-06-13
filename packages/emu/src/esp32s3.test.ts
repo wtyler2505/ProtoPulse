@@ -3591,6 +3591,97 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('SUPER_WDT feed interrupt wakes WAITI through RTC_CORE without reset', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // rtc_cntl_reg.h has SWD_CONF +0xb4, SWD_WPROTECT +0xb8,
+    // SWD_FEED_INT bit 1, SWD_FEED bit 29, SWD_BYPASS_RST bit 17,
+    // and RTC_CNTL_SWD_INT_* at bit 15. RTC_CORE routes through
+    // interrupt_core0_reg.h +0x09c.
+    const RTC_SWD_INT = 1 << 15;
+    const RTC_SWD_WKEY = 0x8f1d312a;
+    const RTC_SWD_BYPASS_RST = 1 << 17;
+    const RTC_SWD_FEED = 1 << 29;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, RTC_SWD_INT, RTC_SWD_WKEY, RTC_SWD_BYPASS_RST, RTC_SWD_FEED],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        MOVI(4, 1),
+        S32I(4, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(5, 3),
+        WSR(5, SR.VECBASE),
+        MOVI(4, 2),
+        WSR(4, SR.INTENABLE),
+        L32R(4, 5),
+        S32I(4, 2, 0xb8), // unlock SUPER_WDT
+        L32R(4, 6),
+        S32I(4, 2, 0xb4), // SWD_CONF.BYPASS_RST: interrupt only
+        L32R(4, 4),
+        S32I(4, 2, 0x4c), // clear stale SWD raw
+        S32I(4, 2, 0x40), // enable SWD raw
+        RSIL(8, 0),
+        WAITI(0),
+        L32I(4, 2, 0xb4), // SWD_CONF.FEED_INT readback
+        SRLI(4, 4, 1),
+        MOVI(6, 1),
+        AND(4, 4, 6),
+        L32R(5, 2),
+        S32I(4, 5, 0), // tx 1
+        L32R(4, 7),
+        S32I(4, 2, 0xb4), // SWD_FEED clears FEED_INT
+        L32I(4, 2, 0xb4),
+        SRLI(4, 4, 1),
+        AND(4, 4, 6),
+        S32I(4, 5, 0), // tx 0: feed pulse cleared FEED_INT
+        L32I(4, 2, 0x48), // INT_ST after handler/feed clear
+        S32I(4, 5, 0), // tx 0
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 4),
+        S32I(3, 2, 0x4c), // clear SWD raw
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([]);
+    c.triggerSuperWatchdog();
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 0, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
+  it('SUPER_WDT reset reports the ROM SUPER_WDT_RESET cause', () => {
+    const RTC_SWD_WKEY = 0x8f1d312a;
+    const RESET_MASK = 0x3f;
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [RTCCNTL, UART, RTC_SWD_WKEY, RESET_MASK], [
+      L32R(2, 0), // a2 = RTC_CNTL
+      L32R(3, 2),
+      S32I(3, 2, 0xb8), // unlock SUPER_WDT
+      MOVI(4, 0),
+      S32I(4, 2, 0xb4), // BYPASS_RST clear: trip resets
+      L32I(4, 2, 0x38), // RESET_STATE
+      L32R(5, 3),
+      AND(4, 4, 5),
+      L32R(6, 1),
+      S32I(4, 6, 0), // tx reset cause
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([1]);
+    c.triggerSuperWatchdog();
+    c.step(300);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([18]);
+  });
+
   it('a read of an unmodeled RTC_CNTL register halts with a diagnostic naming it', () => {
     // 0x60008090 is RTC_CNTL_WDTCONFIG0_REG territory — reading 0 there
     // would silently claim "watchdog off", so the core refuses instead.

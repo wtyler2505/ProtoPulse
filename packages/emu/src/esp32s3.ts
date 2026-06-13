@@ -197,15 +197,19 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * sleep state, WAKEUP_STATE's TIMER_TRIG source records
  * SLP_WAKEUP_CAUSE, and the RTC_CORE interrupt-matrix source wakes
  * WAITI through the normal level-1 path. RWDT stage-0 INT,
- * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips, and
- * XTAL32K-dead watchdog trips also latch their RTC_CNTL INT_* bits and
- * route through RTC_CORE. XTAL32K-dead can wake light-sleep via the
- * RTC_XTAL32K_DEAD_TRIG_EN wake source too.
+ * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips,
+ * XTAL32K-dead watchdog trips, and super-watchdog trips also latch
+ * their RTC_CNTL INT_* bits and route through RTC_CORE. XTAL32K-dead
+ * can wake light-sleep via the RTC_XTAL32K_DEAD_TRIG_EN wake source too.
+ * SUPER_WDT also records its RTC reset flag/feed-interrupt bits,
+ * supports the documented feed/flag-clear pulses, and reports reset
+ * cause 18 when firmware has not selected BYPASS_RST.
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, and the remaining RTC interrupt producers beyond RWDT/COCPU/
- * brownout/XTAL32K-dead — so full IDF/FreeRTOS firmware does NOT run yet.
+ * brownout/XTAL32K-dead/SUPER_WDT, such as touch and SARADC RTC-domain
+ * wake/interrupt paths — so full IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -531,9 +535,19 @@ const RTC_WDTCONFIG0 = 0x98;
 const RTC_WDTCONFIG1 = 0x9c; // ..+0xA8: stage0..3
 const RTC_WDTFEED = 0xac;
 const RTC_WDTWPROTECT = 0xb0;
+const RTC_SWD_CONF = 0xb4;
+const RTC_SWD_WPROTECT = 0xb8;
 const RTC_COCPU_CTRL = 0x104;
 const RTC_BROWN_OUT = 0xe8;
 const RTC_WDT_FEED_BIT = 1 << 31; // RTC_CNTL_RTC_WDT_FEED
+const RTC_SWD_WKEY = 0x8f1d312a;
+const RTC_SWD_DISABLE = 1 << 30;
+const RTC_SWD_FEED = 1 << 29;
+const RTC_SWD_RST_FLAG_CLR = 1 << 28;
+const RTC_SWD_BYPASS_RST = 1 << 17;
+const RTC_SWD_FEED_INT = 1 << 1;
+const RTC_SWD_RESET_FLAG = 1 << 0;
+const RTC_SWD_CONF_RESET = 300 << 18;
 const RTC_COCPU_SW_INT_TRIGGER = 1 << 26;
 const RTC_BROWN_OUT_DET = 1 << 31;
 const RTC_BROWN_OUT_ENA = 1 << 30;
@@ -645,6 +659,7 @@ const RTC_SLP_REJECT_INT = 1 << 1;
 const RTC_WDT_INT = 1 << 3;
 const RTC_BROWN_OUT_INT = 1 << 9;
 const RTC_COCPU_INT = 1 << 13;
+const RTC_SWD_INT = 1 << 15;
 const RTC_XTAL32K_DEAD_INT = 1 << 16;
 const RTC_MAIN_TIMER_INT = 1 << 10;
 const RTC_XTAL32K_CONF = 0xf8;
@@ -673,6 +688,7 @@ const RESET_CAUSE_RTCWDT_CPU = 13; // RTCWDT_CPU_RESET
 const RESET_CAUSE_BROWNOUT = 15; // RTCWDT_BROWN_OUT_RESET
 const RESET_CAUSE_RTCWDT_RTC = 16; // RTCWDT_RTC_RESET
 const RESET_CAUSE_TG1WDT_CPU = 17; // TG1WDT_CPU_RESET
+const RESET_CAUSE_SUPER_WDT = 18; // SUPER_WDT_RESET
 // The RTC main timer counts the ~136 kHz RC_SLOW clock
 // (clk_tree_defs.h SOC_CLK_RC_SLOW_FREQ_APPROX). 48 bits wide.
 const RTC_SLOW_HZ = 136_000;
@@ -1304,6 +1320,8 @@ export class Esp32s3Core implements McuCore {
   private rtcExtXtlConf = RTC_EXT_XTL_CONF_RESET;
   private rtcXtal32kConf = RTC_XTAL32K_CONF_RESET;
   private xtal32kDead = false;
+  private rtcSwdConf = RTC_SWD_CONF_RESET;
+  private rtcSwdWprotect = RTC_SWD_WKEY;
   private rtcCoreIntMaps = freshInterruptMapPair();
   private rtcTimeLatchLo = 0; // captured by a TIME_UPDATE write
   private rtcTimeLatchHi = 0;
@@ -1573,6 +1591,10 @@ export class Esp32s3Core implements McuCore {
   setXtal32kDead(dead: boolean): void {
     this.xtal32kDead = dead;
     this.updateXtal32kDead();
+  }
+
+  triggerSuperWatchdog(): void {
+    this.triggerSuperWatchdogTrip();
   }
 
   inspect(): McuState {
@@ -2048,6 +2070,8 @@ export class Esp32s3Core implements McuCore {
     this.rtcBrownOut = RTC_BROWN_OUT_RESET;
     this.rtcExtXtlConf = RTC_EXT_XTL_CONF_RESET;
     this.rtcXtal32kConf = RTC_XTAL32K_CONF_RESET;
+    this.rtcSwdConf = RTC_SWD_CONF_RESET;
+    this.rtcSwdWprotect = RTC_SWD_WKEY;
     this.rtcCoreIntMaps = freshInterruptMapPair();
     this.rtcTimeLatchLo = 0;
     this.rtcTimeLatchHi = 0;
@@ -2274,6 +2298,21 @@ export class Esp32s3Core implements McuCore {
     }
     this.rtcIntRaw |= RTC_XTAL32K_DEAD_INT;
     this.latchRtcWakeupSource(RTC_XTAL32K_DEAD_TRIG_EN);
+    this.recomputeIrq();
+  }
+
+  private triggerSuperWatchdogTrip(): void {
+    if ((this.rtcSwdConf & RTC_SWD_DISABLE) !== 0) {
+      this.recomputeIrq();
+      return;
+    }
+    this.rtcSwdConf |= RTC_SWD_FEED_INT | RTC_SWD_RESET_FLAG;
+    this.rtcIntRaw |= RTC_SWD_INT;
+    if ((this.rtcSwdConf & RTC_SWD_BYPASS_RST) === 0) {
+      this.resetCause = RESET_CAUSE_SUPER_WDT;
+      this.appResetCause = RESET_CAUSE_SUPER_WDT;
+      this.pendingReset = true;
+    }
     this.recomputeIrq();
   }
 
@@ -3662,6 +3701,8 @@ export class Esp32s3Core implements McuCore {
       }
       if (off === RTC_WDTFEED) return 0; // the feed bit reads back 0
       if (off === RTC_WDTWPROTECT) return this.rwdt.wprotect >>> 0;
+      if (off === RTC_SWD_CONF) return (this.rtcSwdConf & ~(RTC_SWD_FEED | RTC_SWD_RST_FLAG_CLR)) >>> 0;
+      if (off === RTC_SWD_WPROTECT) return this.rtcSwdWprotect >>> 0;
       if (off === RTC_COCPU_CTRL) return (this.rtcCocpuCtrl & ~RTC_COCPU_SW_INT_TRIGGER) >>> 0;
       if (off === RTC_BROWN_OUT) return (this.rtcBrownOut & ~RTC_BROWN_OUT_CNT_CLR) >>> 0;
       if (off === RTC_XTAL32K_CONF) return this.rtcXtal32kConf >>> 0;
@@ -3673,7 +3714,7 @@ export class Esp32s3Core implements McuCore {
           `OPTIONS0(+0x0), SLP_TIMER0/1(+0x4/+0x8), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), ` +
           `STATE0(+0x18), RESET_STATE(+0x38), WAKEUP_STATE(+0x3c), INT_* (+0x40..+0x4c), ` +
           `EXT_XTL_CONF(+0x60), ` +
-          `the RWDT block (+0x98..+0xb0), SW_CPU_STALL(+0xbc), COCPU_CTRL(+0x104), ` +
+          `the RWDT block (+0x98..+0xb0), SWD(+0xb4/+0xb8), SW_CPU_STALL(+0xbc), COCPU_CTRL(+0x104), ` +
           `BROWN_OUT(+0xe8), XTAL32K_CONF(+0xf8), ` +
           `sleep reject/wakeup causes (+0x128/+0x130); ` +
           `a fabricated 0 here would lie`,
@@ -4263,6 +4304,21 @@ export class Esp32s3Core implements McuCore {
           } else {
             this.rwdt.timeouts[(off - RTC_WDTCONFIG1) >> 2] = value >>> 0;
           }
+        }
+      } else if (off === RTC_SWD_WPROTECT) {
+        this.rtcSwdWprotect = value >>> 0;
+      } else if (off === RTC_SWD_CONF) {
+        if (this.rtcSwdWprotect === RTC_SWD_WKEY) {
+          const flags = this.rtcSwdConf & (RTC_SWD_FEED_INT | RTC_SWD_RESET_FLAG);
+          this.rtcSwdConf = ((value & ~(RTC_SWD_FEED | RTC_SWD_RST_FLAG_CLR | RTC_SWD_FEED_INT | RTC_SWD_RESET_FLAG)) | flags) >>> 0;
+          if ((value & RTC_SWD_FEED) !== 0) {
+            this.rtcSwdConf &= ~RTC_SWD_FEED_INT;
+            this.rtcIntRaw &= ~RTC_SWD_INT;
+          }
+          if ((value & RTC_SWD_RST_FLAG_CLR) !== 0) {
+            this.rtcSwdConf &= ~RTC_SWD_RESET_FLAG;
+          }
+          this.recomputeIrq();
         }
       } else if (off === RTC_COCPU_CTRL) {
         // COCPU_SW_INT_TRIGGER is a write-only pulse; the rest of the

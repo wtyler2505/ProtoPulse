@@ -807,6 +807,21 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       auto-backup/restart/return behavior, WDT timeout counting, or
       remaining RTC producers like touch, SARADC RTC-domain, and
       SUPER_WDT yet
+- [x] ESP32-S3 core slice 49 — RTC SUPER_WDT/SWD interrupt and reset
+      delivery (landed 2026-06-13): RTC_CNTL_SWD_CONF (+0xb4) and
+      SWD_WPROTECT (+0xb8) now round-trip the super-watchdog policy
+      fields behind the documented SWD key, expose FEED_INT and
+      RESET_FLAG as readback status, treat SWD_FEED and RST_FLAG_CLR as
+      write-only pulses, and let a host-injected super-watchdog trip
+      latch RTC_CNTL_SWD_INT (bit 15). If BYPASS_RST is clear, the trip
+      also resets with ROM reset cause SUPER_WDT_RESET (18); if
+      BYPASS_RST is set, it wakes through RTC_CORE like the other RTC
+      interrupt producers. Proven by hand-assembled firmware that maps
+      RTC_CORE to level-1 line 1, enables SWD raw delivery, parks in
+      WAITI, reads FEED_INT after a host trip, feeds SWD to clear it,
+      and separately verifies the reset-cause path. Cuts: no timed SWD
+      countdown, auto-feed cadence, or remaining RTC producers like
+      touch and SARADC RTC-domain yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
