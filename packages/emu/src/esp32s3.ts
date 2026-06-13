@@ -197,13 +197,15 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * sleep state, WAKEUP_STATE's TIMER_TRIG source records
  * SLP_WAKEUP_CAUSE, and the RTC_CORE interrupt-matrix source wakes
  * WAITI through the normal level-1 path. RWDT stage-0 INT,
- * COCPU_SW_INT_TRIGGER, and host-injected brownout detector trips also
- * latch their RTC_CNTL INT_* bits and route through RTC_CORE.
+ * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips, and
+ * XTAL32K-dead watchdog trips also latch their RTC_CNTL INT_* bits and
+ * route through RTC_CORE. XTAL32K-dead can wake light-sleep via the
+ * RTC_XTAL32K_DEAD_TRIG_EN wake source too.
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, and the remaining RTC interrupt producers beyond RWDT/COCPU/
- * brownout — so full IDF/FreeRTOS firmware does NOT run yet.
+ * brownout/XTAL32K-dead — so full IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -626,6 +628,7 @@ const RTC_INT_ENA = 0x40;
 const RTC_INT_RAW = 0x44;
 const RTC_INT_ST = 0x48;
 const RTC_INT_CLR = 0x4c;
+const RTC_EXT_XTL_CONF = 0x60;
 const RTC_SW_SYS_RST = 1 << 31;
 const RTC_SW_PROCPU_RST = 1 << 5;
 const RTC_MAIN_TIMER_ALARM_EN = 1 << 16;
@@ -642,12 +645,19 @@ const RTC_SLP_REJECT_INT = 1 << 1;
 const RTC_WDT_INT = 1 << 3;
 const RTC_BROWN_OUT_INT = 1 << 9;
 const RTC_COCPU_INT = 1 << 13;
+const RTC_XTAL32K_DEAD_INT = 1 << 16;
 const RTC_MAIN_TIMER_INT = 1 << 10;
+const RTC_XTAL32K_CONF = 0xf8;
 const RTC_SLP_REJECT_CAUSE = 0x128;
 const RTC_SLP_WAKEUP_CAUSE = 0x130;
 const RTC_INT_ENA_W1TS = 0x138;
 const RTC_INT_ENA_W1TC = 0x13c;
 const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
+const RTC_XTAL32K_DEAD_TRIG_EN = 1 << 12;
+const RTC_XTAL32K_WDT_EN = 1 << 0;
+const RTC_XTAL32K_WDT_RESET = 1 << 2;
+const RTC_EXT_XTL_CONF_RESET = ((3 << 17) | (3 << 13) | (3 << 10) | (1 << 7)) >>> 0;
+const RTC_XTAL32K_CONF_RESET = 0xff << 20;
 // Reset causes (esp_rom/include/esp32s3/rom/rtc.h RESET_REASON —
 // static-asserted equal to soc_reset_reason_t, the values
 // esp_rom_get_reset_reason/esp_reset_reason consume):
@@ -1291,6 +1301,9 @@ export class Esp32s3Core implements McuCore {
   private rtcCocpuCtrl = 0;
   private rtcBrownOut = RTC_BROWN_OUT_RESET;
   private brownoutDetected = false;
+  private rtcExtXtlConf = RTC_EXT_XTL_CONF_RESET;
+  private rtcXtal32kConf = RTC_XTAL32K_CONF_RESET;
+  private xtal32kDead = false;
   private rtcCoreIntMaps = freshInterruptMapPair();
   private rtcTimeLatchLo = 0; // captured by a TIME_UPDATE write
   private rtcTimeLatchHi = 0;
@@ -1555,6 +1568,11 @@ export class Esp32s3Core implements McuCore {
   setBrownoutDetected(detected: boolean): void {
     this.brownoutDetected = detected;
     this.updateBrownoutDetector();
+  }
+
+  setXtal32kDead(dead: boolean): void {
+    this.xtal32kDead = dead;
+    this.updateXtal32kDead();
   }
 
   inspect(): McuState {
@@ -2028,6 +2046,8 @@ export class Esp32s3Core implements McuCore {
     this.rtcWakeupCause = 0;
     this.rtcCocpuCtrl = 0;
     this.rtcBrownOut = RTC_BROWN_OUT_RESET;
+    this.rtcExtXtlConf = RTC_EXT_XTL_CONF_RESET;
+    this.rtcXtal32kConf = RTC_XTAL32K_CONF_RESET;
     this.rtcCoreIntMaps = freshInterruptMapPair();
     this.rtcTimeLatchLo = 0;
     this.rtcTimeLatchHi = 0;
@@ -2215,16 +2235,19 @@ export class Esp32s3Core implements McuCore {
     return (this.rtcWakeupState >>> RTC_WAKEUP_ENA_SHIFT) & RTC_WAKEUP_ENA_MASK;
   }
 
+  private latchRtcWakeupSource(source: number): void {
+    if ((this.rtcState0 & RTC_SLEEP_EN) === 0 || (this.rtcWakeupEnabledSources() & source) === 0) return;
+    this.rtcState0 = (this.rtcState0 & ~RTC_SLEEP_EN) | RTC_SLP_WAKEUP;
+    this.rtcWakeupCause |= source;
+    this.rtcIntRaw |= RTC_SLP_WAKEUP_INT;
+  }
+
   private checkRtcSleepTimer(): void {
     if (!this.rtcMainTimerAlarmArmed) return;
     if (this.rtcTicks() < this.rtcSleepAlarmTarget()) return;
     this.rtcMainTimerAlarmArmed = false;
     this.rtcIntRaw |= RTC_MAIN_TIMER_INT;
-    if ((this.rtcState0 & RTC_SLEEP_EN) !== 0 && (this.rtcWakeupEnabledSources() & RTC_TIMER_TRIG_EN) !== 0) {
-      this.rtcState0 = (this.rtcState0 & ~RTC_SLEEP_EN) | RTC_SLP_WAKEUP;
-      this.rtcWakeupCause |= RTC_TIMER_TRIG_EN;
-      this.rtcIntRaw |= RTC_SLP_WAKEUP_INT;
-    }
+    this.latchRtcWakeupSource(RTC_TIMER_TRIG_EN);
     this.recomputeIrq();
   }
 
@@ -2241,6 +2264,16 @@ export class Esp32s3Core implements McuCore {
       this.appResetCause = RESET_CAUSE_BROWNOUT;
       this.pendingReset = true;
     }
+    this.recomputeIrq();
+  }
+
+  private updateXtal32kDead(): void {
+    if (!this.xtal32kDead || (this.rtcExtXtlConf & RTC_XTAL32K_WDT_EN) === 0) {
+      this.recomputeIrq();
+      return;
+    }
+    this.rtcIntRaw |= RTC_XTAL32K_DEAD_INT;
+    this.latchRtcWakeupSource(RTC_XTAL32K_DEAD_TRIG_EN);
     this.recomputeIrq();
   }
 
@@ -3620,6 +3653,7 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_INT_RAW) return this.rtcIntRaw >>> 0;
       if (off === RTC_INT_ST) return (this.rtcIntRaw & this.rtcIntEna) >>> 0;
       if (off === RTC_INT_CLR) return 0;
+      if (off === RTC_EXT_XTL_CONF) return this.rtcExtXtlConf >>> 0;
       if (off === RTC_SW_CPU_STALL) return this.rtcSwCpuStall >>> 0;
       // The RWDT block (slice 13) — modeled for real now.
       if (off === RTC_WDTCONFIG0) return this.rwdt.config0 >>> 0;
@@ -3630,6 +3664,7 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_WDTWPROTECT) return this.rwdt.wprotect >>> 0;
       if (off === RTC_COCPU_CTRL) return (this.rtcCocpuCtrl & ~RTC_COCPU_SW_INT_TRIGGER) >>> 0;
       if (off === RTC_BROWN_OUT) return (this.rtcBrownOut & ~RTC_BROWN_OUT_CNT_CLR) >>> 0;
+      if (off === RTC_XTAL32K_CONF) return this.rtcXtal32kConf >>> 0;
       if (off === RTC_SLP_REJECT_CAUSE) return this.rtcRejectCause >>> 0;
       if (off === RTC_SLP_WAKEUP_CAUSE) return this.rtcWakeupCause >>> 0;
       if (off === RTC_INT_ENA_W1TS || off === RTC_INT_ENA_W1TC) return 0;
@@ -3637,8 +3672,9 @@ export class Esp32s3Core implements McuCore {
         `read of unmodeled RTC_CNTL register 0x${addr.toString(16)} — this core models only ` +
           `OPTIONS0(+0x0), SLP_TIMER0/1(+0x4/+0x8), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), ` +
           `STATE0(+0x18), RESET_STATE(+0x38), WAKEUP_STATE(+0x3c), INT_* (+0x40..+0x4c), ` +
+          `EXT_XTL_CONF(+0x60), ` +
           `the RWDT block (+0x98..+0xb0), SW_CPU_STALL(+0xbc), COCPU_CTRL(+0x104), ` +
-          `BROWN_OUT(+0xe8), ` +
+          `BROWN_OUT(+0xe8), XTAL32K_CONF(+0xf8), ` +
           `sleep reject/wakeup causes (+0x128/+0x130); ` +
           `a fabricated 0 here would lie`,
       );
@@ -4192,6 +4228,15 @@ export class Esp32s3Core implements McuCore {
       } else if (off === RTC_INT_CLR) {
         this.rtcIntRaw &= ~value;
         this.recomputeIrq();
+      } else if (off === RTC_EXT_XTL_CONF) {
+        // XTAL32K_WDT_RESET is modeled as a write-only pulse. The
+        // surrounding fields round-trip so rtc_clk_32k_enable-style
+        // setup can observe its own policy.
+        this.rtcExtXtlConf = (value & ~RTC_XTAL32K_WDT_RESET) >>> 0;
+        if ((value & RTC_XTAL32K_WDT_RESET) !== 0 && !this.xtal32kDead) {
+          this.rtcIntRaw &= ~RTC_XTAL32K_DEAD_INT;
+        }
+        this.updateXtal32kDead();
       } else if (off === RTC_TIME_UPDATE) {
         if ((value & (1 << 31)) !== 0) {
           // Latch the 48-bit RTC main timer: CPU cycles → RC_SLOW ticks.
@@ -4237,6 +4282,8 @@ export class Esp32s3Core implements McuCore {
           this.rtcBrownOut &= ~RTC_BROWN_OUT_DET;
         }
         this.updateBrownoutDetector();
+      } else if (off === RTC_XTAL32K_CONF) {
+        this.rtcXtal32kConf = value >>> 0;
       } else if (off === RTC_INT_ENA_W1TS) {
         this.rtcIntEna = (this.rtcIntEna | value) >>> 0;
         this.recomputeIrq();

@@ -3529,6 +3529,68 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('XTAL32K-dead trips wake sleep through RTC_CORE and record the wake cause', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // rtc_cntl_reg.h has EXT_XTL_CONF +0x60 with XTAL32K_WDT_EN bit 0,
+    // XTAL32K_CONF +0xf8 for timeout policy, and
+    // RTC_CNTL_XTAL32K_DEAD_INT_* at bit 16. soc/rtc.h exposes
+    // RTC_XTAL32K_DEAD_TRIG_EN as wake source bit 12.
+    const RTC_XTAL32K_DEAD_INT = 1 << 16;
+    const RTC_SLP_WAKEUP_INT = 1;
+    const rtcIntMask = RTC_XTAL32K_DEAD_INT | RTC_SLP_WAKEUP_INT;
+    const wakeupXtal32kDead = (1 << 12) << 15;
+    const xtal32kWdtEn = 1;
+    const sleepEn = 0x80000000;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, rtcIntMask, wakeupXtal32kDead, xtal32kWdtEn, sleepEn],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        MOVI(4, 1),
+        S32I(4, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(5, 3),
+        WSR(5, SR.VECBASE),
+        MOVI(4, 2),
+        WSR(4, SR.INTENABLE),
+        L32R(4, 4),
+        S32I(4, 2, 0x4c), // clear stale XTAL32K_DEAD/SLP_WAKEUP raw
+        S32I(4, 2, 0x40), // enable both RTC raw sources
+        L32R(4, 5),
+        S32I(4, 2, 0x3c), // WAKEUP_STATE XTAL32K_DEAD wake source
+        L32R(4, 6),
+        S32I(4, 2, 0x60), // EXT_XTL_CONF.XTAL32K_WDT_EN
+        L32R(4, 7),
+        S32I(4, 2, 0x18), // STATE0.SLEEP_EN
+        RSIL(8, 0),
+        WAITI(0),
+        L32I(4, 2, 0x130), // SLP_WAKEUP_CAUSE
+        SRLI(4, 4, 12),
+        L32R(5, 2),
+        S32I(4, 5, 0), // tx 1: XTAL32K_DEAD_TRIG_EN recorded
+        L32I(4, 2, 0x48), // INT_ST after handler clear
+        S32I(4, 5, 0), // tx 0
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 4),
+        S32I(3, 2, 0x4c), // clear XTAL32K_DEAD/SLP_WAKEUP raw
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([]);
+    c.setXtal32kDead(true);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('a read of an unmodeled RTC_CNTL register halts with a diagnostic naming it', () => {
     // 0x60008090 is RTC_CNTL_WDTCONFIG0_REG territory — reading 0 there
     // would silently claim "watchdog off", so the core refuses instead.

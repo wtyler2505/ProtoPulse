@@ -790,7 +790,23 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       raw in the ISR, and reports both detector readback and cleared
       INT_ST over UART. Cuts: no analog threshold modeling, delayed
       INT_WAIT/RST_WAIT timing, or remaining RTC producers like touch,
-      SARADC RTC-domain, XTAL32K dead, and SUPER_WDT yet
+      SARADC RTC-domain, and SUPER_WDT yet
+- [x] ESP32-S3 core slice 48 — RTC XTAL32K-dead interrupt and wake
+      source through RTC_CORE (landed 2026-06-13): RTC_CNTL_EXT_XTL_CONF
+      (+0x60) and XTAL32K_CONF (+0xf8) now round-trip the 32 kHz
+      watchdog policy fields, XTAL32K_WDT_RESET is treated as a
+      write-only pulse, and a host-injected 32 kHz clock-dead condition
+      latches RTC_CNTL_XTAL32K_DEAD_INT (bit 16). If firmware is in
+      RTC sleep with RTC_XTAL32K_DEAD_TRIG_EN armed, the same trip also
+      records SLP_WAKEUP_CAUSE and wakes through RTC_CORE. Proven by
+      hand-assembled firmware that enables the XTAL32K watchdog, maps
+      RTC_CORE to level-1 line 1, enables XTAL32K_DEAD plus SLP_WAKEUP
+      raw bits, enters sleep, receives a host dead-clock trip, clears
+      both raw bits in the ISR, and reports the wake-cause bit plus
+      cleared INT_ST over UART. Cuts: no oscillator-period measurement,
+      auto-backup/restart/return behavior, WDT timeout counting, or
+      remaining RTC producers like touch, SARADC RTC-domain, and
+      SUPER_WDT yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
