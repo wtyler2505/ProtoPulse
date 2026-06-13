@@ -235,6 +235,12 @@ export function RSIL(t: number, level: number): number {
   return 0x006000 | (level << 8) | (reg(t, 't') << 4);
 }
 
+/** WAITI 0..15 — set PS.INTLEVEL and sleep until a higher-priority interrupt. */
+export function WAITI(level: number): number {
+  range(level, 0, 15, 'interrupt level');
+  return 0x007000 | (level << 8);
+}
+
 /** RFE — PS.EXCM ← 0; PC ← EPC1. */
 export const RFE = (): number => 0x003000;
 

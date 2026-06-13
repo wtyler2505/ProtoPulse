@@ -478,6 +478,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       THRES0_HIGH, preserves DATA_STATUS, and separately latches/
       clears a monitor-1 low crossing. Cuts: instant compare at sample
       time; monitor 0/1 only; no sleep/wake integration yet
+- [x] ESP32-S3 core slice 22 — WAITI sleep/wake substrate
+      (landed 2026-06-13): the Xtensa core now implements WAITI's
+      `0x007000 | imm4 << 8` encoding, sets PS.INTLEVEL, parks the
+      core without retiring further instructions, continues CCOUNT
+      ticks while idle, and resumes at the post-WAITI PC when an
+      enabled modeled level-1 interrupt wakes it. Proven by hand-
+      assembled firmware that arms CCOMPARE0, executes WAITI(0),
+      vectors into the level-1 timer handler, clears/re-arms the
+      timer, returns through RFE, and only then emits the post-WAITI
+      UART byte. Cuts: level-1 wakeups only; no light/deep sleep
+      register policy, clock gating, or RTC wake sources yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

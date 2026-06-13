@@ -20,11 +20,13 @@
  * change visible register values, only memory and WindowStart).
  *
  * Honest cuts: spill/fill and interrupt vectoring cost no extra
- * cycles (1 instruction = 1 cycle everywhere); MOVSP performs the
- * Alloca handler's net effect directly (save-area move — slice 5);
- * the handler-only L32E/S32E/RFWO/RFWU are refused; PS holds INTLEVEL +
- * EXCM (gating interrupts) but UM/WOE/RING are stored, not acted on;
- * the interrupt lines are the latched timer line (INT6) plus the
+ * cycles (1 instruction = 1 cycle everywhere); WAITI sleeps by
+ * retiring idle cycles while CCOUNT continues until an enabled level-1
+ * interrupt wakes it; MOVSP performs the Alloca handler's net effect
+ * directly (save-area move — slice 5); the handler-only L32E/S32E/RFWO/
+ * RFWU are refused; PS holds INTLEVEL + EXCM (gating interrupts) but
+ * UM/WOE/RING are stored, not acted on; the interrupt lines are the
+ * latched timer line (INT6) plus the
  * level-triggered external level-1 lines driven by the SoC through
  * setExtInt (slice 6) — no software lines, no edge-triggered external
  * lines; VECBASE alignment is not enforced; only level-1
@@ -81,6 +83,8 @@ export class XtensaCpu {
   private ccompare0 = 0;
   /** CCOUNT = (cycles + bias) >>> 0 — WSR.CCOUNT adjusts the bias. */
   private ccountBias = 0;
+  /** Non-null while WAITI has parked the core; value is the resume PC. */
+  private waitiResumePc: number | null = null;
 
   constructor(private readonly bus: XtensaBus) {}
 
@@ -102,6 +106,7 @@ export class XtensaCpu {
     this.extInt = 0;
     this.ccompare0 = 0;
     this.ccountBias = 0;
+    this.waitiResumePc = null;
   }
 
   /** Drive the level-triggered external level-1 lines (the interrupt
@@ -193,13 +198,17 @@ export class XtensaCpu {
    *  EPC1 ← PC, EXCCAUSE ← Level1Interrupt(4), PS.EXCM ← 1,
    *  PC ← VECBASE + 0x340 (XCHAL_USER_VECOFS). */
   private maybeInterrupt(): void {
-    if (((this.interrupt | this.extInt) & this.intenable) === 0) return;
-    if ((this.ps & 0x10) !== 0) return; // EXCM blocks
-    if ((this.ps & 0xf) >= 1) return; // INTLEVEL masks level-1
+    if (!this.pendingLevel1Interrupt()) return;
     this.epc1 = this.pc;
     this.exccause = 4;
     this.ps |= 0x10;
     this.pc = (this.vecbase + 0x340) >>> 0;
+  }
+
+  private pendingLevel1Interrupt(): boolean {
+    if (((this.interrupt | this.extInt) & this.intenable) === 0) return false;
+    if ((this.ps & 0x10) !== 0) return false; // EXCM blocks
+    return (this.ps & 0xf) < 1; // INTLEVEL masks level-1
   }
 
   /** CCOUNT ticked to this value — latch the timer interrupt on match
@@ -210,6 +219,15 @@ export class XtensaCpu {
 
   /** Execute one instruction. */
   step(): void {
+    if (this.waitiResumePc !== null) {
+      if (!this.pendingLevel1Interrupt()) {
+        this.cycles++;
+        this.tickCcount();
+        return;
+      }
+      this.pc = this.waitiResumePc;
+      this.waitiResumePc = null;
+    }
     this.maybeInterrupt();
     const pc = this.pc;
     const b0 = this.bus.read(pc, 1);
@@ -346,6 +364,16 @@ export class XtensaCpu {
           // RSIL at, level: at ← PS; PS.INTLEVEL ← level
           this.wa(t, this.ps);
           this.ps = (this.ps & ~0xf) | s;
+        } else if ((word & 0xfff0ff) === 0x007000) {
+          // WAITI imm4: PS.INTLEVEL ← imm4; retire no more
+          // instructions until an enabled interrupt above that level
+          // arrives. When it wakes, EPC1 points at the instruction
+          // after WAITI so RFE resumes normal control flow.
+          this.ps = (this.ps & ~0xf) | s;
+          if (!this.pendingLevel1Interrupt()) {
+            this.waitiResumePc = next >>> 0;
+            next = pc;
+          }
         } else if ((word & 0xff000f) === 0x800000) {
           this.wa(r, (this.ra(s) + this.ra(t)) | 0); // ADD
         } else if ((word & 0xff000f) === 0xc00000) {

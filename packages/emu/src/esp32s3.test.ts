@@ -55,6 +55,7 @@ import {
   SRAI,
   SRLI,
   SUB,
+  WAITI,
   WSR,
 } from './xtensa-asm.js';
 
@@ -84,6 +85,8 @@ describe('xtensa assembler — byte fixtures from independent sources', () => {
     expect(word(RET())).toEqual([0x80, 0x00, 0x00]);
     expect(word(NOP())).toEqual([0xf0, 0x20, 0x00]);
     expect(word(MEMW())).toEqual([0xc0, 0x20, 0x00]);
+    expect(word(WAITI(0))).toEqual([0x00, 0x70, 0x00]);
+    expect(word(WAITI(3))).toEqual([0x00, 0x73, 0x00]);
     // movi a2, 63 → "22 a0 3f" (objdump)
     expect(word(MOVI(2, 63))).toEqual([0x22, 0xa0, 0x3f]);
     // l32i a2, a1, 16 → imm8 scaled by 4 → "22 21 04"
@@ -531,6 +534,46 @@ describe('Esp32s3Core — exceptions + level-1 interrupts (slice 4)', () => {
     const c = core(image);
     c.step(2_000);
     expect([...c.drainUart()]).toEqual([3]);
+  });
+
+  it('WAITI parks until an enabled level-1 timer interrupt wakes the core', () => {
+    // Source-checked against the Cadence ISA summary/ida-xtensa2:
+    // WAITI encodes as 0x007000 | (imm4 << 8) and waits for an
+    // interrupt above PS.INTLEVEL. This slice models level-1 wakeups.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART, SCRATCH, ESP32S3_IRAM_BASE], [
+      L32R(2, 0), // a2 = UART
+      L32R(3, 1), // a3 = SCRATCH
+      MOVI(4, 0),
+      S32I(4, 3, 0), // counter = 0
+      L32R(5, 2),
+      WSR(5, SR.VECBASE),
+      MOVI(6, 64),
+      WSR(6, SR.INTENABLE),
+      RSR(7, SR.CCOUNT),
+      ADDI(7, 7, 24),
+      WSR(7, SR.CCOMPARE0),
+      WAITI(0), // no further instructions retire until timer0 wakes us
+      L32I(4, 3, 0),
+      S32I(4, 2, 0x00), // tx 1 after RFE resumes past WAITI
+      J(BR(-1)),
+
+      PAD_TO(0x340),
+      WSR(2, SR.EXCSAVE1),
+      L32R(2, 1),
+      S32I(3, 2, 8),
+      L32I(3, 2, 0),
+      ADDI(3, 3, 1),
+      S32I(3, 2, 0),
+      RSR(3, SR.CCOMPARE0),
+      ADDMI(3, 3, 256),
+      WSR(3, SR.CCOMPARE0),
+      L32I(3, 2, 8),
+      RSR(2, SR.EXCSAVE1),
+      RFE(),
+    ]);
+    const c = core(image);
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([1]);
   });
 
   it('RSIL masks a pending interrupt; lowering INTLEVEL delivers it', () => {

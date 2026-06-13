@@ -158,10 +158,11 @@ import type { XtensaBus } from './xtensa.js';
  * RX DONE/SUC_EOF can wake level-1 handlers through
  * DMA_IN_CHn_INT_MAP. Descriptor-starved ADC conversions now latch
  * DSCR_EMPTY instead of disappearing silently after the DMA-owned
- * pool is exhausted. Cuts: no descriptor rings beyond simple
+ * pool is exhausted. CPU WAITI now parks until modeled level-1
+ * interrupts wake it. Cuts: no descriptor rings beyond simple
  * next-pointer advancement, no driver-pool flush/backpressure timing.
- * Still missing: sleep/wake — so full IDF/FreeRTOS firmware does
- * NOT run yet.
+ * Still missing: full light/deep sleep register policy — so full
+ * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
