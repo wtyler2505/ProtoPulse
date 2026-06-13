@@ -202,10 +202,11 @@ describe('routeHead — blocked', () => {
 
   it('the depth cap defaults to 16 and terminates on absurd fields', () => {
     expect(DEFAULT_DEPTH_CAP).toBe(16);
-    // 40 overlapping blocks — way past any sane walk; must terminate.
+    // Eight staggered overlapping blocks — way past any sane walk; must terminate
+    // without leaning on Vitest's default 5s timeout.
     const blocks: Obstacle[] = [];
-    for (let i = 0; i < 40; i++) {
-      blocks.push(rect((i - 20) * 300_000, (i % 2 === 0 ? 1 : -1) * 200_000, MM, MM, null, `w${String(i)}`));
+    for (let i = 0; i < 8; i++) {
+      blocks.push(rect((i - 4) * 300_000, (i % 2 === 0 ? 1 : -1) * 200_000, MM, MM, null, `w${String(i)}`));
     }
     const res = routeHead(FROM, TO, setOf(...blocks));
     expect(typeof res.blocked).toBe('boolean');

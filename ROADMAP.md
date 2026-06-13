@@ -595,6 +595,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       `DUTY_START`, and verifies the duty stays pinned instead of
       drifting to the original fade target. Cuts: no blocking
       `LEDC_FADE_WAIT_DONE` driver shim or gamma/multi-fade stop path yet
+- [x] ESP32-S3 core slice 32 — RMT TX GPIO waveform substrate
+      (landed 2026-06-13): RMT TX channels 0..3 now accept APB FIFO
+      `rmt_symbol_word_t` writes, honor the group/channel dividers for
+      APB/XTAL/RC_FAST clocks, drive GPIO-matrix signals 81..84, apply
+      idle output level, and latch TX_END INT_RAW/ST/ENA/CLR through
+      the core-0 RMT interrupt-map source. Proven by hand-assembled
+      firmware that routes RMT channel 0 to IO5, emits high/low symbols
+      with 6/9/3-cycle edge spacing at APB/divider 1, and reads TX_END
+      bit 0 back over UART. Cuts: no RMT RX, DMA/direct-memory mode,
+      carrier modulation, loop mode, threshold events, or high-level
+      driver queue shim yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

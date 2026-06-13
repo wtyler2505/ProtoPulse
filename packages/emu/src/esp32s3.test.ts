@@ -72,6 +72,7 @@ import type { XtInstr } from './xtensa-asm.js';
 const GPIO = ESP32S3_GPIO_BASE;
 const UART = ESP32S3_UART0_BASE;
 const LEDC = 0x60019000;
+const RMT = 0x60016000;
 const GPIO_FUNC5_OUT_SEL_CFG = GPIO + 0x568;
 const LEDC_CLK_EN = 0x80000000;
 const LEDC_APB_CLK_SEL_XTAL = 3;
@@ -82,6 +83,12 @@ const LEDC_DUTY_START = 0x80000000;
 const LEDC_DUTY_INC = 1 << 30;
 const LEDC_SIG_OUT_EN = 1 << 2;
 const LEDC_LS_SIG_OUT0 = 73;
+const RMT_CLK_EN = 0x80000000;
+const RMT_SCLK_ACTIVE = 1 << 26;
+const RMT_SCLK_SEL_APB = 1 << 24;
+const RMT_TX_START = 1;
+const RMT_IDLE_OUT_EN = 1 << 6;
+const RMT_SIG_OUT0 = 81;
 
 function core(image: Uint8Array): Esp32s3Core {
   const c = new Esp32s3Core();
@@ -209,6 +216,52 @@ describe('Esp32s3Core', () => {
       halfPeriods.add((tail[i]?.cycle ?? 0) - (tail[i - 1]?.cycle ?? 0));
     }
     expect([...halfPeriods]).toEqual([6]);
+  });
+
+  it('routes RMT channel 0 TX symbols through the GPIO matrix to IO5', () => {
+    const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB;
+    const rmtCh0Conf = (1 << 8) | (1 << 16) | RMT_IDLE_OUT_EN;
+    const symbol0 = 2 | (1 << 15) | (3 << 16); // high 2 ticks, low 3 ticks
+    const symbol1 = 1 | (1 << 15) | (2 << 16); // high 1 tick, low 2 ticks
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RMT, GPIO, GPIO_FUNC5_OUT_SEL_CFG, UART, rmtSysConf, symbol0, symbol1, rmtCh0Conf, 1 << 5, RMT_SIG_OUT0, rmtCh0Conf | RMT_TX_START],
+      [
+        L32R(2, 0), // RMT
+        L32R(3, 4),
+        S32I(3, 2, 0xc0), // SYS_CONF: clk on, APB source, group divider 1
+        L32R(3, 5),
+        S32I(3, 2, 0x00), // CH0DATA symbol 0
+        L32R(3, 6),
+        S32I(3, 2, 0x00), // CH0DATA symbol 1
+        L32R(3, 7),
+        S32I(3, 2, 0x20), // CH0CONF0: divider 1, idle low
+
+        L32R(4, 1), // GPIO
+        L32R(5, 8),
+        S32I(5, 4, 0x24), // enable IO5
+        L32R(6, 2),
+        L32R(7, 9),
+        S32I(7, 6, 0x00), // GPIO matrix: IO5 <- RMT_SIG_OUT0
+
+        L32R(3, 10),
+        S32I(3, 2, 0x20), // tx_start
+        MOVI(8, 80),
+        ADDI(8, 8, -1),
+        BNEZ(8, BR(-2)),
+        L32R(9, 3), // UART
+        L32I(8, 2, 0x70), // INT_RAW
+        S32I(8, 9, 0x00),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    const { events } = c.step(360);
+    const io5 = events.filter((e) => e.pin === 'IO5');
+
+    expect(io5.map((e) => e.level)).toEqual([1, 0, 1, 0]);
+    expect(io5.slice(1).map((e, i) => e.cycle - (io5[i]?.cycle ?? 0))).toEqual([6, 9, 3]);
+    expect([...c.drainUart()]).toEqual([1]);
   });
 
   it('uses LEDC shared clock source selection for timer speed and readback', () => {

@@ -171,7 +171,13 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * sample until firmware returns ownership; an emulator-side
  * setAdcContinuousFlushPool(true) knob mirrors ESP-IDF's flush_pool
  * policy by recycling the CPU-owned frame and overwriting old data.
- * Cuts: no timed pressure model or driver ringbuffer API yet.
+ * RMT channel-0..3 TX now has the first transmit substrate: APB FIFO
+ * symbol writes, channel/group dividers for APB/XTAL/RC_FAST clocks,
+ * GPIO-matrix output signals 81..84, idle level, TX stop/start, and
+ * TX_END INT_RAW/ST/ENA/CLR through the core-0 RMT interrupt map.
+ * Cuts: no RMT DMA, RX, carrier, loop mode, threshold events, or direct
+ * memory mode yet; no timed GDMA pressure model or driver ringbuffer
+ * API yet.
  * Still missing: full light/deep sleep register policy — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
@@ -241,6 +247,7 @@ const INTMTX_BASE = 0x600c2000;
 const INTMTX_GPIO_MAP = 0x040; // INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG
 const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
 const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
+const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
 // The six TIMG sources sit contiguously (interrupt_core0_reg.h):
 // TG_T0 +0xC8, TG_T1 +0xCC, TG_WDT +0xD0, TG1_T0 +0xD4, TG1_T1
 // +0xD8, TG1_WDT +0xDC — group-major, [t0, t1, wdt] within a group.
@@ -306,6 +313,48 @@ const LEDC_SIGNAL_BASE = 73; // GPIO matrix LEDC_LS_SIG_OUT0_IDX
 const LEDC_DIV_FRAC_BITS = 8;
 const LEDC_DIV_ONE = 1 << LEDC_DIV_FRAC_BITS;
 const LEDC_DATE_RESET = 0x19040200;
+
+// RMT transmit substrate (rmt_reg.h / rmt_ll.h). ESP32-S3 has four TX
+// channels (0..3) whose GPIO matrix output signals are 81..84.
+const RMT_BASE = 0x60016000;
+const RMT_TX_CHANNELS = 4;
+const RMT_CHDATA = 0x00;
+const RMT_CHCONF0 = 0x20;
+const RMT_CHCONF0_STRIDE = 0x04;
+const RMT_INT_RAW = 0x70;
+const RMT_INT_ST = 0x74;
+const RMT_INT_ENA = 0x78;
+const RMT_INT_CLR = 0x7c;
+const RMT_SYS_CONF = 0x0c0;
+const RMT_TX_SIM = 0x0c4;
+const RMT_REF_CNT_RST = 0x0c8;
+const RMT_DATE = 0x0cc;
+const RMT_TX_START = 1 << 0;
+const RMT_MEM_RD_RST = 1 << 1;
+const RMT_APB_MEM_RST = 1 << 2;
+const RMT_TX_STOP = 1 << 7;
+const RMT_DIV_CNT_SHIFT = 8;
+const RMT_DIV_CNT_MASK = 0xff;
+const RMT_IDLE_OUT_LV = 1 << 5;
+const RMT_IDLE_OUT_EN = 1 << 6;
+const RMT_TX_CONF0_WT_MASK = RMT_TX_START | RMT_MEM_RD_RST | RMT_APB_MEM_RST | RMT_TX_STOP | (1 << 23) | (1 << 24) | (1 << 25);
+const RMT_TX_CONF0_RESET = (2 << RMT_DIV_CNT_SHIFT) | (1 << 16) | (1 << 20) | (1 << 21) | (1 << 22);
+const RMT_SYS_SCLK_DIV_NUM_SHIFT = 4;
+const RMT_SYS_SCLK_DIV_NUM_MASK = 0xff;
+const RMT_SYS_SCLK_DIV_A_SHIFT = 12;
+const RMT_SYS_SCLK_DIV_A_MASK = 0x3f;
+const RMT_SYS_SCLK_DIV_B_SHIFT = 18;
+const RMT_SYS_SCLK_DIV_B_MASK = 0x3f;
+const RMT_SYS_SCLK_SEL_SHIFT = 24;
+const RMT_SYS_SCLK_SEL_MASK = 0x3;
+const RMT_SYS_SCLK_SEL_APB = 1;
+const RMT_SYS_SCLK_SEL_RC_FAST = 2;
+const RMT_SYS_SCLK_SEL_XTAL = 3;
+const RMT_SYS_SCLK_ACTIVE = 1 << 26;
+const RMT_CLK_EN = 1 << 31;
+const RMT_SYS_CONF_RESET = (1 << RMT_SYS_SCLK_DIV_NUM_SHIFT) | (RMT_SYS_SCLK_SEL_APB << RMT_SYS_SCLK_SEL_SHIFT) | RMT_SYS_SCLK_ACTIVE;
+const RMT_SIGNAL_BASE = 81;
+const RMT_DATE_RESET = 0x02100001;
 
 // Timer groups 0 and 1 (timer_group_reg.h; flow per hal timer_ll.h
 // and the gptimer driver): each group has two 54-bit general-purpose
@@ -760,6 +809,20 @@ interface LedcChannel {
   fade: LedcFade | null;
 }
 
+interface RmtTxSegment {
+  endCycle: number;
+  level: DigitalLevel;
+}
+
+interface RmtTxChannel {
+  conf0: number;
+  fifo: number[];
+  startCycle: number;
+  durationCycles: number;
+  segments: RmtTxSegment[];
+  active: boolean;
+}
+
 interface GdmaRxChannel {
   conf0: number;
   conf1: number;
@@ -824,6 +887,15 @@ const freshLedcChannel = (): LedcChannel => ({
   dutyRead: 0,
   ovfSerial: 0,
   fade: null,
+});
+
+const freshRmtTxChannel = (): RmtTxChannel => ({
+  conf0: RMT_TX_CONF0_RESET,
+  fifo: [],
+  startCycle: 0,
+  durationCycles: 0,
+  segments: [],
+  active: false,
 });
 
 const freshGdmaRx = (): GdmaRxChannel => ({
@@ -904,6 +976,11 @@ export class Esp32s3Core implements McuCore {
   private ledcIntRaw = 0;
   private ledcIntEna = 0;
   private ledcIntMap = INTMTX_DEFAULT_MAP;
+  private rmtTx: RmtTxChannel[] = Array.from({ length: RMT_TX_CHANNELS }, freshRmtTxChannel);
+  private rmtSysConf = RMT_SYS_CONF_RESET;
+  private rmtIntRaw = 0;
+  private rmtIntEna = 0;
+  private rmtIntMap = INTMTX_DEFAULT_MAP;
 
   // UART0 interrupt state + the interrupt matrix maps.
   private uartIntEna = 0;
@@ -1529,6 +1606,11 @@ export class Esp32s3Core implements McuCore {
     this.ledcIntRaw = 0;
     this.ledcIntEna = 0;
     this.ledcIntMap = INTMTX_DEFAULT_MAP;
+    this.rmtTx = Array.from({ length: RMT_TX_CHANNELS }, freshRmtTxChannel);
+    this.rmtSysConf = RMT_SYS_CONF_RESET;
+    this.rmtIntRaw = 0;
+    this.rmtIntEna = 0;
+    this.rmtIntMap = INTMTX_DEFAULT_MAP;
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
@@ -1733,6 +1815,7 @@ export class Esp32s3Core implements McuCore {
     }
     if ((this.rwdt.config0 & WDT_EN) !== 0) this.checkRwdt();
     this.checkLedcTimers();
+    this.checkRmt();
   }
 
   /** UART0's raw interrupt bits: RXFIFO_FULL tracks the live FIFO
@@ -1825,8 +1908,10 @@ export class Esp32s3Core implements McuCore {
   }
 
   private ledcFadeDutyAt(ch: LedcChannel, steps: number): number {
+    const fade = ch.fade;
+    if (fade === null) return ch.dutyRead;
     const delta = (steps * this.ledcFadeScale(ch)) << 4;
-    const duty = this.ledcFadeIsIncrement(ch) ? ch.fade!.baseDuty + delta : ch.fade!.baseDuty - delta;
+    const duty = this.ledcFadeIsIncrement(ch) ? fade.baseDuty + delta : fade.baseDuty - delta;
     return Math.max(0, Math.min(LEDC_DUTY_MASK, duty)) >>> 0;
   }
 
@@ -1937,6 +2022,104 @@ export class Esp32s3Core implements McuCore {
     return phase < duty ? 1 : 0;
   }
 
+  private rmtChannelDivider(ch: RmtTxChannel): number {
+    const raw = (ch.conf0 >>> RMT_DIV_CNT_SHIFT) & RMT_DIV_CNT_MASK;
+    return raw === 0 ? 256 : raw;
+  }
+
+  private rmtSourceCyclesPerTick(): number | null {
+    if ((this.rmtSysConf & RMT_CLK_EN) === 0 || (this.rmtSysConf & RMT_SYS_SCLK_ACTIVE) === 0) return null;
+    switch ((this.rmtSysConf >>> RMT_SYS_SCLK_SEL_SHIFT) & RMT_SYS_SCLK_SEL_MASK) {
+      case RMT_SYS_SCLK_SEL_XTAL:
+        return 6; // 40 MHz XTAL over the modeled 240 MHz CPU clock
+      case RMT_SYS_SCLK_SEL_RC_FAST:
+        return 30; // ESP-IDF names the S3 source RC_FAST / CLK_8M for RMT
+      case RMT_SYS_SCLK_SEL_APB:
+      default:
+        return CYCLES_PER_APB; // 80 MHz APB over the modeled 240 MHz CPU clock
+    }
+  }
+
+  private rmtCyclesPerTick(ch: RmtTxChannel): number | null {
+    const sourceCycles = this.rmtSourceCyclesPerTick();
+    if (sourceCycles === null) return null;
+    const divNum = ((this.rmtSysConf >>> RMT_SYS_SCLK_DIV_NUM_SHIFT) & RMT_SYS_SCLK_DIV_NUM_MASK) + 1;
+    const divA = (this.rmtSysConf >>> RMT_SYS_SCLK_DIV_A_SHIFT) & RMT_SYS_SCLK_DIV_A_MASK;
+    const divB = (this.rmtSysConf >>> RMT_SYS_SCLK_DIV_B_SHIFT) & RMT_SYS_SCLK_DIV_B_MASK;
+    const groupDiv = divNum + (divB === 0 ? 0 : divA / divB);
+    return Math.max(1, Math.round(sourceCycles * groupDiv * this.rmtChannelDivider(ch)));
+  }
+
+  private rmtIdleLevel(ch: RmtTxChannel): DigitalLevel {
+    return (ch.conf0 & RMT_IDLE_OUT_EN) !== 0 && (ch.conf0 & RMT_IDLE_OUT_LV) !== 0 ? 1 : 0;
+  }
+
+  private rmtStopTx(ch: RmtTxChannel): void {
+    ch.active = false;
+    ch.startCycle = this.cpu.cycles;
+    ch.durationCycles = 0;
+    ch.segments = [];
+  }
+
+  private rmtStartTx(chIndex: number): void {
+    const ch = this.rmtTx[chIndex];
+    if (ch === undefined) return;
+    this.rmtIntRaw &= ~(1 << chIndex);
+    const cyclesPerTick = this.rmtCyclesPerTick(ch);
+    const segments: RmtTxSegment[] = [];
+    let elapsed = 0;
+    if (cyclesPerTick !== null) {
+      for (const symbol of ch.fifo) {
+        const duration0 = symbol & 0x7fff;
+        const level0 = ((symbol >>> 15) & 1) as DigitalLevel;
+        const duration1 = (symbol >>> 16) & 0x7fff;
+        const level1 = ((symbol >>> 31) & 1) as DigitalLevel;
+        if (duration0 === 0) break;
+        elapsed += duration0 * cyclesPerTick;
+        segments.push({ endCycle: elapsed, level: level0 });
+        if (duration1 === 0) break;
+        elapsed += duration1 * cyclesPerTick;
+        segments.push({ endCycle: elapsed, level: level1 });
+      }
+    }
+    ch.fifo = [];
+    ch.startCycle = this.cpu.cycles;
+    ch.durationCycles = elapsed;
+    ch.segments = segments;
+    ch.active = segments.length > 0;
+    if (!ch.active) this.rmtIntRaw |= 1 << chIndex;
+    this.recomputeIrq();
+  }
+
+  private checkRmt(): void {
+    let changed = false;
+    for (let i = 0; i < RMT_TX_CHANNELS; i++) {
+      const ch = this.rmtTx[i];
+      if (ch === undefined || !ch.active) continue;
+      if (this.cpu.cycles - ch.startCycle < ch.durationCycles) continue;
+      ch.active = false;
+      this.rmtIntRaw |= 1 << i;
+      changed = true;
+    }
+    if (changed) this.recomputeIrq();
+  }
+
+  private rmtSignalLevel(signal: number): DigitalLevel | null {
+    const chIndex = signal - RMT_SIGNAL_BASE;
+    const ch = this.rmtTx[chIndex];
+    if (ch === undefined) return null;
+    if (!ch.active) return this.rmtIdleLevel(ch);
+    const elapsed = Math.max(0, this.cpu.cycles - ch.startCycle);
+    for (const segment of ch.segments) {
+      if (elapsed < segment.endCycle) return segment.level;
+    }
+    return this.rmtIdleLevel(ch);
+  }
+
+  private routedSignalLevel(signal: number): DigitalLevel | null {
+    return this.ledcSignalLevel(signal) ?? this.rmtSignalLevel(signal);
+  }
+
   /** Re-derive the interrupt matrix's output and drive the CPU's
    *  level-triggered external lines. Called whenever any modeled
    *  interrupt source's inputs change. */
@@ -1963,11 +2146,13 @@ export class Esp32s3Core implements McuCore {
     }
     const uartPending = (this.uartIntRaw() & this.uartIntEna) !== 0;
     const ledcPending = (this.ledcIntRaw & this.ledcIntEna) !== 0;
+    const rmtPending = (this.rmtIntRaw & this.rmtIntEna) !== 0;
     const apbAdcPending = (this.apbSaradcIntRaw & this.apbSaradcIntEna) !== 0;
     let mask = 0;
     if (gpioPending) mask |= 1 << (this.gpioIntMap & 31);
     if (uartPending) mask |= 1 << (this.uartIntMap & 31);
     if (ledcPending) mask |= 1 << (this.ledcIntMap & 31);
+    if (rmtPending) mask |= 1 << (this.rmtIntMap & 31);
     if (apbAdcPending) mask |= 1 << (this.apbSaradcIntMap & 31);
     // Each TIMG source (T0/T1/WDT × both groups) drives its own map.
     for (const grp of this.timg) {
@@ -1993,7 +2178,7 @@ export class Esp32s3Core implements McuCore {
         continue;
       }
       const cfg = this.gpioFuncOut[gpio] ?? GPIO_FUNC_OUT_SEL_RESET;
-      const routed = this.ledcSignalLevel(cfg & GPIO_FUNC_OUT_SEL_MASK);
+      const routed = this.routedSignalLevel(cfg & GPIO_FUNC_OUT_SEL_MASK);
       let level: DigitalLevel = routed ?? (((this.out[bank] ?? 0) & bit) !== 0 ? 1 : 0);
       if (routed !== null && (cfg & GPIO_FUNC_OUT_INV_SEL) !== 0) level = level === 1 ? 0 : 1;
       const prev = this.driven[gpio];
@@ -2257,6 +2442,7 @@ export class Esp32s3Core implements McuCore {
       if (off === INTMTX_GPIO_MAP) return this.gpioIntMap;
       if (off === INTMTX_UART_MAP) return this.uartIntMap;
       if (off === INTMTX_LEDC_MAP) return this.ledcIntMap;
+      if (off === INTMTX_RMT_MAP) return this.rmtIntMap;
       if (off >= INTMTX_TG_MAPS && off < INTMTX_TG_MAPS + 24 && (off & 3) === 0) {
         const idx = (off - INTMTX_TG_MAPS) >> 2; // group-major [t0,t1,wdt]
         return this.timg[idx < 3 ? 0 : 1]?.maps[idx % 3] ?? INTMTX_DEFAULT_MAP;
@@ -2266,6 +2452,21 @@ export class Esp32s3Core implements McuCore {
         return this.gdmaRx[(off - INTMTX_GDMA_IN_MAPS) >> 2]?.map ?? INTMTX_DEFAULT_MAP;
       }
       return INTMTX_DEFAULT_MAP; // unmodeled sources sit at their reset map
+    }
+    if (addr >= RMT_BASE && addr < RMT_BASE + 0x1000) {
+      const off = addr - RMT_BASE;
+      if (off >= RMT_CHDATA && off < RMT_CHDATA + RMT_TX_CHANNELS * 4 && (off & 3) === 0) return 0;
+      if (off >= RMT_CHCONF0 && off < RMT_CHCONF0 + RMT_TX_CHANNELS * RMT_CHCONF0_STRIDE && (off & 3) === 0) {
+        return this.rmtTx[(off - RMT_CHCONF0) >> 2]?.conf0 ?? 0;
+      }
+      if (off === RMT_INT_RAW) return this.rmtIntRaw >>> 0;
+      if (off === RMT_INT_ST) return (this.rmtIntRaw & this.rmtIntEna) >>> 0;
+      if (off === RMT_INT_ENA) return this.rmtIntEna >>> 0;
+      if (off === RMT_INT_CLR) return 0;
+      if (off === RMT_SYS_CONF) return this.rmtSysConf >>> 0;
+      if (off === RMT_TX_SIM || off === RMT_REF_CNT_RST) return 0;
+      if (off === RMT_DATE) return RMT_DATE_RESET;
+      return 0;
     }
     if (addr >= LEDC_BASE && addr < LEDC_BASE + 0x1000) {
       const off = addr - LEDC_BASE;
@@ -2528,6 +2729,7 @@ export class Esp32s3Core implements McuCore {
       if (off === INTMTX_GPIO_MAP) this.gpioIntMap = value & 0x1f;
       else if (off === INTMTX_UART_MAP) this.uartIntMap = value & 0x1f;
       else if (off === INTMTX_LEDC_MAP) this.ledcIntMap = value & 0x1f;
+      else if (off === INTMTX_RMT_MAP) this.rmtIntMap = value & 0x1f;
       else if (off >= INTMTX_TG_MAPS && off < INTMTX_TG_MAPS + 24 && (off & 3) === 0) {
         const idx = (off - INTMTX_TG_MAPS) >> 2;
         const grp = this.timg[idx < 3 ? 0 : 1];
@@ -2541,6 +2743,42 @@ export class Esp32s3Core implements McuCore {
       // Map writes for unmodeled sources are accepted and dropped —
       // those sources never assert, so the mapping is moot.
       this.recomputeIrq();
+      return;
+    }
+    if (addr >= RMT_BASE && addr < RMT_BASE + 0x1000) {
+      const off = addr - RMT_BASE;
+      const v = value >>> 0;
+      if (off >= RMT_CHDATA && off < RMT_CHDATA + RMT_TX_CHANNELS * 4 && (off & 3) === 0) {
+        this.rmtTx[(off - RMT_CHDATA) >> 2]?.fifo.push(v);
+      } else if (off >= RMT_CHCONF0 && off < RMT_CHCONF0 + RMT_TX_CHANNELS * RMT_CHCONF0_STRIDE && (off & 3) === 0) {
+        const chIndex = (off - RMT_CHCONF0) >> 2;
+        const ch = this.rmtTx[chIndex];
+        if (ch !== undefined) {
+          ch.conf0 = (v & ~RMT_TX_CONF0_WT_MASK) >>> 0;
+          if ((v & RMT_APB_MEM_RST) !== 0) ch.fifo = [];
+          if ((v & RMT_TX_STOP) !== 0) this.rmtStopTx(ch);
+          if ((v & RMT_TX_START) !== 0) this.rmtStartTx(chIndex);
+        }
+      } else if (off === RMT_INT_ENA) {
+        this.rmtIntEna = v;
+        this.recomputeIrq();
+      } else if (off === RMT_INT_CLR) {
+        this.rmtIntRaw &= ~v;
+        this.recomputeIrq();
+      } else if (off === RMT_SYS_CONF) {
+        this.rmtSysConf = v;
+      } else if (off === RMT_REF_CNT_RST) {
+        for (let i = 0; i < RMT_TX_CHANNELS; i++) {
+          if ((v & (1 << i)) === 0) continue;
+          const ch = this.rmtTx[i];
+          if (ch !== undefined && ch.active) ch.startCycle = this.cpu.cycles;
+        }
+      } else if (off === RMT_TX_SIM) {
+        for (let i = 0; i < RMT_TX_CHANNELS; i++) {
+          if ((v & (1 << i)) !== 0) this.rmtStartTx(i);
+        }
+      }
+      this.syncPins();
       return;
     }
     if (addr >= LEDC_BASE && addr < LEDC_BASE + 0x1000) {
