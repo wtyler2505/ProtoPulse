@@ -180,9 +180,11 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * symbol count after firmware clears INT_RAW, giving the driver refill
  * loop a real interrupt cadence. RMT RX channel 0..3 now captures GPIO
  * input-matrix edges into CH4..CH7 APB FIFO symbols, honoring RX
- * limit/threshold and idle completion. Cuts: no RMT GDMA, live mutation
- * of an already-built TX waveform from a refill ISR, RX carrier
- * demodulation, RX partial-buffer wrapping, or driver ringbuffer API yet.
+ * limit/threshold and idle completion. RMT TX channel 3 can source
+ * symbols from GDMA OUT descriptors when DMA access is enabled. Cuts:
+ * no live mutation of an already-built TX waveform from a refill ISR,
+ * RX GDMA, RX carrier demodulation, RX partial-buffer wrapping, or
+ * driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
@@ -264,6 +266,7 @@ const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
 const INTMTX_TG_MAPS = 0x0c8;
 const INTMTX_APB_ADC_MAP = 0x104; // INTERRUPT_CORE0_APB_ADC_INT_MAP_REG
 const INTMTX_GDMA_IN_MAPS = 0x108; // DMA_IN_CH0..4 at +0x108..+0x118
+const INTMTX_GDMA_OUT_MAPS = 0x11c; // DMA_OUT_CH0..4 at +0x11C..+0x12C
 const INTMTX_DEFAULT_MAP = 16;
 
 // LEDC low-speed PWM (ledc_reg.h / ledc_ll.h). ESP32-S3 has one
@@ -367,7 +370,8 @@ const RMT_MEM_SIZE_MASK = 0x0f;
 const RMT_CARRIER_EFF_EN = 1 << 20;
 const RMT_CARRIER_EN = 1 << 21;
 const RMT_CARRIER_OUT_LV = 1 << 22;
-const RMT_TX_CONF0_WT_MASK = RMT_TX_START | RMT_MEM_RD_RST | RMT_APB_MEM_RST | RMT_TX_STOP | (1 << 23) | (1 << 24) | (1 << 25);
+const RMT_DMA_ACCESS_EN = 1 << 25;
+const RMT_TX_CONF0_WT_MASK = RMT_TX_START | RMT_MEM_RD_RST | RMT_APB_MEM_RST | RMT_TX_STOP | (1 << 23) | (1 << 24);
 const RMT_TX_CONF0_RESET = (2 << RMT_DIV_CNT_SHIFT) | (1 << 16) | (1 << 20) | (1 << 21) | (1 << 22);
 const RMT_CARRIER_DUTY_RESET = (64 << 16) | 64;
 const RMT_SYS_SCLK_DIV_NUM_SHIFT = 4;
@@ -746,13 +750,14 @@ const APB_SARADC_THRES0_EN = 1 << 31;
 const APB_SARADC_THRES1_EN = 1 << 30;
 const APB_SARADC_THRES_ALL_EN = 1 << 27;
 
-// GDMA RX channel substrate for ADC continuous frames (gdma_reg.h).
-// This first slice models the in-link path IDF's ADC continuous driver
-// uses: RX channel n selects peripheral 8 (ADC_DAC), starts from a
-// 20-bit inlink descriptor address, and fills 12-byte DMA descriptors
-// in SRAM. TX/outlink and non-ADC peripherals remain inert.
+// GDMA channel substrate for ADC continuous frames and RMT DMA TX
+// (gdma_reg.h). RX channel n selects peripheral 8 (ADC_DAC), starts
+// from a 20-bit inlink descriptor address, and fills 12-byte DMA
+// descriptors in SRAM. OUT channel n can select peripheral 9 (RMT),
+// start from a 20-bit outlink descriptor, and feed RMT TX symbols.
 const GDMA_BASE = 0x6003f000;
-const GDMA_RX_CHANNELS = 5;
+const GDMA_CHANNELS = 5;
+const GDMA_RX_CHANNELS = GDMA_CHANNELS;
 const GDMA_CH_STRIDE = 0xc0;
 const GDMA_IN_CONF0 = 0x00;
 const GDMA_IN_CONF1 = 0x04;
@@ -770,18 +775,45 @@ const GDMA_IN_DSCR_BF1 = 0x38;
 const GDMA_IN_WEIGHT = 0x3c;
 const GDMA_IN_PRI = 0x44;
 const GDMA_IN_PERI_SEL = 0x48;
+const GDMA_OUT_CONF0 = 0x60;
+const GDMA_OUT_CONF1 = 0x64;
+const GDMA_OUT_INT_RAW = 0x68;
+const GDMA_OUT_INT_ST = 0x6c;
+const GDMA_OUT_INT_ENA = 0x70;
+const GDMA_OUT_INT_CLR = 0x74;
+const GDMA_OUT_LINK = 0x80;
+const GDMA_OUT_STATE = 0x84;
+const GDMA_OUT_EOF_DES_ADDR = 0x88;
+const GDMA_OUT_EOF_BFR_DES_ADDR = 0x8c;
+const GDMA_OUT_DSCR = 0x90;
+const GDMA_OUT_DSCR_BF0 = 0x94;
+const GDMA_OUT_DSCR_BF1 = 0x98;
+const GDMA_OUT_WEIGHT = 0x9c;
+const GDMA_OUT_PRI = 0xa4;
+const GDMA_OUT_PERI_SEL = 0xa8;
 const GDMA_IN_RST = 1 << 0;
 const GDMA_IN_DONE_INT = 1 << 0;
 const GDMA_IN_SUC_EOF_INT = 1 << 1;
 const GDMA_IN_DSCR_ERR_INT = 1 << 3;
 const GDMA_IN_DSCR_EMPTY_INT = 1 << 4;
+const GDMA_OUT_RST = 1 << 0;
+const GDMA_OUT_DONE_INT = 1 << 0;
+const GDMA_OUT_EOF_INT = 1 << 1;
+const GDMA_OUT_DSCR_ERR_INT = 1 << 2;
+const GDMA_OUT_TOTAL_EOF_INT = 1 << 3;
 const GDMA_INLINK_ADDR_MASK = 0x000f_ffff;
 const GDMA_INLINK_AUTO_RET = 1 << 20;
 const GDMA_INLINK_STOP = 1 << 21;
 const GDMA_INLINK_START = 1 << 22;
 const GDMA_INLINK_RESTART = 1 << 23;
 const GDMA_INLINK_PARK = 1 << 24;
+const GDMA_OUTLINK_ADDR_MASK = 0x000f_ffff;
+const GDMA_OUTLINK_STOP = 1 << 20;
+const GDMA_OUTLINK_START = 1 << 21;
+const GDMA_OUTLINK_RESTART = 1 << 22;
+const GDMA_OUTLINK_PARK = 1 << 23;
 const GDMA_PERI_ADC_DAC = 8;
+const GDMA_PERI_RMT = 9;
 const GDMA_PERI_NONE = 0x3f;
 const GDMA_DESC_SIZE_MASK = 0xfff;
 const GDMA_DESC_LENGTH_MASK = 0xfff << 12;
@@ -932,6 +964,25 @@ interface GdmaRxChannel {
   started: boolean;
 }
 
+interface GdmaTxChannel {
+  conf0: number;
+  conf1: number;
+  intRaw: number;
+  intEna: number;
+  outLink: number;
+  currentDesc: number;
+  eofDesc: number;
+  eofBfrDesc: number;
+  descBf0: number;
+  descBf1: number;
+  weight: number;
+  pri: number;
+  periSel: number;
+  map: number;
+  active: boolean;
+  started: boolean;
+}
+
 const freshGpTimer = (): GpTimer => ({
   config: 0,
   base: 0,
@@ -1025,6 +1076,25 @@ const freshGdmaRx = (): GdmaRxChannel => ({
   periSel: GDMA_PERI_NONE,
   map: INTMTX_DEFAULT_MAP,
   offset: 0,
+  active: false,
+  started: false,
+});
+
+const freshGdmaTx = (): GdmaTxChannel => ({
+  conf0: 0,
+  conf1: 0,
+  intRaw: 0,
+  intEna: 0,
+  outLink: 0,
+  currentDesc: 0,
+  eofDesc: 0,
+  eofBfrDesc: 0,
+  descBf0: 0,
+  descBf1: 0,
+  weight: 0x0f00,
+  pri: 0,
+  periSel: GDMA_PERI_NONE,
+  map: INTMTX_DEFAULT_MAP,
   active: false,
   started: false,
 });
@@ -1160,6 +1230,7 @@ export class Esp32s3Core implements McuCore {
   private apbSaradcClkmConf = APB_SARADC_CLKM_CONF_RESET;
   private apbSaradcDataStatus = [0, 0];
   private gdmaRx: GdmaRxChannel[] = Array.from({ length: GDMA_RX_CHANNELS }, freshGdmaRx);
+  private gdmaTx: GdmaTxChannel[] = Array.from({ length: GDMA_CHANNELS }, freshGdmaTx);
   private adcContinuousFlushPool = false;
   private adcContinuousOverflows: Esp32s3AdcContinuousOverflowEvent[] = [];
   /** Bench wiring — survives reset(), like loaded firmware. */
@@ -1600,6 +1671,58 @@ export class Esp32s3Core implements McuCore {
     this.recomputeIrq();
   }
 
+  private gdmaStartTx(ch: GdmaTxChannel): void {
+    const desc = this.gdmaDescriptorAddress(ch.outLink);
+    ch.currentDesc = desc >>> 0;
+    ch.active = desc !== 0;
+    ch.started = ch.active;
+    this.recomputeIrq();
+  }
+
+  private gdmaMarkTxDscrErr(ch: GdmaTxChannel, desc: number): void {
+    ch.eofDesc = desc >>> 0;
+    ch.intRaw |= GDMA_OUT_DSCR_ERR_INT;
+    ch.active = false;
+    ch.started = false;
+    this.recomputeIrq();
+  }
+
+  private gdmaReadTxSymbols(ch: GdmaTxChannel): number[] {
+    const symbols: number[] = [];
+    let desc = ch.currentDesc >>> 0;
+    const seen = new Set<number>();
+    for (let guard = 0; guard < 64 && desc !== 0 && !seen.has(desc); guard++) {
+      seen.add(desc);
+      const dw0 = this.sramU32(desc);
+      const size = dw0 & GDMA_DESC_SIZE_MASK;
+      const length = (dw0 & GDMA_DESC_LENGTH_MASK) >>> 12;
+      const bytes = length > 0 ? Math.min(length, size === 0 ? length : size) : size;
+      const buffer = this.sramU32(desc + 4);
+      const next = this.sramU32(desc + 8);
+      if ((dw0 & GDMA_DESC_OWNER_DMA) === 0 || bytes < 4) {
+        this.gdmaMarkTxDscrErr(ch, desc);
+        break;
+      }
+      for (let offset = 0; offset + 4 <= bytes; offset += 4) {
+        symbols.push(this.sramU32(buffer + offset));
+      }
+      ch.descBf1 = ch.descBf0;
+      ch.descBf0 = desc;
+      ch.eofBfrDesc = buffer >>> 0;
+      ch.eofDesc = desc >>> 0;
+      ch.intRaw |= GDMA_OUT_DONE_INT | GDMA_OUT_EOF_INT;
+      if ((dw0 & GDMA_DESC_SUC_EOF) !== 0 || next === 0) ch.intRaw |= GDMA_OUT_TOTAL_EOF_INT;
+      this.setSramU32(desc, dw0 & ~GDMA_DESC_OWNER_DMA);
+      desc = next >>> 0;
+      ch.currentDesc = desc;
+      if ((dw0 & GDMA_DESC_SUC_EOF) !== 0 || next === 0) break;
+    }
+    ch.active = false;
+    ch.started = false;
+    this.recomputeIrq();
+    return symbols;
+  }
+
   private gdmaPushAdcWord(word: number): void {
     const ch =
       this.gdmaRx.find((rx) => rx.active && rx.periSel === GDMA_PERI_ADC_DAC) ??
@@ -1782,6 +1905,7 @@ export class Esp32s3Core implements McuCore {
     this.apbSaradcClkmConf = APB_SARADC_CLKM_CONF_RESET;
     this.apbSaradcDataStatus = [0, 0];
     this.gdmaRx = Array.from({ length: GDMA_RX_CHANNELS }, freshGdmaRx);
+    this.gdmaTx = Array.from({ length: GDMA_CHANNELS }, freshGdmaTx);
     this.adcContinuousOverflows = [];
     this.driven.fill(undefined);
     this.events = [];
@@ -2197,7 +2321,19 @@ export class Esp32s3Core implements McuCore {
     ch.apbWriteCursor++;
   }
 
-  private rmtTxSourceSymbols(ch: RmtTxChannel): number[] {
+  private rmtTxDmaMode(chIndex: number, ch: RmtTxChannel): boolean {
+    return chIndex === RMT_TX_CHANNELS - 1 && (ch.conf0 & RMT_DMA_ACCESS_EN) !== 0;
+  }
+
+  private rmtTxDmaSourceSymbols(): number[] {
+    const ch =
+      this.gdmaTx.find((tx) => tx.active && tx.periSel === GDMA_PERI_RMT) ??
+      this.gdmaTx.find((tx) => tx.started && tx.periSel === GDMA_PERI_RMT);
+    return ch === undefined ? [] : this.gdmaReadTxSymbols(ch);
+  }
+
+  private rmtTxSourceSymbols(chIndex: number, ch: RmtTxChannel): number[] {
+    if (this.rmtTxDmaMode(chIndex, ch)) return this.rmtTxDmaSourceSymbols();
     if (!this.rmtDirectMemoryMode()) return ch.fifo;
     const capacity = this.rmtTxMemoryCapacity(ch);
     const symbols: number[] = [];
@@ -2422,7 +2558,7 @@ export class Esp32s3Core implements McuCore {
     if (ch === undefined) return;
     this.rmtIntRaw &= ~((1 << chIndex) | (1 << (8 + chIndex)) | (1 << (12 + chIndex)));
     const cyclesPerTick = this.rmtCyclesPerTick(ch);
-    const sourceSymbols = this.rmtTxSourceSymbols(ch);
+    const sourceSymbols = this.rmtTxSourceSymbols(chIndex, ch);
     const segments: RmtTxSegment[] = [];
     const symbolEndCycles: number[] = [];
     let elapsed = 0;
@@ -2444,7 +2580,7 @@ export class Esp32s3Core implements McuCore {
         symbolEndCycles.push(elapsed);
       }
     }
-    if (!this.rmtDirectMemoryMode()) ch.fifo = [];
+    if (!this.rmtDirectMemoryMode() && !this.rmtTxDmaMode(chIndex, ch)) ch.fifo = [];
     ch.startCycle = this.cpu.cycles;
     ch.durationCycles = elapsed;
     ch.segments = segments;
@@ -2598,6 +2734,9 @@ export class Esp32s3Core implements McuCore {
       }
     }
     for (const ch of this.gdmaRx) {
+      if ((ch.intRaw & ch.intEna) !== 0) mask |= 1 << (ch.map & 31);
+    }
+    for (const ch of this.gdmaTx) {
       if ((ch.intRaw & ch.intEna) !== 0) mask |= 1 << (ch.map & 31);
     }
     this.cpu.setExtInt(mask);
@@ -2890,6 +3029,9 @@ export class Esp32s3Core implements McuCore {
       if (off >= INTMTX_GDMA_IN_MAPS && off < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (off & 3) === 0) {
         return this.gdmaRx[(off - INTMTX_GDMA_IN_MAPS) >> 2]?.map ?? INTMTX_DEFAULT_MAP;
       }
+      if (off >= INTMTX_GDMA_OUT_MAPS && off < INTMTX_GDMA_OUT_MAPS + GDMA_CHANNELS * 4 && (off & 3) === 0) {
+        return this.gdmaTx[(off - INTMTX_GDMA_OUT_MAPS) >> 2]?.map ?? INTMTX_DEFAULT_MAP;
+      }
       return INTMTX_DEFAULT_MAP; // unmodeled sources sit at their reset map
     }
     if (addr >= RMT_BASE && addr < RMT_BASE + 0x1000) {
@@ -2994,27 +3136,48 @@ export class Esp32s3Core implements McuCore {
       if (off === TIMG_INT_ST) return grp.intRaw & grp.intEna;
       return 0;
     }
-    if (addr >= GDMA_BASE && addr < GDMA_BASE + GDMA_RX_CHANNELS * GDMA_CH_STRIDE) {
+    if (addr >= GDMA_BASE && addr < GDMA_BASE + GDMA_CHANNELS * GDMA_CH_STRIDE) {
       const rel = addr - GDMA_BASE;
-      const ch = this.gdmaRx[Math.floor(rel / GDMA_CH_STRIDE)];
+      const chIndex = Math.floor(rel / GDMA_CH_STRIDE);
+      const ch = this.gdmaRx[chIndex];
+      const tx = this.gdmaTx[chIndex];
       const off = rel % GDMA_CH_STRIDE;
-      if (ch === undefined) return 0;
-      if (off === GDMA_IN_CONF0) return ch.conf0 >>> 0;
-      if (off === GDMA_IN_CONF1) return ch.conf1 >>> 0;
-      if (off === GDMA_IN_INT_RAW) return ch.intRaw >>> 0;
-      if (off === GDMA_IN_INT_ST) return (ch.intRaw & ch.intEna) >>> 0;
-      if (off === GDMA_IN_INT_ENA) return ch.intEna >>> 0;
-      if (off === GDMA_IN_INT_CLR) return 0;
-      if (off === GDMA_IN_LINK) return (ch.inLink | (ch.active ? 0 : GDMA_INLINK_PARK)) >>> 0;
-      if (off === GDMA_IN_STATE) return ch.currentDesc & 0x3ffff;
-      if (off === GDMA_IN_SUC_EOF_DES_ADDR) return ch.sucEofDesc >>> 0;
-      if (off === GDMA_IN_ERR_EOF_DES_ADDR) return ch.errEofDesc >>> 0;
-      if (off === GDMA_IN_DSCR) return ch.currentDesc >>> 0;
-      if (off === GDMA_IN_DSCR_BF0) return ch.descBf0 >>> 0;
-      if (off === GDMA_IN_DSCR_BF1) return ch.descBf1 >>> 0;
-      if (off === GDMA_IN_WEIGHT) return ch.weight >>> 0;
-      if (off === GDMA_IN_PRI) return ch.pri >>> 0;
-      if (off === GDMA_IN_PERI_SEL) return ch.periSel >>> 0;
+      if (ch !== undefined) {
+        if (off === GDMA_IN_CONF0) return ch.conf0 >>> 0;
+        if (off === GDMA_IN_CONF1) return ch.conf1 >>> 0;
+        if (off === GDMA_IN_INT_RAW) return ch.intRaw >>> 0;
+        if (off === GDMA_IN_INT_ST) return (ch.intRaw & ch.intEna) >>> 0;
+        if (off === GDMA_IN_INT_ENA) return ch.intEna >>> 0;
+        if (off === GDMA_IN_INT_CLR) return 0;
+        if (off === GDMA_IN_LINK) return (ch.inLink | (ch.active ? 0 : GDMA_INLINK_PARK)) >>> 0;
+        if (off === GDMA_IN_STATE) return ch.currentDesc & 0x3ffff;
+        if (off === GDMA_IN_SUC_EOF_DES_ADDR) return ch.sucEofDesc >>> 0;
+        if (off === GDMA_IN_ERR_EOF_DES_ADDR) return ch.errEofDesc >>> 0;
+        if (off === GDMA_IN_DSCR) return ch.currentDesc >>> 0;
+        if (off === GDMA_IN_DSCR_BF0) return ch.descBf0 >>> 0;
+        if (off === GDMA_IN_DSCR_BF1) return ch.descBf1 >>> 0;
+        if (off === GDMA_IN_WEIGHT) return ch.weight >>> 0;
+        if (off === GDMA_IN_PRI) return ch.pri >>> 0;
+        if (off === GDMA_IN_PERI_SEL) return ch.periSel >>> 0;
+      }
+      if (tx !== undefined) {
+        if (off === GDMA_OUT_CONF0) return tx.conf0 >>> 0;
+        if (off === GDMA_OUT_CONF1) return tx.conf1 >>> 0;
+        if (off === GDMA_OUT_INT_RAW) return tx.intRaw >>> 0;
+        if (off === GDMA_OUT_INT_ST) return (tx.intRaw & tx.intEna) >>> 0;
+        if (off === GDMA_OUT_INT_ENA) return tx.intEna >>> 0;
+        if (off === GDMA_OUT_INT_CLR) return 0;
+        if (off === GDMA_OUT_LINK) return (tx.outLink | (tx.active ? 0 : GDMA_OUTLINK_PARK)) >>> 0;
+        if (off === GDMA_OUT_STATE) return tx.currentDesc & 0x3ffff;
+        if (off === GDMA_OUT_EOF_DES_ADDR) return tx.eofDesc >>> 0;
+        if (off === GDMA_OUT_EOF_BFR_DES_ADDR) return tx.eofBfrDesc >>> 0;
+        if (off === GDMA_OUT_DSCR) return tx.currentDesc >>> 0;
+        if (off === GDMA_OUT_DSCR_BF0) return tx.descBf0 >>> 0;
+        if (off === GDMA_OUT_DSCR_BF1) return tx.descBf1 >>> 0;
+        if (off === GDMA_OUT_WEIGHT) return tx.weight >>> 0;
+        if (off === GDMA_OUT_PRI) return tx.pri >>> 0;
+        if (off === GDMA_OUT_PERI_SEL) return tx.periSel >>> 0;
+      }
       return 0;
     }
     if (addr >= SENS_BASE && addr < SENS_BASE + 0x400) {
@@ -3205,6 +3368,9 @@ export class Esp32s3Core implements McuCore {
         this.apbSaradcIntMap = value & 0x1f;
       } else if (off >= INTMTX_GDMA_IN_MAPS && off < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (off & 3) === 0) {
         const ch = this.gdmaRx[(off - INTMTX_GDMA_IN_MAPS) >> 2];
+        if (ch !== undefined) ch.map = value & 0x1f;
+      } else if (off >= INTMTX_GDMA_OUT_MAPS && off < INTMTX_GDMA_OUT_MAPS + GDMA_CHANNELS * 4 && (off & 3) === 0) {
+        const ch = this.gdmaTx[(off - INTMTX_GDMA_OUT_MAPS) >> 2];
         if (ch !== undefined) ch.map = value & 0x1f;
       }
       // Map writes for unmodeled sources are accepted and dropped —
@@ -3425,13 +3591,14 @@ export class Esp32s3Core implements McuCore {
       this.recomputeIrq();
       return;
     }
-    if (addr >= GDMA_BASE && addr < GDMA_BASE + GDMA_RX_CHANNELS * GDMA_CH_STRIDE) {
+    if (addr >= GDMA_BASE && addr < GDMA_BASE + GDMA_CHANNELS * GDMA_CH_STRIDE) {
       const rel = addr - GDMA_BASE;
-      const ch = this.gdmaRx[Math.floor(rel / GDMA_CH_STRIDE)];
+      const chIndex = Math.floor(rel / GDMA_CH_STRIDE);
+      const ch = this.gdmaRx[chIndex];
+      const tx = this.gdmaTx[chIndex];
       const off = rel % GDMA_CH_STRIDE;
       const v = value >>> 0;
-      if (ch === undefined) return;
-      if (off === GDMA_IN_CONF0) {
+      if (ch !== undefined && off === GDMA_IN_CONF0) {
         ch.conf0 = v;
         if ((v & GDMA_IN_RST) !== 0) {
           ch.active = false;
@@ -3441,15 +3608,15 @@ export class Esp32s3Core implements McuCore {
           ch.intRaw = 0;
           this.recomputeIrq();
         }
-      } else if (off === GDMA_IN_CONF1) ch.conf1 = v;
-      else if (off === GDMA_IN_INT_ENA) {
+      } else if (ch !== undefined && off === GDMA_IN_CONF1) ch.conf1 = v;
+      else if (ch !== undefined && off === GDMA_IN_INT_ENA) {
         ch.intEna = v;
         this.recomputeIrq();
-      } else if (off === GDMA_IN_INT_CLR) {
+      } else if (ch !== undefined && off === GDMA_IN_INT_CLR) {
         ch.intRaw &= ~v;
         this.recomputeIrq();
       }
-      else if (off === GDMA_IN_LINK) {
+      else if (ch !== undefined && off === GDMA_IN_LINK) {
         ch.inLink = v & (GDMA_INLINK_ADDR_MASK | GDMA_INLINK_AUTO_RET);
         if ((v & GDMA_INLINK_STOP) !== 0) {
           ch.active = false;
@@ -3458,9 +3625,40 @@ export class Esp32s3Core implements McuCore {
           this.recomputeIrq();
         }
         if ((v & (GDMA_INLINK_START | GDMA_INLINK_RESTART)) !== 0) this.gdmaStart(ch);
-      } else if (off === GDMA_IN_WEIGHT) ch.weight = v & 0x0f00;
-      else if (off === GDMA_IN_PRI) ch.pri = v & 0x0f;
-      else if (off === GDMA_IN_PERI_SEL) ch.periSel = v & 0x3f;
+      } else if (ch !== undefined && off === GDMA_IN_WEIGHT) ch.weight = v & 0x0f00;
+      else if (ch !== undefined && off === GDMA_IN_PRI) ch.pri = v & 0x0f;
+      else if (ch !== undefined && off === GDMA_IN_PERI_SEL) ch.periSel = v & 0x3f;
+      else if (tx !== undefined && off === GDMA_OUT_CONF0) {
+        tx.conf0 = v;
+        if ((v & GDMA_OUT_RST) !== 0) {
+          tx.active = false;
+          tx.started = false;
+          tx.currentDesc = 0;
+          tx.eofDesc = 0;
+          tx.eofBfrDesc = 0;
+          tx.descBf0 = 0;
+          tx.descBf1 = 0;
+          tx.intRaw = 0;
+          this.recomputeIrq();
+        }
+      } else if (tx !== undefined && off === GDMA_OUT_CONF1) tx.conf1 = v;
+      else if (tx !== undefined && off === GDMA_OUT_INT_ENA) {
+        tx.intEna = v;
+        this.recomputeIrq();
+      } else if (tx !== undefined && off === GDMA_OUT_INT_CLR) {
+        tx.intRaw &= ~v;
+        this.recomputeIrq();
+      } else if (tx !== undefined && off === GDMA_OUT_LINK) {
+        tx.outLink = v & GDMA_OUTLINK_ADDR_MASK;
+        if ((v & GDMA_OUTLINK_STOP) !== 0) {
+          tx.active = false;
+          tx.started = false;
+          this.recomputeIrq();
+        }
+        if ((v & (GDMA_OUTLINK_START | GDMA_OUTLINK_RESTART)) !== 0) this.gdmaStartTx(tx);
+      } else if (tx !== undefined && off === GDMA_OUT_WEIGHT) tx.weight = v & 0x0f00;
+      else if (tx !== undefined && off === GDMA_OUT_PRI) tx.pri = v & 0x0f;
+      else if (tx !== undefined && off === GDMA_OUT_PERI_SEL) tx.periSel = v & 0x3f;
       return;
     }
     if (addr >= SENS_BASE && addr < SENS_BASE + 0x400) {

@@ -651,8 +651,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       hand-assembled firmware that writes two CH0 symbols through direct
       memory mode, reads back APB write cursor 2, routes CH0 to IO5,
       clears the first threshold raw bit, and observes the second
-      threshold event over UART. Cuts: no TX GDMA channel-3 path, no
-      live mutation of an already-built TX waveform from a refill ISR,
+      threshold event over UART. Cuts: no live mutation of an
+      already-built TX waveform from a refill ISR, no RX
+      direct-memory/wrap path, and no RX carrier demodulation yet
+- [x] ESP32-S3 core slice 37 — RMT TX GDMA channel-3 first cut
+      (landed 2026-06-13): GDMA OUT channels now expose the TX-side
+      register half (`OUT_LINK`, raw/status/enable/clear,
+      EOF descriptor addresses, priority/weight, and peripheral select)
+      and RMT TX channel 3 can source symbols from DMA-owned descriptors
+      when `dma_access_en_chn` is enabled. Proven by hand-assembled
+      firmware that builds a 12-byte GDMA descriptor in SRAM, points it
+      at two RMT symbols, selects GDMA peripheral 9 (RMT), starts CH3
+      through the GPIO matrix, observes the IO5 waveform, and confirms
+      `OUT_DONE|OUT_EOF|OUT_TOTAL_EOF` plus raw clear over UART. Cuts:
+      no ping-pong live refill/`gdma_append` timing, no RMT RX GDMA,
       no RX direct-memory/wrap path, and no RX carrier demodulation yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,

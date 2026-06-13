@@ -74,6 +74,7 @@ const GPIO = ESP32S3_GPIO_BASE;
 const UART = ESP32S3_UART0_BASE;
 const LEDC = 0x60019000;
 const RMT = 0x60016000;
+const GDMA = 0x6003f000;
 const GPIO_FUNC5_OUT_SEL_CFG = GPIO + 0x568;
 const GPIO_FUNC81_IN_SEL_CFG = GPIO + 0x154 + 81 * 4;
 const GPIO_SIG_IN_SEL = 1 << 7;
@@ -98,11 +99,13 @@ const RMT_IDLE_OUT_EN = 1 << 6;
 const RMT_CARRIER_EFF_EN = 1 << 20;
 const RMT_CARRIER_EN = 1 << 21;
 const RMT_CARRIER_OUT_LV = 1 << 22;
+const RMT_DMA_ACCESS_EN = 1 << 25;
 const RMT_CH0_CARRIER_DUTY = 0x80;
 const RMT_CH0_STATUS = 0x50;
 const RMT_CH0_TX_LIM = 0xa0;
 const RMT_CH4_RX_LIM = 0xb0;
 const RMT_SIG_OUT0 = 81;
+const RMT_SIG_OUT3 = RMT_SIG_OUT0 + 3;
 const RMT_RX_EN = 1;
 const RMT_MEM_WR_RST = 1 << 1;
 const RMT_APB_MEM_RST = 1 << 2;
@@ -111,8 +114,20 @@ const RMT_RX_CONF_UPDATE = 1 << 15;
 const RMT_CH0_TX_END = 1;
 const RMT_CH0_TX_THR_EVENT = 1 << 8;
 const RMT_CH0_TX_LOOP = 1 << 12;
+const RMT_CH3_TX_END = 1 << 3;
 const RMT_CH4_RX_END = 1 << 16;
 const RMT_CH4_RX_THR_EVENT = 1 << 24;
+const GDMA_OUT_CH0_INT_RAW = 0x68;
+const GDMA_OUT_CH0_INT_CLR = 0x74;
+const GDMA_OUT_CH0_LINK = 0x80;
+const GDMA_OUT_CH0_PERI_SEL = 0xa8;
+const GDMA_OUT_LINK_START = 1 << 21;
+const GDMA_PERI_RMT = 9;
+const GDMA_OUT_DONE = 1 << 0;
+const GDMA_OUT_EOF = 1 << 1;
+const GDMA_OUT_TOTAL_EOF = 1 << 3;
+const GDMA_DESC_SUC_EOF = 1 << 30;
+const GDMA_DESC_OWNER_DMA = 1 << 31;
 
 function core(image: Uint8Array): Esp32s3Core {
   const c = new Esp32s3Core();
@@ -410,6 +425,97 @@ describe('Esp32s3Core', () => {
     expect(io5.map((e) => e.level)).toEqual([1, 0, 1, 0]);
     expect(io5.slice(1).map((e, i) => e.cycle - (io5[i]?.cycle ?? 0))).toEqual([6, 6, 3]);
     expect([...c.drainUart()]).toEqual([2, 1, 2]);
+  });
+
+  it('feeds RMT channel 3 TX from GDMA OUT descriptors', () => {
+    const desc = ESP32S3_DRAM_BASE + 0x1200;
+    const buf = ESP32S3_DRAM_BASE + 0x1240;
+    const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB;
+    const rmtCh3Conf = (1 << 8) | (1 << 16) | RMT_IDLE_OUT_EN | RMT_MEM_TX_WRAP_EN | RMT_DMA_ACCESS_EN;
+    const symbol0 = 2 | (1 << 15) | (2 << 16); // high 2 ticks, low 2 ticks
+    const symbol1 = 1 | (1 << 15) | (1 << 16); // high 1 tick, low 1 tick
+    const descWord = GDMA_DESC_OWNER_DMA | GDMA_DESC_SUC_EOF | 8;
+    const outLinkStart = (desc & 0x000f_ffff) | GDMA_OUT_LINK_START;
+    const gdmaDoneMask = GDMA_OUT_DONE | GDMA_OUT_EOF | GDMA_OUT_TOTAL_EOF;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        desc,
+        buf,
+        descWord,
+        symbol0,
+        symbol1,
+        GDMA,
+        outLinkStart,
+        RMT,
+        GPIO,
+        GPIO_FUNC5_OUT_SEL_CFG,
+        UART,
+        rmtSysConf,
+        rmtCh3Conf,
+        1 << 5,
+        RMT_SIG_OUT3,
+        rmtCh3Conf | RMT_TX_START,
+        gdmaDoneMask,
+      ],
+      [
+        L32R(2, 0), // descriptor
+        L32R(3, 2),
+        S32I(3, 2, 0), // dw0: owner=DMA, EOF, 8 bytes
+        L32R(3, 1),
+        S32I(3, 2, 4), // buffer
+        MOVI(3, 0),
+        S32I(3, 2, 8), // next = NULL
+        L32R(4, 1), // buffer
+        L32R(5, 3),
+        S32I(5, 4, 0),
+        L32R(5, 4),
+        S32I(5, 4, 4),
+
+        L32R(6, 5), // GDMA
+        MOVI(7, GDMA_PERI_RMT),
+        S32I(7, 6, GDMA_OUT_CH0_PERI_SEL),
+        L32R(7, 6),
+        S32I(7, 6, GDMA_OUT_CH0_LINK),
+
+        L32R(8, 7), // RMT
+        L32R(9, 11),
+        S32I(9, 8, 0xc0), // SYS_CONF: clk on, APB source, group divider 1
+        L32R(9, 12),
+        S32I(9, 8, 0x2c), // CH3CONF0: DMA access, divider 1, idle low
+
+        L32R(4, 8), // GPIO
+        L32R(5, 13),
+        S32I(5, 4, 0x24), // enable IO5
+        L32R(6, 9),
+        L32R(7, 14),
+        S32I(7, 6, 0x00), // GPIO matrix: IO5 <- RMT_SIG_OUT3
+
+        L32R(9, 15),
+        S32I(9, 8, 0x2c), // CH3 tx_start
+        MOVI(10, 80),
+        ADDI(10, 10, -1),
+        BNEZ(10, BR(-2)),
+        L32R(11, 10), // UART
+        L32R(6, 5), // GDMA
+        L32I(12, 6, GDMA_OUT_CH0_INT_RAW),
+        S32I(12, 11, 0), // GDMA OUT raw = DONE|EOF|TOTAL_EOF
+        L32I(12, 8, 0x70),
+        S32I(12, 11, 0), // RMT raw = CH3_TX_END
+        L32R(12, 16),
+        S32I(12, 6, GDMA_OUT_CH0_INT_CLR),
+        L32I(12, 6, GDMA_OUT_CH0_INT_RAW),
+        S32I(12, 11, 0), // clear worked
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    const { events } = c.step(560);
+    const io5 = events.filter((e) => e.pin === 'IO5');
+
+    expect(io5.map((e) => e.level)).toEqual([1, 0, 1, 0]);
+    expect(io5.slice(1).map((e, i) => e.cycle - (io5[i]?.cycle ?? 0))).toEqual([6, 6, 3]);
+    expect([...c.drainUart()]).toEqual([gdmaDoneMask, RMT_CH3_TX_END, 0]);
   });
 
   it('latches RMT TX threshold and finite-loop interrupts', () => {
