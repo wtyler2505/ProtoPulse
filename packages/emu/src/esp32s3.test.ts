@@ -92,6 +92,10 @@ const RMT_SCLK_SEL_APB = 1 << 24;
 const RMT_TX_START = 1;
 const RMT_TX_CONTI_MODE = 1 << 3;
 const RMT_IDLE_OUT_EN = 1 << 6;
+const RMT_CARRIER_EFF_EN = 1 << 20;
+const RMT_CARRIER_EN = 1 << 21;
+const RMT_CARRIER_OUT_LV = 1 << 22;
+const RMT_CH0_CARRIER_DUTY = 0x80;
 const RMT_CH0_TX_LIM = 0xa0;
 const RMT_CH4_RX_LIM = 0xb0;
 const RMT_SIG_OUT0 = 81;
@@ -278,6 +282,50 @@ describe('Esp32s3Core', () => {
     expect(io5.map((e) => e.level)).toEqual([1, 0, 1, 0]);
     expect(io5.slice(1).map((e, i) => e.cycle - (io5[i]?.cycle ?? 0))).toEqual([6, 9, 3]);
     expect([...c.drainUart()]).toEqual([1]);
+  });
+
+  it('modulates RMT TX high symbols with the carrier duty clock', () => {
+    const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB;
+    const rmtCh0Conf = (1 << 8) | (1 << 16) | RMT_IDLE_OUT_EN | RMT_CARRIER_EFF_EN | RMT_CARRIER_EN | RMT_CARRIER_OUT_LV;
+    const carrierDuty = (1 << 16) | 1; // high 1 group tick, low 1 group tick
+    const symbol = 8 | (1 << 15) | (4 << 16); // high 8 RMT ticks, low 4 RMT ticks
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RMT, GPIO, GPIO_FUNC5_OUT_SEL_CFG, rmtSysConf, carrierDuty, symbol, rmtCh0Conf, 1 << 5, RMT_SIG_OUT0, rmtCh0Conf | RMT_TX_START],
+      [
+        L32R(2, 0), // RMT
+        L32R(3, 3),
+        S32I(3, 2, 0xc0), // SYS_CONF: clk on, APB source, group divider 1
+        L32R(3, 4),
+        S32I(3, 2, RMT_CH0_CARRIER_DUTY),
+        L32R(3, 5),
+        S32I(3, 2, 0x00), // CH0DATA symbol
+        L32R(3, 6),
+        S32I(3, 2, 0x20), // CH0CONF0: carrier on high level, idle low
+
+        L32R(4, 1), // GPIO
+        L32R(5, 7),
+        S32I(5, 4, 0x24), // enable IO5
+        L32R(6, 2),
+        L32R(7, 8),
+        S32I(7, 6, 0x00), // GPIO matrix: IO5 <- RMT_SIG_OUT0
+
+        L32R(3, 9),
+        S32I(3, 2, 0x20), // tx_start
+        MOVI(8, 90),
+        ADDI(8, 8, -1),
+        BNEZ(8, BR(-2)),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    const { events } = c.step(420);
+    const io5 = events.filter((e) => e.pin === 'IO5');
+    const carrier = io5.slice(0, 8);
+
+    expect(carrier.map((e) => e.level)).toEqual([1, 0, 1, 0, 1, 0, 1, 0]);
+    expect(carrier.slice(1).map((e, i) => e.cycle - (carrier[i]?.cycle ?? 0))).toEqual([3, 3, 3, 3, 3, 3, 3]);
+    expect(io5.length).toBe(8);
   });
 
   it('latches RMT TX threshold and finite-loop interrupts', () => {

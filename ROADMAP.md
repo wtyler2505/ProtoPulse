@@ -628,6 +628,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       over UART. Cuts: no RMT DMA/direct-memory mode, carrier
       demodulation, partial-buffer wrapping, driver ringbuffer callback
       shim, or repeated threshold relatching after raw clear yet
+- [x] ESP32-S3 core slice 35 — RMT TX carrier modulation
+      (landed 2026-06-13): TX channels now expose `CHnCARRIER_DUTY`,
+      honor `CARRIER_EN`, `CARRIER_EFF_EN`, and `CARRIER_OUT_LV`, and
+      modulate the configured data level with high/low carrier ticks
+      from the RMT group clock while symbol durations still use the
+      channel divider. Proven by hand-assembled firmware that routes
+      RMT channel 0 to IO5, enables 1/1 carrier duty on a high symbol,
+      and observes 3-cycle carrier edges before the low data segment
+      stays unmodulated. Cuts: no RMT DMA/direct-memory mode, RX carrier
+      demodulation, threshold refill queue shim, or repeated threshold
+      relatching after raw clear yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -173,10 +173,11 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * policy by recycling the CPU-owned frame and overwriting old data.
  * RMT channel-0..3 TX now has APB FIFO symbol writes, channel/group
  * dividers for APB/XTAL/RC_FAST clocks, GPIO-matrix output signals
- * 81..84, idle level, TX stop/start/end, TX threshold, and finite loop
- * interrupts. RMT RX channel 0..3 now captures GPIO input-matrix edges
- * into CH4..CH7 APB FIFO symbols, honoring RX limit/threshold and idle
- * completion. Cuts: no RMT DMA, direct memory mode, carrier modulation,
+ * 81..84, idle level, TX stop/start/end, TX threshold, finite loop
+ * interrupts, and group-clock-based TX carrier modulation. RMT RX
+ * channel 0..3 now captures GPIO input-matrix edges into CH4..CH7 APB
+ * FIFO symbols, honoring RX limit/threshold and idle completion. Cuts:
+ * no RMT DMA, direct memory mode, RX carrier demodulation,
  * RX partial-buffer wrapping, threshold refill queue shim, or driver
  * ringbuffer API yet.
  * Still missing: full light/deep sleep register policy — so full
@@ -336,6 +337,8 @@ const RMT_INT_RAW = 0x70;
 const RMT_INT_ST = 0x74;
 const RMT_INT_ENA = 0x78;
 const RMT_INT_CLR = 0x7c;
+const RMT_CH_CARRIER_DUTY = 0x80;
+const RMT_CH_CARRIER_DUTY_STRIDE = 0x04;
 const RMT_CH_TX_LIM = 0x0a0;
 const RMT_CH_TX_LIM_STRIDE = 0x04;
 const RMT_CH_RX_LIM = 0x0b0;
@@ -353,8 +356,12 @@ const RMT_DIV_CNT_SHIFT = 8;
 const RMT_DIV_CNT_MASK = 0xff;
 const RMT_IDLE_OUT_LV = 1 << 5;
 const RMT_IDLE_OUT_EN = 1 << 6;
+const RMT_CARRIER_EFF_EN = 1 << 20;
+const RMT_CARRIER_EN = 1 << 21;
+const RMT_CARRIER_OUT_LV = 1 << 22;
 const RMT_TX_CONF0_WT_MASK = RMT_TX_START | RMT_MEM_RD_RST | RMT_APB_MEM_RST | RMT_TX_STOP | (1 << 23) | (1 << 24) | (1 << 25);
 const RMT_TX_CONF0_RESET = (2 << RMT_DIV_CNT_SHIFT) | (1 << 16) | (1 << 20) | (1 << 21) | (1 << 22);
+const RMT_CARRIER_DUTY_RESET = (64 << 16) | 64;
 const RMT_SYS_SCLK_DIV_NUM_SHIFT = 4;
 const RMT_SYS_SCLK_DIV_NUM_MASK = 0xff;
 const RMT_SYS_SCLK_DIV_A_SHIFT = 12;
@@ -862,6 +869,7 @@ interface RmtTxSegment {
 interface RmtTxChannel {
   conf0: number;
   txLim: number;
+  carrierDuty: number;
   fifo: number[];
   startCycle: number;
   durationCycles: number;
@@ -960,6 +968,7 @@ const freshLedcChannel = (): LedcChannel => ({
 const freshRmtTxChannel = (): RmtTxChannel => ({
   conf0: RMT_TX_CONF0_RESET,
   txLim: RMT_TX_LIM_RESET,
+  carrierDuty: RMT_CARRIER_DUTY_RESET,
   fifo: [],
   startCycle: 0,
   durationCycles: 0,
@@ -2131,14 +2140,20 @@ export class Esp32s3Core implements McuCore {
     }
   }
 
-  private rmtCyclesPerTick(ch: RmtTxChannel): number | null {
+  private rmtGroupCyclesPerTick(): number | null {
     const sourceCycles = this.rmtSourceCyclesPerTick();
     if (sourceCycles === null) return null;
     const divNum = ((this.rmtSysConf >>> RMT_SYS_SCLK_DIV_NUM_SHIFT) & RMT_SYS_SCLK_DIV_NUM_MASK) + 1;
     const divA = (this.rmtSysConf >>> RMT_SYS_SCLK_DIV_A_SHIFT) & RMT_SYS_SCLK_DIV_A_MASK;
     const divB = (this.rmtSysConf >>> RMT_SYS_SCLK_DIV_B_SHIFT) & RMT_SYS_SCLK_DIV_B_MASK;
     const groupDiv = divNum + (divB === 0 ? 0 : divA / divB);
-    return Math.max(1, Math.round(sourceCycles * groupDiv * this.rmtChannelDivider(ch)));
+    return Math.max(1, Math.round(sourceCycles * groupDiv));
+  }
+
+  private rmtCyclesPerTick(ch: RmtTxChannel): number | null {
+    const groupCycles = this.rmtGroupCyclesPerTick();
+    if (groupCycles === null) return null;
+    return Math.max(1, groupCycles * this.rmtChannelDivider(ch));
   }
 
   private rmtRxDivider(ch: RmtRxChannel): number {
@@ -2147,13 +2162,9 @@ export class Esp32s3Core implements McuCore {
   }
 
   private rmtRxCyclesPerTick(ch: RmtRxChannel): number | null {
-    const sourceCycles = this.rmtSourceCyclesPerTick();
-    if (sourceCycles === null) return null;
-    const divNum = ((this.rmtSysConf >>> RMT_SYS_SCLK_DIV_NUM_SHIFT) & RMT_SYS_SCLK_DIV_NUM_MASK) + 1;
-    const divA = (this.rmtSysConf >>> RMT_SYS_SCLK_DIV_A_SHIFT) & RMT_SYS_SCLK_DIV_A_MASK;
-    const divB = (this.rmtSysConf >>> RMT_SYS_SCLK_DIV_B_SHIFT) & RMT_SYS_SCLK_DIV_B_MASK;
-    const groupDiv = divNum + (divB === 0 ? 0 : divA / divB);
-    return Math.max(1, Math.round(sourceCycles * groupDiv * this.rmtRxDivider(ch)));
+    const groupCycles = this.rmtGroupCyclesPerTick();
+    if (groupCycles === null) return null;
+    return Math.max(1, groupCycles * this.rmtRxDivider(ch));
   }
 
   private gpioPadLevel(gpio: number): DigitalLevel {
@@ -2280,6 +2291,30 @@ export class Esp32s3Core implements McuCore {
 
   private rmtIdleLevel(ch: RmtTxChannel): DigitalLevel {
     return (ch.conf0 & RMT_IDLE_OUT_EN) !== 0 && (ch.conf0 & RMT_IDLE_OUT_LV) !== 0 ? 1 : 0;
+  }
+
+  private rmtCarrierActiveLevel(ch: RmtTxChannel): DigitalLevel {
+    return (ch.conf0 & RMT_CARRIER_OUT_LV) !== 0 ? 1 : 0;
+  }
+
+  private rmtCarrierLevel(ch: RmtTxChannel, elapsedCycles: number): DigitalLevel | null {
+    if ((ch.conf0 & RMT_CARRIER_EN) === 0) return null;
+    const cyclesPerCarrierTick = this.rmtGroupCyclesPerTick();
+    if (cyclesPerCarrierTick === null) return null;
+    const highTicks = (ch.carrierDuty >>> 16) & 0xffff;
+    const lowTicks = ch.carrierDuty & 0xffff;
+    const active = this.rmtCarrierActiveLevel(ch);
+    if (highTicks === 0 && lowTicks === 0) return null;
+    if (highTicks === 0) return active === 1 ? 0 : 1;
+    if (lowTicks === 0) return active;
+    const carrierTick = Math.floor(Math.max(0, elapsedCycles) / cyclesPerCarrierTick);
+    const phase = carrierTick % (highTicks + lowTicks);
+    return phase < highTicks ? active : active === 1 ? 0 : 1;
+  }
+
+  private rmtMaybeApplyCarrier(ch: RmtTxChannel, baseLevel: DigitalLevel, elapsedCycles: number): DigitalLevel {
+    if (baseLevel !== this.rmtCarrierActiveLevel(ch)) return baseLevel;
+    return this.rmtCarrierLevel(ch, elapsedCycles) ?? baseLevel;
   }
 
   private rmtStopTx(ch: RmtTxChannel): void {
@@ -2413,11 +2448,14 @@ export class Esp32s3Core implements McuCore {
     const chIndex = signal - RMT_SIGNAL_BASE;
     const ch = this.rmtTx[chIndex];
     if (ch === undefined) return null;
-    if (!ch.active) return this.rmtIdleLevel(ch);
+    if (!ch.active) {
+      if ((ch.conf0 & RMT_CARRIER_EFF_EN) === 0) return this.rmtCarrierLevel(ch, this.cpu.cycles - ch.startCycle) ?? this.rmtIdleLevel(ch);
+      return this.rmtIdleLevel(ch);
+    }
     let elapsed = Math.max(0, this.cpu.cycles - ch.startCycle);
     if (this.rmtTxLoopEnabled(ch) && ch.durationCycles > 0) elapsed %= ch.durationCycles;
     for (const segment of ch.segments) {
-      if (elapsed < segment.endCycle) return segment.level;
+      if (elapsed < segment.endCycle) return this.rmtMaybeApplyCarrier(ch, segment.level, elapsed);
     }
     return this.rmtIdleLevel(ch);
   }
@@ -2784,6 +2822,9 @@ export class Esp32s3Core implements McuCore {
       if (off === RMT_INT_ST) return (this.rmtIntRaw & this.rmtIntEna) >>> 0;
       if (off === RMT_INT_ENA) return this.rmtIntEna >>> 0;
       if (off === RMT_INT_CLR) return 0;
+      if (off >= RMT_CH_CARRIER_DUTY && off < RMT_CH_CARRIER_DUTY + RMT_TX_CHANNELS * RMT_CH_CARRIER_DUTY_STRIDE && (off & 3) === 0) {
+        return this.rmtTx[(off - RMT_CH_CARRIER_DUTY) >> 2]?.carrierDuty ?? RMT_CARRIER_DUTY_RESET;
+      }
       if (off >= RMT_CH_TX_LIM && off < RMT_CH_TX_LIM + RMT_TX_CHANNELS * RMT_CH_TX_LIM_STRIDE && (off & 3) === 0) {
         return this.rmtTx[(off - RMT_CH_TX_LIM) >> 2]?.txLim ?? RMT_TX_LIM_RESET;
       }
@@ -3110,6 +3151,9 @@ export class Esp32s3Core implements McuCore {
       } else if (off === RMT_INT_CLR) {
         this.rmtIntRaw &= ~v;
         this.recomputeIrq();
+      } else if (off >= RMT_CH_CARRIER_DUTY && off < RMT_CH_CARRIER_DUTY + RMT_TX_CHANNELS * RMT_CH_CARRIER_DUTY_STRIDE && (off & 3) === 0) {
+        const ch = this.rmtTx[(off - RMT_CH_CARRIER_DUTY) >> 2];
+        if (ch !== undefined) ch.carrierDuty = v;
       } else if (off >= RMT_CH_TX_LIM && off < RMT_CH_TX_LIM + RMT_TX_CHANNELS * RMT_CH_TX_LIM_STRIDE && (off & 3) === 0) {
         const ch = this.rmtTx[(off - RMT_CH_TX_LIM) >> 2];
         if (ch !== undefined) {
