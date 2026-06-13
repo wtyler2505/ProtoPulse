@@ -1854,6 +1854,13 @@ export class Esp32s3Core implements McuCore {
     return true;
   }
 
+  private ledcLatchFixedDuty(chIndex: number, ch: LedcChannel): void {
+    ch.fade = null;
+    ch.dutyRead = ch.duty;
+    this.ledcIntRaw |= 1 << (4 + chIndex);
+    this.recomputeIrq();
+  }
+
   private ledcResyncFade(chIndex: number, ch: LedcChannel): void {
     if (ch.fade === null) return;
     this.ledcUpdateFade(chIndex, ch);
@@ -2570,9 +2577,7 @@ export class Esp32s3Core implements McuCore {
                 latchedSteps: 0,
               };
             } else {
-              ch.fade = null;
-              this.ledcIntRaw |= 1 << (4 + chIndex);
-              this.recomputeIrq();
+              this.ledcLatchFixedDuty(chIndex, ch);
             }
           }
         }

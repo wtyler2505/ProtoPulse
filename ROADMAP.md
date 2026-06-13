@@ -583,8 +583,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       duty-change-end interrupt bit. Proven by hand-assembled firmware
       that starts at duty 1, fades upward by two single-cycle steps,
       waits for `LEDC_DUTY_CHNG_END_LSCH0_INT_ST`, and reads back duty
-      3 over UART. Cuts: no gamma/multi-fade ranges, fade stop semantics,
-      sleep behavior, or high-level driver API shim yet
+      3 over UART. Cuts: no gamma/multi-fade ranges, sleep behavior, or
+      high-level driver API shim yet
+- [x] ESP32-S3 core slice 31 — LEDC fade-stop fixed-duty abort
+      (landed 2026-06-13): the fixed-duty update path now explicitly
+      aborts any active single-range fade, matching the register writes
+      used by ESP-IDF's `ledc_fade_stop()` after it snapshots the
+      current duty. Proven by hand-assembled firmware that starts a
+      longer fade, waits until `DUTY_R` has partially advanced, writes
+      that raw duty back through `DUTY`, sends a zero-param
+      `DUTY_START`, and verifies the duty stays pinned instead of
+      drifting to the original fade target. Cuts: no blocking
+      `LEDC_FADE_WAIT_DONE` driver shim or gamma/multi-fade stop path yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -330,6 +330,53 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([1, 3, LEDC_DUTY_CHNG_END_CH0]);
   });
 
+  it('stops an active LEDC fade with an ESP-IDF-style fixed duty update', () => {
+    const LEDC_FADE_UP_SIX_STEPS = LEDC_DUTY_START | LEDC_DUTY_INC | (6 << 20) | (2 << 10) | 1;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [LEDC, UART, LEDC_CLK_EN, LEDC_TIMER0_3BIT_DIV1, 1 << 4, LEDC_FADE_UP_SIX_STEPS, LEDC_DUTY_START],
+      [
+        L32R(2, 0), // LEDC
+        L32R(3, 1), // UART
+        L32R(4, 2),
+        S32I(4, 2, 0xd0), // CONF.CLK_EN
+        L32R(4, 3),
+        S32I(4, 2, 0xa0), // TIMER0: 3-bit resolution, divider=1.0
+        L32R(4, 4),
+        S32I(4, 2, 0x08), // CH0 starts at duty 1
+        L32R(4, 5),
+        S32I(4, 2, 0x0c), // start a long hardware fade toward duty 7
+
+        MOVI(7, 70),
+        ADDI(7, 7, -1),
+        BNEZ(7, BR(-2)),
+        L32I(5, 2, 0x10),
+        SRLI(6, 5, 4),
+        S32I(6, 3, 0), // partial duty, after fade has moved
+
+        S32I(5, 2, 0x08), // ledc_fade_stop snapshots current raw DUTY_R
+        L32R(4, 6),
+        S32I(4, 2, 0x0c), // fixed update with zero fade params aborts the fade
+
+        MOVI(7, 220),
+        ADDI(7, 7, -1),
+        BNEZ(7, BR(-2)),
+        L32I(5, 2, 0x10),
+        SRLI(5, 5, 4),
+        S32I(5, 3, 0), // final duty must stay pinned at the snapshot
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(700);
+    const output = [...c.drainUart()];
+
+    expect(output).toHaveLength(2);
+    expect(output[0]).toBeGreaterThan(1);
+    expect(output[0]).toBeLessThan(7);
+    expect(output[1]).toBe(output[0]);
+  });
+
   it('routes LEDC duty-change interrupts through the interrupt matrix', () => {
     const SCRATCH = ESP32S3_DRAM_BASE + 0x900;
     const INTMTX = 0x600c2000;
