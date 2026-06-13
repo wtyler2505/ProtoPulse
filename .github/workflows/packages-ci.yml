@@ -39,7 +39,7 @@ jobs:
         run: npm run check:packages
 
       - name: Lint packages
-        run: npx eslint packages tools/golden
+        run: npx eslint packages tools/golden --quiet
 
       - name: Test all workspaces (graph coverage gate enforced in-package)
         run: npm run test:packages

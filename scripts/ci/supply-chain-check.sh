@@ -48,12 +48,19 @@ fi
 
 # ── npm audit (REQUIRED, shipped surface only) ───────────────────────────────
 echo
-echo "[supply-chain] npm audit (--omit=dev --audit-level=high)"
-if ! npm audit --omit=dev --audit-level=high 2>&1 | tee /tmp/npm-audit.log; then
-    echo "  ✗ npm audit reported high/critical advisories — BLOCKING per R4 retro Wave 7" >&2
+echo "[supply-chain] npm audit (--omit=dev --audit-level=high + policy)"
+npm_audit_json="$(mktemp)"
+npm_audit_status=0
+npm audit --omit=dev --audit-level=high --json >"$npm_audit_json" || npm_audit_status=$?
+if ! node scripts/ci/check-npm-audit-policy.mjs "$npm_audit_json" scripts/ci/npm-audit-allowlist.json; then
+    echo "  ✗ npm audit reported unapproved high/critical advisories — BLOCKING per R4 retro Wave 7" >&2
     exit 1
 fi
-echo "  ✓ npm audit clean (high+critical only)"
+if [[ "$npm_audit_status" -ne 0 ]]; then
+    echo "  ✓ npm audit high+critical findings are explicitly allowlisted no-fix advisories"
+else
+    echo "  ✓ npm audit clean (high+critical only)"
+fi
 
 # ── CycloneDX SBOM generation (REQUIRED — R4 retro Wave 7) ───────────────────
 echo
@@ -65,16 +72,20 @@ if ! command -v cargo-cyclonedx >/dev/null 2>&1; then
     echo "ERROR: cargo-cyclonedx not installed. Run: cargo install --locked cargo-cyclonedx" >&2
     exit 1
 fi
-(cd src-tauri && cargo cyclonedx --format json) >/dev/null 2>&1 || {
+rust_sbom_generated="protopulse-rust.json"
+rust_sbom_artifact="protopulse-rust.cdx.json"
+rm -f "src-tauri/$rust_sbom_generated" "src-tauri/$rust_sbom_artifact"
+(cd src-tauri && cargo cyclonedx --format json --override-filename protopulse-rust) >/dev/null 2>&1 || {
     echo "ERROR: cargo-cyclonedx generation failed" >&2
     exit 1
 }
-# cargo-cyclonedx writes bom.json adjacent to Cargo.toml; copy to artifacts dir
-if [[ -f src-tauri/bom.json ]]; then
-    cp src-tauri/bom.json artifacts/sbom/protopulse-rust.cdx.json
+# cargo-cyclonedx writes adjacent to Cargo.toml; copy to artifacts dir.
+if [[ -f "src-tauri/$rust_sbom_generated" ]]; then
+    cp "src-tauri/$rust_sbom_generated" "artifacts/sbom/$rust_sbom_artifact"
+    rm -f "src-tauri/$rust_sbom_generated"
     echo "  ✓ Rust SBOM: artifacts/sbom/protopulse-rust.cdx.json"
 else
-    echo "ERROR: cargo-cyclonedx did not produce bom.json" >&2
+    echo "ERROR: cargo-cyclonedx did not produce $rust_sbom_generated" >&2
     exit 1
 fi
 

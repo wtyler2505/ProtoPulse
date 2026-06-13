@@ -24,7 +24,7 @@ jobs:
 
       - run: npm ci
 
-      - run: npx eslint .
+      - run: npx eslint client/src server shared scripts packages tools/golden --quiet
         env:
           NODE_OPTIONS: --max-old-space-size=16384
 

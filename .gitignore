@@ -32,6 +32,10 @@ FileScopeMCP-tree.json
 # fetched per-target at CI build time. Not committed to repo.
 src-tauri/binaries/arduino-cli-*
 packages/*/coverage/
+coverage/
+
+# CI-generated artifacts (uploaded by workflows, not source)
+artifacts/
 
 # Playwright MCP browser-verification artifacts (snapshots, console logs)
 .playwright-mcp/

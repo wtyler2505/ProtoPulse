@@ -1,0 +1,66 @@
+{
+  "allow": [
+    {
+      "name": "@genkit-ai/ai",
+      "maxSeverity": "high",
+      "requireNoFixAvailable": true,
+      "allowedVia": ["@genkit-ai/core", "uuid"],
+      "until": "2026-07-31",
+      "reason": "Transitive Genkit chain blocked by OpenTelemetry/uuid advisories with no npm fix available after npm audit fix on 2026-06-13."
+    },
+    {
+      "name": "@genkit-ai/core",
+      "maxSeverity": "high",
+      "requireNoFixAvailable": true,
+      "allowedVia": ["@genkit-ai/firebase", "@opentelemetry/sdk-node"],
+      "until": "2026-07-31",
+      "reason": "Transitive Genkit chain blocked by OpenTelemetry/uuid advisories with no npm fix available after npm audit fix on 2026-06-13."
+    },
+    {
+      "name": "@genkit-ai/firebase",
+      "maxSeverity": "high",
+      "requireNoFixAvailable": true,
+      "allowedVia": ["@genkit-ai/google-cloud", "@google-cloud/firestore", "firebase-admin", "genkit"],
+      "until": "2026-07-31",
+      "reason": "Transitive Genkit chain blocked by OpenTelemetry/uuid advisories with no npm fix available after npm audit fix on 2026-06-13."
+    },
+    {
+      "name": "@genkit-ai/google-cloud",
+      "maxSeverity": "high",
+      "requireNoFixAvailable": true,
+      "allowedVia": [
+        "@google-cloud/logging-winston",
+        "@google-cloud/opentelemetry-cloud-monitoring-exporter",
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/sdk-node",
+        "genkit"
+      ],
+      "until": "2026-07-31",
+      "reason": "Transitive Genkit chain blocked by OpenTelemetry/uuid advisories with no npm fix available after npm audit fix on 2026-06-13."
+    },
+    {
+      "name": "@opentelemetry/auto-instrumentations-node",
+      "maxSeverity": "high",
+      "requireNoFixAvailable": true,
+      "allowedVia": ["@opentelemetry/sdk-node", "GHSA-q7rr-3cgh-j5r3"],
+      "until": "2026-07-31",
+      "reason": "GHSA-q7rr-3cgh-j5r3 remains in the Genkit dependency chain with no npm fix available after npm audit fix on 2026-06-13."
+    },
+    {
+      "name": "@opentelemetry/sdk-node",
+      "maxSeverity": "high",
+      "requireNoFixAvailable": true,
+      "allowedVia": ["GHSA-q7rr-3cgh-j5r3"],
+      "until": "2026-07-31",
+      "reason": "GHSA-q7rr-3cgh-j5r3 reports no npm fix available after npm audit fix on 2026-06-13."
+    },
+    {
+      "name": "genkit",
+      "maxSeverity": "high",
+      "requireNoFixAvailable": true,
+      "allowedVia": ["@genkit-ai/ai", "@genkit-ai/core", "uuid"],
+      "until": "2026-07-31",
+      "reason": "Direct dependency remains affected by transitive OpenTelemetry/uuid advisories with no npm fix available after npm audit fix on 2026-06-13."
+    }
+  ]
+}
