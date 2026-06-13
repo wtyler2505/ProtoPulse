@@ -143,12 +143,13 @@ import type { XtensaBus } from './xtensa.js';
  * modeled); SUPER_WDT, sleep pause, and XTAL clock sources are out
  * of scope. The APB_SARADC digital-controller register substrate is
  * modeled (slice 15): CTRL/CTRL2, packed pattern tables, DATA_STATUS,
- * DMA_CONF storage, and ADC1/ADC2 done interrupts; timer/start
- * triggers complete instantly and clearing DONE while timer mode is
- * enabled advances the pattern stream. APB_SARADC's ADC_DONE status
- * routes through the core-0 interrupt matrix source at +0x104 (slice
- * 20), so digital-controller firmware can sleep in a level-1 handler
- * instead of polling. GDMA RX channel descriptors
+ * DMA_CONF storage, ADC1/ADC2 done interrupts, and the two ESP-IDF
+ * digital monitor threshold comparators; timer/start triggers complete
+ * instantly and clearing DONE while timer mode is enabled advances the
+ * pattern stream. APB_SARADC's ADC_DONE and threshold status route
+ * through the core-0 interrupt matrix source at +0x104 (slice 20/21),
+ * so digital-controller firmware can sleep in a level-1 handler instead
+ * of polling. GDMA RX channel descriptors
  * are modeled for ADC continuous mode (slice 16): a channel whose
  * IN_PERI_SEL is ADC_DAC consumes APB_SARADC result words into the
  * real 12-byte DMA descriptor format in SRAM, updates descriptor
@@ -545,7 +546,18 @@ const APB_SARADC_SAR2_PATT_P_CLEAR = 1 << 24;
 const APB_SARADC_SAR1_PATT_P_CLEAR = 1 << 23;
 const APB_SARADC_INT_ADC1_DONE = 1 << 31;
 const APB_SARADC_INT_ADC2_DONE = 1 << 30;
+const APB_SARADC_INT_THRES0_HIGH = 1 << 29;
+const APB_SARADC_INT_THRES1_HIGH = 1 << 28;
+const APB_SARADC_INT_THRES0_LOW = 1 << 27;
+const APB_SARADC_INT_THRES1_LOW = 1 << 26;
 const APB_SARADC_DMA_RESET_FSM = 1 << 30;
+const APB_SARADC_THRES_VALUE_MASK = 0x1fff;
+const APB_SARADC_THRES_HIGH_SHIFT = 5;
+const APB_SARADC_THRES_LOW_SHIFT = 18;
+const APB_SARADC_THRES_CHANNEL_MASK = 0x1f;
+const APB_SARADC_THRES0_EN = 1 << 31;
+const APB_SARADC_THRES1_EN = 1 << 30;
+const APB_SARADC_THRES_ALL_EN = 1 << 27;
 
 // GDMA RX channel substrate for ADC continuous frames (gdma_reg.h).
 // This first slice models the in-link path IDF's ADC continuous driver
@@ -1124,8 +1136,36 @@ export class Esp32s3Core implements McuCore {
     const word = (data & 0xfff) | ((muxChannel & 0xf) << 13) | ((unit - 1) << 17);
     this.apbSaradcDataStatus[unit - 1] = word >>> 0;
     this.gdmaPushAdcWord(word >>> 0);
+    this.apbSaradcCheckThresholds(unit, muxChannel, data);
     this.apbSaradcIntRaw |= unit === 1 ? APB_SARADC_INT_ADC1_DONE : APB_SARADC_INT_ADC2_DONE;
     this.recomputeIrq();
+  }
+
+  private apbSaradcCheckThresholds(unit: 1 | 2, muxChannel: number, data: number): void {
+    const thresCtrl = this.apbSaradcThres[2] ?? 0;
+    const sampleChannel = (((unit - 1) << 3) | (muxChannel & 0x7)) & APB_SARADC_THRES_CHANNEL_MASK;
+    const monitors = [
+      {
+        ctrl: this.apbSaradcThres[0] ?? 0,
+        enabled: (thresCtrl & (APB_SARADC_THRES0_EN | APB_SARADC_THRES_ALL_EN)) !== 0,
+        highInt: APB_SARADC_INT_THRES0_HIGH,
+        lowInt: APB_SARADC_INT_THRES0_LOW,
+      },
+      {
+        ctrl: this.apbSaradcThres[1] ?? 0,
+        enabled: (thresCtrl & (APB_SARADC_THRES1_EN | APB_SARADC_THRES_ALL_EN)) !== 0,
+        highInt: APB_SARADC_INT_THRES1_HIGH,
+        lowInt: APB_SARADC_INT_THRES1_LOW,
+      },
+    ];
+    for (const monitor of monitors) {
+      if (!monitor.enabled) continue;
+      if ((monitor.ctrl & APB_SARADC_THRES_CHANNEL_MASK) !== sampleChannel) continue;
+      const high = (monitor.ctrl >>> APB_SARADC_THRES_HIGH_SHIFT) & APB_SARADC_THRES_VALUE_MASK;
+      const low = (monitor.ctrl >>> APB_SARADC_THRES_LOW_SHIFT) & APB_SARADC_THRES_VALUE_MASK;
+      if (data > high) this.apbSaradcIntRaw |= monitor.highInt;
+      if (data < low) this.apbSaradcIntRaw |= monitor.lowInt;
+    }
   }
 
   private apbSaradcRunDigitalConversion(): void {

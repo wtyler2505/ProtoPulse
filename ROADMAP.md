@@ -466,7 +466,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       APB_ADC to CPU line 0, enables ADC1_DONE, starts a digital ADC1
       conversion, vectors into a handler, clears INT_CLR, and returns
       with DATA_STATUS intact. Cuts: core-0 only; threshold interrupt
-      sources still wait on threshold comparator modeling
+      delivery waits on threshold comparator modeling in slice 21
+- [x] ESP32-S3 core slice 21 — APB_SARADC threshold comparators
+      (landed 2026-06-13): the two ESP-IDF digital monitor threshold
+      comparators now consume THRES0/1_CTRL and THRES_CTRL, use the
+      adc_ll channel encoding `adc_unit << 3 | channel & 0x7`, and
+      latch THRES0/1_HIGH or THRES0/1_LOW raw bits when ADC digital
+      samples cross `raw_result > high` or `raw_result < low`.
+      Proven by hand-assembled firmware that routes a monitor-0 high
+      crossing through APB_ADC_INT_MAP into a level-1 handler, clears
+      THRES0_HIGH, preserves DATA_STATUS, and separately latches/
+      clears a monitor-1 low crossing. Cuts: instant compare at sample
+      time; monitor 0/1 only; no sleep/wake integration yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

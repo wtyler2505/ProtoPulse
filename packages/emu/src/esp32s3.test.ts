@@ -1043,10 +1043,16 @@ describe('Esp32s3Core — APB_SARADC digital controller (slice 15)', () => {
   const INTMTX = 0x600c2000;
   const SCRATCH = ESP32S3_DRAM_BASE + 0x1100;
   const INT_ADC1_DONE = 0x80000000;
+  const INT_THRES0_HIGH = 0x20000000;
+  const INT_THRES1_LOW = 0x04000000;
   const CTRL_ADC1_LEN1 = 1 << 25; // data_sar_sel, single ADC1, pattern length 1
   const CTRL_ADC1_START = CTRL_ADC1_LEN1 | 2;
   const CTRL_ADC1_LEN2 = (1 << 25) | (1 << 15); // sar1_patt_len = 1 -> length 2
   const CTRL2_TIMER_ENABLE = (1 << 24) | (1 << 11);
+  const THRES0_CTRL_CH4_HIGH_0X900_LOW_0 = (0x900 << 5) | 4;
+  const THRES1_CTRL_CH4_HIGH_DISABLED_LOW_0X400 = ((0x400 << 18) | (0x1fff << 5) | 4) >>> 0;
+  const THRES0_EN = 0x80000000;
+  const THRES1_EN = 0x40000000;
   const MASK_12BIT = 0xfff;
   const SAR1_PATTERN_CH4 = ((4 << 2) << 18) >>> 0;
   const SAR1_PATTERN_CH2_CH5 = (((2 << 2) << 18) | ((5 << 2) << 12)) >>> 0;
@@ -1192,6 +1198,144 @@ describe('Esp32s3Core — APB_SARADC digital controller (slice 15)', () => {
     c.setAdcSampler((channel) => (channel === 4 ? 1.65 : 0));
     c.step(400);
     expect([...c.drainUart()]).toEqual([1, 0, 0x00, 0x08]);
+    expect(c.drainAdcReads().map((r) => r.channel)).toEqual([4]);
+  });
+
+  it('routes APB_SARADC threshold-monitor high crossings through the interrupt matrix', () => {
+    // Source-checked against esp-idf v5.2.7:
+    //   adc_types.h       — HIGH means raw_result > threshold
+    //   adc_ll.h          — monitor channel = (adc_unit << 3) | (channel & 0x7)
+    //   apb_saradc_reg.h — THRES0_HIGH_INT lives at bit 29; THRES0_EN at THRES_CTRL bit 31
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        UART,
+        APB_SARADC,
+        INTMTX,
+        SCRATCH,
+        ESP32S3_IRAM_BASE,
+        SAR1_PATTERN_CH4,
+        CTRL_ADC1_LEN1,
+        INT_THRES0_HIGH,
+        THRES0_CTRL_CH4_HIGH_0X900_LOW_0,
+        THRES0_EN,
+        CTRL_ADC1_START,
+        MASK_12BIT,
+      ],
+      [
+        L32R(13, 3), // scratch
+        MOVI(14, 0),
+        S32I(14, 13, 0), // ISR counter = 0
+        L32R(14, 4),
+        WSR(14, SR.VECBASE),
+
+        L32R(3, 1), // APB_SARADC
+        L32R(4, 5),
+        S32I(4, 3, 0x18), // SAR1 pattern item 0 = channel 4
+        L32R(4, 6),
+        S32I(4, 3, 0x00), // ADC1, START low
+        L32R(4, 8),
+        S32I(4, 3, 0x44), // THRES0: ADC1 channel 4, high threshold 0x900
+        L32R(4, 9),
+        S32I(4, 3, 0x58), // enable threshold monitor 0
+        L32R(4, 7),
+        S32I(4, 3, 0x5c), // INT_ENA = THRES0_HIGH
+
+        L32R(15, 2), // interrupt matrix
+        MOVI(4, 0),
+        S32I(4, 15, 0x104), // APB_ADC source -> CPU line 0
+        MOVI(4, 1),
+        WSR(4, SR.INTENABLE),
+        RSIL(12, 0),
+
+        L32R(4, 10),
+        S32I(4, 3, 0x00), // START edge triggers threshold monitor
+        MOVI(11, 1),
+        L32I(4, 13, 0),
+        BNE(4, 11, BR(-2)),
+
+        L32R(2, 0), // UART
+        S32I(4, 2, 0x00), // counter = 1
+        L32I(5, 3, 0x64), // INT_ST after the ISR clear
+        S32I(5, 2, 0x00),
+        L32I(5, 3, 0x40), // ADC1 DATA_STATUS still holds the sample
+        L32R(6, 11),
+        AND(5, 5, 6),
+        S32I(5, 2, 0x00),
+        SRLI(5, 5, 8),
+        S32I(5, 2, 0x00),
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 3),
+        S32I(3, 2, 8),
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0),
+        L32R(3, 1),
+        L32R(4, 7),
+        S32I(4, 3, 0x68), // INT_CLR = THRES0_HIGH
+        L32I(3, 2, 8),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.setAdcSampler((channel) => (channel === 4 ? 2.5 : 0));
+    c.step(420);
+    expect([...c.drainUart()]).toEqual([1, 0, 0x1e, 0x0c]);
+    expect(c.drainAdcReads().map((r) => r.channel)).toEqual([4]);
+  });
+
+  it('latches and clears APB_SARADC threshold-monitor low crossings', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        UART,
+        APB_SARADC,
+        SAR1_PATTERN_CH4,
+        CTRL_ADC1_LEN1,
+        THRES1_CTRL_CH4_HIGH_DISABLED_LOW_0X400,
+        THRES1_EN,
+        INT_THRES1_LOW,
+        CTRL_ADC1_START,
+      ],
+      [
+        L32R(2, 0), // UART
+        L32R(3, 1), // APB_SARADC
+        L32R(4, 2),
+        S32I(4, 3, 0x18), // SAR1 pattern item 0 = channel 4
+        L32R(4, 3),
+        S32I(4, 3, 0x00), // ADC1, START low
+        L32R(4, 4),
+        S32I(4, 3, 0x48), // THRES1: ADC1 channel 4, low threshold 0x400
+        L32R(4, 5),
+        S32I(4, 3, 0x58), // enable threshold monitor 1
+        L32R(4, 6),
+        S32I(4, 3, 0x5c), // INT_ENA = THRES1_LOW
+        L32R(4, 7),
+        S32I(4, 3, 0x00), // START edge triggers threshold monitor
+        L32I(5, 3, 0x64), // INT_ST
+        SRLI(5, 5, 13),
+        SRLI(5, 5, 13),
+        MOVI(6, 1),
+        AND(5, 5, 6),
+        S32I(5, 2, 0x00),
+        L32R(4, 6),
+        S32I(4, 3, 0x68), // clear THRES1_LOW
+        L32I(5, 3, 0x64),
+        SRLI(5, 5, 13),
+        SRLI(5, 5, 13),
+        AND(5, 5, 6),
+        S32I(5, 2, 0x00),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.setAdcSampler((channel) => (channel === 4 ? 0.5 : 3.3));
+    c.step(260);
+    expect([...c.drainUart()]).toEqual([1, 0]);
     expect(c.drainAdcReads().map((r) => r.channel)).toEqual([4]);
   });
 });
