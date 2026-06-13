@@ -10,6 +10,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   lint:
     name: Lint
@@ -74,9 +77,9 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
         env:
-          DATABASE_URL: "postgresql://localhost:5432/protopulse_ci"
-          API_KEY_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
-          NODE_ENV: "test"
+          DATABASE_URL: 'postgresql://localhost:5432/protopulse_ci'
+          API_KEY_ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000000'
+          NODE_ENV: 'test'
 
       - name: Coverage gate
         run: npx tsx scripts/check-coverage.ts --coverage-dir=coverage --lines=60 --branches=50 --functions=55 --statements=60

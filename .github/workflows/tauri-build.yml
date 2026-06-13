@@ -10,14 +10,17 @@ name: Tauri build matrix
 on:
   push:
     branches: [main]
-    tags: ["v*"]
+    tags: ['v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: write   # tauri-action creates a draft release on tag pushes
-  id-token: write   # required for GitHub artifact attestations (Phase 5.2)
+  contents: write # tauri-action creates a draft release on tag pushes
+  id-token: write # required for GitHub artifact attestations (Phase 5.2)
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-tauri:
@@ -25,16 +28,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest,    target: x86_64-unknown-linux-gnu,    label: linux-x64,   bundles: "deb,appimage" }
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, label: linux-x64, bundles: 'deb,appimage' }
           # R5 Deferral #1: Linux ARM64 expansion. ubuntu-24.04-arm is a GA
           # GitHub-hosted runner (verified https://docs.github.com/en/actions/
           # reference/runners/github-hosted-runners 2026-05-12). Sidecar
           # binary SHA256 reserved in scripts/tauri/prepare-arduino-sidecar.ts
           # since Wave 8.
-          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu,   label: linux-arm64, bundles: "deb,appimage" }
-          - { os: macos-latest,     target: x86_64-apple-darwin,         label: macos-x64,   bundles: "app,dmg" }
-          - { os: macos-14,         target: aarch64-apple-darwin,        label: macos-arm64, bundles: "app,dmg" }
-          - { os: windows-latest,   target: x86_64-pc-windows-msvc,      label: windows-x64, bundles: "msi,nsis" }
+          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, label: linux-arm64, bundles: 'deb,appimage' }
+          - { os: macos-latest, target: x86_64-apple-darwin, label: macos-x64, bundles: 'app,dmg' }
+          - { os: macos-14, target: aarch64-apple-darwin, label: macos-arm64, bundles: 'app,dmg' }
+          - { os: windows-2025-vs2026, target: x86_64-pc-windows-msvc, label: windows-x64, bundles: 'msi,nsis' }
     runs-on: ${{ matrix.os }}
     name: build (${{ matrix.label }})
 
@@ -65,7 +68,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: "1.93.0"
+          toolchain: '1.93.0'
           targets: ${{ matrix.target }}
           components: rustfmt, clippy
 
@@ -81,8 +84,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Install npm dependencies
         run: npm ci
@@ -152,7 +155,7 @@ jobs:
         with:
           name: sbom-${{ matrix.label }}
           path: artifacts/sbom/
-          if-no-files-found: error   # R4 retro C8+C21: hard-fail if SBOM step produced nothing.
+          if-no-files-found: error # R4 retro C8+C21: hard-fail if SBOM step produced nothing.
           retention-days: 14
 
       # R5 #5 follow-up (per docs/decisions/2026-05-12-adr-slsa-provenance.md
@@ -169,7 +172,7 @@ jobs:
             src-tauri/target/release/bundle/**/*.deb
             src-tauri/target/release/bundle/**/*.AppImage
           sbom-path: artifacts/sbom/protopulse-rust.cdx.json
-        continue-on-error: true   # SBOM attestation is a hardening enhancement; fail-open until first tagged release validates the wiring
+        continue-on-error: true # SBOM attestation is a hardening enhancement; fail-open until first tagged release validates the wiring
 
       - name: Packaged smoke (Phase 5 closeout)
         if: matrix.label == 'linux-x64'
@@ -180,7 +183,7 @@ jobs:
         if: ${{ !startsWith(matrix.os, 'ubuntu') }}
         run: bash scripts/ci/verify-signed-artifacts.sh --dry-run
         shell: bash
-        continue-on-error: true   # signing not yet activated; flip when Tyler-owned cert lands
+        continue-on-error: true # signing not yet activated; flip when Tyler-owned cert lands
 
       - name: Upload dev-preview artifacts
         uses: actions/upload-artifact@v4
@@ -214,4 +217,4 @@ jobs:
             src-tauri/target/release/bundle/**/*.msi
             src-tauri/target/release/bundle/**/*-setup.exe
             src-tauri/target/release/bundle/**/*.dmg
-        continue-on-error: false   # SLSA attestation is REQUIRED for any tagged release
+        continue-on-error: false # SLSA attestation is REQUIRED for any tagged release
