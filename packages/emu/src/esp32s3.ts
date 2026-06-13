@@ -211,10 +211,11 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * RTC_ULP_TRIG_EN is armed; the ULP sleep timer also schedules that
  * synthetic WAKE from ULP_CP_TIMER_1.SLP_CYCLE while enabled, and
  * LOW_POWER_ST exposes the main idle/sleep + ready-for-wakeup bits ULP
- * WAKE examples poll. COCPU_SW_INT_TRIGGER wakes RTC sleep when
- * RTC_COCPU_TRIG_EN is armed. SENS_SAR_COCPU_STATE.DBG_TRIGGER models
- * a synthetic COCPU trap producer, latching RTC_CNTL_COCPU_TRAP_INT and
- * waking RTC sleep when RTC_COCPU_TRAP_TRIG_EN is armed. Touch scans
+ * WAKE examples poll. COCPU_DONE/SHUT_RESET_EN now reflect through
+ * LOW_POWER_ST's COCPU done/sleep bits. COCPU_SW_INT_TRIGGER wakes RTC
+ * sleep when RTC_COCPU_TRIG_EN is armed. SENS_SAR_COCPU_STATE.DBG_TRIGGER
+ * models a synthetic COCPU trap producer, latching RTC_CNTL_COCPU_TRAP_INT
+ * and waking RTC sleep when RTC_COCPU_TRAP_TRIG_EN is armed. Touch scans
  * with a nonzero timeout budget below the synthetic measurement cost latch
  * RTC_CNTL_TOUCH_TIMEOUT_INT. Touch proximity pads accumulate
  * deterministic approach counts and latch TOUCH_APPROACH_LOOP_DONE when
@@ -578,6 +579,8 @@ const RTC_ULP_CP_START_TOP = 1 << 31;
 const RTC_ULP_CP_FORCE_START_TOP = 1 << 30;
 const RTC_ULP_CP_RESET = 1 << 29;
 const RTC_ULP_CP_MEM_OFFST_CLR = 1 << 22;
+const RTC_COCPU_DONE = 1 << 25;
+const RTC_COCPU_SHUT_RESET_EN = 1 << 22;
 const RTC_COCPU_SW_INT_TRIGGER = 1 << 26;
 const RTC_BROWN_OUT_DET = 1 << 31;
 const RTC_BROWN_OUT_ENA = 1 << 30;
@@ -719,6 +722,8 @@ const RTC_INT_ENA_W1TC = 0x13c;
 const RTC_MAIN_STATE_IN_IDLE = 1 << 27;
 const RTC_MAIN_STATE_IN_SLP = 1 << 26;
 const RTC_RDY_FOR_WAKEUP = 1 << 19;
+const RTC_COCPU_STATE_DONE = 1 << 16;
+const RTC_COCPU_STATE_SLP = 1 << 15;
 const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
 const RTC_ULP_TRIG_EN = 1 << 9;
 const RTC_COCPU_TRIG_EN = 1 << 11;
@@ -2485,8 +2490,11 @@ export class Esp32s3Core implements McuCore {
   }
 
   private rtcLowPowerStatus(): number {
-    if ((this.rtcState0 & RTC_SLEEP_EN) !== 0) return RTC_MAIN_STATE_IN_SLP | RTC_RDY_FOR_WAKEUP;
-    return RTC_MAIN_STATE_IN_IDLE;
+    let v = (this.rtcState0 & RTC_SLEEP_EN) !== 0 ? RTC_MAIN_STATE_IN_SLP | RTC_RDY_FOR_WAKEUP : RTC_MAIN_STATE_IN_IDLE;
+    if ((this.rtcCocpuCtrl & (RTC_COCPU_DONE | RTC_COCPU_SHUT_RESET_EN)) === (RTC_COCPU_DONE | RTC_COCPU_SHUT_RESET_EN)) {
+      v |= RTC_COCPU_STATE_DONE | RTC_COCPU_STATE_SLP;
+    }
+    return v >>> 0;
   }
 
   private rtcWakeupEnabledSources(): number {

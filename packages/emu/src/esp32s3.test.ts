@@ -3435,6 +3435,39 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([1, 0x81]);
   });
 
+  it('RTC low-power status reports COCPU done and sleep after ULP halt control writes', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // ulp_riscv_halt() sets RTC_CNTL_COCPU_CTRL.COCPU_DONE and
+    // COCPU_SHUT_RESET_EN; rtc_cntl_reg.h exposes LOW_POWER_ST
+    // COCPU_STATE_DONE/SLP as read-only status bits.
+    const cocpuDoneAndReset = (1 << 25) | (1 << 22);
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, UART, cocpuDoneAndReset],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(6, 1), // a6 = UART
+        L32R(4, 2),
+        S32I(4, 2, 0x104), // COCPU_CTRL.DONE | SHUT_RESET_EN
+        L32I(5, 2, 0xd0), // LOW_POWER_ST
+        SRAI(5, 5, 15),
+        MOVI(7, 3),
+        AND(5, 5, 7),
+        S32I(5, 6, 0), // tx 3: COCPU_STATE_DONE | COCPU_STATE_SLP
+        MOVI(4, 0),
+        S32I(4, 2, 0x104), // rescue/reset path clears the status-driving bits
+        L32I(5, 2, 0xd0),
+        SRAI(5, 5, 15),
+        AND(5, 5, 7),
+        S32I(5, 6, 0), // tx 0: COCPU status bits clear
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(120);
+    expect([...c.drainUart()]).toEqual([3, 0]);
+  });
+
   it('COCPU software trigger wakes WAITI through the RTC core interrupt matrix', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // rtc_cntl_reg.h has COCPU_CTRL +0x104, COCPU_SW_INT_TRIGGER

@@ -958,6 +958,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       after entering RTC sleep and reports the expected idle/sleep/
       ready bit pattern over UART. Cuts: no full RTC power-state
       sequencer, wait-for-XTAL/PLL/8M substates, or COCPU state bits yet
+- [x] ESP32-S3 core slice 61 — COCPU_DONE low-power status bits
+      (landed 2026-06-13): RTC_CNTL_COCPU_CTRL writes that set
+      COCPU_DONE plus COCPU_SHUT_RESET_EN now reflect through
+      RTC_CNTL_LOW_POWER_ST as COCPU_STATE_DONE and COCPU_STATE_SLP,
+      matching the status side of ESP-IDF's ULP RISC-V halt/reset
+      helpers. Proven by hand-assembled firmware that writes the halt
+      control bits, reads LOW_POWER_ST, reports the done/sleep bitmap,
+      clears the bits, and verifies the status clears. Cuts: no real
+      ULP RISC-V instruction execution, monitor state, COCPU start/
+      switch timing, or debug-PC/EOI behavior
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
