@@ -617,6 +617,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       RX, DMA/direct-memory mode, carrier modulation, threshold refill
       queue shim, or repeated threshold relatching after firmware clears
       the raw bit mid-transmission yet
+- [x] ESP32-S3 core slice 34 — RMT RX GPIO capture substrate
+      (landed 2026-06-13): RX channels now expose the hardware channel
+      4..7 config windows (`CH4CONF0/1` etc.), GPIO input-matrix routing
+      for `RMT_SIG_IN0..3`, `CH4..7DATA` APB FIFO reads,
+      `CHm_RX_LIM`, RX threshold events, and idle-threshold completion
+      into RX_END. Proven by hand-assembled firmware that routes host-
+      driven IO4 into RMT RX channel 0, captures a high/low symbol,
+      reads RX_END/RX_THR raw bits, and reads duration/level fields back
+      over UART. Cuts: no RMT DMA/direct-memory mode, carrier
+      demodulation, partial-buffer wrapping, driver ringbuffer callback
+      shim, or repeated threshold relatching after raw clear yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

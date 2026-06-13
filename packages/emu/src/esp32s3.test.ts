@@ -16,6 +16,7 @@ import {
   AND,
   assembleXtensa,
   BEQZ,
+  BEQZ_TO,
   BEQZ_N_TO,
   BLT,
   BNE,
@@ -74,6 +75,8 @@ const UART = ESP32S3_UART0_BASE;
 const LEDC = 0x60019000;
 const RMT = 0x60016000;
 const GPIO_FUNC5_OUT_SEL_CFG = GPIO + 0x568;
+const GPIO_FUNC81_IN_SEL_CFG = GPIO + 0x154 + 81 * 4;
+const GPIO_SIG_IN_SEL = 1 << 7;
 const LEDC_CLK_EN = 0x80000000;
 const LEDC_APB_CLK_SEL_XTAL = 3;
 const LEDC_TIMER0_2BIT_DIV1 = (256 << 4) | 2;
@@ -90,10 +93,18 @@ const RMT_TX_START = 1;
 const RMT_TX_CONTI_MODE = 1 << 3;
 const RMT_IDLE_OUT_EN = 1 << 6;
 const RMT_CH0_TX_LIM = 0xa0;
+const RMT_CH4_RX_LIM = 0xb0;
 const RMT_SIG_OUT0 = 81;
+const RMT_RX_EN = 1;
+const RMT_MEM_WR_RST = 1 << 1;
+const RMT_APB_MEM_RST = 1 << 2;
+const RMT_MEM_OWNER_RX = 1 << 3;
+const RMT_RX_CONF_UPDATE = 1 << 15;
 const RMT_CH0_TX_END = 1;
 const RMT_CH0_TX_THR_EVENT = 1 << 8;
 const RMT_CH0_TX_LOOP = 1 << 12;
+const RMT_CH4_RX_END = 1 << 16;
+const RMT_CH4_RX_THR_EVENT = 1 << 24;
 
 function core(image: Uint8Array): Esp32s3Core {
   const c = new Esp32s3Core();
@@ -334,6 +345,94 @@ describe('Esp32s3Core', () => {
 
     expect(io5.map((e) => e.level)).toEqual([1, 0, 1, 0]);
     expect([...c.drainUart()]).toEqual([RMT_CH0_TX_END, (RMT_CH0_TX_THR_EVENT | RMT_CH0_TX_LOOP) >> 8]);
+  });
+
+  it('captures host-driven GPIO edges with RMT RX channel 0', () => {
+    const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB;
+    const rxConf0 = 1 | (4 << 8) | (1 << 24); // divider 1, idle after 4 RMT ticks, one memory block
+    const rxConf1Reset = RMT_MEM_OWNER_RX | RMT_MEM_WR_RST | RMT_APB_MEM_RST | RMT_RX_CONF_UPDATE;
+    const rxConf1Start = RMT_MEM_OWNER_RX | RMT_RX_EN | RMT_RX_CONF_UPDATE;
+    const gpioInRoute = 4 | GPIO_SIG_IN_SEL; // IO4 -> RMT_SIG_IN0
+    const intMask = RMT_CH4_RX_END | RMT_CH4_RX_THR_EVENT;
+    const literals = [
+      RMT,
+      GPIO_FUNC81_IN_SEL_CFG,
+      UART,
+      rmtSysConf,
+      rxConf0,
+      gpioInRoute,
+      rxConf1Reset,
+      rxConf1Start,
+      intMask,
+      RMT_CH4_RX_END,
+      0xff,
+      1,
+    ];
+    const code: XtInstr[] = [
+      L32R(2, 0), // RMT
+      L32R(3, 3),
+      S32I(3, 2, 0xc0), // SYS_CONF: clk on, APB source, group divider 1
+      L32R(3, 4),
+      S32I(3, 2, 0x30), // CH4CONF0: RX divider + idle threshold
+      MOVI(3, 1),
+      S32I(3, 2, RMT_CH4_RX_LIM), // threshold after one captured symbol
+      L32R(4, 1),
+      L32R(5, 5),
+      S32I(5, 4, 0x00), // GPIO input matrix: RMT_SIG_IN0 <- IO4
+      L32R(3, 6),
+      S32I(3, 2, 0x34), // reset RX write/APB pointers
+      L32R(3, 8),
+      S32I(3, 2, 0x78), // enable RX_END | RX_THR_EVENT
+      L32R(3, 7),
+      S32I(3, 2, 0x34), // rx_en + conf_update
+    ];
+    const poll = code.length;
+    code.push(
+      L32I(8, 2, 0x70), // INT_RAW
+      L32R(10, 9),
+      AND(9, 8, 10),
+      BEQZ_TO(9, poll),
+      L32R(12, 2), // UART
+      L32R(10, 10), // 0xff
+      SRLI(11, 8, 8),
+      SRLI(11, 11, 8),
+      AND(11, 11, 10),
+      S32I(11, 12, 0x00), // RX_END raw byte
+      SRLI(11, 8, 12),
+      SRLI(11, 11, 12),
+      AND(11, 11, 10),
+      S32I(11, 12, 0x00), // RX_THR raw byte
+      L32I(8, 2, 0x10), // CH4DATA
+      AND(11, 8, 10),
+      S32I(11, 12, 0x00), // duration0 low byte
+      SRLI(11, 8, 15),
+      L32R(10, 11), // 1
+      AND(11, 11, 10),
+      S32I(11, 12, 0x00), // level0
+      L32R(10, 10),
+      SRLI(11, 8, 8),
+      SRLI(11, 11, 8),
+      AND(11, 11, 10),
+      S32I(11, 12, 0x00), // duration1 low byte
+      SRLI(11, 8, 15),
+      SRLI(11, 11, 15),
+      SRLI(11, 11, 1),
+      L32R(10, 11),
+      AND(11, 11, 10),
+      S32I(11, 12, 0x00), // level1
+      J(BR(-1)),
+    );
+    const c = core(assembleXtensa(ESP32S3_IRAM_BASE, literals, code));
+    c.setPin('IO4', 0);
+    c.step(90);
+    c.setPin('IO4', 1);
+    c.step(6);
+    c.setPin('IO4', 0);
+    c.step(9);
+    c.setPin('IO4', 1);
+    c.step(90);
+
+    expect([...c.drainUart()]).toEqual([1, 1, 2, 1, 3, 0]);
   });
 
   it('uses LEDC shared clock source selection for timer speed and readback', () => {

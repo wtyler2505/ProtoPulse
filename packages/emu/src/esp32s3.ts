@@ -171,13 +171,14 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * sample until firmware returns ownership; an emulator-side
  * setAdcContinuousFlushPool(true) knob mirrors ESP-IDF's flush_pool
  * policy by recycling the CPU-owned frame and overwriting old data.
- * RMT channel-0..3 TX now has the first transmit substrate: APB FIFO
- * symbol writes, channel/group dividers for APB/XTAL/RC_FAST clocks,
- * GPIO-matrix output signals 81..84, idle level, TX stop/start, and
- * TX_END INT_RAW/ST/ENA/CLR through the core-0 RMT interrupt map.
- * Cuts: no RMT DMA, RX, carrier, loop mode, threshold events, or direct
- * memory mode yet; no timed GDMA pressure model or driver ringbuffer
- * API yet.
+ * RMT channel-0..3 TX now has APB FIFO symbol writes, channel/group
+ * dividers for APB/XTAL/RC_FAST clocks, GPIO-matrix output signals
+ * 81..84, idle level, TX stop/start/end, TX threshold, and finite loop
+ * interrupts. RMT RX channel 0..3 now captures GPIO input-matrix edges
+ * into CH4..CH7 APB FIFO symbols, honoring RX limit/threshold and idle
+ * completion. Cuts: no RMT DMA, direct memory mode, carrier modulation,
+ * RX partial-buffer wrapping, threshold refill queue shim, or driver
+ * ringbuffer API yet.
  * Still missing: full light/deep sleep register policy — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
@@ -214,7 +215,12 @@ const GPIO_STATUS1 = 0x50; // GPIO32-48
 const GPIO_STATUS1_W1TS = 0x54;
 const GPIO_STATUS1_W1TC = 0x58;
 const GPIO_PIN0 = 0x74; // GPIO_PINn at +4·n: INT_TYPE [9:7], INT_ENA [17:13]
+const GPIO_FUNC0_IN_SEL_CFG = 0x154; // GPIO_FUNCn_IN_SEL_CFG at +4·signal
 const GPIO_FUNC0_OUT_SEL_CFG = 0x554; // GPIO_FUNCn_OUT_SEL_CFG at +4·n
+const GPIO_FUNC_IN_SEL_LAST = GPIO_FUNC0_OUT_SEL_CFG;
+const GPIO_FUNC_IN_SEL_MASK = 0x3f;
+const GPIO_FUNC_IN_INV_SEL = 1 << 6;
+const GPIO_SIG_IN_SEL = 1 << 7;
 const GPIO_FUNC_OUT_SEL_RESET = 0x100;
 const GPIO_FUNC_OUT_SEL_MASK = 0x1ff;
 const GPIO_FUNC_OUT_INV_SEL = 1 << 9;
@@ -314,19 +320,26 @@ const LEDC_DIV_FRAC_BITS = 8;
 const LEDC_DIV_ONE = 1 << LEDC_DIV_FRAC_BITS;
 const LEDC_DATE_RESET = 0x19040200;
 
-// RMT transmit substrate (rmt_reg.h / rmt_ll.h). ESP32-S3 has four TX
-// channels (0..3) whose GPIO matrix output signals are 81..84.
+// RMT substrate (rmt_reg.h / rmt_ll.h). ESP32-S3 has four TX channels
+// (0..3) and four RX channels (hardware 4..7, driver-indexed 0..3).
 const RMT_BASE = 0x60016000;
 const RMT_TX_CHANNELS = 4;
+const RMT_RX_CHANNELS = 4;
 const RMT_CHDATA = 0x00;
+const RMT_CHDATA_STRIDE = 0x04;
 const RMT_CHCONF0 = 0x20;
 const RMT_CHCONF0_STRIDE = 0x04;
+const RMT_CHMCONF0 = 0x30;
+const RMT_CHMCONF_STRIDE = 0x08;
+const RMT_CHMCONF1 = 0x34;
 const RMT_INT_RAW = 0x70;
 const RMT_INT_ST = 0x74;
 const RMT_INT_ENA = 0x78;
 const RMT_INT_CLR = 0x7c;
 const RMT_CH_TX_LIM = 0x0a0;
 const RMT_CH_TX_LIM_STRIDE = 0x04;
+const RMT_CH_RX_LIM = 0x0b0;
+const RMT_CH_RX_LIM_STRIDE = 0x04;
 const RMT_SYS_CONF = 0x0c0;
 const RMT_TX_SIM = 0x0c4;
 const RMT_REF_CNT_RST = 0x0c8;
@@ -365,6 +378,28 @@ const RMT_TX_LOOP_NUM_MASK = 0x3ff;
 const RMT_TX_LOOP_CNT_EN = 1 << 19;
 const RMT_LOOP_COUNT_RESET = 1 << 20;
 const RMT_LOOP_STOP_EN = 1 << 21;
+const RMT_RX_EN = 1 << 0;
+const RMT_MEM_WR_RST = 1 << 1;
+const RMT_RX_APB_MEM_RST = 1 << 2;
+const RMT_MEM_OWNER_RX = 1 << 3;
+const RMT_RX_FILTER_EN = 1 << 4;
+const RMT_RX_FILTER_THRES_SHIFT = 5;
+const RMT_RX_FILTER_THRES_MASK = 0xff;
+const RMT_RX_CONF_UPDATE = 1 << 15;
+const RMT_RX_CONF1_WT_MASK = RMT_MEM_WR_RST | RMT_RX_APB_MEM_RST | (1 << 14) | RMT_RX_CONF_UPDATE;
+const RMT_RX_CONF1_RESET = RMT_MEM_OWNER_RX | (15 << RMT_RX_FILTER_THRES_SHIFT);
+const RMT_RX_DIV_CNT_MASK = 0xff;
+const RMT_RX_IDLE_THRES_SHIFT = 8;
+const RMT_RX_IDLE_THRES_MASK = 0x7fff;
+const RMT_RX_MEM_SIZE_SHIFT = 24;
+const RMT_RX_MEM_SIZE_MASK = 0x0f;
+const RMT_RX_CONF0_RESET = 2 | (RMT_RX_IDLE_THRES_MASK << RMT_RX_IDLE_THRES_SHIFT) | (1 << RMT_RX_MEM_SIZE_SHIFT) | (1 << 28) | (1 << 29);
+const RMT_RX_LIM_MASK = 0x1ff;
+const RMT_RX_LIM_RESET = 128;
+const RMT_RX_END_INT_BASE = 16;
+const RMT_RX_ERR_INT_BASE = 20;
+const RMT_RX_THR_INT_BASE = 24;
+const RMT_RX_SYMBOLS_PER_BLOCK = 48;
 
 // Timer groups 0 and 1 (timer_group_reg.h; flow per hal timer_ll.h
 // and the gptimer driver): each group has two 54-bit general-purpose
@@ -837,6 +872,25 @@ interface RmtTxChannel {
   loopFired: boolean;
 }
 
+interface RmtRxHalfPulse {
+  duration: number;
+  level: DigitalLevel;
+}
+
+interface RmtRxChannel {
+  conf0: number;
+  conf1: number;
+  rxLim: number;
+  memory: number[];
+  readCursor: number;
+  pending: RmtRxHalfPulse | null;
+  active: boolean;
+  started: boolean;
+  lastCycle: number;
+  lastLevel: DigitalLevel;
+  thresholdFired: boolean;
+}
+
 interface GdmaRxChannel {
   conf0: number;
   conf1: number;
@@ -916,6 +970,20 @@ const freshRmtTxChannel = (): RmtTxChannel => ({
   loopFired: false,
 });
 
+const freshRmtRxChannel = (): RmtRxChannel => ({
+  conf0: RMT_RX_CONF0_RESET,
+  conf1: RMT_RX_CONF1_RESET,
+  rxLim: RMT_RX_LIM_RESET,
+  memory: [],
+  readCursor: 0,
+  pending: null,
+  active: false,
+  started: false,
+  lastCycle: 0,
+  lastLevel: 0,
+  thresholdFired: false,
+});
+
 const freshGdmaRx = (): GdmaRxChannel => ({
   conf0: 0,
   conf1: 0x0c, // INFIFO_FULL threshold reset from gdma_reg.h
@@ -984,6 +1052,7 @@ export class Esp32s3Core implements McuCore {
   private inLevels = [0, 0];
   private gpioStatus = [0, 0]; // latched interrupt status per bank
   private pinCfg = new Int32Array(PIN_COUNT); // GPIO_PINn registers
+  private gpioFuncIn = new Int32Array(256);
   private gpioFuncOut = new Int32Array(PIN_COUNT).fill(GPIO_FUNC_OUT_SEL_RESET);
 
   // LEDC low-speed group state. Counters are virtual, like TIMG:
@@ -995,6 +1064,7 @@ export class Esp32s3Core implements McuCore {
   private ledcIntEna = 0;
   private ledcIntMap = INTMTX_DEFAULT_MAP;
   private rmtTx: RmtTxChannel[] = Array.from({ length: RMT_TX_CHANNELS }, freshRmtTxChannel);
+  private rmtRx: RmtRxChannel[] = Array.from({ length: RMT_RX_CHANNELS }, freshRmtRxChannel);
   private rmtSysConf = RMT_SYS_CONF_RESET;
   private rmtIntRaw = 0;
   private rmtIntEna = 0;
@@ -1243,6 +1313,7 @@ export class Esp32s3Core implements McuCore {
         this.gpioStatus[bank] = (this.gpioStatus[bank] ?? 0) | bit;
       }
     }
+    this.captureRmtRxInputs();
     this.recomputeIrq();
   }
 
@@ -1617,6 +1688,7 @@ export class Esp32s3Core implements McuCore {
     this.inLevels = [0, 0];
     this.gpioStatus = [0, 0];
     this.pinCfg.fill(0);
+    this.gpioFuncIn.fill(0);
     this.gpioFuncOut.fill(GPIO_FUNC_OUT_SEL_RESET);
     this.ledcTimers = Array.from({ length: LEDC_TIMERS }, freshLedcTimer);
     this.ledcChannels = Array.from({ length: LEDC_CHANNELS }, freshLedcChannel);
@@ -1625,6 +1697,7 @@ export class Esp32s3Core implements McuCore {
     this.ledcIntEna = 0;
     this.ledcIntMap = INTMTX_DEFAULT_MAP;
     this.rmtTx = Array.from({ length: RMT_TX_CHANNELS }, freshRmtTxChannel);
+    this.rmtRx = Array.from({ length: RMT_RX_CHANNELS }, freshRmtRxChannel);
     this.rmtSysConf = RMT_SYS_CONF_RESET;
     this.rmtIntRaw = 0;
     this.rmtIntEna = 0;
@@ -2068,6 +2141,143 @@ export class Esp32s3Core implements McuCore {
     return Math.max(1, Math.round(sourceCycles * groupDiv * this.rmtChannelDivider(ch)));
   }
 
+  private rmtRxDivider(ch: RmtRxChannel): number {
+    const raw = ch.conf0 & RMT_RX_DIV_CNT_MASK;
+    return raw === 0 ? 256 : raw;
+  }
+
+  private rmtRxCyclesPerTick(ch: RmtRxChannel): number | null {
+    const sourceCycles = this.rmtSourceCyclesPerTick();
+    if (sourceCycles === null) return null;
+    const divNum = ((this.rmtSysConf >>> RMT_SYS_SCLK_DIV_NUM_SHIFT) & RMT_SYS_SCLK_DIV_NUM_MASK) + 1;
+    const divA = (this.rmtSysConf >>> RMT_SYS_SCLK_DIV_A_SHIFT) & RMT_SYS_SCLK_DIV_A_MASK;
+    const divB = (this.rmtSysConf >>> RMT_SYS_SCLK_DIV_B_SHIFT) & RMT_SYS_SCLK_DIV_B_MASK;
+    const groupDiv = divNum + (divB === 0 ? 0 : divA / divB);
+    return Math.max(1, Math.round(sourceCycles * groupDiv * this.rmtRxDivider(ch)));
+  }
+
+  private gpioPadLevel(gpio: number): DigitalLevel {
+    const driven = this.driven[gpio];
+    if (driven !== undefined) return driven;
+    const bank = gpio >> 5;
+    const bit = 1 << (gpio & 31);
+    return ((this.inLevels[bank] ?? 0) & bit) !== 0 ? 1 : 0;
+  }
+
+  private rmtRxInputLevel(rxIndex: number): DigitalLevel | null {
+    const cfg = this.gpioFuncIn[RMT_SIGNAL_BASE + rxIndex] ?? 0;
+    if ((cfg & GPIO_SIG_IN_SEL) === 0) return null;
+    const gpio = cfg & GPIO_FUNC_IN_SEL_MASK;
+    if (gpio >= PIN_COUNT) return null;
+    let level = this.gpioPadLevel(gpio);
+    if ((cfg & GPIO_FUNC_IN_INV_SEL) !== 0) level = level === 1 ? 0 : 1;
+    return level;
+  }
+
+  private rmtRxIdleThreshold(ch: RmtRxChannel): number {
+    return (ch.conf0 >>> RMT_RX_IDLE_THRES_SHIFT) & RMT_RX_IDLE_THRES_MASK;
+  }
+
+  private rmtRxMemoryCapacity(ch: RmtRxChannel): number {
+    const blocks = (ch.conf0 >>> RMT_RX_MEM_SIZE_SHIFT) & RMT_RX_MEM_SIZE_MASK;
+    return Math.max(1, blocks) * RMT_RX_SYMBOLS_PER_BLOCK;
+  }
+
+  private rmtRxLimit(ch: RmtRxChannel): number {
+    return ch.rxLim & RMT_RX_LIM_MASK;
+  }
+
+  private rmtResetRx(ch: RmtRxChannel): void {
+    ch.memory = [];
+    ch.readCursor = 0;
+    ch.pending = null;
+    ch.started = false;
+    ch.lastCycle = this.cpu.cycles;
+    ch.lastLevel = 0;
+    ch.thresholdFired = false;
+  }
+
+  private rmtStartRx(chIndex: number): void {
+    const ch = this.rmtRx[chIndex];
+    if (ch === undefined) return;
+    this.rmtIntRaw &= ~((1 << (RMT_RX_END_INT_BASE + chIndex)) | (1 << (RMT_RX_ERR_INT_BASE + chIndex)) | (1 << (RMT_RX_THR_INT_BASE + chIndex)));
+    ch.active = true;
+    ch.started = false;
+    ch.pending = null;
+    ch.thresholdFired = false;
+    ch.lastCycle = this.cpu.cycles;
+    ch.lastLevel = this.rmtRxInputLevel(chIndex) ?? 0;
+    this.recomputeIrq();
+  }
+
+  private rmtStopRx(ch: RmtRxChannel): void {
+    ch.active = false;
+    ch.started = false;
+    ch.pending = null;
+  }
+
+  private rmtPushRxHalf(chIndex: number, duration: number, level: DigitalLevel): boolean {
+    const ch = this.rmtRx[chIndex];
+    if (ch === undefined || duration <= 0) return false;
+    const half: RmtRxHalfPulse = { duration: Math.min(duration, 0x7fff), level };
+    if (ch.pending === null) {
+      ch.pending = half;
+      return false;
+    }
+    const capacity = this.rmtRxMemoryCapacity(ch);
+    if (ch.memory.length >= capacity) {
+      ch.active = false;
+      this.rmtIntRaw |= 1 << (RMT_RX_ERR_INT_BASE + chIndex);
+      return true;
+    }
+    const first = ch.pending;
+    ch.pending = null;
+    const symbol = (first.duration | (first.level << 15) | (half.duration << 16) | (half.level << 31)) >>> 0;
+    ch.memory.push(symbol);
+    const limit = this.rmtRxLimit(ch);
+    if (!ch.thresholdFired && limit > 0 && ch.memory.length >= limit) {
+      ch.thresholdFired = true;
+      this.rmtIntRaw |= 1 << (RMT_RX_THR_INT_BASE + chIndex);
+      return true;
+    }
+    return false;
+  }
+
+  private rmtCaptureRxEdge(chIndex: number, nextLevel: DigitalLevel, now: number): boolean {
+    const ch = this.rmtRx[chIndex];
+    if (ch === undefined || !ch.active || (ch.conf1 & RMT_MEM_OWNER_RX) === 0) return false;
+    if (!ch.started) {
+      ch.started = true;
+      ch.lastLevel = nextLevel;
+      ch.lastCycle = now;
+      return false;
+    }
+    if (nextLevel === ch.lastLevel) return false;
+    const cyclesPerTick = this.rmtRxCyclesPerTick(ch);
+    if (cyclesPerTick === null) return false;
+    const duration = Math.max(1, Math.round((now - ch.lastCycle) / cyclesPerTick));
+    const filter = (ch.conf1 >>> RMT_RX_FILTER_THRES_SHIFT) & RMT_RX_FILTER_THRES_MASK;
+    let changed = false;
+    if ((ch.conf1 & RMT_RX_FILTER_EN) === 0 || duration >= filter) {
+      changed = this.rmtPushRxHalf(chIndex, duration, ch.lastLevel);
+    }
+    ch.lastLevel = nextLevel;
+    ch.lastCycle = now;
+    return changed;
+  }
+
+  private captureRmtRxInputs(): boolean {
+    let changed = false;
+    const now = this.cpu.cycles;
+    for (let i = 0; i < RMT_RX_CHANNELS; i++) {
+      const ch = this.rmtRx[i];
+      const level = this.rmtRxInputLevel(i);
+      if (ch === undefined || level === null || !ch.active || level === ch.lastLevel) continue;
+      changed = this.rmtCaptureRxEdge(i, level, now) || changed;
+    }
+    return changed;
+  }
+
   private rmtIdleLevel(ch: RmtTxChannel): DigitalLevel {
     return (ch.conf0 & RMT_IDLE_OUT_EN) !== 0 && (ch.conf0 & RMT_IDLE_OUT_LV) !== 0 ? 1 : 0;
   }
@@ -2134,6 +2344,25 @@ export class Esp32s3Core implements McuCore {
 
   private checkRmt(): void {
     let changed = false;
+    changed = this.captureRmtRxInputs() || changed;
+    const now = this.cpu.cycles;
+    for (let i = 0; i < RMT_RX_CHANNELS; i++) {
+      const ch = this.rmtRx[i];
+      if (ch === undefined || !ch.active || !ch.started) continue;
+      const cyclesPerTick = this.rmtRxCyclesPerTick(ch);
+      if (cyclesPerTick === null) continue;
+      const idleThreshold = this.rmtRxIdleThreshold(ch);
+      if (idleThreshold === 0) continue;
+      const idleTicks = Math.floor((now - ch.lastCycle) / cyclesPerTick);
+      if (idleTicks < idleThreshold) continue;
+      const level = this.rmtRxInputLevel(i) ?? ch.lastLevel;
+      changed = this.rmtPushRxHalf(i, Math.min(idleTicks, RMT_RX_IDLE_THRES_MASK), level) || changed;
+      ch.active = false;
+      ch.started = false;
+      ch.pending = null;
+      this.rmtIntRaw |= 1 << (RMT_RX_END_INT_BASE + i);
+      changed = true;
+    }
     for (let i = 0; i < RMT_TX_CHANNELS; i++) {
       const ch = this.rmtTx[i];
       if (ch === undefined || !ch.active) continue;
@@ -2492,6 +2721,9 @@ export class Esp32s3Core implements McuCore {
       if (off >= GPIO_PIN0 && off < GPIO_PIN0 + 4 * PIN_COUNT && (off & 3) === 0) {
         return (this.pinCfg[(off - GPIO_PIN0) >> 2] ?? 0) >>> 0;
       }
+      if (off >= GPIO_FUNC0_IN_SEL_CFG && off < GPIO_FUNC_IN_SEL_LAST && (off & 3) === 0) {
+        return (this.gpioFuncIn[(off - GPIO_FUNC0_IN_SEL_CFG) >> 2] ?? 0) >>> 0;
+      }
       if (off >= GPIO_FUNC0_OUT_SEL_CFG && off < GPIO_FUNC0_OUT_SEL_CFG + 4 * PIN_COUNT && (off & 3) === 0) {
         return (this.gpioFuncOut[(off - GPIO_FUNC0_OUT_SEL_CFG) >> 2] ?? GPIO_FUNC_OUT_SEL_RESET) >>> 0;
       }
@@ -2532,9 +2764,21 @@ export class Esp32s3Core implements McuCore {
     }
     if (addr >= RMT_BASE && addr < RMT_BASE + 0x1000) {
       const off = addr - RMT_BASE;
-      if (off >= RMT_CHDATA && off < RMT_CHDATA + RMT_TX_CHANNELS * 4 && (off & 3) === 0) return 0;
+      if (off >= RMT_CHDATA && off < RMT_CHDATA + (RMT_TX_CHANNELS + RMT_RX_CHANNELS) * RMT_CHDATA_STRIDE && (off & 3) === 0) {
+        const channel = (off - RMT_CHDATA) >> 2;
+        if (channel < RMT_TX_CHANNELS) return 0;
+        const ch = this.rmtRx[channel - RMT_TX_CHANNELS];
+        if (ch === undefined) return 0;
+        return (ch.memory[ch.readCursor++] ?? 0) >>> 0;
+      }
       if (off >= RMT_CHCONF0 && off < RMT_CHCONF0 + RMT_TX_CHANNELS * RMT_CHCONF0_STRIDE && (off & 3) === 0) {
         return this.rmtTx[(off - RMT_CHCONF0) >> 2]?.conf0 ?? 0;
+      }
+      if (off >= RMT_CHMCONF0 && off < RMT_CHMCONF0 + RMT_RX_CHANNELS * RMT_CHMCONF_STRIDE && (off - RMT_CHMCONF0) % RMT_CHMCONF_STRIDE === 0) {
+        return this.rmtRx[(off - RMT_CHMCONF0) / RMT_CHMCONF_STRIDE]?.conf0 ?? 0;
+      }
+      if (off >= RMT_CHMCONF1 && off < RMT_CHMCONF1 + RMT_RX_CHANNELS * RMT_CHMCONF_STRIDE && (off - RMT_CHMCONF1) % RMT_CHMCONF_STRIDE === 0) {
+        return this.rmtRx[(off - RMT_CHMCONF1) / RMT_CHMCONF_STRIDE]?.conf1 ?? RMT_RX_CONF1_RESET;
       }
       if (off === RMT_INT_RAW) return this.rmtIntRaw >>> 0;
       if (off === RMT_INT_ST) return (this.rmtIntRaw & this.rmtIntEna) >>> 0;
@@ -2542,6 +2786,9 @@ export class Esp32s3Core implements McuCore {
       if (off === RMT_INT_CLR) return 0;
       if (off >= RMT_CH_TX_LIM && off < RMT_CH_TX_LIM + RMT_TX_CHANNELS * RMT_CH_TX_LIM_STRIDE && (off & 3) === 0) {
         return this.rmtTx[(off - RMT_CH_TX_LIM) >> 2]?.txLim ?? RMT_TX_LIM_RESET;
+      }
+      if (off >= RMT_CH_RX_LIM && off < RMT_CH_RX_LIM + RMT_RX_CHANNELS * RMT_CH_RX_LIM_STRIDE && (off & 3) === 0) {
+        return this.rmtRx[(off - RMT_CH_RX_LIM) >> 2]?.rxLim ?? RMT_RX_LIM_RESET;
       }
       if (off === RMT_SYS_CONF) return this.rmtSysConf >>> 0;
       if (off === RMT_TX_SIM || off === RMT_REF_CNT_RST) return 0;
@@ -2780,6 +3027,9 @@ export class Esp32s3Core implements McuCore {
       else if (off === GPIO_STATUS1_W1TC) this.gpioStatus[1] = ((this.gpioStatus[1] ?? 0) & ~v) >>> 0;
       else if (off >= GPIO_PIN0 && off < GPIO_PIN0 + 4 * PIN_COUNT && (off & 3) === 0) {
         this.pinCfg[(off - GPIO_PIN0) >> 2] = v | 0;
+      } else if (off >= GPIO_FUNC0_IN_SEL_CFG && off < GPIO_FUNC_IN_SEL_LAST && (off & 3) === 0) {
+        this.gpioFuncIn[(off - GPIO_FUNC0_IN_SEL_CFG) >> 2] = v & 0xff;
+        this.captureRmtRxInputs();
       } else if (off >= GPIO_FUNC0_OUT_SEL_CFG && off < GPIO_FUNC0_OUT_SEL_CFG + 4 * PIN_COUNT && (off & 3) === 0) {
         this.gpioFuncOut[(off - GPIO_FUNC0_OUT_SEL_CFG) >> 2] = (v & GPIO_FUNC_OUT_CFG_MASK) | 0;
       }
@@ -2828,8 +3078,9 @@ export class Esp32s3Core implements McuCore {
     if (addr >= RMT_BASE && addr < RMT_BASE + 0x1000) {
       const off = addr - RMT_BASE;
       const v = value >>> 0;
-      if (off >= RMT_CHDATA && off < RMT_CHDATA + RMT_TX_CHANNELS * 4 && (off & 3) === 0) {
-        this.rmtTx[(off - RMT_CHDATA) >> 2]?.fifo.push(v);
+      if (off >= RMT_CHDATA && off < RMT_CHDATA + (RMT_TX_CHANNELS + RMT_RX_CHANNELS) * RMT_CHDATA_STRIDE && (off & 3) === 0) {
+        const channel = (off - RMT_CHDATA) >> 2;
+        if (channel < RMT_TX_CHANNELS) this.rmtTx[channel]?.fifo.push(v);
       } else if (off >= RMT_CHCONF0 && off < RMT_CHCONF0 + RMT_TX_CHANNELS * RMT_CHCONF0_STRIDE && (off & 3) === 0) {
         const chIndex = (off - RMT_CHCONF0) >> 2;
         const ch = this.rmtTx[chIndex];
@@ -2838,6 +3089,20 @@ export class Esp32s3Core implements McuCore {
           if ((v & RMT_APB_MEM_RST) !== 0) ch.fifo = [];
           if ((v & RMT_TX_STOP) !== 0) this.rmtStopTx(ch);
           if ((v & RMT_TX_START) !== 0) this.rmtStartTx(chIndex);
+        }
+      } else if (off >= RMT_CHMCONF0 && off < RMT_CHMCONF0 + RMT_RX_CHANNELS * RMT_CHMCONF_STRIDE && (off - RMT_CHMCONF0) % RMT_CHMCONF_STRIDE === 0) {
+        const ch = this.rmtRx[(off - RMT_CHMCONF0) / RMT_CHMCONF_STRIDE];
+        if (ch !== undefined) ch.conf0 = v;
+      } else if (off >= RMT_CHMCONF1 && off < RMT_CHMCONF1 + RMT_RX_CHANNELS * RMT_CHMCONF_STRIDE && (off - RMT_CHMCONF1) % RMT_CHMCONF_STRIDE === 0) {
+        const chIndex = (off - RMT_CHMCONF1) / RMT_CHMCONF_STRIDE;
+        const ch = this.rmtRx[chIndex];
+        if (ch !== undefined) {
+          const wasEnabled = (ch.conf1 & RMT_RX_EN) !== 0;
+          ch.conf1 = (v & ~RMT_RX_CONF1_WT_MASK) >>> 0;
+          if ((v & (RMT_MEM_WR_RST | RMT_RX_APB_MEM_RST)) !== 0) this.rmtResetRx(ch);
+          const nowEnabled = (ch.conf1 & RMT_RX_EN) !== 0;
+          if (nowEnabled && !wasEnabled) this.rmtStartRx(chIndex);
+          if (!nowEnabled && wasEnabled) this.rmtStopRx(ch);
         }
       } else if (off === RMT_INT_ENA) {
         this.rmtIntEna = v;
@@ -2855,6 +3120,9 @@ export class Esp32s3Core implements McuCore {
             ch.loopFired = false;
           }
         }
+      } else if (off >= RMT_CH_RX_LIM && off < RMT_CH_RX_LIM + RMT_RX_CHANNELS * RMT_CH_RX_LIM_STRIDE && (off & 3) === 0) {
+        const ch = this.rmtRx[(off - RMT_CH_RX_LIM) >> 2];
+        if (ch !== undefined) ch.rxLim = v;
       } else if (off === RMT_SYS_CONF) {
         this.rmtSysConf = v;
       } else if (off === RMT_REF_CNT_RST) {
