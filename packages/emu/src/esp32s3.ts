@@ -211,15 +211,17 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * RTC_ULP_TRIG_EN is armed. COCPU_SW_INT_TRIGGER wakes RTC sleep when
  * RTC_COCPU_TRIG_EN is armed. SENS_SAR_COCPU_STATE.DBG_TRIGGER models
  * a synthetic COCPU trap producer, latching RTC_CNTL_COCPU_TRAP_INT and
- * waking RTC sleep when RTC_COCPU_TRAP_TRIG_EN is armed.
+ * waking RTC sleep when RTC_COCPU_TRAP_TRIG_EN is armed. Touch scans
+ * with a nonzero timeout budget below the synthetic measurement cost
+ * latch RTC_CNTL_TOUCH_TIMEOUT_INT.
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
  * instruction execution, and the remaining RTC interrupt producers
  * beyond RWDT/COCPU/brownout/XTAL32K-dead/SUPER_WDT/SARADC/TSENS/
- * touch done-scan-active/wake/ULP wake/COCPU wake/COCPU trap paths —
- * so full IDF/FreeRTOS firmware does NOT run yet.
+ * touch done-scan-active/wake/timeout/ULP wake/COCPU wake/COCPU trap
+ * paths — so full IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -882,6 +884,8 @@ const RTC_TOUCH_RESET = 1 << 29;
 const RTC_TOUCH_START_EN = 1 << 15;
 const RTC_TOUCH_SLP_TIMER_EN = 1 << 13;
 const RTC_TOUCH_SLP_CHANNEL_CLR = 1 << 23;
+const RTC_TOUCH_TIMEOUT_EN = 1 << 22;
+const RTC_TOUCH_TIMEOUT_NUM_MASK = 0x003f_ffff;
 const RTC_TOUCH_SCAN_PAD_MAP_SHIFT = 10;
 const RTC_TOUCH_SCAN_PAD_MAP_MASK = 0x7fff << RTC_TOUCH_SCAN_PAD_MAP_SHIFT;
 const RTC_TOUCH_TRIG_EN = 1 << 8;
@@ -1815,6 +1819,10 @@ export class Esp32s3Core implements McuCore {
     }
 
     this.rtcIntRaw |= RTC_TOUCH_DONE_INT | RTC_TOUCH_SCAN_DONE_INT;
+    const timeoutCycles = this.rtcTouchTimeoutCtrl & RTC_TOUCH_TIMEOUT_NUM_MASK;
+    if ((this.rtcTouchTimeoutCtrl & RTC_TOUCH_TIMEOUT_EN) !== 0 && timeoutCycles !== 0 && timeoutCycles <= SENS_TOUCH_DEFAULT_DATA) {
+      this.rtcIntRaw |= RTC_TOUCH_TIMEOUT_INT;
+    }
     this.latchRtcWakeupSource(RTC_TOUCH_TRIG_EN);
     this.recomputeIrq();
   }

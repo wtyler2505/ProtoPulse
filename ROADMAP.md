@@ -911,6 +911,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       COCPU_TRAP_TRIG_EN, trap-state readback, and cleared INT_ST over
       UART. Cuts: no real COCPU execution, COCPU_DONE state machine,
       EBREAK/EOI/debug-PC modeling, or trap clear semantics beyond reset
+- [x] ESP32-S3 core slice 57 — touch timeout RTC interrupt producer
+      (landed 2026-06-13): RTC_TOUCH_TIMEOUT_CTRL now participates in
+      synthetic touch scans: if TIMEOUT_EN is set and TIMEOUT_NUM is a
+      small nonzero budget below the modeled measurement cost, the scan
+      latches RTC_CNTL_TOUCH_TIMEOUT_INT (bit 18). Proven by
+      hand-assembled firmware that maps RTC_CORE, enables only
+      TOUCH_TIMEOUT, sets a one-cycle timeout threshold, triggers
+      TOUCH_START_EN, waits for the RTC_CORE ISR to clear timeout raw,
+      and reports dispatch plus cleared INT_ST over UART. Cuts: no
+      cycle-accurate capacitive timing, timeout side effects beyond the
+      raw interrupt, or proximity-loop counter/status modeling
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
