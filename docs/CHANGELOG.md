@@ -2,6 +2,30 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-12 — ESP32-S3 slice 20: APB_SARADC interrupt delivery
+
+### Added
+- **APB_ADC interrupt-matrix route** (@protopulse/emu): APB_SARADC
+  INT_RAW&INT_ENA now drives the ESP32-S3 core-0 interrupt matrix
+  source at `INTERRUPT_CORE0_APB_ADC_INT_MAP_REG` (+0x104), matching
+  Espressif's ESP-IDF v5.2.7 S3 headers. Digital ADC firmware can
+  now wake a level-1 handler on ADC1/ADC2 DONE instead of polling
+  INT_ST forever.
+
+### Verified (+1 test, emu suite at 161 green)
+- Hand-assembled Xtensa firmware maps APB_ADC to CPU line 0, enables
+  ADC1_DONE, starts a digital ADC1 conversion, vectors into a
+  level-1 handler, clears INT_CLR, returns, and verifies DATA_STATUS
+  still holds the sampled channel data.
+- `@protopulse/emu` tests, targeted ESLint for the touched emulator
+  files, `check:packages`, and the full package test suite passed.
+
+### Honest cuts
+- Core-0 only, consistent with the currently modeled interrupt-matrix
+  surface. Threshold interrupt bits are routable once something
+  models the threshold comparators; this slice only generates the
+  ADC_DONE raw bits.
+
 ## 2026-06-11 — ESP32-S3 slice 9: flash-mapped IROM/DROM segments
 
 ### Added

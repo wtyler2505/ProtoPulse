@@ -1040,8 +1040,11 @@ describe('Esp32s3Core — SAR ADC2 oneshot (slice 14)', () => {
 
 describe('Esp32s3Core — APB_SARADC digital controller (slice 15)', () => {
   const APB_SARADC = 0x60040000;
+  const INTMTX = 0x600c2000;
+  const SCRATCH = ESP32S3_DRAM_BASE + 0x1100;
   const INT_ADC1_DONE = 0x80000000;
   const CTRL_ADC1_LEN1 = 1 << 25; // data_sar_sel, single ADC1, pattern length 1
+  const CTRL_ADC1_START = CTRL_ADC1_LEN1 | 2;
   const CTRL_ADC1_LEN2 = (1 << 25) | (1 << 15); // sar1_patt_len = 1 -> length 2
   const CTRL2_TIMER_ENABLE = (1 << 24) | (1 << 11);
   const MASK_12BIT = 0xfff;
@@ -1121,6 +1124,75 @@ describe('Esp32s3Core — APB_SARADC digital controller (slice 15)', () => {
     c.step(220);
     expect([...c.drainUart()]).toEqual([0x00, 0x04, 0xff, 0x0f]);
     expect(c.drainAdcReads().map((r) => r.channel)).toEqual([2, 5]);
+  });
+
+  it('routes APB_SARADC ADC1_DONE through the interrupt matrix to a level-1 handler', () => {
+    // Source-checked against esp-idf v5.2.7:
+    //   interrupt_core0_reg.h — INTERRUPT_CORE0_APB_ADC_INT_MAP_REG = +0x104
+    //   apb_saradc_reg.h     — ADC1_DONE lives at bit 31 in INT_ENA/RAW/ST/CLR
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [UART, APB_SARADC, INTMTX, SCRATCH, ESP32S3_IRAM_BASE, SAR1_PATTERN_CH4, CTRL_ADC1_LEN1, INT_ADC1_DONE, CTRL_ADC1_START, MASK_12BIT],
+      [
+        L32R(13, 3), // scratch
+        MOVI(14, 0),
+        S32I(14, 13, 0), // ISR counter = 0
+        L32R(14, 4),
+        WSR(14, SR.VECBASE),
+
+        L32R(3, 1), // APB_SARADC
+        L32R(4, 5),
+        S32I(4, 3, 0x18), // SAR1 pattern item 0 = channel 4
+        L32R(4, 6),
+        S32I(4, 3, 0x00), // ADC1, START low
+        L32R(4, 7),
+        S32I(4, 3, 0x5c), // INT_ENA = ADC1_DONE
+
+        L32R(15, 2), // interrupt matrix
+        MOVI(4, 0),
+        S32I(4, 15, 0x104), // APB_ADC source -> CPU line 0
+        MOVI(4, 1),
+        WSR(4, SR.INTENABLE),
+        RSIL(12, 0),
+
+        L32R(4, 8),
+        S32I(4, 3, 0x00), // START edge triggers ADC1_DONE
+        MOVI(11, 1),
+        L32I(4, 13, 0),
+        BNE(4, 11, BR(-2)),
+
+        L32R(2, 0), // UART
+        S32I(4, 2, 0x00), // counter = 1
+        L32I(5, 3, 0x64), // INT_ST after the ISR clear
+        S32I(5, 2, 0x00),
+        L32I(5, 3, 0x40), // ADC1 DATA_STATUS still holds the sample
+        L32R(6, 9),
+        AND(5, 5, 6),
+        S32I(5, 2, 0x00),
+        SRLI(5, 5, 8),
+        S32I(5, 2, 0x00),
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 3),
+        S32I(3, 2, 8),
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0),
+        L32R(3, 1),
+        L32R(4, 7),
+        S32I(4, 3, 0x68), // INT_CLR = ADC1_DONE
+        L32I(3, 2, 8),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.setAdcSampler((channel) => (channel === 4 ? 1.65 : 0));
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([1, 0, 0x00, 0x08]);
+    expect(c.drainAdcReads().map((r) => r.channel)).toEqual([4]);
   });
 });
 

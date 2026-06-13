@@ -457,11 +457,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       second value to prove one-way OR semantics. Cuts: no read/write
       protection policy, no RS-code validation, and no security-key
       side effects yet
+- [x] ESP32-S3 core slice 20 — APB_SARADC interrupt delivery
+      (landed 2026-06-12): the APB_ADC interrupt-matrix source at
+      +0x104 now routes APB_SARADC INT_RAW&INT_ENA into core 0's
+      level-1 external interrupt surface, so ADC digital-controller
+      firmware can wake from ADC1/ADC2 DONE instead of polling
+      INT_ST forever. Proven by hand-assembled firmware that maps
+      APB_ADC to CPU line 0, enables ADC1_DONE, starts a digital ADC1
+      conversion, vectors into a handler, clears INT_CLR, and returns
+      with DATA_STATUS intact. Cuts: core-0 only; threshold interrupt
+      sources still wait on threshold comparator modeling
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
-      sleep/wake, interrupt delivery still outside the currently
-      modeled sources, and remaining peripherals — walked openly,
-      slice by slice
+      sleep/wake, remaining interrupt-delivery gaps, and remaining
+      peripherals — walked openly, slice by slice
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 

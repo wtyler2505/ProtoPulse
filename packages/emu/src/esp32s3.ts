@@ -145,7 +145,10 @@ import type { XtensaBus } from './xtensa.js';
  * modeled (slice 15): CTRL/CTRL2, packed pattern tables, DATA_STATUS,
  * DMA_CONF storage, and ADC1/ADC2 done interrupts; timer/start
  * triggers complete instantly and clearing DONE while timer mode is
- * enabled advances the pattern stream. GDMA RX channel descriptors
+ * enabled advances the pattern stream. APB_SARADC's ADC_DONE status
+ * routes through the core-0 interrupt matrix source at +0x104 (slice
+ * 20), so digital-controller firmware can sleep in a level-1 handler
+ * instead of polling. GDMA RX channel descriptors
  * are modeled for ADC continuous mode (slice 16): a channel whose
  * IN_PERI_SEL is ADC_DAC consumes APB_SARADC result words into the
  * real 12-byte DMA descriptor format in SRAM, updates descriptor
@@ -223,6 +226,7 @@ const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
 // TG_T0 +0xC8, TG_T1 +0xCC, TG_WDT +0xD0, TG1_T0 +0xD4, TG1_T1
 // +0xD8, TG1_WDT +0xDC — group-major, [t0, t1, wdt] within a group.
 const INTMTX_TG_MAPS = 0x0c8;
+const INTMTX_APB_ADC_MAP = 0x104; // INTERRUPT_CORE0_APB_ADC_INT_MAP_REG
 const INTMTX_GDMA_IN_MAPS = 0x108; // DMA_IN_CH0..4 at +0x108..+0x118
 const INTMTX_DEFAULT_MAP = 16;
 
@@ -716,8 +720,10 @@ const freshGdmaRx = (): GdmaRxChannel => ({
 
 const freshEfuseBlocks = (): number[][] => {
   const blocks = Array.from({ length: EFUSE_BLOCK_COUNT }, () => Array(EFUSE_BLOCK_WORDS).fill(0) as number[]);
-  blocks[1]![0] = EFUSE_MAC_0;
-  blocks[1]![1] = EFUSE_MAC_1;
+  const macBlock = blocks[1];
+  if (macBlock === undefined) throw new Error('freshEfuseBlocks failed to allocate BLOCK1');
+  macBlock[0] = EFUSE_MAC_0;
+  macBlock[1] = EFUSE_MAC_1;
   return blocks;
 };
 
@@ -821,6 +827,7 @@ export class Esp32s3Core implements McuCore {
   private apbSaradcThres = [0, 0, 0];
   private apbSaradcIntEna = 0;
   private apbSaradcIntRaw = 0;
+  private apbSaradcIntMap = INTMTX_DEFAULT_MAP;
   private apbSaradcDmaConf = 0xff;
   private apbSaradcClkmConf = APB_SARADC_CLKM_CONF_RESET;
   private apbSaradcDataStatus = [0, 0];
@@ -1063,7 +1070,10 @@ export class Esp32s3Core implements McuCore {
       throw new Error(`eFuse program command selected invalid block ${String(block)}; expected 0..10`);
     }
     const words = block < 2 ? 6 : EFUSE_BLOCK_WORDS;
-    const target = this.efuseBlocks[block]!;
+    const target = this.efuseBlocks[block];
+    if (target === undefined) {
+      throw new Error(`eFuse BLOCK${String(block)} storage is missing`);
+    }
     for (let i = 0; i < words; i++) {
       target[i] = ((target[i] ?? 0) | (this.efusePgmData[i] ?? 0)) >>> 0;
     }
@@ -1115,6 +1125,7 @@ export class Esp32s3Core implements McuCore {
     this.apbSaradcDataStatus[unit - 1] = word >>> 0;
     this.gdmaPushAdcWord(word >>> 0);
     this.apbSaradcIntRaw |= unit === 1 ? APB_SARADC_INT_ADC1_DONE : APB_SARADC_INT_ADC2_DONE;
+    this.recomputeIrq();
   }
 
   private apbSaradcRunDigitalConversion(): void {
@@ -1336,6 +1347,7 @@ export class Esp32s3Core implements McuCore {
     this.apbSaradcThres = [0, 0, 0];
     this.apbSaradcIntEna = 0;
     this.apbSaradcIntRaw = 0;
+    this.apbSaradcIntMap = INTMTX_DEFAULT_MAP;
     this.apbSaradcDmaConf = 0xff;
     this.apbSaradcClkmConf = APB_SARADC_CLKM_CONF_RESET;
     this.apbSaradcDataStatus = [0, 0];
@@ -1524,9 +1536,11 @@ export class Esp32s3Core implements McuCore {
       }
     }
     const uartPending = (this.uartIntRaw() & this.uartIntEna) !== 0;
+    const apbAdcPending = (this.apbSaradcIntRaw & this.apbSaradcIntEna) !== 0;
     let mask = 0;
     if (gpioPending) mask |= 1 << (this.gpioIntMap & 31);
     if (uartPending) mask |= 1 << (this.uartIntMap & 31);
+    if (apbAdcPending) mask |= 1 << (this.apbSaradcIntMap & 31);
     // Each TIMG source (T0/T1/WDT × both groups) drives its own map.
     for (const grp of this.timg) {
       const pending = grp.intRaw & grp.intEna & 7;
@@ -1812,6 +1826,7 @@ export class Esp32s3Core implements McuCore {
         const idx = (off - INTMTX_TG_MAPS) >> 2; // group-major [t0,t1,wdt]
         return this.timg[idx < 3 ? 0 : 1]?.maps[idx % 3] ?? INTMTX_DEFAULT_MAP;
       }
+      if (off === INTMTX_APB_ADC_MAP) return this.apbSaradcIntMap;
       if (off >= INTMTX_GDMA_IN_MAPS && off < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (off & 3) === 0) {
         return this.gdmaRx[(off - INTMTX_GDMA_IN_MAPS) >> 2]?.map ?? INTMTX_DEFAULT_MAP;
       }
@@ -2050,6 +2065,8 @@ export class Esp32s3Core implements McuCore {
         const idx = (off - INTMTX_TG_MAPS) >> 2;
         const grp = this.timg[idx < 3 ? 0 : 1];
         if (grp !== undefined) grp.maps[idx % 3] = value & 0x1f;
+      } else if (off === INTMTX_APB_ADC_MAP) {
+        this.apbSaradcIntMap = value & 0x1f;
       } else if (off >= INTMTX_GDMA_IN_MAPS && off < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (off & 3) === 0) {
         const ch = this.gdmaRx[(off - INTMTX_GDMA_IN_MAPS) >> 2];
         if (ch !== undefined) ch.map = value & 0x1f;
@@ -2203,10 +2220,14 @@ export class Esp32s3Core implements McuCore {
       else if (off === APB_SARADC_THRES0_CTRL) this.apbSaradcThres[0] = v;
       else if (off === APB_SARADC_THRES1_CTRL) this.apbSaradcThres[1] = v;
       else if (off === APB_SARADC_THRES_CTRL) this.apbSaradcThres[2] = v;
-      else if (off === APB_SARADC_INT_ENA) this.apbSaradcIntEna = v;
+      else if (off === APB_SARADC_INT_ENA) {
+        this.apbSaradcIntEna = v;
+        this.recomputeIrq();
+      }
       else if (off === APB_SARADC_INT_CLR) {
         this.apbSaradcIntRaw &= ~v;
         if ((this.apbSaradcCtrl2 & APB_SARADC_TIMER_EN) !== 0) this.apbSaradcRunDigitalConversion();
+        this.recomputeIrq();
       } else if (off === APB_SARADC_DMA_CONF) {
         this.apbSaradcDmaConf = v;
         if ((v & APB_SARADC_DMA_RESET_FSM) !== 0) {
@@ -2214,6 +2235,7 @@ export class Esp32s3Core implements McuCore {
           this.apbSaradcDataStatus = [0, 0];
           this.apbSaradcPatternIdx = [0, 0];
           this.apbSaradcAlterNext = 1;
+          this.recomputeIrq();
         }
       } else if (off === APB_SARADC_APB_ADC_CLKM_CONF) this.apbSaradcClkmConf = v;
       return;
