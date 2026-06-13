@@ -111,14 +111,17 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * While gated/stalled, core 1's timeline slides forward without
  * executing. All SR state (PS, INTENABLE/INTERRUPT, CCOUNT/
  * CCOMPARE0, VECBASE, windows) lives per-XtensaCpu, so per-core
- * timer interrupts cannot cross-fire. OPTIONS0's SW_APPCPU_RST
+ * timer interrupts cannot cross-fire. FROM_CPU cross-core software
+ * interrupts latch through SYSTEM_CPU_INTR_FROM_CPU0..3 and the
+ * per-core interrupt matrix maps at +0x13C..+0x148, so the ESP-IDF
+ * crosscore ISR path can poke the APP CPU while it sleeps in WAITI.
+ * OPTIONS0's SW_APPCPU_RST
  * resets core 1 alone (cause 12 in RESET_STATE's APPCPU [11:6];
  * the boot address survives, like the real ROM's, so it restarts).
- * Core-1 cuts: FROM_CPU cross-core software interrupts are not
- * modeled, no per-core cache/TRAX, no
- * atomic/exclusive-access modeling (the ISA subset has none), and
- * raw (non-ROM) core-1 programs get a SYNTHETIC reset SP 16 KiB
- * below the DRAM top (real code sets its own stack immediately).
+ * Core-1 cuts: no per-core cache/TRAX, no atomic/exclusive-access
+ * modeling (the ISA subset has none), and raw (non-ROM) core-1
+ * programs get a SYNTHETIC reset SP 16 KiB below the DRAM top (real
+ * code sets its own stack immediately).
  * ALL FOUR general-purpose timers run (slice 13): the slice-8 T0
  * model generalized to T0/T1 in both TIMG0 and TIMG1 (T1's block is
  * T0's at +0x24; TIMG1's base is 0x60020000 — reg_base.h), each with
@@ -274,6 +277,7 @@ const INTMTX_TG_MAPS = 0x0c8;
 const INTMTX_APB_ADC_MAP = 0x104; // INTERRUPT_CORE0_APB_ADC_INT_MAP_REG
 const INTMTX_GDMA_IN_MAPS = 0x108; // DMA_IN_CH0..4 at +0x108..+0x118
 const INTMTX_GDMA_OUT_MAPS = 0x11c; // DMA_OUT_CH0..4 at +0x11C..+0x12C
+const INTMTX_FROM_CPU_MAPS = 0x13c; // FROM_CPU_INTR0..3 at +0x13C..+0x148
 const INTMTX_DEFAULT_MAP = 16;
 type InterruptCore = 0 | 1;
 type InterruptMapPair = [number, number];
@@ -693,6 +697,8 @@ const SYSTEM_CLK_XTAL_FREQ_MASK = 0x7f << 12; // RO field — writes can't touch
 // at the stored address once all release conditions hold.
 const SYSTEM_CORE_1_CTRL0 = 0x0;
 const SYSTEM_CORE_1_CTRL1 = 0x4;
+const SYSTEM_CPU_INTR_FROM_CPU = 0x30;
+const SYSTEM_CPU_INTR_FROM_CPU_COUNT = 4;
 const CORE1_RUNSTALL = 1 << 0;
 const CORE1_CLKGATE_EN = 1 << 1;
 const CORE1_RESETING = 1 << 2;
@@ -1178,6 +1184,8 @@ export class Esp32s3Core implements McuCore {
   /** Core 0 cycle at which core 1 last (re)started — its shared-
    *  timeline position is core1Epoch + cpu1.cycles. */
   private core1Epoch = 0;
+  private fromCpuIntRaw = Array(SYSTEM_CPU_INTR_FROM_CPU_COUNT).fill(0) as number[];
+  private fromCpuIntMaps: InterruptMapPair[] = Array.from({ length: SYSTEM_CPU_INTR_FROM_CPU_COUNT }, freshInterruptMapPair);
 
   // GPIO matrix state (two 32-bit banks each).
   private out = [0, 0];
@@ -1943,6 +1951,8 @@ export class Esp32s3Core implements McuCore {
     this.appBootAddr = 0; // cpu_start.c zeroes it early in boot too
     this.core1Started = false;
     this.core1Epoch = 0;
+    this.fromCpuIntRaw.fill(0);
+    this.fromCpuIntMaps = Array.from({ length: SYSTEM_CPU_INTR_FROM_CPU_COUNT }, freshInterruptMapPair);
     this.rtcTimeLatchLo = 0;
     this.rtcTimeLatchHi = 0;
     this.cpuPerConf = SYSTEM_CPU_PER_CONF_RESET;
@@ -2948,6 +2958,10 @@ export class Esp32s3Core implements McuCore {
     if (ledcPending) raise(this.ledcIntMaps);
     if (rmtPending) raise(this.rmtIntMaps);
     if (apbAdcPending) raise(this.apbSaradcIntMaps);
+    for (let i = 0; i < SYSTEM_CPU_INTR_FROM_CPU_COUNT; i++) {
+      const maps = this.fromCpuIntMaps[i];
+      if ((this.fromCpuIntRaw[i] ?? 0) !== 0 && maps !== undefined) raise(maps);
+    }
     // Each TIMG source (T0/T1/WDT × both groups) drives its own map.
     for (const grp of this.timg) {
       const pending = grp.intRaw & grp.intEna & 7;
@@ -3260,6 +3274,9 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff >= INTMTX_GDMA_OUT_MAPS && sourceOff < INTMTX_GDMA_OUT_MAPS + GDMA_CHANNELS * 4 && (sourceOff & 3) === 0) {
         return this.gdmaTx[(sourceOff - INTMTX_GDMA_OUT_MAPS) >> 2]?.maps[core] ?? INTMTX_DEFAULT_MAP;
       }
+      if (sourceOff >= INTMTX_FROM_CPU_MAPS && sourceOff < INTMTX_FROM_CPU_MAPS + SYSTEM_CPU_INTR_FROM_CPU_COUNT * 4 && (sourceOff & 3) === 0) {
+        return this.fromCpuIntMaps[(sourceOff - INTMTX_FROM_CPU_MAPS) >> 2]?.[core] ?? INTMTX_DEFAULT_MAP;
+      }
       return INTMTX_DEFAULT_MAP; // unmodeled sources sit at their reset map
     }
     if (addr >= RMT_BASE && addr < RMT_BASE + 0x1000) {
@@ -3522,11 +3539,15 @@ export class Esp32s3Core implements McuCore {
       const off = addr - SYSTEM_BASE;
       if (off === SYSTEM_CORE_1_CTRL0) return this.core1Ctrl0 >>> 0;
       if (off === SYSTEM_CORE_1_CTRL1) return this.core1Msg >>> 0;
+      if (off >= SYSTEM_CPU_INTR_FROM_CPU && off < SYSTEM_CPU_INTR_FROM_CPU + SYSTEM_CPU_INTR_FROM_CPU_COUNT * 4 && (off & 3) === 0) {
+        return this.fromCpuIntRaw[(off - SYSTEM_CPU_INTR_FROM_CPU) >> 2] ?? 0;
+      }
       if (off === SYSTEM_CPU_PER_CONF) return this.cpuPerConf >>> 0;
       if (off === SYSTEM_SYSCLK_CONF) return this.sysclkConf >>> 0;
       throw new Error(
         `read of unmodeled SYSTEM register 0x${addr.toString(16)} — this core models only ` +
-          `CORE_1_CONTROL_0/1(+0x0/+0x4), CPU_PER_CONF(+0x10) and SYSCLK_CONF(+0x60), frozen at the 240 MHz PLL state`,
+          `CORE_1_CONTROL_0/1(+0x0/+0x4), CPU_INTR_FROM_CPU0..3(+0x30..+0x3c), ` +
+          `CPU_PER_CONF(+0x10) and SYSCLK_CONF(+0x60), frozen at the 240 MHz PLL state`,
       );
     }
     throw new Error(`read outside the modeled ESP32-S3 map: 0x${addr.toString(16)}`);
@@ -3614,6 +3635,9 @@ export class Esp32s3Core implements McuCore {
       } else if (sourceOff >= INTMTX_GDMA_OUT_MAPS && sourceOff < INTMTX_GDMA_OUT_MAPS + GDMA_CHANNELS * 4 && (sourceOff & 3) === 0) {
         const ch = this.gdmaTx[(sourceOff - INTMTX_GDMA_OUT_MAPS) >> 2];
         if (ch !== undefined) ch.maps[core] = value & 0x1f;
+      } else if (sourceOff >= INTMTX_FROM_CPU_MAPS && sourceOff < INTMTX_FROM_CPU_MAPS + SYSTEM_CPU_INTR_FROM_CPU_COUNT * 4 && (sourceOff & 3) === 0) {
+        const maps = this.fromCpuIntMaps[(sourceOff - INTMTX_FROM_CPU_MAPS) >> 2];
+        if (maps !== undefined) maps[core] = value & 0x1f;
       }
       // Map writes for unmodeled sources are accepted and dropped —
       // those sources never assert, so the mapping is moot.
@@ -4106,6 +4130,11 @@ export class Esp32s3Core implements McuCore {
       }
       if (off === SYSTEM_CORE_1_CTRL1) {
         this.core1Msg = value >>> 0; // MESSAGE scratch word
+        return;
+      }
+      if (off >= SYSTEM_CPU_INTR_FROM_CPU && off < SYSTEM_CPU_INTR_FROM_CPU + SYSTEM_CPU_INTR_FROM_CPU_COUNT * 4 && (off & 3) === 0) {
+        this.fromCpuIntRaw[(off - SYSTEM_CPU_INTR_FROM_CPU) >> 2] = value & 1;
+        this.recomputeIrq();
         return;
       }
       // Stored but inert: the emulated clock is fixed at 240 MHz (cut

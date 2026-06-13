@@ -3627,6 +3627,63 @@ describe('Esp32s3Core — second core (slice 12)', () => {
     expect([...c.drainUart()]).toEqual([0x42]);
   });
 
+  it('routes FROM_CPU cross-core software interrupts to APP CPU', () => {
+    const fromCpu1 = SYS + 0x34; // SYSTEM_CPU_INTR_FROM_CPU_1_REG
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [SYS, SET_BOOT, CORE1_ENTRY, UART, INTMTX_CORE1, fromCpu1],
+      [
+        ADDI(3, 1, -16),
+        S32I(1, 3, 4),
+        // Route FROM_CPU_INTR1 to APP CPU external level-1 line 1.
+        L32R(5, 4),
+        MOVI(3, 1),
+        S32I(3, 5, 0x140),
+        // Release core 1 and point the ROM park loop at CORE1_ENTRY.
+        L32R(4, 0),
+        MOVI(7, 6),
+        S32I(7, 4, 0),
+        MOVI(7, 2),
+        S32I(7, 4, 0),
+        L32R(8, 1),
+        L32R(10, 2),
+        CALLXN(2, 8),
+        ...Array.from({ length: 64 }, () => NOP()),
+        // crosscore_int_ll_trigger_interrupt(1) writes bit 0 to this register.
+        L32R(6, 5),
+        MOVI(7, 1),
+        S32I(7, 6, 0),
+        J(BR(-1)),
+        PAD_TO(0x400),
+        // core 1: wait for the cross-core software interrupt.
+        L32R(2, 3),
+        L32R(5, 2),
+        WSR(5, SR.VECBASE),
+        MOVI(3, 2),
+        WSR(3, SR.INTENABLE),
+        RSIL(8, 0),
+        WAITI(0),
+        J(BR(-1)),
+        PAD_TO(0x740),
+        WSR(2, SR.EXCSAVE1),
+        // crosscore_int_ll_clear_interrupt(1) writes 0 to the same register.
+        L32R(2, 5),
+        MOVI(3, 0),
+        S32I(3, 2, 0),
+        L32R(2, 3),
+        MOVI(3, 0x51),
+        S32I(3, 2, 0),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([0x51]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('SW_APPCPU_RST sets the APPCPU reset cause (12) while PROCPU keeps power-on (1)', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

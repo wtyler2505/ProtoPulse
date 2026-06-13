@@ -732,6 +732,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       symbol's delayed TX_END edge instead of taking the original early
       low edge. Cuts: no driver ringbuffer API shim and no additional
       RMT error taxonomy beyond existing memory/APB overflow flags yet
+- [x] ESP32-S3 core slice 43 — FROM_CPU cross-core software interrupts
+      (landed 2026-06-13): SYSTEM_CPU_INTR_FROM_CPU0..3 now latch the
+      software interrupt bit exactly the way ESP-IDF's crosscore LL
+      trigger/clear helpers use them, and their interrupt matrix maps
+      at +0x13C..+0x148 route through the existing per-core output
+      surface. Proven by hand-assembled dual-core firmware that maps
+      FROM_CPU_INTR1 to APP CPU line 1, parks APP CPU in WAITI, has
+      PRO CPU write SYSTEM_CPU_INTR_FROM_CPU_1_REG, then clears the
+      latch in the APP CPU ISR and reports over UART. Cuts: no
+      higher-level FreeRTOS yield/IPI scheduling semantics yet; this is
+      the hardware delivery substrate
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
