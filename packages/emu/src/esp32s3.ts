@@ -275,6 +275,7 @@ const LEDC_TIMER_CLK_DIV_MASK = 0x3ffff;
 const LEDC_TIMER_PAUSE = 1 << 22;
 const LEDC_TIMER_RST = 1 << 23;
 const LEDC_TIMER_PARA_UP = 1 << 25;
+const LEDC_LSTIMER_OVF_INT_BASE = 0;
 const LEDC_INT_RAW = 0x0c0;
 const LEDC_INT_ST = 0x0c4;
 const LEDC_INT_ENA = 0x0c8;
@@ -723,6 +724,7 @@ interface LedcTimer {
   conf: number;
   base: number;
   sync: number;
+  ovfSerial: number;
 }
 
 interface LedcChannel {
@@ -786,6 +788,7 @@ const freshLedcTimer = (): LedcTimer => ({
   conf: LEDC_TIMER_RST,
   base: 0,
   sync: 0,
+  ovfSerial: 0,
 });
 
 const freshLedcChannel = (): LedcChannel => ({
@@ -1702,6 +1705,7 @@ export class Esp32s3Core implements McuCore {
       }
     }
     if ((this.rwdt.config0 & WDT_EN) !== 0) this.checkRwdt();
+    this.checkLedcTimers();
   }
 
   /** UART0's raw interrupt bits: RXFIFO_FULL tracks the live FIFO
@@ -1726,16 +1730,48 @@ export class Esp32s3Core implements McuCore {
     return Math.max(1, 1 << this.ledcTimerResolution(t));
   }
 
-  private ledcTimerCounter(t: LedcTimer): number {
-    if ((this.ledcConf & LEDC_CLK_EN) === 0 || (t.conf & (LEDC_TIMER_RST | LEDC_TIMER_PAUSE)) !== 0) return 0;
+  private ledcTimerRunning(t: LedcTimer): boolean {
+    return (this.ledcConf & LEDC_CLK_EN) !== 0 && (t.conf & (LEDC_TIMER_RST | LEDC_TIMER_PAUSE)) === 0;
+  }
+
+  private ledcTimerTicks(t: LedcTimer): number {
+    if (!this.ledcTimerRunning(t)) return 0;
     const divider = this.ledcTimerDivider(t);
-    const ticks = Math.floor(((this.cpu.cycles - t.sync) * LEDC_DIV_ONE) / (CYCLES_PER_APB * divider));
-    return (t.base + ticks) % this.ledcTimerPeriod(t);
+    return Math.floor(((this.cpu.cycles - t.sync) * LEDC_DIV_ONE) / (CYCLES_PER_APB * divider));
+  }
+
+  private ledcTimerTotal(t: LedcTimer): number {
+    return t.base + this.ledcTimerTicks(t);
+  }
+
+  private ledcTimerCounter(t: LedcTimer): number {
+    if (!this.ledcTimerRunning(t)) return 0;
+    return this.ledcTimerTotal(t) % this.ledcTimerPeriod(t);
+  }
+
+  private ledcTimerOverflowSerial(t: LedcTimer): number {
+    if ((this.ledcConf & LEDC_CLK_EN) === 0 || (t.conf & (LEDC_TIMER_RST | LEDC_TIMER_PAUSE)) !== 0) return 0;
+    return Math.floor(this.ledcTimerTotal(t) / this.ledcTimerPeriod(t));
   }
 
   private ledcTimerResync(t: LedcTimer): void {
     t.base = this.ledcTimerCounter(t);
     t.sync = this.cpu.cycles;
+    t.ovfSerial = this.ledcTimerOverflowSerial(t);
+  }
+
+  private checkLedcTimers(): void {
+    let changed = false;
+    for (let i = 0; i < LEDC_TIMERS; i++) {
+      const timer = this.ledcTimers[i];
+      if (timer === undefined || !this.ledcTimerRunning(timer)) continue;
+      const serial = this.ledcTimerOverflowSerial(timer);
+      if (serial <= timer.ovfSerial) continue;
+      timer.ovfSerial = serial;
+      this.ledcIntRaw |= 1 << (LEDC_LSTIMER_OVF_INT_BASE + i);
+      changed = true;
+    }
+    if (changed) this.recomputeIrq();
   }
 
   private ledcSignalLevel(signal: number): DigitalLevel | null {
@@ -2403,7 +2439,13 @@ export class Esp32s3Core implements McuCore {
       } else if (off === LEDC_INT_CLR) {
         this.ledcIntRaw &= ~v;
         this.recomputeIrq();
-      } else if (off === LEDC_CONF) this.ledcConf = v;
+      } else if (off === LEDC_CONF) {
+        const prev = this.ledcConf;
+        if ((prev & LEDC_CLK_EN) !== (v & LEDC_CLK_EN)) {
+          for (const timer of this.ledcTimers) this.ledcTimerResync(timer);
+        }
+        this.ledcConf = v;
+      }
       else if (off === LEDC_DATE) return;
       this.syncPins();
       return;

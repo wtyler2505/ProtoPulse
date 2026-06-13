@@ -535,6 +535,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       end only; no fade engine, timer/overflow interrupt generation,
       clock-source switching, sleep behavior, or high-level driver API
       shim yet
+- [x] ESP32-S3 core slice 27 — LEDC low-speed timer overflow IRQs
+      (landed 2026-06-13): low-speed timer overflow bits
+      `LEDC_LSTIMERn_OVF_INT_RAW` (`BIT(0..3)`) now latch as virtual
+      LEDC time advances, route through the existing LEDC interrupt
+      matrix source, and clear via `LEDC_INT_CLR`. LEDC timers resync
+      when the global LEDC clock is toggled so disabled-clock time does
+      not replay. Proven by hand-assembled firmware that maps LEDC to
+      CPU line 0, enables timer0 overflow interrupts, clears each ISR,
+      and reports three overflow interrupts over UART. Cuts: no fade
+      engine, channel overflow-count interrupts (`BIT(12 + channel)`),
+      clock-source switching, sleep behavior, or high-level driver API
+      shim yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -75,6 +75,7 @@ const LEDC = 0x60019000;
 const GPIO_FUNC5_OUT_SEL_CFG = GPIO + 0x568;
 const LEDC_CLK_EN = 0x80000000;
 const LEDC_TIMER0_2BIT_DIV1 = (256 << 4) | 2;
+const LEDC_TIMER0_8BIT_DIV1 = (256 << 4) | 8;
 const LEDC_DUTY_START = 0x80000000;
 const LEDC_SIG_OUT_EN = 1 << 2;
 const LEDC_LS_SIG_OUT0 = 73;
@@ -301,6 +302,64 @@ describe('Esp32s3Core', () => {
     c.step(500);
 
     expect([...c.drainUart()]).toEqual([2]);
+  });
+
+  it('generates LEDC low-speed timer overflow interrupts', () => {
+    const SCRATCH = ESP32S3_DRAM_BASE + 0x920;
+    const INTMTX = 0x600c2000;
+    const LEDC_LSTIMER0_OVF = 1 << 0;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [UART, LEDC, INTMTX, SCRATCH, ESP32S3_IRAM_BASE, LEDC_CLK_EN, LEDC_TIMER0_8BIT_DIV1],
+      [
+        L32R(2, 0), // UART
+        L32R(3, 1), // LEDC
+        L32R(4, 2), // interrupt matrix
+        L32R(5, 3), // SCRATCH counter
+        MOVI(6, 0),
+        S32I(6, 5, 0), // counter = 0
+        L32R(6, 4),
+        WSR(6, SR.VECBASE),
+        MOVI(6, 0),
+        S32I(6, 4, 0x8c), // LEDC source -> CPU line 0
+        MOVI(6, 1),
+        WSR(6, SR.INTENABLE),
+        RSIL(8, 0),
+
+        L32R(6, 5),
+        S32I(6, 3, 0xd0), // CONF.CLK_EN
+        L32R(6, 6),
+        S32I(6, 3, 0xa0), // TIMER0: 8-bit resolution, divider=1.0
+        MOVI(6, LEDC_LSTIMER0_OVF),
+        S32I(6, 3, 0xc8), // INT_ENA: low-speed timer0 overflow
+
+        MOVI(7, 3),
+        L32I(8, 5, 0),
+        BNE(8, 7, BR(-2)),
+        S32I(8, 2, 0x00),
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 3), // SCRATCH
+        S32I(3, 2, 8),
+        S32I(4, 2, 12),
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0),
+        L32R(3, 1), // LEDC
+        MOVI(4, LEDC_LSTIMER0_OVF),
+        S32I(4, 3, 0xcc), // INT_CLR: low-speed timer0 overflow
+        L32I(4, 2, 12),
+        L32I(3, 2, 8),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(5_000);
+
+    expect([...c.drainUart()]).toEqual([3]);
   });
 
   it('high-bank pins (IO33 via OUT1/ENABLE1) emit events too', () => {
