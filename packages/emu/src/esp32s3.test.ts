@@ -4364,6 +4364,38 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('ULP control force-start and clock-force bits read back while mem-offset clear is write-only', () => {
+    // Source-checked against ESP-IDF release/v5.5 rtc_cntl_reg.h:
+    // FORCE_START_TOP and CLK_FO are R/W, while MEM_OFFST_CLR is WO.
+    const ulpForceStart = 1 << 30;
+    const ulpClockForce = 1 << 28;
+    const memOffsetClear = 1 << 22;
+    const ctrlValue = ulpForceStart | ulpClockForce | memOffsetClear;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, UART, ctrlValue, 7, 1],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 2),
+        S32I(3, 2, 0x100), // ULP_CP_CTRL: FORCE_START_TOP | CLK_FO | WO MEM_OFFST_CLR
+        L32I(4, 2, 0x100),
+        SRAI(5, 4, 28),
+        L32R(6, 3),
+        AND(5, 5, 6),
+        L32R(7, 1),
+        S32I(5, 7, 0), // tx 5: FORCE_START_TOP and CLK_FO read back
+        SRAI(5, 4, 22),
+        L32R(6, 4),
+        AND(5, 5, 6),
+        S32I(5, 7, 0), // tx 0: MEM_OFFST_CLR is write-only
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(500);
+    expect([...c.drainUart()]).toEqual([5, 0]);
+  });
+
   it('ULP force-start wakes RTC sleep with the ULP wake source recorded', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // esp_sleep_enable_ulp_wakeup() arms the ULP wake source, soc/rtc.h

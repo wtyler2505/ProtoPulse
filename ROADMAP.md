@@ -988,6 +988,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       COCPU_CTRL at reset and reports START_2_RESET_DIS, START_2_INTR_EN,
       SHUT_2_CLK_DIS, and COCPU_SEL over UART. Cuts: no real COCPU
       timing/state sequencer, clock-gate timing, or reset-delay behavior
+- [x] ESP32-S3 core slice 64 — ULP_CP_CTRL force-start readback
+      fidelity (landed 2026-06-13): RTC_CNTL_ULP_CP_CTRL readback now
+      preserves the documented FORCE_START_TOP and CLK_FO R/W bits while
+      continuing to treat MEM_OFFST_CLR as a write-only pulse. This
+      keeps ULP setup helpers from seeing a false cleared force-start/
+      clock-force policy after read/modify/write flows. Proven by
+      hand-assembled firmware that writes FORCE_START_TOP, CLK_FO, and
+      MEM_OFFST_CLR, reads the register back, reports the expected
+      high-bit bitmap, and verifies MEM_OFFST_CLR reads as zero. Cuts:
+      no real ULP instruction execution, memory offset behavior, or
+      coprocessor clock-state sequencing
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
