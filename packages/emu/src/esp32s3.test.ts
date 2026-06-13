@@ -76,8 +76,10 @@ const GPIO_FUNC5_OUT_SEL_CFG = GPIO + 0x568;
 const LEDC_CLK_EN = 0x80000000;
 const LEDC_APB_CLK_SEL_XTAL = 3;
 const LEDC_TIMER0_2BIT_DIV1 = (256 << 4) | 2;
+const LEDC_TIMER0_3BIT_DIV1 = (256 << 4) | 3;
 const LEDC_TIMER0_8BIT_DIV1 = (256 << 4) | 8;
 const LEDC_DUTY_START = 0x80000000;
+const LEDC_DUTY_INC = 1 << 30;
 const LEDC_SIG_OUT_EN = 1 << 2;
 const LEDC_LS_SIG_OUT0 = 73;
 
@@ -284,6 +286,48 @@ describe('Esp32s3Core', () => {
     c.step(80);
 
     expect([...c.drainUart()]).toEqual([3]);
+  });
+
+  it('advances LEDC single-range hardware fade before duty-change interrupt', () => {
+    const LEDC_DUTY_CHNG_END_CH0 = 1 << 4;
+    const LEDC_FADE_UP_TWO_STEPS = LEDC_DUTY_START | LEDC_DUTY_INC | (2 << 20) | (1 << 10) | 1;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [LEDC, UART, LEDC_CLK_EN, LEDC_TIMER0_3BIT_DIV1, 1 << 4, LEDC_FADE_UP_TWO_STEPS],
+      [
+        L32R(2, 0), // LEDC
+        L32R(3, 1), // UART
+        L32R(4, 2),
+        S32I(4, 2, 0xd0), // CONF.CLK_EN
+        L32R(4, 3),
+        S32I(4, 2, 0xa0), // TIMER0: 3-bit resolution, divider=1.0
+        L32R(4, 4),
+        S32I(4, 2, 0x08), // CH0 starts at duty 1
+        MOVI(4, LEDC_DUTY_CHNG_END_CH0),
+        S32I(4, 2, 0xc8), // INT_ENA: duty-change-end ch0
+        L32R(4, 5),
+        S32I(4, 2, 0x0c), // start 2 x +1 hardware fade steps
+        L32I(5, 2, 0x10),
+        SRLI(5, 5, 4),
+        S32I(5, 3, 0), // immediate readback is still the start duty
+
+        MOVI(7, 80),
+        ADDI(7, 7, -1),
+        BNEZ(7, BR(-2)),
+        L32I(5, 2, 0x10),
+        SRLI(5, 5, 4),
+        S32I(5, 3, 0), // final duty after two fade steps
+        L32I(5, 2, 0xc4),
+        MOVI(6, LEDC_DUTY_CHNG_END_CH0),
+        AND(5, 5, 6),
+        S32I(5, 3, 0), // prove the fade-end status bit latched
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(400);
+
+    expect([...c.drainUart()]).toEqual([1, 3, LEDC_DUTY_CHNG_END_CH0]);
   });
 
   it('routes LEDC duty-change interrupts through the interrupt matrix', () => {

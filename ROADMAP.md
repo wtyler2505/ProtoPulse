@@ -572,6 +572,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       double its half-period from APB's 6 cycles to XTAL's 12 cycles.
       Cuts: no fade engine, sleep behavior, or high-level driver API
       shim yet
+- [x] ESP32-S3 core slice 30 — LEDC single-range hardware fade
+      (landed 2026-06-13): `LEDC_LSCHn_CONF1` now models the common
+      ESP-IDF fade path for one hardware range: `duty_scale`,
+      `duty_cycle`, `duty_num`, `duty_inc`, and `duty_start` advance
+      `DUTY_R` over selected-timer PWM overflows instead of treating
+      every `DUTY_START` as an immediate update. Fixed-duty updates
+      with zero fade scale/cycle/steps still apply immediately for
+      `ledc_update_duty()`. Fade completion latches the existing
+      duty-change-end interrupt bit. Proven by hand-assembled firmware
+      that starts at duty 1, fades upward by two single-cycle steps,
+      waits for `LEDC_DUTY_CHNG_END_LSCH0_INT_ST`, and reads back duty
+      3 over UART. Cuts: no gamma/multi-fade ranges, fade stop semantics,
+      sleep behavior, or high-level driver API shim yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
