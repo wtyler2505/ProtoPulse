@@ -200,8 +200,8 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * Cuts: no driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, non-timer wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
- * gating, and the remaining RTC interrupt producers beyond RWDT — so full
- * IDF/FreeRTOS firmware does NOT run yet.
+ * gating, and the remaining RTC interrupt producers beyond RWDT/COCPU — so
+ * full IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -527,7 +527,9 @@ const RTC_WDTCONFIG0 = 0x98;
 const RTC_WDTCONFIG1 = 0x9c; // ..+0xA8: stage0..3
 const RTC_WDTFEED = 0xac;
 const RTC_WDTWPROTECT = 0xb0;
+const RTC_COCPU_CTRL = 0x104;
 const RTC_WDT_FEED_BIT = 1 << 31; // RTC_CNTL_RTC_WDT_FEED
+const RTC_COCPU_SW_INT_TRIGGER = 1 << 26;
 const RWDT_CONFIG0_RESET = ((1 << 16) | (1 << 13) | (1 << 12) | (1 << 9)) >>> 0;
 
 // SAR ADC1/ADC2 oneshot paths (sens_reg.h; flow per
@@ -630,6 +632,7 @@ const RTC_WAKEUP_STATE_RESET = 0x000c << RTC_WAKEUP_ENA_SHIFT; // rtc_cntl_reg.h
 const RTC_SLP_WAKEUP_INT = 1 << 0;
 const RTC_SLP_REJECT_INT = 1 << 1;
 const RTC_WDT_INT = 1 << 3;
+const RTC_COCPU_INT = 1 << 13;
 const RTC_MAIN_TIMER_INT = 1 << 10;
 const RTC_SLP_REJECT_CAUSE = 0x128;
 const RTC_SLP_WAKEUP_CAUSE = 0x130;
@@ -1275,6 +1278,7 @@ export class Esp32s3Core implements McuCore {
   private rtcIntEna = 0;
   private rtcRejectCause = 0;
   private rtcWakeupCause = 0;
+  private rtcCocpuCtrl = 0;
   private rtcCoreIntMaps = freshInterruptMapPair();
   private rtcTimeLatchLo = 0; // captured by a TIME_UPDATE write
   private rtcTimeLatchHi = 0;
@@ -2005,6 +2009,7 @@ export class Esp32s3Core implements McuCore {
     this.rtcIntEna = 0;
     this.rtcRejectCause = 0;
     this.rtcWakeupCause = 0;
+    this.rtcCocpuCtrl = 0;
     this.rtcCoreIntMaps = freshInterruptMapPair();
     this.rtcTimeLatchLo = 0;
     this.rtcTimeLatchHi = 0;
@@ -3589,6 +3594,7 @@ export class Esp32s3Core implements McuCore {
       }
       if (off === RTC_WDTFEED) return 0; // the feed bit reads back 0
       if (off === RTC_WDTWPROTECT) return this.rwdt.wprotect >>> 0;
+      if (off === RTC_COCPU_CTRL) return (this.rtcCocpuCtrl & ~RTC_COCPU_SW_INT_TRIGGER) >>> 0;
       if (off === RTC_SLP_REJECT_CAUSE) return this.rtcRejectCause >>> 0;
       if (off === RTC_SLP_WAKEUP_CAUSE) return this.rtcWakeupCause >>> 0;
       if (off === RTC_INT_ENA_W1TS || off === RTC_INT_ENA_W1TC) return 0;
@@ -3596,7 +3602,8 @@ export class Esp32s3Core implements McuCore {
         `read of unmodeled RTC_CNTL register 0x${addr.toString(16)} — this core models only ` +
           `OPTIONS0(+0x0), SLP_TIMER0/1(+0x4/+0x8), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), ` +
           `STATE0(+0x18), RESET_STATE(+0x38), WAKEUP_STATE(+0x3c), INT_* (+0x40..+0x4c), ` +
-          `the RWDT block (+0x98..+0xb0), SW_CPU_STALL(+0xbc), sleep reject/wakeup causes (+0x128/+0x130); ` +
+          `the RWDT block (+0x98..+0xb0), SW_CPU_STALL(+0xbc), COCPU_CTRL(+0x104), ` +
+          `sleep reject/wakeup causes (+0x128/+0x130); ` +
           `a fabricated 0 here would lie`,
       );
     }
@@ -4175,6 +4182,14 @@ export class Esp32s3Core implements McuCore {
           } else {
             this.rwdt.timeouts[(off - RTC_WDTCONFIG1) >> 2] = value >>> 0;
           }
+        }
+      } else if (off === RTC_COCPU_CTRL) {
+        // COCPU_SW_INT_TRIGGER is a write-only pulse; the rest of the
+        // register is stored so IDF startup can round-trip inert fields.
+        this.rtcCocpuCtrl = (value & ~RTC_COCPU_SW_INT_TRIGGER) >>> 0;
+        if ((value & RTC_COCPU_SW_INT_TRIGGER) !== 0) {
+          this.rtcIntRaw |= RTC_COCPU_INT;
+          this.recomputeIrq();
         }
       } else if (off === RTC_INT_ENA_W1TS) {
         this.rtcIntEna = (this.rtcIntEna | value) >>> 0;

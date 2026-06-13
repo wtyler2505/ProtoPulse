@@ -26,6 +26,7 @@ import {
   CALL0,
   CALL0_TO,
   CALLN_TO,
+  CALLX0,
   CALLXN,
   ENTRY,
   J,
@@ -3130,6 +3131,9 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
   const RTC_TIME_UPDATE = 0x6000800c;
   const RTC_RESET_STATE = 0x60008038;
   const INTMTX = 0x600c2000;
+  const SYS = 0x600c0000;
+  const SET_BOOT = 0x40000720;
+  const CORE1_ENTRY = ESP32S3_IRAM_BASE + 0x400;
   const EFUSE_BASE = 0x60007000;
   const EFUSE_MAC0 = 0x60007044;
   const EFUSE_MAC1 = 0x60007048;
@@ -3399,6 +3403,71 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     const c = core(image);
     c.step(5_000);
     expect([...c.drainUart()]).toEqual([rtcTimerTrig]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
+  it('COCPU software trigger wakes WAITI through the RTC core interrupt matrix', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // rtc_cntl_reg.h has COCPU_CTRL +0x104, COCPU_SW_INT_TRIGGER
+    // bit 26, and RTC_CNTL_COCPU_INT_* at bit 13. RTC_CORE routes
+    // through interrupt_core0_reg.h +0x09c.
+    const RTC_COCPU_INT = 1 << 13;
+    const RTC_COCPU_SW_INT_TRIGGER = 1 << 26;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, SYS, SET_BOOT, CORE1_ENTRY, RTC_COCPU_INT, RTC_COCPU_SW_INT_TRIGGER],
+      [
+        ADDI(3, 1, -16),
+        S32I(1, 3, 4),
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(4, 1), // a4 = interrupt matrix
+        MOVI(5, 1),
+        S32I(5, 4, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(6, 3),
+        WSR(6, SR.VECBASE),
+        MOVI(5, 2),
+        WSR(5, SR.INTENABLE),
+        L32R(7, 7),
+        S32I(7, 2, 0x4c), // clear stale COCPU raw
+        S32I(7, 2, 0x40), // enable COCPU raw
+        L32R(10, 5),
+        L32R(2, 6),
+        CALLX0(10), // ets_set_appcpu_boot_addr(CORE1_ENTRY)
+        L32R(2, 0), // restore a2 = RTC_CNTL after the call0 argument
+        L32R(8, 4), // a8 = SYSTEM
+        MOVI(9, 6),
+        S32I(9, 8, 0), // CLKGATE_EN | RESETING
+        MOVI(9, 2),
+        S32I(9, 8, 0), // clear RESETING: core 1 released
+        RSIL(12, 0),
+        WAITI(0),
+        L32I(5, 2, 0x48), // INT_ST after handler clear
+        L32R(6, 2),
+        S32I(5, 6, 0), // tx 0: status is clear
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 7),
+        S32I(3, 2, 0x4c), // clear COCPU raw
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+
+        PAD_TO(0x400),
+        L32R(2, 0), // core 1: a2 = RTC_CNTL
+        MOVI(3, 80),
+        ADDI(3, 3, -1),
+        BNEZ(3, BR(-2)), // give core 0 time to enter WAITI
+        L32R(4, 8),
+        S32I(4, 2, 0x104), // COCPU_CTRL.COCPU_SW_INT_TRIGGER
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(5_000);
+    expect([...c.drainUart()]).toEqual([0]);
     c.step(300);
     expect([...c.drainUart()]).toEqual([]);
   });

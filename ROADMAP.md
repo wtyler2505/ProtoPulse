@@ -764,7 +764,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       level-1 line 1, parks in WAITI, clears RTC_WDT in the ISR, feeds
       RWDT afterward, and reports that INT_ST is clear while the reset
       cause remains POWERON. Cuts: no SUPER_WDT, sleep-pause clock
-      policy, XTAL clock source, or remaining RTC interrupt producers yet
+      policy, XTAL clock source, or remaining RTC interrupt producers
+      beyond COCPU yet
+- [x] ESP32-S3 core slice 46 — RTC COCPU software interrupt delivery
+      through RTC_CORE (landed 2026-06-13): RTC_CNTL_COCPU_CTRL now
+      stores inert control fields and treats COCPU_SW_INT_TRIGGER
+      (bit 26) as a write-only pulse that latches RTC_CNTL_COCPU_INT
+      (bit 13), flows through RTC_CNTL INT_RAW/ST/ENA/CLR, and wakes
+      the CPU through the RTC_CORE interrupt-matrix source. Proven by
+      hand-assembled dual-core firmware that maps RTC_CORE to level-1
+      line 1 on PRO CPU, parks PRO CPU in WAITI, has APP CPU write the
+      COCPU trigger, clears COCPU raw in the PRO CPU ISR, and reports
+      that INT_ST is clear. Cuts: no ULP/RISC-V coprocessor execution,
+      COCPU_DONE/TRAP modeling, or remaining RTC producers like touch,
+      brownout, SARADC RTC-domain, XTAL32K dead, and SUPER_WDT yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
