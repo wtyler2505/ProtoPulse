@@ -20,7 +20,10 @@ if [[ ! -d "$bundle_root" ]]; then
   exit 1
 fi
 
-mapfile -t artifacts < <(
+artifacts=()
+while IFS= read -r artifact; do
+  artifacts+=("$artifact")
+done < <(
   find "$bundle_root" \
     -path '*/release/bundle/*' \
     -type f \
