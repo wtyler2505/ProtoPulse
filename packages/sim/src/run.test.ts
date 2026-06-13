@@ -21,7 +21,7 @@ function ledResistorGraph(): DesignGraph {
   return graph;
 }
 
-const engine = new SpiceEngine();
+const engine = new SpiceEngine({ quiet: true });
 
 beforeAll(async () => {
   await engine.start();

@@ -28,6 +28,14 @@ export interface SimResult {
   vectors: SimVector[];
 }
 
+export interface SpiceEngineOptions {
+  /**
+   * Suppress eecircuit-engine's direct console chatter. Normal callers keep
+   * logs visible; integration tests use this for expected ngspice failures.
+   */
+  quiet?: boolean;
+}
+
 function normalize(raw: ResultType, analysis: Analysis): SimResult {
   const vectors: SimVector[] =
     raw.dataType === 'complex'
@@ -48,6 +56,11 @@ function normalize(raw: ResultType, analysis: Analysis): SimResult {
 export class SpiceEngine {
   private sim: Simulation | null = null;
   private booting: Promise<void> | null = null;
+  private readonly quiet: boolean;
+
+  constructor(opts: SpiceEngineOptions = {}) {
+    this.quiet = opts.quiet ?? false;
+  }
 
   /** Lazily boot the WASM engine; safe to call repeatedly. */
   async start(): Promise<void> {
@@ -67,8 +80,10 @@ export class SpiceEngine {
     const sim = this.sim;
     if (!sim) throw new Error('engine not started');
     const body = netlistBody.endsWith('\n') ? netlistBody : `${netlistBody}\n`;
-    sim.setNetList(`${body}${analysisCard(analysis)}\n.end\n`);
-    const raw = await sim.runSim();
+    const raw = await this.withQuietConsole(async () => {
+      sim.setNetList(`${body}${analysisCard(analysis)}\n.end\n`);
+      return sim.runSim();
+    });
     if (raw.numPoints === 0 || raw.variableNames.length === 0) {
       const errors = sim.getError().filter((line) => line.trim().length > 0);
       throw new Error(`simulation produced no data${errors.length > 0 ? `: ${errors.join('; ')}` : ''}`);
@@ -81,6 +96,22 @@ export class SpiceEngine {
     this.sim = null;
     this.booting = null;
     await Promise.resolve();
+  }
+
+  private async withQuietConsole<T>(run: () => Promise<T>): Promise<T> {
+    if (!this.quiet) return run();
+    const runtimeConsole = globalThis.console;
+    const originalInfo = runtimeConsole.info;
+    const originalError = runtimeConsole.error;
+    const ignore = (): void => undefined;
+    runtimeConsole.info = ignore;
+    runtimeConsole.error = ignore;
+    try {
+      return await run();
+    } finally {
+      runtimeConsole.info = originalInfo;
+      runtimeConsole.error = originalError;
+    }
   }
 }
 

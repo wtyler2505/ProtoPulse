@@ -9,7 +9,7 @@ import type { SimVector } from './engine.js';
  * engine — boot takes seconds; setNetList + runSim are cheap per run.
  */
 
-const engine = new SpiceEngine();
+const engine = new SpiceEngine({ quiet: true });
 
 beforeAll(async () => {
   await engine.start();
