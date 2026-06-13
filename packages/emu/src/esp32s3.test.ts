@@ -77,6 +77,7 @@ const RMT = 0x60016000;
 const GDMA = 0x6003f000;
 const GPIO_FUNC5_OUT_SEL_CFG = GPIO + 0x568;
 const GPIO_FUNC81_IN_SEL_CFG = GPIO + 0x154 + 81 * 4;
+const GPIO_FUNC84_IN_SEL_CFG = GPIO + 0x154 + 84 * 4;
 const GPIO_SIG_IN_SEL = 1 << 7;
 const LEDC_CLK_EN = 0x80000000;
 const LEDC_APB_CLK_SEL_XTAL = 3;
@@ -100,6 +101,7 @@ const RMT_CARRIER_EFF_EN = 1 << 20;
 const RMT_CARRIER_EN = 1 << 21;
 const RMT_CARRIER_OUT_LV = 1 << 22;
 const RMT_DMA_ACCESS_EN = 1 << 25;
+const RMT_RX_DMA_ACCESS_EN = 1 << 23;
 const RMT_CH0_CARRIER_DUTY = 0x80;
 const RMT_CH0_STATUS = 0x50;
 const RMT_CH0_TX_LIM = 0xa0;
@@ -121,8 +123,16 @@ const GDMA_OUT_CH0_INT_RAW = 0x68;
 const GDMA_OUT_CH0_INT_CLR = 0x74;
 const GDMA_OUT_CH0_LINK = 0x80;
 const GDMA_OUT_CH0_PERI_SEL = 0xa8;
+const GDMA_IN_CH0_INT_RAW = 0x08;
+const GDMA_IN_CH0_INT_CLR = 0x14;
+const GDMA_IN_CH0_LINK = 0x20;
+const GDMA_IN_CH0_PERI_SEL = 0x48;
 const GDMA_OUT_LINK_START = 1 << 21;
+const GDMA_INLINK_AUTO_RET = 1 << 20;
+const GDMA_INLINK_START = 1 << 22;
 const GDMA_PERI_RMT = 9;
+const GDMA_IN_DONE = 1 << 0;
+const GDMA_IN_SUC_EOF = 1 << 1;
 const GDMA_OUT_DONE = 1 << 0;
 const GDMA_OUT_EOF = 1 << 1;
 const GDMA_OUT_TOTAL_EOF = 1 << 3;
@@ -671,6 +681,121 @@ describe('Esp32s3Core', () => {
     c.step(90);
 
     expect([...c.drainUart()]).toEqual([1, 1, 2, 1, 3, 0]);
+  });
+
+  it('captures RMT RX channel 3 symbols through GDMA IN descriptors', () => {
+    const desc = ESP32S3_DRAM_BASE + 0x1280;
+    const buf = ESP32S3_DRAM_BASE + 0x12c0;
+    const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB;
+    const rxDmaConf0 = 1 | (4 << 8) | RMT_RX_DMA_ACCESS_EN | (1 << 24); // divider 1, idle 4 ticks, DMA-capable CH7
+    const rxConf1Reset = RMT_MEM_OWNER_RX | RMT_MEM_WR_RST | RMT_APB_MEM_RST | RMT_RX_CONF_UPDATE;
+    const rxConf1Start = RMT_MEM_OWNER_RX | RMT_RX_EN | RMT_RX_CONF_UPDATE;
+    const gpioInRoute = 4 | GPIO_SIG_IN_SEL; // IO4 -> RMT_SIG_IN3
+    const descWord = GDMA_DESC_OWNER_DMA | 8;
+    const inLinkStart = (desc & 0x000f_ffff) | GDMA_INLINK_AUTO_RET | GDMA_INLINK_START;
+    const gdmaDoneMask = GDMA_IN_DONE | GDMA_IN_SUC_EOF;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        desc,
+        buf,
+        descWord,
+        GDMA,
+        inLinkStart,
+        RMT,
+        GPIO_FUNC84_IN_SEL_CFG,
+        gpioInRoute,
+        rmtSysConf,
+        rxDmaConf0,
+        rxConf1Reset,
+        rxConf1Start,
+        UART,
+        gdmaDoneMask,
+        0xff,
+        1,
+      ],
+      [
+        L32R(2, 0), // descriptor
+        L32R(3, 2),
+        S32I(3, 2, 0), // dw0: owner=DMA, 8-byte buffer
+        L32R(3, 1),
+        S32I(3, 2, 4), // buffer
+        MOVI(3, 0),
+        S32I(3, 2, 8), // next = NULL
+
+        L32R(4, 3), // GDMA
+        MOVI(5, GDMA_PERI_RMT),
+        S32I(5, 4, GDMA_IN_CH0_PERI_SEL),
+        L32R(5, 4),
+        S32I(5, 4, GDMA_IN_CH0_LINK),
+
+        L32R(6, 5), // RMT
+        L32R(7, 8),
+        S32I(7, 6, 0xc0), // SYS_CONF: clk on, APB source, group divider 1
+        L32R(7, 9),
+        S32I(7, 6, 0x48), // CH7CONF0: DMA access + idle threshold
+        L32R(7, 6),
+        L32R(8, 7),
+        S32I(8, 7, 0), // GPIO input matrix: RMT_SIG_IN3 <- IO4
+        L32R(7, 10),
+        S32I(7, 6, 0x4c), // reset RX write/APB pointers
+        L32R(7, 11),
+        S32I(7, 6, 0x4c), // rx_en + conf_update
+
+        L32R(12, 12), // UART
+        L32R(10, 13), // GDMA done mask
+        L32I(8, 4, GDMA_IN_CH0_INT_RAW),
+        AND(9, 8, 10),
+        BEQZ(9, BR(-3)),
+        S32I(8, 12, 0), // GDMA IN raw = DONE|SUC_EOF
+        L32I(8, 6, 0x70),
+        SRLI(8, 8, 8),
+        SRLI(8, 8, 8),
+        S32I(8, 12, 0), // no RMT RX_END raw byte in DMA mode
+        L32R(9, 1), // buffer
+        L32R(10, 14), // 0xff
+        L32I(8, 9, 0),
+        AND(11, 8, 10),
+        S32I(11, 12, 0), // duration0 low byte
+        SRLI(11, 8, 15),
+        L32R(10, 15), // 1
+        AND(11, 11, 10),
+        S32I(11, 12, 0), // level0
+        L32R(10, 14),
+        SRLI(11, 8, 8),
+        SRLI(11, 11, 8),
+        AND(11, 11, 10),
+        S32I(11, 12, 0), // duration1 low byte
+        SRLI(11, 8, 15),
+        SRLI(11, 11, 15),
+        SRLI(11, 11, 1),
+        L32R(10, 15),
+        AND(11, 11, 10),
+        S32I(11, 12, 0), // level1
+        L32R(9, 0), // descriptor
+        L32I(8, 9, 0),
+        SRLI(8, 8, 12),
+        L32R(10, 14),
+        AND(8, 8, 10),
+        S32I(8, 12, 0), // descriptor length = 4, partial EOF
+        L32R(8, 13),
+        S32I(8, 4, GDMA_IN_CH0_INT_CLR),
+        L32I(8, 4, GDMA_IN_CH0_INT_RAW),
+        S32I(8, 12, 0), // clear worked
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.setPin('IO4', 0);
+    c.step(90);
+    c.setPin('IO4', 1);
+    c.step(6);
+    c.setPin('IO4', 0);
+    c.step(9);
+    c.setPin('IO4', 1);
+    c.step(300);
+
+    expect([...c.drainUart()]).toEqual([gdmaDoneMask, 0, 2, 1, 3, 0, 4, 0]);
   });
 
   it('uses LEDC shared clock source selection for timer speed and readback', () => {

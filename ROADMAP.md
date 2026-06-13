@@ -664,8 +664,23 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       at two RMT symbols, selects GDMA peripheral 9 (RMT), starts CH3
       through the GPIO matrix, observes the IO5 waveform, and confirms
       `OUT_DONE|OUT_EOF|OUT_TOTAL_EOF` plus raw clear over UART. Cuts:
-      no ping-pong live refill/`gdma_append` timing, no RMT RX GDMA,
-      no RX direct-memory/wrap path, and no RX carrier demodulation yet
+      no ping-pong live refill/`gdma_append` timing, no RX
+      direct-memory/wrap path, and no RX carrier demodulation yet
+- [x] ESP32-S3 core slice 38 — RMT RX GDMA channel-3 first cut
+      (landed 2026-06-13): RMT RX channel 3 now honors the RX
+      `dma_access_en_chm` bit and writes captured 32-bit symbols into
+      GDMA IN descriptors selected with peripheral 9 (RMT). RX idle end
+      finalizes a partially filled descriptor with
+      `DONE|SUC_EOF`, descriptor length writeback, and CPU ownership,
+      matching the ESP-IDF driver's DMA end-marker path that uses GDMA
+      callbacks instead of RMT RX interrupts. Proven by hand-assembled
+      firmware that arms GDMA IN, routes IO4 to `RMT_SIG_IN3`, captures
+      a high/low symbol through CH7, verifies the DMA buffer contents,
+      confirms no RMT RX_END raw byte is needed in DMA mode, and clears
+      GDMA raw status over UART. Cuts: no RX DMA ping-pong/partial
+      receive callback flow, no carrier demodulation, no RX
+      direct-memory/wrap APB readback path, and no driver ringbuffer API
+      shim yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

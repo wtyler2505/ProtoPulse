@@ -181,10 +181,11 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * loop a real interrupt cadence. RMT RX channel 0..3 now captures GPIO
  * input-matrix edges into CH4..CH7 APB FIFO symbols, honoring RX
  * limit/threshold and idle completion. RMT TX channel 3 can source
- * symbols from GDMA OUT descriptors when DMA access is enabled. Cuts:
- * no live mutation of an already-built TX waveform from a refill ISR,
- * RX GDMA, RX carrier demodulation, RX partial-buffer wrapping, or
- * driver ringbuffer API yet.
+ * symbols from GDMA OUT descriptors when DMA access is enabled, and
+ * RMT RX channel 3 can write captured symbols into GDMA IN descriptors.
+ * Cuts: no live mutation of an already-built TX waveform from a refill
+ * ISR, RX carrier demodulation, RX partial-buffer wrapping, or driver
+ * ringbuffer API yet.
  * Still missing: full light/deep sleep register policy — so full
  * IDF/FreeRTOS firmware does NOT run yet.
  * Loading Intel-HEX refuses with a message.
@@ -411,6 +412,7 @@ const RMT_RX_CONF1_RESET = RMT_MEM_OWNER_RX | (15 << RMT_RX_FILTER_THRES_SHIFT);
 const RMT_RX_DIV_CNT_MASK = 0xff;
 const RMT_RX_IDLE_THRES_SHIFT = 8;
 const RMT_RX_IDLE_THRES_MASK = 0x7fff;
+const RMT_RX_DMA_ACCESS_EN = 1 << 23;
 const RMT_RX_MEM_SIZE_SHIFT = 24;
 const RMT_RX_MEM_SIZE_MASK = 0x0f;
 const RMT_RX_CONF0_RESET = 2 | (RMT_RX_IDLE_THRES_MASK << RMT_RX_IDLE_THRES_SHIFT) | (1 << RMT_RX_MEM_SIZE_SHIFT) | (1 << 28) | (1 << 29);
@@ -1732,6 +1734,44 @@ export class Esp32s3Core implements McuCore {
     this.recomputeIrq();
   }
 
+  private gdmaPushRmtRxWord(word: number): boolean {
+    const ch =
+      this.gdmaRx.find((rx) => rx.active && rx.periSel === GDMA_PERI_RMT) ??
+      this.gdmaRx.find((rx) => rx.started && rx.periSel === GDMA_PERI_RMT);
+    if (ch === undefined) return false;
+    const before = ch.intRaw;
+    this.gdmaPushRxWord(ch, word >>> 0);
+    this.recomputeIrq();
+    return ch.intRaw !== before;
+  }
+
+  private gdmaFinishRxDescriptor(ch: GdmaRxChannel): boolean {
+    const desc = ch.currentDesc >>> 0;
+    if (desc === 0 || ch.offset === 0) return false;
+    const dw0 = this.sramU32(desc);
+    const size = dw0 & GDMA_DESC_SIZE_MASK;
+    const length = Math.min(ch.offset, size) & GDMA_DESC_SIZE_MASK;
+    const nextDw0 = (dw0 & ~(GDMA_DESC_LENGTH_MASK | GDMA_DESC_OWNER_DMA)) | (length << 12) | GDMA_DESC_SUC_EOF;
+    this.setSramU32(desc, nextDw0 >>> 0);
+    ch.sucEofDesc = desc;
+    ch.intRaw |= GDMA_IN_DONE_INT | GDMA_IN_SUC_EOF_INT;
+    ch.descBf1 = ch.descBf0;
+    ch.descBf0 = desc;
+    ch.currentDesc = this.sramU32(desc + 8) >>> 0;
+    ch.offset = 0;
+    ch.active = false;
+    ch.started = false;
+    this.recomputeIrq();
+    return true;
+  }
+
+  private gdmaFinishRmtRx(): boolean {
+    const ch =
+      this.gdmaRx.find((rx) => rx.active && rx.periSel === GDMA_PERI_RMT) ??
+      this.gdmaRx.find((rx) => rx.started && rx.periSel === GDMA_PERI_RMT);
+    return ch === undefined ? false : this.gdmaFinishRxDescriptor(ch);
+  }
+
   private gdmaPushRxWord(ch: GdmaRxChannel, word: number): void {
     let desc = ch.currentDesc >>> 0;
     if (desc === 0) {
@@ -2424,6 +2464,10 @@ export class Esp32s3Core implements McuCore {
     return ch.rxLim & RMT_RX_LIM_MASK;
   }
 
+  private rmtRxDmaMode(chIndex: number, ch: RmtRxChannel): boolean {
+    return chIndex === RMT_RX_CHANNELS - 1 && (ch.conf0 & RMT_RX_DMA_ACCESS_EN) !== 0;
+  }
+
   private rmtResetRx(ch: RmtRxChannel): void {
     ch.memory = [];
     ch.readCursor = 0;
@@ -2470,6 +2514,7 @@ export class Esp32s3Core implements McuCore {
     const first = ch.pending;
     ch.pending = null;
     const symbol = (first.duration | (first.level << 15) | (half.duration << 16) | (half.level << 31)) >>> 0;
+    if (this.rmtRxDmaMode(chIndex, ch)) return this.gdmaPushRmtRxWord(symbol);
     ch.memory.push(symbol);
     const limit = this.rmtRxLimit(ch);
     if (!ch.thresholdFired && limit > 0 && ch.memory.length >= limit) {
@@ -2618,11 +2663,13 @@ export class Esp32s3Core implements McuCore {
       const idleTicks = Math.floor((now - ch.lastCycle) / cyclesPerTick);
       if (idleTicks < idleThreshold) continue;
       const level = this.rmtRxInputLevel(i) ?? ch.lastLevel;
+      const dmaMode = this.rmtRxDmaMode(i, ch);
       changed = this.rmtPushRxHalf(i, Math.min(idleTicks, RMT_RX_IDLE_THRES_MASK), level) || changed;
       ch.active = false;
       ch.started = false;
       ch.pending = null;
-      this.rmtIntRaw |= 1 << (RMT_RX_END_INT_BASE + i);
+      if (dmaMode) changed = this.gdmaFinishRmtRx() || changed;
+      else this.rmtIntRaw |= 1 << (RMT_RX_END_INT_BASE + i);
       changed = true;
     }
     for (let i = 0; i < RMT_TX_CHANNELS; i++) {
