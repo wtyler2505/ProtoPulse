@@ -522,6 +522,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       on IO5, plus a readback test for ESP-IDF integer-duty semantics.
       Cuts: no fade engine, LEDC interrupts, clock-source switching,
       sleep behavior, or high-level driver API shim yet
+- [x] ESP32-S3 core slice 26 — LEDC interrupt delivery
+      (landed 2026-06-13): the LEDC interrupt-matrix map at
+      0x600C208C now routes enabled LEDC INT_RAW bits into core 0's
+      level-1 external interrupt surface, including the ESP-IDF
+      duty-change-end bits at `BIT(4 + channel)`. LEDC INT_ENA/CLR and
+      duty-start writes recompute the CPU line mask, so firmware can
+      clear and re-arm duty-change interrupts without polling. Proven
+      by hand-assembled firmware that maps LEDC to CPU line 0, enables
+      channel-0 duty-change-end, vectors twice through a handler, clears
+      INT_CLR, and reports the ISR count over UART. Cuts: duty-change
+      end only; no fade engine, timer/overflow interrupt generation,
+      clock-source switching, sleep behavior, or high-level driver API
+      shim yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

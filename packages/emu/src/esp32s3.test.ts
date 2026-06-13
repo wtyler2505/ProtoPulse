@@ -226,6 +226,83 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([3]);
   });
 
+  it('routes LEDC duty-change interrupts through the interrupt matrix', () => {
+    const SCRATCH = ESP32S3_DRAM_BASE + 0x900;
+    const INTMTX = 0x600c2000;
+    const LEDC_DUTY_CHNG_END_CH0 = 1 << 4;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        UART,
+        LEDC,
+        INTMTX,
+        SCRATCH,
+        ESP32S3_IRAM_BASE,
+        LEDC_CLK_EN,
+        LEDC_TIMER0_2BIT_DIV1,
+        2 << 4,
+        LEDC_DUTY_START,
+      ],
+      [
+        L32R(2, 0), // UART
+        L32R(3, 1), // LEDC
+        L32R(4, 2), // interrupt matrix
+        L32R(5, 3), // SCRATCH counter
+        MOVI(6, 0),
+        S32I(6, 5, 0), // counter = 0
+        L32R(6, 4),
+        WSR(6, SR.VECBASE),
+        MOVI(6, 0),
+        S32I(6, 4, 0x8c), // LEDC source -> CPU line 0
+        MOVI(6, 1),
+        WSR(6, SR.INTENABLE),
+        RSIL(8, 0),
+
+        L32R(6, 5),
+        S32I(6, 3, 0xd0), // CONF.CLK_EN
+        L32R(6, 6),
+        S32I(6, 3, 0xa0), // TIMER0: 2-bit resolution, divider=1.0
+        L32R(6, 7),
+        S32I(6, 3, 0x08), // CH0 duty
+        MOVI(6, LEDC_DUTY_CHNG_END_CH0),
+        S32I(6, 3, 0xc8), // INT_ENA: duty-change-end ch0
+
+        L32R(6, 8),
+        S32I(6, 3, 0x0c), // first duty-start interrupt
+        MOVI(7, 1),
+        L32I(8, 5, 0),
+        BNE(8, 7, BR(-2)),
+        L32R(6, 8),
+        S32I(6, 3, 0x0c), // second interrupt after ISR clear
+        MOVI(7, 2),
+        L32I(8, 5, 0),
+        BNE(8, 7, BR(-2)),
+        S32I(8, 2, 0x00),
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 3), // SCRATCH
+        S32I(3, 2, 8),
+        S32I(4, 2, 12),
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0),
+        L32R(3, 1), // LEDC
+        MOVI(4, LEDC_DUTY_CHNG_END_CH0),
+        S32I(4, 3, 0xcc), // INT_CLR: duty-change-end ch0
+        L32I(4, 2, 12),
+        L32I(3, 2, 8),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(500);
+
+    expect([...c.drainUart()]).toEqual([2]);
+  });
+
   it('high-bank pins (IO33 via OUT1/ENABLE1) emit events too', () => {
     const image = assembleXtensa(ESP32S3_IRAM_BASE, [GPIO, 1 << (33 - 32)], [
       L32R(2, 0),

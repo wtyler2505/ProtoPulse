@@ -240,6 +240,7 @@ const UART_TX_DONE_INT = 1 << 14;
 const INTMTX_BASE = 0x600c2000;
 const INTMTX_GPIO_MAP = 0x040; // INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG
 const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
+const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
 // The six TIMG sources sit contiguously (interrupt_core0_reg.h):
 // TG_T0 +0xC8, TG_T1 +0xCC, TG_WDT +0xD0, TG1_T0 +0xD4, TG1_T1
 // +0xD8, TG1_WDT +0xDC — group-major, [t0, t1, wdt] within a group.
@@ -872,6 +873,7 @@ export class Esp32s3Core implements McuCore {
   private ledcConf = 0;
   private ledcIntRaw = 0;
   private ledcIntEna = 0;
+  private ledcIntMap = INTMTX_DEFAULT_MAP;
 
   // UART0 interrupt state + the interrupt matrix maps.
   private uartIntEna = 0;
@@ -1496,6 +1498,7 @@ export class Esp32s3Core implements McuCore {
     this.ledcConf = 0;
     this.ledcIntRaw = 0;
     this.ledcIntEna = 0;
+    this.ledcIntMap = INTMTX_DEFAULT_MAP;
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
@@ -1776,10 +1779,12 @@ export class Esp32s3Core implements McuCore {
       }
     }
     const uartPending = (this.uartIntRaw() & this.uartIntEna) !== 0;
+    const ledcPending = (this.ledcIntRaw & this.ledcIntEna) !== 0;
     const apbAdcPending = (this.apbSaradcIntRaw & this.apbSaradcIntEna) !== 0;
     let mask = 0;
     if (gpioPending) mask |= 1 << (this.gpioIntMap & 31);
     if (uartPending) mask |= 1 << (this.uartIntMap & 31);
+    if (ledcPending) mask |= 1 << (this.ledcIntMap & 31);
     if (apbAdcPending) mask |= 1 << (this.apbSaradcIntMap & 31);
     // Each TIMG source (T0/T1/WDT × both groups) drives its own map.
     for (const grp of this.timg) {
@@ -2068,6 +2073,7 @@ export class Esp32s3Core implements McuCore {
       const off = addr - INTMTX_BASE;
       if (off === INTMTX_GPIO_MAP) return this.gpioIntMap;
       if (off === INTMTX_UART_MAP) return this.uartIntMap;
+      if (off === INTMTX_LEDC_MAP) return this.ledcIntMap;
       if (off >= INTMTX_TG_MAPS && off < INTMTX_TG_MAPS + 24 && (off & 3) === 0) {
         const idx = (off - INTMTX_TG_MAPS) >> 2; // group-major [t0,t1,wdt]
         return this.timg[idx < 3 ? 0 : 1]?.maps[idx % 3] ?? INTMTX_DEFAULT_MAP;
@@ -2338,6 +2344,7 @@ export class Esp32s3Core implements McuCore {
       const off = addr - INTMTX_BASE;
       if (off === INTMTX_GPIO_MAP) this.gpioIntMap = value & 0x1f;
       else if (off === INTMTX_UART_MAP) this.uartIntMap = value & 0x1f;
+      else if (off === INTMTX_LEDC_MAP) this.ledcIntMap = value & 0x1f;
       else if (off >= INTMTX_TG_MAPS && off < INTMTX_TG_MAPS + 24 && (off & 3) === 0) {
         const idx = (off - INTMTX_TG_MAPS) >> 2;
         const grp = this.timg[idx < 3 ? 0 : 1];
@@ -2369,6 +2376,7 @@ export class Esp32s3Core implements McuCore {
           if ((v & LEDC_CH_DUTY_START) !== 0) {
             ch.dutyRead = ch.duty;
             this.ledcIntRaw |= 1 << (4 + chIndex);
+            this.recomputeIrq();
           }
         }
         this.syncPins();
@@ -2389,9 +2397,13 @@ export class Esp32s3Core implements McuCore {
         this.syncPins();
         return;
       }
-      if (off === LEDC_INT_ENA) this.ledcIntEna = v;
-      else if (off === LEDC_INT_CLR) this.ledcIntRaw &= ~v;
-      else if (off === LEDC_CONF) this.ledcConf = v;
+      if (off === LEDC_INT_ENA) {
+        this.ledcIntEna = v;
+        this.recomputeIrq();
+      } else if (off === LEDC_INT_CLR) {
+        this.ledcIntRaw &= ~v;
+        this.recomputeIrq();
+      } else if (off === LEDC_CONF) this.ledcConf = v;
       else if (off === LEDC_DATE) return;
       this.syncPins();
       return;
