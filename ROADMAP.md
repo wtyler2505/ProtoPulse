@@ -1037,6 +1037,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       firmware that reads reset state, writes selector 2, then writes
       0xff and observes readback 7 instead of fabricated high bits.
       Cuts: no FIB reset-source routing for GLITCH/BOD/SUPER_WDT yet
+- [x] ESP32-S3 core slice 69 — RTC light-sleep reject source
+      (landed 2026-06-14): RTC_CNTL_SLP_REJECT_CONF now stores
+      LIGHT_SLP_REJECT_EN plus SLEEP_REJECT_ENA, and a host-injected
+      reject source blocks modeled STATE0.SLEEP_EN, latches
+      STATE0.SLP_REJECT, records SLP_REJECT_CAUSE, and routes
+      RTC_CNTL_SLP_REJECT_INT through RTC_CORE. Proven by
+      hand-assembled firmware that enables GPIO reject, attempts sleep,
+      wakes through the RTC_CORE ISR, reports SLP_REJECT plus GPIO
+      cause, verifies SLEEP_EN did not stick, then clears the cause.
+      Cuts: GPIO/SDIO hardware reject detection only via host hook; no
+      deep-sleep reject sequencing yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

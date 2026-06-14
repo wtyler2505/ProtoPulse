@@ -3446,6 +3446,78 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('RTC sleep reject blocks light sleep and reports the reject cause through RTC_CORE', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // rtc_cntl_reg.h has SLP_REJECT_CONF +0x68 with
+    // LIGHT_SLP_REJECT_EN bit 30 and SLEEP_REJECT_ENA [29:12];
+    // STATE0.SLP_REJECT is bit 30, SLP_REJECT_CAUSE is +0x128, and
+    // RTC_CNTL_SLP_REJECT_INT_* is bit 1. soc/rtc.h defines
+    // RTC_GPIO_TRIG_EN as BIT(2), part of RTC_SLEEP_REJECT_MASK.
+    const rtcGpioTrig = 1 << 2;
+    const rtcSleepRejectInt = 1 << 1;
+    const lightSleepRejectEn = 1 << 30;
+    const rejectConf = lightSleepRejectEn | (rtcGpioTrig << 12);
+    const sleepEn = 0x80000000;
+    const rejectCauseClr = 1 << 1;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, rtcSleepRejectInt, rejectConf, sleepEn, rtcGpioTrig, 1, rejectCauseClr],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        MOVI(4, 1),
+        S32I(4, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(5, 3),
+        WSR(5, SR.VECBASE),
+        MOVI(4, 2),
+        WSR(4, SR.INTENABLE),
+        L32R(4, 5),
+        S32I(4, 2, 0x68), // SLP_REJECT_CONF: light sleep, GPIO source
+        L32R(4, 4),
+        S32I(4, 2, 0x4c), // clear stale SLP_REJECT raw
+        S32I(4, 2, 0x40), // enable SLP_REJECT raw
+        RSIL(12, 12), // hold the reject interrupt until WAITI lowers INTLEVEL
+        L32R(4, 6),
+        S32I(4, 2, 0x18), // STATE0.SLEEP_EN, rejected by host source
+        WAITI(0),
+        L32I(4, 2, 0x18),
+        SRAI(4, 4, 30),
+        L32R(6, 8),
+        AND(4, 4, 6),
+        L32R(5, 2),
+        S32I(4, 5, 0), // tx 1: STATE0.SLP_REJECT latched
+        L32I(4, 2, 0x128),
+        L32R(6, 7),
+        AND(4, 4, 6),
+        S32I(4, 5, 0), // tx 4: GPIO reject cause
+        L32I(4, 2, 0x18),
+        SRAI(4, 4, 31),
+        L32R(6, 8),
+        AND(4, 4, 6),
+        S32I(4, 5, 0), // tx 0: SLEEP_EN did not stick
+        L32R(4, 9),
+        S32I(4, 2, 0x18), // SLP_REJECT_CAUSE_CLR
+        L32I(4, 2, 0x128),
+        S32I(4, 5, 0), // tx 0: cause cleared
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 4),
+        S32I(3, 2, 0x4c), // clear SLP_REJECT raw
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.setRtcSleepRejectSource(rtcGpioTrig);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, rtcGpioTrig, 0, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('RTC low-power status reports idle, sleep, and ready-for-wakeup bits', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // ULP WAKE examples poll RTC_CNTL_LOW_POWER_ST.RDY_FOR_WAKEUP

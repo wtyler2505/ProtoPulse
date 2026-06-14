@@ -196,7 +196,9 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * SLP_TIMER0/1 arm the RTC main-timer alarm, STATE0.SLEEP_EN enters the
  * sleep state, WAKEUP_STATE's TIMER_TRIG source records
  * SLP_WAKEUP_CAUSE, and the RTC_CORE interrupt-matrix source wakes
- * WAITI through the normal level-1 path. RWDT stage-0 INT,
+ * WAITI through the normal level-1 path. SLP_REJECT_CONF can also
+ * reject a modeled light-sleep entry for a host-injected reject source,
+ * latching SLP_REJECT_CAUSE and RTC_CNTL_SLP_REJECT_INT. RWDT stage-0 INT,
  * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips,
  * power-glitch detector trips, XTAL32K-dead watchdog trips, and
  * super-watchdog trips also latch their RTC_CNTL INT_* bits and route
@@ -695,14 +697,19 @@ const RTC_INT_RAW = 0x44;
 const RTC_INT_ST = 0x48;
 const RTC_INT_CLR = 0x4c;
 const RTC_EXT_XTL_CONF = 0x60;
+const RTC_SLP_REJECT_CONF = 0x68;
 const RTC_SW_SYS_RST = 1 << 31;
 const RTC_SW_PROCPU_RST = 1 << 5;
 const RTC_MAIN_TIMER_ALARM_EN = 1 << 16;
 const RTC_SLP_VAL_HI_MASK = 0xffff;
 const RTC_SLEEP_EN = 1 << 31;
+const RTC_SLP_REJECT = 1 << 30;
 const RTC_SLP_WAKEUP = 1 << 29;
 const RTC_SLP_REJECT_CAUSE_CLR = 1 << 1;
 const RTC_SW_CPU_INT = 1 << 0;
+const RTC_LIGHT_SLP_REJECT_EN = 1 << 30;
+const RTC_SLEEP_REJECT_ENA_SHIFT = 12;
+const RTC_SLEEP_REJECT_ENA_MASK = 0x3ffff;
 const RTC_WAKEUP_ENA_SHIFT = 15;
 const RTC_WAKEUP_ENA_MASK = 0x1ffff;
 const RTC_WAKEUP_STATE_RESET = 0x000c << RTC_WAKEUP_ENA_SHIFT; // rtc_cntl_reg.h default: 17'b1100
@@ -1465,6 +1472,8 @@ export class Esp32s3Core implements McuCore {
   private rtcWakeupState = RTC_WAKEUP_STATE_RESET;
   private rtcIntRaw = 0;
   private rtcIntEna = 0;
+  private rtcSlpRejectConf = 0;
+  private rtcSleepRejectSource = 0;
   private rtcRejectCause = 0;
   private rtcWakeupCause = 0;
   private rtcCocpuCtrl = RTC_COCPU_CTRL_RESET;
@@ -1773,6 +1782,10 @@ export class Esp32s3Core implements McuCore {
   setPowerGlitchDetected(detected: boolean): void {
     this.powerGlitchDetected = detected;
     this.updatePowerGlitchDetector();
+  }
+
+  setRtcSleepRejectSource(sourceMask: number): void {
+    this.rtcSleepRejectSource = sourceMask & RTC_SLEEP_REJECT_ENA_MASK;
   }
 
   setXtal32kDead(dead: boolean): void {
@@ -2301,6 +2314,7 @@ export class Esp32s3Core implements McuCore {
     this.rtcWakeupState = RTC_WAKEUP_STATE_RESET;
     this.rtcIntRaw = 0;
     this.rtcIntEna = 0;
+    this.rtcSlpRejectConf = 0;
     this.rtcRejectCause = 0;
     this.rtcWakeupCause = 0;
     this.rtcCocpuCtrl = RTC_COCPU_CTRL_RESET;
@@ -2537,6 +2551,18 @@ export class Esp32s3Core implements McuCore {
     this.rtcState0 = (this.rtcState0 & ~RTC_SLEEP_EN) | RTC_SLP_WAKEUP;
     this.rtcWakeupCause |= source;
     this.rtcIntRaw |= RTC_SLP_WAKEUP_INT;
+  }
+
+  private rejectRtcSleepIfNeeded(): boolean {
+    if ((this.rtcSlpRejectConf & RTC_LIGHT_SLP_REJECT_EN) === 0) return false;
+    const enabled = (this.rtcSlpRejectConf >>> RTC_SLEEP_REJECT_ENA_SHIFT) & RTC_SLEEP_REJECT_ENA_MASK;
+    const rejected = enabled & this.rtcSleepRejectSource;
+    if (rejected === 0) return false;
+    this.rtcState0 = (this.rtcState0 & ~RTC_SLEEP_EN) | RTC_SLP_REJECT;
+    this.rtcRejectCause = rejected >>> 0;
+    this.rtcIntRaw |= RTC_SLP_REJECT_INT;
+    this.recomputeIrq();
+    return true;
   }
 
   private checkRtcSleepTimer(): void {
@@ -4045,6 +4071,7 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_INT_ST) return (this.rtcIntRaw & this.rtcIntEna) >>> 0;
       if (off === RTC_INT_CLR) return 0;
       if (off === RTC_EXT_XTL_CONF) return this.rtcExtXtlConf >>> 0;
+      if (off === RTC_SLP_REJECT_CONF) return this.rtcSlpRejectConf >>> 0;
       if (off === RTC_SW_CPU_STALL) return this.rtcSwCpuStall >>> 0;
       // The RWDT block (slice 13) — modeled for real now.
       if (off === RTC_WDTCONFIG0) return this.rwdt.config0 >>> 0;
@@ -4080,7 +4107,7 @@ export class Esp32s3Core implements McuCore {
         `read of unmodeled RTC_CNTL register 0x${addr.toString(16)} — this core models only ` +
           `OPTIONS0(+0x0), SLP_TIMER0/1(+0x4/+0x8), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), ` +
           `STATE0(+0x18), RESET_STATE(+0x38), WAKEUP_STATE(+0x3c), INT_* (+0x40..+0x4c), ` +
-          `EXT_XTL_CONF(+0x60), ` +
+          `EXT_XTL_CONF(+0x60), SLP_REJECT_CONF(+0x68), ` +
           `the RWDT block (+0x98..+0xb0), SWD(+0xb4/+0xb8), SW_CPU_STALL(+0xbc), LOW_POWER_ST(+0xd0), ` +
           `ULP_CP_TIMER/CTRL(+0xfc/+0x100), COCPU_CTRL(+0x104), ` +
           `BROWN_OUT(+0xe8), XTAL32K_CONF(+0xf8), PG_CTRL/FIB_SEL(+0x144/+0x148), ` +
@@ -4655,6 +4682,7 @@ export class Esp32s3Core implements McuCore {
         if ((value & RTC_SW_CPU_INT) !== 0) {
           this.triggerUlpWake();
         } else {
+          if ((value & RTC_SLEEP_EN) !== 0 && this.rejectRtcSleepIfNeeded()) return;
           if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcSleepTimer();
           this.recomputeIrq();
         }
@@ -4682,6 +4710,8 @@ export class Esp32s3Core implements McuCore {
           this.rtcIntRaw &= ~RTC_XTAL32K_DEAD_INT;
         }
         this.updateXtal32kDead();
+      } else if (off === RTC_SLP_REJECT_CONF) {
+        this.rtcSlpRejectConf = value >>> 0;
       } else if (off === RTC_TIME_UPDATE) {
         if ((value & (1 << 31)) !== 0) {
           // Latch the 48-bit RTC main timer: CPU cycles → RC_SLOW ticks.
