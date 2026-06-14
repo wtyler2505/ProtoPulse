@@ -198,9 +198,10 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * SLP_WAKEUP_CAUSE, and the RTC_CORE interrupt-matrix source wakes
  * WAITI through the normal level-1 path. RWDT stage-0 INT,
  * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips,
- * XTAL32K-dead watchdog trips, and super-watchdog trips also latch
- * their RTC_CNTL INT_* bits and route through RTC_CORE. XTAL32K-dead
- * can wake light-sleep via the RTC_XTAL32K_DEAD_TRIG_EN wake source too.
+ * power-glitch detector trips, XTAL32K-dead watchdog trips, and
+ * super-watchdog trips also latch their RTC_CNTL INT_* bits and route
+ * through RTC_CORE. XTAL32K-dead can wake light-sleep via the
+ * RTC_XTAL32K_DEAD_TRIG_EN wake source too.
  * SUPER_WDT also records its RTC reset flag/feed-interrupt bits,
  * supports the documented feed/flag-clear pulses, and reports reset
  * cause 18 when firmware has not selected BYPASS_RST. RTC SARADC1/2
@@ -233,9 +234,10 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
  * instruction execution, and the remaining RTC interrupt producers
- * beyond RWDT/COCPU/brownout/XTAL32K-dead/SUPER_WDT/SARADC/TSENS/
- * touch done-scan-active/wake/timeout/proximity/ULP wake/COCPU wake/
- * COCPU trap paths — so full IDF/FreeRTOS firmware does NOT run yet.
+ * beyond RWDT/COCPU/brownout/power-glitch/XTAL32K-dead/SUPER_WDT/
+ * SARADC/TSENS/touch done-scan-active/wake/timeout/proximity/ULP wake/
+ * COCPU wake/COCPU trap paths — so full IDF/FreeRTOS firmware does NOT
+ * run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -567,6 +569,7 @@ const RTC_ULP_CP_TIMER = 0xfc;
 const RTC_ULP_CP_CTRL = 0x100;
 const RTC_COCPU_CTRL = 0x104;
 const RTC_ULP_CP_TIMER_1 = 0x134;
+const RTC_PG_CTRL = 0x144;
 const RTC_BROWN_OUT = 0xe8;
 const RTC_WDT_FEED_BIT = 1 << 31; // RTC_CNTL_RTC_WDT_FEED
 const RTC_SWD_WKEY = 0x8f1d312a;
@@ -597,6 +600,8 @@ const RTC_BROWN_OUT_ENA = 1 << 30;
 const RTC_BROWN_OUT_CNT_CLR = 1 << 29;
 const RTC_BROWN_OUT_RST_ENA = 1 << 26;
 const RTC_BROWN_OUT_RESET = (RTC_BROWN_OUT_ENA | (0x3ff << 16) | (1 << 4)) >>> 0;
+const RTC_POWER_GLITCH_EN = 1 << 31;
+const RTC_PG_CTRL_RESET = 0;
 const RWDT_CONFIG0_RESET = ((1 << 16) | (1 << 13) | (1 << 12) | (1 << 9)) >>> 0;
 
 // SAR ADC1/ADC2 oneshot paths (sens_reg.h; flow per
@@ -714,6 +719,7 @@ const RTC_SWD_INT = 1 << 15;
 const RTC_XTAL32K_DEAD_INT = 1 << 16;
 const RTC_COCPU_TRAP_INT = 1 << 17;
 const RTC_TOUCH_TIMEOUT_INT = 1 << 18;
+const RTC_GLITCH_DET_INT = 1 << 19;
 const RTC_TOUCH_APPROACH_LOOP_DONE_INT = 1 << 20;
 const RTC_INT_RAW_WRITABLE = RTC_TOUCH_APPROACH_LOOP_DONE_INT;
 const RTC_MAIN_TIMER_INT = 1 << 10;
@@ -1460,6 +1466,8 @@ export class Esp32s3Core implements McuCore {
   private rtcCocpuCtrl = RTC_COCPU_CTRL_RESET;
   private rtcBrownOut = RTC_BROWN_OUT_RESET;
   private brownoutDetected = false;
+  private rtcPgCtrl = RTC_PG_CTRL_RESET;
+  private powerGlitchDetected = false;
   private rtcExtXtlConf = RTC_EXT_XTL_CONF_RESET;
   private rtcXtal32kConf = RTC_XTAL32K_CONF_RESET;
   private xtal32kDead = false;
@@ -1755,6 +1763,11 @@ export class Esp32s3Core implements McuCore {
   setBrownoutDetected(detected: boolean): void {
     this.brownoutDetected = detected;
     this.updateBrownoutDetector();
+  }
+
+  setPowerGlitchDetected(detected: boolean): void {
+    this.powerGlitchDetected = detected;
+    this.updatePowerGlitchDetector();
   }
 
   setXtal32kDead(dead: boolean): void {
@@ -2287,6 +2300,7 @@ export class Esp32s3Core implements McuCore {
     this.rtcWakeupCause = 0;
     this.rtcCocpuCtrl = RTC_COCPU_CTRL_RESET;
     this.rtcBrownOut = RTC_BROWN_OUT_RESET;
+    this.rtcPgCtrl = RTC_PG_CTRL_RESET;
     this.rtcExtXtlConf = RTC_EXT_XTL_CONF_RESET;
     this.rtcXtal32kConf = RTC_XTAL32K_CONF_RESET;
     this.rtcSwdConf = RTC_SWD_CONF_RESET;
@@ -2541,6 +2555,15 @@ export class Esp32s3Core implements McuCore {
       this.appResetCause = RESET_CAUSE_BROWNOUT;
       this.pendingReset = true;
     }
+    this.recomputeIrq();
+  }
+
+  private updatePowerGlitchDetector(): void {
+    if (!this.powerGlitchDetected || (this.rtcPgCtrl & RTC_POWER_GLITCH_EN) === 0) {
+      this.recomputeIrq();
+      return;
+    }
+    this.rtcIntRaw |= RTC_GLITCH_DET_INT;
     this.recomputeIrq();
   }
 
@@ -4032,6 +4055,7 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_LOW_POWER_ST) return this.rtcLowPowerStatus();
       if (off === RTC_BROWN_OUT) return (this.rtcBrownOut & ~RTC_BROWN_OUT_CNT_CLR) >>> 0;
       if (off === RTC_XTAL32K_CONF) return this.rtcXtal32kConf >>> 0;
+      if (off === RTC_PG_CTRL) return this.rtcPgCtrl >>> 0;
       if (off === RTC_TOUCH_CTRL1) return this.rtcTouchCtrl1 >>> 0;
       if (off === RTC_TOUCH_CTRL2) return this.rtcTouchCtrl2 >>> 0;
       if (off === RTC_TOUCH_SCAN_CTRL) return this.rtcTouchScanCtrl >>> 0;
@@ -4052,7 +4076,7 @@ export class Esp32s3Core implements McuCore {
           `EXT_XTL_CONF(+0x60), ` +
           `the RWDT block (+0x98..+0xb0), SWD(+0xb4/+0xb8), SW_CPU_STALL(+0xbc), LOW_POWER_ST(+0xd0), ` +
           `ULP_CP_TIMER/CTRL(+0xfc/+0x100), COCPU_CTRL(+0x104), ` +
-          `BROWN_OUT(+0xe8), XTAL32K_CONF(+0xf8), ` +
+          `BROWN_OUT(+0xe8), XTAL32K_CONF(+0xf8), PG_CTRL(+0x144), ` +
           `TOUCH_CTRL1/2(+0x108/+0x10c), TOUCH_SCAN/SLP/APPROACH/FILTER/TIMEOUT(+0x110..+0x124), TOUCH_DAC/DAC1(+0x14c/+0x150), ` +
           `sleep reject/wakeup causes (+0x128/+0x130), ULP_CP_TIMER_1(+0x134); ` +
           `a fabricated 0 here would lie`,
@@ -4734,6 +4758,9 @@ export class Esp32s3Core implements McuCore {
         this.updateBrownoutDetector();
       } else if (off === RTC_XTAL32K_CONF) {
         this.rtcXtal32kConf = value >>> 0;
+      } else if (off === RTC_PG_CTRL) {
+        this.rtcPgCtrl = value >>> 0;
+        this.updatePowerGlitchDetector();
       } else if (off === RTC_TOUCH_CTRL1) {
         this.rtcTouchCtrl1 = value >>> 0;
       } else if (off === RTC_TOUCH_CTRL2) {

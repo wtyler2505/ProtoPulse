@@ -1019,6 +1019,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       verifies the low RO bits did not latch, then clears the approach
       raw bit with a zero write. Cuts: no GLITCH_DET producer or new
       interrupt sources
+- [x] ESP32-S3 core slice 67 — RTC power-glitch interrupt producer
+      (landed 2026-06-14): RTC_CNTL_PG_CTRL now stores
+      POWER_GLITCH_EN and a host-injected power-glitch detector trip
+      latches RTC_CNTL_GLITCH_DET_INT (bit 19), flowing through
+      RTC_CNTL INT_RAW/ST/ENA/CLR and the RTC_CORE interrupt-matrix
+      source. Proven by hand-assembled firmware that enables
+      PG_CTRL.POWER_GLITCH_EN, parks in WAITI, observes RTC_CORE
+      dispatch on the injected trip, verifies the enable bit
+      round-trips, and confirms INT_ST is clear after the ISR. Cuts:
+      no analog power-glitch model and no GLITCH_RTC_RESET or
+      POWER_GLITCH_RESET reset-cause behavior yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
