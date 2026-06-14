@@ -198,7 +198,9 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * SLP_WAKEUP_CAUSE, and the RTC_CORE interrupt-matrix source wakes
  * WAITI through the normal level-1 path. SLP_REJECT_CONF can also
  * reject a modeled light-sleep entry for a host-injected reject source,
- * latching SLP_REJECT_CAUSE and RTC_CNTL_SLP_REJECT_INT. RWDT stage-0 INT,
+ * latching SLP_REJECT_CAUSE and RTC_CNTL_SLP_REJECT_INT. A host-injected
+ * SDIO-idle event latches RTC_CNTL_SDIO_IDLE_INT and can wake modeled
+ * light sleep through RTC_SDIO_TRIG_EN. RWDT stage-0 INT,
  * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips,
  * power-glitch detector trips, XTAL32K-dead watchdog trips, and
  * super-watchdog trips also latch their RTC_CNTL INT_* bits and route
@@ -715,6 +717,7 @@ const RTC_WAKEUP_ENA_MASK = 0x1ffff;
 const RTC_WAKEUP_STATE_RESET = 0x000c << RTC_WAKEUP_ENA_SHIFT; // rtc_cntl_reg.h default: 17'b1100
 const RTC_SLP_WAKEUP_INT = 1 << 0;
 const RTC_SLP_REJECT_INT = 1 << 1;
+const RTC_SDIO_IDLE_INT = 1 << 2;
 const RTC_WDT_INT = 1 << 3;
 const RTC_TOUCH_SCAN_DONE_INT = 1 << 4;
 const RTC_ULP_CP_INT = 1 << 5;
@@ -753,6 +756,7 @@ const RTC_RDY_FOR_WAKEUP = 1 << 19;
 const RTC_COCPU_STATE_DONE = 1 << 16;
 const RTC_COCPU_STATE_SLP = 1 << 15;
 const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
+const RTC_SDIO_TRIG_EN = 1 << 4;
 const RTC_ULP_TRIG_EN = 1 << 9;
 const RTC_COCPU_TRIG_EN = 1 << 11;
 const RTC_XTAL32K_DEAD_TRIG_EN = 1 << 12;
@@ -1474,6 +1478,7 @@ export class Esp32s3Core implements McuCore {
   private rtcIntEna = 0;
   private rtcSlpRejectConf = 0;
   private rtcSleepRejectSource = 0;
+  private rtcSdioIdle = false;
   private rtcRejectCause = 0;
   private rtcWakeupCause = 0;
   private rtcCocpuCtrl = RTC_COCPU_CTRL_RESET;
@@ -1786,6 +1791,11 @@ export class Esp32s3Core implements McuCore {
 
   setRtcSleepRejectSource(sourceMask: number): void {
     this.rtcSleepRejectSource = sourceMask & RTC_SLEEP_REJECT_ENA_MASK;
+  }
+
+  setRtcSdioIdle(idle: boolean): void {
+    this.rtcSdioIdle = idle;
+    this.updateRtcSdioIdle();
   }
 
   setXtal32kDead(dead: boolean): void {
@@ -2571,6 +2581,16 @@ export class Esp32s3Core implements McuCore {
     this.rtcMainTimerAlarmArmed = false;
     this.rtcIntRaw |= RTC_MAIN_TIMER_INT;
     this.latchRtcWakeupSource(RTC_TIMER_TRIG_EN);
+    this.recomputeIrq();
+  }
+
+  private updateRtcSdioIdle(): void {
+    if (!this.rtcSdioIdle) {
+      this.recomputeIrq();
+      return;
+    }
+    this.rtcIntRaw |= RTC_SDIO_IDLE_INT;
+    this.latchRtcWakeupSource(RTC_SDIO_TRIG_EN);
     this.recomputeIrq();
   }
 
@@ -4684,6 +4704,7 @@ export class Esp32s3Core implements McuCore {
         } else {
           if ((value & RTC_SLEEP_EN) !== 0 && this.rejectRtcSleepIfNeeded()) return;
           if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcSleepTimer();
+          if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcSdioIdle();
           this.recomputeIrq();
         }
       } else if (off === RTC_SW_CPU_STALL) {

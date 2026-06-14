@@ -1048,6 +1048,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       cause, verifies SLEEP_EN did not stick, then clears the cause.
       Cuts: GPIO/SDIO hardware reject detection only via host hook; no
       deep-sleep reject sequencing yet
+- [x] ESP32-S3 core slice 70 — RTC SDIO-idle wake source
+      (landed 2026-06-14): host-injected SDIO idle now latches
+      RTC_CNTL_SDIO_IDLE_INT (bit 2), routes through RTC_CNTL
+      INT_RAW/ST/ENA/CLR and RTC_CORE, and wakes modeled light sleep
+      when WAKEUP_STATE arms RTC_SDIO_TRIG_EN. Proven by
+      hand-assembled firmware that enables SDIO_IDLE plus SLP_WAKEUP,
+      enters sleep, takes the RTC_CORE ISR after host SDIO-idle
+      injection, reports RTC_SDIO_TRIG_EN as SLP_WAKEUP_CAUSE, and
+      confirms INT_ST is clear. Cuts: no SDIO slave peripheral model or
+      real SDIO host bus timing yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
