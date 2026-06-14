@@ -1058,6 +1058,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       injection, reports RTC_SDIO_TRIG_EN as SLP_WAKEUP_CAUSE, and
       confirms INT_ST is clear. Cuts: no SDIO slave peripheral model or
       real SDIO host bus timing yet
+- [x] ESP32-S3 core slice 71 — UART0 RX light-sleep wake source
+      (landed 2026-06-14): host-injected UART0 RX bytes now wake
+      modeled light sleep when WAKEUP_STATE arms RTC_UART0_TRIG_EN,
+      latching SLP_WAKEUP_CAUSE through the existing RTC_CORE path while
+      leaving the received byte available in UART0 FIFO. Proven by
+      hand-assembled firmware that enables SLP_WAKEUP, sleeps with
+      UART0 wake armed, receives a host byte, reports RTC_UART0_TRIG_EN,
+      reads back the byte, and confirms INT_ST is clear after the ISR.
+      Cuts: no UART1 wake source, wake threshold counter, or baud-edge
+      timing yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

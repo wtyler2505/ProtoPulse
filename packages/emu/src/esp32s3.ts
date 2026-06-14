@@ -200,7 +200,8 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * reject a modeled light-sleep entry for a host-injected reject source,
  * latching SLP_REJECT_CAUSE and RTC_CNTL_SLP_REJECT_INT. A host-injected
  * SDIO-idle event latches RTC_CNTL_SDIO_IDLE_INT and can wake modeled
- * light sleep through RTC_SDIO_TRIG_EN. RWDT stage-0 INT,
+ * light sleep through RTC_SDIO_TRIG_EN. UART0 RX bytes can likewise
+ * wake modeled light sleep through RTC_UART0_TRIG_EN. RWDT stage-0 INT,
  * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips,
  * power-glitch detector trips, XTAL32K-dead watchdog trips, and
  * super-watchdog trips also latch their RTC_CNTL INT_* bits and route
@@ -757,6 +758,7 @@ const RTC_COCPU_STATE_DONE = 1 << 16;
 const RTC_COCPU_STATE_SLP = 1 << 15;
 const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
 const RTC_SDIO_TRIG_EN = 1 << 4;
+const RTC_UART0_TRIG_EN = 1 << 6;
 const RTC_ULP_TRIG_EN = 1 << 9;
 const RTC_COCPU_TRIG_EN = 1 << 11;
 const RTC_XTAL32K_DEAD_TRIG_EN = 1 << 12;
@@ -1750,6 +1752,7 @@ export class Esp32s3Core implements McuCore {
       throw new Error(`uartWrite expects a byte 0..255 (got ${String(byte)})`);
     }
     this.rxQueue.push(byte);
+    this.latchRtcWakeupSource(RTC_UART0_TRIG_EN);
     this.recomputeIrq();
   }
 
