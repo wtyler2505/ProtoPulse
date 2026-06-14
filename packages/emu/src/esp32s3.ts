@@ -202,8 +202,10 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * SDIO-idle event latches RTC_CNTL_SDIO_IDLE_INT and can wake modeled
  * light sleep through RTC_SDIO_TRIG_EN. GPIO high/low level wakeup
  * tracks GPIO_PINn.WAKEUP_ENABLE plus INT_TYPE and records
- * RTC_GPIO_TRIG_EN, while UART0 RX bytes can likewise wake modeled
- * light sleep through RTC_UART0_TRIG_EN. RWDT stage-0 INT,
+ * RTC_GPIO_TRIG_EN. EXT1 wakeup watches the RTC GPIO0..21 mask and
+ * records RTC_EXT1_TRIG_EN plus EXT_WAKEUP1_STATUS. UART0 RX bytes can
+ * likewise wake modeled light sleep through RTC_UART0_TRIG_EN.
+ * RWDT stage-0 INT,
  * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips,
  * power-glitch detector trips, XTAL32K-dead watchdog trips, and
  * super-watchdog trips also latch their RTC_CNTL INT_* bits and route
@@ -707,6 +709,7 @@ const RTC_INT_RAW = 0x44;
 const RTC_INT_ST = 0x48;
 const RTC_INT_CLR = 0x4c;
 const RTC_EXT_XTL_CONF = 0x60;
+const RTC_EXT_WAKEUP_CONF = 0x64;
 const RTC_SLP_REJECT_CONF = 0x68;
 const RTC_SW_SYS_RST = 1 << 31;
 const RTC_SW_PROCPU_RST = 1 << 5;
@@ -754,15 +757,24 @@ const RTC_TOUCH_INT_MASK =
   RTC_TOUCH_APPROACH_LOOP_DONE_INT;
 const RTC_XTAL32K_CONF = 0xf8;
 const RTC_LOW_POWER_ST = 0xd0;
+const RTC_EXT_WAKEUP1 = 0xe0;
+const RTC_EXT_WAKEUP1_STATUS = 0xe4;
 const RTC_SLP_REJECT_CAUSE = 0x128;
 const RTC_SLP_WAKEUP_CAUSE = 0x130;
 const RTC_INT_ENA_W1TS = 0x138;
 const RTC_INT_ENA_W1TC = 0x13c;
+const RTC_EXT_WAKEUP1_LV = 1 << 31;
+const RTC_EXT_WAKEUP0_LV = 1 << 30;
+const RTC_GPIO_WAKEUP_FILTER = 1 << 29;
+const RTC_EXT_WAKEUP_CONF_MASK = RTC_EXT_WAKEUP1_LV | RTC_EXT_WAKEUP0_LV | RTC_GPIO_WAKEUP_FILTER;
+const RTC_EXT_WAKEUP1_STATUS_CLR = 1 << 22;
+const RTC_EXT_WAKEUP1_SEL_MASK = 0x003f_ffff;
 const RTC_MAIN_STATE_IN_IDLE = 1 << 27;
 const RTC_MAIN_STATE_IN_SLP = 1 << 26;
 const RTC_RDY_FOR_WAKEUP = 1 << 19;
 const RTC_COCPU_STATE_DONE = 1 << 16;
 const RTC_COCPU_STATE_SLP = 1 << 15;
+const RTC_EXT1_TRIG_EN = 1 << 1;
 const RTC_GPIO_TRIG_EN = 1 << 2;
 const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
 const RTC_SDIO_TRIG_EN = 1 << 4;
@@ -1489,6 +1501,9 @@ export class Esp32s3Core implements McuCore {
   private rtcSlpRejectConf = 0;
   private rtcSleepRejectSource = 0;
   private rtcSdioIdle = false;
+  private rtcExtWakeupConf = 0;
+  private rtcExtWakeup1 = 0;
+  private rtcExtWakeup1Status = 0;
   private rtcRejectCause = 0;
   private rtcWakeupCause = 0;
   private rtcCocpuCtrl = RTC_COCPU_CTRL_RESET;
@@ -1752,6 +1767,7 @@ export class Esp32s3Core implements McuCore {
       }
     }
     this.updateRtcGpioWakeup();
+    this.updateRtcExt1Wakeup();
     this.captureRmtRxInputs();
     this.recomputeIrq();
   }
@@ -2337,6 +2353,9 @@ export class Esp32s3Core implements McuCore {
     this.rtcIntRaw = 0;
     this.rtcIntEna = 0;
     this.rtcSlpRejectConf = 0;
+    this.rtcExtWakeupConf = 0;
+    this.rtcExtWakeup1 = 0;
+    this.rtcExtWakeup1Status = 0;
     this.rtcRejectCause = 0;
     this.rtcWakeupCause = 0;
     this.rtcCocpuCtrl = RTC_COCPU_CTRL_RESET;
@@ -2584,6 +2603,34 @@ export class Esp32s3Core implements McuCore {
 
   private updateRtcGpioWakeup(): void {
     if (this.rtcGpioWakeupPending()) this.latchRtcWakeupSource(RTC_GPIO_TRIG_EN);
+  }
+
+  private rtcExt1WakeupPending(): number {
+    const selected = this.rtcExtWakeup1 & RTC_EXT_WAKEUP1_SEL_MASK;
+    if (selected === 0) return 0;
+    const highWake = (this.rtcExtWakeupConf & RTC_EXT_WAKEUP1_LV) !== 0;
+    let pending = 0;
+    for (let gpio = 0; gpio < 22; gpio++) {
+      const rtcBit = 1 << gpio;
+      if ((selected & rtcBit) === 0) continue;
+      const bank = gpio >> 5;
+      const gpioBit = 1 << (gpio & 31);
+      const high = ((this.inLevels[bank] ?? 0) & gpioBit) !== 0;
+      if (highWake ? high : !high) pending |= rtcBit;
+    }
+    return pending >>> 0;
+  }
+
+  private updateRtcExt1Wakeup(): void {
+    const pending = this.rtcExt1WakeupPending();
+    if (
+      pending !== 0 &&
+      (this.rtcState0 & RTC_SLEEP_EN) !== 0 &&
+      (this.rtcWakeupEnabledSources() & RTC_EXT1_TRIG_EN) !== 0
+    ) {
+      this.rtcExtWakeup1Status |= pending;
+      this.latchRtcWakeupSource(RTC_EXT1_TRIG_EN);
+    }
   }
 
   private latchRtcWakeupSource(source: number): void {
@@ -4121,6 +4168,7 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_INT_ST) return (this.rtcIntRaw & this.rtcIntEna) >>> 0;
       if (off === RTC_INT_CLR) return 0;
       if (off === RTC_EXT_XTL_CONF) return this.rtcExtXtlConf >>> 0;
+      if (off === RTC_EXT_WAKEUP_CONF) return this.rtcExtWakeupConf >>> 0;
       if (off === RTC_SLP_REJECT_CONF) return this.rtcSlpRejectConf >>> 0;
       if (off === RTC_SW_CPU_STALL) return this.rtcSwCpuStall >>> 0;
       // The RWDT block (slice 13) — modeled for real now.
@@ -4136,6 +4184,8 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_ULP_CP_CTRL) return (this.rtcUlpCpCtrl & ~RTC_ULP_CP_MEM_OFFST_CLR) >>> 0;
       if (off === RTC_COCPU_CTRL) return (this.rtcCocpuCtrl & ~RTC_COCPU_SW_INT_TRIGGER) >>> 0;
       if (off === RTC_LOW_POWER_ST) return this.rtcLowPowerStatus();
+      if (off === RTC_EXT_WAKEUP1) return this.rtcExtWakeup1 >>> 0;
+      if (off === RTC_EXT_WAKEUP1_STATUS) return this.rtcExtWakeup1Status >>> 0;
       if (off === RTC_BROWN_OUT) return (this.rtcBrownOut & ~RTC_BROWN_OUT_CNT_CLR) >>> 0;
       if (off === RTC_XTAL32K_CONF) return this.rtcXtal32kConf >>> 0;
       if (off === RTC_PG_CTRL) return this.rtcPgCtrl >>> 0;
@@ -4735,6 +4785,7 @@ export class Esp32s3Core implements McuCore {
         } else {
           if ((value & RTC_SLEEP_EN) !== 0 && this.rejectRtcSleepIfNeeded()) return;
           if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcSleepTimer();
+          if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcExt1Wakeup();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcGpioWakeup();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcSdioIdle();
           this.recomputeIrq();
@@ -4763,6 +4814,9 @@ export class Esp32s3Core implements McuCore {
           this.rtcIntRaw &= ~RTC_XTAL32K_DEAD_INT;
         }
         this.updateXtal32kDead();
+      } else if (off === RTC_EXT_WAKEUP_CONF) {
+        this.rtcExtWakeupConf = value & RTC_EXT_WAKEUP_CONF_MASK;
+        this.updateRtcExt1Wakeup();
       } else if (off === RTC_SLP_REJECT_CONF) {
         this.rtcSlpRejectConf = value >>> 0;
       } else if (off === RTC_TIME_UPDATE) {
@@ -4853,6 +4907,10 @@ export class Esp32s3Core implements McuCore {
         this.updatePowerGlitchDetector();
       } else if (off === RTC_FIB_SEL) {
         this.rtcFibSel = value & RTC_FIB_SEL_MASK;
+      } else if (off === RTC_EXT_WAKEUP1) {
+        if ((value & RTC_EXT_WAKEUP1_STATUS_CLR) !== 0) this.rtcExtWakeup1Status = 0;
+        this.rtcExtWakeup1 = value & RTC_EXT_WAKEUP1_SEL_MASK;
+        this.updateRtcExt1Wakeup();
       } else if (off === RTC_TOUCH_CTRL1) {
         this.rtcTouchCtrl1 = value >>> 0;
       } else if (off === RTC_TOUCH_CTRL2) {
