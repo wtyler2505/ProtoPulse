@@ -1068,6 +1068,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       reads back the byte, and confirms INT_ST is clear after the ISR.
       Cuts: no UART1 wake source, wake threshold counter, or baud-edge
       timing yet
+- [x] ESP32-S3 core slice 72 — GPIO level light-sleep wake source
+      (landed 2026-06-14): GPIO_PINn.WAKEUP_ENABLE now combines with
+      low/high-level INT_TYPE to wake modeled light sleep when
+      WAKEUP_STATE arms RTC_GPIO_TRIG_EN. Proven by hand-assembled
+      firmware that configures GPIO7 high-level wake, enters sleep,
+      receives a host IO7 high level, reports RTC_GPIO_TRIG_EN as
+      SLP_WAKEUP_CAUSE, and confirms INT_ST is clear after the ISR.
+      Cuts: no deep-sleep EXT0/EXT1 RTC-IO path or GPIO wake-status
+      register surface yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

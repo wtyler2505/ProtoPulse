@@ -200,8 +200,10 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * reject a modeled light-sleep entry for a host-injected reject source,
  * latching SLP_REJECT_CAUSE and RTC_CNTL_SLP_REJECT_INT. A host-injected
  * SDIO-idle event latches RTC_CNTL_SDIO_IDLE_INT and can wake modeled
- * light sleep through RTC_SDIO_TRIG_EN. UART0 RX bytes can likewise
- * wake modeled light sleep through RTC_UART0_TRIG_EN. RWDT stage-0 INT,
+ * light sleep through RTC_SDIO_TRIG_EN. GPIO high/low level wakeup
+ * tracks GPIO_PINn.WAKEUP_ENABLE plus INT_TYPE and records
+ * RTC_GPIO_TRIG_EN, while UART0 RX bytes can likewise wake modeled
+ * light sleep through RTC_UART0_TRIG_EN. RWDT stage-0 INT,
  * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips,
  * power-glitch detector trips, XTAL32K-dead watchdog trips, and
  * super-watchdog trips also latch their RTC_CNTL INT_* bits and route
@@ -291,8 +293,13 @@ const GPIO_FUNC_OUT_CFG_MASK = 0xfff;
 
 // GPIO_PINn INT_TYPE values (hal/gpio_types.h, written verbatim by
 // gpio_ll_set_intr_type): 0 off, 1 posedge, 2 negedge, 3 anyedge,
-// 4 low level, 5 high level. INT_ENA bit 13 = GPIO_LL_INTR_ENA — on
-// the S3 both CPUs share that one enable bit.
+// 4 low level, 5 high level. WAKEUP_ENABLE bit 10 is set by
+// gpio_wakeup_enable for light sleep; INT_ENA bit 13 =
+// GPIO_LL_INTR_ENA — on the S3 both CPUs share that one enable bit.
+const GPIO_PIN_INT_TYPE_SHIFT = 7;
+const GPIO_PIN_WAKEUP_ENABLE_BIT = 1 << 10;
+const GPIO_INT_LOW_LEVEL = 4;
+const GPIO_INT_HIGH_LEVEL = 5;
 const GPIO_INT_ENA_BIT = 1 << 13;
 
 // UART register offsets (uart_reg.h):
@@ -756,6 +763,7 @@ const RTC_MAIN_STATE_IN_SLP = 1 << 26;
 const RTC_RDY_FOR_WAKEUP = 1 << 19;
 const RTC_COCPU_STATE_DONE = 1 << 16;
 const RTC_COCPU_STATE_SLP = 1 << 15;
+const RTC_GPIO_TRIG_EN = 1 << 2;
 const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
 const RTC_SDIO_TRIG_EN = 1 << 4;
 const RTC_UART0_TRIG_EN = 1 << 6;
@@ -1738,11 +1746,12 @@ export class Esp32s3Core implements McuCore {
     this.inLevels[bank] = level === 1 ? cur | bit : cur & ~bit;
     if (was !== level) {
       // Edge-type pins latch their STATUS bit on a matching edge.
-      const type = ((this.pinCfg[gpio] ?? 0) >> 7) & 7;
+      const type = ((this.pinCfg[gpio] ?? 0) >>> GPIO_PIN_INT_TYPE_SHIFT) & 7;
       if ((type === 1 && level === 1) || (type === 2 && level === 0) || type === 3) {
         this.gpioStatus[bank] = (this.gpioStatus[bank] ?? 0) | bit;
       }
     }
+    this.updateRtcGpioWakeup();
     this.captureRmtRxInputs();
     this.recomputeIrq();
   }
@@ -2557,6 +2566,24 @@ export class Esp32s3Core implements McuCore {
 
   private rtcWakeupEnabledSources(): number {
     return (this.rtcWakeupState >>> RTC_WAKEUP_ENA_SHIFT) & RTC_WAKEUP_ENA_MASK;
+  }
+
+  private rtcGpioWakeupPending(): boolean {
+    for (let gpio = 0; gpio < PIN_COUNT; gpio++) {
+      const cfg = this.pinCfg[gpio] ?? 0;
+      if ((cfg & GPIO_PIN_WAKEUP_ENABLE_BIT) === 0) continue;
+      const type = (cfg >>> GPIO_PIN_INT_TYPE_SHIFT) & 7;
+      if (type !== GPIO_INT_LOW_LEVEL && type !== GPIO_INT_HIGH_LEVEL) continue;
+      const bank = gpio >> 5;
+      const bit = 1 << (gpio & 31);
+      const high = ((this.inLevels[bank] ?? 0) & bit) !== 0;
+      if (type === GPIO_INT_LOW_LEVEL ? !high : high) return true;
+    }
+    return false;
+  }
+
+  private updateRtcGpioWakeup(): void {
+    if (this.rtcGpioWakeupPending()) this.latchRtcWakeupSource(RTC_GPIO_TRIG_EN);
   }
 
   private latchRtcWakeupSource(source: number): void {
@@ -3490,12 +3517,12 @@ export class Esp32s3Core implements McuCore {
     // Level-type GPIO pins re-assert their STATUS bit while the level
     // holds — W1TC alone cannot silence them, exactly like hardware.
     for (let gpio = 0; gpio < PIN_COUNT; gpio++) {
-      const type = ((this.pinCfg[gpio] ?? 0) >> 7) & 7;
-      if (type !== 4 && type !== 5) continue;
+      const type = ((this.pinCfg[gpio] ?? 0) >>> GPIO_PIN_INT_TYPE_SHIFT) & 7;
+      if (type !== GPIO_INT_LOW_LEVEL && type !== GPIO_INT_HIGH_LEVEL) continue;
       const bank = gpio >> 5;
       const bit = 1 << (gpio & 31);
       const high = ((this.inLevels[bank] ?? 0) & bit) !== 0;
-      if (type === 4 ? !high : high) {
+      if (type === GPIO_INT_LOW_LEVEL ? !high : high) {
         this.gpioStatus[bank] = (this.gpioStatus[bank] ?? 0) | bit;
       }
     }
@@ -4231,6 +4258,7 @@ export class Esp32s3Core implements McuCore {
         this.gpioFuncOut[(off - GPIO_FUNC0_OUT_SEL_CFG) >> 2] = (v & GPIO_FUNC_OUT_CFG_MASK) | 0;
       }
       this.syncPins();
+      this.updateRtcGpioWakeup();
       this.recomputeIrq();
       return;
     }
@@ -4707,6 +4735,7 @@ export class Esp32s3Core implements McuCore {
         } else {
           if ((value & RTC_SLEEP_EN) !== 0 && this.rejectRtcSleepIfNeeded()) return;
           if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcSleepTimer();
+          if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcGpioWakeup();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcSdioIdle();
           this.recomputeIrq();
         }

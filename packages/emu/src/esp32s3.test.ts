@@ -3567,6 +3567,70 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('GPIO high-level wakeup wakes light sleep through RTC_CORE and records the wake cause', () => {
+    // Context7: ESP-IDF release/v5.5 sleep docs say GPIO wake is
+    // light-sleep-only and uses high/low levels configured by
+    // gpio_wakeup_enable. Source-checked against ESP-IDF release/v5.5:
+    // gpio.c writes GPIO_PINn.INT_TYPE + WAKEUP_ENABLE, gpio_reg.h puts
+    // WAKEUP_ENABLE at bit 10 and INT_TYPE at [9:7], and soc/rtc.h
+    // exposes RTC_GPIO_TRIG_EN as BIT(2).
+    const rtcGpioTrig = 1 << 2;
+    const rtcSlpWakeupInt = 1;
+    const wakeupGpio = rtcGpioTrig << 15;
+    const sleepEn = 0x80000000;
+    const gpioPin7HighWake = (1 << 10) | (5 << 7);
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, GPIO, wakeupGpio, rtcSlpWakeupInt, sleepEn, rtcGpioTrig, gpioPin7HighWake],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        L32R(7, 4), // a7 = GPIO
+        MOVI(4, 1),
+        S32I(4, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(5, 3),
+        WSR(5, SR.VECBASE),
+        MOVI(4, 2),
+        WSR(4, SR.INTENABLE),
+        L32R(4, 6),
+        S32I(4, 2, 0x4c), // clear stale SLP_WAKEUP raw
+        S32I(4, 2, 0x40), // enable SLP_WAKEUP raw
+        L32R(4, 9),
+        S32I(4, 7, 0x90), // GPIO_PIN7: WAKEUP_ENABLE + high-level INT_TYPE
+        L32R(4, 5),
+        S32I(4, 2, 0x3c), // WAKEUP_STATE GPIO wake source
+        RSIL(12, 12), // hold pending RTC_CORE interrupt until WAITI lowers INTLEVEL
+        L32R(4, 7),
+        S32I(4, 2, 0x18), // STATE0.SLEEP_EN
+        WAITI(0),
+        L32I(4, 2, 0x130), // SLP_WAKEUP_CAUSE raw trigger bitmap
+        L32R(5, 8),
+        AND(4, 4, 5),
+        L32R(6, 2),
+        S32I(4, 6, 0), // tx RTC_GPIO_TRIG_EN (0x04)
+        L32I(4, 2, 0x48),
+        S32I(4, 6, 0), // tx 0: INT_ST clear after ISR
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 6),
+        S32I(3, 2, 0x4c), // clear SLP_WAKEUP so it does not re-fire
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+    c.setPin('IO7', 1);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([rtcGpioTrig, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('RTC sleep reject blocks light sleep and reports the reject cause through RTC_CORE', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // rtc_cntl_reg.h has SLP_REJECT_CONF +0x68 with
