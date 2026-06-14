@@ -1010,6 +1010,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       SET_PERI_REG_MASK, clears ULP/SLP_WAKEUP raw in the ISR, and
       reports ULP_TRIG_EN plus cleared INT_ST over UART. Cuts: no real
       ULP RISC-V instruction execution or separate SW_CPU_INT raw source
+- [x] ESP32-S3 core slice 66 — RTC INT_RAW write policy
+      (landed 2026-06-13): RTC_CNTL_INT_RAW writes now only affect the
+      documented TOUCH_APPROACH_LOOP_DONE_INT_RAW R/W bit, while
+      producer-owned raw bits such as ULP_CP and SLP_WAKEUP remain
+      read-only latches. Proven by hand-assembled firmware that writes a
+      mix of R/W and RO raw bits, reads back only the approach bit,
+      verifies the low RO bits did not latch, then clears the approach
+      raw bit with a zero write. Cuts: no GLITCH_DET producer or new
+      interrupt sources
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

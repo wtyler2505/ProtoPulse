@@ -3350,6 +3350,45 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([0x06, 0x01, 0xa1]);
   });
 
+  it('RTC INT_RAW writes only affect the documented touch-approach R/W raw bit', () => {
+    // Source-checked against ESP-IDF release/v5.5 rtc_cntl_reg.h:
+    // TOUCH_APPROACH_LOOP_DONE_INT_RAW is R/W, while ULP_CP and
+    // SLP_WAKEUP raw bits are RO producer latches.
+    const touchApproachRaw = 1 << 20;
+    const ulpRaw = 1 << 5;
+    const sleepWakeRaw = 1;
+    const rawWrite = touchApproachRaw | ulpRaw | sleepWakeRaw;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, UART, rawWrite, 1, 0x3f, 0],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 2),
+        S32I(3, 2, 0x44), // INT_RAW: write R/W approach plus RO ULP/SLP bits
+        L32I(4, 2, 0x44),
+        SRAI(5, 4, 20),
+        L32R(6, 3),
+        AND(5, 5, 6),
+        L32R(7, 1),
+        S32I(5, 7, 0), // tx 1: approach raw is writable
+        L32R(6, 4),
+        AND(5, 4, 6),
+        S32I(5, 7, 0), // tx 0: low RO raw bits did not latch from write
+        L32R(3, 5),
+        S32I(3, 2, 0x44), // INT_RAW: clear the R/W approach bit
+        L32I(4, 2, 0x44),
+        SRAI(5, 4, 20),
+        L32R(6, 3),
+        AND(5, 5, 6),
+        S32I(5, 7, 0), // tx 0: approach raw cleared by the write
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(500);
+    expect([...c.drainUart()]).toEqual([1, 0, 0]);
+  });
+
   it('RTC sleep timer wakes WAITI through the RTC core interrupt matrix', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // rtc_cntl_reg.h: SLP_TIMER0 +0x04, SLP_TIMER1 +0x08,

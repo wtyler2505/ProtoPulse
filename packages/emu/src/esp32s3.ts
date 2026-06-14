@@ -215,9 +215,11 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * while treating GPIO_WAKEUP_CLR as a write-only pulse. ULP_CP_CTRL
  * preserves FORCE_START_TOP/CLK_FO readback while treating MEM_OFFST_CLR
  * as write-only. STATE0.SW_CPU_INT follows the ULP wake-main pulse path
- * used by ulp_riscv_wakeup_main_processor(). COCPU_CTRL keeps the
- * documented reset timing fields/COCPU_SEL bit while COCPU_DONE/
- * SHUT_RESET_EN reflect through LOW_POWER_ST's COCPU done/sleep bits.
+ * used by ulp_riscv_wakeup_main_processor(). INT_RAW writes only affect
+ * the documented TOUCH_APPROACH_LOOP_DONE R/W raw bit; producer-owned
+ * raw bits stay read-only. COCPU_CTRL keeps the documented reset timing
+ * fields/COCPU_SEL bit while COCPU_DONE/SHUT_RESET_EN reflect through
+ * LOW_POWER_ST's COCPU done/sleep bits.
  * COCPU_SW_INT_TRIGGER wakes RTC sleep when RTC_COCPU_TRIG_EN is armed.
  * SENS_SAR_COCPU_STATE.DBG_TRIGGER
  * models a synthetic COCPU trap producer, latching RTC_CNTL_COCPU_TRAP_INT
@@ -713,6 +715,7 @@ const RTC_XTAL32K_DEAD_INT = 1 << 16;
 const RTC_COCPU_TRAP_INT = 1 << 17;
 const RTC_TOUCH_TIMEOUT_INT = 1 << 18;
 const RTC_TOUCH_APPROACH_LOOP_DONE_INT = 1 << 20;
+const RTC_INT_RAW_WRITABLE = RTC_TOUCH_APPROACH_LOOP_DONE_INT;
 const RTC_MAIN_TIMER_INT = 1 << 10;
 const RTC_TOUCH_INT_MASK =
   RTC_TOUCH_SCAN_DONE_INT |
@@ -4633,7 +4636,8 @@ export class Esp32s3Core implements McuCore {
         this.rtcIntEna = value >>> 0;
         this.recomputeIrq();
       } else if (off === RTC_INT_RAW) {
-        this.rtcIntRaw = value >>> 0;
+        this.rtcIntRaw =
+          ((this.rtcIntRaw & ~RTC_INT_RAW_WRITABLE) | (value & RTC_INT_RAW_WRITABLE)) >>> 0;
         this.recomputeIrq();
       } else if (off === RTC_INT_CLR) {
         this.rtcIntRaw &= ~value;
