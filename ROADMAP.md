@@ -1030,6 +1030,13 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       round-trips, and confirms INT_ST is clear after the ISR. Cuts:
       no analog power-glitch model and no GLITCH_RTC_RESET or
       POWER_GLITCH_RESET reset-cause behavior yet
+- [x] ESP32-S3 core slice 68 — RTC FIB_SEL register fidelity
+      (landed 2026-06-14): RTC_CNTL_FIB_SEL now resets to the
+      documented three-bit value 7, round-trips the selector field, and
+      masks writes so only bits [2:0] stick. Proven by hand-assembled
+      firmware that reads reset state, writes selector 2, then writes
+      0xff and observes readback 7 instead of fabricated high bits.
+      Cuts: no FIB reset-source routing for GLITCH/BOD/SUPER_WDT yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

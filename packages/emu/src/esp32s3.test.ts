@@ -3841,6 +3841,38 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('RTC FIB_SEL resets and writes only the documented three-bit selector', () => {
+    // Source-checked against ESP-IDF release/v5.5 rtc_cntl_reg.h:
+    // RTC_CNTL_FIB_SEL is an R/W field at PG_CTRL+0x4, bitpos [2:0],
+    // reset 3'd7.
+    const fibSelMask = 0x7;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, UART, fibSelMask, 0x02, 0xff],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = UART
+        L32R(6, 2),
+        L32I(4, 2, 0x148),
+        AND(4, 4, 6),
+        S32I(4, 3, 0), // tx 7: reset selector
+        L32R(4, 3),
+        S32I(4, 2, 0x148),
+        L32I(5, 2, 0x148),
+        AND(5, 5, 6),
+        S32I(5, 3, 0), // tx 2: selector write
+        L32R(4, 4),
+        S32I(4, 2, 0x148),
+        L32I(5, 2, 0x148),
+        S32I(5, 3, 0), // tx 7: high bits do not stick
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([7, 2, 7]);
+  });
+
   it('XTAL32K-dead trips wake sleep through RTC_CORE and record the wake cause', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // rtc_cntl_reg.h has EXT_XTL_CONF +0x60 with XTAL32K_WDT_EN bit 0,

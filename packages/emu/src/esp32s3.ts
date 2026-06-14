@@ -218,7 +218,8 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * as write-only. STATE0.SW_CPU_INT follows the ULP wake-main pulse path
  * used by ulp_riscv_wakeup_main_processor(). INT_RAW writes only affect
  * the documented TOUCH_APPROACH_LOOP_DONE R/W raw bit; producer-owned
- * raw bits stay read-only. COCPU_CTRL keeps the documented reset timing
+ * raw bits stay read-only. FIB_SEL preserves the documented three-bit
+ * selector reset/readback. COCPU_CTRL keeps the documented reset timing
  * fields/COCPU_SEL bit while COCPU_DONE/SHUT_RESET_EN reflect through
  * LOW_POWER_ST's COCPU done/sleep bits.
  * COCPU_SW_INT_TRIGGER wakes RTC sleep when RTC_COCPU_TRIG_EN is armed.
@@ -570,6 +571,7 @@ const RTC_ULP_CP_CTRL = 0x100;
 const RTC_COCPU_CTRL = 0x104;
 const RTC_ULP_CP_TIMER_1 = 0x134;
 const RTC_PG_CTRL = 0x144;
+const RTC_FIB_SEL = 0x148;
 const RTC_BROWN_OUT = 0xe8;
 const RTC_WDT_FEED_BIT = 1 << 31; // RTC_CNTL_RTC_WDT_FEED
 const RTC_SWD_WKEY = 0x8f1d312a;
@@ -602,6 +604,8 @@ const RTC_BROWN_OUT_RST_ENA = 1 << 26;
 const RTC_BROWN_OUT_RESET = (RTC_BROWN_OUT_ENA | (0x3ff << 16) | (1 << 4)) >>> 0;
 const RTC_POWER_GLITCH_EN = 1 << 31;
 const RTC_PG_CTRL_RESET = 0;
+const RTC_FIB_SEL_MASK = 0x7;
+const RTC_FIB_SEL_RESET = 0x7;
 const RWDT_CONFIG0_RESET = ((1 << 16) | (1 << 13) | (1 << 12) | (1 << 9)) >>> 0;
 
 // SAR ADC1/ADC2 oneshot paths (sens_reg.h; flow per
@@ -1468,6 +1472,7 @@ export class Esp32s3Core implements McuCore {
   private brownoutDetected = false;
   private rtcPgCtrl = RTC_PG_CTRL_RESET;
   private powerGlitchDetected = false;
+  private rtcFibSel = RTC_FIB_SEL_RESET;
   private rtcExtXtlConf = RTC_EXT_XTL_CONF_RESET;
   private rtcXtal32kConf = RTC_XTAL32K_CONF_RESET;
   private xtal32kDead = false;
@@ -2301,6 +2306,7 @@ export class Esp32s3Core implements McuCore {
     this.rtcCocpuCtrl = RTC_COCPU_CTRL_RESET;
     this.rtcBrownOut = RTC_BROWN_OUT_RESET;
     this.rtcPgCtrl = RTC_PG_CTRL_RESET;
+    this.rtcFibSel = RTC_FIB_SEL_RESET;
     this.rtcExtXtlConf = RTC_EXT_XTL_CONF_RESET;
     this.rtcXtal32kConf = RTC_XTAL32K_CONF_RESET;
     this.rtcSwdConf = RTC_SWD_CONF_RESET;
@@ -4056,6 +4062,7 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_BROWN_OUT) return (this.rtcBrownOut & ~RTC_BROWN_OUT_CNT_CLR) >>> 0;
       if (off === RTC_XTAL32K_CONF) return this.rtcXtal32kConf >>> 0;
       if (off === RTC_PG_CTRL) return this.rtcPgCtrl >>> 0;
+      if (off === RTC_FIB_SEL) return this.rtcFibSel >>> 0;
       if (off === RTC_TOUCH_CTRL1) return this.rtcTouchCtrl1 >>> 0;
       if (off === RTC_TOUCH_CTRL2) return this.rtcTouchCtrl2 >>> 0;
       if (off === RTC_TOUCH_SCAN_CTRL) return this.rtcTouchScanCtrl >>> 0;
@@ -4076,7 +4083,7 @@ export class Esp32s3Core implements McuCore {
           `EXT_XTL_CONF(+0x60), ` +
           `the RWDT block (+0x98..+0xb0), SWD(+0xb4/+0xb8), SW_CPU_STALL(+0xbc), LOW_POWER_ST(+0xd0), ` +
           `ULP_CP_TIMER/CTRL(+0xfc/+0x100), COCPU_CTRL(+0x104), ` +
-          `BROWN_OUT(+0xe8), XTAL32K_CONF(+0xf8), PG_CTRL(+0x144), ` +
+          `BROWN_OUT(+0xe8), XTAL32K_CONF(+0xf8), PG_CTRL/FIB_SEL(+0x144/+0x148), ` +
           `TOUCH_CTRL1/2(+0x108/+0x10c), TOUCH_SCAN/SLP/APPROACH/FILTER/TIMEOUT(+0x110..+0x124), TOUCH_DAC/DAC1(+0x14c/+0x150), ` +
           `sleep reject/wakeup causes (+0x128/+0x130), ULP_CP_TIMER_1(+0x134); ` +
           `a fabricated 0 here would lie`,
@@ -4761,6 +4768,8 @@ export class Esp32s3Core implements McuCore {
       } else if (off === RTC_PG_CTRL) {
         this.rtcPgCtrl = value >>> 0;
         this.updatePowerGlitchDetector();
+      } else if (off === RTC_FIB_SEL) {
+        this.rtcFibSel = value & RTC_FIB_SEL_MASK;
       } else if (off === RTC_TOUCH_CTRL1) {
         this.rtcTouchCtrl1 = value >>> 0;
       } else if (off === RTC_TOUCH_CTRL2) {
