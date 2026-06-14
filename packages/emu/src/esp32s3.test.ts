@@ -4455,6 +4455,68 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('ULP wake-main software pulse wakes RTC sleep with the ULP wake source recorded', () => {
+    // Source-checked against ESP-IDF release/v5.5:
+    // ulp_riscv_wakeup_main_processor() sets RTC_CNTL_STATE0.SW_CPU_INT,
+    // and ULP RISC-V examples use that helper before the main app sees
+    // ESP_SLEEP_WAKEUP_ULP. SET_PERI_REG_MASK performs a read/modify/write,
+    // so this test preserves STATE0.SLEEP_EN while pulsing SW_CPU_INT.
+    const RTC_ULP_CP_INT = 1 << 5;
+    const RTC_SLP_WAKEUP_INT = 1;
+    const RTC_ULP_TRIG_EN = 1 << 9;
+    const rtcIntMask = RTC_ULP_CP_INT | RTC_SLP_WAKEUP_INT;
+    const wakeupUlp = RTC_ULP_TRIG_EN << 15;
+    const sleepEn = 0x80000000;
+    const swCpuInt = 1;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, rtcIntMask, wakeupUlp, sleepEn, swCpuInt],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        MOVI(5, 1),
+        S32I(5, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(6, 3),
+        WSR(6, SR.VECBASE),
+        MOVI(5, 2),
+        WSR(5, SR.INTENABLE),
+        L32R(5, 4),
+        S32I(5, 2, 0x4c), // clear stale ULP/SLP_WAKEUP raw bits
+        S32I(5, 2, 0x40), // enable ULP and SLP_WAKEUP raw bits
+        L32R(5, 5),
+        S32I(5, 2, 0x3c), // WAKEUP_STATE ULP wake source
+        L32R(5, 6),
+        S32I(5, 2, 0x18), // STATE0.SLEEP_EN
+        RSIL(12, 12), // hold the pending RTC_CORE interrupt until WAITI lowers INTLEVEL
+        L32I(5, 2, 0x18),
+        L32R(7, 7),
+        OR(5, 5, 7),
+        S32I(5, 2, 0x18), // SET_PERI_REG_MASK(STATE0, SW_CPU_INT)
+        WAITI(0),
+        L32I(5, 2, 0x130), // SLP_WAKEUP_CAUSE
+        SRLI(5, 5, 9),
+        L32R(6, 2),
+        S32I(5, 6, 0), // tx 1: ULP_TRIG_EN recorded
+        L32I(5, 2, 0x48),
+        S32I(5, 6, 0), // tx 0: RTC INT_ST clear after ISR
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 4),
+        S32I(3, 2, 0x4c), // clear ULP/SLP_WAKEUP raw bits
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('ULP sleep timer wakes RTC sleep with the ULP wake source recorded', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // ulp_run() sets RTC_CNTL_ULP_CP_TIMER.ULP_CP_SLP_TIMER_EN, and

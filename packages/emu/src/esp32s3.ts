@@ -214,9 +214,10 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * WAKE examples poll, and ULP_CP_TIMER readback preserves GPIO_WAKEUP_ENA
  * while treating GPIO_WAKEUP_CLR as a write-only pulse. ULP_CP_CTRL
  * preserves FORCE_START_TOP/CLK_FO readback while treating MEM_OFFST_CLR
- * as write-only. COCPU_CTRL keeps the documented reset timing fields/
- * COCPU_SEL bit while COCPU_DONE/SHUT_RESET_EN reflect through
- * LOW_POWER_ST's COCPU done/sleep bits.
+ * as write-only. STATE0.SW_CPU_INT follows the ULP wake-main pulse path
+ * used by ulp_riscv_wakeup_main_processor(). COCPU_CTRL keeps the
+ * documented reset timing fields/COCPU_SEL bit while COCPU_DONE/
+ * SHUT_RESET_EN reflect through LOW_POWER_ST's COCPU done/sleep bits.
  * COCPU_SW_INT_TRIGGER wakes RTC sleep when RTC_COCPU_TRIG_EN is armed.
  * SENS_SAR_COCPU_STATE.DBG_TRIGGER
  * models a synthetic COCPU trap producer, latching RTC_CNTL_COCPU_TRAP_INT
@@ -4617,8 +4618,12 @@ export class Esp32s3Core implements McuCore {
           this.rtcIntRaw &= ~RTC_SLP_REJECT_INT;
         }
         this.rtcState0 = (value & ~(RTC_SLP_REJECT_CAUSE_CLR | RTC_SW_CPU_INT)) >>> 0;
-        if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcSleepTimer();
-        this.recomputeIrq();
+        if ((value & RTC_SW_CPU_INT) !== 0) {
+          this.triggerUlpWake();
+        } else {
+          if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcSleepTimer();
+          this.recomputeIrq();
+        }
       } else if (off === RTC_SW_CPU_STALL) {
         this.rtcSwCpuStall = value >>> 0;
         this.maybeStartCore1();

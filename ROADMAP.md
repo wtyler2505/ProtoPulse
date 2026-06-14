@@ -999,6 +999,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       high-bit bitmap, and verifies MEM_OFFST_CLR reads as zero. Cuts:
       no real ULP instruction execution, memory offset behavior, or
       coprocessor clock-state sequencing
+- [x] ESP32-S3 core slice 65 — ULP wake-main software pulse
+      (landed 2026-06-13): RTC_CNTL_STATE0.SW_CPU_INT now acts as the
+      ULP wake-main pulse used by Espressif's
+      `ulp_riscv_wakeup_main_processor()`, reusing the modeled ULP wake
+      path so RTC_ULP_TRIG_EN records the wake source and RTC_CORE can
+      wake WAITI when ULP and SLP_WAKEUP interrupts are enabled. Proven
+      by hand-assembled firmware that enters RTC sleep, performs the
+      same read/modify/write style STATE0.SW_CPU_INT pulse used by
+      SET_PERI_REG_MASK, clears ULP/SLP_WAKEUP raw in the ISR, and
+      reports ULP_TRIG_EN plus cleared INT_ST over UART. Cuts: no real
+      ULP RISC-V instruction execution or separate SW_CPU_INT raw source
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
