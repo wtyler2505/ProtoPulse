@@ -1087,6 +1087,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       RTC_EXT1_TRIG_EN plus EXT_WAKEUP1_STATUS bit 7, clears status,
       and confirms INT_ST is clear after the ISR. Cuts: no EXT0 single
       RTC-IO wake selector or real deep-sleep reset/wake-stub behavior yet
+- [x] ESP32-S3 core slice 74 — EXT0 RTC IO wake source
+      (landed 2026-06-15): RTC_IO_EXT_WAKEUP0_SEL now stores the
+      selected single RTC GPIO0..21, RTC_CNTL_EXT_WAKEUP_CONF stores
+      EXT_WAKEUP0_LV, and host pin changes wake modeled sleep when
+      WAKEUP_STATE arms RTC_EXT0_TRIG_EN. Proven by hand-assembled
+      firmware that selects RTC GPIO7, sets high-level EXT0 wake,
+      receives a host IO7 high level, reports RTC_EXT0_TRIG_EN,
+      confirms the RTC_IO selector round-trips as GPIO7, and confirms
+      INT_ST is clear after the ISR. Cuts: no RTC_IO pad function/input
+      enable side effects or real deep-sleep reset/wake-stub behavior yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

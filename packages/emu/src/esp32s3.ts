@@ -685,8 +685,8 @@ const ROM_STR_MAX = 0x10000;
 
 // ── Slice 11: RTC_CNTL / eFuse / SYSTEM ──
 // Bases from reg_base.h (DR_REG_EFUSE_BASE / DR_REG_RTCCNTL_BASE /
-// DR_REG_SYSTEM_BASE); offsets and fields from rtc_cntl_reg.h,
-// efuse_reg.h, system_reg.h — all esp-idf v5.2
+// DR_REG_RTCIO_BASE / DR_REG_SYSTEM_BASE); offsets and fields from
+// rtc_cntl_reg.h, rtc_io_reg.h, efuse_reg.h, system_reg.h — all esp-idf v5.2
 // components/soc/esp32s3/include/soc/. Policy for these three blocks:
 // reads of unmodeled registers REFUSE with a diagnostic (a benign
 // zero would silently lie — 0 in RTC_CNTL_WDTCONFIG0 claims "watchdog
@@ -695,6 +695,8 @@ const ROM_STR_MAX = 0x10000;
 // firmware logic the way a fabricated read can).
 const RTCCNTL_BASE = 0x60008000;
 const RTCCNTL_END = 0x60008800; // SENS sits at +0x800
+const RTCIO_BASE = 0x60008400;
+const RTCIO_END = 0x60008800;
 const RTC_OPTIONS0 = 0x00; // SW_SYS_RST bit 31, SW_PROCPU_RST bit 5, SW_APPCPU_RST bit 4 (all WO)
 const RTC_SLP_TIMER0 = 0x04; // SLP_VAL_LO [31:0]
 const RTC_SLP_TIMER1 = 0x08; // SLP_VAL_HI [15:0], MAIN_TIMER_ALARM_EN bit 16 (WO)
@@ -769,11 +771,15 @@ const RTC_GPIO_WAKEUP_FILTER = 1 << 29;
 const RTC_EXT_WAKEUP_CONF_MASK = RTC_EXT_WAKEUP1_LV | RTC_EXT_WAKEUP0_LV | RTC_GPIO_WAKEUP_FILTER;
 const RTC_EXT_WAKEUP1_STATUS_CLR = 1 << 22;
 const RTC_EXT_WAKEUP1_SEL_MASK = 0x003f_ffff;
+const RTC_IO_EXT_WAKEUP0 = 0xdc;
+const RTC_IO_EXT_WAKEUP0_SEL_SHIFT = 27;
+const RTC_IO_EXT_WAKEUP0_SEL_MASK = 0xf800_0000;
 const RTC_MAIN_STATE_IN_IDLE = 1 << 27;
 const RTC_MAIN_STATE_IN_SLP = 1 << 26;
 const RTC_RDY_FOR_WAKEUP = 1 << 19;
 const RTC_COCPU_STATE_DONE = 1 << 16;
 const RTC_COCPU_STATE_SLP = 1 << 15;
+const RTC_EXT0_TRIG_EN = 1 << 0;
 const RTC_EXT1_TRIG_EN = 1 << 1;
 const RTC_GPIO_TRIG_EN = 1 << 2;
 const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
@@ -1502,6 +1508,7 @@ export class Esp32s3Core implements McuCore {
   private rtcSleepRejectSource = 0;
   private rtcSdioIdle = false;
   private rtcExtWakeupConf = 0;
+  private rtcIoExtWakeup0 = 0;
   private rtcExtWakeup1 = 0;
   private rtcExtWakeup1Status = 0;
   private rtcRejectCause = 0;
@@ -1767,6 +1774,7 @@ export class Esp32s3Core implements McuCore {
       }
     }
     this.updateRtcGpioWakeup();
+    this.updateRtcExt0Wakeup();
     this.updateRtcExt1Wakeup();
     this.captureRmtRxInputs();
     this.recomputeIrq();
@@ -2354,6 +2362,7 @@ export class Esp32s3Core implements McuCore {
     this.rtcIntEna = 0;
     this.rtcSlpRejectConf = 0;
     this.rtcExtWakeupConf = 0;
+    this.rtcIoExtWakeup0 = 0;
     this.rtcExtWakeup1 = 0;
     this.rtcExtWakeup1Status = 0;
     this.rtcRejectCause = 0;
@@ -2603,6 +2612,19 @@ export class Esp32s3Core implements McuCore {
 
   private updateRtcGpioWakeup(): void {
     if (this.rtcGpioWakeupPending()) this.latchRtcWakeupSource(RTC_GPIO_TRIG_EN);
+  }
+
+  private rtcExt0WakeupPending(): boolean {
+    const gpio = (this.rtcIoExtWakeup0 >>> RTC_IO_EXT_WAKEUP0_SEL_SHIFT) & 0x1f;
+    if (gpio >= 22) return false;
+    const bit = 1 << (gpio & 31);
+    const high = ((this.inLevels[gpio >> 5] ?? 0) & bit) !== 0;
+    const highWake = (this.rtcExtWakeupConf & RTC_EXT_WAKEUP0_LV) !== 0;
+    return highWake ? high : !high;
+  }
+
+  private updateRtcExt0Wakeup(): void {
+    if (this.rtcExt0WakeupPending()) this.latchRtcWakeupSource(RTC_EXT0_TRIG_EN);
   }
 
   private rtcExt1WakeupPending(): number {
@@ -4149,6 +4171,14 @@ export class Esp32s3Core implements McuCore {
       if (off === APB_SARADC_APB_CTRL_DATE) return APB_SARADC_DATE_RESET;
       return 0;
     }
+    if (addr >= RTCIO_BASE && addr < RTCIO_END) {
+      const off = addr - RTCIO_BASE;
+      if (off === RTC_IO_EXT_WAKEUP0) return this.rtcIoExtWakeup0 >>> 0;
+      throw new Error(
+        `read of unmodeled RTC_IO register 0x${addr.toString(16)} — this core models only ` +
+          `EXT_WAKEUP0(+0xdc); a fabricated 0 here would lie`,
+      );
+    }
     if (addr >= RTCCNTL_BASE && addr < RTCCNTL_END) {
       const off = addr - RTCCNTL_BASE;
       if (off === RTC_OPTIONS0) return this.rtcOptions0 >>> 0; // sw-reset bits are WO — they read 0
@@ -4745,6 +4775,14 @@ export class Esp32s3Core implements McuCore {
       } else if (off === APB_SARADC_APB_ADC_CLKM_CONF) this.apbSaradcClkmConf = v;
       return;
     }
+    if (addr >= RTCIO_BASE && addr < RTCIO_END) {
+      const off = addr - RTCIO_BASE;
+      if (off === RTC_IO_EXT_WAKEUP0) {
+        this.rtcIoExtWakeup0 = value & RTC_IO_EXT_WAKEUP0_SEL_MASK;
+        this.updateRtcExt0Wakeup();
+      }
+      return;
+    }
     if (addr >= RTCCNTL_BASE && addr < RTCCNTL_END) {
       const off = addr - RTCCNTL_BASE;
       if (off === RTC_OPTIONS0) {
@@ -4785,6 +4823,7 @@ export class Esp32s3Core implements McuCore {
         } else {
           if ((value & RTC_SLEEP_EN) !== 0 && this.rejectRtcSleepIfNeeded()) return;
           if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcSleepTimer();
+          if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcExt0Wakeup();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcExt1Wakeup();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcGpioWakeup();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcSdioIdle();
@@ -4816,6 +4855,7 @@ export class Esp32s3Core implements McuCore {
         this.updateXtal32kDead();
       } else if (off === RTC_EXT_WAKEUP_CONF) {
         this.rtcExtWakeupConf = value & RTC_EXT_WAKEUP_CONF_MASK;
+        this.updateRtcExt0Wakeup();
         this.updateRtcExt1Wakeup();
       } else if (off === RTC_SLP_REJECT_CONF) {
         this.rtcSlpRejectConf = value >>> 0;

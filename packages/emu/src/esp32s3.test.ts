@@ -3118,7 +3118,8 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
   // REAL register addresses, pinned independently of the implementation,
   // from esp-idf v5.2 components/soc/esp32s3/include/soc/:
   //   reg_base.h     — DR_REG_EFUSE_BASE 0x60007000, DR_REG_RTCCNTL_BASE
-  //                    0x60008000, DR_REG_SYSTEM_BASE 0x600C0000
+  //                    0x60008000, DR_REG_RTCIO_BASE 0x60008400,
+  //                    DR_REG_SYSTEM_BASE 0x600C0000
   //   rtc_cntl_reg.h — OPTIONS0 +0x0, TIME_UPDATE +0xC, TIME_LOW0 +0x10,
   //                    TIME_HIGH0 +0x14, RESET_STATE +0x38
   //   efuse_reg.h    — PGM_DATA0 +0x0, RD_MAC_SPI_SYS_0 +0x44, _1 +0x48,
@@ -3127,6 +3128,7 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
   // Reset causes from esp_rom/include/esp32s3/rom/rtc.h: POWERON_RESET=1,
   // RTC_SW_SYS_RESET=3, RTC_SW_CPU_RESET=12.
   const RTCCNTL = 0x60008000;
+  const RTCIO = 0x60008400;
   const RTC_OPTIONS0 = 0x60008000;
   const RTC_TIME_UPDATE = 0x6000800c;
   const RTC_RESET_STATE = 0x60008038;
@@ -3627,6 +3629,75 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     c.setPin('IO7', 1);
     c.step(1_000);
     expect([...c.drainUart()]).toEqual([rtcGpioTrig, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
+  it('EXT0 RTC IO wakeup records the single wake source', () => {
+    // Context7: ESP-IDF release/v5.5 sleep docs say ESP32-S3 EXT0 uses
+    // one RTC GPIO0..21 and wakes on a selected low/high level. Source-
+    // checked against ESP-IDF release/v5.5: rtc_io_ll.h writes
+    // RTC_IO_EXT_WAKEUP0_SEL and RTC_CNTL_EXT_WAKEUP0_LV, while
+    // sleep_modes.c arms RTC_EXT0_TRIG_EN for esp_sleep_enable_ext0_wakeup().
+    const rtcExt0Trig = 1 << 0;
+    const rtcSlpWakeupInt = 1;
+    const wakeupExt0 = rtcExt0Trig << 15;
+    const sleepEn = 0x80000000;
+    const ext0LvHigh = 1 << 30;
+    const ext0Gpio7 = 7 << 27;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, RTCIO, wakeupExt0, rtcSlpWakeupInt, sleepEn, rtcExt0Trig, ext0LvHigh, ext0Gpio7],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        L32R(8, 4), // a8 = RTC_IO
+        MOVI(4, 1),
+        S32I(4, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(5, 3),
+        WSR(5, SR.VECBASE),
+        MOVI(4, 2),
+        WSR(4, SR.INTENABLE),
+        L32R(4, 6),
+        S32I(4, 2, 0x4c), // clear stale SLP_WAKEUP raw
+        S32I(4, 2, 0x40), // enable SLP_WAKEUP raw
+        L32R(4, 9),
+        S32I(4, 2, 0x64), // EXT_WAKEUP_CONF.EXT_WAKEUP0_LV = high
+        L32R(4, 10),
+        S32I(4, 8, 0xdc), // RTC_IO_EXT_WAKEUP0_SEL = RTC GPIO7
+        L32R(4, 5),
+        S32I(4, 2, 0x3c), // WAKEUP_STATE EXT0 wake source
+        RSIL(12, 12), // hold pending RTC_CORE interrupt until WAITI lowers INTLEVEL
+        L32R(4, 7),
+        S32I(4, 2, 0x18), // STATE0.SLEEP_EN
+        WAITI(0),
+        L32I(4, 2, 0x130), // SLP_WAKEUP_CAUSE raw trigger bitmap
+        L32R(5, 8),
+        AND(4, 4, 5),
+        L32R(6, 2),
+        S32I(4, 6, 0), // tx RTC_EXT0_TRIG_EN (0x01)
+        L32I(4, 8, 0xdc), // RTC_IO_EXT_WAKEUP0_SEL
+        SRAI(4, 4, 27),
+        S32I(4, 6, 0), // tx selected RTC GPIO number (7)
+        L32I(4, 2, 0x48),
+        S32I(4, 6, 0), // tx 0: INT_ST clear after ISR
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 6),
+        S32I(3, 2, 0x4c), // clear SLP_WAKEUP so it does not re-fire
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+    c.setPin('IO7', 1);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([rtcExt0Trig, 7, 0]);
     c.step(300);
     expect([...c.drainUart()]).toEqual([]);
   });
