@@ -12,9 +12,16 @@
       "name": "@genkit-ai/core",
       "maxSeverity": "high",
       "requireNoFixAvailable": true,
-      "allowedVia": ["@genkit-ai/firebase", "@opentelemetry/sdk-node"],
+      "allowedVia": [
+        "@genkit-ai/firebase",
+        "@opentelemetry/core",
+        "@opentelemetry/sdk-logs",
+        "@opentelemetry/sdk-metrics",
+        "@opentelemetry/sdk-node",
+        "@opentelemetry/sdk-trace-base"
+      ],
       "until": "2026-07-31",
-      "reason": "Transitive Genkit chain blocked by OpenTelemetry/uuid advisories with no npm fix available after npm audit fix on 2026-06-13."
+      "reason": "Transitive Genkit chain blocked by OpenTelemetry/uuid advisories with no npm fix available after npm audit fix on 2026-06-13; npm audit expanded OpenTelemetry via chains on 2026-06-15."
     },
     {
       "name": "@genkit-ai/firebase",
@@ -31,28 +38,71 @@
       "allowedVia": [
         "@google-cloud/logging-winston",
         "@google-cloud/opentelemetry-cloud-monitoring-exporter",
+        "@google-cloud/opentelemetry-cloud-trace-exporter",
+        "@google-cloud/opentelemetry-resource-util",
         "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/core",
+        "@opentelemetry/instrumentation-pino",
+        "@opentelemetry/resources",
+        "@opentelemetry/sdk-metrics",
         "@opentelemetry/sdk-node",
+        "@opentelemetry/sdk-trace-base",
         "genkit"
       ],
       "until": "2026-07-31",
-      "reason": "Transitive Genkit chain blocked by OpenTelemetry/uuid advisories with no npm fix available after npm audit fix on 2026-06-13."
+      "reason": "Transitive Genkit chain blocked by OpenTelemetry/uuid advisories with no npm fix available after npm audit fix on 2026-06-13; npm audit expanded OpenTelemetry via chains on 2026-06-15."
     },
     {
       "name": "@opentelemetry/auto-instrumentations-node",
       "maxSeverity": "high",
       "requireNoFixAvailable": true,
-      "allowedVia": ["@opentelemetry/sdk-node", "GHSA-q7rr-3cgh-j5r3"],
+      "allowedVia": [
+        "@opentelemetry/instrumentation-amqplib",
+        "@opentelemetry/instrumentation-aws-lambda",
+        "@opentelemetry/instrumentation-aws-sdk",
+        "@opentelemetry/instrumentation-connect",
+        "@opentelemetry/instrumentation-express",
+        "@opentelemetry/instrumentation-fastify",
+        "@opentelemetry/instrumentation-fs",
+        "@opentelemetry/instrumentation-hapi",
+        "@opentelemetry/instrumentation-http",
+        "@opentelemetry/instrumentation-koa",
+        "@opentelemetry/instrumentation-mongodb",
+        "@opentelemetry/instrumentation-mongoose",
+        "@opentelemetry/instrumentation-mysql2",
+        "@opentelemetry/instrumentation-pg",
+        "@opentelemetry/instrumentation-pino",
+        "@opentelemetry/instrumentation-restify",
+        "@opentelemetry/instrumentation-undici",
+        "@opentelemetry/resource-detector-aws",
+        "@opentelemetry/resource-detector-azure",
+        "@opentelemetry/resource-detector-gcp",
+        "@opentelemetry/resources",
+        "@opentelemetry/sdk-node",
+        "GHSA-q7rr-3cgh-j5r3"
+      ],
       "until": "2026-07-31",
-      "reason": "GHSA-q7rr-3cgh-j5r3 remains in the Genkit dependency chain with no npm fix available after npm audit fix on 2026-06-13."
+      "reason": "GHSA-q7rr-3cgh-j5r3 remains in the Genkit dependency chain with no npm fix available after npm audit fix on 2026-06-13; npm audit expanded OpenTelemetry via chains on 2026-06-15."
     },
     {
       "name": "@opentelemetry/sdk-node",
       "maxSeverity": "high",
       "requireNoFixAvailable": true,
-      "allowedVia": ["GHSA-q7rr-3cgh-j5r3"],
+      "allowedVia": [
+        "@opentelemetry/core",
+        "@opentelemetry/exporter-trace-otlp-grpc",
+        "@opentelemetry/exporter-trace-otlp-http",
+        "@opentelemetry/exporter-trace-otlp-proto",
+        "@opentelemetry/exporter-zipkin",
+        "@opentelemetry/resources",
+        "@opentelemetry/sdk-logs",
+        "@opentelemetry/sdk-metrics",
+        "@opentelemetry/sdk-trace-base",
+        "@opentelemetry/sdk-trace-node",
+        "GHSA-q7rr-3cgh-j5r3"
+      ],
       "until": "2026-07-31",
-      "reason": "GHSA-q7rr-3cgh-j5r3 reports no npm fix available after npm audit fix on 2026-06-13."
+      "reason": "GHSA-q7rr-3cgh-j5r3 reports no npm fix available after npm audit fix on 2026-06-13; npm audit expanded OpenTelemetry via chains on 2026-06-15."
     },
     {
       "name": "genkit",
