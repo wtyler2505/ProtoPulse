@@ -2,6 +2,28 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 93: RTC slow-clock mux for RWDT
+
+### Added
+- **RTC slow-clock source selection** (@protopulse/emu):
+  RTC_CNTL_CLK_CONF.ANA_CLK_RTC_SEL now round-trips and drives the
+  RTC_SLOW_CLK tick rate used by RWDT and RTC main-timer latching.
+  The model covers Espressif's RC_SLOW, XTAL32K, and RC_FAST_D256
+  approximate clock sources.
+
+### Verified
+- Added hand-assembled Xtensa firmware that selects XTAL32K, arms a
+  raw RWDT stage0=1 timeout, survives beyond the old RC_SLOW x2
+  deadline, and then reboots later with RTCWDT_SYS_RESET.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 149 ESP32-S3 tests.
+
+### Honest cuts
+- RTC_CNTL_SLOW_CLK_CONF.ANA_CLK_DIV is stored for readback but not
+  applied to tick math yet.
+- Changing RTC_SLOW_CLK while a timeout is already aging still uses
+  simple virtual-time math instead of re-basing elapsed time.
+
 ## 2026-06-16 — ESP32-S3 slices 21-92: IDF runway catch-up
 
 ### Added

@@ -1274,8 +1274,9 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       clears sleep. Proven by hand-assembled firmware that arms a
       two-RTC-slow-tick RWDT reset, sleeps until RTC timer tick 10,
       wakes through RTC_CORE, disarms RWDT, and reports the wake cause
-      plus unchanged POWERON reset cause. Cuts: no RWDT XTAL clock
-      source yet
+      plus unchanged POWERON reset cause. Cuts: mixed-source elapsed
+      accounting is still approximate if firmware changes RTC_SLOW_CLK
+      while timers are already running
 - [x] ESP32-S3 core slice 91 — RWDT stage-0 eFuse timeout multiplier
       (landed 2026-06-16): RWDT stage 0 now applies the ESP32-S3
       implicit timeout multiplier selected by BLOCK0 WDT_DELAY_SEL, so
@@ -1283,7 +1284,8 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       ages like hardware. Proven by hand-assembled firmware for the
       default x2 path and a burned WDT_DELAY_SEL=2 x8 path, both using a
       raw WDTCONFIG1 value of 1 before resetting with RTCWDT_SYS_RESET.
-      Cuts: no RWDT XTAL clock source yet
+      Cuts: mixed-source elapsed accounting is still approximate if
+      firmware changes RTC_SLOW_CLK while timers are already running
 - [x] ESP32-S3 core slice 92 — clock-glitch interrupt producer
       (landed 2026-06-16): a host-injected clock-glitch trip now latches
       RTC_CNTL_GLITCH_DET_INT (bit 19) when ANA_CONF.GLITCH_RST_EN is
@@ -1293,6 +1295,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       clears GLITCH_DET in the ISR, and reports clear INT_ST afterward.
       Cuts: still no analog glitch waveform/timing model or eFuse strap
       routing model
+- [x] ESP32-S3 core slice 93 — RWDT RTC slow-clock source selection
+      (landed 2026-06-16): RTC_CNTL_CLK_CONF.ANA_CLK_RTC_SEL now
+      round-trips and drives the RTC_SLOW_CLK tick rate used by RWDT
+      and the RTC main timer, covering RC_SLOW, XTAL32K, and
+      RC_FAST_D256 approximations from Espressif's clock-tree headers.
+      Proven by hand-assembled firmware that selects XTAL32K before
+      arming a raw RWDT stage0=1 timeout, survives beyond the old
+      RC_SLOW x2 deadline, then later reboots with RTCWDT_SYS_RESET.
+      Cuts: ANA_CLK_DIV is stored but not applied, and elapsed time is
+      not re-based when firmware switches RTC_SLOW_CLK mid-timeout
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

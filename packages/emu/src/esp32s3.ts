@@ -78,7 +78,7 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * per-CPU reset causes in RTC_CNTL_RESET_STATE_REG (power-on 1; the
  * software_reset ROM trap and the OPTIONS0 SW_SYS_RST/SW_PROCPU_RST
  * write bits set 3/12 per rom/rtc.h), the 48-bit RTC main timer over
- * the ~136 kHz RC_SLOW clock (TIME_UPDATE-latched LOW0/HIGH0 reads;
+ * the selected RTC_SLOW clock (TIME_UPDATE-latched LOW0/HIGH0 reads;
  * the counter restarts at reset — real hardware keeps it),
  * eFuse BLOCK0..10 reads, BLOCK1 serving a documented SYNTHETIC
  * locally-administered MAC (7A:C0:DE:00:53:33) and wafer version 0
@@ -138,7 +138,7 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * resets the CPU, 3 the system, 4 (RWDT only) system+RTC — with the
  * real rom/rtc.h causes in RESET_STATE: TG0WDT 7/11, TG1WDT 8/17,
  * RTCWDT 9/13/16. MWDTs count APB/CLK_PRESCALE ticks; the RWDT
- * counts the modeled ~136 kHz RC_SLOW clock, with the real stage-0
+ * counts the selected RTC_SLOW clock source, with the real stage-0
  * eFuse timeout multiplier from BLOCK0 WDT_DELAY_SEL. Watchdog cuts,
  * stated plainly: stage-N CPU-reset ignores the PROCPU/APPCPU_RESET_EN
  * routing bits and always resets the PRO CPU (whole machine, like
@@ -149,7 +149,7 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * real modeled registers); the RWDT INT stage action now latches
  * RTC_WDT_INT via the RTC_CORE interrupt source, and RWDT
  * PAUSE_IN_SLP freezes elapsed timeout while modeled RTC sleep is
- * active. SUPER_WDT timed countdown and XTAL clock sources are out of scope.
+ * active. SUPER_WDT timed countdown is out of scope.
  * The APB_SARADC digital-controller register substrate is
  * modeled (slice 15): CTRL/CTRL2, packed pattern tables, DATA_STATUS,
  * DMA_CONF storage, ADC1/ADC2 done interrupts, and the two ESP-IDF
@@ -592,8 +592,8 @@ const WDT_STAGE_RESET_RTC = 4; // RWDT only
 // RWDT — RTC_CNTL (rtc_cntl_reg.h): WDTCONFIG0 +0x98 (EN 31, STG0..3
 // at [30:28]/[27:25]/[24:22]/[21:19] — 3-bit fields, since action 4
 // exists), WDTCONFIG1..4 +0x9C..0xA8 (stage0..3 timeouts in RTC-slow
-// ticks — the modeled ~136 kHz RC_SLOW; stage 0 applies the eFuse
-// WDT_DELAY_SEL multiplier rwdt_ll.h compensates for),
+// ticks — the selected RC_SLOW/XTAL32K/RC_FAST_D256 source; stage 0
+// applies the eFuse WDT_DELAY_SEL multiplier rwdt_ll.h compensates for),
 // WDTFEED +0xAC (bit 31), WDTWPROTECT +0xB0 (same 0x50D83AA1 key —
 // hal/esp32s3/include/hal/rwdt_ll.h). Reset value keeps the header's
 // FLASHBOOT_MOD_EN(12)/PAUSE_IN_SLP(9)/reset-length defaults, all
@@ -745,6 +745,8 @@ const RTC_INT_CLR = 0x4c;
 const RTC_EXT_XTL_CONF = 0x60;
 const RTC_EXT_WAKEUP_CONF = 0x64;
 const RTC_SLP_REJECT_CONF = 0x68;
+const RTC_CLK_CONF = 0x74;
+const RTC_SLOW_CLK_CONF = 0x78;
 const RTC_SW_SYS_RST = 1 << 31;
 const RTC_SW_PROCPU_RST = 1 << 5;
 const RTC_MAIN_TIMER_ALARM_EN = 1 << 16;
@@ -846,9 +848,18 @@ const RESET_CAUSE_TG1WDT_CPU = 17; // TG1WDT_CPU_RESET
 const RESET_CAUSE_SUPER_WDT = 18; // SUPER_WDT_RESET
 const RESET_CAUSE_GLITCH_RTC = 19; // GLITCH_RTC_RESET
 const RESET_CAUSE_POWER_GLITCH = 23; // POWER_GLITCH_RESET
-// The RTC main timer counts the ~136 kHz RC_SLOW clock
-// (clk_tree_defs.h SOC_CLK_RC_SLOW_FREQ_APPROX). 48 bits wide.
-const RTC_SLOW_HZ = 136_000;
+// The RTC main timer and RWDT count RTC_SLOW_CLK. ESP-IDF's clk_tree
+// maps ANA_CLK_RTC_SEL to RC_SLOW, XTAL32K, or RC_FAST_D256.
+const RTC_CLK_CONF_RESET = 0x1158321c; // rtc_cntl_reg.h reset fields
+const RTC_SLOW_CLK_CONF_RESET = 1 << 22; // ANA_CLK_DIV_VLD reset bit
+const RTC_ANA_CLK_RTC_SEL_SHIFT = 30;
+const RTC_ANA_CLK_RTC_SEL_MASK = 0x3;
+const RTC_SLOW_SRC_RC_SLOW = 0;
+const RTC_SLOW_SRC_XTAL32K = 1;
+const RTC_SLOW_SRC_RC_FAST_D256 = 2;
+const RTC_RC_SLOW_HZ = 136_000;
+const RTC_XTAL32K_HZ = 32_768;
+const RTC_RC_FAST_D256_HZ = Math.floor(17_500_000 / 256);
 
 const EFUSE_BASE = 0x60007000;
 const EFUSE_PGM_DATA_0 = 0x00;
@@ -1558,7 +1569,7 @@ export class Esp32s3Core implements McuCore {
   // core-0 cycles, no per-cycle bookkeeping.
   private timg: TimgGroup[] = [freshTimgGroup(), freshTimgGroup()];
   // The RTC watchdog (slice 13) — config1 unused (no prescaler; it
-  // counts the modeled ~136 kHz RC_SLOW clock directly).
+  // counts RTC_SLOW_CLK directly).
   private rwdt: Watchdog = freshWatchdog(RWDT_CONFIG0_RESET, 0);
   private rwdtPauseStartCycle: number | null = null;
 
@@ -1577,6 +1588,8 @@ export class Esp32s3Core implements McuCore {
   private rtcIntRaw = 0;
   private rtcIntEna = 0;
   private rtcSlpRejectConf = 0;
+  private rtcClkConf = RTC_CLK_CONF_RESET;
+  private rtcSlowClkConf = RTC_SLOW_CLK_CONF_RESET;
   private rtcSleepRejectSource = 0;
   private rtcSdioIdle = false;
   private rtcExtWakeupConf = 0;
@@ -2572,6 +2585,8 @@ export class Esp32s3Core implements McuCore {
     this.rtcIntRaw = 0;
     this.rtcIntEna = 0;
     this.rtcSlpRejectConf = 0;
+    this.rtcClkConf = RTC_CLK_CONF_RESET;
+    this.rtcSlowClkConf = RTC_SLOW_CLK_CONF_RESET;
     this.rtcExtWakeupConf = 0;
     this.rtcIoExtWakeup0 = 0;
     this.rtcExtWakeup1 = 0;
@@ -2768,7 +2783,7 @@ export class Esp32s3Core implements McuCore {
     });
   }
 
-  /** The RWDT: counts the modeled ~136 kHz RC_SLOW clock. 3-bit stage
+  /** The RWDT: counts the selected RTC_SLOW_CLK source. 3-bit stage
    *  fields; action 4 (reset RTC) exists here. INT stages latch
    *  RTC_CNTL_WDT_INT and route through RTC_CORE when enabled. */
   private checkRwdt(): void {
@@ -2782,7 +2797,7 @@ export class Esp32s3Core implements McuCore {
       w.epoch += this.cpu.cycles - this.rwdtPauseStartCycle;
       this.rwdtPauseStartCycle = null;
     }
-    const ticks = Math.floor(((this.cpu.cycles - w.epoch) * RTC_SLOW_HZ) / CLOCK_HZ);
+    const ticks = Math.floor(((this.cpu.cycles - w.epoch) * this.rtcSlowHz()) / CLOCK_HZ);
     this.runWdtStages(
       w,
       ticks,
@@ -2813,7 +2828,20 @@ export class Esp32s3Core implements McuCore {
   }
 
   private rtcTicks(): number {
-    return Math.floor((this.cpu.cycles * RTC_SLOW_HZ) / CLOCK_HZ);
+    return Math.floor((this.cpu.cycles * this.rtcSlowHz()) / CLOCK_HZ);
+  }
+
+  private rtcSlowHz(): number {
+    const source = (this.rtcClkConf >>> RTC_ANA_CLK_RTC_SEL_SHIFT) & RTC_ANA_CLK_RTC_SEL_MASK;
+    switch (source) {
+      case RTC_SLOW_SRC_XTAL32K:
+        return RTC_XTAL32K_HZ;
+      case RTC_SLOW_SRC_RC_FAST_D256:
+        return RTC_RC_FAST_D256_HZ;
+      case RTC_SLOW_SRC_RC_SLOW:
+      default:
+        return RTC_RC_SLOW_HZ;
+    }
   }
 
   private rtcSleepAlarmTarget(): number {
@@ -4535,6 +4563,8 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_EXT_XTL_CONF) return this.rtcExtXtlConf >>> 0;
       if (off === RTC_EXT_WAKEUP_CONF) return this.rtcExtWakeupConf >>> 0;
       if (off === RTC_SLP_REJECT_CONF) return this.rtcSlpRejectConf >>> 0;
+      if (off === RTC_CLK_CONF) return this.rtcClkConf >>> 0;
+      if (off === RTC_SLOW_CLK_CONF) return this.rtcSlowClkConf >>> 0;
       if (off === RTC_SW_CPU_STALL) return this.rtcSwCpuStall >>> 0;
       // The RWDT block (slice 13) — modeled for real now.
       if (off === RTC_WDTCONFIG0) return this.rwdt.config0 >>> 0;
@@ -4572,7 +4602,7 @@ export class Esp32s3Core implements McuCore {
         `read of unmodeled RTC_CNTL register 0x${addr.toString(16)} — this core models only ` +
           `OPTIONS0(+0x0), SLP_TIMER0/1(+0x4/+0x8), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), ` +
           `STATE0(+0x18), ANA_CONF(+0x34), RESET_STATE(+0x38), WAKEUP_STATE(+0x3c), INT_* (+0x40..+0x4c), ` +
-          `EXT_XTL_CONF(+0x60), SLP_REJECT_CONF(+0x68), ` +
+          `EXT_XTL_CONF(+0x60), SLP_REJECT_CONF(+0x68), CLK_CONF/SLOW_CLK_CONF(+0x74/+0x78), ` +
           `the RWDT block (+0x98..+0xb0), SWD(+0xb4/+0xb8), SW_CPU_STALL(+0xbc), LOW_POWER_ST(+0xd0), ` +
           `ULP_CP_TIMER/CTRL(+0xfc/+0x100), COCPU_CTRL(+0x104), ` +
           `BROWN_OUT(+0xe8), XTAL32K_CONF(+0xf8), PG_CTRL/FIB_SEL(+0x144/+0x148), ` +
@@ -5251,9 +5281,13 @@ export class Esp32s3Core implements McuCore {
         this.updateRtcExt1Wakeup();
       } else if (off === RTC_SLP_REJECT_CONF) {
         this.rtcSlpRejectConf = value >>> 0;
+      } else if (off === RTC_CLK_CONF) {
+        this.rtcClkConf = value >>> 0;
+      } else if (off === RTC_SLOW_CLK_CONF) {
+        this.rtcSlowClkConf = value >>> 0;
       } else if (off === RTC_TIME_UPDATE) {
         if ((value & (1 << 31)) !== 0) {
-          // Latch the 48-bit RTC main timer: CPU cycles → RC_SLOW ticks.
+          // Latch the 48-bit RTC main timer: CPU cycles → RTC_SLOW ticks.
           const ticks = this.rtcTicks();
           this.rtcTimeLatchLo = ticks % 0x100000000;
           this.rtcTimeLatchHi = Math.floor(ticks / 0x100000000) & 0xffff;
