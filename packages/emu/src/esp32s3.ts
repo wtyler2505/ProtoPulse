@@ -215,7 +215,8 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * RTC_XTAL32K_DEAD_TRIG_EN wake source too.
  * SUPER_WDT also records its RTC reset flag/feed-interrupt bits,
  * supports the documented feed/flag-clear pulses, and reports reset
- * cause 18 when firmware has not selected BYPASS_RST. RTC SARADC1/2
+ * cause 18 when firmware has not selected BYPASS_RST and has selected
+ * software control in FIB_SEL. RTC SARADC1/2
  * oneshot completions, TSENS raw reads, and touch one-shot scans latch
  * their RTC-domain interrupt producers. The repeated touch sleep timer
  * runs on TOUCH_SLEEP_CYCLES and can wake RTC sleep when RTC_TOUCH_TRIG_EN is armed.
@@ -231,8 +232,8 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * used by ulp_riscv_wakeup_main_processor(). INT_RAW writes only affect
  * the documented TOUCH_APPROACH_LOOP_DONE R/W raw bit; producer-owned
  * raw bits stay read-only. FIB_SEL preserves the documented three-bit
- * selector reset/readback and gates software-controlled brownout analog
- * reset plus power-glitch reset routing. COCPU_CTRL keeps the
+ * selector reset/readback and gates software-controlled brownout analog,
+ * glitch, and super-watchdog reset routing. COCPU_CTRL keeps the
  * documented reset timing fields/COCPU_SEL bit while
  * COCPU_DONE/SHUT_RESET_EN reflect through LOW_POWER_ST's COCPU
  * done/sleep bits.
@@ -643,6 +644,7 @@ const RTC_FIB_SEL_MASK = 0x7;
 const RTC_FIB_SEL_RESET = 0x7;
 const RTC_FIB_GLITCH_RST = 1 << 0;
 const RTC_FIB_BOD_RST = 1 << 1;
+const RTC_FIB_SUPER_WDT_RST = 1 << 2;
 const RWDT_CONFIG0_RESET = ((1 << 16) | (1 << 13) | (1 << 12) | (1 << 9)) >>> 0;
 
 // SAR ADC1/ADC2 oneshot paths (sens_reg.h; flow per
@@ -2993,7 +2995,7 @@ export class Esp32s3Core implements McuCore {
     }
     this.rtcSwdConf |= RTC_SWD_FEED_INT | RTC_SWD_RESET_FLAG;
     this.rtcIntRaw |= RTC_SWD_INT;
-    if ((this.rtcSwdConf & RTC_SWD_BYPASS_RST) === 0) {
+    if ((this.rtcSwdConf & RTC_SWD_BYPASS_RST) === 0 && (this.rtcFibSel & RTC_FIB_SUPER_WDT_RST) === 0) {
       this.resetCause = RESET_CAUSE_SUPER_WDT;
       this.appResetCause = RESET_CAUSE_SUPER_WDT;
       this.pendingReset = true;

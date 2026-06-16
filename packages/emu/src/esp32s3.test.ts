@@ -4768,29 +4768,47 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
-  it('SUPER_WDT reset reports the ROM SUPER_WDT_RESET cause', () => {
+  it('SUPER_WDT reset follows FIB_SEL software control and reports the ROM cause', () => {
+    // Source-checked against ESP-IDF v5.5.4: SWD_CONF has
+    // SWD_BYPASS_RST bit 17, FIB_SEL bit 2 is FIB_SUPER_WDT_RST, and
+    // esp32s3/rom/rtc.h reports super-watchdog resets as cause 18.
     const RTC_SWD_WKEY = 0x8f1d312a;
-    const RESET_MASK = 0x3f;
-    const image = assembleXtensa(ESP32S3_IRAM_BASE, [RTCCNTL, UART, RTC_SWD_WKEY, RESET_MASK], [
-      L32R(2, 0), // a2 = RTC_CNTL
-      L32R(3, 2),
-      S32I(3, 2, 0xb8), // unlock SUPER_WDT
-      MOVI(4, 0),
-      S32I(4, 2, 0xb4), // BYPASS_RST clear: trip resets
-      L32I(4, 2, 0x38), // RESET_STATE
-      L32R(5, 3),
-      AND(4, 4, 5),
-      L32R(6, 1),
-      S32I(4, 6, 0), // tx reset cause
-      J(BR(-1)),
+    const FIB_SUPER_WDT_RST = 1 << 2;
+    const fibSoftwareSuperWdtReset = 0x7 & ~FIB_SUPER_WDT_RST;
+
+    const defaultFibImage = causeRoundTrip([RTCCNTL, RTC_SWD_WKEY], [
+      L32R(8, 2),
+      L32R(9, 3),
+      S32I(9, 8, 0xb8), // unlock SUPER_WDT
+      MOVI(9, 0),
+      S32I(9, 8, 0xb4), // BYPASS_RST clear, but FIB still owns reset
+    ]);
+    const defaultFib = core(defaultFibImage);
+    defaultFib.step(300);
+    expect([...defaultFib.drainUart()]).toEqual([1]);
+    defaultFib.triggerSuperWatchdog();
+    defaultFib.step(1_000);
+    expect([...defaultFib.drainUart()]).toEqual([]);
+
+    const image = causeRoundTrip([RTCCNTL, RTC_SWD_WKEY, fibSoftwareSuperWdtReset], [
+      L32R(8, 2),
+      L32R(9, 3),
+      S32I(9, 8, 0xb8), // unlock SUPER_WDT
+      MOVI(9, 0),
+      S32I(9, 8, 0xb4), // BYPASS_RST clear
+      L32R(9, 4),
+      S32I(9, 8, 0x148), // FIB_SEL: software controls SUPER_WDT reset
     ]);
     const c = core(image);
-    c.step(300);
+    c.step(800);
     expect([...c.drainUart()]).toEqual([1]);
     c.triggerSuperWatchdog();
-    c.step(300);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([]);
     c.step(300);
     expect([...c.drainUart()]).toEqual([18]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
   });
 
   it('SARADC1/2 RTC-domain conversions route through RTC_CORE', () => {

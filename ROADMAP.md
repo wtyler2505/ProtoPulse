@@ -1036,7 +1036,7 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       masks writes so only bits [2:0] stick. Proven by hand-assembled
       firmware that reads reset state, writes selector 2, then writes
       0xff and observes readback 7 instead of fabricated high bits.
-      Cuts: no FIB reset-source routing for GLITCH/BOD/SUPER_WDT yet
+      Cuts: no eFuse strap/source-selection routing model yet
 - [x] ESP32-S3 core slice 69 — RTC light-sleep reject source
       (landed 2026-06-14): RTC_CNTL_SLP_REJECT_CONF now stores
       LIGHT_SLP_REJECT_EN plus SLEEP_REJECT_ENA, and a host-injected
@@ -1244,6 +1244,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       FIB_GLITCH_RST, enables ANA_CONF.GLITCH_RST_EN, receives a host
       clock-glitch trip, reboots, and reports reset cause 19. Cuts: no
       analog glitch waveform/timing model and no eFuse strap routing
+      model yet
+- [x] ESP32-S3 core slice 88 — SUPER_WDT reset via FIB_SEL
+      (landed 2026-06-16): RTC_CNTL_FIB_SEL now also gates the
+      software-owned super-watchdog reset route: a host-injected
+      SUPER_WDT trip still latches SWD_FEED_INT/RESET_FLAG and
+      RTC_CNTL_SWD_INT, but it only resets with ROM cause
+      SUPER_WDT_RESET (18) when firmware leaves SWD_BYPASS_RST clear
+      and clears FIB_SUPER_WDT_RST. Proven by hand-assembled firmware
+      that first shows the default FIB selector prevents a reset, then
+      clears FIB_SUPER_WDT_RST, receives a host SUPER_WDT trip, reboots,
+      and reports reset cause 18. Cuts: no timed SWD countdown,
+      auto-feed cadence, sleep-pause behavior, or eFuse strap routing
       model yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
