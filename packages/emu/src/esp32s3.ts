@@ -204,7 +204,9 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * tracks GPIO_PINn.WAKEUP_ENABLE plus INT_TYPE and records
  * RTC_GPIO_TRIG_EN. EXT1 wakeup watches the RTC GPIO0..21 mask and
  * records RTC_EXT1_TRIG_EN plus EXT_WAKEUP1_STATUS. UART0/1 RX bytes
- * can likewise wake modeled light sleep through RTC_UART0/1_TRIG_EN.
+ * can likewise wake modeled light sleep through RTC_UART0/1_TRIG_EN
+ * after their modeled RX edge threshold is reached; the pre-wake/
+ * triggering byte is dropped like ESP-IDF documents for light sleep.
  * RWDT stage-0 INT,
  * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips,
  * power-glitch detector trips, XTAL32K-dead watchdog trips, and
@@ -313,8 +315,13 @@ const UART_INT_ENA = 0x0c;
 const UART_INT_CLR = 0x10;
 const UART_STATUS = 0x1c; // RXFIFO_CNT [9:0], TXFIFO_CNT [25:16]
 const UART_CONF1 = 0x24; // RXFIFO_FULL_THRHD [9:0], resets to 96
+const UART_SLEEP_CONF = 0x38; // ACTIVE_THRESHOLD [9:0], resets to 240
+const UART_RXFIFO_MASK = 0x3ff;
+const UART_ACTIVE_THRESHOLD_RESET = 240;
+const UART_WAKEUP_EDGE_MIN = 3;
 const UART_RXFIFO_FULL_INT = 1 << 0;
 const UART_TX_DONE_INT = 1 << 14;
+const UART_WAKEUP_INT = 1 << 19;
 
 // The interrupt matrix (reg_base.h DR_REG_INTERRUPT_BASE +
 // interrupt_core0_reg.h / interrupt_core1_reg.h): each peripheral
@@ -1482,10 +1489,16 @@ export class Esp32s3Core implements McuCore {
   private uartIntEna = 0;
   private uartTxDone = false; // latched TX_DONE raw bit
   private uartRxThrhd = 96; // CONF1 RXFIFO_FULL_THRHD reset value
+  private uartWakeup = false;
+  private uartWakeActiveThreshold = UART_ACTIVE_THRESHOLD_RESET;
+  private uartWakeEdgeCount = 0;
   private uart1RxQueue: number[] = [];
   private uart1IntEna = 0;
   private uart1TxDone = false;
   private uart1RxThrhd = 96;
+  private uart1Wakeup = false;
+  private uart1WakeActiveThreshold = UART_ACTIVE_THRESHOLD_RESET;
+  private uart1WakeEdgeCount = 0;
   private gpioIntMaps = freshInterruptMapPair();
   private uartIntMaps = freshInterruptMapPair();
   private uart1IntMaps = freshInterruptMapPair();
@@ -1796,14 +1809,59 @@ export class Esp32s3Core implements McuCore {
     if (!Number.isInteger(byte) || byte < 0 || byte > 0xff) {
       throw new Error(`uartWriteTo expects a byte 0..255 (got ${String(byte)})`);
     }
+    if (this.consumeUartSleepRxByte(port, byte)) {
+      this.recomputeIrq();
+      return;
+    }
     if (port === 0) {
+      this.uartWakeEdgeCount = 0;
       this.rxQueue.push(byte);
-      this.latchRtcWakeupSource(RTC_UART0_TRIG_EN);
     } else {
+      this.uart1WakeEdgeCount = 0;
       this.uart1RxQueue.push(byte);
-      this.latchRtcWakeupSource(RTC_UART1_TRIG_EN);
     }
     this.recomputeIrq();
+  }
+
+  private consumeUartSleepRxByte(port: 0 | 1, byte: number): boolean {
+    const source = port === 0 ? RTC_UART0_TRIG_EN : RTC_UART1_TRIG_EN;
+    if ((this.rtcState0 & RTC_SLEEP_EN) === 0 || (this.rtcWakeupEnabledSources() & source) === 0) return false;
+
+    const edges = this.uartPositiveEdges8n1(byte);
+    if (port === 0) {
+      this.uartWakeEdgeCount += edges;
+      if (this.uartWakeEdgeCount >= this.uartWakeActiveThreshold + UART_WAKEUP_EDGE_MIN) {
+        this.uartWakeEdgeCount = 0;
+        this.uartWakeup = true;
+        this.latchRtcWakeupSource(source);
+      }
+    } else {
+      this.uart1WakeEdgeCount += edges;
+      if (this.uart1WakeEdgeCount >= this.uart1WakeActiveThreshold + UART_WAKEUP_EDGE_MIN) {
+        this.uart1WakeEdgeCount = 0;
+        this.uart1Wakeup = true;
+        this.latchRtcWakeupSource(source);
+      }
+    }
+    return true;
+  }
+
+  private uartPositiveEdges8n1(byte: number): number {
+    let prev = 1; // idle line before the start bit
+    let edges = 0;
+    const sample = (level: number): void => {
+      if (prev === 0 && level === 1) edges++;
+      prev = level;
+    };
+    sample(0); // start bit
+    for (let bit = 0; bit < 8; bit++) sample((byte >>> bit) & 1);
+    sample(1); // stop bit
+    return edges;
+  }
+
+  private resetUartWakeEdgeCounts(): void {
+    this.uartWakeEdgeCount = 0;
+    this.uart1WakeEdgeCount = 0;
   }
 
   drainUart(): Uint8Array {
@@ -2354,10 +2412,16 @@ export class Esp32s3Core implements McuCore {
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
+    this.uartWakeup = false;
+    this.uartWakeActiveThreshold = UART_ACTIVE_THRESHOLD_RESET;
+    this.uartWakeEdgeCount = 0;
     this.uart1RxQueue = [];
     this.uart1IntEna = 0;
     this.uart1TxDone = false;
     this.uart1RxThrhd = 96;
+    this.uart1Wakeup = false;
+    this.uart1WakeActiveThreshold = UART_ACTIVE_THRESHOLD_RESET;
+    this.uart1WakeEdgeCount = 0;
     this.gpioIntMaps = freshInterruptMapPair();
     this.uartIntMaps = freshInterruptMapPair();
     this.uart1IntMaps = freshInterruptMapPair();
@@ -2681,6 +2745,7 @@ export class Esp32s3Core implements McuCore {
   private latchRtcWakeupSource(source: number): void {
     if ((this.rtcState0 & RTC_SLEEP_EN) === 0 || (this.rtcWakeupEnabledSources() & source) === 0) return;
     this.rtcState0 = (this.rtcState0 & ~RTC_SLEEP_EN) | RTC_SLP_WAKEUP;
+    this.resetUartWakeEdgeCounts();
     this.rtcWakeupCause |= source;
     this.rtcIntRaw |= RTC_SLP_WAKEUP_INT;
   }
@@ -2829,15 +2894,17 @@ export class Esp32s3Core implements McuCore {
   /** UART0's raw interrupt bits: RXFIFO_FULL tracks the live FIFO
    *  state against the CONF1 threshold (level-style — it re-asserts
    *  while data remains); TX_DONE latches per transmitted byte and
-   *  clears via INT_CLR. */
+   *  clears via INT_CLR; WAKEUP latches after the sleep edge threshold. */
   private uartIntRaw(): number {
     let raw = this.uartTxDone ? UART_TX_DONE_INT : 0;
+    if (this.uartWakeup) raw |= UART_WAKEUP_INT;
     if (this.rxQueue.length > this.uartRxThrhd) raw |= UART_RXFIFO_FULL_INT;
     return raw;
   }
 
   private uart1IntRaw(): number {
     let raw = this.uart1TxDone ? UART_TX_DONE_INT : 0;
+    if (this.uart1Wakeup) raw |= UART_WAKEUP_INT;
     if (this.uart1RxQueue.length > this.uart1RxThrhd) raw |= UART_RXFIFO_FULL_INT;
     return raw;
   }
@@ -3938,13 +4005,14 @@ export class Esp32s3Core implements McuCore {
         return byte;
       }
       if (off === UART_STATUS) {
-        const rx = Math.min(this.rxQueue.length, 0x3ff);
+        const rx = Math.min(this.rxQueue.length, UART_RXFIFO_MASK);
         return rx; // TXFIFO_CNT [25:16] stays 0 — the modeled tx FIFO never fills
       }
       if (off === UART_INT_RAW) return this.uartIntRaw();
       if (off === UART_INT_ST) return this.uartIntRaw() & this.uartIntEna;
       if (off === UART_INT_ENA) return this.uartIntEna;
       if (off === UART_CONF1) return this.uartRxThrhd;
+      if (off === UART_SLEEP_CONF) return this.uartWakeActiveThreshold;
       return 0;
     }
     if (addr >= UART1_BASE && addr < UART1_BASE + 0x1000) {
@@ -3955,13 +4023,14 @@ export class Esp32s3Core implements McuCore {
         return byte;
       }
       if (off === UART_STATUS) {
-        const rx = Math.min(this.uart1RxQueue.length, 0x3ff);
+        const rx = Math.min(this.uart1RxQueue.length, UART_RXFIFO_MASK);
         return rx; // TXFIFO_CNT [25:16] stays 0 — the modeled tx FIFO never fills
       }
       if (off === UART_INT_RAW) return this.uart1IntRaw();
       if (off === UART_INT_ST) return this.uart1IntRaw() & this.uart1IntEna;
       if (off === UART_INT_ENA) return this.uart1IntEna;
       if (off === UART_CONF1) return this.uart1RxThrhd;
+      if (off === UART_SLEEP_CONF) return this.uart1WakeActiveThreshold;
       return 0;
     }
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
@@ -4402,8 +4471,14 @@ export class Esp32s3Core implements McuCore {
         // Clears latched bits; RXFIFO_FULL tracks the FIFO level, so
         // it re-asserts unless the FIFO was drained first.
         if ((value & UART_TX_DONE_INT) !== 0) this.uartTxDone = false;
+        if ((value & UART_WAKEUP_INT) !== 0) {
+          this.uartWakeup = false;
+          this.uartWakeEdgeCount = 0;
+        }
       } else if (off === UART_CONF1) {
-        this.uartRxThrhd = value & 0x3ff;
+        this.uartRxThrhd = value & UART_RXFIFO_MASK;
+      } else if (off === UART_SLEEP_CONF) {
+        this.uartWakeActiveThreshold = value & UART_RXFIFO_MASK;
       }
       this.recomputeIrq();
       return;
@@ -4417,8 +4492,14 @@ export class Esp32s3Core implements McuCore {
         this.uart1IntEna = value >>> 0;
       } else if (off === UART_INT_CLR) {
         if ((value & UART_TX_DONE_INT) !== 0) this.uart1TxDone = false;
+        if ((value & UART_WAKEUP_INT) !== 0) {
+          this.uart1Wakeup = false;
+          this.uart1WakeEdgeCount = 0;
+        }
       } else if (off === UART_CONF1) {
-        this.uart1RxThrhd = value & 0x3ff;
+        this.uart1RxThrhd = value & UART_RXFIFO_MASK;
+      } else if (off === UART_SLEEP_CONF) {
+        this.uart1WakeActiveThreshold = value & UART_RXFIFO_MASK;
       }
       this.recomputeIrq();
       return;
@@ -4887,6 +4968,7 @@ export class Esp32s3Core implements McuCore {
           this.triggerUlpWake();
         } else {
           if ((value & RTC_SLEEP_EN) !== 0 && this.rejectRtcSleepIfNeeded()) return;
+          if ((value & RTC_SLEEP_EN) !== 0) this.resetUartWakeEdgeCounts();
           if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcSleepTimer();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcExt0Wakeup();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcExt1Wakeup();

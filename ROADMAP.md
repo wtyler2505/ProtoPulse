@@ -1109,6 +1109,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       byte over UART0, and confirms INT_ST is clear after the ISR.
       Cuts: no UART2 wake source, wake threshold counter, baud-edge
       accounting, or full UART driver surface yet
+- [x] ESP32-S3 core slice 76 — UART light-sleep wake edge threshold
+      (landed 2026-06-16): UART0/1 now expose
+      UART_SLEEP_CONF.ACTIVE_THRESHOLD at +0x38, latch UART_WAKEUP_INT
+      bit 19, count modeled 8N1 positive RX edges while RTC UART wake
+      is armed, and drop the pre-wake/triggering byte so post-wake data
+      must be sent separately like ESP-IDF documents. Proven by
+      hand-assembled firmware for both UART0 and UART1 that sets the
+      public wake threshold to three positive edges, wakes on 0x61,
+      reports FIFO count 0, verifies UART_WAKEUP_INT latches and clears,
+      then receives a separate post-wake byte. Cuts: no UART2 RTC wake
+      source, baud/parity/configurable frame accounting, or full UART
+      driver surface yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -3544,17 +3544,21 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
-  it('UART0 RX wakes light sleep through RTC_CORE and leaves the byte readable', () => {
+  it('UART0 RX wakes light sleep through RTC_CORE after edge threshold and drops the wake byte', () => {
     // Context7: ESP-IDF release/v5.5 sleep docs list UART wake as a
-    // light-sleep source. Source-checked against ESP-IDF release/v5.5
-    // soc/rtc.h: RTC_UART0_TRIG_EN is BIT(6).
+    // light-sleep source and say the triggering byte is not received.
+    // Source-checked against ESP-IDF release/v5.5: soc/rtc.h makes
+    // RTC_UART0_TRIG_EN BIT(6), uart_ll.h stores wake_threshold - 3 in
+    // UART_SLEEP_CONF.ACTIVE_THRESHOLD, and uart.h documents 0x61 as
+    // an 8N1 byte with three positive RX edges.
     const rtcUart0Trig = 1 << 6;
     const rtcSlpWakeupInt = 1;
+    const uartWakeupInt = 1 << 19;
     const wakeupUart0 = rtcUart0Trig << 15;
     const sleepEn = 0x80000000;
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
-      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, wakeupUart0, rtcSlpWakeupInt, sleepEn, rtcUart0Trig, 0xff],
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, wakeupUart0, rtcSlpWakeupInt, sleepEn, rtcUart0Trig, 0xff, 0x3ff, uartWakeupInt],
       [
         L32R(2, 0), // a2 = RTC_CNTL
         L32R(3, 1), // a3 = interrupt matrix
@@ -3567,6 +3571,9 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
         L32R(4, 5),
         S32I(4, 2, 0x4c), // clear stale SLP_WAKEUP raw
         S32I(4, 2, 0x40), // enable SLP_WAKEUP raw
+        L32R(6, 2), // a6 = UART0
+        MOVI(4, 0),
+        S32I(4, 6, 0x38), // UART_SLEEP_CONF.ACTIVE_THRESHOLD = 0 -> 3 edges
         L32R(4, 4),
         S32I(4, 2, 0x3c), // WAKEUP_STATE UART0 wake source
         RSIL(12, 12), // hold pending RTC_CORE interrupt until WAITI lowers INTLEVEL
@@ -3578,12 +3585,35 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
         AND(4, 4, 5),
         L32R(6, 2),
         S32I(4, 6, 0), // tx RTC_UART0_TRIG_EN (0x40)
-        L32I(4, 6, 0), // UART0 FIFO: host byte still readable after wake
+        L32R(7, 9),
+        L32I(4, 6, 0x1c), // UART0 STATUS: wake byte is not received
+        AND(4, 4, 7),
+        S32I(4, 6, 0), // tx FIFO count 0
+        L32I(4, 6, 0x04), // UART_INT_RAW
+        L32R(5, 10),
+        AND(4, 4, 5),
+        MOVI(5, 0),
+        BEQZ(4, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0), // tx UART_WAKEUP_INT raw flag
+        L32R(4, 10),
+        S32I(4, 6, 0x10), // clear UART_WAKEUP_INT
+        L32I(4, 6, 0x04),
+        L32R(5, 10),
+        AND(4, 4, 5),
+        MOVI(5, 0),
+        BEQZ(4, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0), // tx 0: UART_WAKEUP_INT cleared
+        L32I(4, 2, 0x48),
+        S32I(4, 6, 0), // tx 0: RTC INT_ST clear after ISR
+        L32I(4, 6, 0x1c), // wait for the post-wake byte
+        AND(4, 4, 7),
+        BEQZ(4, BR(-3)),
+        L32I(4, 6, 0),
         L32R(5, 8),
         AND(4, 4, 5),
-        S32I(4, 6, 0), // tx host byte
-        L32I(4, 2, 0x48),
-        S32I(4, 6, 0), // tx 0: INT_ST clear after ISR
+        S32I(4, 6, 0), // tx post-wake byte
         J(BR(-1)),
 
         PAD_TO(0x340),
@@ -3598,26 +3628,28 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     const c = core(image);
     c.step(300);
     expect([...c.drainUart()]).toEqual([]);
+    c.uartWrite(0x61);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([rtcUart0Trig, 0, 1, 0, 0]);
     c.uartWrite(0x5a);
     c.step(1_000);
-    expect([...c.drainUart()]).toEqual([rtcUart0Trig, 0x5a, 0]);
+    expect([...c.drainUart()]).toEqual([0x5a]);
     c.step(300);
     expect([...c.drainUart()]).toEqual([]);
   });
 
-  it('UART1 RX wakes light sleep through RTC_CORE and leaves the byte readable', () => {
-    // Context7 resolved ESP-IDF but query failed; source-checked against
-    // ESP-IDF v5.5.3 docs/headers instead. sleep_modes.c arms
-    // RTC_UART1_TRIG_EN for UART_NUM_1, rtc.h defines it as BIT(7),
-    // soc.h maps REG_UART_BASE(1) to UART0+0x10000, and
-    // interrupt_core0_reg.h exposes UART1_INTR_MAP at +0x070.
+  it('UART1 RX wakes light sleep through RTC_CORE after edge threshold and drops the wake byte', () => {
+    // Context7 + ESP-IDF v5.5.4 sources: UART wake is light-sleep-only,
+    // RTC_UART1_TRIG_EN is BIT(7), UART1 lives at UART0+0x10000, and
+    // UART_SLEEP_CONF.ACTIVE_THRESHOLD stores wake_threshold - 3.
     const rtcUart1Trig = 1 << 7;
     const rtcSlpWakeupInt = 1;
+    const uartWakeupInt = 1 << 19;
     const wakeupUart1 = rtcUart1Trig << 15;
     const sleepEn = 0x80000000;
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
-      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, UART1, wakeupUart1, rtcSlpWakeupInt, sleepEn, rtcUart1Trig, 0xff],
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, UART1, wakeupUart1, rtcSlpWakeupInt, sleepEn, rtcUart1Trig, 0xff, 0x3ff, uartWakeupInt],
       [
         L32R(2, 0), // a2 = RTC_CNTL
         L32R(3, 1), // a3 = interrupt matrix
@@ -3630,6 +3662,9 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
         L32R(4, 6),
         S32I(4, 2, 0x4c), // clear stale SLP_WAKEUP raw
         S32I(4, 2, 0x40), // enable SLP_WAKEUP raw
+        L32R(7, 4), // a7 = UART1
+        MOVI(4, 0),
+        S32I(4, 7, 0x38), // UART_SLEEP_CONF.ACTIVE_THRESHOLD = 0 -> 3 edges
         L32R(4, 5),
         S32I(4, 2, 0x3c), // WAKEUP_STATE UART1 wake source
         RSIL(12, 12), // hold pending RTC_CORE interrupt until WAITI lowers INTLEVEL
@@ -3642,12 +3677,35 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
         L32R(6, 2), // a6 = UART0 for test reporting
         S32I(4, 6, 0), // tx RTC_UART1_TRIG_EN (0x80)
         L32R(7, 4), // a7 = UART1
-        L32I(4, 7, 0), // UART1 FIFO: host byte still readable after wake
+        L32R(8, 10),
+        L32I(4, 7, 0x1c), // UART1 STATUS: wake byte is not received
+        AND(4, 4, 8),
+        S32I(4, 6, 0), // tx FIFO count 0
+        L32I(4, 7, 0x04), // UART1 INT_RAW
+        L32R(5, 11),
+        AND(4, 4, 5),
+        MOVI(5, 0),
+        BEQZ(4, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0), // tx UART_WAKEUP_INT raw flag
+        L32R(4, 11),
+        S32I(4, 7, 0x10), // clear UART_WAKEUP_INT
+        L32I(4, 7, 0x04),
+        L32R(5, 11),
+        AND(4, 4, 5),
+        MOVI(5, 0),
+        BEQZ(4, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0), // tx 0: UART_WAKEUP_INT cleared
+        L32I(4, 2, 0x48),
+        S32I(4, 6, 0), // tx 0: RTC INT_ST clear after ISR
+        L32I(4, 7, 0x1c), // wait for the post-wake byte
+        AND(4, 4, 8),
+        BEQZ(4, BR(-3)),
+        L32I(4, 7, 0),
         L32R(5, 9),
         AND(4, 4, 5),
-        S32I(4, 6, 0), // tx host byte
-        L32I(4, 2, 0x48),
-        S32I(4, 6, 0), // tx 0: INT_ST clear after ISR
+        S32I(4, 6, 0), // tx post-wake byte
         J(BR(-1)),
 
         PAD_TO(0x340),
@@ -3662,9 +3720,12 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     const c = core(image);
     c.step(300);
     expect([...c.drainUart()]).toEqual([]);
+    c.uartWriteTo(1, 0x61);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([rtcUart1Trig, 0, 1, 0, 0]);
     c.uartWriteTo(1, 0x6b);
     c.step(1_000);
-    expect([...c.drainUart()]).toEqual([rtcUart1Trig, 0x6b, 0]);
+    expect([...c.drainUart()]).toEqual([0x6b]);
     c.step(300);
     expect([...c.drainUart()]).toEqual([]);
   });
