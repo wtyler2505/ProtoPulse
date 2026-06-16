@@ -1326,6 +1326,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       mid-timeout, and still resets after the remaining tick with
       RTCWDT_SYS_RESET. Cut: sub-tick oscillator phase remains
       integer-rounded
+- [x] ESP32-S3 core slice 96 — WiFi/BT light-sleep wake source bits
+      (landed 2026-06-16): host-injected WiFi and BT wake events now
+      record RTC_WIFI_TRIG_EN / RTC_BT_TRIG_EN through
+      SLP_WAKEUP_CAUSE and wake modeled light sleep through RTC_CORE
+      when WAKEUP_STATE arms them. Proven by hand-assembled firmware
+      that enters RTC sleep twice, injects WiFi then BT, confirms the
+      selected wake-cause bit was recorded, and confirms INT_ST is clear
+      after the RTC_CORE ISR. Cut: no WiFi/Bluetooth MAC, PHY,
+      coexistence, or host-controller model yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -200,8 +200,10 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * reject a modeled light-sleep entry for a host-injected reject source,
  * latching SLP_REJECT_CAUSE and RTC_CNTL_SLP_REJECT_INT. A host-injected
  * SDIO-idle event latches RTC_CNTL_SDIO_IDLE_INT and can wake modeled
- * light sleep through RTC_SDIO_TRIG_EN. GPIO high/low level wakeup
- * tracks GPIO_PINn.WAKEUP_ENABLE plus INT_TYPE and records
+ * light sleep through RTC_SDIO_TRIG_EN. Host-injected WiFi/BT wake
+ * events record RTC_WIFI_TRIG_EN/RTC_BT_TRIG_EN through the shared
+ * SLP_WAKEUP path. GPIO high/low level wakeup tracks
+ * GPIO_PINn.WAKEUP_ENABLE plus INT_TYPE and records
  * RTC_GPIO_TRIG_EN. EXT1 wakeup watches the RTC GPIO0..21 mask and
  * records RTC_EXT1_TRIG_EN plus EXT_WAKEUP1_STATUS. UART0/1 RX bytes
  * can likewise wake modeled light sleep through RTC_UART0/1_TRIG_EN
@@ -818,9 +820,11 @@ const RTC_EXT1_TRIG_EN = 1 << 1;
 const RTC_GPIO_TRIG_EN = 1 << 2;
 const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
 const RTC_SDIO_TRIG_EN = 1 << 4;
+const RTC_WIFI_TRIG_EN = 1 << 5;
 const RTC_UART0_TRIG_EN = 1 << 6;
 const RTC_UART1_TRIG_EN = 1 << 7;
 const RTC_ULP_TRIG_EN = 1 << 9;
+const RTC_BT_TRIG_EN = 1 << 10;
 const RTC_COCPU_TRIG_EN = 1 << 11;
 const RTC_XTAL32K_DEAD_TRIG_EN = 1 << 12;
 const RTC_COCPU_TRAP_TRIG_EN = 1 << 13;
@@ -1598,6 +1602,8 @@ export class Esp32s3Core implements McuCore {
   private rtcTickBaseCycle = 0;
   private rtcSleepRejectSource = 0;
   private rtcSdioIdle = false;
+  private rtcWifiWake = false;
+  private rtcBtWake = false;
   private rtcExtWakeupConf = 0;
   private rtcIoExtWakeup0 = 0;
   private rtcExtWakeup1 = 0;
@@ -2002,6 +2008,16 @@ export class Esp32s3Core implements McuCore {
   setRtcSdioIdle(idle: boolean): void {
     this.rtcSdioIdle = idle;
     this.updateRtcSdioIdle();
+  }
+
+  setRtcWifiWake(active: boolean): void {
+    this.rtcWifiWake = active;
+    this.updateRtcWifiWake();
+  }
+
+  setRtcBtWake(active: boolean): void {
+    this.rtcBtWake = active;
+    this.updateRtcBtWake();
   }
 
   setXtal32kDead(dead: boolean): void {
@@ -2995,6 +3011,24 @@ export class Esp32s3Core implements McuCore {
     }
     this.rtcIntRaw |= RTC_SDIO_IDLE_INT;
     this.latchRtcWakeupSource(RTC_SDIO_TRIG_EN);
+    this.recomputeIrq();
+  }
+
+  private updateRtcWifiWake(): void {
+    if (!this.rtcWifiWake) {
+      this.recomputeIrq();
+      return;
+    }
+    this.latchRtcWakeupSource(RTC_WIFI_TRIG_EN);
+    this.recomputeIrq();
+  }
+
+  private updateRtcBtWake(): void {
+    if (!this.rtcBtWake) {
+      this.recomputeIrq();
+      return;
+    }
+    this.latchRtcWakeupSource(RTC_BT_TRIG_EN);
     this.recomputeIrq();
   }
 
@@ -5285,6 +5319,8 @@ export class Esp32s3Core implements McuCore {
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcExt1Wakeup();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcGpioWakeup();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcSdioIdle();
+          if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcWifiWake();
+          if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcBtWake();
           if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcTouchSleepTimer();
           this.recomputeIrq();
         }

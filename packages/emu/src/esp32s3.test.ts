@@ -3621,6 +3621,77 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('RTC WiFi and BT host events wake light sleep through SLP_WAKEUP cause bits', () => {
+    // Context7: ESP-IDF v5.5.4 sleep docs list WiFi and Bluetooth as
+    // light-sleep wake sources. Source-checked against ESP-IDF v5.5.4:
+    // soc/rtc.h defines RTC_WIFI_TRIG_EN as BIT(5) and RTC_BT_TRIG_EN
+    // as BIT(10), while rtc_cntl_reg.h exposes no separate WiFi/BT
+    // RTC INT_RAW producer bits; both wake through SLP_WAKEUP.
+    const rtcWifiTrig = 1 << 5;
+    const rtcBtTrig = 1 << 10;
+    const rtcSlpWakeupInt = 1;
+    const sleepEn = 0x80000000;
+    const imageFor = (wakeupTrig: number, wakeupShift: number) =>
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, wakeupTrig << 15, rtcSlpWakeupInt, sleepEn, wakeupTrig],
+        [
+          L32R(2, 0), // a2 = RTC_CNTL
+          L32R(3, 1), // a3 = interrupt matrix
+          MOVI(4, 1),
+          S32I(4, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+          L32R(5, 3),
+          WSR(5, SR.VECBASE),
+          MOVI(4, 2),
+          WSR(4, SR.INTENABLE),
+          L32R(4, 5),
+          S32I(4, 2, 0x4c), // clear stale SLP_WAKEUP raw bit
+          S32I(4, 2, 0x40), // enable SLP_WAKEUP raw source
+          L32R(4, 4),
+          S32I(4, 2, 0x3c), // WAKEUP_STATE WiFi/BT wake source
+          RSIL(12, 12), // hold pending RTC_CORE interrupt until WAITI lowers INTLEVEL
+          L32R(4, 6),
+          S32I(4, 2, 0x18), // STATE0.SLEEP_EN
+          WAITI(0),
+          L32I(4, 2, 0x130), // SLP_WAKEUP_CAUSE raw trigger bitmap
+          L32R(5, 7),
+          AND(4, 4, 5),
+          SRLI(4, 4, wakeupShift),
+          L32R(6, 2),
+          S32I(4, 6, 0), // tx 1: selected wake cause bit was recorded
+          L32I(4, 2, 0x48),
+          S32I(4, 6, 0), // tx 0: INT_ST clear after ISR
+          J(BR(-1)),
+
+          PAD_TO(0x340),
+          WSR(2, SR.EXCSAVE1),
+          L32R(2, 0),
+          L32R(3, 5),
+          S32I(3, 2, 0x4c), // clear SLP_WAKEUP so it does not re-fire
+          RSR(2, SR.EXCSAVE1),
+          RFE(),
+        ],
+      );
+
+    const wifi = core(imageFor(rtcWifiTrig, 5));
+    wifi.step(300);
+    expect([...wifi.drainUart()]).toEqual([]);
+    wifi.setRtcWifiWake(true);
+    wifi.step(1_000);
+    expect([...wifi.drainUart()]).toEqual([1, 0]);
+    wifi.step(300);
+    expect([...wifi.drainUart()]).toEqual([]);
+
+    const bt = core(imageFor(rtcBtTrig, 10));
+    bt.step(300);
+    expect([...bt.drainUart()]).toEqual([]);
+    bt.setRtcBtWake(true);
+    bt.step(1_000);
+    expect([...bt.drainUart()]).toEqual([1, 0]);
+    bt.step(300);
+    expect([...bt.drainUart()]).toEqual([]);
+  });
+
   it('UART0 RX wakes light sleep through RTC_CORE after edge threshold and drops the wake byte', () => {
     // Context7: ESP-IDF release/v5.5 sleep docs list UART wake as a
     // light-sleep source and say the triggering byte is not received.

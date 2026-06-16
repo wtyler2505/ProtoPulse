@@ -2,6 +2,26 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 96: WiFi/BT light-sleep wake sources
+
+### Added
+- **WiFi/BT RTC wake hooks** (@protopulse/emu):
+  host-injected WiFi and Bluetooth wake events now wake modeled RTC
+  sleep when WAKEUP_STATE arms RTC_WIFI_TRIG_EN or RTC_BT_TRIG_EN.
+  Both paths record the selected source through SLP_WAKEUP_CAUSE and
+  route through RTC_CORE using the shared SLP_WAKEUP raw bit.
+
+### Verified
+- Added hand-assembled Xtensa firmware that enters RTC sleep, injects
+  WiFi wake, verifies the WiFi wake-cause bit, clears RTC_CORE, then
+  repeats the same proof for BT wake.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 153 ESP32-S3 tests.
+
+### Honest cuts
+- This models the sleep wake-source plumbing only. It does not claim a
+  WiFi/Bluetooth MAC, PHY, coexistence, or host-controller model.
+
 ## 2026-06-16 — ESP32-S3 slice 95: RTC slow-clock elapsed rebase
 
 ### Added
