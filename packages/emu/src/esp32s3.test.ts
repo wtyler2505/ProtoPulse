@@ -4580,6 +4580,67 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('power-glitch eFuse selector enables reset from BLOCK0 POWERGLITCH_EN', () => {
+    // Source-checked against ESP-IDF v5.5.4: PG_CTRL.EFUSE_SEL is bit
+    // 30, EFUSE_RD_REPEAT_DATA4 has POWERGLITCH_EN at bit 30, and
+    // esp32s3/rom/rtc.h reports power-glitch resets as cause 23.
+    const POWER_GLITCH_EFUSE_SEL = 1 << 30;
+    const EFUSE_POWERGLITCH_EN = 1 << 30;
+    const EFUSE_BLK0_PGM_CMD = EFUSE_PGM_DONE;
+    const FIB_GLITCH_RST = 1;
+    const fibSoftwareGlitchReset = 0x7 & ~FIB_GLITCH_RST;
+
+    const fuseClearImage = causeRoundTrip([RTCCNTL, fibSoftwareGlitchReset, POWER_GLITCH_EFUSE_SEL], [
+      L32R(8, 2),
+      L32R(9, 3),
+      S32I(9, 8, 0x148), // FIB_SEL: software controls glitch reset
+      L32R(9, 4),
+      S32I(9, 8, 0x144), // PG_CTRL: select eFuse enable source
+    ]);
+    const fuseClear = core(fuseClearImage);
+    fuseClear.step(800);
+    expect([...fuseClear.drainUart()]).toEqual([1]);
+    fuseClear.setPowerGlitchDetected(true);
+    fuseClear.step(1_000);
+    expect([...fuseClear.drainUart()]).toEqual([]);
+
+    const image = causeRoundTrip(
+      [
+        EFUSE_BASE,
+        RTCCNTL,
+        EFUSE_POWERGLITCH_EN,
+        EFUSE_WRITE_OP_CODE,
+        EFUSE_BLK0_PGM_CMD,
+        fibSoftwareGlitchReset,
+        POWER_GLITCH_EFUSE_SEL,
+      ],
+      [
+        L32R(8, 2),
+        L32R(9, 4),
+        S32I(9, 8, 0x14), // PGM_DATA5: BLOCK0 POWERGLITCH_EN
+        L32R(9, 5),
+        S32I(9, 8, 0x1cc), // CONF = WRITE_OP_CODE
+        L32R(9, 6),
+        S32I(9, 8, 0x1d4), // CMD = BLOCK0 + PGM_CMD
+        L32R(8, 3),
+        L32R(9, 7),
+        S32I(9, 8, 0x148), // FIB_SEL: software controls glitch reset
+        L32R(9, 8),
+        S32I(9, 8, 0x144), // PG_CTRL: eFuse-selected power-glitch enable
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1]);
+    c.setPowerGlitchDetected(true);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([23]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('clock-glitch reset follows ANA_CONF and FIB_SEL software control', () => {
     // Source-checked against ESP-IDF v5.5.4: ANA_CONF is +0x34,
     // GLITCH_RST_EN is bit 20, FIB_SEL bit 0 is FIB_GLITCH_RST, and

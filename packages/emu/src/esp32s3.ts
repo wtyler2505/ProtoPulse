@@ -211,7 +211,9 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips,
  * power-glitch detector trips, XTAL32K-dead watchdog trips, and
  * super-watchdog trips also latch their RTC_CNTL INT_* bits and route
- * through RTC_CORE. XTAL32K-dead can wake light-sleep via the
+ * through RTC_CORE. The power-glitch detector can take its enable bit
+ * either from PG_CTRL or the documented BLOCK0 eFuse bit when
+ * PG_CTRL selects eFuse control. XTAL32K-dead can wake light-sleep via the
  * RTC_XTAL32K_DEAD_TRIG_EN wake source too.
  * SUPER_WDT also records its RTC reset flag/feed-interrupt bits,
  * supports the documented feed/flag-clear pulses, and reports reset
@@ -639,6 +641,7 @@ const RTC_BROWN_OUT_ANA_RST_EN = 1 << 28;
 const RTC_BROWN_OUT_RST_ENA = 1 << 26;
 const RTC_BROWN_OUT_RESET = (RTC_BROWN_OUT_ENA | (0x3ff << 16) | (1 << 4)) >>> 0;
 const RTC_POWER_GLITCH_EN = 1 << 31;
+const RTC_POWER_GLITCH_EFUSE_SEL = 1 << 30;
 const RTC_PG_CTRL_RESET = 0;
 const RTC_FIB_SEL_MASK = 0x7;
 const RTC_FIB_SEL_RESET = 0x7;
@@ -886,6 +889,7 @@ const EFUSE_RD_TIM_CONF_RESET = 18 << 24;
 const EFUSE_WR_TIM_CONF1_RESET = 10368 << 8;
 const EFUSE_WR_TIM_CONF2_RESET = 400;
 const EFUSE_DATE_RESET = 34_607_760;
+const EFUSE_POWERGLITCH_EN = 1 << 30;
 // SYNTHETIC MAC, documented: 7A:C0:DE:00:53:33 — locally-administered
 // unicast (first octet bit 1 set, bit 0 clear), "C0DE"/"S3" mnemonic.
 // efuse_hal_get_mac byte order: mac[0]=mac_1>>8, mac[1]=mac_1&0xff,
@@ -2031,6 +2035,10 @@ export class Esp32s3Core implements McuCore {
     this.efuseIntRaw |= EFUSE_PGM_CMD;
   }
 
+  private powerGlitchEfuseEnabled(): boolean {
+    return ((this.efuseReadWord(EFUSE_RD_REPEAT_DATA_4) ?? 0) & EFUSE_POWERGLITCH_EN) !== 0;
+  }
+
   private sampleAdc(channel: number): number {
     const cycle = this.now();
     const volts = this.sampler ? this.sampler(channel, cycle) : 0;
@@ -2913,7 +2921,11 @@ export class Esp32s3Core implements McuCore {
   }
 
   private updatePowerGlitchDetector(): void {
-    if (!this.powerGlitchDetected || (this.rtcPgCtrl & RTC_POWER_GLITCH_EN) === 0) {
+    const enabled =
+      (this.rtcPgCtrl & RTC_POWER_GLITCH_EFUSE_SEL) !== 0
+        ? this.powerGlitchEfuseEnabled()
+        : (this.rtcPgCtrl & RTC_POWER_GLITCH_EN) !== 0;
+    if (!this.powerGlitchDetected || !enabled) {
       this.recomputeIrq();
       return;
     }

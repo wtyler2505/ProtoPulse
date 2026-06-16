@@ -1233,8 +1233,7 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       cause (23). Proven by hand-assembled firmware that first reports
       POWERON, configures software-owned glitch reset, receives a host
       power-glitch trip, reboots, and reports reset cause 23. Cuts: no
-      analog glitch model and no POWER_GLITCH_EFUSE_SEL/eFuse routing
-      model yet
+      analog glitch model yet
 - [x] ESP32-S3 core slice 87 — clock-glitch reset via ANA_CONF/FIB_SEL
       (landed 2026-06-16): RTC_CNTL_ANA_CONF now round-trips its
       documented reset defaults plus GLITCH_RST_EN, and host-injected
@@ -1257,6 +1256,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       and reports reset cause 18. Cuts: no timed SWD countdown,
       auto-feed cadence, sleep-pause behavior, or eFuse strap routing
       model yet
+- [x] ESP32-S3 core slice 89 — power-glitch eFuse enable selector
+      (landed 2026-06-16): RTC_CNTL_PG_CTRL.POWER_GLITCH_EFUSE_SEL now
+      switches the modeled power-glitch detector enable source from the
+      PG_CTRL POWER_GLITCH_EN bit to BLOCK0 EFUSE_POWERGLITCH_EN
+      (RD_REPEAT_DATA4 bit 30), while FIB_GLITCH_RST still gates the
+      software-owned reset route. Proven by hand-assembled firmware
+      that first selects eFuse control with the fuse clear and observes
+      no reboot, then burns EFUSE_POWERGLITCH_EN, selects eFuse control,
+      receives a host power-glitch trip, reboots, and reports ROM cause
+      POWER_GLITCH_RESET (23). Cuts: no analog glitch waveform/timing
+      model and no POWER_GLITCH_DSENSE timing behavior yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
