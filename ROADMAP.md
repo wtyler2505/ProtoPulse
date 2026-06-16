@@ -1454,6 +1454,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       three transitions. Cuts: still no full ESP-IDF driver alert
       queue, bit timing, arbitration, retry scheduling, wire-level GPIO
       waveform, or exact dual-filter mode yet
+- [x] ESP32-S3 core slice 106 — TWAI listen-only TX suppression (landed
+      2026-06-16): TWAI TX and self-RX requests now do nothing while
+      listen-only mode is active, matching ESP-IDF's contract that a
+      listen-only node receives but does not transmit dominant bits,
+      including ACK and error frames. Proven by hand-assembled firmware
+      that leaves reset in listen-only mode, attempts a standard-frame
+      transmit request, and verifies host TX drain, event drain, TEC,
+      and interrupt state remain quiet. Cuts: still no full ESP-IDF
+      driver alert queue, bit timing, arbitration, retry scheduling,
+      wire-level GPIO waveform, or exact dual-filter mode yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

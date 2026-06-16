@@ -2,6 +2,32 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 106: TWAI listen-only TX suppression
+
+### Added
+- **TWAI/CAN listen-only transmit suppression** (@protopulse/emu):
+  register-level TWAI TX and self-RX requests now do nothing while
+  `TWAI_MODE_LISTEN_ONLY` is active, matching ESP-IDF's listen-only
+  contract that the node receives but does not transmit dominant bits,
+  including ACK and error frames.
+- The existing peer-bus listen-only ACK suppression now has its paired
+  transmit-side coverage: listen-only nodes neither surface host TX
+  frames nor emit TX/error events from a transmit request.
+
+### Verified
+- Added hand-assembled Xtensa firmware that leaves reset in listen-only
+  mode, attempts a standard data-frame TX request, and proves host TX,
+  event drain, TEC, and interrupt state all remain quiet.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 174 ESP32-S3 tests.
+- `npm run check:packages` passed.
+- `npm run test:packages` passed across package workspaces with 1,516 tests.
+
+### Honest cuts
+- This still is not the full ESP-IDF driver alert queue. Bit-timing,
+  arbitration, retry scheduling, wire-level GPIO waveform, and exact
+  dual-filter mode remain open.
+
 ## 2026-06-16 — ESP32-S3 slice 105: TWAI state-change events
 
 ### Added

@@ -183,6 +183,7 @@ const MCPWM_OP0_TEA_INT = 1 << 15;
 const MCPWM_PWM0_OUT0A = 160;
 const MCPWM_PWM1_OUT0A = 166;
 const TWAI_RI_TI = 0x03;
+const TWAI_LISTEN_ONLY_MODE = 1 << 1;
 const TWAI_SELF_TEST_MODE = 1 << 2;
 const TWAI_ACCEPTANCE_FILTER_MODE = 1 << 3;
 const TWAI_TI_EI_BEI = (1 << 1) | (1 << 2) | (1 << 7);
@@ -866,6 +867,40 @@ describe('Esp32s3Core', () => {
       { type: 'state_change', oldState: 'warning', newState: 'passive' },
       { type: 'state_change', oldState: 'passive', newState: 'bus_off' },
     ]);
+  });
+
+  it('does not transmit TWAI frames while listen-only mode is active', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [TWAI, UART, 0x80, 0xc0, 0x77],
+      [
+        L32R(2, 0), // TWAI
+        L32R(6, 1), // UART0
+        MOVI(3, TWAI_LISTEN_ONLY_MODE),
+        S32I(3, 2, 0x00), // leave reset with listen-only active
+        MOVI(3, 1),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=1
+        L32R(3, 2),
+        S32I(3, 2, 0x44), // std id 0x406 byte 0
+        L32R(3, 3),
+        S32I(3, 2, 0x48), // std id 0x406 byte 1
+        L32R(3, 4),
+        S32I(3, 2, 0x4c), // data 0
+        MOVI(3, TWAI_TX_REQUEST),
+        S32I(3, 2, 0x04),
+        L32I(3, 2, 0x3c), // TEC stays zero because no TX occurred
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x0c), // no TX/error interrupt latched
+        S32I(3, 6, 0),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(360);
+
+    expect(c.drainTwaiTx()).toEqual([]);
+    expect(c.drainTwaiEvents()).toEqual([]);
+    expect([...c.drainUart()]).toEqual([0, 0]);
   });
 
   it('routes RMT channel 0 TX symbols through the GPIO matrix to IO5', () => {

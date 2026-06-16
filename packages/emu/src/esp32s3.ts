@@ -294,8 +294,8 @@ export type Esp32s3TwaiEvent =
  * interrupts, acceptance-filter enforcement, typed host injection/drain,
  * and a host-side peer bus that delivers standard frames, models ACK/no-ACK
  * TX error-counter movement, enters BUS_OFF after repeated ACK errors, and
- * exposes host-drained TX/RX/error/state-change events for bridge-style
- * callback data.
+ * suppresses listen-only transmissions while exposing host-drained
+ * TX/RX/error/state-change events for bridge-style callback data.
  * Cuts: no bit timing/arbitration/retry scheduling, full driver alert queue,
  * exact dual-filter mode, or wire-level GPIO waveform yet.
  * Still missing: full light/deep sleep register policy, remaining wake
@@ -4674,6 +4674,7 @@ export class Esp32s3Core implements McuCore {
 
   private twaiTransmit(selfReceive: boolean): void {
     if ((this.twai.mode & TWAI_MODE_RESET) !== 0) return;
+    if ((this.twai.mode & TWAI_MODE_LISTEN_ONLY) !== 0) return;
     const frame = this.twai.buffer.slice(0, TWAI_BUFFER_BYTES).map((b) => b & 0xff);
     this.twai.txLog.push(frame);
     let acknowledged = (this.twai.mode & TWAI_MODE_NO_ACK) !== 0;
