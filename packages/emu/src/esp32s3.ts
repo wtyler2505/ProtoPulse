@@ -268,6 +268,12 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * 160..171, continuous software force, and PWM0/1 interrupt-matrix
  * routing. Cuts: no dead-time, carrier, faults, capture, sync propagation,
  * power/clock gating effects, or full driver object model yet.
+ * TWAI/CAN now exposes the source-pinned ESP32-S3 register block, the
+ * SJA1000-style 8-bit registers packed into 32-bit words, TX/RX frame
+ * buffer bytes, self-reception loopback, RX buffer release, RI/TI
+ * interrupts, and the CAN interrupt-matrix route. Cuts: no real CAN bus
+ * object, bit timing/arbitration/ACK/error confinement, acceptance-filter
+ * enforcement, alerts queue, or wire-level GPIO waveform yet.
  * Still missing: full light/deep sleep register policy, remaining wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
@@ -553,6 +559,47 @@ const MCPWM_SIGNAL_GROUP0_BASE = 160; // PWM0_OUT0A_IDX
 const MCPWM_SIGNAL_GROUP1_BASE = 166; // PWM1_OUT0A_IDX
 const MCPWM_DATE_RESET = 34632240;
 
+// TWAI/CAN controller (ESP-IDF v5.5.4 ESP32-S3):
+// reg_base.h pins TWAI at 0x6002B000. twai_struct.h maps the SJA1000-style
+// 8-bit registers into the low byte of 32-bit words from +0x00..+0x7c.
+// soc_caps.h says ESP32-S3 has one TWAI controller; twai_periph.c wires
+// it to ETS_TWAI_INTR_SOURCE/CAN_INT_MAP and GPIO matrix signal 116.
+const TWAI_BASE = 0x6002b000;
+const TWAI_BLOCK_BYTES = 0x80;
+const TWAI_MODE = 0x00;
+const TWAI_COMMAND = 0x04;
+const TWAI_STATUS = 0x08;
+const TWAI_INTERRUPT = 0x0c;
+const TWAI_INTERRUPT_ENABLE = 0x10;
+const TWAI_BUS_TIMING_0 = 0x18;
+const TWAI_BUS_TIMING_1 = 0x1c;
+const TWAI_ARB_LOST_CAPTURE = 0x2c;
+const TWAI_ERR_CODE_CAPTURE = 0x30;
+const TWAI_ERR_WARNING_LIMIT = 0x34;
+const TWAI_RX_ERR_COUNTER = 0x38;
+const TWAI_TX_ERR_COUNTER = 0x3c;
+const TWAI_BUFFER_START = 0x40;
+const TWAI_BUFFER_BYTES = 13;
+const TWAI_ACCEPTANCE_BYTES = 8;
+const TWAI_RX_MESSAGE_COUNTER = 0x74;
+const TWAI_CLOCK_DIVIDER = 0x7c;
+const TWAI_MODE_RESET = 1 << 0;
+const TWAI_MODE_MASK = 0x0f;
+const TWAI_CMD_TX_REQUEST = 1 << 0;
+const TWAI_CMD_ABORT_TX = 1 << 1;
+const TWAI_CMD_RELEASE_RX = 1 << 2;
+const TWAI_CMD_CLEAR_OVERRUN = 1 << 3;
+const TWAI_CMD_SELF_RX_REQUEST = 1 << 4;
+const TWAI_STATUS_RX_BUFFER = 1 << 0;
+const TWAI_STATUS_DATA_OVERRUN = 1 << 1;
+const TWAI_STATUS_TX_BUFFER = 1 << 2;
+const TWAI_STATUS_TX_COMPLETE = 1 << 3;
+const TWAI_INTR_RX = 1 << 0;
+const TWAI_INTR_TX = 1 << 1;
+const TWAI_INTR_DATA_OVERRUN = 1 << 3;
+const TWAI_INTR_CLEARABLE = 0xef;
+const TWAI_CLOCK_DIVIDER_MASK = 0x1ff;
+
 // The interrupt matrix (reg_base.h DR_REG_INTERRUPT_BASE +
 // interrupt_core0_reg.h / interrupt_core1_reg.h): each peripheral
 // source has a 5-bit map register per CPU core selecting which CPU
@@ -568,6 +615,7 @@ const INTMTX_UART2_MAP = 0x074; // INTERRUPT_CORE0_UART2_INTR_MAP_REG
 const INTMTX_PWM0_MAP = 0x07c; // INTERRUPT_CORE0_PWM0_INTR_MAP_REG
 const INTMTX_PWM1_MAP = 0x080; // INTERRUPT_CORE0_PWM1_INTR_MAP_REG
 const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
+const INTMTX_CAN_MAP = 0x094; // INTERRUPT_CORE0_CAN_INT_MAP_REG
 const INTMTX_RTC_CORE_MAP = 0x09c; // INTERRUPT_CORE0_RTC_CORE_INTR_MAP_REG
 const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
 const INTMTX_PCNT_MAP = 0x0a4; // INTERRUPT_CORE0_PCNT_INTR_MAP_REG
@@ -1688,6 +1736,25 @@ interface McpwmGroup {
   clk: number;
 }
 
+interface TwaiController {
+  mode: number;
+  busTiming0: number;
+  busTiming1: number;
+  arbLostCapture: number;
+  errCodeCapture: number;
+  errWarningLimit: number;
+  rxErrCounter: number;
+  txErrCounter: number;
+  buffer: number[];
+  acceptance: number[];
+  rxFifo: number[][];
+  dataOverrun: boolean;
+  interrupt: number;
+  interruptEna: number;
+  clockDivider: number;
+  maps: InterruptMapPair;
+}
+
 const freshGpTimer = (): GpTimer => ({
   config: 0,
   base: 0,
@@ -1910,6 +1977,25 @@ const freshMcpwmGroup = (): McpwmGroup => ({
   clk: 0,
 });
 
+const freshTwaiController = (): TwaiController => ({
+  mode: TWAI_MODE_RESET,
+  busTiming0: 0,
+  busTiming1: 0,
+  arbLostCapture: 0,
+  errCodeCapture: 0,
+  errWarningLimit: 0,
+  rxErrCounter: 0,
+  txErrCounter: 0,
+  buffer: Array(TWAI_BUFFER_BYTES).fill(0) as number[],
+  acceptance: Array(TWAI_ACCEPTANCE_BYTES).fill(0) as number[],
+  rxFifo: [],
+  dataOverrun: false,
+  interrupt: 0,
+  interruptEna: 0,
+  clockDivider: 0,
+  maps: freshInterruptMapPair(),
+});
+
 const freshEfuseBlocks = (): number[][] => {
   const blocks = Array.from({ length: EFUSE_BLOCK_COUNT }, () => Array(EFUSE_BLOCK_WORDS).fill(0) as number[]);
   const macBlock = blocks[1];
@@ -1985,6 +2071,7 @@ export class Esp32s3Core implements McuCore {
   private i2c: I2cController[] = Array.from({ length: I2C_CONTROLLER_COUNT }, freshI2cController);
   private spi: SpiController[] = Array.from({ length: SPI_CONTROLLER_COUNT }, freshSpiController);
   private mcpwm: McpwmGroup[] = Array.from({ length: MCPWM_GROUPS }, freshMcpwmGroup);
+  private twai: TwaiController = freshTwaiController();
 
   // UART0/1 interrupt state + the interrupt matrix maps.
   private uartIntEna = 0;
@@ -3026,6 +3113,7 @@ export class Esp32s3Core implements McuCore {
     this.i2c = Array.from({ length: I2C_CONTROLLER_COUNT }, freshI2cController);
     this.spi = Array.from({ length: SPI_CONTROLLER_COUNT }, freshSpiController);
     this.mcpwm = Array.from({ length: MCPWM_GROUPS }, freshMcpwmGroup);
+    this.twai = freshTwaiController();
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
@@ -4296,6 +4384,129 @@ export class Esp32s3Core implements McuCore {
     }
   }
 
+  private twaiForAddress(addr: number): number | null {
+    if (addr >= TWAI_BASE && addr < TWAI_BASE + TWAI_BLOCK_BYTES) return addr - TWAI_BASE;
+    return null;
+  }
+
+  private twaiStatus(): number {
+    let status = TWAI_STATUS_TX_BUFFER | TWAI_STATUS_TX_COMPLETE;
+    if (this.twai.rxFifo.length > 0) status |= TWAI_STATUS_RX_BUFFER;
+    if (this.twai.dataOverrun) status |= TWAI_STATUS_DATA_OVERRUN;
+    return status >>> 0;
+  }
+
+  private twaiReadBufferByte(index: number): number {
+    const frame = this.twai.rxFifo[0];
+    return (frame ?? this.twai.buffer)[index] ?? 0;
+  }
+
+  private twaiPushRxFrame(frame: number[]): void {
+    if (this.twai.rxFifo.length >= 64) {
+      this.twai.dataOverrun = true;
+      this.twai.interrupt |= TWAI_INTR_DATA_OVERRUN;
+      return;
+    }
+    this.twai.rxFifo.push(frame.map((b) => b & 0xff));
+    this.twai.interrupt |= TWAI_INTR_RX;
+  }
+
+  private twaiTransmit(selfReceive: boolean): void {
+    if ((this.twai.mode & TWAI_MODE_RESET) !== 0) return;
+    const frame = this.twai.buffer.slice(0, TWAI_BUFFER_BYTES);
+    if (selfReceive) this.twaiPushRxFrame(frame);
+    this.twai.interrupt |= TWAI_INTR_TX;
+  }
+
+  private twaiRead(off: number): number {
+    if (off === TWAI_MODE) return this.twai.mode >>> 0;
+    if (off === TWAI_COMMAND) return 0;
+    if (off === TWAI_STATUS) return this.twaiStatus();
+    if (off === TWAI_INTERRUPT) {
+      const value = this.twai.interrupt & TWAI_INTR_CLEARABLE;
+      this.twai.interrupt = 0;
+      this.recomputeIrq();
+      return value >>> 0;
+    }
+    if (off === TWAI_INTERRUPT_ENABLE) return this.twai.interruptEna >>> 0;
+    if (off === TWAI_BUS_TIMING_0) return this.twai.busTiming0 >>> 0;
+    if (off === TWAI_BUS_TIMING_1) return this.twai.busTiming1 >>> 0;
+    if (off === TWAI_ARB_LOST_CAPTURE) return this.twai.arbLostCapture >>> 0;
+    if (off === TWAI_ERR_CODE_CAPTURE) return this.twai.errCodeCapture >>> 0;
+    if (off === TWAI_ERR_WARNING_LIMIT) return this.twai.errWarningLimit >>> 0;
+    if (off === TWAI_RX_ERR_COUNTER) return this.twai.rxErrCounter >>> 0;
+    if (off === TWAI_TX_ERR_COUNTER) return this.twai.txErrCounter >>> 0;
+    if (off >= TWAI_BUFFER_START && off < TWAI_BUFFER_START + TWAI_BUFFER_BYTES * 4 && (off & 3) === 0) {
+      return this.twaiReadBufferByte((off - TWAI_BUFFER_START) >> 2);
+    }
+    if (off === TWAI_RX_MESSAGE_COUNTER) return Math.min(0x7f, this.twai.rxFifo.length);
+    if (off === TWAI_CLOCK_DIVIDER) return this.twai.clockDivider >>> 0;
+    return 0;
+  }
+
+  private twaiWrite(off: number, value: number): void {
+    const v = value >>> 0;
+    if (off === TWAI_MODE) {
+      this.twai.mode = v & TWAI_MODE_MASK;
+      this.recomputeIrq();
+      return;
+    }
+    if (off === TWAI_COMMAND) {
+      if ((v & TWAI_CMD_RELEASE_RX) !== 0) this.twai.rxFifo.shift();
+      if ((v & TWAI_CMD_CLEAR_OVERRUN) !== 0) {
+        this.twai.dataOverrun = false;
+        this.twai.interrupt &= ~TWAI_INTR_DATA_OVERRUN;
+      }
+      if ((v & TWAI_CMD_ABORT_TX) !== 0) this.twai.interrupt |= TWAI_INTR_TX;
+      if ((v & TWAI_CMD_TX_REQUEST) !== 0) this.twaiTransmit(false);
+      if ((v & TWAI_CMD_SELF_RX_REQUEST) !== 0) this.twaiTransmit(true);
+      this.recomputeIrq();
+      return;
+    }
+    if (off === TWAI_INTERRUPT_ENABLE) {
+      this.twai.interruptEna = v & TWAI_INTR_CLEARABLE;
+      this.recomputeIrq();
+      return;
+    }
+    if (off === TWAI_BUS_TIMING_0) {
+      this.twai.busTiming0 = v & 0xffff;
+      return;
+    }
+    if (off === TWAI_BUS_TIMING_1) {
+      this.twai.busTiming1 = v & 0xff;
+      return;
+    }
+    if (off === TWAI_ARB_LOST_CAPTURE) {
+      this.twai.arbLostCapture = v & 0x1f;
+      return;
+    }
+    if (off === TWAI_ERR_CODE_CAPTURE) {
+      this.twai.errCodeCapture = v & 0xff;
+      return;
+    }
+    if (off === TWAI_ERR_WARNING_LIMIT) {
+      this.twai.errWarningLimit = v & 0xff;
+      return;
+    }
+    if (off === TWAI_RX_ERR_COUNTER) {
+      this.twai.rxErrCounter = v & 0xff;
+      return;
+    }
+    if (off === TWAI_TX_ERR_COUNTER) {
+      this.twai.txErrCounter = v & 0xff;
+      return;
+    }
+    if (off >= TWAI_BUFFER_START && off < TWAI_BUFFER_START + TWAI_BUFFER_BYTES * 4 && (off & 3) === 0) {
+      const index = (off - TWAI_BUFFER_START) >> 2;
+      this.twai.buffer[index] = v & 0xff;
+      if (index < TWAI_ACCEPTANCE_BYTES) this.twai.acceptance[index] = v & 0xff;
+      return;
+    }
+    if (off === TWAI_CLOCK_DIVIDER) {
+      this.twai.clockDivider = v & TWAI_CLOCK_DIVIDER_MASK;
+    }
+  }
+
   private ledcTimerDivider(t: LedcTimer): number {
     return ((t.conf >>> LEDC_TIMER_CLK_DIV_SHIFT) & LEDC_TIMER_CLK_DIV_MASK) || LEDC_DIV_ONE;
   }
@@ -5206,6 +5417,7 @@ export class Esp32s3Core implements McuCore {
     const pcntPending = (this.pcntIntRaw & this.pcntIntEna) !== 0;
     const mcpwm0Pending = ((this.mcpwm[0]?.intRaw ?? 0) & (this.mcpwm[0]?.intEna ?? 0)) !== 0;
     const mcpwm1Pending = ((this.mcpwm[1]?.intRaw ?? 0) & (this.mcpwm[1]?.intEna ?? 0)) !== 0;
+    const twaiPending = (this.twai.interrupt & this.twai.interruptEna) !== 0;
     const i2c0Pending = ((this.i2c[0]?.intRaw ?? 0) & (this.i2c[0]?.intEna ?? 0)) !== 0;
     const i2c1Pending = ((this.i2c[1]?.intRaw ?? 0) & (this.i2c[1]?.intEna ?? 0)) !== 0;
     const spi2Pending = ((this.spi[0]?.intRaw ?? 0) & (this.spi[0]?.intEna ?? 0)) !== 0;
@@ -5226,6 +5438,7 @@ export class Esp32s3Core implements McuCore {
     if (pcntPending) raise(this.pcntIntMaps);
     if (mcpwm0Pending) raise(this.mcpwm[0]?.maps ?? freshInterruptMapPair());
     if (mcpwm1Pending) raise(this.mcpwm[1]?.maps ?? freshInterruptMapPair());
+    if (twaiPending) raise(this.twai.maps);
     if (i2c0Pending) raise(this.i2c[0]?.maps ?? freshInterruptMapPair());
     if (i2c1Pending) raise(this.i2c[1]?.maps ?? freshInterruptMapPair());
     if (spi2Pending) raise(this.spi[0]?.maps ?? freshInterruptMapPair());
@@ -5576,6 +5789,8 @@ export class Esp32s3Core implements McuCore {
     if (spi !== null) return this.spiRead(spi.ctrl, spi.off);
     const mcpwm = this.mcpwmForAddress(addr);
     if (mcpwm !== null) return this.mcpwmRead(mcpwm.group, mcpwm.off);
+    const twai = this.twaiForAddress(addr);
+    if (twai !== null) return this.twaiRead(twai);
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
@@ -5587,6 +5802,7 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_PWM0_MAP) return this.mcpwm[0]?.maps[core] ?? INTMTX_DEFAULT_MAP;
       if (sourceOff === INTMTX_PWM1_MAP) return this.mcpwm[1]?.maps[core] ?? INTMTX_DEFAULT_MAP;
       if (sourceOff === INTMTX_LEDC_MAP) return this.ledcIntMaps[core];
+      if (sourceOff === INTMTX_CAN_MAP) return this.twai.maps[core];
       if (sourceOff === INTMTX_RTC_CORE_MAP) return this.rtcCoreIntMaps[core];
       if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
       if (sourceOff === INTMTX_PCNT_MAP) return this.pcntIntMaps[core];
@@ -6131,6 +6347,11 @@ export class Esp32s3Core implements McuCore {
       this.mcpwmWrite(mcpwm.group, mcpwm.off, value);
       return;
     }
+    const twai = this.twaiForAddress(addr);
+    if (twai !== null) {
+      this.twaiWrite(twai, value);
+      return;
+    }
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
@@ -6146,6 +6367,7 @@ export class Esp32s3Core implements McuCore {
         const group = this.mcpwm[1];
         if (group !== undefined) group.maps[core] = value & 0x1f;
       } else if (sourceOff === INTMTX_LEDC_MAP) this.ledcIntMaps[core] = value & 0x1f;
+      else if (sourceOff === INTMTX_CAN_MAP) this.twai.maps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_PCNT_MAP) this.pcntIntMaps[core] = value & 0x1f;
@@ -6965,6 +7187,7 @@ export {
   PCNT_BASE as ESP32S3_PCNT_BASE,
   SPI2_BASE as ESP32S3_SPI2_BASE,
   SPI3_BASE as ESP32S3_SPI3_BASE,
+  TWAI_BASE as ESP32S3_TWAI_BASE,
   UART0_BASE as ESP32S3_UART0_BASE,
   UART1_BASE as ESP32S3_UART1_BASE,
   UART2_BASE as ESP32S3_UART2_BASE,

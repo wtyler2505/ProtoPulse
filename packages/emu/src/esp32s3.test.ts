@@ -12,6 +12,7 @@ import {
   ESP32S3_PCNT_BASE,
   ESP32S3_SPI2_BASE,
   ESP32S3_SPI3_BASE,
+  ESP32S3_TWAI_BASE,
   ESP32S3_UART0_BASE,
   ESP32S3_UART1_BASE,
   ESP32S3_UART2_BASE,
@@ -90,6 +91,7 @@ const SPI2 = ESP32S3_SPI2_BASE;
 const SPI3 = ESP32S3_SPI3_BASE;
 const MCPWM0 = ESP32S3_MCPWM0_BASE;
 const MCPWM1 = ESP32S3_MCPWM1_BASE;
+const TWAI = ESP32S3_TWAI_BASE;
 const INTMTX = 0x600c2000;
 const LEDC = 0x60019000;
 const RMT = 0x60016000;
@@ -180,6 +182,12 @@ const MCPWM_GEN_UTEZ_HIGH_UTEA_LOW = (2 | (1 << 4)) >>> 0;
 const MCPWM_OP0_TEA_INT = 1 << 15;
 const MCPWM_PWM0_OUT0A = 160;
 const MCPWM_PWM1_OUT0A = 166;
+const TWAI_RI_TI = 0x03;
+const TWAI_SELF_TEST_MODE = 1 << 2;
+const TWAI_SELF_RX_REQUEST = 1 << 4;
+const TWAI_RELEASE_RX_BUFFER = 1 << 2;
+const TWAI_STATUS_RBS_TBS_TCS = 0x0d;
+const TWAI_STD_DLC3 = 3;
 const GDMA_OUT_CH0_INT_RAW = 0x68;
 const GDMA_OUT_CH0_INT_CLR = 0x74;
 const GDMA_OUT_CH0_LINK = 0x80;
@@ -459,6 +467,112 @@ describe('Esp32s3Core', () => {
     const c = core(image);
     const { events } = c.step(80);
     expect(events.find((e) => e.pin === 'IO5')?.level).toBe(1);
+  });
+
+  it('loops back a TWAI self-reception frame and releases the RX buffer', () => {
+    // Context7: ESP-IDF v5.5.4 TWAI has one ESP32-S3 controller and
+    // twai_ll.h uses the self-reception command for self-test traffic.
+    // Source-checked against twai_struct.h: buffer bytes live at +0x40.
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [TWAI, UART, 0xa0, 0x80, 0x11, 0x22, 0x33, TWAI_STATUS_RBS_TBS_TCS],
+      [
+        L32R(2, 0), // TWAI
+        MOVI(3, TWAI_SELF_TEST_MODE),
+        S32I(3, 2, 0x00), // leave reset mode, enable self-test/no-ack style mode
+        MOVI(3, TWAI_RI_TI),
+        S32I(3, 2, 0x10), // enable RI/TI, even though this polling test does not map CAN_INT
+
+        MOVI(3, TWAI_STD_DLC3),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=3
+        L32R(3, 2),
+        S32I(3, 2, 0x44), // standard ID byte 0
+        L32R(3, 3),
+        S32I(3, 2, 0x48), // standard ID byte 1
+        L32R(3, 4),
+        S32I(3, 2, 0x4c), // data 0
+        L32R(3, 5),
+        S32I(3, 2, 0x50), // data 1
+        L32R(3, 6),
+        S32I(3, 2, 0x54), // data 2
+
+        MOVI(3, TWAI_SELF_RX_REQUEST),
+        S32I(3, 2, 0x04), // command: self reception request
+        L32R(6, 1), // UART0
+        L32I(3, 2, 0x08), // status: RBS + TBS + TCS
+        L32R(4, 7),
+        AND(3, 3, 4),
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x74), // RX message counter
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x40), // frame info
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x44), // ID byte 0
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x48), // ID byte 1
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x4c), // data 0
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x50), // data 1
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x54), // data 2
+        S32I(3, 6, 0),
+        MOVI(3, TWAI_RELEASE_RX_BUFFER),
+        S32I(3, 2, 0x04), // release RX buffer
+        L32I(3, 2, 0x08),
+        MOVI(4, 1),
+        AND(3, 3, 4), // RBS should clear
+        S32I(3, 6, 0),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(600);
+    expect([...c.drainUart()]).toEqual([0x0d, 1, 3, 0xa0, 0x80, 0x11, 0x22, 0x33, 0]);
+  });
+
+  it('routes TWAI RX/TX interrupts through CAN_INT and clears them on interrupt read', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [TWAI, UART, ESP32S3_IRAM_BASE, INTMTX],
+      [
+        L32R(2, 0), // TWAI
+        L32R(6, 1), // UART0
+        L32R(5, 2),
+        WSR(5, SR.VECBASE),
+        L32R(7, 3),
+        MOVI(3, 1),
+        S32I(3, 7, 0x94), // CAN_INT -> CPU line 1
+        MOVI(3, 2),
+        WSR(3, SR.INTENABLE),
+        RSIL(12, 12),
+
+        MOVI(3, TWAI_SELF_TEST_MODE),
+        S32I(3, 2, 0x00),
+        MOVI(3, TWAI_RI_TI),
+        S32I(3, 2, 0x10),
+        MOVI(3, TWAI_STD_DLC3),
+        S32I(3, 2, 0x40),
+        MOVI(3, TWAI_SELF_RX_REQUEST),
+        S32I(3, 2, 0x04),
+        WAITI(0),
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(6, 1),
+        L32I(3, 2, 0x0c), // INTERRUPT read clears RI/TI
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x0c), // second read proves clear
+        S32I(3, 6, 0),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(700);
+    expect([...c.drainUart()]).toEqual([TWAI_RI_TI, 0]);
   });
 
   it('routes RMT channel 0 TX symbols through the GPIO matrix to IO5', () => {

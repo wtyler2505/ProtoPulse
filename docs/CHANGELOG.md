@@ -2,6 +2,33 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 101: TWAI/CAN register + self-test first cut
+
+### Added
+- **TWAI/CAN peripheral surface** (@protopulse/emu):
+  ESP32-S3 TWAI now exposes the source-pinned register block at
+  0x6002B000, SJA1000-style 8-bit registers packed into 32-bit words,
+  TX/RX frame buffer bytes, self-reception loopback, RX buffer release,
+  RX message count/status bits, read-to-clear RI/TI interrupts, and
+  `CAN_INT_MAP` interrupt-matrix routing.
+
+### Verified
+- Added hand-assembled Xtensa firmware that sends a standard TWAI
+  self-reception frame, reads frame info/ID/data back from the RX
+  buffer, releases the RX buffer, and wakes through a `CAN_INT` ISR that
+  proves `interrupt_reg` read-to-clear behavior.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 166 ESP32-S3 tests.
+- `npm run check:packages` passed.
+- `npm run test:packages` passed across package workspaces with 1,508 tests.
+
+### Honest cuts
+- No virtual CAN bus object, bit timing/arbitration/ACK/error
+  confinement, acceptance-filter enforcement, driver alert queue, or
+  wire-level GPIO waveform yet.
+- This is the register/self-test/interrupt runway, not the full
+  ESP-IDF TWAI driver behavior.
+
 ## 2026-06-16 — ESP32-S3 slice 100: MCPWM timer/operator/generator first cut
 
 ### Added

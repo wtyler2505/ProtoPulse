@@ -1389,6 +1389,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       modulation, fault/capture/sync propagation, complementary pair
       helpers, power/clock gating effects, or full driver object model
       yet
+- [x] ESP32-S3 core slice 101 — TWAI/CAN register + self-test first
+      cut (landed 2026-06-16): the TWAI controller now exposes the
+      source-pinned ESP32-S3 register block at 0x6002B000, the
+      SJA1000-style 8-bit register layout packed into 32-bit words,
+      TX/RX frame buffer bytes, self-reception loopback, RX buffer
+      release, RX message count/status bits, read-to-clear RI/TI
+      interrupts, and CAN_INT interrupt-matrix routing at +0x094.
+      Proven by hand-assembled firmware that transmits a standard
+      self-reception frame, reads back frame info/ID/data from the RX
+      buffer, releases the RX buffer, and wakes through a CAN_INT ISR
+      that proves `interrupt_reg` read-to-clear behavior. Cuts: no
+      virtual CAN bus object, bit timing/arbitration/ACK/error
+      confinement, acceptance-filter enforcement, driver alert queue,
+      or wire-level GPIO waveform yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
