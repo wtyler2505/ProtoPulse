@@ -314,8 +314,14 @@ const UART_INT_ST = 0x08; // raw & ena
 const UART_INT_ENA = 0x0c;
 const UART_INT_CLR = 0x10;
 const UART_STATUS = 0x1c; // RXFIFO_CNT [9:0], TXFIFO_CNT [25:16]
+const UART_CONF0 = 0x20; // PARITY [0], PARITY_EN [1], BIT_NUM [3:2], STOP_BIT_NUM [5:4]
 const UART_CONF1 = 0x24; // RXFIFO_FULL_THRHD [9:0], resets to 96
 const UART_SLEEP_CONF = 0x38; // ACTIVE_THRESHOLD [9:0], resets to 240
+const UART_CONF0_RESET = 0x1c; // 8 data bits, no parity, 1 stop bit
+const UART_PARITY = 1 << 0;
+const UART_PARITY_EN = 1 << 1;
+const UART_BIT_NUM_SHIFT = 2;
+const UART_BIT_NUM_MASK = 0x3;
 const UART_RXFIFO_MASK = 0x3ff;
 const UART_ACTIVE_THRESHOLD_RESET = 240;
 const UART_WAKEUP_EDGE_MIN = 3;
@@ -1489,6 +1495,7 @@ export class Esp32s3Core implements McuCore {
   private uartIntEna = 0;
   private uartTxDone = false; // latched TX_DONE raw bit
   private uartRxThrhd = 96; // CONF1 RXFIFO_FULL_THRHD reset value
+  private uartConf0 = UART_CONF0_RESET;
   private uartWakeup = false;
   private uartWakeActiveThreshold = UART_ACTIVE_THRESHOLD_RESET;
   private uartWakeEdgeCount = 0;
@@ -1496,6 +1503,7 @@ export class Esp32s3Core implements McuCore {
   private uart1IntEna = 0;
   private uart1TxDone = false;
   private uart1RxThrhd = 96;
+  private uart1Conf0 = UART_CONF0_RESET;
   private uart1Wakeup = false;
   private uart1WakeActiveThreshold = UART_ACTIVE_THRESHOLD_RESET;
   private uart1WakeEdgeCount = 0;
@@ -1827,7 +1835,8 @@ export class Esp32s3Core implements McuCore {
     const source = port === 0 ? RTC_UART0_TRIG_EN : RTC_UART1_TRIG_EN;
     if ((this.rtcState0 & RTC_SLEEP_EN) === 0 || (this.rtcWakeupEnabledSources() & source) === 0) return false;
 
-    const edges = this.uartPositiveEdges8n1(byte);
+    const conf0 = port === 0 ? this.uartConf0 : this.uart1Conf0;
+    const edges = this.uartPositiveEdges(byte, conf0);
     if (port === 0) {
       this.uartWakeEdgeCount += edges;
       if (this.uartWakeEdgeCount >= this.uartWakeActiveThreshold + UART_WAKEUP_EDGE_MIN) {
@@ -1846,16 +1855,29 @@ export class Esp32s3Core implements McuCore {
     return true;
   }
 
-  private uartPositiveEdges8n1(byte: number): number {
+  private uartPositiveEdges(byte: number, conf0: number): number {
     let prev = 1; // idle line before the start bit
     let edges = 0;
     const sample = (level: number): void => {
       if (prev === 0 && level === 1) edges++;
       prev = level;
     };
+    const dataBits = 5 + ((conf0 >>> UART_BIT_NUM_SHIFT) & UART_BIT_NUM_MASK);
     sample(0); // start bit
-    for (let bit = 0; bit < 8; bit++) sample((byte >>> bit) & 1);
-    sample(1); // stop bit
+    let ones = 0;
+    for (let bit = 0; bit < dataBits; bit++) {
+      const dataBit = (byte >>> bit) & 1;
+      ones += dataBit;
+      sample(dataBit);
+    }
+    if ((conf0 & UART_PARITY_EN) !== 0) {
+      const oddParity = (conf0 & UART_PARITY) !== 0;
+      const parityBit = oddParity ? 1 - (ones & 1) : ones & 1;
+      sample(parityBit);
+    }
+    // One high sample covers all legal stop-bit modes; extra high stop
+    // time cannot create another positive edge.
+    sample(1);
     return edges;
   }
 
@@ -2412,6 +2434,7 @@ export class Esp32s3Core implements McuCore {
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
+    this.uartConf0 = UART_CONF0_RESET;
     this.uartWakeup = false;
     this.uartWakeActiveThreshold = UART_ACTIVE_THRESHOLD_RESET;
     this.uartWakeEdgeCount = 0;
@@ -2419,6 +2442,7 @@ export class Esp32s3Core implements McuCore {
     this.uart1IntEna = 0;
     this.uart1TxDone = false;
     this.uart1RxThrhd = 96;
+    this.uart1Conf0 = UART_CONF0_RESET;
     this.uart1Wakeup = false;
     this.uart1WakeActiveThreshold = UART_ACTIVE_THRESHOLD_RESET;
     this.uart1WakeEdgeCount = 0;
@@ -4011,6 +4035,7 @@ export class Esp32s3Core implements McuCore {
       if (off === UART_INT_RAW) return this.uartIntRaw();
       if (off === UART_INT_ST) return this.uartIntRaw() & this.uartIntEna;
       if (off === UART_INT_ENA) return this.uartIntEna;
+      if (off === UART_CONF0) return this.uartConf0 >>> 0;
       if (off === UART_CONF1) return this.uartRxThrhd;
       if (off === UART_SLEEP_CONF) return this.uartWakeActiveThreshold;
       return 0;
@@ -4029,6 +4054,7 @@ export class Esp32s3Core implements McuCore {
       if (off === UART_INT_RAW) return this.uart1IntRaw();
       if (off === UART_INT_ST) return this.uart1IntRaw() & this.uart1IntEna;
       if (off === UART_INT_ENA) return this.uart1IntEna;
+      if (off === UART_CONF0) return this.uart1Conf0 >>> 0;
       if (off === UART_CONF1) return this.uart1RxThrhd;
       if (off === UART_SLEEP_CONF) return this.uart1WakeActiveThreshold;
       return 0;
@@ -4477,6 +4503,8 @@ export class Esp32s3Core implements McuCore {
         }
       } else if (off === UART_CONF1) {
         this.uartRxThrhd = value & UART_RXFIFO_MASK;
+      } else if (off === UART_CONF0) {
+        this.uartConf0 = value >>> 0;
       } else if (off === UART_SLEEP_CONF) {
         this.uartWakeActiveThreshold = value & UART_RXFIFO_MASK;
       }
@@ -4498,6 +4526,8 @@ export class Esp32s3Core implements McuCore {
         }
       } else if (off === UART_CONF1) {
         this.uart1RxThrhd = value & UART_RXFIFO_MASK;
+      } else if (off === UART_CONF0) {
+        this.uart1Conf0 = value >>> 0;
       } else if (off === UART_SLEEP_CONF) {
         this.uart1WakeActiveThreshold = value & UART_RXFIFO_MASK;
       }

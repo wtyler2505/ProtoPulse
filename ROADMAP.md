@@ -1121,6 +1121,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       then receives a separate post-wake byte. Cuts: no UART2 RTC wake
       source, baud/parity/configurable frame accounting, or full UART
       driver surface yet
+- [x] ESP32-S3 core slice 77 — UART frame-config wake edge accounting
+      (landed 2026-06-16): UART0/1 now expose UART_CONF0 at +0x20 with
+      the ESP32-S3 reset frame (8N1), preserve firmware writes, and use
+      UART_BIT_NUM plus UART_PARITY/PARITY_EN when counting RX positive
+      edges for light-sleep UART wake. Stop-bit modes are represented
+      as the single high transition that can contribute an edge, so
+      extra high stop time cannot double-count. Proven by
+      hand-assembled firmware that configures UART0 to 7N1, sets the
+      public wake threshold to three positive edges, confirms two 0x40
+      bytes remain below threshold, wakes on the third, reports FIFO
+      count 0, then receives a separate post-wake byte. Cuts: no UART2
+      RTC wake source, baud-rate sampling/noise/framing error behavior,
+      or full UART driver surface yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

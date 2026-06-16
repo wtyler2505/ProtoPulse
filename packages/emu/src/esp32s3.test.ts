@@ -3730,6 +3730,88 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('UART0 light-sleep wake edge count honors configured data bits', () => {
+    // Context7 + ESP-IDF v5.5.4 sources: UART_CONF0 at +0x20 stores
+    // UART_BIT_NUM [3:2], UART_PARITY(_EN), and STOP_BIT_NUM; UART
+    // wake counts positive RX edges across the configured frame.
+    const rtcUart0Trig = 1 << 6;
+    const rtcSlpWakeupInt = 1;
+    const wakeupUart0 = rtcUart0Trig << 15;
+    const sleepEn = 0x80000000;
+    const uart7n1Conf0 = (2 << 2) | (1 << 4); // UART_DATA_7_BITS + UART_STOP_BITS_1
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, wakeupUart0, rtcSlpWakeupInt, sleepEn, rtcUart0Trig, 0xff, uart7n1Conf0, 0x3ff],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        MOVI(4, 1),
+        S32I(4, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(5, 3),
+        WSR(5, SR.VECBASE),
+        MOVI(4, 2),
+        WSR(4, SR.INTENABLE),
+        L32R(4, 5),
+        S32I(4, 2, 0x4c), // clear stale SLP_WAKEUP raw
+        S32I(4, 2, 0x40), // enable SLP_WAKEUP raw
+        L32R(6, 2), // a6 = UART0
+        MOVI(4, 0),
+        S32I(4, 6, 0x38), // UART_SLEEP_CONF.ACTIVE_THRESHOLD = 0 -> 3 edges
+        L32R(4, 9),
+        S32I(4, 6, 0x20), // UART_CONF0 = 7N1
+        L32R(4, 4),
+        S32I(4, 2, 0x3c), // WAKEUP_STATE UART0 wake source
+        RSIL(12, 12), // hold pending RTC_CORE interrupt until WAITI lowers INTLEVEL
+        L32R(4, 6),
+        S32I(4, 2, 0x18), // STATE0.SLEEP_EN
+        WAITI(0),
+        L32I(4, 2, 0x130), // SLP_WAKEUP_CAUSE raw trigger bitmap
+        L32R(5, 7),
+        AND(4, 4, 5),
+        S32I(4, 6, 0), // tx RTC_UART0_TRIG_EN (0x40)
+        L32I(4, 6, 0x1c), // UART0 STATUS: wake bytes are not received
+        L32R(5, 10),
+        AND(4, 4, 5),
+        S32I(4, 6, 0), // tx FIFO count 0
+        L32I(4, 2, 0x48),
+        S32I(4, 6, 0), // tx 0: INT_ST clear after ISR
+        L32I(4, 6, 0x1c), // wait for the post-wake byte
+        AND(4, 4, 5),
+        BEQZ(4, BR(-3)),
+        L32I(4, 6, 0),
+        L32R(5, 8),
+        AND(4, 4, 5),
+        S32I(4, 6, 0), // tx post-wake byte
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 5),
+        S32I(3, 2, 0x4c), // clear SLP_WAKEUP so it does not re-fire
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+    c.uartWrite(0x40);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([]);
+    c.uartWrite(0x40);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([]);
+    c.uartWrite(0x40);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([rtcUart0Trig, 0, 0]);
+    c.uartWrite(0x5a);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([0x5a]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('GPIO high-level wakeup wakes light sleep through RTC_CORE and records the wake cause', () => {
     // Context7: ESP-IDF release/v5.5 sleep docs say GPIO wake is
     // light-sleep-only and uses high/low levels configured by
