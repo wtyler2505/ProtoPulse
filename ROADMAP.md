@@ -1335,6 +1335,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       selected wake-cause bit was recorded, and confirms INT_ST is clear
       after the RTC_CORE ISR. Cut: no WiFi/Bluetooth MAC, PHY,
       coexistence, or host-controller model yet
+- [x] ESP32-S3 core slice 97 — PCNT pulse-counter first cut
+      (landed 2026-06-16): PCNT now has a source-pinned ESP32-S3
+      register block at 0x60017000, GPIO input-matrix pulse/control
+      signals 33..48, signed 16-bit count readback, reset/pause
+      control, edge increment/decrement/hold actions, level-control
+      keep/invert/hold behavior, high/low/threshold/zero status latches,
+      and the PCNT interrupt-matrix source at +0x0A4. Proven by
+      hand-assembled firmware that routes IO4 into PCNT unit 0, counts
+      three rising edges, latches/clears the high-limit interrupt, and
+      separately verifies low control-level inversion makes a rising
+      edge decrement. Cuts: no APB-cycle glitch filter timing, no
+      full quadrature helper path yet, no PCNT power/clock gating effect
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -192,7 +192,13 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * OUT descriptors when DMA access is enabled, and RMT RX channel 3 can
  * write captured symbols into GDMA IN descriptors, continuing across
  * linked descriptors so partial-receive callbacks can be modeled before
- * the final idle EOF. The first RTC sleep/wake path is modeled too:
+ * the final idle EOF. PCNT unit 0..3 now exposes the ESP32-S3 pulse-counter
+ * register block, consumes GPIO input-matrix pulse/control signals 33..48,
+ * applies edge actions plus level-control inversion/hold, returns signed
+ * 16-bit counts, and latches watchpoint/status interrupts through the PCNT
+ * interrupt-matrix map. PCNT cuts: no APB-cycle glitch filtering, no
+ * quadrature helper layer beyond the two raw channels, and no driver power/
+ * clock gating effects yet. The first RTC sleep/wake path is modeled too:
  * SLP_TIMER0/1 arm the RTC main-timer alarm, STATE0.SLEEP_EN enters the
  * sleep state, WAKEUP_STATE's TIMER_TRIG source records
  * SLP_WAKEUP_CAUSE, and the RTC_CORE interrupt-matrix source wakes
@@ -354,6 +360,7 @@ const INTMTX_UART2_MAP = 0x074; // INTERRUPT_CORE0_UART2_INTR_MAP_REG
 const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
 const INTMTX_RTC_CORE_MAP = 0x09c; // INTERRUPT_CORE0_RTC_CORE_INTR_MAP_REG
 const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
+const INTMTX_PCNT_MAP = 0x0a4; // INTERRUPT_CORE0_PCNT_INTR_MAP_REG
 // The six TIMG sources sit contiguously (interrupt_core0_reg.h):
 // TG_T0 +0xC8, TG_T1 +0xCC, TG_WDT +0xD0, TG1_T0 +0xD4, TG1_T1
 // +0xD8, TG1_WDT +0xDC — group-major, [t0, t1, wdt] within a group.
@@ -533,6 +540,54 @@ const RMT_RX_ERR_INT_BASE = 20;
 const RMT_RX_THR_INT_BASE = 24;
 const RMT_RX_SYMBOLS_PER_BLOCK = 48;
 const RMT_TX_SYMBOLS_PER_BLOCK = 48;
+
+// PCNT pulse counter (pcnt_reg.h / pcnt_ll.h). Four units, two
+// channels per unit. GPIO input matrix signals are laid out as
+// SIG_CH0, SIG_CH1, CTRL_CH0, CTRL_CH1 for each unit.
+const PCNT_BASE = 0x60017000;
+const PCNT_UNITS = 4;
+const PCNT_CHANNELS = 2;
+const PCNT_UNIT_CONF_STRIDE = 0x0c;
+const PCNT_U_CONF0 = 0x00;
+const PCNT_U_CONF1 = 0x04;
+const PCNT_U_CONF2 = 0x08;
+const PCNT_U_CNT = 0x30;
+const PCNT_U_CNT_STRIDE = 0x04;
+const PCNT_INT_RAW = 0x40;
+const PCNT_INT_ST = 0x44;
+const PCNT_INT_ENA = 0x48;
+const PCNT_INT_CLR = 0x4c;
+const PCNT_U_STATUS = 0x50;
+const PCNT_U_STATUS_STRIDE = 0x04;
+const PCNT_CTRL = 0x60;
+const PCNT_DATE = 0xfc;
+const PCNT_FILTER_EN = 1 << 10;
+const PCNT_THR_ZERO_EN = 1 << 11;
+const PCNT_THR_H_LIM_EN = 1 << 12;
+const PCNT_THR_L_LIM_EN = 1 << 13;
+const PCNT_THR_THRES0_EN = 1 << 14;
+const PCNT_THR_THRES1_EN = 1 << 15;
+const PCNT_CONF0_RESET = 16 | PCNT_FILTER_EN | PCNT_THR_ZERO_EN | PCNT_THR_H_LIM_EN | PCNT_THR_L_LIM_EN;
+const PCNT_CTRL_RESET = 0x55;
+const PCNT_DATE_RESET = 0x19072601;
+const PCNT_CH0_NEG_MODE_SHIFT = 16;
+const PCNT_CH0_POS_MODE_SHIFT = 18;
+const PCNT_CH0_HCTRL_MODE_SHIFT = 20;
+const PCNT_CH0_LCTRL_MODE_SHIFT = 22;
+const PCNT_CH_FIELD_CHANNEL_SHIFT = 8;
+const PCNT_MODE_MASK = 0x3;
+const PCNT_ACTION_HOLD = 0;
+const PCNT_ACTION_INCREASE = 1;
+const PCNT_ACTION_DECREASE = 2;
+const PCNT_CTRL_KEEP = 0;
+const PCNT_CTRL_INVERT = 1;
+const PCNT_SIG_CH0_IN0_IDX = 33;
+const PCNT_MATRIX_SIGNALS_PER_UNIT = 4;
+const PCNT_STATUS_THRES1_LAT = 1 << 2;
+const PCNT_STATUS_THRES0_LAT = 1 << 3;
+const PCNT_STATUS_L_LIM_LAT = 1 << 4;
+const PCNT_STATUS_H_LIM_LAT = 1 << 5;
+const PCNT_STATUS_ZERO_LAT = 1 << 6;
 
 // Timer groups 0 and 1 (timer_group_reg.h; flow per hal timer_ll.h
 // and the gptimer driver): each group has two 54-bit general-purpose
@@ -1353,6 +1408,16 @@ interface GdmaTxChannel {
   started: boolean;
 }
 
+interface PcntUnit {
+  conf0: number;
+  conf1: number;
+  conf2: number;
+  count: number;
+  status: number;
+  lastPulse: Array<DigitalLevel | null>;
+  lastCtrl: Array<DigitalLevel | null>;
+}
+
 const freshGpTimer = (): GpTimer => ({
   config: 0,
   base: 0,
@@ -1476,6 +1541,16 @@ const freshGdmaTx = (): GdmaTxChannel => ({
   started: false,
 });
 
+const freshPcntUnit = (): PcntUnit => ({
+  conf0: PCNT_CONF0_RESET,
+  conf1: 0,
+  conf2: 0,
+  count: 0,
+  status: 0,
+  lastPulse: Array(PCNT_CHANNELS).fill(null) as Array<DigitalLevel | null>,
+  lastCtrl: Array(PCNT_CHANNELS).fill(null) as Array<DigitalLevel | null>,
+});
+
 const freshEfuseBlocks = (): number[][] => {
   const blocks = Array.from({ length: EFUSE_BLOCK_COUNT }, () => Array(EFUSE_BLOCK_WORDS).fill(0) as number[]);
   const macBlock = blocks[1];
@@ -1543,6 +1618,11 @@ export class Esp32s3Core implements McuCore {
   private rmtIntRaw = 0;
   private rmtIntEna = 0;
   private rmtIntMaps = freshInterruptMapPair();
+  private pcntUnits: PcntUnit[] = Array.from({ length: PCNT_UNITS }, freshPcntUnit);
+  private pcntCtrl = PCNT_CTRL_RESET;
+  private pcntIntRaw = 0;
+  private pcntIntEna = 0;
+  private pcntIntMaps = freshInterruptMapPair();
 
   // UART0/1 interrupt state + the interrupt matrix maps.
   private uartIntEna = 0;
@@ -1878,6 +1958,7 @@ export class Esp32s3Core implements McuCore {
     this.updateRtcExt0Wakeup();
     this.updateRtcExt1Wakeup();
     this.captureRmtRxInputs();
+    this.capturePcntInputs();
     this.recomputeIrq();
   }
 
@@ -2559,6 +2640,11 @@ export class Esp32s3Core implements McuCore {
     this.rmtIntRaw = 0;
     this.rmtIntEna = 0;
     this.rmtIntMaps = freshInterruptMapPair();
+    this.pcntUnits = Array.from({ length: PCNT_UNITS }, freshPcntUnit);
+    this.pcntCtrl = PCNT_CTRL_RESET;
+    this.pcntIntRaw = 0;
+    this.pcntIntEna = 0;
+    this.pcntIntMaps = freshInterruptMapPair();
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
@@ -3543,6 +3629,118 @@ export class Esp32s3Core implements McuCore {
     return level;
   }
 
+  private pcntMatrixLevel(signal: number): DigitalLevel | null {
+    const cfg = this.gpioFuncIn[signal] ?? 0;
+    if ((cfg & GPIO_SIG_IN_SEL) === 0) return null;
+    const gpio = cfg & GPIO_FUNC_IN_SEL_MASK;
+    if (gpio >= PIN_COUNT) return null;
+    let level = this.gpioPadLevel(gpio);
+    if ((cfg & GPIO_FUNC_IN_INV_SEL) !== 0) level = level === 1 ? 0 : 1;
+    return level;
+  }
+
+  private pcntSignalIndex(unit: number, channel: number): number {
+    return PCNT_SIG_CH0_IN0_IDX + unit * PCNT_MATRIX_SIGNALS_PER_UNIT + channel;
+  }
+
+  private pcntCtrlIndex(unit: number, channel: number): number {
+    return PCNT_SIG_CH0_IN0_IDX + unit * PCNT_MATRIX_SIGNALS_PER_UNIT + 2 + channel;
+  }
+
+  private pcntModeShift(channel: number, rising: boolean): number {
+    return (rising ? PCNT_CH0_POS_MODE_SHIFT : PCNT_CH0_NEG_MODE_SHIFT) + channel * PCNT_CH_FIELD_CHANNEL_SHIFT;
+  }
+
+  private pcntCtrlShift(channel: number, level: DigitalLevel): number {
+    return (level === 1 ? PCNT_CH0_HCTRL_MODE_SHIFT : PCNT_CH0_LCTRL_MODE_SHIFT) + channel * PCNT_CH_FIELD_CHANNEL_SHIFT;
+  }
+
+  private pcntSigned16(value: number): number {
+    const raw = value & 0xffff;
+    return raw >= 0x8000 ? raw - 0x10000 : raw;
+  }
+
+  private pcntUnitReset(unit: number): boolean {
+    return (this.pcntCtrl & (1 << (unit * 2))) !== 0;
+  }
+
+  private pcntUnitPaused(unit: number): boolean {
+    return (this.pcntCtrl & (1 << (unit * 2 + 1))) !== 0;
+  }
+
+  private pcntThresholdValue(unit: PcntUnit, index: 0 | 1): number {
+    const raw = index === 0 ? unit.conf1 & 0xffff : (unit.conf1 >>> 16) & 0xffff;
+    return this.pcntSigned16(raw);
+  }
+
+  private pcntLimitValue(unit: PcntUnit, high: boolean): number {
+    const raw = high ? unit.conf2 & 0xffff : (unit.conf2 >>> 16) & 0xffff;
+    return this.pcntSigned16(raw);
+  }
+
+  private pcntApplyEdgeAction(unitIndex: number, channel: number, rising: boolean): void {
+    const unit = this.pcntUnits[unitIndex];
+    if (unit === undefined || this.pcntUnitReset(unitIndex) || this.pcntUnitPaused(unitIndex)) return;
+    let action = (unit.conf0 >>> this.pcntModeShift(channel, rising)) & PCNT_MODE_MASK;
+    if (action === PCNT_ACTION_HOLD || (action !== PCNT_ACTION_INCREASE && action !== PCNT_ACTION_DECREASE)) return;
+
+    const ctrl = unit.lastCtrl[channel];
+    if (ctrl !== null && ctrl !== undefined) {
+      const ctrlAction = (unit.conf0 >>> this.pcntCtrlShift(channel, ctrl)) & PCNT_MODE_MASK;
+      if (ctrlAction === PCNT_CTRL_INVERT) {
+        action = action === PCNT_ACTION_INCREASE ? PCNT_ACTION_DECREASE : PCNT_ACTION_INCREASE;
+      } else if (ctrlAction !== PCNT_CTRL_KEEP) {
+        return;
+      }
+    }
+
+    const oldCount = unit.count;
+    const delta = action === PCNT_ACTION_INCREASE ? 1 : -1;
+    unit.count = this.pcntSigned16(unit.count + delta);
+    if (unit.count !== oldCount) this.pcntCheckEvents(unitIndex, unit, oldCount);
+  }
+
+  private pcntCheckEvents(unitIndex: number, unit: PcntUnit, oldCount: number): void {
+    let latched = 0;
+    if ((unit.conf0 & PCNT_THR_THRES1_EN) !== 0 && unit.count === this.pcntThresholdValue(unit, 1)) latched |= PCNT_STATUS_THRES1_LAT;
+    if ((unit.conf0 & PCNT_THR_THRES0_EN) !== 0 && unit.count === this.pcntThresholdValue(unit, 0)) latched |= PCNT_STATUS_THRES0_LAT;
+    if ((unit.conf0 & PCNT_THR_L_LIM_EN) !== 0 && unit.count === this.pcntLimitValue(unit, false)) latched |= PCNT_STATUS_L_LIM_LAT;
+    if ((unit.conf0 & PCNT_THR_H_LIM_EN) !== 0 && unit.count === this.pcntLimitValue(unit, true)) latched |= PCNT_STATUS_H_LIM_LAT;
+    if ((unit.conf0 & PCNT_THR_ZERO_EN) !== 0 && unit.count === 0) latched |= PCNT_STATUS_ZERO_LAT;
+    if (unit.count === 0 && oldCount > 0) unit.status = (unit.status & ~PCNT_MODE_MASK) | 0;
+    else if (unit.count === 0 && oldCount < 0) unit.status = (unit.status & ~PCNT_MODE_MASK) | 1;
+    else if (oldCount < 0 && unit.count > 0) unit.status = (unit.status & ~PCNT_MODE_MASK) | 2;
+    else if (oldCount > 0 && unit.count < 0) unit.status = (unit.status & ~PCNT_MODE_MASK) | 3;
+    if (latched !== 0) {
+      unit.status |= latched;
+      this.pcntIntRaw |= 1 << unitIndex;
+      this.recomputeIrq();
+    }
+  }
+
+  private capturePcntInputs(countEdges = true): void {
+    for (let unitIndex = 0; unitIndex < PCNT_UNITS; unitIndex++) {
+      const unit = this.pcntUnits[unitIndex];
+      if (unit === undefined) continue;
+      for (let channel = 0; channel < PCNT_CHANNELS; channel++) {
+        const pulse = this.pcntMatrixLevel(this.pcntSignalIndex(unitIndex, channel));
+        const ctrl = this.pcntMatrixLevel(this.pcntCtrlIndex(unitIndex, channel));
+        const last = unit.lastPulse[channel];
+        unit.lastCtrl[channel] = ctrl;
+        if (pulse === null) {
+          unit.lastPulse[channel] = null;
+          continue;
+        }
+        if (!countEdges || last === null) {
+          unit.lastPulse[channel] = pulse;
+          continue;
+        }
+        if (pulse !== last) this.pcntApplyEdgeAction(unitIndex, channel, pulse === 1);
+        unit.lastPulse[channel] = pulse;
+      }
+    }
+  }
+
   private rmtRxCarrierEnabled(ch: RmtRxChannel): boolean {
     return (ch.conf0 & RMT_RX_CARRIER_EN) !== 0;
   }
@@ -3990,6 +4188,7 @@ export class Esp32s3Core implements McuCore {
     const uart2Pending = (this.uart2IntRaw() & this.uart2IntEna) !== 0;
     const ledcPending = (this.ledcIntRaw & this.ledcIntEna) !== 0;
     const rmtPending = (this.rmtIntRaw & this.rmtIntEna) !== 0;
+    const pcntPending = (this.pcntIntRaw & this.pcntIntEna) !== 0;
     const apbAdcPending = (this.apbSaradcIntRaw & this.apbSaradcIntEna) !== 0;
     const rtcPending = (this.rtcIntRaw & this.rtcIntEna) !== 0;
     const masks: InterruptMapPair = [0, 0];
@@ -4003,6 +4202,7 @@ export class Esp32s3Core implements McuCore {
     if (uart2Pending) raise(this.uart2IntMaps);
     if (ledcPending) raise(this.ledcIntMaps);
     if (rmtPending) raise(this.rmtIntMaps);
+    if (pcntPending) raise(this.pcntIntMaps);
     if (apbAdcPending) raise(this.apbSaradcIntMaps);
     if (rtcPending) raise(this.rtcCoreIntMaps);
     for (let i = 0; i < SYSTEM_CPU_INTR_FROM_CPU_COUNT; i++) {
@@ -4049,6 +4249,7 @@ export class Esp32s3Core implements McuCore {
       }
       this.driven[gpio] = level;
     }
+    this.capturePcntInputs();
   }
 
   // ── ROM function traps (slice 10) ──
@@ -4353,6 +4554,7 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_LEDC_MAP) return this.ledcIntMaps[core];
       if (sourceOff === INTMTX_RTC_CORE_MAP) return this.rtcCoreIntMaps[core];
       if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
+      if (sourceOff === INTMTX_PCNT_MAP) return this.pcntIntMaps[core];
       if (sourceOff >= INTMTX_TG_MAPS && sourceOff < INTMTX_TG_MAPS + 24 && (sourceOff & 3) === 0) {
         const idx = (sourceOff - INTMTX_TG_MAPS) >> 2; // group-major [t0,t1,wdt]
         return this.timg[idx < 3 ? 0 : 1]?.maps[core][idx % 3] ?? INTMTX_DEFAULT_MAP;
@@ -4419,6 +4621,32 @@ export class Esp32s3Core implements McuCore {
       if (off === RMT_SYS_CONF) return this.rmtSysConf >>> 0;
       if (off === RMT_TX_SIM || off === RMT_REF_CNT_RST) return 0;
       if (off === RMT_DATE) return RMT_DATE_RESET;
+      return 0;
+    }
+    if (addr >= PCNT_BASE && addr < PCNT_BASE + 0x1000) {
+      const off = addr - PCNT_BASE;
+      if (off < PCNT_U_CNT && off % PCNT_UNIT_CONF_STRIDE < 0x0c && (off & 3) === 0) {
+        const unit = this.pcntUnits[Math.floor(off / PCNT_UNIT_CONF_STRIDE)];
+        const toff = off % PCNT_UNIT_CONF_STRIDE;
+        if (unit === undefined) return 0;
+        if (toff === PCNT_U_CONF0) return unit.conf0 >>> 0;
+        if (toff === PCNT_U_CONF1) return unit.conf1 >>> 0;
+        if (toff === PCNT_U_CONF2) return unit.conf2 >>> 0;
+        return 0;
+      }
+      if (off >= PCNT_U_CNT && off < PCNT_U_CNT + PCNT_UNITS * PCNT_U_CNT_STRIDE && (off & 3) === 0) {
+        const unit = this.pcntUnits[(off - PCNT_U_CNT) >> 2];
+        return unit === undefined ? 0 : unit.count & 0xffff;
+      }
+      if (off === PCNT_INT_RAW) return this.pcntIntRaw >>> 0;
+      if (off === PCNT_INT_ST) return (this.pcntIntRaw & this.pcntIntEna) >>> 0;
+      if (off === PCNT_INT_ENA) return this.pcntIntEna >>> 0;
+      if (off === PCNT_INT_CLR) return 0;
+      if (off >= PCNT_U_STATUS && off < PCNT_U_STATUS + PCNT_UNITS * PCNT_U_STATUS_STRIDE && (off & 3) === 0) {
+        return this.pcntUnits[(off - PCNT_U_STATUS) >> 2]?.status ?? 0;
+      }
+      if (off === PCNT_CTRL) return this.pcntCtrl >>> 0;
+      if (off === PCNT_DATE) return PCNT_DATE_RESET;
       return 0;
     }
     if (addr >= LEDC_BASE && addr < LEDC_BASE + 0x1000) {
@@ -4773,6 +5001,7 @@ export class Esp32s3Core implements McuCore {
       } else if (off >= GPIO_FUNC0_IN_SEL_CFG && off < GPIO_FUNC_IN_SEL_LAST && (off & 3) === 0) {
         this.gpioFuncIn[(off - GPIO_FUNC0_IN_SEL_CFG) >> 2] = v & 0xff;
         this.captureRmtRxInputs();
+        this.capturePcntInputs(false);
       } else if (off >= GPIO_FUNC0_OUT_SEL_CFG && off < GPIO_FUNC0_OUT_SEL_CFG + 4 * PIN_COUNT && (off & 3) === 0) {
         this.gpioFuncOut[(off - GPIO_FUNC0_OUT_SEL_CFG) >> 2] = (v & GPIO_FUNC_OUT_CFG_MASK) | 0;
       }
@@ -4859,6 +5088,7 @@ export class Esp32s3Core implements McuCore {
       else if (sourceOff === INTMTX_LEDC_MAP) this.ledcIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;
+      else if (sourceOff === INTMTX_PCNT_MAP) this.pcntIntMaps[core] = value & 0x1f;
       else if (sourceOff >= INTMTX_TG_MAPS && sourceOff < INTMTX_TG_MAPS + 24 && (sourceOff & 3) === 0) {
         const idx = (sourceOff - INTMTX_TG_MAPS) >> 2;
         const grp = this.timg[idx < 3 ? 0 : 1];
@@ -4953,6 +5183,43 @@ export class Esp32s3Core implements McuCore {
         }
       }
       this.syncPins();
+      return;
+    }
+    if (addr >= PCNT_BASE && addr < PCNT_BASE + 0x1000) {
+      const off = addr - PCNT_BASE;
+      const v = value >>> 0;
+      if (off < PCNT_U_CNT && off % PCNT_UNIT_CONF_STRIDE < 0x0c && (off & 3) === 0) {
+        const unit = this.pcntUnits[Math.floor(off / PCNT_UNIT_CONF_STRIDE)];
+        const toff = off % PCNT_UNIT_CONF_STRIDE;
+        if (unit !== undefined) {
+          if (toff === PCNT_U_CONF0) unit.conf0 = v;
+          else if (toff === PCNT_U_CONF1) unit.conf1 = v;
+          else if (toff === PCNT_U_CONF2) unit.conf2 = v;
+          this.capturePcntInputs(false);
+        }
+      } else if (off === PCNT_INT_ENA) {
+        this.pcntIntEna = v & ((1 << PCNT_UNITS) - 1);
+        this.recomputeIrq();
+      } else if (off === PCNT_INT_CLR) {
+        this.pcntIntRaw &= ~v;
+        for (let i = 0; i < PCNT_UNITS; i++) {
+          if ((v & (1 << i)) !== 0) {
+            const unit = this.pcntUnits[i];
+            if (unit !== undefined) unit.status &= PCNT_MODE_MASK;
+          }
+        }
+        this.recomputeIrq();
+      } else if (off === PCNT_CTRL) {
+        this.pcntCtrl = v;
+        for (let i = 0; i < PCNT_UNITS; i++) {
+          if ((v & (1 << (i * 2))) !== 0) {
+            const unit = this.pcntUnits[i];
+            if (unit !== undefined) unit.count = 0;
+          }
+        }
+        this.capturePcntInputs(false);
+        this.recomputeIrq();
+      }
       return;
     }
     if (addr >= LEDC_BASE && addr < LEDC_BASE + 0x1000) {
@@ -5618,6 +5885,7 @@ export {
   IRAM_BASE as ESP32S3_IRAM_BASE,
   DRAM_BASE as ESP32S3_DRAM_BASE,
   GPIO_BASE as ESP32S3_GPIO_BASE,
+  PCNT_BASE as ESP32S3_PCNT_BASE,
   UART0_BASE as ESP32S3_UART0_BASE,
   UART1_BASE as ESP32S3_UART1_BASE,
   UART2_BASE as ESP32S3_UART2_BASE,

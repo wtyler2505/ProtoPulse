@@ -5,6 +5,7 @@ import {
   ESP32S3_DRAM_BASE,
   ESP32S3_GPIO_BASE,
   ESP32S3_IRAM_BASE,
+  ESP32S3_PCNT_BASE,
   ESP32S3_UART0_BASE,
   ESP32S3_UART1_BASE,
   ESP32S3_UART2_BASE,
@@ -79,8 +80,11 @@ const UART1 = ESP32S3_UART1_BASE;
 const UART2 = ESP32S3_UART2_BASE;
 const LEDC = 0x60019000;
 const RMT = 0x60016000;
+const PCNT = ESP32S3_PCNT_BASE;
 const GDMA = 0x6003f000;
 const GPIO_FUNC5_OUT_SEL_CFG = GPIO + 0x568;
+const GPIO_FUNC33_IN_SEL_CFG = GPIO + 0x154 + 33 * 4;
+const GPIO_FUNC35_IN_SEL_CFG = GPIO + 0x154 + 35 * 4;
 const GPIO_FUNC81_IN_SEL_CFG = GPIO + 0x154 + 81 * 4;
 const GPIO_FUNC84_IN_SEL_CFG = GPIO + 0x154 + 84 * 4;
 const GPIO_SIG_IN_SEL = 1 << 7;
@@ -129,6 +133,11 @@ const RMT_CH3_TX_END = 1 << 3;
 const RMT_CH4_STATUS = 0x60;
 const RMT_CH4_RX_END = 1 << 16;
 const RMT_CH4_RX_THR_EVENT = 1 << 24;
+const PCNT_CH0_POS_INC = 1 << 18;
+const PCNT_CH0_LCTRL_INVERT = 1 << 22;
+const PCNT_THR_H_LIM_EN = 1 << 12;
+const PCNT_UNIT0_INT = 1;
+const PCNT_H_LIM_STATUS = 1 << 5;
 const GDMA_OUT_CH0_INT_RAW = 0x68;
 const GDMA_OUT_CH0_INT_CLR = 0x74;
 const GDMA_OUT_CH0_LINK = 0x80;
@@ -876,6 +885,105 @@ describe('Esp32s3Core', () => {
     c.step(300);
 
     expect([...c.drainUart()]).toEqual([1, 1, 4, 1, 4, 0]);
+  });
+
+  it('counts GPIO-matrix PCNT pulses and latches high-limit interrupts', () => {
+    const conf0 = PCNT_CH0_POS_INC | PCNT_THR_H_LIM_EN;
+    const highLimit3 = 3;
+    const pulseRoute = 4 | GPIO_SIG_IN_SEL; // IO4 -> PCNT_SIG_CH0_IN0
+    const literals = [PCNT, GPIO_FUNC33_IN_SEL_CFG, UART, conf0, highLimit3, pulseRoute, 0, PCNT_UNIT0_INT, 0xff];
+    const code: XtInstr[] = [
+      L32R(2, 0), // PCNT
+      L32R(3, 3),
+      S32I(3, 2, 0x00), // U0_CONF0: ch0 rising increments, high-limit event enabled
+      L32R(3, 4),
+      S32I(3, 2, 0x08), // U0_CONF2: high limit = 3
+      L32R(4, 1),
+      L32R(5, 5),
+      S32I(5, 4, 0x00), // GPIO input matrix: PCNT_SIG_CH0_IN0 <- IO4
+      L32R(3, 7),
+      S32I(3, 2, 0x48), // INT_ENA: unit 0 threshold/watch event
+      L32R(3, 6),
+      S32I(3, 2, 0x60), // CTRL: release unit reset bits
+    ];
+    const poll = code.length;
+    code.push(
+      L32I(8, 2, 0x44), // INT_ST
+      L32R(9, 7),
+      AND(8, 8, 9),
+      BEQZ_TO(8, poll),
+      L32I(6, 2, 0x30), // U0_CNT
+      L32I(7, 2, 0x50), // U0_STATUS
+      L32R(12, 2), // UART
+      L32R(10, 8), // 0xff
+      AND(11, 6, 10),
+      S32I(11, 12, 0x00), // count low byte
+      AND(11, 8, 10),
+      S32I(11, 12, 0x00), // masked interrupt bit
+      AND(11, 7, 10),
+      S32I(11, 12, 0x00), // high-limit status latch
+      L32R(9, 7),
+      S32I(9, 2, 0x4c), // INT_CLR
+      L32I(8, 2, 0x44),
+      AND(11, 8, 10),
+      S32I(11, 12, 0x00), // interrupt clears
+      J(BR(-1)),
+    );
+
+    const c = core(assembleXtensa(ESP32S3_IRAM_BASE, literals, code));
+    c.setPin('IO4', 0);
+    c.step(120);
+    for (let i = 0; i < 3; i++) {
+      c.setPin('IO4', 1);
+      c.step(1);
+      c.setPin('IO4', 0);
+      c.step(1);
+    }
+    c.step(300);
+
+    expect([...c.drainUart()]).toEqual([3, PCNT_UNIT0_INT, PCNT_H_LIM_STATUS, 0]);
+  });
+
+  it('honors PCNT level-control inversion on pulse edges', () => {
+    const conf0 = PCNT_CH0_POS_INC | PCNT_CH0_LCTRL_INVERT;
+    const pulseRoute = 4 | GPIO_SIG_IN_SEL; // IO4 -> PCNT_SIG_CH0_IN0
+    const ctrlRoute = 5 | GPIO_SIG_IN_SEL; // IO5 -> PCNT_CTRL_CH0_IN0
+    const literals = [PCNT, GPIO_FUNC33_IN_SEL_CFG, GPIO_FUNC35_IN_SEL_CFG, UART, conf0, pulseRoute, ctrlRoute, 0, 0xff];
+    const code: XtInstr[] = [
+      L32R(2, 0), // PCNT
+      L32R(3, 4),
+      S32I(3, 2, 0x00), // U0_CONF0: rising increments, low control inverts
+      L32R(4, 1),
+      L32R(5, 5),
+      S32I(5, 4, 0x00), // pulse route
+      L32R(4, 2),
+      L32R(5, 6),
+      S32I(5, 4, 0x00), // control route
+      L32R(3, 7),
+      S32I(3, 2, 0x60), // release unit reset bits
+    ];
+    const poll = code.length;
+    code.push(
+      L32I(6, 2, 0x30), // U0_CNT
+      BEQZ_TO(6, poll),
+      L32R(12, 3), // UART
+      L32R(10, 8), // 0xff
+      AND(11, 6, 10),
+      S32I(11, 12, 0x00), // low byte of signed -1
+      SRLI(11, 6, 8),
+      AND(11, 11, 10),
+      S32I(11, 12, 0x00), // high byte of signed -1
+      J(BR(-1)),
+    );
+
+    const c = core(assembleXtensa(ESP32S3_IRAM_BASE, literals, code));
+    c.setPin('IO4', 0);
+    c.setPin('IO5', 0);
+    c.step(120);
+    c.setPin('IO4', 1);
+    c.step(160);
+
+    expect([...c.drainUart()]).toEqual([0xff, 0xff]);
   });
 
   it('wraps RMT RX direct memory and reports APB read/write offsets', () => {

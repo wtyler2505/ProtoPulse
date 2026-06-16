@@ -2,6 +2,27 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 97: PCNT pulse-counter first cut
+
+### Added
+- **PCNT peripheral surface** (@protopulse/emu):
+  ESP32-S3 PCNT now exposes the source-pinned register block, GPIO
+  input-matrix pulse/control signals, signed 16-bit count readback,
+  reset/pause control, edge actions, level-control inversion/hold, and
+  watchpoint/status interrupts through the PCNT interrupt-matrix source.
+
+### Verified
+- Added hand-assembled Xtensa firmware that routes IO4 into PCNT unit 0,
+  counts three rising edges, observes and clears a high-limit interrupt,
+  then verifies low control-level inversion makes a rising edge decrement.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 155 ESP32-S3 tests.
+
+### Honest cuts
+- No APB-cycle glitch filter timing yet.
+- No full quadrature helper path yet.
+- PCNT clock/power gating is stored for register shape only.
+
 ## 2026-06-16 — ESP32-S3 slice 96: WiFi/BT light-sleep wake sources
 
 ### Added
