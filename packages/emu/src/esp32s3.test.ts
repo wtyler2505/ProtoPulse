@@ -6303,6 +6303,7 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
   const RWDT_EN_STG0_SYS = (0x80000000 | (3 << 28)) >>> 0;
   // RWDT CONFIG0: EN (31) | STG0 = interrupt (1 << 28).
   const RWDT_EN_STG0_INT = (0x80000000 | (1 << 28)) >>> 0;
+  const RWDT_PAUSE_IN_SLP = 1 << 9;
 
   /** Same shape as the slice-11 helper: tx RESET_CAUSE_PROCPU, then on
    *  power-on (1) run `trigger` and fall into a self-loop halt; a
@@ -6500,6 +6501,75 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
     c.step(20_000); // boot 1: tx 1, RWDT bites
     c.step(500); // boot 2: tx the cause
     expect([...c.drainUart()]).toEqual([9]);
+  });
+
+  it('RWDT pause-in-sleep freezes the timeout until RTC timer wake', () => {
+    // Source-checked against ESP-IDF v5.5.4: RTC_CNTL_WDTCONFIG0
+    // has WDT_PAUSE_IN_SLP at bit 9 with reset default 1. The test
+    // arms a two-slow-tick reset timeout, sleeps until tick 10, and
+    // proves the reset did not happen while RTC sleep was active.
+    const rtcTimerTrig = 1 << 3;
+    const wakeupTimer = rtcTimerTrig << 15;
+    const rtcIntMask = (1 << 10) | 1; // MAIN_TIMER_INT | SLP_WAKEUP_INT
+    const sleepEn = 0x80000000;
+    const mainTimerAlarmEn = 1 << 16;
+    const rwdtPausedReset = (RWDT_EN_STG0_SYS | RWDT_PAUSE_IN_SLP) >>> 0;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, WDT_KEY, rwdtPausedReset, INTMTX, ESP32S3_IRAM_BASE, wakeupTimer, rtcIntMask, sleepEn, mainTimerAlarmEn, UART, 10],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1),
+        S32I(3, 2, 0xb0), // unlock RWDT
+        MOVI(4, 2),
+        S32I(4, 2, 0x9c), // WDTCONFIG1: stage0 = 2 RTC-slow ticks
+        L32R(5, 3),
+        MOVI(4, 1),
+        S32I(4, 5, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(6, 4),
+        WSR(6, SR.VECBASE),
+        MOVI(4, 2),
+        WSR(4, SR.INTENABLE),
+        RSIL(8, 0),
+        L32R(4, 6),
+        S32I(4, 2, 0x4c), // clear stale MAIN_TIMER/SLP_WAKEUP raw bits
+        S32I(4, 2, 0x40), // enable both RTC raw sources
+        L32R(4, 5),
+        S32I(4, 2, 0x3c), // WAKEUP_STATE timer wake source
+        L32R(4, 2),
+        S32I(4, 2, 0x98), // arm RWDT with pause-in-sleep
+        L32R(4, 10),
+        S32I(4, 2, 0x04), // target RTC slow-clock tick 10
+        L32R(4, 8),
+        S32I(4, 2, 0x08), // arm RTC main timer alarm
+        L32R(4, 7),
+        S32I(4, 2, 0x18), // STATE0.SLEEP_EN
+        WAITI(0),
+        MOVI(4, 0),
+        S32I(4, 2, 0x98), // disarm before RWDT resumes long enough to bite
+        L32I(4, 2, 0x130), // SLP_WAKEUP_CAUSE raw trigger bitmap
+        L32R(5, 9),
+        S32I(4, 5, 0), // tx RTC_TIMER_TRIG_EN
+        L32I(4, 2, 0x38), // RESET_STATE
+        MOVI(6, 0x3f),
+        AND(4, 4, 6),
+        S32I(4, 5, 0), // tx POWERON reset cause, not RTCWDT
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 6),
+        S32I(3, 2, 0x4c), // clear MAIN_TIMER/SLP_WAKEUP so it does not re-fire
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(25_000);
+    expect([...c.drainUart()]).toEqual([rtcTimerTrig, 1]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
   });
 
   it('an RWDT stage-0 interrupt wakes WAITI through RTC_CORE without rebooting', () => {

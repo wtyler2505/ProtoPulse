@@ -148,8 +148,9 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * quiesced, so raw test images aren't killed before they can
  * configure anything — IDF startup's disable writes still land on
  * real modeled registers); the RWDT INT stage action now latches
- * RTC_WDT_INT via the RTC_CORE interrupt source. SUPER_WDT, sleep
- * pause, and XTAL clock sources are out of scope.
+ * RTC_WDT_INT via the RTC_CORE interrupt source, and RWDT
+ * PAUSE_IN_SLP freezes elapsed timeout while modeled RTC sleep is
+ * active. SUPER_WDT timed countdown and XTAL clock sources are out of scope.
  * The APB_SARADC digital-controller register substrate is
  * modeled (slice 15): CTRL/CTRL2, packed pattern tables, DATA_STATUS,
  * DMA_CONF storage, ADC1/ADC2 done interrupts, and the two ESP-IDF
@@ -596,7 +597,8 @@ const WDT_STAGE_RESET_RTC = 4; // RWDT only
 // WDTFEED +0xAC (bit 31), WDTWPROTECT +0xB0 (same 0x50D83AA1 key —
 // hal/esp32s3/include/hal/rwdt_ll.h). Reset value keeps the header's
 // FLASHBOOT_MOD_EN(12)/PAUSE_IN_SLP(9)/reset-length defaults, all
-// inert here.
+// inert except PAUSE_IN_SLP, which freezes the modeled RWDT while RTC
+// sleep is active.
 const RTC_WDTCONFIG0 = 0x98;
 const RTC_WDTCONFIG1 = 0x9c; // ..+0xA8: stage0..3
 const RTC_WDTFEED = 0xac;
@@ -611,6 +613,7 @@ const RTC_PG_CTRL = 0x144;
 const RTC_FIB_SEL = 0x148;
 const RTC_BROWN_OUT = 0xe8;
 const RTC_WDT_FEED_BIT = 1 << 31; // RTC_CNTL_RTC_WDT_FEED
+const RTC_WDT_PAUSE_IN_SLP = 1 << 9;
 const RTC_SWD_WKEY = 0x8f1d312a;
 const RTC_SWD_DISABLE = 1 << 30;
 const RTC_SWD_FEED = 1 << 29;
@@ -1554,6 +1557,7 @@ export class Esp32s3Core implements McuCore {
   // The RTC watchdog (slice 13) — config1 unused (no prescaler; it
   // counts the modeled ~136 kHz RC_SLOW clock directly).
   private rwdt: Watchdog = freshWatchdog(RWDT_CONFIG0_RESET, 0);
+  private rwdtPauseStartCycle: number | null = null;
 
   // RTC/eFuse/SYSTEM state (slice 11). The reset causes survive
   // reset() — they describe WHY the last reset happened; loadFirmware
@@ -2544,6 +2548,7 @@ export class Esp32s3Core implements McuCore {
     this.uart2IntMaps = freshInterruptMapPair();
     this.timg = [freshTimgGroup(), freshTimgGroup()];
     this.rwdt = freshWatchdog(RWDT_CONFIG0_RESET, 0);
+    this.rwdtPauseStartCycle = null;
     // resetCause/appResetCause are deliberately NOT cleared — they
     // report why this reset happened (software_reset / SW_*_RST set
     // them before calling).
@@ -2765,6 +2770,15 @@ export class Esp32s3Core implements McuCore {
    *  RTC_CNTL_WDT_INT and route through RTC_CORE when enabled. */
   private checkRwdt(): void {
     const w = this.rwdt;
+    const paused = (w.config0 & RTC_WDT_PAUSE_IN_SLP) !== 0 && (this.rtcState0 & RTC_SLEEP_EN) !== 0;
+    if (paused) {
+      if (this.rwdtPauseStartCycle === null) this.rwdtPauseStartCycle = this.cpu.cycles;
+      return;
+    }
+    if (this.rwdtPauseStartCycle !== null) {
+      w.epoch += this.cpu.cycles - this.rwdtPauseStartCycle;
+      this.rwdtPauseStartCycle = null;
+    }
     const ticks = Math.floor(((this.cpu.cycles - w.epoch) * RTC_SLOW_HZ) / CLOCK_HZ);
     this.runWdtStages(w, ticks, (s) => {
       const action = (w.config0 >>> (28 - 3 * s)) & 7;
@@ -5236,11 +5250,13 @@ export class Esp32s3Core implements McuCore {
             this.rwdt.config0 = value >>> 0;
             this.rwdt.epoch = this.cpu.cycles;
             this.rwdt.handled = 0;
+            this.rwdtPauseStartCycle = null;
           } else if (off === RTC_WDTFEED) {
             // rwdt_ll_feed sets bit 31 (RTC_CNTL_RTC_WDT_FEED).
             if ((value & RTC_WDT_FEED_BIT) !== 0) {
               this.rwdt.epoch = this.cpu.cycles;
               this.rwdt.handled = 0;
+              this.rwdtPauseStartCycle = null;
             }
           } else {
             this.rwdt.timeouts[(off - RTC_WDTCONFIG1) >> 2] = value >>> 0;

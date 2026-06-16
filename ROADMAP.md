@@ -1267,6 +1267,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       receives a host power-glitch trip, reboots, and reports ROM cause
       POWER_GLITCH_RESET (23). Cuts: no analog glitch waveform/timing
       model and no POWER_GLITCH_DSENSE timing behavior yet
+- [x] ESP32-S3 core slice 90 — RWDT pause-in-sleep behavior (landed
+      2026-06-16): RTC_CNTL_WDTCONFIG0.PAUSE_IN_SLP now freezes the
+      modeled RTC watchdog timeout while RTC sleep is active, preserving
+      pre-sleep elapsed time and resuming after the RTC wake source
+      clears sleep. Proven by hand-assembled firmware that arms a
+      two-RTC-slow-tick RWDT reset, sleeps until RTC timer tick 10,
+      wakes through RTC_CORE, disarms RWDT, and reports the wake cause
+      plus unchanged POWERON reset cause. Cuts: no RWDT XTAL clock
+      source and no eFuse timeout multiplier model yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
