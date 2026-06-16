@@ -209,9 +209,10 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * triggering byte is dropped like ESP-IDF documents for light sleep.
  * RWDT stage-0 INT,
  * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips,
- * power-glitch detector trips, XTAL32K-dead watchdog trips, and
- * super-watchdog trips also latch their RTC_CNTL INT_* bits and route
- * through RTC_CORE. The power-glitch detector can take its enable bit
+ * power-glitch detector trips, clock-glitch detector trips,
+ * XTAL32K-dead watchdog trips, and super-watchdog trips also latch
+ * their RTC_CNTL INT_* bits and route through RTC_CORE. The power-glitch
+ * detector can take its enable bit
  * either from PG_CTRL or the documented BLOCK0 eFuse bit when
  * PG_CTRL selects eFuse control. XTAL32K-dead can wake light-sleep via the
  * RTC_XTAL32K_DEAD_TRIG_EN wake source too.
@@ -252,10 +253,10 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
  * instruction execution, and the remaining RTC interrupt producers
- * beyond RWDT/COCPU/brownout/power-glitch/XTAL32K-dead/SUPER_WDT/
- * SARADC/TSENS/touch done-scan-active/wake/timeout/proximity/ULP wake/
- * COCPU wake/COCPU trap paths — so full IDF/FreeRTOS firmware does NOT
- * run yet.
+ * beyond RWDT/COCPU/brownout/power-glitch/clock-glitch/XTAL32K-dead/
+ * SUPER_WDT/SARADC/TSENS/touch done-scan-active/wake/timeout/proximity/
+ * ULP wake/COCPU wake/COCPU trap paths — so full IDF/FreeRTOS firmware
+ * does NOT run yet.
  * Loading Intel-HEX refuses with a message.
  */
 
@@ -2967,10 +2968,13 @@ export class Esp32s3Core implements McuCore {
   }
 
   private updateClockGlitchDetector(): void {
-    const softwareResetEnabled =
-      this.clockGlitchDetected &&
-      (this.rtcAnaConf & RTC_GLITCH_RST_EN) !== 0 &&
-      (this.rtcFibSel & RTC_FIB_GLITCH_RST) === 0;
+    const enabled = this.clockGlitchDetected && (this.rtcAnaConf & RTC_GLITCH_RST_EN) !== 0;
+    if (!enabled) {
+      this.recomputeIrq();
+      return;
+    }
+    this.rtcIntRaw |= RTC_GLITCH_DET_INT;
+    const softwareResetEnabled = (this.rtcFibSel & RTC_FIB_GLITCH_RST) === 0;
     if (softwareResetEnabled) {
       this.resetCause = RESET_CAUSE_GLITCH_RTC;
       this.appResetCause = RESET_CAUSE_GLITCH_RTC;

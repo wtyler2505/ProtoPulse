@@ -1284,6 +1284,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       default x2 path and a burned WDT_DELAY_SEL=2 x8 path, both using a
       raw WDTCONFIG1 value of 1 before resetting with RTCWDT_SYS_RESET.
       Cuts: no RWDT XTAL clock source yet
+- [x] ESP32-S3 core slice 92 — clock-glitch interrupt producer
+      (landed 2026-06-16): a host-injected clock-glitch trip now latches
+      RTC_CNTL_GLITCH_DET_INT (bit 19) when ANA_CONF.GLITCH_RST_EN is
+      armed, flowing through RTC_CORE even when FIB_SEL leaves the reset
+      path hardware-owned. Proven by hand-assembled firmware that enables
+      GLITCH_DET, parks in WAITI, receives the injected clock glitch,
+      clears GLITCH_DET in the ISR, and reports clear INT_ST afterward.
+      Cuts: still no analog glitch waveform/timing model or eFuse strap
+      routing model
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

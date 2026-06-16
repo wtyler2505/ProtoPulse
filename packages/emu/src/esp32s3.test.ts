@@ -4554,6 +4554,62 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('clock-glitch detector trips WAITI through the RTC core interrupt matrix', () => {
+    // Source-checked against ESP-IDF v5.5.4: ANA_CONF has
+    // GLITCH_RST_EN bit 20, RTC_CNTL_GLITCH_DET_INT_* is bit 19, and
+    // RTC_CORE routes through interrupt_core0_reg.h +0x09c.
+    const RTC_GLITCH_DET_INT = 1 << 19;
+    const RTC_GLITCH_RST_EN = 1 << 20;
+    const RTC_ANA_CONF_RESET = (1 << 22) | (1 << 18);
+    const anaConfGlitchDetect = (RTC_ANA_CONF_RESET | RTC_GLITCH_RST_EN) >>> 0;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, RTC_GLITCH_DET_INT, anaConfGlitchDetect],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        MOVI(4, 1),
+        S32I(4, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(5, 3),
+        WSR(5, SR.VECBASE),
+        MOVI(4, 2),
+        WSR(4, SR.INTENABLE),
+        L32R(4, 5),
+        S32I(4, 2, 0x34), // ANA_CONF.GLITCH_RST_EN, without software reset routing
+        L32R(4, 4),
+        S32I(4, 2, 0x4c), // clear stale GLITCH_DET raw
+        S32I(4, 2, 0x40), // enable GLITCH_DET raw
+        RSIL(8, 0),
+        WAITI(0),
+        L32I(4, 2, 0x34),
+        SRAI(4, 4, 20),
+        MOVI(6, 1),
+        AND(4, 4, 6),
+        L32R(5, 2),
+        S32I(4, 5, 0), // tx 1: ANA_CONF.GLITCH_RST_EN round-tripped
+        L32I(4, 2, 0x48),
+        S32I(4, 5, 0), // tx 0: INT_ST clear after ISR
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 4),
+        S32I(3, 2, 0x4c), // clear GLITCH_DET raw
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+    c.setClockGlitchDetected(true);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('power-glitch reset follows FIB_SEL software control and reports the ROM power-glitch cause', () => {
     // Source-checked against ESP-IDF release/v5.5: PG_CTRL has
     // POWER_GLITCH_EN, FIB_SEL bit 0 is FIB_GLITCH_RST, and
