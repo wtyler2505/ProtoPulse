@@ -1403,6 +1403,22 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       virtual CAN bus object, bit timing/arbitration/ACK/error
       confinement, acceptance-filter enforcement, driver alert queue,
       or wire-level GPIO waveform yet
+- [x] ESP32-S3 core slice 102 — TWAI host injection + acceptance
+      filters (landed 2026-06-16): the ESP32-S3 core now exposes typed
+      TWAI host bench helpers (`injectTwaiFrame`, `drainTwaiTx`) so
+      tests and future bridge/probe paths can inject frames from an
+      outside bus node and inspect firmware transmissions. The
+      register-level ACR/AMR acceptance-filter view is now distinct
+      from the TX/RX buffer while reset mode is active, defaults to
+      accept-all, and gates incoming standard frames before they enter
+      the RX FIFO. Proven by hand-assembled firmware that configures an
+      ID `0x123` filter, rejects a mismatched host-injected frame,
+      accepts the matching frame, reads the RX frame bytes/RI interrupt
+      through TWAI registers, and separately proves `TR` transmissions
+      drain to the host bench. Cuts: no shared multi-node virtual CAN
+      bus, arbitration, ACK/retry timing, error confinement, driver
+      alert queue, wire-level GPIO waveform, or exact dual-filter mode
+      yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -10,6 +10,14 @@ export interface Esp32s3AdcContinuousOverflowEvent {
   policy: 'drop-new' | 'flush-old';
 }
 
+export interface Esp32s3TwaiFrame {
+  id: number;
+  data?: readonly number[];
+  dlc?: number;
+  extended?: boolean;
+  rtr?: boolean;
+}
+
 /**
  * ESP32-S3 v0 — a from-scratch Xtensa LX7 core, the first slice of the
  * "no off-the-shelf JS emulator" epic. Every address and encoding is
@@ -599,6 +607,12 @@ const TWAI_INTR_TX = 1 << 1;
 const TWAI_INTR_DATA_OVERRUN = 1 << 3;
 const TWAI_INTR_CLEARABLE = 0xef;
 const TWAI_CLOCK_DIVIDER_MASK = 0x1ff;
+const TWAI_FRAME_DLC_MASK = 0x0f;
+const TWAI_FRAME_RTR = 1 << 6;
+const TWAI_FRAME_EXTENDED = 1 << 7;
+const TWAI_STD_ID_MASK = 0x7ff;
+const TWAI_EXT_ID_MASK = 0x1fffffff;
+const TWAI_FRAME_DATA_BYTES = 8;
 
 // The interrupt matrix (reg_base.h DR_REG_INTERRUPT_BASE +
 // interrupt_core0_reg.h / interrupt_core1_reg.h): each peripheral
@@ -1748,6 +1762,7 @@ interface TwaiController {
   buffer: number[];
   acceptance: number[];
   rxFifo: number[][];
+  txLog: number[][];
   dataOverrun: boolean;
   interrupt: number;
   interruptEna: number;
@@ -1987,8 +2002,9 @@ const freshTwaiController = (): TwaiController => ({
   rxErrCounter: 0,
   txErrCounter: 0,
   buffer: Array(TWAI_BUFFER_BYTES).fill(0) as number[],
-  acceptance: Array(TWAI_ACCEPTANCE_BYTES).fill(0) as number[],
+  acceptance: [0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff],
   rxFifo: [],
+  txLog: [],
   dataOverrun: false,
   interrupt: 0,
   interruptEna: 0,
@@ -2509,6 +2525,19 @@ export class Esp32s3Core implements McuCore {
     if (ctrl === undefined) throw new Error(`drainSpiWrites expects port 2 or 3 (got ${String(port)})`);
     const out = Uint8Array.from(ctrl.writeLog);
     ctrl.writeLog = [];
+    return out;
+  }
+
+  injectTwaiFrame(frame: Esp32s3TwaiFrame): boolean {
+    const raw = this.twaiFormatFrame(frame);
+    const accepted = this.twaiPushRxFrame(raw, true);
+    this.recomputeIrq();
+    return accepted;
+  }
+
+  drainTwaiTx(): Esp32s3TwaiFrame[] {
+    const out = this.twai.txLog.map((frame) => this.twaiDecodeFrame(frame));
+    this.twai.txLog = [];
     return out;
   }
 
@@ -4401,20 +4430,118 @@ export class Esp32s3Core implements McuCore {
     return (frame ?? this.twai.buffer)[index] ?? 0;
   }
 
-  private twaiPushRxFrame(frame: number[]): void {
+  private twaiAcceptanceCode(): number {
+    return (
+      (((this.twai.acceptance[0] ?? 0) << 24) |
+        ((this.twai.acceptance[1] ?? 0) << 16) |
+        ((this.twai.acceptance[2] ?? 0) << 8) |
+        (this.twai.acceptance[3] ?? 0)) >>>
+      0
+    );
+  }
+
+  private twaiAcceptanceMask(): number {
+    return (
+      (((this.twai.acceptance[4] ?? 0) << 24) |
+        ((this.twai.acceptance[5] ?? 0) << 16) |
+        ((this.twai.acceptance[6] ?? 0) << 8) |
+        (this.twai.acceptance[7] ?? 0)) >>>
+      0
+    );
+  }
+
+  private twaiFrameAcceptanceWord(frame: readonly number[]): number {
+    const info = frame[0] ?? 0;
+    const rtr = (info & TWAI_FRAME_RTR) !== 0 ? 1 : 0;
+    if ((info & TWAI_FRAME_EXTENDED) !== 0) {
+      const id =
+        ((((frame[1] ?? 0) << 21) | ((frame[2] ?? 0) << 13) | ((frame[3] ?? 0) << 5) | ((frame[4] ?? 0) >>> 3)) &
+          TWAI_EXT_ID_MASK) >>>
+        0;
+      return (((id & TWAI_EXT_ID_MASK) << 3) | (rtr << 2)) >>> 0;
+    }
+    const id = ((((frame[1] ?? 0) << 3) | ((frame[2] ?? 0) >>> 5)) & TWAI_STD_ID_MASK) >>> 0;
+    const data0 = (frame[3] ?? 0) & 0xff;
+    const data1 = (frame[4] ?? 0) & 0xff;
+    return (((id & TWAI_STD_ID_MASK) << 21) | (rtr << 20) | (data0 << 12) | (data1 << 4)) >>> 0;
+  }
+
+  private twaiAcceptsFrame(frame: readonly number[]): boolean {
+    const code = this.twaiAcceptanceCode();
+    const mask = this.twaiAcceptanceMask();
+    const word = this.twaiFrameAcceptanceWord(frame);
+    // SJA1000-style AMR semantics: mask bit 1 means "do not compare".
+    // This slice models the single-filter register path; dual-filter
+    // mode still uses the same coarse 32-bit compare as an honest cut.
+    return (((word ^ code) & ~mask) >>> 0) === 0;
+  }
+
+  private twaiPushRxFrame(frame: number[], applyFilter: boolean): boolean {
+    if ((this.twai.mode & TWAI_MODE_RESET) !== 0) return false;
+    if (applyFilter && !this.twaiAcceptsFrame(frame)) return false;
     if (this.twai.rxFifo.length >= 64) {
       this.twai.dataOverrun = true;
       this.twai.interrupt |= TWAI_INTR_DATA_OVERRUN;
-      return;
+      return false;
     }
     this.twai.rxFifo.push(frame.map((b) => b & 0xff));
     this.twai.interrupt |= TWAI_INTR_RX;
+    return true;
+  }
+
+  private twaiFormatFrame(frame: Esp32s3TwaiFrame): number[] {
+    const data = Array.from(frame.data ?? [], (b) => {
+      if (!Number.isInteger(b) || b < 0 || b > 0xff) {
+        throw new Error(`TWAI data bytes must be integers 0..255 (got ${String(b)})`);
+      }
+      return b & 0xff;
+    });
+    const dlc = frame.dlc ?? data.length;
+    if (!Number.isInteger(dlc) || dlc < 0 || dlc > TWAI_FRAME_DLC_MASK) {
+      throw new Error(`TWAI dlc must be an integer 0..15 (got ${String(dlc)})`);
+    }
+    const extended = frame.extended === true;
+    const idMask = extended ? TWAI_EXT_ID_MASK : TWAI_STD_ID_MASK;
+    if (!Number.isInteger(frame.id) || frame.id < 0 || frame.id > idMask) {
+      throw new Error(`TWAI ${extended ? 'extended' : 'standard'} id must be 0..0x${idMask.toString(16)} (got ${String(frame.id)})`);
+    }
+
+    const out = Array(TWAI_BUFFER_BYTES).fill(0) as number[];
+    out[0] = (dlc & TWAI_FRAME_DLC_MASK) | (frame.rtr === true ? TWAI_FRAME_RTR : 0) | (extended ? TWAI_FRAME_EXTENDED : 0);
+    if (extended) {
+      const id = frame.id & TWAI_EXT_ID_MASK;
+      out[1] = (id >>> 21) & 0xff;
+      out[2] = (id >>> 13) & 0xff;
+      out[3] = (id >>> 5) & 0xff;
+      out[4] = (id << 3) & 0xff;
+      for (let i = 0; i < Math.min(TWAI_FRAME_DATA_BYTES, dlc, data.length); i++) out[5 + i] = data[i] ?? 0;
+    } else {
+      const id = frame.id & TWAI_STD_ID_MASK;
+      out[1] = (id >>> 3) & 0xff;
+      out[2] = (id << 5) & 0xff;
+      for (let i = 0; i < Math.min(TWAI_FRAME_DATA_BYTES, dlc, data.length); i++) out[3 + i] = data[i] ?? 0;
+    }
+    return out;
+  }
+
+  private twaiDecodeFrame(frame: readonly number[]): Esp32s3TwaiFrame {
+    const info = frame[0] ?? 0;
+    const dlc = info & TWAI_FRAME_DLC_MASK;
+    const extended = (info & TWAI_FRAME_EXTENDED) !== 0;
+    const rtr = (info & TWAI_FRAME_RTR) !== 0;
+    const id = extended
+      ? ((((frame[1] ?? 0) << 21) | ((frame[2] ?? 0) << 13) | ((frame[3] ?? 0) << 5) | ((frame[4] ?? 0) >>> 3)) & TWAI_EXT_ID_MASK)
+      : ((((frame[1] ?? 0) << 3) | ((frame[2] ?? 0) >>> 5)) & TWAI_STD_ID_MASK);
+    const dataOffset = extended ? 5 : 3;
+    const data = rtr ? [] : frame.slice(dataOffset, dataOffset + Math.min(TWAI_FRAME_DATA_BYTES, dlc)).map((b) => b & 0xff);
+    return { id, data, dlc, extended, rtr };
   }
 
   private twaiTransmit(selfReceive: boolean): void {
     if ((this.twai.mode & TWAI_MODE_RESET) !== 0) return;
     const frame = this.twai.buffer.slice(0, TWAI_BUFFER_BYTES);
-    if (selfReceive) this.twaiPushRxFrame(frame);
+    this.twai.txLog.push(frame.map((b) => b & 0xff));
+    if (selfReceive) this.twaiPushRxFrame(frame, true);
     this.twai.interrupt |= TWAI_INTR_TX;
   }
 
@@ -4437,7 +4564,9 @@ export class Esp32s3Core implements McuCore {
     if (off === TWAI_RX_ERR_COUNTER) return this.twai.rxErrCounter >>> 0;
     if (off === TWAI_TX_ERR_COUNTER) return this.twai.txErrCounter >>> 0;
     if (off >= TWAI_BUFFER_START && off < TWAI_BUFFER_START + TWAI_BUFFER_BYTES * 4 && (off & 3) === 0) {
-      return this.twaiReadBufferByte((off - TWAI_BUFFER_START) >> 2);
+      const index = (off - TWAI_BUFFER_START) >> 2;
+      if ((this.twai.mode & TWAI_MODE_RESET) !== 0 && index < TWAI_ACCEPTANCE_BYTES) return this.twai.acceptance[index] ?? 0;
+      return this.twaiReadBufferByte(index);
     }
     if (off === TWAI_RX_MESSAGE_COUNTER) return Math.min(0x7f, this.twai.rxFifo.length);
     if (off === TWAI_CLOCK_DIVIDER) return this.twai.clockDivider >>> 0;
@@ -4498,8 +4627,8 @@ export class Esp32s3Core implements McuCore {
     }
     if (off >= TWAI_BUFFER_START && off < TWAI_BUFFER_START + TWAI_BUFFER_BYTES * 4 && (off & 3) === 0) {
       const index = (off - TWAI_BUFFER_START) >> 2;
-      this.twai.buffer[index] = v & 0xff;
-      if (index < TWAI_ACCEPTANCE_BYTES) this.twai.acceptance[index] = v & 0xff;
+      if ((this.twai.mode & TWAI_MODE_RESET) !== 0 && index < TWAI_ACCEPTANCE_BYTES) this.twai.acceptance[index] = v & 0xff;
+      else this.twai.buffer[index] = v & 0xff;
       return;
     }
     if (off === TWAI_CLOCK_DIVIDER) {

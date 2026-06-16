@@ -184,10 +184,14 @@ const MCPWM_PWM0_OUT0A = 160;
 const MCPWM_PWM1_OUT0A = 166;
 const TWAI_RI_TI = 0x03;
 const TWAI_SELF_TEST_MODE = 1 << 2;
+const TWAI_ACCEPTANCE_FILTER_MODE = 1 << 3;
+const TWAI_TX_REQUEST = 1 << 0;
 const TWAI_SELF_RX_REQUEST = 1 << 4;
 const TWAI_RELEASE_RX_BUFFER = 1 << 2;
 const TWAI_STATUS_RBS_TBS_TCS = 0x0d;
 const TWAI_STD_DLC3 = 3;
+const TWAI_STD_ID_0X123_BYTE0 = 0x24;
+const TWAI_STD_ID_0X123_BYTE1 = 0x60;
 const GDMA_OUT_CH0_INT_RAW = 0x68;
 const GDMA_OUT_CH0_INT_CLR = 0x74;
 const GDMA_OUT_CH0_LINK = 0x80;
@@ -573,6 +577,87 @@ describe('Esp32s3Core', () => {
     const c = core(image);
     c.step(700);
     expect([...c.drainUart()]).toEqual([TWAI_RI_TI, 0]);
+  });
+
+  it('accepts host-injected TWAI frames through the acceptance filter', () => {
+    const code: XtInstr[] = [
+      L32R(2, 0), // TWAI
+      MOVI(3, TWAI_STD_ID_0X123_BYTE0),
+      S32I(3, 2, 0x40), // ACR0: std ID 0x123 bits 10..3
+      MOVI(3, TWAI_STD_ID_0X123_BYTE1),
+      S32I(3, 2, 0x44), // ACR1: std ID 0x123 bits 2..0, left-aligned
+      MOVI(3, 0),
+      S32I(3, 2, 0x48), // ACR2
+      S32I(3, 2, 0x4c), // ACR3
+      S32I(3, 2, 0x50), // AMR0: compare ACR0
+      MOVI(3, 0x1f),
+      S32I(3, 2, 0x54), // AMR1: compare ID bits, ignore non-ID low bits
+      MOVI(3, 0xff),
+      S32I(3, 2, 0x58), // AMR2: ignore data byte 0
+      S32I(3, 2, 0x5c), // AMR3: ignore data byte 1
+      MOVI(3, TWAI_ACCEPTANCE_FILTER_MODE),
+      S32I(3, 2, 0x00), // leave reset mode, keep AFM single-filter bit
+      MOVI(3, TWAI_RI_TI),
+      S32I(3, 2, 0x10),
+    ];
+    const poll = code.length;
+    code.push(
+      L32I(3, 2, 0x74), // RX message counter
+      BEQZ_TO(3, poll),
+      L32R(6, 1), // UART0
+      S32I(3, 6, 0), // count
+      L32I(3, 2, 0x0c), // interrupt register; read clears RI
+      S32I(3, 6, 0),
+      L32I(3, 2, 0x40), // frame info
+      S32I(3, 6, 0),
+      L32I(3, 2, 0x44), // ID byte 0
+      S32I(3, 6, 0),
+      L32I(3, 2, 0x48), // ID byte 1
+      S32I(3, 6, 0),
+      L32I(3, 2, 0x4c), // data 0
+      S32I(3, 6, 0),
+      L32I(3, 2, 0x50), // data 1
+      S32I(3, 6, 0),
+      J(BR(-1)),
+    );
+
+    const c = core(assembleXtensa(ESP32S3_IRAM_BASE, [TWAI, UART], code));
+    c.step(240);
+    expect(c.injectTwaiFrame({ id: 0x321, data: [0x44] })).toBe(false);
+    c.step(240);
+    expect([...c.drainUart()]).toEqual([]);
+    expect(c.injectTwaiFrame({ id: 0x123, data: [0xaa, 0xbb] })).toBe(true);
+    c.step(700);
+    expect([...c.drainUart()]).toEqual([1, 1, 2, TWAI_STD_ID_0X123_BYTE0, TWAI_STD_ID_0X123_BYTE1, 0xaa, 0xbb]);
+  });
+
+  it('surfaces firmware TWAI transmissions to the host bench', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [TWAI, 0x80, 0x20, 0xde, 0xad],
+      [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, 2),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=2
+        L32R(3, 1),
+        S32I(3, 2, 0x44), // std id 0x401 byte 0
+        L32R(3, 2),
+        S32I(3, 2, 0x48), // std id 0x401 byte 1
+        L32R(3, 3),
+        S32I(3, 2, 0x4c), // data 0
+        L32R(3, 4),
+        S32I(3, 2, 0x50), // data 1
+        MOVI(3, TWAI_TX_REQUEST),
+        S32I(3, 2, 0x04),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(360);
+    expect(c.drainTwaiTx()).toEqual([{ id: 0x401, data: [0xde, 0xad], dlc: 2, extended: false, rtr: false }]);
+    expect(c.drainTwaiTx()).toEqual([]);
   });
 
   it('routes RMT channel 0 TX symbols through the GPIO matrix to IO5', () => {

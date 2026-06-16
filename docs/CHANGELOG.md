@@ -2,6 +2,41 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 102: TWAI host injection + acceptance filters
+
+### Added
+- **TWAI/CAN bench bridge** (@protopulse/emu):
+  ESP32-S3 TWAI now has a typed host frame surface
+  (`injectTwaiFrame`, `drainTwaiTx`) so tests and future co-sim/probe
+  paths can inject another bus node's frames and inspect firmware
+  transmissions without pretending a physical CAN transceiver exists.
+- **Acceptance-filter enforcement** for the register-level TWAI path:
+  ACR/AMR writes made while reset mode is active now live in the
+  acceptance-filter register view, default to accept-all, and gate
+  incoming standard frames before they enter the RX FIFO.
+
+### Verified
+- Added hand-assembled Xtensa firmware that configures a standard-ID
+  acceptance filter for ID `0x123`, proves a mismatched host-injected
+  frame is dropped, then accepts a matching frame and reads count,
+  interrupt, frame-info, ID, and data bytes through the TWAI register
+  block.
+- Added firmware TX coverage proving a normal `TR` command is surfaced
+  to the host bench as a decoded TWAI frame and that `drainTwaiTx()`
+  drains cleanly.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 168 ESP32-S3 tests.
+- `npm run check:packages` passed.
+- `npm run test:packages` passed across package workspaces with 1,510 tests.
+
+### Honest cuts
+- No shared multi-node virtual CAN bus, arbitration, ACK/retry timing,
+  error confinement, driver alert queue, or wire-level GPIO waveform
+  yet.
+- Dual-filter mode is still approximated by the coarse 32-bit
+  acceptance compare; this slice intentionally pins the single-filter
+  standard-frame path first.
+
 ## 2026-06-16 — ESP32-S3 slice 101: TWAI/CAN register + self-test first cut
 
 ### Added
