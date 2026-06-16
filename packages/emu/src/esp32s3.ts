@@ -263,6 +263,11 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * no DMA descriptor movement, attached-device response model, timing,
  * chip-select pins, line modes beyond the recorded phase bytes, or
  * driver ringbuffer API yet.
+ * MCPWM0/MCPWM1 now expose the source-pinned register blocks, virtual
+ * timer/operator/comparator/generator path, GPIO-matrix output signals
+ * 160..171, continuous software force, and PWM0/1 interrupt-matrix
+ * routing. Cuts: no dead-time, carrier, faults, capture, sync propagation,
+ * power/clock gating effects, or full driver object model yet.
  * Still missing: full light/deep sleep register policy, remaining wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
@@ -482,6 +487,72 @@ const SPI_USER1_RESET = ((23 << 27) | (1 << 22) | 7) >>> 0;
 const SPI_USER2_RESET = ((7 << 28) | (1 << 27)) >>> 0;
 const SPI_DATE_RESET = 0x02101190;
 
+// MCPWM motor-control PWM blocks (ESP-IDF v5.5.4 ESP32-S3):
+// reg_base.h pins PWM0=0x6001E000 and PWM1=0x6002C000; soc_caps.h
+// says two groups, each with three timers/operators and two generators.
+// This first cut models timer/operator/comparator/generator output and
+// the group interrupt registers. Cuts: no dead-time, carrier, fault,
+// capture, sync input propagation, or power/clock gating side effects yet.
+const MCPWM0_BASE = 0x6001e000;
+const MCPWM1_BASE = 0x6002c000;
+const MCPWM_BLOCK_BYTES = 0x1000;
+const MCPWM_GROUPS = 2;
+const MCPWM_TIMERS = 3;
+const MCPWM_OPERATORS = 3;
+const MCPWM_GENERATORS = 2;
+const MCPWM_CLK_CFG = 0x00;
+const MCPWM_TIMER0_CFG0 = 0x04;
+const MCPWM_TIMER_CFG_STRIDE = 0x10;
+const MCPWM_TIMER_CFG1_DELTA = 0x04;
+const MCPWM_TIMER_SYNC_DELTA = 0x08;
+const MCPWM_TIMER_STATUS_DELTA = 0x0c;
+const MCPWM_TIMER_PRESCALE_MASK = 0xff;
+const MCPWM_TIMER_PERIOD_SHIFT = 8;
+const MCPWM_TIMER_PERIOD_MASK = 0xffff;
+const MCPWM_TIMER_CFG0_RESET = 255 << MCPWM_TIMER_PERIOD_SHIFT;
+const MCPWM_TIMER_START_MASK = 0x7;
+const MCPWM_TIMER_MOD_SHIFT = 3;
+const MCPWM_TIMER_MOD_MASK = 0x3;
+const MCPWM_TIMER_MOD_UP = 1;
+const MCPWM_TIMER_MOD_DOWN = 2;
+const MCPWM_TIMER_MOD_UP_DOWN = 3;
+const MCPWM_TIMER_START_RUN = 2;
+const MCPWM_OPERATOR_TIMERSEL = 0x38;
+const MCPWM_OPERATOR_STRIDE = 0x38;
+const MCPWM_OPERATOR0_BASE = 0x3c;
+const MCPWM_GEN_STMP_CFG = 0x00;
+const MCPWM_GEN_TSTMP_A = 0x04;
+const MCPWM_GEN_TSTMP_B = 0x08;
+const MCPWM_GEN_CFG0 = 0x0c;
+const MCPWM_GEN_FORCE = 0x10;
+const MCPWM_GEN_A_REG = 0x14;
+const MCPWM_GEN_B_REG = 0x18;
+const MCPWM_FORCE_RESET = 0x20;
+const MCPWM_GEN_A_FORCE_SHIFT = 6;
+const MCPWM_GEN_B_FORCE_SHIFT = 8;
+const MCPWM_GEN_FORCE_MASK = 0x3;
+const MCPWM_GEN_ACTION_LOW = 1;
+const MCPWM_GEN_ACTION_HIGH = 2;
+const MCPWM_GEN_ACTION_TOGGLE = 3;
+const MCPWM_GEN_ACTION_UTEZ_SHIFT = 0;
+const MCPWM_GEN_ACTION_UTEP_SHIFT = 2;
+const MCPWM_GEN_ACTION_UTEA_SHIFT = 4;
+const MCPWM_GEN_ACTION_UTEB_SHIFT = 6;
+const MCPWM_INT_ENA = 0x110;
+const MCPWM_INT_RAW = 0x114;
+const MCPWM_INT_ST = 0x118;
+const MCPWM_INT_CLR = 0x11c;
+const MCPWM_CLK = 0x120;
+const MCPWM_DATE = 0x124;
+const MCPWM_INT_CLEARABLE = 0x3fffffff;
+const MCPWM_TIMER_TEZ_INT_BASE = 3;
+const MCPWM_TIMER_TEP_INT_BASE = 6;
+const MCPWM_OP_TEA_INT_BASE = 15;
+const MCPWM_OP_TEB_INT_BASE = 18;
+const MCPWM_SIGNAL_GROUP0_BASE = 160; // PWM0_OUT0A_IDX
+const MCPWM_SIGNAL_GROUP1_BASE = 166; // PWM1_OUT0A_IDX
+const MCPWM_DATE_RESET = 34632240;
+
 // The interrupt matrix (reg_base.h DR_REG_INTERRUPT_BASE +
 // interrupt_core0_reg.h / interrupt_core1_reg.h): each peripheral
 // source has a 5-bit map register per CPU core selecting which CPU
@@ -494,6 +565,8 @@ const INTMTX_GPIO_MAP = 0x040; // INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG
 const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
 const INTMTX_UART1_MAP = 0x070; // INTERRUPT_CORE0_UART1_INTR_MAP_REG
 const INTMTX_UART2_MAP = 0x074; // INTERRUPT_CORE0_UART2_INTR_MAP_REG
+const INTMTX_PWM0_MAP = 0x07c; // INTERRUPT_CORE0_PWM0_INTR_MAP_REG
+const INTMTX_PWM1_MAP = 0x080; // INTERRUPT_CORE0_PWM1_INTR_MAP_REG
 const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
 const INTMTX_RTC_CORE_MAP = 0x09c; // INTERRUPT_CORE0_RTC_CORE_INTR_MAP_REG
 const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
@@ -1582,6 +1655,39 @@ interface SpiController {
   writeLog: number[];
 }
 
+interface McpwmTimer {
+  cfg0: number;
+  cfg1: number;
+  syncReg: number;
+  base: number;
+  sync: number;
+  tezSerial: number;
+  tepSerial: number;
+}
+
+interface McpwmOperator {
+  stmpCfg: number;
+  tstmpA: number;
+  tstmpB: number;
+  cfg0: number;
+  force: number;
+  genA: number;
+  genB: number;
+  cmpASerial: number;
+  cmpBSerial: number;
+}
+
+interface McpwmGroup {
+  clkCfg: number;
+  timers: McpwmTimer[];
+  operators: McpwmOperator[];
+  operatorTimerSel: number;
+  intRaw: number;
+  intEna: number;
+  maps: InterruptMapPair;
+  clk: number;
+}
+
 const freshGpTimer = (): GpTimer => ({
   config: 0,
   base: 0,
@@ -1771,6 +1877,39 @@ const freshSpiController = (): SpiController => ({
   writeLog: [],
 });
 
+const freshMcpwmTimer = (): McpwmTimer => ({
+  cfg0: MCPWM_TIMER_CFG0_RESET,
+  cfg1: 0,
+  syncReg: 0,
+  base: 0,
+  sync: 0,
+  tezSerial: 0,
+  tepSerial: 0,
+});
+
+const freshMcpwmOperator = (): McpwmOperator => ({
+  stmpCfg: 0,
+  tstmpA: 0,
+  tstmpB: 0,
+  cfg0: 0,
+  force: MCPWM_FORCE_RESET,
+  genA: 0,
+  genB: 0,
+  cmpASerial: 0,
+  cmpBSerial: 0,
+});
+
+const freshMcpwmGroup = (): McpwmGroup => ({
+  clkCfg: 0,
+  timers: Array.from({ length: MCPWM_TIMERS }, freshMcpwmTimer),
+  operators: Array.from({ length: MCPWM_OPERATORS }, freshMcpwmOperator),
+  operatorTimerSel: 0,
+  intRaw: 0,
+  intEna: 0,
+  maps: freshInterruptMapPair(),
+  clk: 0,
+});
+
 const freshEfuseBlocks = (): number[][] => {
   const blocks = Array.from({ length: EFUSE_BLOCK_COUNT }, () => Array(EFUSE_BLOCK_WORDS).fill(0) as number[]);
   const macBlock = blocks[1];
@@ -1845,6 +1984,7 @@ export class Esp32s3Core implements McuCore {
   private pcntIntMaps = freshInterruptMapPair();
   private i2c: I2cController[] = Array.from({ length: I2C_CONTROLLER_COUNT }, freshI2cController);
   private spi: SpiController[] = Array.from({ length: SPI_CONTROLLER_COUNT }, freshSpiController);
+  private mcpwm: McpwmGroup[] = Array.from({ length: MCPWM_GROUPS }, freshMcpwmGroup);
 
   // UART0/1 interrupt state + the interrupt matrix maps.
   private uartIntEna = 0;
@@ -2885,6 +3025,7 @@ export class Esp32s3Core implements McuCore {
     this.pcntIntMaps = freshInterruptMapPair();
     this.i2c = Array.from({ length: I2C_CONTROLLER_COUNT }, freshI2cController);
     this.spi = Array.from({ length: SPI_CONTROLLER_COUNT }, freshSpiController);
+    this.mcpwm = Array.from({ length: MCPWM_GROUPS }, freshMcpwmGroup);
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
@@ -3493,6 +3634,7 @@ export class Esp32s3Core implements McuCore {
     this.checkRtcSleepTimer();
     this.checkRtcUlpTimer();
     this.checkRtcTouchSleepTimer();
+    this.checkMcpwm();
     this.checkLedcTimers();
     this.checkRmt();
   }
@@ -3808,6 +3950,350 @@ export class Esp32s3Core implements McuCore {
     }
     if (off === SPI_DATE) return;
     ctrl.regs.set(off, v);
+  }
+
+  private mcpwmForAddress(addr: number): { groupIndex: 0 | 1; group: McpwmGroup; off: number } | null {
+    const bases = [MCPWM0_BASE, MCPWM1_BASE] as const;
+    for (const groupIndex of [0, 1] as const) {
+      const base = bases[groupIndex];
+      if (addr >= base && addr < base + MCPWM_BLOCK_BYTES) {
+        const group = this.mcpwm[groupIndex];
+        if (group === undefined) throw new Error(`missing MCPWM${String(groupIndex)} group`);
+        return { groupIndex, group, off: addr - base };
+      }
+    }
+    return null;
+  }
+
+  private mcpwmTimerForOffset(group: McpwmGroup, off: number): { index: number; timer: McpwmTimer; toff: number } | null {
+    if (off < MCPWM_TIMER0_CFG0 || off >= MCPWM_TIMER0_CFG0 + MCPWM_TIMERS * MCPWM_TIMER_CFG_STRIDE) return null;
+    const rel = off - MCPWM_TIMER0_CFG0;
+    if ((rel & 3) !== 0) return null;
+    const index = Math.floor(rel / MCPWM_TIMER_CFG_STRIDE);
+    const timer = group.timers[index];
+    if (timer === undefined) return null;
+    return { index, timer, toff: rel % MCPWM_TIMER_CFG_STRIDE };
+  }
+
+  private mcpwmOperatorForOffset(group: McpwmGroup, off: number): { index: number; op: McpwmOperator; toff: number } | null {
+    if (off < MCPWM_OPERATOR0_BASE || off >= MCPWM_OPERATOR0_BASE + MCPWM_OPERATORS * MCPWM_OPERATOR_STRIDE) return null;
+    const rel = off - MCPWM_OPERATOR0_BASE;
+    if ((rel & 3) !== 0) return null;
+    const index = Math.floor(rel / MCPWM_OPERATOR_STRIDE);
+    const op = group.operators[index];
+    if (op === undefined) return null;
+    return { index, op, toff: rel % MCPWM_OPERATOR_STRIDE };
+  }
+
+  private mcpwmTimerPeriod(t: McpwmTimer): number {
+    return (t.cfg0 >>> MCPWM_TIMER_PERIOD_SHIFT) & MCPWM_TIMER_PERIOD_MASK;
+  }
+
+  private mcpwmTimerCycleLength(t: McpwmTimer): number {
+    return Math.max(1, this.mcpwmTimerPeriod(t) + 1);
+  }
+
+  private mcpwmTimerMode(t: McpwmTimer): number {
+    return (t.cfg1 >>> MCPWM_TIMER_MOD_SHIFT) & MCPWM_TIMER_MOD_MASK;
+  }
+
+  private mcpwmTimerRunning(t: McpwmTimer): boolean {
+    return (t.cfg1 & MCPWM_TIMER_START_MASK) === MCPWM_TIMER_START_RUN && this.mcpwmTimerMode(t) !== 0;
+  }
+
+  private mcpwmTimerTicks(group: McpwmGroup, t: McpwmTimer): number {
+    if (!this.mcpwmTimerRunning(t)) return 0;
+    const elapsed = Math.max(0, this.cpu.cycles - t.sync);
+    const groupDiv = (group.clkCfg & 0xff) + 1;
+    const timerDiv = (t.cfg0 & MCPWM_TIMER_PRESCALE_MASK) + 1;
+    // mcpwm_reg.h defines PWM_clk as 6.25 ns * (prescale + 1),
+    // i.e. 160 MHz before dividers. The modeled CPU runs at 240 MHz.
+    return Math.floor((elapsed * 2) / (3 * groupDiv * timerDiv));
+  }
+
+  private mcpwmTimerTotal(group: McpwmGroup, t: McpwmTimer): number {
+    return t.base + this.mcpwmTimerTicks(group, t);
+  }
+
+  private mcpwmTimerCounter(group: McpwmGroup, t: McpwmTimer): number {
+    if (!this.mcpwmTimerRunning(t)) return t.base & MCPWM_TIMER_PERIOD_MASK;
+    const period = this.mcpwmTimerPeriod(t);
+    const mode = this.mcpwmTimerMode(t);
+    if (mode === MCPWM_TIMER_MOD_DOWN) {
+      const down = this.mcpwmTimerTotal(group, t) % Math.max(1, period + 1);
+      return Math.max(0, period - down);
+    }
+    if (mode === MCPWM_TIMER_MOD_UP_DOWN && period > 0) {
+      const phase = this.mcpwmTimerTotal(group, t) % (period * 2);
+      return phase <= period ? phase : period * 2 - phase;
+    }
+    return this.mcpwmTimerTotal(group, t) % this.mcpwmTimerCycleLength(t);
+  }
+
+  private mcpwmTimerDirection(group: McpwmGroup, t: McpwmTimer): 0 | 1 {
+    const mode = this.mcpwmTimerMode(t);
+    if (mode === MCPWM_TIMER_MOD_DOWN) return 1;
+    if (mode !== MCPWM_TIMER_MOD_UP_DOWN) return 0;
+    const period = this.mcpwmTimerPeriod(t);
+    if (period <= 0) return 0;
+    return this.mcpwmTimerTotal(group, t) % (period * 2) > period ? 1 : 0;
+  }
+
+  private mcpwmEventSerial(total: number, threshold: number, period: number): number {
+    if (threshold < 0 || threshold > period || total < threshold) return 0;
+    return Math.floor((total - threshold) / Math.max(1, period + 1)) + 1;
+  }
+
+  private mcpwmTezSerial(group: McpwmGroup, t: McpwmTimer): number {
+    if (!this.mcpwmTimerRunning(t)) return 0;
+    return Math.floor(this.mcpwmTimerTotal(group, t) / this.mcpwmTimerCycleLength(t));
+  }
+
+  private mcpwmTepSerial(group: McpwmGroup, t: McpwmTimer): number {
+    if (!this.mcpwmTimerRunning(t)) return 0;
+    const period = this.mcpwmTimerPeriod(t);
+    return this.mcpwmEventSerial(this.mcpwmTimerTotal(group, t), period, period);
+  }
+
+  private mcpwmLatchTimerSerials(group: McpwmGroup, timer: McpwmTimer): void {
+    timer.tezSerial = this.mcpwmTezSerial(group, timer);
+    timer.tepSerial = this.mcpwmTepSerial(group, timer);
+  }
+
+  private mcpwmLatchOperatorSerials(group: McpwmGroup, opIndex: number, op: McpwmOperator): void {
+    const timer = this.mcpwmOperatorTimer(group, opIndex);
+    if (timer === undefined || !this.mcpwmTimerRunning(timer)) {
+      op.cmpASerial = 0;
+      op.cmpBSerial = 0;
+      return;
+    }
+    const period = this.mcpwmTimerPeriod(timer);
+    const total = this.mcpwmTimerTotal(group, timer);
+    op.cmpASerial = this.mcpwmEventSerial(total, op.tstmpA & 0xffff, period);
+    op.cmpBSerial = this.mcpwmEventSerial(total, op.tstmpB & 0xffff, period);
+  }
+
+  private mcpwmResyncTimer(group: McpwmGroup, timer: McpwmTimer): void {
+    timer.base = this.mcpwmTimerCounter(group, timer);
+    timer.sync = this.cpu.cycles;
+    this.mcpwmLatchTimerSerials(group, timer);
+  }
+
+  private mcpwmOperatorTimer(group: McpwmGroup, opIndex: number): McpwmTimer | undefined {
+    const timerIndex = (group.operatorTimerSel >>> (opIndex * 2)) & 0x3;
+    return group.timers[timerIndex < MCPWM_TIMERS ? timerIndex : 0];
+  }
+
+  private mcpwmApplyAction(level: DigitalLevel, action: number): DigitalLevel {
+    switch (action & 0x3) {
+      case MCPWM_GEN_ACTION_LOW:
+        return 0;
+      case MCPWM_GEN_ACTION_HIGH:
+        return 1;
+      case MCPWM_GEN_ACTION_TOGGLE:
+        return level === 1 ? 0 : 1;
+      default:
+        return level;
+    }
+  }
+
+  private mcpwmGeneratorLevel(group: McpwmGroup, opIndex: number, genIndex: number): DigitalLevel {
+    const op = group.operators[opIndex];
+    if (op === undefined) return 0;
+    const forceShift = genIndex === 0 ? MCPWM_GEN_A_FORCE_SHIFT : MCPWM_GEN_B_FORCE_SHIFT;
+    const forceMode = (op.force >>> forceShift) & MCPWM_GEN_FORCE_MASK;
+    if (forceMode === MCPWM_GEN_ACTION_LOW) return 0;
+    if (forceMode === MCPWM_GEN_ACTION_HIGH) return 1;
+
+    const timer = this.mcpwmOperatorTimer(group, opIndex);
+    if (timer === undefined || !this.mcpwmTimerRunning(timer)) return 0;
+    const period = this.mcpwmTimerPeriod(timer);
+    const counter = this.mcpwmTimerCounter(group, timer);
+    const cmpA = op.tstmpA & 0xffff;
+    const cmpB = op.tstmpB & 0xffff;
+    const actionReg = genIndex === 0 ? op.genA : op.genB;
+
+    let level: DigitalLevel = 0;
+    level = this.mcpwmApplyAction(level, (actionReg >>> MCPWM_GEN_ACTION_UTEZ_SHIFT) & 0x3);
+    if (cmpA <= period && counter >= cmpA) {
+      level = this.mcpwmApplyAction(level, (actionReg >>> MCPWM_GEN_ACTION_UTEA_SHIFT) & 0x3);
+    }
+    if (cmpB <= period && counter >= cmpB) {
+      level = this.mcpwmApplyAction(level, (actionReg >>> MCPWM_GEN_ACTION_UTEB_SHIFT) & 0x3);
+    }
+    if (counter >= period) {
+      level = this.mcpwmApplyAction(level, (actionReg >>> MCPWM_GEN_ACTION_UTEP_SHIFT) & 0x3);
+    }
+    return level;
+  }
+
+  private mcpwmSignalLevel(signal: number): DigitalLevel | null {
+    let groupIndex: 0 | 1;
+    let signalBase: number;
+    if (signal >= MCPWM_SIGNAL_GROUP0_BASE && signal < MCPWM_SIGNAL_GROUP0_BASE + MCPWM_OPERATORS * MCPWM_GENERATORS) {
+      groupIndex = 0;
+      signalBase = MCPWM_SIGNAL_GROUP0_BASE;
+    } else if (signal >= MCPWM_SIGNAL_GROUP1_BASE && signal < MCPWM_SIGNAL_GROUP1_BASE + MCPWM_OPERATORS * MCPWM_GENERATORS) {
+      groupIndex = 1;
+      signalBase = MCPWM_SIGNAL_GROUP1_BASE;
+    } else {
+      return null;
+    }
+    const group = this.mcpwm[groupIndex];
+    if (group === undefined) return null;
+    const rel = signal - signalBase;
+    return this.mcpwmGeneratorLevel(group, Math.floor(rel / MCPWM_GENERATORS), rel % MCPWM_GENERATORS);
+  }
+
+  private checkMcpwm(): void {
+    let changed = false;
+    for (const group of this.mcpwm) {
+      for (let timerIndex = 0; timerIndex < MCPWM_TIMERS; timerIndex++) {
+        const timer = group.timers[timerIndex];
+        if (timer === undefined || !this.mcpwmTimerRunning(timer)) continue;
+        const tezSerial = this.mcpwmTezSerial(group, timer);
+        if (tezSerial > timer.tezSerial) {
+          timer.tezSerial = tezSerial;
+          group.intRaw |= 1 << (MCPWM_TIMER_TEZ_INT_BASE + timerIndex);
+          changed = true;
+        }
+        const tepSerial = this.mcpwmTepSerial(group, timer);
+        if (tepSerial > timer.tepSerial) {
+          timer.tepSerial = tepSerial;
+          group.intRaw |= 1 << (MCPWM_TIMER_TEP_INT_BASE + timerIndex);
+          changed = true;
+        }
+      }
+      for (let opIndex = 0; opIndex < MCPWM_OPERATORS; opIndex++) {
+        const op = group.operators[opIndex];
+        const timer = this.mcpwmOperatorTimer(group, opIndex);
+        if (op === undefined || timer === undefined || !this.mcpwmTimerRunning(timer)) continue;
+        const period = this.mcpwmTimerPeriod(timer);
+        const total = this.mcpwmTimerTotal(group, timer);
+        const cmpASerial = this.mcpwmEventSerial(total, op.tstmpA & 0xffff, period);
+        if (cmpASerial > op.cmpASerial) {
+          op.cmpASerial = cmpASerial;
+          group.intRaw |= 1 << (MCPWM_OP_TEA_INT_BASE + opIndex);
+          changed = true;
+        }
+        const cmpBSerial = this.mcpwmEventSerial(total, op.tstmpB & 0xffff, period);
+        if (cmpBSerial > op.cmpBSerial) {
+          op.cmpBSerial = cmpBSerial;
+          group.intRaw |= 1 << (MCPWM_OP_TEB_INT_BASE + opIndex);
+          changed = true;
+        }
+      }
+    }
+    if (changed) this.recomputeIrq();
+  }
+
+  private mcpwmRead(group: McpwmGroup, off: number): number {
+    if (off === MCPWM_CLK_CFG) return group.clkCfg >>> 0;
+    const timerReg = this.mcpwmTimerForOffset(group, off);
+    if (timerReg !== null) {
+      const { timer, toff } = timerReg;
+      if (toff === 0) return timer.cfg0 >>> 0;
+      if (toff === MCPWM_TIMER_CFG1_DELTA) return timer.cfg1 >>> 0;
+      if (toff === MCPWM_TIMER_SYNC_DELTA) return timer.syncReg >>> 0;
+      if (toff === MCPWM_TIMER_STATUS_DELTA) {
+        return (this.mcpwmTimerCounter(group, timer) | (this.mcpwmTimerDirection(group, timer) << 16)) >>> 0;
+      }
+      return 0;
+    }
+    if (off === MCPWM_OPERATOR_TIMERSEL) return group.operatorTimerSel >>> 0;
+    const opReg = this.mcpwmOperatorForOffset(group, off);
+    if (opReg !== null) {
+      const { op, toff } = opReg;
+      if (toff === MCPWM_GEN_STMP_CFG) return op.stmpCfg >>> 0;
+      if (toff === MCPWM_GEN_TSTMP_A) return op.tstmpA >>> 0;
+      if (toff === MCPWM_GEN_TSTMP_B) return op.tstmpB >>> 0;
+      if (toff === MCPWM_GEN_CFG0) return op.cfg0 >>> 0;
+      if (toff === MCPWM_GEN_FORCE) return op.force >>> 0;
+      if (toff === MCPWM_GEN_A_REG) return op.genA >>> 0;
+      if (toff === MCPWM_GEN_B_REG) return op.genB >>> 0;
+      return 0;
+    }
+    if (off === MCPWM_INT_ENA) return group.intEna >>> 0;
+    if (off === MCPWM_INT_RAW) return group.intRaw >>> 0;
+    if (off === MCPWM_INT_ST) return (group.intRaw & group.intEna) >>> 0;
+    if (off === MCPWM_INT_CLR) return 0;
+    if (off === MCPWM_CLK) return group.clk >>> 0;
+    if (off === MCPWM_DATE) return MCPWM_DATE_RESET;
+    return 0;
+  }
+
+  private mcpwmWrite(group: McpwmGroup, off: number, value: number): void {
+    const v = value >>> 0;
+    if (off === MCPWM_CLK_CFG) {
+      for (const timer of group.timers) this.mcpwmResyncTimer(group, timer);
+      group.clkCfg = v & 0xff;
+      return;
+    }
+    const timerReg = this.mcpwmTimerForOffset(group, off);
+    if (timerReg !== null) {
+      const { timer, toff } = timerReg;
+      if (toff === 0) {
+        this.mcpwmResyncTimer(group, timer);
+        timer.cfg0 = v & 0x03ffffff;
+        this.mcpwmLatchTimerSerials(group, timer);
+      } else if (toff === MCPWM_TIMER_CFG1_DELTA) {
+        const wasRunning = this.mcpwmTimerRunning(timer);
+        if (wasRunning) this.mcpwmResyncTimer(group, timer);
+        timer.cfg1 = v & 0x1f;
+        if (!wasRunning && this.mcpwmTimerRunning(timer)) {
+          timer.base = 0;
+          timer.sync = this.cpu.cycles;
+        }
+        this.mcpwmLatchTimerSerials(group, timer);
+        for (let i = 0; i < MCPWM_OPERATORS; i++) {
+          const op = group.operators[i];
+          if (op !== undefined) this.mcpwmLatchOperatorSerials(group, i, op);
+        }
+      } else if (toff === MCPWM_TIMER_SYNC_DELTA) {
+        timer.syncReg = v;
+      }
+      this.syncPins();
+      return;
+    }
+    if (off === MCPWM_OPERATOR_TIMERSEL) {
+      group.operatorTimerSel = v & 0x3f;
+      for (let i = 0; i < MCPWM_OPERATORS; i++) {
+        const op = group.operators[i];
+        if (op !== undefined) this.mcpwmLatchOperatorSerials(group, i, op);
+      }
+      this.syncPins();
+      return;
+    }
+    const opReg = this.mcpwmOperatorForOffset(group, off);
+    if (opReg !== null) {
+      const { index, op, toff } = opReg;
+      if (toff === MCPWM_GEN_STMP_CFG) op.stmpCfg = v;
+      else if (toff === MCPWM_GEN_TSTMP_A) {
+        op.tstmpA = v & 0xffff;
+        this.mcpwmLatchOperatorSerials(group, index, op);
+      } else if (toff === MCPWM_GEN_TSTMP_B) {
+        op.tstmpB = v & 0xffff;
+        this.mcpwmLatchOperatorSerials(group, index, op);
+      } else if (toff === MCPWM_GEN_CFG0) op.cfg0 = v;
+      else if (toff === MCPWM_GEN_FORCE) op.force = v;
+      else if (toff === MCPWM_GEN_A_REG) op.genA = v & 0x00ffffff;
+      else if (toff === MCPWM_GEN_B_REG) op.genB = v & 0x00ffffff;
+      this.syncPins();
+      return;
+    }
+    if (off === MCPWM_INT_ENA) {
+      group.intEna = v & MCPWM_INT_CLEARABLE;
+      this.recomputeIrq();
+      return;
+    }
+    if (off === MCPWM_INT_CLR) {
+      group.intRaw &= ~(v & MCPWM_INT_CLEARABLE);
+      this.recomputeIrq();
+      return;
+    }
+    if (off === MCPWM_CLK) {
+      group.clk = v & 1;
+    }
   }
 
   private ledcTimerDivider(t: LedcTimer): number {
@@ -4685,7 +5171,7 @@ export class Esp32s3Core implements McuCore {
   }
 
   private routedSignalLevel(signal: number): DigitalLevel | null {
-    return this.ledcSignalLevel(signal) ?? this.rmtSignalLevel(signal);
+    return this.ledcSignalLevel(signal) ?? this.rmtSignalLevel(signal) ?? this.mcpwmSignalLevel(signal);
   }
 
   /** Re-derive the interrupt matrix's output and drive the CPU's
@@ -4718,6 +5204,8 @@ export class Esp32s3Core implements McuCore {
     const ledcPending = (this.ledcIntRaw & this.ledcIntEna) !== 0;
     const rmtPending = (this.rmtIntRaw & this.rmtIntEna) !== 0;
     const pcntPending = (this.pcntIntRaw & this.pcntIntEna) !== 0;
+    const mcpwm0Pending = ((this.mcpwm[0]?.intRaw ?? 0) & (this.mcpwm[0]?.intEna ?? 0)) !== 0;
+    const mcpwm1Pending = ((this.mcpwm[1]?.intRaw ?? 0) & (this.mcpwm[1]?.intEna ?? 0)) !== 0;
     const i2c0Pending = ((this.i2c[0]?.intRaw ?? 0) & (this.i2c[0]?.intEna ?? 0)) !== 0;
     const i2c1Pending = ((this.i2c[1]?.intRaw ?? 0) & (this.i2c[1]?.intEna ?? 0)) !== 0;
     const spi2Pending = ((this.spi[0]?.intRaw ?? 0) & (this.spi[0]?.intEna ?? 0)) !== 0;
@@ -4736,6 +5224,8 @@ export class Esp32s3Core implements McuCore {
     if (ledcPending) raise(this.ledcIntMaps);
     if (rmtPending) raise(this.rmtIntMaps);
     if (pcntPending) raise(this.pcntIntMaps);
+    if (mcpwm0Pending) raise(this.mcpwm[0]?.maps ?? freshInterruptMapPair());
+    if (mcpwm1Pending) raise(this.mcpwm[1]?.maps ?? freshInterruptMapPair());
     if (i2c0Pending) raise(this.i2c[0]?.maps ?? freshInterruptMapPair());
     if (i2c1Pending) raise(this.i2c[1]?.maps ?? freshInterruptMapPair());
     if (spi2Pending) raise(this.spi[0]?.maps ?? freshInterruptMapPair());
@@ -5084,6 +5574,8 @@ export class Esp32s3Core implements McuCore {
     if (i2c !== null) return this.i2cRead(i2c.ctrl, i2c.off);
     const spi = this.spiForAddress(addr);
     if (spi !== null) return this.spiRead(spi.ctrl, spi.off);
+    const mcpwm = this.mcpwmForAddress(addr);
+    if (mcpwm !== null) return this.mcpwmRead(mcpwm.group, mcpwm.off);
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
@@ -5092,6 +5584,8 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_UART_MAP) return this.uartIntMaps[core];
       if (sourceOff === INTMTX_UART1_MAP) return this.uart1IntMaps[core];
       if (sourceOff === INTMTX_UART2_MAP) return this.uart2IntMaps[core];
+      if (sourceOff === INTMTX_PWM0_MAP) return this.mcpwm[0]?.maps[core] ?? INTMTX_DEFAULT_MAP;
+      if (sourceOff === INTMTX_PWM1_MAP) return this.mcpwm[1]?.maps[core] ?? INTMTX_DEFAULT_MAP;
       if (sourceOff === INTMTX_LEDC_MAP) return this.ledcIntMaps[core];
       if (sourceOff === INTMTX_RTC_CORE_MAP) return this.rtcCoreIntMaps[core];
       if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
@@ -5632,6 +6126,11 @@ export class Esp32s3Core implements McuCore {
       this.spiWrite(spi.ctrl, spi.off, value);
       return;
     }
+    const mcpwm = this.mcpwmForAddress(addr);
+    if (mcpwm !== null) {
+      this.mcpwmWrite(mcpwm.group, mcpwm.off, value);
+      return;
+    }
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
@@ -5640,7 +6139,13 @@ export class Esp32s3Core implements McuCore {
       else if (sourceOff === INTMTX_UART_MAP) this.uartIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_UART1_MAP) this.uart1IntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_UART2_MAP) this.uart2IntMaps[core] = value & 0x1f;
-      else if (sourceOff === INTMTX_LEDC_MAP) this.ledcIntMaps[core] = value & 0x1f;
+      else if (sourceOff === INTMTX_PWM0_MAP) {
+        const group = this.mcpwm[0];
+        if (group !== undefined) group.maps[core] = value & 0x1f;
+      } else if (sourceOff === INTMTX_PWM1_MAP) {
+        const group = this.mcpwm[1];
+        if (group !== undefined) group.maps[core] = value & 0x1f;
+      } else if (sourceOff === INTMTX_LEDC_MAP) this.ledcIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_PCNT_MAP) this.pcntIntMaps[core] = value & 0x1f;
@@ -6455,6 +6960,8 @@ export {
   GPIO_BASE as ESP32S3_GPIO_BASE,
   I2C0_BASE as ESP32S3_I2C0_BASE,
   I2C1_BASE as ESP32S3_I2C1_BASE,
+  MCPWM0_BASE as ESP32S3_MCPWM0_BASE,
+  MCPWM1_BASE as ESP32S3_MCPWM1_BASE,
   PCNT_BASE as ESP32S3_PCNT_BASE,
   SPI2_BASE as ESP32S3_SPI2_BASE,
   SPI3_BASE as ESP32S3_SPI3_BASE,

@@ -2,6 +2,33 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 100: MCPWM timer/operator/generator first cut
+
+### Added
+- **MCPWM peripheral surface** (@protopulse/emu):
+  ESP32-S3 MCPWM0/MCPWM1 now expose source-pinned register blocks at
+  0x6001E000/0x6002C000, virtual timer counters, operator timer
+  selection, comparator A/B timestamps, generator A/B actions,
+  continuous software force, GPIO-matrix output signals 160..171, and
+  PWM0/PWM1 interrupt-matrix routing.
+
+### Verified
+- Added hand-assembled Xtensa firmware that routes MCPWM0 operator 0
+  generator A through the GPIO matrix to IO5, delivers OP0_TEA compare
+  interrupts through `PWM0_INTR_MAP`, clears/disables the interrupt in
+  the ISR, and routes MCPWM1's independent `PWM1_OUT0A` signal.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 164 ESP32-S3 tests.
+- `npm run check:packages` passed.
+- `npm run test:packages` passed across package workspaces with 1,506 tests.
+
+### Honest cuts
+- No dead-time insertion, carrier modulation, fault/capture/sync
+  propagation, complementary pair helpers, or power/clock gating effects
+  yet.
+- This is the first register/timer/generator path, not the full ESP-IDF
+  MCPWM driver object model.
+
 ## 2026-06-16 — ESP32-S3 slice 99: SPI master CPU-FIFO first cut
 
 ### Added

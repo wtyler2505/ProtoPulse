@@ -7,6 +7,8 @@ import {
   ESP32S3_I2C0_BASE,
   ESP32S3_I2C1_BASE,
   ESP32S3_IRAM_BASE,
+  ESP32S3_MCPWM0_BASE,
+  ESP32S3_MCPWM1_BASE,
   ESP32S3_PCNT_BASE,
   ESP32S3_SPI2_BASE,
   ESP32S3_SPI3_BASE,
@@ -86,6 +88,8 @@ const I2C0 = ESP32S3_I2C0_BASE;
 const I2C1 = ESP32S3_I2C1_BASE;
 const SPI2 = ESP32S3_SPI2_BASE;
 const SPI3 = ESP32S3_SPI3_BASE;
+const MCPWM0 = ESP32S3_MCPWM0_BASE;
+const MCPWM1 = ESP32S3_MCPWM1_BASE;
 const INTMTX = 0x600c2000;
 const LEDC = 0x60019000;
 const RMT = 0x60016000;
@@ -170,6 +174,12 @@ const SPI_USER1_ADDR_24_BITS = (23 << 27) >>> 0;
 const SPI_USER2_CMD_9F = ((7 << 28) | 0x9f) >>> 0;
 const SPI_MS_DLEN_16_BITS = 15;
 const SPI_MS_DLEN_32_BITS = 31;
+const MCPWM_TIMER0_PERIOD7 = 7 << 8;
+const MCPWM_TIMER0_START_UP = (2 | (1 << 3)) >>> 0;
+const MCPWM_GEN_UTEZ_HIGH_UTEA_LOW = (2 | (1 << 4)) >>> 0;
+const MCPWM_OP0_TEA_INT = 1 << 15;
+const MCPWM_PWM0_OUT0A = 160;
+const MCPWM_PWM1_OUT0A = 166;
 const GDMA_OUT_CH0_INT_RAW = 0x68;
 const GDMA_OUT_CH0_INT_CLR = 0x74;
 const GDMA_OUT_CH0_LINK = 0x80;
@@ -316,6 +326,139 @@ describe('Esp32s3Core', () => {
       halfPeriods.add((tail[i]?.cycle ?? 0) - (tail[i - 1]?.cycle ?? 0));
     }
     expect([...halfPeriods]).toEqual([6]);
+  });
+
+  it('routes MCPWM0 operator 0 generator A through the GPIO matrix to IO5', () => {
+    // Context7: ESP-IDF v5.5.4 MCPWM uses timer -> operator ->
+    // comparator -> generator; source-checked against mcpwm_reg.h and
+    // GPIO matrix PWM0_OUT0A_IDX=160.
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        MCPWM0,
+        GPIO,
+        GPIO_FUNC5_OUT_SEL_CFG,
+        MCPWM_TIMER0_PERIOD7,
+        3,
+        MCPWM_GEN_UTEZ_HIGH_UTEA_LOW,
+        MCPWM_TIMER0_START_UP,
+        1 << 5,
+        MCPWM_PWM0_OUT0A,
+      ],
+      [
+        L32R(2, 0), // MCPWM0
+        L32R(3, 3),
+        S32I(3, 2, 0x04), // TIMER0_CFG0: period 7, divider 1
+        L32R(3, 4),
+        S32I(3, 2, 0x40), // GEN0_TSTMP_A = 3
+        L32R(3, 5),
+        S32I(3, 2, 0x50), // GEN0_A: high at TEZ, low at TEA
+
+        L32R(4, 1), // GPIO
+        L32R(5, 7),
+        S32I(5, 4, 0x24), // enable IO5
+        L32R(6, 2),
+        L32R(7, 8),
+        S32I(7, 6, 0x00), // GPIO matrix: IO5 <- PWM0_OUT0A
+
+        L32R(3, 6),
+        S32I(3, 2, 0x08), // TIMER0_CFG1: run up-counting
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    const { events } = c.step(320);
+    const io5 = events.filter((e) => e.pin === 'IO5');
+
+    expect(io5.length).toBeGreaterThan(10);
+    expect(new Set(io5.map((e) => e.level))).toEqual(new Set([0, 1]));
+    for (let i = 1; i < io5.length; i++) {
+      expect(io5[i]?.level).toBe(io5[i - 1]?.level === 1 ? 0 : 1);
+    }
+  });
+
+  it('routes MCPWM0 compare interrupts through the interrupt matrix', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        MCPWM0,
+        UART,
+        ESP32S3_IRAM_BASE,
+        INTMTX,
+        MCPWM_OP0_TEA_INT,
+        MCPWM_TIMER0_PERIOD7,
+        3,
+        MCPWM_GEN_UTEZ_HIGH_UTEA_LOW,
+        MCPWM_TIMER0_START_UP,
+      ],
+      [
+        L32R(2, 0), // MCPWM0
+        L32R(6, 1), // UART0
+        L32R(5, 2),
+        WSR(5, SR.VECBASE),
+        L32R(7, 3),
+        MOVI(3, 1),
+        S32I(3, 7, 0x7c), // PWM0_INTR -> CPU line 1
+        MOVI(3, 2),
+        WSR(3, SR.INTENABLE),
+        RSIL(12, 12),
+
+        L32R(3, 4),
+        S32I(3, 2, 0x11c), // clear stale OP0_TEA
+        S32I(3, 2, 0x110), // enable OP0_TEA
+        L32R(3, 5),
+        S32I(3, 2, 0x04), // TIMER0_CFG0
+        L32R(3, 6),
+        S32I(3, 2, 0x40), // GEN0_TSTMP_A
+        L32R(3, 7),
+        S32I(3, 2, 0x50), // GEN0_A action
+        L32R(3, 8),
+        S32I(3, 2, 0x08), // start timer
+        WAITI(0),
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(6, 1),
+        L32I(3, 2, 0x118), // INT_ST
+        L32R(4, 4),
+        AND(3, 3, 4),
+        SRLI(3, 3, 8),
+        S32I(3, 6, 0), // OP0_TEA bit 15 -> UART byte 0x80
+        L32R(4, 4),
+        S32I(4, 2, 0x11c), // clear OP0_TEA
+        MOVI(4, 0),
+        S32I(4, 2, 0x110), // one-shot test: disable further compare IRQs
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([0x80]);
+  });
+
+  it('routes MCPWM1 output signals independently from MCPWM0', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [MCPWM1, GPIO, GPIO_FUNC5_OUT_SEL_CFG, 2 << 6, 1 << 5, MCPWM_PWM1_OUT0A],
+      [
+        L32R(2, 0), // MCPWM1
+        L32R(3, 3),
+        S32I(3, 2, 0x4c), // GEN0_FORCE: force A high
+        L32R(4, 1), // GPIO
+        L32R(5, 4),
+        S32I(5, 4, 0x24), // enable IO5
+        L32R(6, 2),
+        L32R(7, 5),
+        S32I(7, 6, 0x00), // GPIO matrix: IO5 <- PWM1_OUT0A
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    const { events } = c.step(80);
+    expect(events.find((e) => e.pin === 'IO5')?.level).toBe(1);
   });
 
   it('routes RMT channel 0 TX symbols through the GPIO matrix to IO5', () => {

@@ -1375,6 +1375,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       from W8 with USR_MOSI_HIGHPART. Cuts: no DMA descriptor movement,
       attached-device response model, SPI timing, chip-select pin
       behavior, multi-line modes, or slave mode yet
+- [x] ESP32-S3 core slice 100 — MCPWM timer/operator/generator first
+      cut (landed 2026-06-16): MCPWM0/MCPWM1 now expose source-pinned
+      ESP32-S3 register blocks at 0x6001E000/0x6002C000, three virtual
+      timers per group, operator timer selection, comparator A/B
+      timestamps, generator A/B event actions, continuous software
+      force, GPIO-matrix output signals 160..171, raw/status/enable/
+      clear interrupt registers, and PWM0/PWM1 interrupt-matrix routing
+      at +0x07C/+0x080. Proven by hand-assembled firmware that routes
+      MCPWM0 operator 0 generator A to IO5, wakes through an OP0_TEA
+      compare ISR, clears/disables the interrupt, and separately routes
+      MCPWM1's PWM1_OUT0A signal. Cuts: no dead-time insertion, carrier
+      modulation, fault/capture/sync propagation, complementary pair
+      helpers, power/clock gating effects, or full driver object model
+      yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
