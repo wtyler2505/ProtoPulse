@@ -138,12 +138,11 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * resets the CPU, 3 the system, 4 (RWDT only) system+RTC — with the
  * real rom/rtc.h causes in RESET_STATE: TG0WDT 7/11, TG1WDT 8/17,
  * RTCWDT 9/13/16. MWDTs count APB/CLK_PRESCALE ticks; the RWDT
- * counts the modeled ~136 kHz RC_SLOW clock. Watchdog cuts, stated
- * plainly: stage-N CPU-reset ignores the PROCPU/APPCPU_RESET_EN
+ * counts the modeled ~136 kHz RC_SLOW clock, with the real stage-0
+ * eFuse timeout multiplier from BLOCK0 WDT_DELAY_SEL. Watchdog cuts,
+ * stated plainly: stage-N CPU-reset ignores the PROCPU/APPCPU_RESET_EN
  * routing bits and always resets the PRO CPU (whole machine, like
- * SW_PROCPU_RST); the RWDT's stage-0 eFuse tick multiplier
- * (rwdt_ll.h writes timeout>>1) is NOT applied — CONFIG registers
- * hold raw ticks; FLASHBOOT_MOD_EN bits are stored but INERT (this
+ * SW_PROCPU_RST); FLASHBOOT_MOD_EN bits are stored but INERT (this
  * core boots post-bootloader with the flashboot watchdogs already
  * quiesced, so raw test images aren't killed before they can
  * configure anything — IDF startup's disable writes still land on
@@ -592,8 +591,8 @@ const WDT_STAGE_RESET_RTC = 4; // RWDT only
 // RWDT — RTC_CNTL (rtc_cntl_reg.h): WDTCONFIG0 +0x98 (EN 31, STG0..3
 // at [30:28]/[27:25]/[24:22]/[21:19] — 3-bit fields, since action 4
 // exists), WDTCONFIG1..4 +0x9C..0xA8 (stage0..3 timeouts in RTC-slow
-// ticks — the modeled ~136 kHz RC_SLOW; the eFuse stage-0 tick
-// multiplier rwdt_ll.h compensates for is NOT modeled, raw ticks),
+// ticks — the modeled ~136 kHz RC_SLOW; stage 0 applies the eFuse
+// WDT_DELAY_SEL multiplier rwdt_ll.h compensates for),
 // WDTFEED +0xAC (bit 31), WDTWPROTECT +0xB0 (same 0x50D83AA1 key —
 // hal/esp32s3/include/hal/rwdt_ll.h). Reset value keeps the header's
 // FLASHBOOT_MOD_EN(12)/PAUSE_IN_SLP(9)/reset-length defaults, all
@@ -856,6 +855,7 @@ const EFUSE_PGM_DATA_WORDS = 8;
 const EFUSE_PGM_CHECK_VALUE_0 = 0x20;
 const EFUSE_PGM_CHECK_WORDS = 3;
 const EFUSE_RD_WR_DIS = 0x2c;
+const EFUSE_RD_REPEAT_DATA_0 = 0x30;
 const EFUSE_RD_REPEAT_DATA_4 = 0x40;
 const EFUSE_RD_MAC_SPI_SYS_0 = 0x44; // BLOCK1 word 0: MAC[31:0]
 const EFUSE_RD_MAC_SPI_SYS_5 = 0x58; // BLOCK1 word 5: wafer/pkg/cal fields
@@ -892,6 +892,8 @@ const EFUSE_RD_TIM_CONF_RESET = 18 << 24;
 const EFUSE_WR_TIM_CONF1_RESET = 10368 << 8;
 const EFUSE_WR_TIM_CONF2_RESET = 400;
 const EFUSE_DATE_RESET = 34_607_760;
+const EFUSE_WDT_DELAY_SEL_SHIFT = 16;
+const EFUSE_WDT_DELAY_SEL_MASK = 0x3;
 const EFUSE_POWERGLITCH_EN = 1 << 30;
 // SYNTHETIC MAC, documented: 7A:C0:DE:00:53:33 — locally-administered
 // unicast (first octet bit 1 set, bit 0 clear), "C0DE"/"S3" mnemonic.
@@ -2724,10 +2726,10 @@ export class Esp32s3Core implements McuCore {
    *  feed, firing each newly-expired stage's action via `fire`. If
    *  all four stages expire without a reset, the hardware wraps to
    *  stage 0 — modeled as a self-feed. */
-  private runWdtStages(w: Watchdog, ticks: number, fire: (stage: number) => void): void {
+  private runWdtStages(w: Watchdog, ticks: number, fire: (stage: number) => void, timeoutForStage?: (stage: number) => number): void {
     let cum = 0;
     for (let s = 0; s < 4; s++) {
-      cum += w.timeouts[s] ?? 0;
+      cum += timeoutForStage ? timeoutForStage(s) : (w.timeouts[s] ?? 0);
       if (ticks < cum) return;
       if (s < w.handled) continue;
       w.handled = s + 1;
@@ -2780,21 +2782,33 @@ export class Esp32s3Core implements McuCore {
       this.rwdtPauseStartCycle = null;
     }
     const ticks = Math.floor(((this.cpu.cycles - w.epoch) * RTC_SLOW_HZ) / CLOCK_HZ);
-    this.runWdtStages(w, ticks, (s) => {
-      const action = (w.config0 >>> (28 - 3 * s)) & 7;
-      if (action === WDT_STAGE_INT) {
-        this.rtcIntRaw |= RTC_WDT_INT;
-        this.recomputeIrq();
-      } else if (action === WDT_STAGE_RESET_CPU) {
-        this.resetCause = RESET_CAUSE_RTCWDT_CPU;
-        this.pendingReset = true;
-      } else if (action === WDT_STAGE_RESET_SYSTEM || action === WDT_STAGE_RESET_RTC) {
-        const cause = action === WDT_STAGE_RESET_RTC ? RESET_CAUSE_RTCWDT_RTC : RESET_CAUSE_RTCWDT_SYS;
-        this.resetCause = cause;
-        this.appResetCause = cause;
-        this.pendingReset = true;
-      }
-    });
+    this.runWdtStages(
+      w,
+      ticks,
+      (s) => {
+        const action = (w.config0 >>> (28 - 3 * s)) & 7;
+        if (action === WDT_STAGE_INT) {
+          this.rtcIntRaw |= RTC_WDT_INT;
+          this.recomputeIrq();
+        } else if (action === WDT_STAGE_RESET_CPU) {
+          this.resetCause = RESET_CAUSE_RTCWDT_CPU;
+          this.pendingReset = true;
+        } else if (action === WDT_STAGE_RESET_SYSTEM || action === WDT_STAGE_RESET_RTC) {
+          const cause = action === WDT_STAGE_RESET_RTC ? RESET_CAUSE_RTCWDT_RTC : RESET_CAUSE_RTCWDT_SYS;
+          this.resetCause = cause;
+          this.appResetCause = cause;
+          this.pendingReset = true;
+        }
+      },
+      (s) => this.rwdtTimeoutForStage(s),
+    );
+  }
+
+  private rwdtTimeoutForStage(stage: number): number {
+    const timeout = this.rwdt.timeouts[stage] ?? 0;
+    if (stage !== 0) return timeout;
+    const delaySel = ((this.efuseReadWord(EFUSE_RD_REPEAT_DATA_0) ?? 0) >>> EFUSE_WDT_DELAY_SEL_SHIFT) & EFUSE_WDT_DELAY_SEL_MASK;
+    return timeout * (2 << delaySel);
   }
 
   private rtcTicks(): number {

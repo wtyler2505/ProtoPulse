@@ -1275,7 +1275,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       two-RTC-slow-tick RWDT reset, sleeps until RTC timer tick 10,
       wakes through RTC_CORE, disarms RWDT, and reports the wake cause
       plus unchanged POWERON reset cause. Cuts: no RWDT XTAL clock
-      source and no eFuse timeout multiplier model yet
+      source yet
+- [x] ESP32-S3 core slice 91 — RWDT stage-0 eFuse timeout multiplier
+      (landed 2026-06-16): RWDT stage 0 now applies the ESP32-S3
+      implicit timeout multiplier selected by BLOCK0 WDT_DELAY_SEL, so
+      IDF's `rwdt_ll_config_stage()` `timeout_ticks >> 1` register write
+      ages like hardware. Proven by hand-assembled firmware for the
+      default x2 path and a burned WDT_DELAY_SEL=2 x8 path, both using a
+      raw WDTCONFIG1 value of 1 before resetting with RTCWDT_SYS_RESET.
+      Cuts: no RWDT XTAL clock source yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

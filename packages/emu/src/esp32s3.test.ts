@@ -6292,9 +6292,13 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
   const TIMG0 = 0x6001f000;
   const TIMG1 = 0x60020000;
   const INTMTX = 0x600c2000;
+  const EFUSE_BASE = 0x60007000;
   const RTC_RESET_STATE = 0x60008038;
   const RTCCNTL = 0x60008000;
   const WDT_KEY = 0x50d83aa1;
+  const EFUSE_WRITE_OP_CODE = 0x5a5a;
+  const EFUSE_PGM_DONE = 1 << 1;
+  const EFUSE_BLK0_PGM_CMD = EFUSE_PGM_DONE;
   // T1CONFIG: EN | INCREASE | divider 2 | AUTORELOAD off | ALARM_EN.
   const T1_CFG_ONESHOT = (0x80000000 | 0x40000000 | (2 << 13) | (1 << 10)) >>> 0;
   // MWDT CONFIG0: EN (31) | STG0 = reset-system (3 << 29).
@@ -6304,6 +6308,7 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
   // RWDT CONFIG0: EN (31) | STG0 = interrupt (1 << 28).
   const RWDT_EN_STG0_INT = (0x80000000 | (1 << 28)) >>> 0;
   const RWDT_PAUSE_IN_SLP = 1 << 9;
+  const EFUSE_WDT_DELAY_SEL_2 = 2 << 16;
 
   /** Same shape as the slice-11 helper: tx RESET_CAUSE_PROCPU, then on
    *  power-on (1) run `trigger` and fall into a self-loop halt; a
@@ -6500,6 +6505,72 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
     const c = core(image);
     c.step(20_000); // boot 1: tx 1, RWDT bites
     c.step(500); // boot 2: tx the cause
+    expect([...c.drainUart()]).toEqual([9]);
+  });
+
+  it('RWDT stage-0 uses the default eFuse x2 timeout multiplier', () => {
+    // Source-checked against ESP-IDF v5.5.4: rwdt_ll_config_stage()
+    // writes WDTCONFIG1 = timeout_ticks >> 1, and the hardware applies
+    // an implicit stage-0 multiplier from BLOCK0 WDT_DELAY_SEL. The
+    // default fuse value 0 therefore makes register value 1 last for
+    // two RTC-slow ticks, not one.
+    const image = causeRoundTrip([RTCCNTL, WDT_KEY, RWDT_EN_STG0_SYS], [
+      L32R(8, 2),
+      L32R(9, 3),
+      S32I(9, 8, 0xb0), // unlock RWDT
+      MOVI(10, 1),
+      S32I(10, 8, 0x9c), // WDTCONFIG1: raw stage0 register value 1
+      L32R(10, 4),
+      S32I(10, 8, 0x98), // WDTCONFIG0: EN | STG0=reset-system
+      MOVI(10, 1000),
+      ADDI(10, 10, -1),
+      BNEZ(10, BR(-2)), // run past one RTC-slow tick but not two
+      L32R(11, 1),
+      MOVI(12, 42),
+      S32I(12, 11, 0), // tx survives only if the implicit x2 is honored
+    ]);
+    const c = core(image);
+    c.step(2_600);
+    expect([...c.drainUart()]).toEqual([1, 42]);
+    c.step(4_000);
+    c.step(500);
+    expect([...c.drainUart()]).toEqual([9]);
+  });
+
+  it('RWDT stage-0 honors burned eFuse WDT_DELAY_SEL values', () => {
+    // EFUSE_RD_REPEAT_DATA0.WDT_DELAY_SEL bits [17:16] select the
+    // stage-0 implicit multiplier. Fuse value 2 makes register value 1
+    // last for eight RTC-slow ticks.
+    const image = causeRoundTrip(
+      [EFUSE_BASE, RTCCNTL, WDT_KEY, EFUSE_WDT_DELAY_SEL_2, EFUSE_WRITE_OP_CODE, EFUSE_BLK0_PGM_CMD, RWDT_EN_STG0_SYS],
+      [
+        L32R(8, 2),
+        L32R(9, 5),
+        S32I(9, 8, 0x04), // PGM_DATA1: BLOCK0 WDT_DELAY_SEL = 2
+        L32R(9, 6),
+        S32I(9, 8, 0x1cc), // CONF = WRITE_OP_CODE
+        L32R(9, 7),
+        S32I(9, 8, 0x1d4), // CMD = BLOCK0 + PGM_CMD
+        L32R(8, 3),
+        L32R(9, 4),
+        S32I(9, 8, 0xb0), // unlock RWDT
+        MOVI(10, 1),
+        S32I(10, 8, 0x9c), // raw stage0 register value 1
+        L32R(10, 8),
+        S32I(10, 8, 0x98), // WDTCONFIG0: EN | STG0=reset-system
+        MOVI(10, 2000),
+        ADDI(10, 10, -1),
+        BNEZ(10, BR(-2)), // beyond default x2, still before burned x8
+        L32R(11, 1),
+        MOVI(12, 99),
+        S32I(12, 11, 0),
+      ],
+    );
+    const c = core(image);
+    c.step(6_000);
+    expect([...c.drainUart()]).toEqual([1, 99]);
+    c.step(12_000);
+    c.step(500);
     expect([...c.drainUart()]).toEqual([9]);
   });
 
