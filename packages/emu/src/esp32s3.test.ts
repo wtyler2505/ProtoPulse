@@ -5373,6 +5373,107 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('touch sleep timer armed before sleep wakes RTC sleep with the touch source recorded', () => {
+    // Context7 + ESP-IDF v5.5.4 sources: touch wake is a touch interrupt
+    // sleep source, and touch_ll_start_fsm_repeated_timer() arms
+    // RTCCNTL.touch_ctrl2.touch_slp_timer_en for timer-triggered scans.
+    const SENS = 0x60008800;
+    const TOUCH_INTS = (1 << 4) | (1 << 6) | (1 << 7);
+    const RTC_SLP_WAKEUP_INT = 1;
+    const RTC_TOUCH_TRIG_EN = 1 << 8;
+    const rtcIntMask = TOUCH_INTS | RTC_SLP_WAKEUP_INT;
+    const wakeupTouch = RTC_TOUCH_TRIG_EN << 15;
+    const sleepEn = 0x80000000;
+    const TOUCH_SCAN_PAD1 = ((0xf << 28) | (1 << 11) | (1 << 8) | 2) >>> 0;
+    const TOUCH_CTRL2_TIMER = ((4 << 17) | (1 << 16) | (1 << 14) | (1 << 13) | (3 << 6) | (3 << 2)) >>> 0;
+    const TOUCH_CONF_ALL_OUT = 0x7fff;
+    const TOUCH_SLEEP_PAD1 = 1 << 27;
+    const TOUCH_SLP_CHANNEL_CLR = 1 << 23;
+    const BYTE_MASK = 0xff;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        RTCCNTL,
+        INTMTX,
+        UART,
+        ESP32S3_IRAM_BASE,
+        SENS,
+        rtcIntMask,
+        wakeupTouch,
+        sleepEn,
+        TOUCH_SCAN_PAD1,
+        TOUCH_CTRL2_TIMER,
+        TOUCH_CONF_ALL_OUT,
+        TOUCH_SLEEP_PAD1,
+        TOUCH_SLP_CHANNEL_CLR,
+        BYTE_MASK,
+      ],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        L32R(4, 4), // a4 = SENS
+        L32R(6, 2), // a6 = UART
+        MOVI(5, 1),
+        S32I(5, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(5, 3),
+        WSR(5, SR.VECBASE),
+        MOVI(5, 2),
+        WSR(5, SR.INTENABLE),
+        L32R(5, 5),
+        S32I(5, 2, 0x4c), // clear stale touch/SLP_WAKEUP raw bits
+        S32I(5, 2, 0x40), // enable touch and SLP_WAKEUP raw bits
+        L32R(5, 10),
+        S32I(5, 4, 0x5c), // SENS_TOUCH_CONF: enable touch outputs
+        L32R(5, 11),
+        S32I(5, 2, 0x114), // TOUCH_SLP_THRES: sleep pad 1
+        L32R(5, 8),
+        S32I(5, 2, 0x110), // TOUCH_SCAN_CTRL: scan pad 1
+        L32R(5, 9),
+        S32I(5, 2, 0x10c), // arm repeated touch sleep timer before sleep
+        L32R(5, 12),
+        S32I(5, 2, 0x118), // clear the pre-sleep timer-start sample
+        L32R(5, 5),
+        S32I(5, 2, 0x4c), // clear raw bits from the pre-sleep timer-start sample
+        L32R(5, 6),
+        S32I(5, 2, 0x3c), // WAKEUP_STATE touch wake source
+        RSIL(12, 12), // hold the pending RTC_CORE interrupt until WAITI lowers INTLEVEL
+        L32R(5, 7),
+        S32I(5, 2, 0x18), // STATE0.SLEEP_EN; armed touch timer produces wake scan
+        WAITI(0),
+        L32I(5, 2, 0x130), // SLP_WAKEUP_CAUSE
+        SRLI(5, 5, 8),
+        S32I(5, 6, 0), // tx 1: TOUCH_TRIG_EN recorded
+        L32I(5, 4, 0xa4), // SENS_SAR_TOUCH_STATUS1: fresh sleep-timer sample
+        SRLI(5, 5, 8),
+        L32R(7, 13),
+        AND(5, 5, 7),
+        S32I(5, 6, 0), // tx 8: 2048 >> 8
+        L32I(5, 4, 0xa4),
+        SRLI(5, 5, 14),
+        SRLI(5, 5, 15),
+        L32R(7, 13),
+        AND(5, 5, 7),
+        S32I(5, 6, 0), // tx 1: one sleep-entry sample contributes debounce
+        L32I(5, 2, 0x48),
+        S32I(5, 6, 0), // tx 0: RTC INT_ST clear after ISR
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 5),
+        S32I(3, 2, 0x4c), // clear touch/SLP_WAKEUP raw bits
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 8, 1, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('ULP control force-start and clock-force bits read back while mem-offset clear is write-only', () => {
     // Source-checked against ESP-IDF release/v5.5 rtc_cntl_reg.h:
     // FORCE_START_TOP and CLK_FO are R/W, while MEM_OFFST_CLR is WO.

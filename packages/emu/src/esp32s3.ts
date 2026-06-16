@@ -217,8 +217,9 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * supports the documented feed/flag-clear pulses, and reports reset
  * cause 18 when firmware has not selected BYPASS_RST. RTC SARADC1/2
  * oneshot completions, TSENS raw reads, and touch one-shot scans latch
- * their RTC-domain interrupt producers. Touch one-shot scans also wake
- * RTC sleep when RTC_TOUCH_TRIG_EN is armed. ULP force-start/start-top
+ * their RTC-domain interrupt producers. Touch one-shot scans and the
+ * repeated touch sleep timer also wake RTC sleep when RTC_TOUCH_TRIG_EN is armed.
+ * ULP force-start/start-top
  * synthetic WAKEs latch RTC_CNTL_ULP_CP_INT and wake sleep when
  * RTC_ULP_TRIG_EN is armed; the ULP sleep timer also schedules that
  * synthetic WAKE from ULP_CP_TIMER_1.SLP_CYCLE while enabled, and
@@ -2064,6 +2065,13 @@ export class Esp32s3Core implements McuCore {
     }
     this.latchRtcWakeupSource(RTC_TOUCH_TRIG_EN);
     this.recomputeIrq();
+  }
+
+  private checkRtcTouchSleepTimer(): void {
+    if ((this.rtcState0 & RTC_SLEEP_EN) === 0) return;
+    if ((this.rtcTouchCtrl2 & RTC_TOUCH_SLP_TIMER_EN) === 0) return;
+    if ((this.rtcWakeupEnabledSources() & RTC_TOUCH_TRIG_EN) === 0) return;
+    this.runTouchMeasurement();
   }
 
   private updateTouchApproachCounts(channel: number): void {
@@ -5100,6 +5108,7 @@ export class Esp32s3Core implements McuCore {
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcExt1Wakeup();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcGpioWakeup();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcSdioIdle();
+          if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcTouchSleepTimer();
           this.recomputeIrq();
         }
       } else if (off === RTC_SW_CPU_STALL) {

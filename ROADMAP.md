@@ -1189,6 +1189,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       SLP_STATUS, and reads TOUCH_SLP_DEBOUNCE as 1. Cuts: debounce is
       a simple saturating sample count, not the full hardware filter
       algorithm; no real deep-sleep touch policy yet
+- [x] ESP32-S3 core slice 83 — touch sleep timer wakes RTC sleep
+      (landed 2026-06-16): entering modeled RTC sleep with
+      RTC_TOUCH_SLP_TIMER_EN already armed now runs one touch sleep-timer
+      measurement through the existing touch interrupt/wake path when
+      RTC_TOUCH_TRIG_EN is enabled. Proven by hand-assembled firmware
+      that arms the repeated touch timer before sleep, clears the
+      pre-sleep timer-start sample, enters sleep with the touch wake
+      source enabled, then reads TOUCH_TRIG_EN from SLP_WAKEUP_CAUSE and
+      fresh pad-1 data/debounce from SENS_SAR_TOUCH_STATUS1. Cuts: this
+      is a single sleep-entry timer sample, not repeated interval timing,
+      full deep-sleep reset behavior, or RTC power-domain policy
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
