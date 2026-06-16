@@ -217,8 +217,8 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * supports the documented feed/flag-clear pulses, and reports reset
  * cause 18 when firmware has not selected BYPASS_RST. RTC SARADC1/2
  * oneshot completions, TSENS raw reads, and touch one-shot scans latch
- * their RTC-domain interrupt producers. Touch one-shot scans and the
- * repeated touch sleep timer also wake RTC sleep when RTC_TOUCH_TRIG_EN is armed.
+ * their RTC-domain interrupt producers. The repeated touch sleep timer
+ * runs on TOUCH_SLEEP_CYCLES and can wake RTC sleep when RTC_TOUCH_TRIG_EN is armed.
  * ULP force-start/start-top
  * synthetic WAKEs latch RTC_CNTL_ULP_CP_INT and wake sleep when
  * RTC_ULP_TRIG_EN is armed; the ULP sleep timer also schedules that
@@ -975,6 +975,7 @@ const RTC_TOUCH_SLP_THRES_RESET = 0xf << 27;
 const RTC_TOUCH_APPROACH_RESET = 80 << 24;
 const RTC_TOUCH_SLP_PAD_SHIFT = 27;
 const RTC_TOUCH_SLP_PAD_MASK = 0x1f;
+const RTC_TOUCH_SLEEP_CYCLES_MASK = 0xffff;
 const RTC_TOUCH_SLP_APPROACH_EN = 1 << 26;
 const RTC_TOUCH_APPROACH_MEAS_TIME_SHIFT = 24;
 const RTC_TOUCH_APPROACH_MEAS_TIME_MASK = 0xff << RTC_TOUCH_APPROACH_MEAS_TIME_SHIFT;
@@ -1619,6 +1620,7 @@ export class Esp32s3Core implements McuCore {
   private touchScanCurr = 0;
   private touchApproachCounts = [0, 0, 0];
   private touchSleepApproachCount = 0;
+  private rtcTouchTimerStartTick: number | null = null;
   private adcData = 0; // ADC1 latched 12-bit result
   private adc2Data = 0;
   private adcDone = false; // ADC1 done bit
@@ -2067,10 +2069,27 @@ export class Esp32s3Core implements McuCore {
     this.recomputeIrq();
   }
 
+  private touchSleepTimerPeriodTicks(): number {
+    return Math.max(1, this.rtcTouchCtrl1 & RTC_TOUCH_SLEEP_CYCLES_MASK);
+  }
+
+  private armTouchSleepTimer(): void {
+    this.rtcTouchTimerStartTick = this.rtcTicks();
+  }
+
   private checkRtcTouchSleepTimer(): void {
-    if ((this.rtcState0 & RTC_SLEEP_EN) === 0) return;
-    if ((this.rtcTouchCtrl2 & RTC_TOUCH_SLP_TIMER_EN) === 0) return;
-    if ((this.rtcWakeupEnabledSources() & RTC_TOUCH_TRIG_EN) === 0) return;
+    if ((this.rtcTouchCtrl2 & RTC_TOUCH_SLP_TIMER_EN) === 0) {
+      this.rtcTouchTimerStartTick = null;
+      return;
+    }
+    if (this.rtcTouchTimerStartTick === null) {
+      this.rtcTouchTimerStartTick = this.rtcTicks();
+      return;
+    }
+    const now = this.rtcTicks();
+    const period = this.touchSleepTimerPeriodTicks();
+    if (now - this.rtcTouchTimerStartTick < period) return;
+    this.rtcTouchTimerStartTick = now;
     this.runTouchMeasurement();
   }
 
@@ -2576,6 +2595,7 @@ export class Esp32s3Core implements McuCore {
     this.touchScanCurr = 0;
     this.touchApproachCounts = [0, 0, 0];
     this.touchSleepApproachCount = 0;
+    this.rtcTouchTimerStartTick = null;
     this.adcData = 0;
     this.adc2Data = 0;
     this.adcDone = false;
@@ -2959,6 +2979,7 @@ export class Esp32s3Core implements McuCore {
     if ((this.rwdt.config0 & WDT_EN) !== 0) this.checkRwdt();
     this.checkRtcSleepTimer();
     this.checkRtcUlpTimer();
+    this.checkRtcTouchSleepTimer();
     this.checkLedcTimers();
     this.checkRmt();
   }
@@ -5235,6 +5256,7 @@ export class Esp32s3Core implements McuCore {
         this.updateRtcExt1Wakeup();
       } else if (off === RTC_TOUCH_CTRL1) {
         this.rtcTouchCtrl1 = value >>> 0;
+        if ((this.rtcTouchCtrl2 & RTC_TOUCH_SLP_TIMER_EN) !== 0) this.armTouchSleepTimer();
       } else if (off === RTC_TOUCH_CTRL2) {
         const prev = this.rtcTouchCtrl2;
         this.rtcTouchCtrl2 = value >>> 0;
@@ -5246,10 +5268,13 @@ export class Esp32s3Core implements McuCore {
           this.touchDebounce.fill(0);
           this.touchApproachCounts = [0, 0, 0];
           this.touchSleepApproachCount = 0;
+          this.rtcTouchTimerStartTick = null;
           this.rtcIntRaw &= ~RTC_TOUCH_INT_MASK;
         }
         const startPulse = (value & RTC_TOUCH_START_EN) !== 0 && (prev & RTC_TOUCH_START_EN) === 0;
         const timerStart = (value & RTC_TOUCH_SLP_TIMER_EN) !== 0 && (prev & RTC_TOUCH_SLP_TIMER_EN) === 0;
+        if (timerStart) this.armTouchSleepTimer();
+        else if ((value & RTC_TOUCH_SLP_TIMER_EN) === 0) this.rtcTouchTimerStartTick = null;
         if (startPulse || timerStart) this.runTouchMeasurement();
         this.recomputeIrq();
       } else if (off === RTC_TOUCH_SCAN_CTRL) {

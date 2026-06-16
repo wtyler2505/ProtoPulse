@@ -5373,10 +5373,12 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
-  it('touch sleep timer armed before sleep wakes RTC sleep with the touch source recorded', () => {
+  it('touch sleep timer wakes RTC sleep after the programmed interval', () => {
     // Context7 + ESP-IDF v5.5.4 sources: touch wake is a touch interrupt
     // sleep source, and touch_ll_start_fsm_repeated_timer() arms
     // RTCCNTL.touch_ctrl2.touch_slp_timer_en for timer-triggered scans.
+    // RTC_CNTL_TOUCH_CTRL1.TOUCH_SLEEP_CYCLES sets the RTC slow-clock
+    // interval between repeated timer measurements.
     const SENS = 0x60008800;
     const TOUCH_INTS = (1 << 4) | (1 << 6) | (1 << 7);
     const RTC_SLP_WAKEUP_INT = 1;
@@ -5389,6 +5391,7 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     const TOUCH_CONF_ALL_OUT = 0x7fff;
     const TOUCH_SLEEP_PAD1 = 1 << 27;
     const TOUCH_SLP_CHANNEL_CLR = 1 << 23;
+    const TOUCH_CTRL1_SLEEP_4 = ((0x1000 << 16) | 4) >>> 0;
     const BYTE_MASK = 0xff;
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
@@ -5407,6 +5410,7 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
         TOUCH_SLEEP_PAD1,
         TOUCH_SLP_CHANNEL_CLR,
         BYTE_MASK,
+        TOUCH_CTRL1_SLEEP_4,
       ],
       [
         L32R(2, 0), // a2 = RTC_CNTL
@@ -5428,6 +5432,8 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
         S32I(5, 2, 0x114), // TOUCH_SLP_THRES: sleep pad 1
         L32R(5, 8),
         S32I(5, 2, 0x110), // TOUCH_SCAN_CTRL: scan pad 1
+        L32R(5, 14),
+        S32I(5, 2, 0x108), // TOUCH_CTRL1: 4 RTC slow-clock sleep cycles between scans
         L32R(5, 9),
         S32I(5, 2, 0x10c), // arm repeated touch sleep timer before sleep
         L32R(5, 12),
@@ -5469,6 +5475,8 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     );
     const c = core(image);
     c.step(1_000);
+    expect([...c.drainUart()]).toEqual([]);
+    c.step(20_000);
     expect([...c.drainUart()]).toEqual([1, 8, 1, 0]);
     c.step(300);
     expect([...c.drainUart()]).toEqual([]);

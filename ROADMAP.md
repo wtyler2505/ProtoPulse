@@ -1200,6 +1200,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       fresh pad-1 data/debounce from SENS_SAR_TOUCH_STATUS1. Cuts: this
       is a single sleep-entry timer sample, not repeated interval timing,
       full deep-sleep reset behavior, or RTC power-domain policy
+- [x] ESP32-S3 core slice 84 — touch sleep timer interval scheduling
+      (landed 2026-06-16): RTC_TOUCH_SLP_TIMER_EN now runs as a
+      repeated RTC-slow-clock producer keyed off
+      RTC_CNTL_TOUCH_CTRL1.TOUCH_SLEEP_CYCLES instead of only a
+      sleep-entry shortcut. The same synthetic touch measurement path
+      still owns RTC touch interrupts, sleep wake-source recording, and
+      sleep-pad status/debounce updates. Proven by hand-assembled
+      firmware that arms the repeated touch timer, clears the pre-sleep
+      sample, enters RTC sleep with RTC_TOUCH_TRIG_EN enabled, observes
+      no UART before the programmed interval, then wakes and reports
+      TOUCH_TRIG_EN plus fresh pad-1 data/debounce. Cuts: no full
+      capacitive physics, deep-sleep reset/wake-stub policy, or RTC
+      power-domain policy yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
