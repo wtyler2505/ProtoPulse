@@ -1213,6 +1213,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       TOUCH_TRIG_EN plus fresh pad-1 data/debounce. Cuts: no full
       capacitive physics, deep-sleep reset/wake-stub policy, or RTC
       power-domain policy yet
+- [x] ESP32-S3 core slice 85 — brownout analog reset via FIB_SEL
+      (landed 2026-06-16): RTC_CNTL_FIB_SEL now participates in the
+      brownout reset path the way ESP-IDF's brownout LL uses it:
+      firmware can clear FIB_BOD_RST, set BROWN_OUT_ANA_RST_EN, and a
+      host-injected brownout trip resets with the ROM brownout cause
+      (15) even when BROWN_OUT_RST_ENA is not set. The interrupt-only
+      brownout path remains intact. Proven by hand-assembled firmware
+      that first reports POWERON, configures software-owned BOD analog
+      reset, receives a host brownout trip, reboots, and reports reset
+      cause 15. Cuts: no analog voltage threshold/counter timing model
+      and no delayed BROWN_OUT_INT_WAIT/RST_WAIT sequencing yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

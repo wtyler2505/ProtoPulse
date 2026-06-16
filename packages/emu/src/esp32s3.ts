@@ -231,7 +231,8 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * used by ulp_riscv_wakeup_main_processor(). INT_RAW writes only affect
  * the documented TOUCH_APPROACH_LOOP_DONE R/W raw bit; producer-owned
  * raw bits stay read-only. FIB_SEL preserves the documented three-bit
- * selector reset/readback. COCPU_CTRL keeps the documented reset timing
+ * selector reset/readback and gates software-controlled brownout analog
+ * reset routing. COCPU_CTRL keeps the documented reset timing
  * fields/COCPU_SEL bit while COCPU_DONE/SHUT_RESET_EN reflect through
  * LOW_POWER_ST's COCPU done/sleep bits.
  * COCPU_SW_INT_TRIGGER wakes RTC sleep when RTC_COCPU_TRIG_EN is armed.
@@ -632,12 +633,14 @@ const RTC_COCPU_CTRL_RESET = ((1 << 23) | (40 << 14) | (16 << 7) | (8 << 1)) >>>
 const RTC_BROWN_OUT_DET = 1 << 31;
 const RTC_BROWN_OUT_ENA = 1 << 30;
 const RTC_BROWN_OUT_CNT_CLR = 1 << 29;
+const RTC_BROWN_OUT_ANA_RST_EN = 1 << 28;
 const RTC_BROWN_OUT_RST_ENA = 1 << 26;
 const RTC_BROWN_OUT_RESET = (RTC_BROWN_OUT_ENA | (0x3ff << 16) | (1 << 4)) >>> 0;
 const RTC_POWER_GLITCH_EN = 1 << 31;
 const RTC_PG_CTRL_RESET = 0;
 const RTC_FIB_SEL_MASK = 0x7;
 const RTC_FIB_SEL_RESET = 0x7;
+const RTC_FIB_BOD_RST = 1 << 1;
 const RWDT_CONFIG0_RESET = ((1 << 16) | (1 << 13) | (1 << 12) | (1 << 9)) >>> 0;
 
 // SAR ADC1/ADC2 oneshot paths (sens_reg.h; flow per
@@ -2881,7 +2884,10 @@ export class Esp32s3Core implements McuCore {
     }
     this.rtcBrownOut |= RTC_BROWN_OUT_DET;
     this.rtcIntRaw |= RTC_BROWN_OUT_INT;
-    if ((this.rtcBrownOut & RTC_BROWN_OUT_RST_ENA) !== 0) {
+    const digitalReset = (this.rtcBrownOut & RTC_BROWN_OUT_RST_ENA) !== 0;
+    const analogReset =
+      (this.rtcBrownOut & RTC_BROWN_OUT_ANA_RST_EN) !== 0 && (this.rtcFibSel & RTC_FIB_BOD_RST) === 0;
+    if (digitalReset || analogReset) {
       this.resetCause = RESET_CAUSE_BROWNOUT;
       this.appResetCause = RESET_CAUSE_BROWNOUT;
       this.pendingReset = true;

@@ -4470,6 +4470,35 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('brownout analog reset follows FIB_SEL software control and reports the ROM brownout cause', () => {
+    // Source-checked against ESP-IDF v5.5.4: brownout_ll_ana_reset_enable()
+    // clears RTC_CNTL_FIB_BOD_RST before setting BROWN_OUT_ANA_RST_EN.
+    // esp32s3/rom/rtc.h reports brownout resets as cause 15.
+    const RTC_BROWN_OUT_ENA = 1 << 30;
+    const RTC_BROWN_OUT_ANA_RST_EN = 1 << 28;
+    const FIB_BOD_RST = 1 << 1;
+    const fibSoftwareBodReset = 0x7 & ~FIB_BOD_RST;
+    const rtcBrownoutAnalogReset =
+      (RTC_BROWN_OUT_ENA | RTC_BROWN_OUT_ANA_RST_EN | (0x3ff << 16) | (1 << 4)) >>> 0;
+    const image = causeRoundTrip([RTCCNTL, fibSoftwareBodReset, rtcBrownoutAnalogReset], [
+      L32R(8, 2),
+      L32R(9, 3),
+      S32I(9, 8, 0x148), // FIB_SEL: software controls BOD reset
+      L32R(9, 4),
+      S32I(9, 8, 0xe8), // BROWN_OUT: enable detector + analog reset only
+    ]);
+    const c = core(image);
+    c.step(800);
+    expect([...c.drainUart()]).toEqual([1]);
+    c.setBrownoutDetected(true);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([15]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('power-glitch detector trips WAITI through the RTC core interrupt matrix', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // rtc_cntl_reg.h has PG_CTRL +0x144, POWER_GLITCH_EN bit 31, and
