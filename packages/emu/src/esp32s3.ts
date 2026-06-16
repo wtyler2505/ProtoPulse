@@ -1005,6 +1005,7 @@ const SENS_TOUCH_MEAS_DONE = 1 << 31;
 const SENS_TOUCH_CHANNEL_CLR_MASK = TOUCH_CHANNEL_MASK << 15;
 const SENS_SAR_TOUCH_STATUS0 = 0xa0;
 const SENS_SAR_TOUCH_STATUS_STRIDE = 4;
+const SENS_SAR_TOUCH_SLP_STATUS = 0xdc;
 const SENS_SAR_TOUCH_APPR_STATUS = 0xe0;
 const SENS_TOUCH_SCAN_CURR_SHIFT = 22;
 const SENS_TOUCH_DATA_MASK = 0x003f_ffff;
@@ -4333,6 +4334,10 @@ export class Esp32s3Core implements McuCore {
         const data = this.touchData[channel] ?? 0;
         if (channel === 0) return ((this.touchScanCurr << SENS_TOUCH_SCAN_CURR_SHIFT) | (data & SENS_TOUCH_DATA_MASK)) >>> 0;
         return data & SENS_TOUCH_DATA_MASK;
+      }
+      if (off === SENS_SAR_TOUCH_SLP_STATUS) {
+        const sleepPad = (this.rtcTouchSlpThres >>> RTC_TOUCH_SLP_PAD_SHIFT) & RTC_TOUCH_SLP_PAD_MASK;
+        return (this.touchData[sleepPad] ?? 0) & SENS_TOUCH_DATA_MASK;
       }
       if (off === SENS_SAR_TOUCH_APPR_STATUS) {
         return (

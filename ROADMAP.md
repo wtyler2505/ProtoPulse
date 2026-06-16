@@ -1159,6 +1159,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       latches after it. Cuts: no capacitive accumulation math,
       debounce/smooth sleep-pad data, or real deep-sleep touch policy
       yet
+- [x] ESP32-S3 core slice 80 — touch sleep-pad status data readback
+      (landed 2026-06-16): SENS_SAR_TOUCH_SLP_STATUS (+0xdc) now
+      returns the modeled data for the pad selected by
+      RTC_TOUCH_SLP_THRES.TOUCH_SLP_PAD, matching the register surface
+      used by ESP-IDF sleep benchmark/smooth reads. Proven by
+      hand-assembled firmware that selects sleep pad 1, confirms the
+      sleep status data is zero before a scan, starts a pad-1 scan, and
+      reads back the modeled 2048 count through SLP_STATUS. Cuts: no
+      debounce/smooth filtering math, raw sleep-pad workaround routing,
+      or real deep-sleep touch policy yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
