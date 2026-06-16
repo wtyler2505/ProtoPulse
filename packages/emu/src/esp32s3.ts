@@ -262,6 +262,7 @@ const SRAM_BYTES = 0x78000; // 480 KiB shared window
 const GPIO_BASE = 0x60004000;
 const UART0_BASE = 0x60000000;
 const UART1_BASE = 0x60010000;
+const UART2_BASE = 0x6002e000; // REG_UART_BASE(2): UART0 + 2*0x10000 + 0xe000
 
 // GPIO matrix register offsets (gpio_reg.h):
 const GPIO_OUT = 0x04;
@@ -340,6 +341,7 @@ const INTMTX_CORE1_OFFSET = 0x800;
 const INTMTX_GPIO_MAP = 0x040; // INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG
 const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
 const INTMTX_UART1_MAP = 0x070; // INTERRUPT_CORE0_UART1_INTR_MAP_REG
+const INTMTX_UART2_MAP = 0x074; // INTERRUPT_CORE0_UART2_INTR_MAP_REG
 const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
 const INTMTX_RTC_CORE_MAP = 0x09c; // INTERRUPT_CORE0_RTC_CORE_INTR_MAP_REG
 const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
@@ -1507,9 +1509,16 @@ export class Esp32s3Core implements McuCore {
   private uart1Wakeup = false;
   private uart1WakeActiveThreshold = UART_ACTIVE_THRESHOLD_RESET;
   private uart1WakeEdgeCount = 0;
+  private uart2RxQueue: number[] = [];
+  private uart2IntEna = 0;
+  private uart2TxDone = false;
+  private uart2RxThrhd = 96;
+  private uart2Conf0 = UART_CONF0_RESET;
+  private uart2WakeActiveThreshold = UART_ACTIVE_THRESHOLD_RESET;
   private gpioIntMaps = freshInterruptMapPair();
   private uartIntMaps = freshInterruptMapPair();
   private uart1IntMaps = freshInterruptMapPair();
+  private uart2IntMaps = freshInterruptMapPair();
 
   // TIMG0/TIMG1 state (slices 8 + 13): per-group timers, MWDT, INT_*
   // regs and matrix maps. Counters are virtual — derived from elapsed
@@ -1813,20 +1822,22 @@ export class Esp32s3Core implements McuCore {
     this.uartWriteTo(0, byte);
   }
 
-  uartWriteTo(port: 0 | 1, byte: number): void {
+  uartWriteTo(port: 0 | 1 | 2, byte: number): void {
     if (!Number.isInteger(byte) || byte < 0 || byte > 0xff) {
       throw new Error(`uartWriteTo expects a byte 0..255 (got ${String(byte)})`);
     }
-    if (this.consumeUartSleepRxByte(port, byte)) {
+    if (port !== 2 && this.consumeUartSleepRxByte(port, byte)) {
       this.recomputeIrq();
       return;
     }
     if (port === 0) {
       this.uartWakeEdgeCount = 0;
       this.rxQueue.push(byte);
-    } else {
+    } else if (port === 1) {
       this.uart1WakeEdgeCount = 0;
       this.uart1RxQueue.push(byte);
+    } else {
+      this.uart2RxQueue.push(byte);
     }
     this.recomputeIrq();
   }
@@ -2446,9 +2457,16 @@ export class Esp32s3Core implements McuCore {
     this.uart1Wakeup = false;
     this.uart1WakeActiveThreshold = UART_ACTIVE_THRESHOLD_RESET;
     this.uart1WakeEdgeCount = 0;
+    this.uart2RxQueue = [];
+    this.uart2IntEna = 0;
+    this.uart2TxDone = false;
+    this.uart2RxThrhd = 96;
+    this.uart2Conf0 = UART_CONF0_RESET;
+    this.uart2WakeActiveThreshold = UART_ACTIVE_THRESHOLD_RESET;
     this.gpioIntMaps = freshInterruptMapPair();
     this.uartIntMaps = freshInterruptMapPair();
     this.uart1IntMaps = freshInterruptMapPair();
+    this.uart2IntMaps = freshInterruptMapPair();
     this.timg = [freshTimgGroup(), freshTimgGroup()];
     this.rwdt = freshWatchdog(RWDT_CONFIG0_RESET, 0);
     // resetCause/appResetCause are deliberately NOT cleared — they
@@ -2930,6 +2948,12 @@ export class Esp32s3Core implements McuCore {
     let raw = this.uart1TxDone ? UART_TX_DONE_INT : 0;
     if (this.uart1Wakeup) raw |= UART_WAKEUP_INT;
     if (this.uart1RxQueue.length > this.uart1RxThrhd) raw |= UART_RXFIFO_FULL_INT;
+    return raw;
+  }
+
+  private uart2IntRaw(): number {
+    let raw = this.uart2TxDone ? UART_TX_DONE_INT : 0;
+    if (this.uart2RxQueue.length > this.uart2RxThrhd) raw |= UART_RXFIFO_FULL_INT;
     return raw;
   }
 
@@ -3725,6 +3749,7 @@ export class Esp32s3Core implements McuCore {
     }
     const uartPending = (this.uartIntRaw() & this.uartIntEna) !== 0;
     const uart1Pending = (this.uart1IntRaw() & this.uart1IntEna) !== 0;
+    const uart2Pending = (this.uart2IntRaw() & this.uart2IntEna) !== 0;
     const ledcPending = (this.ledcIntRaw & this.ledcIntEna) !== 0;
     const rmtPending = (this.rmtIntRaw & this.rmtIntEna) !== 0;
     const apbAdcPending = (this.apbSaradcIntRaw & this.apbSaradcIntEna) !== 0;
@@ -3737,6 +3762,7 @@ export class Esp32s3Core implements McuCore {
     if (gpioPending) raise(this.gpioIntMaps);
     if (uartPending) raise(this.uartIntMaps);
     if (uart1Pending) raise(this.uart1IntMaps);
+    if (uart2Pending) raise(this.uart2IntMaps);
     if (ledcPending) raise(this.ledcIntMaps);
     if (rmtPending) raise(this.rmtIntMaps);
     if (apbAdcPending) raise(this.apbSaradcIntMaps);
@@ -4059,6 +4085,25 @@ export class Esp32s3Core implements McuCore {
       if (off === UART_SLEEP_CONF) return this.uart1WakeActiveThreshold;
       return 0;
     }
+    if (addr >= UART2_BASE && addr < UART2_BASE + 0x1000) {
+      const off = addr - UART2_BASE;
+      if (off === UART_FIFO) {
+        const byte = this.uart2RxQueue.shift() ?? 0;
+        this.recomputeIrq(); // draining may deassert RXFIFO_FULL
+        return byte;
+      }
+      if (off === UART_STATUS) {
+        const rx = Math.min(this.uart2RxQueue.length, UART_RXFIFO_MASK);
+        return rx;
+      }
+      if (off === UART_INT_RAW) return this.uart2IntRaw();
+      if (off === UART_INT_ST) return this.uart2IntRaw() & this.uart2IntEna;
+      if (off === UART_INT_ENA) return this.uart2IntEna;
+      if (off === UART_CONF0) return this.uart2Conf0 >>> 0;
+      if (off === UART_CONF1) return this.uart2RxThrhd;
+      if (off === UART_SLEEP_CONF) return this.uart2WakeActiveThreshold;
+      return 0;
+    }
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
@@ -4066,6 +4111,7 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_GPIO_MAP) return this.gpioIntMaps[core];
       if (sourceOff === INTMTX_UART_MAP) return this.uartIntMaps[core];
       if (sourceOff === INTMTX_UART1_MAP) return this.uart1IntMaps[core];
+      if (sourceOff === INTMTX_UART2_MAP) return this.uart2IntMaps[core];
       if (sourceOff === INTMTX_LEDC_MAP) return this.ledcIntMaps[core];
       if (sourceOff === INTMTX_RTC_CORE_MAP) return this.rtcCoreIntMaps[core];
       if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
@@ -4534,6 +4580,25 @@ export class Esp32s3Core implements McuCore {
       this.recomputeIrq();
       return;
     }
+    if (addr >= UART2_BASE && addr < UART2_BASE + 0x1000) {
+      const off = addr - UART2_BASE;
+      if (off === UART_FIFO) {
+        this.txBuffer.push(value & 0xff);
+        this.uart2TxDone = true; // tx is instantaneous in this model
+      } else if (off === UART_INT_ENA) {
+        this.uart2IntEna = value >>> 0;
+      } else if (off === UART_INT_CLR) {
+        if ((value & UART_TX_DONE_INT) !== 0) this.uart2TxDone = false;
+      } else if (off === UART_CONF1) {
+        this.uart2RxThrhd = value & UART_RXFIFO_MASK;
+      } else if (off === UART_CONF0) {
+        this.uart2Conf0 = value >>> 0;
+      } else if (off === UART_SLEEP_CONF) {
+        this.uart2WakeActiveThreshold = value & UART_RXFIFO_MASK;
+      }
+      this.recomputeIrq();
+      return;
+    }
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
@@ -4541,6 +4606,7 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_GPIO_MAP) this.gpioIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_UART_MAP) this.uartIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_UART1_MAP) this.uart1IntMaps[core] = value & 0x1f;
+      else if (sourceOff === INTMTX_UART2_MAP) this.uart2IntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_LEDC_MAP) this.ledcIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;
@@ -5281,4 +5347,5 @@ export {
   GPIO_BASE as ESP32S3_GPIO_BASE,
   UART0_BASE as ESP32S3_UART0_BASE,
   UART1_BASE as ESP32S3_UART1_BASE,
+  UART2_BASE as ESP32S3_UART2_BASE,
 };

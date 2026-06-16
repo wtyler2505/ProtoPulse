@@ -1134,6 +1134,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       count 0, then receives a separate post-wake byte. Cuts: no UART2
       RTC wake source, baud-rate sampling/noise/framing error behavior,
       or full UART driver surface yet
+- [x] ESP32-S3 core slice 78 — UART2 register and interrupt runway
+      (landed 2026-06-16): the third ESP32-S3 UART now has the same
+      basic active-mode register substrate as UART0/1: FIFO, STATUS,
+      INT_RAW/ST/ENA/CLR, CONF0, CONF1, SLEEP_CONF round-trip, TX_DONE,
+      RXFIFO_FULL, and its own interrupt-matrix source at +0x074.
+      `uartWriteTo(2, byte)` feeds UART2 RX while UART0 remains the
+      test reporting channel. Proven by hand-assembled firmware that
+      maps UART2 RXFIFO_FULL to CPU line 1, receives a host byte on
+      UART2, drains that FIFO in the ISR, and reports the byte over
+      UART0. Cuts: no UART2 RTC sleep-wake plumbing in this slice,
+      baud-rate sampling/noise/framing error behavior, or full UART
+      driver surface yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

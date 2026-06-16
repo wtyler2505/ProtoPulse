@@ -7,6 +7,7 @@ import {
   ESP32S3_IRAM_BASE,
   ESP32S3_UART0_BASE,
   ESP32S3_UART1_BASE,
+  ESP32S3_UART2_BASE,
 } from './esp32s3.js';
 import {
   ADD,
@@ -75,6 +76,7 @@ import type { XtInstr } from './xtensa-asm.js';
 const GPIO = ESP32S3_GPIO_BASE;
 const UART = ESP32S3_UART0_BASE;
 const UART1 = ESP32S3_UART1_BASE;
+const UART2 = ESP32S3_UART2_BASE;
 const LEDC = 0x60019000;
 const RMT = 0x60016000;
 const GDMA = 0x6003f000;
@@ -2235,6 +2237,43 @@ describe('Esp32s3Core — peripheral interrupt lines through the matrix (slice 6
     c.uartWriteTo(1, 0x5c);
     c.step(100);
     expect([...c.drainUart()]).toEqual([0x5c]);
+  });
+
+  it('routes UART2 RXFIFO_FULL through its own interrupt matrix source', () => {
+    // ESP-IDF v5.5.4 ESP32-S3 headers: SOC_UART_NUM is 3,
+    // REG_UART_BASE(2) is UART0 + 0x2e000, and UART2_INTR_MAP is
+    // INTERRUPT_CORE0_BASE + 0x074.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART2, UART, ESP32S3_IRAM_BASE, INTMTX], [
+      L32R(2, 0), // a2 = UART2
+      L32R(5, 2),
+      WSR(5, SR.VECBASE),
+      MOVI(3, 0),
+      S32I(3, 2, 0x24), // CONF1: RXFIFO_FULL_THRHD = 0 (any byte)
+      MOVI(3, 1),
+      S32I(3, 2, 0x0c), // INT_ENA = RXFIFO_FULL
+      L32R(7, 3),
+      MOVI(3, 1),
+      S32I(3, 7, 0x74), // UART2 source -> CPU line 1
+      MOVI(3, 2),
+      WSR(3, SR.INTENABLE),
+      RSIL(8, 0),
+      J(BR(-1)),
+
+      PAD_TO(0x340),
+      WSR(2, SR.EXCSAVE1),
+      L32R(2, 0), // UART2
+      L32R(4, 1), // UART0 test output
+      L32I(3, 2, 0x00), // UART2 FIFO read
+      S32I(3, 4, 0x00), // report over UART0
+      RSR(2, SR.EXCSAVE1),
+      RFE(),
+    ]);
+    const c = core(image);
+    c.step(100);
+    expect([...c.drainUart()]).toEqual([]);
+    c.uartWriteTo(2, 0x6d);
+    c.step(100);
+    expect([...c.drainUart()]).toEqual([0x6d]);
   });
 });
 
