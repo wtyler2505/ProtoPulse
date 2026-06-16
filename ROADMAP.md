@@ -1342,6 +1342,12 @@ manufacturing pipeline (Vol II §H).
       format means a pack can already travel as a file
 - [ ] Community library: registry/sharing (product decision — needs
       Tyler: where packs live, who can publish, moderation)
+- [ ] Board/module packs after the ESP32 long tail: verified starter
+      packs for Arduino Uno/Nano/Mega-class boards, Raspberry Pi
+      Pico/RP2040 boards, ESP32 dev boards, common sensors, motor
+      drivers, power modules, connectors, and reusable circuit snippets.
+      Full Raspberry Pi/Linux SBC support is a later bridge/plugin/
+      telemetry decision, not an MCU-emulator target
 - [x] Multi-fab rule decks + fab picker (landed 2026-06-11, the
       manufacturing pipeline's foundation): OSHPark and PCBWay
       2-layer decks join JLC — every capability web-verified against

@@ -2,6 +2,35 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slices 21-92: IDF runway catch-up
+
+### Added
+- **ADC/GDMA/LEDC/RMT runway** (@protopulse/emu): APB_SARADC
+  threshold comparators, ADC continuous GDMA backpressure/overflow
+  behavior, LEDC low-speed PWM/fade/interrupt delivery, and RMT TX/RX
+  direct-memory + GDMA surfaces landed after slice 20.
+- **Sleep, wake, and RTC interrupt surface**: WAITI and RTC sleep wake
+  sources now cover timer, watchdog, brownout, XTAL32K-dead, SUPER_WDT,
+  SARADC, TSENS, touch, ULP/COCPU, GPIO/EXT0/EXT1, UART wake, and
+  low-power status/readback slices.
+- **Reset and fault-routing fidelity**: power-glitch, brownout,
+  clock-glitch, SUPER_WDT, RWDT pause-in-sleep, RWDT eFuse timeout
+  multiplier, FIB_SEL routing, and clock-glitch interrupt producer
+  slices brought the RTC/reset runway much closer to ESP-IDF startup
+  expectations.
+
+### Verified
+- Each slice carries its own hand-assembled Xtensa firmware proof in
+  `ROADMAP.md`, ending with slice 92's host-injected clock-glitch
+  interrupt producer.
+- Packages CI was green through `ab301d16` after the latest slice.
+
+### Honest cuts
+- This is still not a claim that unmodified IDF/FreeRTOS firmware is
+  complete. The open long tail remains GDMA driver-pool flush policy,
+  backpressure timing, sleep/wake edge cases, remaining interrupt gaps,
+  and the broader peripheral matrix.
+
 ## 2026-06-12 — ESP32-S3 slice 20: APB_SARADC interrupt delivery
 
 ### Added
