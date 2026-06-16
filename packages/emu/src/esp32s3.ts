@@ -1012,6 +1012,8 @@ const SENS_SAR_TOUCH_SLP_STATUS = 0xdc;
 const SENS_SAR_TOUCH_APPR_STATUS = 0xe0;
 const SENS_TOUCH_SCAN_CURR_SHIFT = 22;
 const SENS_TOUCH_DATA_MASK = 0x003f_ffff;
+const SENS_TOUCH_DEBOUNCE_SHIFT = 29;
+const SENS_TOUCH_DEBOUNCE_MASK = 0x7;
 const SENS_TOUCH_DEFAULT_DATA = 2048;
 const SENS_TOUCH_APPROACH_PAD0_SHIFT = 28;
 const SENS_TOUCH_APPROACH_PAD1_SHIFT = 24;
@@ -1610,6 +1612,7 @@ export class Esp32s3Core implements McuCore {
   private sensTouchConf = SENS_TOUCH_CONF_RESET;
   private touchThresholds = Array(SENS_TOUCH_THRES_COUNT).fill(0) as number[];
   private touchData = Array(TOUCH_CHANNEL_COUNT).fill(0) as number[];
+  private touchDebounce = Array(TOUCH_CHANNEL_COUNT).fill(0) as number[];
   private touchMeasDone = false;
   private touchActiveMask = 0;
   private touchScanCurr = 0;
@@ -2039,6 +2042,9 @@ export class Esp32s3Core implements McuCore {
     this.touchScanCurr = channel & 0xf;
     this.touchMeasDone = true;
     this.touchData[channel] = SENS_TOUCH_DEFAULT_DATA;
+    if (channel > 0) {
+      this.touchDebounce[channel] = Math.min(SENS_TOUCH_DEBOUNCE_MASK, (this.touchDebounce[channel] ?? 0) + 1);
+    }
 
     const threshold = channel > 0 ? (this.touchThresholds[channel - 1] ?? 0) : 0;
     const nextActive = threshold !== 0 && SENS_TOUCH_DEFAULT_DATA >= threshold ? 1 << channel : 0;
@@ -2556,6 +2562,7 @@ export class Esp32s3Core implements McuCore {
     this.sensTouchConf = SENS_TOUCH_CONF_RESET;
     this.touchThresholds = Array(SENS_TOUCH_THRES_COUNT).fill(0) as number[];
     this.touchData = Array(TOUCH_CHANNEL_COUNT).fill(0) as number[];
+    this.touchDebounce = Array(TOUCH_CHANNEL_COUNT).fill(0) as number[];
     this.touchMeasDone = false;
     this.touchActiveMask = 0;
     this.touchScanCurr = 0;
@@ -4336,7 +4343,7 @@ export class Esp32s3Core implements McuCore {
         const channel = (off - SENS_SAR_TOUCH_STATUS0) / SENS_SAR_TOUCH_STATUS_STRIDE;
         const data = this.touchData[channel] ?? 0;
         if (channel === 0) return ((this.touchScanCurr << SENS_TOUCH_SCAN_CURR_SHIFT) | (data & SENS_TOUCH_DATA_MASK)) >>> 0;
-        return data & SENS_TOUCH_DATA_MASK;
+        return ((((this.touchDebounce[channel] ?? 0) & SENS_TOUCH_DEBOUNCE_MASK) << SENS_TOUCH_DEBOUNCE_SHIFT) | (data & SENS_TOUCH_DATA_MASK)) >>> 0;
       }
       if (off === SENS_SAR_TOUCH_SLP_STATUS) {
         const sleepPad = (this.rtcTouchSlpThres >>> RTC_TOUCH_SLP_PAD_SHIFT) & RTC_TOUCH_SLP_PAD_MASK;
@@ -4344,7 +4351,7 @@ export class Esp32s3Core implements McuCore {
         // ESP-IDF's LL uses SLP_STATUS only for benchmark/smooth; raw
         // sleep-pad data is read from sar_touch_status[touch_num - 1].
         const data = dataSel >= SENS_TOUCH_DATA_SEL_BENCHMARK ? (this.touchData[sleepPad] ?? 0) : 0;
-        return data & SENS_TOUCH_DATA_MASK;
+        return ((((this.touchDebounce[sleepPad] ?? 0) & SENS_TOUCH_DEBOUNCE_MASK) << SENS_TOUCH_DEBOUNCE_SHIFT) | (data & SENS_TOUCH_DATA_MASK)) >>> 0;
       }
       if (off === SENS_SAR_TOUCH_APPR_STATUS) {
         return (
@@ -5227,6 +5234,7 @@ export class Esp32s3Core implements McuCore {
           this.touchActiveMask = 0;
           this.touchScanCurr = 0;
           this.touchData.fill(0);
+          this.touchDebounce.fill(0);
           this.touchApproachCounts = [0, 0, 0];
           this.touchSleepApproachCount = 0;
           this.rtcIntRaw &= ~RTC_TOUCH_INT_MASK;
@@ -5245,6 +5253,7 @@ export class Esp32s3Core implements McuCore {
           this.touchMeasDone = false;
           this.touchScanCurr = 0;
           this.touchData.fill(0);
+          this.touchDebounce.fill(0);
           this.touchApproachCounts = [0, 0, 0];
           this.touchSleepApproachCount = 0;
         }

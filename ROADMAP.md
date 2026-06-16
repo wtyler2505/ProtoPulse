@@ -1179,6 +1179,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       reads the modeled 2048 count from SENS_SAR_TOUCH_STATUS1 (+0xa4).
       Cuts: no debounce/smooth filtering math or real deep-sleep touch
       policy yet
+- [x] ESP32-S3 core slice 82 — touch sleep debounce and smooth status
+      (landed 2026-06-16): SENS_SAR_TOUCH_STATUS1..14 and
+      SENS_SAR_TOUCH_SLP_STATUS now expose a modeled 3-bit debounce
+      count in bits [31:29], and sleep smooth reads share the same
+      modeled SLP_STATUS data path as benchmark reads. Proven by
+      hand-assembled firmware that selects sleep pad 1, reads zero
+      before scan, scans pad 1, reads benchmark and smooth data through
+      SLP_STATUS, and reads TOUCH_SLP_DEBOUNCE as 1. Cuts: debounce is
+      a simple saturating sample count, not the full hardware filter
+      algorithm; no real deep-sleep touch policy yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
