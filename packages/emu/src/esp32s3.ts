@@ -996,6 +996,9 @@ const SENS_TOUCH_DENOISE_END = 1 << 18;
 const SENS_TOUCH_UNIT_END = 1 << 19;
 const SENS_TOUCH_STATUS_CLR = 1 << 15;
 const SENS_TOUCH_OUTEN_MASK = TOUCH_CHANNEL_MASK;
+const SENS_TOUCH_DATA_SEL_SHIFT = 16;
+const SENS_TOUCH_DATA_SEL_MASK = 0x3 << SENS_TOUCH_DATA_SEL_SHIFT;
+const SENS_TOUCH_DATA_SEL_BENCHMARK = 2;
 const SENS_TOUCH_CONF_RESET = ((0xf << 28) | (0xf << 24) | (0xf << 20) | SENS_TOUCH_OUTEN_MASK) >>> 0;
 const SENS_SAR_TOUCH_THRES1 = 0x64;
 const SENS_TOUCH_THRES_COUNT = 14;
@@ -4337,7 +4340,11 @@ export class Esp32s3Core implements McuCore {
       }
       if (off === SENS_SAR_TOUCH_SLP_STATUS) {
         const sleepPad = (this.rtcTouchSlpThres >>> RTC_TOUCH_SLP_PAD_SHIFT) & RTC_TOUCH_SLP_PAD_MASK;
-        return (this.touchData[sleepPad] ?? 0) & SENS_TOUCH_DATA_MASK;
+        const dataSel = (this.sensTouchConf & SENS_TOUCH_DATA_SEL_MASK) >>> SENS_TOUCH_DATA_SEL_SHIFT;
+        // ESP-IDF's LL uses SLP_STATUS only for benchmark/smooth; raw
+        // sleep-pad data is read from sar_touch_status[touch_num - 1].
+        const data = dataSel >= SENS_TOUCH_DATA_SEL_BENCHMARK ? (this.touchData[sleepPad] ?? 0) : 0;
+        return data & SENS_TOUCH_DATA_MASK;
       }
       if (off === SENS_SAR_TOUCH_APPR_STATUS) {
         return (

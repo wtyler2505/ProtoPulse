@@ -1169,6 +1169,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       reads back the modeled 2048 count through SLP_STATUS. Cuts: no
       debounce/smooth filtering math, raw sleep-pad workaround routing,
       or real deep-sleep touch policy yet
+- [x] ESP32-S3 core slice 81 — touch sleep raw-data workaround routing
+      (landed 2026-06-16): SENS_SAR_TOUCH_SLP_STATUS now models the
+      ESP-IDF LL split between benchmark/smooth sleep reads and raw
+      sleep-pad reads: raw mode leaves SLP_STATUS empty, while the raw
+      value remains available through SENS.sar_touch_status[touch_num -
+      1]. Proven by hand-assembled firmware that selects sleep pad 1,
+      scans pad 1, confirms SLP_STATUS stays zero in raw mode, then
+      reads the modeled 2048 count from SENS_SAR_TOUCH_STATUS1 (+0xa4).
+      Cuts: no debounce/smooth filtering math or real deep-sleep touch
+      policy yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
