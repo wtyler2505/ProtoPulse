@@ -4,6 +4,8 @@ import {
   Esp32s3Core,
   ESP32S3_DRAM_BASE,
   ESP32S3_GPIO_BASE,
+  ESP32S3_I2C0_BASE,
+  ESP32S3_I2C1_BASE,
   ESP32S3_IRAM_BASE,
   ESP32S3_PCNT_BASE,
   ESP32S3_UART0_BASE,
@@ -78,6 +80,9 @@ const GPIO = ESP32S3_GPIO_BASE;
 const UART = ESP32S3_UART0_BASE;
 const UART1 = ESP32S3_UART1_BASE;
 const UART2 = ESP32S3_UART2_BASE;
+const I2C0 = ESP32S3_I2C0_BASE;
+const I2C1 = ESP32S3_I2C1_BASE;
+const INTMTX = 0x600c2000;
 const LEDC = 0x60019000;
 const RMT = 0x60016000;
 const PCNT = ESP32S3_PCNT_BASE;
@@ -138,6 +143,15 @@ const PCNT_CH0_LCTRL_INVERT = 1 << 22;
 const PCNT_THR_H_LIM_EN = 1 << 12;
 const PCNT_UNIT0_INT = 1;
 const PCNT_H_LIM_STATUS = 1 << 5;
+const I2C_TRANS_COMPLETE_INT = 1 << 7;
+const I2C_NACK_INT = 1 << 10;
+const I2C_ALL_INTS = 0x3fff;
+const I2C_CMD_RESTART = 6 << 11;
+const I2C_CMD_WRITE2_ACK = 2 | (1 << 8) | (1 << 11);
+const I2C_CMD_WRITE1_ACK_EXPECT_NACK = 1 | (1 << 8) | (1 << 9) | (1 << 11);
+const I2C_CMD_READ2 = 2 | (3 << 11);
+const I2C_CMD_STOP = 2 << 11;
+const I2C_CMD_END = 4 << 11;
 const GDMA_OUT_CH0_INT_RAW = 0x68;
 const GDMA_OUT_CH0_INT_CLR = 0x74;
 const GDMA_OUT_CH0_LINK = 0x80;
@@ -2382,6 +2396,216 @@ describe('Esp32s3Core — peripheral interrupt lines through the matrix (slice 6
     c.uartWriteTo(2, 0x6d);
     c.step(100);
     expect([...c.drainUart()]).toEqual([0x6d]);
+  });
+
+  it('runs an I2C0 master write command list and routes completion through I2C_EXT0', () => {
+    // Context7: ESP-IDF v5.5.4 I2C master supports blocking and async
+    // completion; source-checked against i2c_ll.h command fields and
+    // esp32s3.peripherals.ld/I2C0 plus I2C_EXT0_INTR_MAP at +0x0A8.
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        I2C0,
+        UART,
+        ESP32S3_IRAM_BASE,
+        INTMTX,
+        I2C_TRANS_COMPLETE_INT,
+        I2C_ALL_INTS,
+        I2C_CMD_RESTART,
+        I2C_CMD_WRITE2_ACK,
+        I2C_CMD_STOP,
+        I2C_CMD_END,
+        0x3f,
+      ],
+      [
+        L32R(2, 0), // a2 = I2C0
+        L32R(6, 1), // a6 = UART0 for reporting
+        L32R(5, 2),
+        WSR(5, SR.VECBASE),
+        L32R(3, 5),
+        S32I(3, 2, 0x24), // clear stale I2C interrupts
+        L32R(3, 4),
+        S32I(3, 2, 0x28), // enable TRANS_COMPLETE
+        L32R(7, 3),
+        MOVI(3, 1),
+        S32I(3, 7, 0xa8), // I2C_EXT0 -> CPU line 1
+        MOVI(3, 2),
+        WSR(3, SR.INTENABLE),
+        MOVI(3, 0xa0),
+        S32I(3, 2, 0x1c), // address byte 0x50 write
+        MOVI(3, 0x33),
+        S32I(3, 2, 0x1c), // payload
+        L32R(3, 6),
+        S32I(3, 2, 0x58), // START/RESTART
+        L32R(3, 7),
+        S32I(3, 2, 0x5c), // WRITE 2, check ACK=0
+        L32R(3, 8),
+        S32I(3, 2, 0x60), // STOP
+        L32R(3, 9),
+        S32I(3, 2, 0x64), // END
+        RSIL(12, 12),
+        MOVI(3, 0x20),
+        S32I(3, 2, 0x04), // TRANS_START
+        WAITI(0),
+        L32I(4, 2, 0x08), // SR: tx FIFO count should be 0
+        SRLI(4, 4, 15),
+        SRLI(4, 4, 3),
+        L32R(5, 10),
+        AND(4, 4, 5),
+        S32I(4, 6, 0),
+        L32I(4, 2, 0x58), // COMD0 done bit
+        SRAI(4, 4, 31),
+        MOVI(5, 1),
+        AND(4, 4, 5),
+        S32I(4, 6, 0),
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(6, 1),
+        L32I(3, 2, 0x2c), // INT_ST
+        L32R(4, 4),
+        AND(3, 3, 4),
+        MOVI(5, 0),
+        BEQZ(3, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0), // report completion IRQ
+        L32R(3, 4),
+        S32I(3, 2, 0x24), // clear completion
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 0, 1]);
+    expect([...c.drainI2cWrites(0)]).toEqual([0xa0, 0x33]);
+  });
+
+  it('fills the I2C0 RX FIFO for a master READ command and clears completion raw', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [I2C0, UART, I2C_TRANS_COMPLETE_INT, I2C_ALL_INTS, I2C_CMD_RESTART, I2C_CMD_READ2, I2C_CMD_STOP, I2C_CMD_END, 0x3f],
+      [
+        L32R(2, 0), // I2C0
+        L32R(6, 1), // UART0
+        L32R(3, 3),
+        S32I(3, 2, 0x24), // clear all I2C raw bits
+        L32R(3, 4),
+        S32I(3, 2, 0x58),
+        L32R(3, 5),
+        S32I(3, 2, 0x5c), // READ two synthetic bytes
+        L32R(3, 6),
+        S32I(3, 2, 0x60),
+        L32R(3, 7),
+        S32I(3, 2, 0x64),
+        MOVI(3, 0x20),
+        S32I(3, 2, 0x04), // TRANS_START
+        L32I(4, 2, 0x20), // INT_RAW
+        L32R(5, 2),
+        AND(4, 4, 5),
+        MOVI(5, 0),
+        BEQZ(4, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0), // completion raw present
+        L32I(4, 2, 0x08), // SR: RXFIFO_CNT
+        SRLI(4, 4, 8),
+        L32R(5, 8),
+        AND(4, 4, 5),
+        S32I(4, 6, 0),
+        L32I(4, 2, 0x1c),
+        S32I(4, 6, 0),
+        L32I(4, 2, 0x1c),
+        S32I(4, 6, 0),
+        L32R(3, 2),
+        S32I(3, 2, 0x24), // clear completion
+        L32I(4, 2, 0x20),
+        L32R(5, 2),
+        AND(4, 4, 5),
+        MOVI(5, 0),
+        BEQZ(4, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0), // 0 after clear
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(600);
+    expect([...c.drainUart()]).toEqual([1, 2, 0, 0, 0]);
+  });
+
+  it('routes I2C1 forced NACK through its own interrupt matrix source', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        I2C1,
+        UART,
+        ESP32S3_IRAM_BASE,
+        INTMTX,
+        I2C_NACK_INT,
+        I2C_ALL_INTS,
+        I2C_CMD_RESTART,
+        I2C_CMD_WRITE1_ACK_EXPECT_NACK,
+        I2C_CMD_STOP,
+        I2C_CMD_END,
+      ],
+      [
+        L32R(2, 0), // a2 = I2C1
+        L32R(6, 1), // a6 = UART0 for reporting
+        L32R(5, 2),
+        WSR(5, SR.VECBASE),
+        L32R(3, 5),
+        S32I(3, 2, 0x24), // clear all I2C raw bits
+        L32R(3, 4),
+        S32I(3, 2, 0x28), // enable NACK
+        L32R(7, 3),
+        MOVI(3, 1),
+        S32I(3, 7, 0xac), // I2C_EXT1 -> CPU line 1
+        MOVI(3, 2),
+        WSR(3, SR.INTENABLE),
+        MOVI(3, 0xa0),
+        S32I(3, 2, 0x1c),
+        L32R(3, 6),
+        S32I(3, 2, 0x58),
+        L32R(3, 7),
+        S32I(3, 2, 0x5c), // WRITE 1, impossible expected ACK=1
+        L32R(3, 8),
+        S32I(3, 2, 0x60),
+        L32R(3, 9),
+        S32I(3, 2, 0x64),
+        RSIL(12, 12),
+        MOVI(3, 0x20),
+        S32I(3, 2, 0x04), // TRANS_START
+        WAITI(0),
+        L32I(4, 2, 0x5c), // COMD1 done bit
+        SRAI(4, 4, 31),
+        MOVI(5, 1),
+        AND(4, 4, 5),
+        S32I(4, 6, 0),
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(6, 1),
+        L32I(3, 2, 0x2c), // INT_ST
+        L32R(4, 4),
+        AND(3, 3, 4),
+        MOVI(5, 0),
+        BEQZ(3, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0), // report NACK IRQ
+        L32R(3, 4),
+        S32I(3, 2, 0x24), // clear NACK
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 1]);
+    expect([...c.drainI2cWrites(1)]).toEqual([0xa0]);
   });
 });
 

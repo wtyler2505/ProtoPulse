@@ -345,6 +345,85 @@ const UART_RXFIFO_FULL_INT = 1 << 0;
 const UART_TX_DONE_INT = 1 << 14;
 const UART_WAKEUP_INT = 1 << 19;
 
+// I2C external controllers (ESP-IDF v5.5.4 ESP32-S3):
+// soc.h REG_I2C_BASE(i) = 0x60013000 + i * 0x14000; the linker
+// script provides I2C0=0x60013000 and I2C1=0x60027000. This first cut
+// executes the LL command FIFO instantly, acks writes by default, and
+// returns synthetic zero bytes for reads until a real bus/device bridge
+// exists.
+const I2C0_BASE = 0x60013000;
+const I2C1_BASE = 0x60027000;
+const I2C_BLOCK_BYTES = 0x200; // sizeof(i2c_dev_t)
+const I2C_CONTROLLER_COUNT = 2;
+const I2C_FIFO_LEN = 32; // SOC_I2C_FIFO_LEN
+const I2C_CMD_COUNT = 8; // SOC_I2C_CMD_REG_NUM
+const I2C_SCL_LOW_PERIOD = 0x00;
+const I2C_CTR = 0x04;
+const I2C_SR = 0x08;
+const I2C_TO = 0x0c;
+const I2C_SLAVE_ADDR = 0x10;
+const I2C_FIFO_ST = 0x14;
+const I2C_FIFO_CONF = 0x18;
+const I2C_DATA = 0x1c;
+const I2C_INT_RAW = 0x20;
+const I2C_INT_CLR = 0x24;
+const I2C_INT_ENA = 0x28;
+const I2C_INT_ST = 0x2c;
+const I2C_SDA_HOLD = 0x30;
+const I2C_SDA_SAMPLE = 0x34;
+const I2C_SCL_HIGH_PERIOD = 0x38;
+const I2C_SCL_START_HOLD = 0x40;
+const I2C_SCL_RSTART_SETUP = 0x44;
+const I2C_SCL_STOP_HOLD = 0x48;
+const I2C_SCL_STOP_SETUP = 0x4c;
+const I2C_FILTER_CFG = 0x50;
+const I2C_CLK_CONF = 0x54;
+const I2C_COMD0 = 0x58;
+const I2C_COMD_END = I2C_COMD0 + I2C_CMD_COUNT * 4;
+const I2C_SCL_ST_TIME_OUT = 0x78;
+const I2C_SCL_MAIN_ST_TIME_OUT = 0x7c;
+const I2C_SCL_SP_CONF = 0x80;
+const I2C_SCL_STRETCH_CONF = 0x84;
+const I2C_DATE = 0xf8;
+const I2C_TXFIFO_START_ADDR = 0x100;
+const I2C_RXFIFO_START_ADDR = 0x180;
+const I2C_CTR_RESET = 0x20b; // SDA/SCL open-drain, rx-full NACK, arbitration enabled
+const I2C_TO_RESET = 16;
+const I2C_FIFO_CONF_RESET = 11 | (4 << 5) | (1 << 14);
+const I2C_FILTER_CFG_RESET = (1 << 8) | (1 << 9);
+const I2C_CLK_CONF_RESET = 1 << 21;
+const I2C_SCL_SETUP_RESET = 8;
+const I2C_SCL_ST_TIMEOUT_RESET = 16;
+const I2C_DATE_RESET = 537330177;
+const I2C_TRANS_START = 1 << 5;
+const I2C_RX_FIFO_RST = 1 << 12;
+const I2C_TX_FIFO_RST = 1 << 13;
+const I2C_FIFO_PRT_EN = 1 << 14;
+const I2C_RXFIFO_CNT_SHIFT = 8;
+const I2C_TXFIFO_CNT_SHIFT = 18;
+const I2C_FIFO_CNT_MASK = 0x3f;
+const I2C_RXFIFO_WM_INT = 1 << 0;
+const I2C_TXFIFO_WM_INT = 1 << 1;
+const I2C_RXFIFO_OVF_INT = 1 << 2;
+const I2C_END_DETECT_INT = 1 << 3;
+const I2C_TRANS_COMPLETE_INT = 1 << 7;
+const I2C_NACK_INT = 1 << 10;
+const I2C_TXFIFO_OVF_INT = 1 << 11;
+const I2C_RXFIFO_UDF_INT = 1 << 12;
+const I2C_INT_CLEARABLE = 0x1ffff;
+const I2C_COMMAND_MASK = 0x3fff;
+const I2C_COMMAND_DONE = 0x80000000;
+const I2C_CMD_BYTE_NUM_MASK = 0xff;
+const I2C_CMD_ACK_EN = 1 << 8;
+const I2C_CMD_ACK_EXP = 1 << 9;
+const I2C_CMD_OP_SHIFT = 11;
+const I2C_CMD_OP_MASK = 0x7;
+const I2C_LL_CMD_WRITE = 1;
+const I2C_LL_CMD_STOP = 2;
+const I2C_LL_CMD_READ = 3;
+const I2C_LL_CMD_END = 4;
+const I2C_LL_CMD_RESTART = 6;
+
 // The interrupt matrix (reg_base.h DR_REG_INTERRUPT_BASE +
 // interrupt_core0_reg.h / interrupt_core1_reg.h): each peripheral
 // source has a 5-bit map register per CPU core selecting which CPU
@@ -361,6 +440,8 @@ const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
 const INTMTX_RTC_CORE_MAP = 0x09c; // INTERRUPT_CORE0_RTC_CORE_INTR_MAP_REG
 const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
 const INTMTX_PCNT_MAP = 0x0a4; // INTERRUPT_CORE0_PCNT_INTR_MAP_REG
+const INTMTX_I2C_EXT0_MAP = 0x0a8; // INTERRUPT_CORE0_I2C_EXT0_INTR_MAP_REG
+const INTMTX_I2C_EXT1_MAP = 0x0ac; // INTERRUPT_CORE0_I2C_EXT1_INTR_MAP_REG
 // The six TIMG sources sit contiguously (interrupt_core0_reg.h):
 // TG_T0 +0xC8, TG_T1 +0xCC, TG_WDT +0xD0, TG1_T0 +0xD4, TG1_T1
 // +0xD8, TG1_WDT +0xDC — group-major, [t0, t1, wdt] within a group.
@@ -1418,6 +1499,20 @@ interface PcntUnit {
   lastCtrl: Array<DigitalLevel | null>;
 }
 
+interface I2cController {
+  regs: Map<number, number>;
+  commands: number[];
+  txFifo: number[];
+  rxFifo: number[];
+  txMem: number[];
+  rxMem: number[];
+  intRaw: number;
+  intEna: number;
+  maps: InterruptMapPair;
+  writeLog: number[];
+  lastAck: 0 | 1;
+}
+
 const freshGpTimer = (): GpTimer => ({
   config: 0,
   base: 0,
@@ -1551,6 +1646,39 @@ const freshPcntUnit = (): PcntUnit => ({
   lastCtrl: Array(PCNT_CHANNELS).fill(null) as Array<DigitalLevel | null>,
 });
 
+const freshI2cController = (): I2cController => ({
+  regs: new Map<number, number>([
+    [I2C_SCL_LOW_PERIOD, 0],
+    [I2C_CTR, I2C_CTR_RESET],
+    [I2C_TO, I2C_TO_RESET],
+    [I2C_SLAVE_ADDR, 0],
+    [I2C_FIFO_CONF, I2C_FIFO_CONF_RESET],
+    [I2C_SDA_HOLD, 0],
+    [I2C_SDA_SAMPLE, 0],
+    [I2C_SCL_HIGH_PERIOD, 0],
+    [I2C_SCL_START_HOLD, I2C_SCL_SETUP_RESET],
+    [I2C_SCL_RSTART_SETUP, I2C_SCL_SETUP_RESET],
+    [I2C_SCL_STOP_HOLD, I2C_SCL_SETUP_RESET],
+    [I2C_SCL_STOP_SETUP, I2C_SCL_SETUP_RESET],
+    [I2C_FILTER_CFG, I2C_FILTER_CFG_RESET],
+    [I2C_CLK_CONF, I2C_CLK_CONF_RESET],
+    [I2C_SCL_ST_TIME_OUT, I2C_SCL_ST_TIMEOUT_RESET],
+    [I2C_SCL_MAIN_ST_TIME_OUT, I2C_SCL_ST_TIMEOUT_RESET],
+    [I2C_SCL_SP_CONF, 0],
+    [I2C_SCL_STRETCH_CONF, 0],
+  ]),
+  commands: Array(I2C_CMD_COUNT).fill(0) as number[],
+  txFifo: [],
+  rxFifo: [],
+  txMem: Array(I2C_FIFO_LEN).fill(0) as number[],
+  rxMem: Array(I2C_FIFO_LEN).fill(0) as number[],
+  intRaw: 0,
+  intEna: 0,
+  maps: freshInterruptMapPair(),
+  writeLog: [],
+  lastAck: 0,
+});
+
 const freshEfuseBlocks = (): number[][] => {
   const blocks = Array.from({ length: EFUSE_BLOCK_COUNT }, () => Array(EFUSE_BLOCK_WORDS).fill(0) as number[]);
   const macBlock = blocks[1];
@@ -1623,6 +1751,7 @@ export class Esp32s3Core implements McuCore {
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
+  private i2c: I2cController[] = Array.from({ length: I2C_CONTROLLER_COUNT }, freshI2cController);
 
   // UART0/1 interrupt state + the interrupt matrix maps.
   private uartIntEna = 0;
@@ -2044,6 +2173,14 @@ export class Esp32s3Core implements McuCore {
   drainUart(): Uint8Array {
     const out = Uint8Array.from(this.txBuffer);
     this.txBuffer = [];
+    return out;
+  }
+
+  drainI2cWrites(port: 0 | 1 = 0): Uint8Array {
+    const ctrl = this.i2c[port];
+    if (ctrl === undefined) throw new Error(`drainI2cWrites expects port 0 or 1 (got ${String(port)})`);
+    const out = Uint8Array.from(ctrl.writeLog);
+    ctrl.writeLog = [];
     return out;
   }
 
@@ -2645,6 +2782,7 @@ export class Esp32s3Core implements McuCore {
     this.pcntIntRaw = 0;
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
+    this.i2c = Array.from({ length: I2C_CONTROLLER_COUNT }, freshI2cController);
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
@@ -3279,6 +3417,189 @@ export class Esp32s3Core implements McuCore {
     let raw = this.uart2TxDone ? UART_TX_DONE_INT : 0;
     if (this.uart2RxQueue.length > this.uart2RxThrhd) raw |= UART_RXFIFO_FULL_INT;
     return raw;
+  }
+
+  private i2cForAddress(addr: number): { port: 0 | 1; ctrl: I2cController; off: number } | null {
+    const bases = [I2C0_BASE, I2C1_BASE] as const;
+    for (const port of [0, 1] as const) {
+      const base = bases[port];
+      if (addr >= base && addr < base + I2C_BLOCK_BYTES) {
+        const ctrl = this.i2c[port];
+        if (ctrl === undefined) throw new Error(`missing I2C${String(port)} controller`);
+        return { port, ctrl, off: addr - base };
+      }
+    }
+    return null;
+  }
+
+  private i2cUpdateWatermarks(ctrl: I2cController): void {
+    ctrl.intRaw &= ~(I2C_RXFIFO_WM_INT | I2C_TXFIFO_WM_INT);
+    const fifoConf = ctrl.regs.get(I2C_FIFO_CONF) ?? I2C_FIFO_CONF_RESET;
+    if ((fifoConf & I2C_FIFO_PRT_EN) === 0) return;
+    const rxThreshold = fifoConf & 0x1f;
+    const txThreshold = (fifoConf >>> 5) & 0x1f;
+    if (ctrl.rxFifo.length > rxThreshold) ctrl.intRaw |= I2C_RXFIFO_WM_INT;
+    if (ctrl.txFifo.length < txThreshold) ctrl.intRaw |= I2C_TXFIFO_WM_INT;
+  }
+
+  private i2cRead(ctrl: I2cController, off: number): number {
+    if (off === I2C_DATA) {
+      const byte = ctrl.rxFifo.shift();
+      if (byte === undefined) {
+        ctrl.intRaw |= I2C_RXFIFO_UDF_INT;
+        this.recomputeIrq();
+        return 0;
+      }
+      ctrl.rxMem.copyWithin(0, 1);
+      ctrl.rxMem[I2C_FIFO_LEN - 1] = 0;
+      this.i2cUpdateWatermarks(ctrl);
+      this.recomputeIrq();
+      return byte & 0xff;
+    }
+    if (off === I2C_SR) {
+      const rx = Math.min(ctrl.rxFifo.length, I2C_FIFO_CNT_MASK);
+      const tx = Math.min(ctrl.txFifo.length, I2C_FIFO_CNT_MASK);
+      return ((ctrl.lastAck & 1) | (rx << I2C_RXFIFO_CNT_SHIFT) | (tx << I2C_TXFIFO_CNT_SHIFT)) >>> 0;
+    }
+    if (off === I2C_FIFO_ST) {
+      const rx = Math.min(ctrl.rxFifo.length, 0x1f);
+      const tx = Math.min(ctrl.txFifo.length, 0x1f);
+      return ((rx << 5) | (tx << 15)) >>> 0;
+    }
+    if (off === I2C_INT_RAW) return ctrl.intRaw >>> 0;
+    if (off === I2C_INT_ST) return (ctrl.intRaw & ctrl.intEna) >>> 0;
+    if (off === I2C_INT_ENA) return ctrl.intEna >>> 0;
+    if (off >= I2C_COMD0 && off < I2C_COMD_END && (off & 3) === 0) {
+      return ctrl.commands[(off - I2C_COMD0) >> 2] ?? 0;
+    }
+    if (off === I2C_DATE) return I2C_DATE_RESET;
+    if (off >= I2C_TXFIFO_START_ADDR && off < I2C_TXFIFO_START_ADDR + I2C_FIFO_LEN * 4 && (off & 3) === 0) {
+      return ctrl.txMem[(off - I2C_TXFIFO_START_ADDR) >> 2] ?? 0;
+    }
+    if (off >= I2C_RXFIFO_START_ADDR && off < I2C_RXFIFO_START_ADDR + I2C_FIFO_LEN * 4 && (off & 3) === 0) {
+      return ctrl.rxMem[(off - I2C_RXFIFO_START_ADDR) >> 2] ?? 0;
+    }
+    return ctrl.regs.get(off) ?? 0;
+  }
+
+  private i2cWrite(ctrl: I2cController, off: number, value: number): void {
+    const v = value >>> 0;
+    if (off === I2C_DATA) {
+      if (ctrl.txFifo.length >= I2C_FIFO_LEN) ctrl.intRaw |= I2C_TXFIFO_OVF_INT;
+      else {
+        ctrl.txFifo.push(v & 0xff);
+        ctrl.txMem[ctrl.txFifo.length - 1] = v & 0xff;
+      }
+      this.i2cUpdateWatermarks(ctrl);
+      this.recomputeIrq();
+      return;
+    }
+    if (off === I2C_INT_ENA) {
+      ctrl.intEna = v & I2C_INT_CLEARABLE;
+      this.recomputeIrq();
+      return;
+    }
+    if (off === I2C_INT_CLR) {
+      ctrl.intRaw &= ~(v & I2C_INT_CLEARABLE);
+      this.i2cUpdateWatermarks(ctrl);
+      this.recomputeIrq();
+      return;
+    }
+    if (off === I2C_FIFO_CONF) {
+      ctrl.regs.set(I2C_FIFO_CONF, v & ~(I2C_RX_FIFO_RST | I2C_TX_FIFO_RST));
+      if ((v & I2C_RX_FIFO_RST) !== 0) {
+        ctrl.rxFifo = [];
+        ctrl.rxMem.fill(0);
+      }
+      if ((v & I2C_TX_FIFO_RST) !== 0) {
+        ctrl.txFifo = [];
+        ctrl.txMem.fill(0);
+      }
+      this.i2cUpdateWatermarks(ctrl);
+      this.recomputeIrq();
+      return;
+    }
+    if (off === I2C_CTR) {
+      ctrl.regs.set(I2C_CTR, v & ~I2C_TRANS_START);
+      if ((v & I2C_TRANS_START) !== 0) this.i2cRunTransaction(ctrl);
+      this.recomputeIrq();
+      return;
+    }
+    if (off >= I2C_COMD0 && off < I2C_COMD_END && (off & 3) === 0) {
+      ctrl.commands[(off - I2C_COMD0) >> 2] = v & I2C_COMMAND_MASK;
+      return;
+    }
+    if (off >= I2C_TXFIFO_START_ADDR && off < I2C_TXFIFO_START_ADDR + I2C_FIFO_LEN * 4 && (off & 3) === 0) {
+      const idx = (off - I2C_TXFIFO_START_ADDR) >> 2;
+      ctrl.txMem[idx] = v & 0xff;
+      if (idx >= ctrl.txFifo.length) ctrl.txFifo.length = idx + 1;
+      ctrl.txFifo[idx] = v & 0xff;
+      this.i2cUpdateWatermarks(ctrl);
+      return;
+    }
+    if (off >= I2C_RXFIFO_START_ADDR && off < I2C_RXFIFO_START_ADDR + I2C_FIFO_LEN * 4 && (off & 3) === 0) {
+      ctrl.rxMem[(off - I2C_RXFIFO_START_ADDR) >> 2] = v & 0xff;
+      return;
+    }
+    ctrl.regs.set(off, v);
+  }
+
+  private i2cRunTransaction(ctrl: I2cController): void {
+    let txMemCursor = 0;
+    let sawStop = false;
+    let stopped = false;
+    ctrl.lastAck = 0;
+    for (let i = 0; i < I2C_CMD_COUNT && !stopped; i++) {
+      const command = ctrl.commands[i] ?? 0;
+      const payload = command & I2C_COMMAND_MASK;
+      const op = (payload >>> I2C_CMD_OP_SHIFT) & I2C_CMD_OP_MASK;
+      if (payload === 0) break;
+      switch (op) {
+        case I2C_LL_CMD_RESTART:
+          break;
+        case I2C_LL_CMD_WRITE: {
+          const count = payload & I2C_CMD_BYTE_NUM_MASK;
+          for (let n = 0; n < count; n++) {
+            const byte = ctrl.txFifo.shift() ?? ctrl.txMem[txMemCursor] ?? 0;
+            txMemCursor++;
+            ctrl.writeLog.push(byte & 0xff);
+          }
+          const ackExpected = (payload & I2C_CMD_ACK_EXP) !== 0 ? 1 : 0;
+          if ((payload & I2C_CMD_ACK_EN) !== 0 && ackExpected !== ctrl.lastAck) {
+            ctrl.intRaw |= I2C_NACK_INT;
+            stopped = true;
+          }
+          break;
+        }
+        case I2C_LL_CMD_READ: {
+          const count = payload & I2C_CMD_BYTE_NUM_MASK;
+          for (let n = 0; n < count; n++) {
+            if (ctrl.rxFifo.length >= I2C_FIFO_LEN) {
+              ctrl.intRaw |= I2C_RXFIFO_OVF_INT;
+              break;
+            }
+            ctrl.rxFifo.push(0);
+            ctrl.rxMem[ctrl.rxFifo.length - 1] = 0;
+          }
+          break;
+        }
+        case I2C_LL_CMD_STOP:
+          sawStop = true;
+          break;
+        case I2C_LL_CMD_END:
+          stopped = true;
+          break;
+        default:
+          stopped = true;
+          break;
+      }
+      ctrl.commands[i] = (payload | I2C_COMMAND_DONE) >>> 0;
+    }
+    if (sawStop) ctrl.intRaw |= I2C_END_DETECT_INT;
+    if ((ctrl.intRaw & I2C_NACK_INT) === 0) ctrl.intRaw |= I2C_TRANS_COMPLETE_INT;
+    ctrl.txFifo = [];
+    ctrl.txMem.fill(0);
+    this.i2cUpdateWatermarks(ctrl);
   }
 
   private ledcTimerDivider(t: LedcTimer): number {
@@ -4189,6 +4510,8 @@ export class Esp32s3Core implements McuCore {
     const ledcPending = (this.ledcIntRaw & this.ledcIntEna) !== 0;
     const rmtPending = (this.rmtIntRaw & this.rmtIntEna) !== 0;
     const pcntPending = (this.pcntIntRaw & this.pcntIntEna) !== 0;
+    const i2c0Pending = ((this.i2c[0]?.intRaw ?? 0) & (this.i2c[0]?.intEna ?? 0)) !== 0;
+    const i2c1Pending = ((this.i2c[1]?.intRaw ?? 0) & (this.i2c[1]?.intEna ?? 0)) !== 0;
     const apbAdcPending = (this.apbSaradcIntRaw & this.apbSaradcIntEna) !== 0;
     const rtcPending = (this.rtcIntRaw & this.rtcIntEna) !== 0;
     const masks: InterruptMapPair = [0, 0];
@@ -4203,6 +4526,8 @@ export class Esp32s3Core implements McuCore {
     if (ledcPending) raise(this.ledcIntMaps);
     if (rmtPending) raise(this.rmtIntMaps);
     if (pcntPending) raise(this.pcntIntMaps);
+    if (i2c0Pending) raise(this.i2c[0]?.maps ?? freshInterruptMapPair());
+    if (i2c1Pending) raise(this.i2c[1]?.maps ?? freshInterruptMapPair());
     if (apbAdcPending) raise(this.apbSaradcIntMaps);
     if (rtcPending) raise(this.rtcCoreIntMaps);
     for (let i = 0; i < SYSTEM_CPU_INTR_FROM_CPU_COUNT; i++) {
@@ -4543,6 +4868,8 @@ export class Esp32s3Core implements McuCore {
       if (off === UART_SLEEP_CONF) return this.uart2WakeActiveThreshold;
       return 0;
     }
+    const i2c = this.i2cForAddress(addr);
+    if (i2c !== null) return this.i2cRead(i2c.ctrl, i2c.off);
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
@@ -4555,6 +4882,8 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_RTC_CORE_MAP) return this.rtcCoreIntMaps[core];
       if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
       if (sourceOff === INTMTX_PCNT_MAP) return this.pcntIntMaps[core];
+      if (sourceOff === INTMTX_I2C_EXT0_MAP) return this.i2c[0]?.maps[core] ?? INTMTX_DEFAULT_MAP;
+      if (sourceOff === INTMTX_I2C_EXT1_MAP) return this.i2c[1]?.maps[core] ?? INTMTX_DEFAULT_MAP;
       if (sourceOff >= INTMTX_TG_MAPS && sourceOff < INTMTX_TG_MAPS + 24 && (sourceOff & 3) === 0) {
         const idx = (sourceOff - INTMTX_TG_MAPS) >> 2; // group-major [t0,t1,wdt]
         return this.timg[idx < 3 ? 0 : 1]?.maps[core][idx % 3] ?? INTMTX_DEFAULT_MAP;
@@ -5077,6 +5406,11 @@ export class Esp32s3Core implements McuCore {
       this.recomputeIrq();
       return;
     }
+    const i2c = this.i2cForAddress(addr);
+    if (i2c !== null) {
+      this.i2cWrite(i2c.ctrl, i2c.off, value);
+      return;
+    }
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
@@ -5089,6 +5423,13 @@ export class Esp32s3Core implements McuCore {
       else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_PCNT_MAP) this.pcntIntMaps[core] = value & 0x1f;
+      else if (sourceOff === INTMTX_I2C_EXT0_MAP) {
+        const ctrl = this.i2c[0];
+        if (ctrl !== undefined) ctrl.maps[core] = value & 0x1f;
+      } else if (sourceOff === INTMTX_I2C_EXT1_MAP) {
+        const ctrl = this.i2c[1];
+        if (ctrl !== undefined) ctrl.maps[core] = value & 0x1f;
+      }
       else if (sourceOff >= INTMTX_TG_MAPS && sourceOff < INTMTX_TG_MAPS + 24 && (sourceOff & 3) === 0) {
         const idx = (sourceOff - INTMTX_TG_MAPS) >> 2;
         const grp = this.timg[idx < 3 ? 0 : 1];
@@ -5885,6 +6226,8 @@ export {
   IRAM_BASE as ESP32S3_IRAM_BASE,
   DRAM_BASE as ESP32S3_DRAM_BASE,
   GPIO_BASE as ESP32S3_GPIO_BASE,
+  I2C0_BASE as ESP32S3_I2C0_BASE,
+  I2C1_BASE as ESP32S3_I2C1_BASE,
   PCNT_BASE as ESP32S3_PCNT_BASE,
   UART0_BASE as ESP32S3_UART0_BASE,
   UART1_BASE as ESP32S3_UART1_BASE,

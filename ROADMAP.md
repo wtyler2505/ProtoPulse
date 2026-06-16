@@ -1347,6 +1347,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       separately verifies low control-level inversion makes a rising
       edge decrement. Cuts: no APB-cycle glitch filter timing, no
       full quadrature helper path yet, no PCNT power/clock gating effect
+- [x] ESP32-S3 core slice 98 — I2C master command/FIFO first cut
+      (landed 2026-06-16): I2C0/I2C1 now have source-pinned ESP32-S3
+      register blocks at 0x60013000/0x60027000, FIFO DATA access,
+      command-register execution for START/WRITE/READ/STOP/END, status
+      RX/TX FIFO count readback, command-done bits, transaction-complete
+      and NACK raw/status/enable/clear behavior, and I2C_EXT0/1
+      interrupt-matrix routing at +0x0A8/+0x0AC. Proven by
+      hand-assembled firmware that runs an I2C0 write transaction
+      through the completion ISR, verifies the emitted write bytes and
+      drained TX FIFO, reads two synthetic bytes through a READ command,
+      and forces an I2C1 NACK through its independent interrupt source.
+      Cuts: no real attached-device model yet, no SCL/SDA waveform
+      timing, no clock-stretch/arbitration/timeout timing, no slave
+      mode, and reads synthesize zero bytes
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -2,6 +2,34 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 98: I2C master command/FIFO first cut
+
+### Added
+- **I2C master peripheral surface** (@protopulse/emu):
+  ESP32-S3 I2C0/I2C1 now expose the source-pinned register blocks at
+  0x60013000/0x60027000, FIFO data access, command registers, status
+  readback, transaction-complete/NACK raw/status/enable/clear bits, and
+  I2C_EXT0/I2C_EXT1 interrupt-matrix routing.
+
+### Verified
+- Added hand-assembled Xtensa firmware that runs an I2C0 write command
+  list through START/WRITE/STOP/END, observes completion through the
+  I2C_EXT0 interrupt source, verifies TX FIFO drain and command-done
+  readback, reads two synthetic bytes through an I2C0 READ command, and
+  forces an I2C1 NACK through its independent I2C_EXT1 matrix source.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 158 ESP32-S3 tests.
+- `npm run check:packages` passed.
+- `npm run test:packages` passed with 1,500 package tests.
+
+### Honest cuts
+- I2C bus timing, open-drain SCL/SDA waveforms, glitch filters, and
+  clock stretching are stored/read back but not physically timed.
+- No attached-device model yet: writes ACK by default, reads synthesize
+  zero bytes, and NACK is only modeled for an impossible expected ACK.
+- Slave mode, arbitration loss, timeout timing, and DMA/non-FIFO corner
+  cases remain future slices.
+
 ## 2026-06-16 — ESP32-S3 slice 97: PCNT pulse-counter first cut
 
 ### Added
