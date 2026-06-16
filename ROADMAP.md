@@ -1146,6 +1146,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       UART0. Cuts: no UART2 RTC sleep-wake plumbing in this slice,
       baud-rate sampling/noise/framing error behavior, or full UART
       driver surface yet
+- [x] ESP32-S3 core slice 79 — touch sleep proximity count status
+      (landed 2026-06-16): the modeled touch scanner now increments
+      SENS_SAR_TOUCH_APPR_STATUS.TOUCH_SLP_APPROACH_CNT when
+      RTC_TOUCH_SLP_THRES selects the scanned sleep pad and enables
+      sleep proximity. The count shares TOUCH_APPROACH_MEAS_TIME with
+      normal proximity pads and latches TOUCH_APPROACH_LOOP_DONE only
+      once the configured total is reached. Proven by hand-assembled
+      firmware that configures sleep pad 1 for proximity, performs two
+      synthetic scans, reports sleep-count values 1 then 2, and proves
+      the loop-done raw bit stays clear before the second scan then
+      latches after it. Cuts: no capacitive accumulation math,
+      debounce/smooth sleep-pad data, or real deep-sleep touch policy
+      yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

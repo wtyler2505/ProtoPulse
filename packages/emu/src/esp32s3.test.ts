@@ -5108,6 +5108,89 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('touch sleep proximity count is exposed in APPR_STATUS and gates loop-done', () => {
+    // Source-checked against ESP-IDF v5.5.4 ESP32-S3 headers:
+    // touch_ll_sleep_enable_proximity_sensing() writes
+    // RTCCNTL.touch_slp_thres.touch_slp_approach_en,
+    // touch_ll_sleep_set_channel_num() writes touch_slp_pad, and
+    // touch_ll_sleep_read_proximity_cnt() reads
+    // SENS.sar_touch_appr_status.touch_slp_approach_cnt.
+    const SENS = 0x60008800;
+    const RTC_TOUCH_PROX_DONE_INT = 1 << 20;
+    const TOUCH_SCAN_PAD1 = ((0xf << 28) | (1 << 11) | (1 << 8) | 2) >>> 0;
+    const TOUCH_CTRL2_START = ((4 << 17) | (1 << 16) | (1 << 15) | (1 << 14) | (3 << 6) | (3 << 2)) >>> 0;
+    const TOUCH_CONF_ALL_OUT = 0x7fff;
+    const TOUCH_SLEEP_PAD1_PROX = ((1 << 27) | (1 << 26)) >>> 0;
+    const TOUCH_APPROACH_TWICE = 2 << 24;
+    const BYTE_MASK = 0xff;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        RTCCNTL,
+        SENS,
+        UART,
+        TOUCH_SCAN_PAD1,
+        TOUCH_CTRL2_START,
+        TOUCH_CONF_ALL_OUT,
+        TOUCH_SLEEP_PAD1_PROX,
+        TOUCH_APPROACH_TWICE,
+        BYTE_MASK,
+        RTC_TOUCH_PROX_DONE_INT,
+      ],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = SENS
+        L32R(4, 2), // a4 = UART
+        L32R(5, 5),
+        S32I(5, 3, 0x5c), // SENS_TOUCH_CONF: enable touch outputs
+        L32R(5, 6),
+        S32I(5, 2, 0x114), // TOUCH_SLP_THRES: sleep pad 1 + approach enable
+        L32R(5, 7),
+        S32I(5, 2, 0x118), // TOUCH_APPROACH_MEAS_TIME = 2
+        L32R(5, 3),
+        S32I(5, 2, 0x110), // TOUCH_SCAN_CTRL: scan pad 1
+
+        L32R(5, 4),
+        S32I(5, 2, 0x10c), // first TOUCH_START_EN pulse
+        L32I(6, 3, 0xe0), // SENS_SAR_TOUCH_APPR_STATUS
+        SRLI(6, 6, 12),
+        SRLI(6, 6, 12),
+        L32R(7, 8),
+        AND(6, 6, 7),
+        S32I(6, 4, 0), // tx 1: sleep approach count after first scan
+        L32I(6, 2, 0x44), // RTC_INT_RAW
+        L32R(7, 9),
+        AND(6, 6, 7),
+        MOVI(7, 0),
+        BEQZ(6, BR(1)),
+        MOVI(7, 1),
+        S32I(7, 4, 0), // tx 0: loop-done still below total
+
+        MOVI(5, 0),
+        S32I(5, 2, 0x10c), // clear START_EN so the second write has an edge
+        L32R(5, 4),
+        S32I(5, 2, 0x10c), // second TOUCH_START_EN pulse
+        L32I(6, 3, 0xe0),
+        SRLI(6, 6, 12),
+        SRLI(6, 6, 12),
+        L32R(7, 8),
+        AND(6, 6, 7),
+        S32I(6, 4, 0), // tx 2: sleep approach count after second scan
+        L32I(6, 2, 0x44),
+        L32R(7, 9),
+        AND(6, 6, 7),
+        MOVI(7, 0),
+        BEQZ(6, BR(1)),
+        MOVI(7, 1),
+        S32I(7, 4, 0), // tx 1: loop-done reached total
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 0, 2, 1]);
+  });
+
   it('touch one-shot scans wake RTC sleep with the touch wake source recorded', () => {
     // Source-checked against ESP-IDF release/v5.5:
     // soc/rtc.h defines RTC_TOUCH_TRIG_EN as BIT(8), and sleep_modes

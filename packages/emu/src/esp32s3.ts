@@ -972,6 +972,9 @@ const RTC_TOUCH_CTRL2_RESET = ((4 << 17) | (1 << 14) | (3 << 6) | (3 << 2)) >>> 
 const RTC_TOUCH_SCAN_CTRL_RESET = ((0xf << 28) | (1 << 8) | 2) >>> 0;
 const RTC_TOUCH_SLP_THRES_RESET = 0xf << 27;
 const RTC_TOUCH_APPROACH_RESET = 80 << 24;
+const RTC_TOUCH_SLP_PAD_SHIFT = 27;
+const RTC_TOUCH_SLP_PAD_MASK = 0x1f;
+const RTC_TOUCH_SLP_APPROACH_EN = 1 << 26;
 const RTC_TOUCH_APPROACH_MEAS_TIME_SHIFT = 24;
 const RTC_TOUCH_APPROACH_MEAS_TIME_MASK = 0xff << RTC_TOUCH_APPROACH_MEAS_TIME_SHIFT;
 const RTC_TOUCH_FILTER_CTRL_RESET =
@@ -2056,6 +2059,14 @@ export class Esp32s3Core implements McuCore {
   private updateTouchApproachCounts(channel: number): void {
     const total = (this.rtcTouchApproach & RTC_TOUCH_APPROACH_MEAS_TIME_MASK) >>> RTC_TOUCH_APPROACH_MEAS_TIME_SHIFT;
     if (total === 0) return;
+    const sleepPad = (this.rtcTouchSlpThres >>> RTC_TOUCH_SLP_PAD_SHIFT) & RTC_TOUCH_SLP_PAD_MASK;
+    if ((this.rtcTouchSlpThres & RTC_TOUCH_SLP_APPROACH_EN) !== 0 && sleepPad === channel) {
+      const next = Math.min(SENS_TOUCH_APPROACH_COUNT_MASK, this.touchSleepApproachCount + 1);
+      this.touchSleepApproachCount = next;
+      if (next >= total) {
+        this.rtcIntRaw |= RTC_TOUCH_APPROACH_LOOP_DONE_INT;
+      }
+    }
     const pads = [
       (this.sensTouchConf >>> SENS_TOUCH_APPROACH_PAD0_SHIFT) & SENS_TOUCH_APPROACH_PAD_MASK,
       (this.sensTouchConf >>> SENS_TOUCH_APPROACH_PAD1_SHIFT) & SENS_TOUCH_APPROACH_PAD_MASK,
