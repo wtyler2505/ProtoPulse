@@ -1097,6 +1097,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       confirms the RTC_IO selector round-trips as GPIO7, and confirms
       INT_ST is clear after the ISR. Cuts: no RTC_IO pad function/input
       enable side effects or real deep-sleep reset/wake-stub behavior yet
+- [x] ESP32-S3 core slice 75 — UART1 RX light-sleep wake source
+      (landed 2026-06-15): UART1 now has the same modeled register
+      subset as UART0 — FIFO, STATUS, INT_RAW/ST/ENA/CLR, CONF1, and
+      its own interrupt-matrix map at +0x070. ESP32-S3-specific
+      `uartWriteTo(1, byte)` feeds the UART1 RX FIFO, records
+      RTC_UART1_TRIG_EN when WAKEUP_STATE arms it, and leaves the
+      received byte readable after the RTC_CORE ISR wakes WAITI.
+      Proven by hand-assembled firmware that enters modeled sleep,
+      receives a host UART1 byte, reports RTC_UART1_TRIG_EN plus that
+      byte over UART0, and confirms INT_ST is clear after the ISR.
+      Cuts: no UART2 wake source, wake threshold counter, baud-edge
+      accounting, or full UART driver surface yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

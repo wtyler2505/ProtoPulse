@@ -6,6 +6,7 @@ import {
   ESP32S3_GPIO_BASE,
   ESP32S3_IRAM_BASE,
   ESP32S3_UART0_BASE,
+  ESP32S3_UART1_BASE,
 } from './esp32s3.js';
 import {
   ADD,
@@ -73,6 +74,7 @@ import type { XtInstr } from './xtensa-asm.js';
 
 const GPIO = ESP32S3_GPIO_BASE;
 const UART = ESP32S3_UART0_BASE;
+const UART1 = ESP32S3_UART1_BASE;
 const LEDC = 0x60019000;
 const RMT = 0x60016000;
 const GDMA = 0x6003f000;
@@ -2200,6 +2202,40 @@ describe('Esp32s3Core — peripheral interrupt lines through the matrix (slice 6
     c.step(100);
     expect([...c.drainUart()]).toEqual([0x55]);
   });
+
+  it('routes UART1 RXFIFO_FULL through its own interrupt matrix source', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [UART1, UART, ESP32S3_IRAM_BASE, INTMTX], [
+      L32R(2, 0), // a2 = UART1
+      L32R(5, 2),
+      WSR(5, SR.VECBASE),
+      MOVI(3, 0),
+      S32I(3, 2, 0x24), // CONF1: RXFIFO_FULL_THRHD = 0 (any byte)
+      MOVI(3, 1),
+      S32I(3, 2, 0x0c), // INT_ENA = RXFIFO_FULL
+      L32R(7, 3),
+      MOVI(3, 1),
+      S32I(3, 7, 0x70), // UART1 source -> CPU line 1
+      MOVI(3, 2),
+      WSR(3, SR.INTENABLE),
+      RSIL(8, 0),
+      J(BR(-1)),
+
+      PAD_TO(0x340),
+      WSR(2, SR.EXCSAVE1),
+      L32R(2, 0), // UART1
+      L32R(4, 1), // UART0 test output
+      L32I(3, 2, 0x00), // UART1 FIFO read
+      S32I(3, 4, 0x00), // report over UART0
+      RSR(2, SR.EXCSAVE1),
+      RFE(),
+    ]);
+    const c = core(image);
+    c.step(100);
+    expect([...c.drainUart()]).toEqual([]);
+    c.uartWriteTo(1, 0x5c);
+    c.step(100);
+    expect([...c.drainUart()]).toEqual([0x5c]);
+  });
 });
 
 describe('Esp32s3Core — flash-mapped IROM/DROM segments (slice 9)', () => {
@@ -3565,6 +3601,70 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     c.uartWrite(0x5a);
     c.step(1_000);
     expect([...c.drainUart()]).toEqual([rtcUart0Trig, 0x5a, 0]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
+  it('UART1 RX wakes light sleep through RTC_CORE and leaves the byte readable', () => {
+    // Context7 resolved ESP-IDF but query failed; source-checked against
+    // ESP-IDF v5.5.3 docs/headers instead. sleep_modes.c arms
+    // RTC_UART1_TRIG_EN for UART_NUM_1, rtc.h defines it as BIT(7),
+    // soc.h maps REG_UART_BASE(1) to UART0+0x10000, and
+    // interrupt_core0_reg.h exposes UART1_INTR_MAP at +0x070.
+    const rtcUart1Trig = 1 << 7;
+    const rtcSlpWakeupInt = 1;
+    const wakeupUart1 = rtcUart1Trig << 15;
+    const sleepEn = 0x80000000;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [RTCCNTL, INTMTX, UART, ESP32S3_IRAM_BASE, UART1, wakeupUart1, rtcSlpWakeupInt, sleepEn, rtcUart1Trig, 0xff],
+      [
+        L32R(2, 0), // a2 = RTC_CNTL
+        L32R(3, 1), // a3 = interrupt matrix
+        MOVI(4, 1),
+        S32I(4, 3, 0x9c), // RTC_CORE_INTR_MAP -> external level-1 line 1
+        L32R(5, 3),
+        WSR(5, SR.VECBASE),
+        MOVI(4, 2),
+        WSR(4, SR.INTENABLE),
+        L32R(4, 6),
+        S32I(4, 2, 0x4c), // clear stale SLP_WAKEUP raw
+        S32I(4, 2, 0x40), // enable SLP_WAKEUP raw
+        L32R(4, 5),
+        S32I(4, 2, 0x3c), // WAKEUP_STATE UART1 wake source
+        RSIL(12, 12), // hold pending RTC_CORE interrupt until WAITI lowers INTLEVEL
+        L32R(4, 7),
+        S32I(4, 2, 0x18), // STATE0.SLEEP_EN
+        WAITI(0),
+        L32I(4, 2, 0x130), // SLP_WAKEUP_CAUSE raw trigger bitmap
+        L32R(5, 8),
+        AND(4, 4, 5),
+        L32R(6, 2), // a6 = UART0 for test reporting
+        S32I(4, 6, 0), // tx RTC_UART1_TRIG_EN (0x80)
+        L32R(7, 4), // a7 = UART1
+        L32I(4, 7, 0), // UART1 FIFO: host byte still readable after wake
+        L32R(5, 9),
+        AND(4, 4, 5),
+        S32I(4, 6, 0), // tx host byte
+        L32I(4, 2, 0x48),
+        S32I(4, 6, 0), // tx 0: INT_ST clear after ISR
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(3, 6),
+        S32I(3, 2, 0x4c), // clear SLP_WAKEUP so it does not re-fire
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+    c.uartWriteTo(1, 0x6b);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([rtcUart1Trig, 0x6b, 0]);
     c.step(300);
     expect([...c.drainUart()]).toEqual([]);
   });

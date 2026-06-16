@@ -203,8 +203,8 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * light sleep through RTC_SDIO_TRIG_EN. GPIO high/low level wakeup
  * tracks GPIO_PINn.WAKEUP_ENABLE plus INT_TYPE and records
  * RTC_GPIO_TRIG_EN. EXT1 wakeup watches the RTC GPIO0..21 mask and
- * records RTC_EXT1_TRIG_EN plus EXT_WAKEUP1_STATUS. UART0 RX bytes can
- * likewise wake modeled light sleep through RTC_UART0_TRIG_EN.
+ * records RTC_EXT1_TRIG_EN plus EXT_WAKEUP1_STATUS. UART0/1 RX bytes
+ * can likewise wake modeled light sleep through RTC_UART0/1_TRIG_EN.
  * RWDT stage-0 INT,
  * COCPU_SW_INT_TRIGGER, host-injected brownout detector trips,
  * power-glitch detector trips, XTAL32K-dead watchdog trips, and
@@ -240,7 +240,7 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * deterministic approach counts and latch TOUCH_APPROACH_LOOP_DONE when
  * they reach the configured total scan count.
  * Cuts: no driver ringbuffer API yet.
- * Still missing: full light/deep sleep register policy, non-timer wake
+ * Still missing: full light/deep sleep register policy, remaining wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
  * instruction execution, and the remaining RTC interrupt producers
@@ -259,6 +259,7 @@ const DRAM_BASE = 0x3fc88000;
 const SRAM_BYTES = 0x78000; // 480 KiB shared window
 const GPIO_BASE = 0x60004000;
 const UART0_BASE = 0x60000000;
+const UART1_BASE = 0x60010000;
 
 // GPIO matrix register offsets (gpio_reg.h):
 const GPIO_OUT = 0x04;
@@ -325,6 +326,7 @@ const INTMTX_BASE = 0x600c2000;
 const INTMTX_CORE1_OFFSET = 0x800;
 const INTMTX_GPIO_MAP = 0x040; // INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG
 const INTMTX_UART_MAP = 0x06c; // INTERRUPT_CORE0_UART_INTR_MAP_REG
+const INTMTX_UART1_MAP = 0x070; // INTERRUPT_CORE0_UART1_INTR_MAP_REG
 const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
 const INTMTX_RTC_CORE_MAP = 0x09c; // INTERRUPT_CORE0_RTC_CORE_INTR_MAP_REG
 const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
@@ -785,6 +787,7 @@ const RTC_GPIO_TRIG_EN = 1 << 2;
 const RTC_TIMER_TRIG_EN = 1 << 3; // components/esp_hw_support/port/esp32s3/include/soc/rtc.h
 const RTC_SDIO_TRIG_EN = 1 << 4;
 const RTC_UART0_TRIG_EN = 1 << 6;
+const RTC_UART1_TRIG_EN = 1 << 7;
 const RTC_ULP_TRIG_EN = 1 << 9;
 const RTC_COCPU_TRIG_EN = 1 << 11;
 const RTC_XTAL32K_DEAD_TRIG_EN = 1 << 12;
@@ -1475,12 +1478,17 @@ export class Esp32s3Core implements McuCore {
   private rmtIntEna = 0;
   private rmtIntMaps = freshInterruptMapPair();
 
-  // UART0 interrupt state + the interrupt matrix maps.
+  // UART0/1 interrupt state + the interrupt matrix maps.
   private uartIntEna = 0;
   private uartTxDone = false; // latched TX_DONE raw bit
   private uartRxThrhd = 96; // CONF1 RXFIFO_FULL_THRHD reset value
+  private uart1RxQueue: number[] = [];
+  private uart1IntEna = 0;
+  private uart1TxDone = false;
+  private uart1RxThrhd = 96;
   private gpioIntMaps = freshInterruptMapPair();
   private uartIntMaps = freshInterruptMapPair();
+  private uart1IntMaps = freshInterruptMapPair();
 
   // TIMG0/TIMG1 state (slices 8 + 13): per-group timers, MWDT, INT_*
   // regs and matrix maps. Counters are virtual — derived from elapsed
@@ -1781,11 +1789,20 @@ export class Esp32s3Core implements McuCore {
   }
 
   uartWrite(byte: number): void {
+    this.uartWriteTo(0, byte);
+  }
+
+  uartWriteTo(port: 0 | 1, byte: number): void {
     if (!Number.isInteger(byte) || byte < 0 || byte > 0xff) {
-      throw new Error(`uartWrite expects a byte 0..255 (got ${String(byte)})`);
+      throw new Error(`uartWriteTo expects a byte 0..255 (got ${String(byte)})`);
     }
-    this.rxQueue.push(byte);
-    this.latchRtcWakeupSource(RTC_UART0_TRIG_EN);
+    if (port === 0) {
+      this.rxQueue.push(byte);
+      this.latchRtcWakeupSource(RTC_UART0_TRIG_EN);
+    } else {
+      this.uart1RxQueue.push(byte);
+      this.latchRtcWakeupSource(RTC_UART1_TRIG_EN);
+    }
     this.recomputeIrq();
   }
 
@@ -2337,8 +2354,13 @@ export class Esp32s3Core implements McuCore {
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
+    this.uart1RxQueue = [];
+    this.uart1IntEna = 0;
+    this.uart1TxDone = false;
+    this.uart1RxThrhd = 96;
     this.gpioIntMaps = freshInterruptMapPair();
     this.uartIntMaps = freshInterruptMapPair();
+    this.uart1IntMaps = freshInterruptMapPair();
     this.timg = [freshTimgGroup(), freshTimgGroup()];
     this.rwdt = freshWatchdog(RWDT_CONFIG0_RESET, 0);
     // resetCause/appResetCause are deliberately NOT cleared — they
@@ -2445,6 +2467,7 @@ export class Esp32s3Core implements McuCore {
     this.driven.fill(undefined);
     this.events = [];
     this.rxQueue = [];
+    this.uart1RxQueue = [];
     this.txBuffer = [];
     this.pendingReset = false;
     this.cpu = new XtensaCpu(this.bus());
@@ -2810,6 +2833,12 @@ export class Esp32s3Core implements McuCore {
   private uartIntRaw(): number {
     let raw = this.uartTxDone ? UART_TX_DONE_INT : 0;
     if (this.rxQueue.length > this.uartRxThrhd) raw |= UART_RXFIFO_FULL_INT;
+    return raw;
+  }
+
+  private uart1IntRaw(): number {
+    let raw = this.uart1TxDone ? UART_TX_DONE_INT : 0;
+    if (this.uart1RxQueue.length > this.uart1RxThrhd) raw |= UART_RXFIFO_FULL_INT;
     return raw;
   }
 
@@ -3604,6 +3633,7 @@ export class Esp32s3Core implements McuCore {
       }
     }
     const uartPending = (this.uartIntRaw() & this.uartIntEna) !== 0;
+    const uart1Pending = (this.uart1IntRaw() & this.uart1IntEna) !== 0;
     const ledcPending = (this.ledcIntRaw & this.ledcIntEna) !== 0;
     const rmtPending = (this.rmtIntRaw & this.rmtIntEna) !== 0;
     const apbAdcPending = (this.apbSaradcIntRaw & this.apbSaradcIntEna) !== 0;
@@ -3615,6 +3645,7 @@ export class Esp32s3Core implements McuCore {
     };
     if (gpioPending) raise(this.gpioIntMaps);
     if (uartPending) raise(this.uartIntMaps);
+    if (uart1Pending) raise(this.uart1IntMaps);
     if (ledcPending) raise(this.ledcIntMaps);
     if (rmtPending) raise(this.rmtIntMaps);
     if (apbAdcPending) raise(this.apbSaradcIntMaps);
@@ -3916,12 +3947,30 @@ export class Esp32s3Core implements McuCore {
       if (off === UART_CONF1) return this.uartRxThrhd;
       return 0;
     }
+    if (addr >= UART1_BASE && addr < UART1_BASE + 0x1000) {
+      const off = addr - UART1_BASE;
+      if (off === UART_FIFO) {
+        const byte = this.uart1RxQueue.shift() ?? 0;
+        this.recomputeIrq(); // draining may deassert RXFIFO_FULL
+        return byte;
+      }
+      if (off === UART_STATUS) {
+        const rx = Math.min(this.uart1RxQueue.length, 0x3ff);
+        return rx; // TXFIFO_CNT [25:16] stays 0 — the modeled tx FIFO never fills
+      }
+      if (off === UART_INT_RAW) return this.uart1IntRaw();
+      if (off === UART_INT_ST) return this.uart1IntRaw() & this.uart1IntEna;
+      if (off === UART_INT_ENA) return this.uart1IntEna;
+      if (off === UART_CONF1) return this.uart1RxThrhd;
+      return 0;
+    }
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
       const sourceOff = off - core * INTMTX_CORE1_OFFSET;
       if (sourceOff === INTMTX_GPIO_MAP) return this.gpioIntMaps[core];
       if (sourceOff === INTMTX_UART_MAP) return this.uartIntMaps[core];
+      if (sourceOff === INTMTX_UART1_MAP) return this.uart1IntMaps[core];
       if (sourceOff === INTMTX_LEDC_MAP) return this.ledcIntMaps[core];
       if (sourceOff === INTMTX_RTC_CORE_MAP) return this.rtcCoreIntMaps[core];
       if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
@@ -4359,12 +4408,28 @@ export class Esp32s3Core implements McuCore {
       this.recomputeIrq();
       return;
     }
+    if (addr >= UART1_BASE && addr < UART1_BASE + 0x1000) {
+      const off = addr - UART1_BASE;
+      if (off === UART_FIFO) {
+        this.txBuffer.push(value & 0xff);
+        this.uart1TxDone = true; // tx is instantaneous in this model
+      } else if (off === UART_INT_ENA) {
+        this.uart1IntEna = value >>> 0;
+      } else if (off === UART_INT_CLR) {
+        if ((value & UART_TX_DONE_INT) !== 0) this.uart1TxDone = false;
+      } else if (off === UART_CONF1) {
+        this.uart1RxThrhd = value & 0x3ff;
+      }
+      this.recomputeIrq();
+      return;
+    }
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
       const sourceOff = off - core * INTMTX_CORE1_OFFSET;
       if (sourceOff === INTMTX_GPIO_MAP) this.gpioIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_UART_MAP) this.uartIntMaps[core] = value & 0x1f;
+      else if (sourceOff === INTMTX_UART1_MAP) this.uart1IntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_LEDC_MAP) this.ledcIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;
@@ -5098,4 +5163,10 @@ export class Esp32s3Core implements McuCore {
   }
 }
 
-export { IRAM_BASE as ESP32S3_IRAM_BASE, DRAM_BASE as ESP32S3_DRAM_BASE, GPIO_BASE as ESP32S3_GPIO_BASE, UART0_BASE as ESP32S3_UART0_BASE };
+export {
+  IRAM_BASE as ESP32S3_IRAM_BASE,
+  DRAM_BASE as ESP32S3_DRAM_BASE,
+  GPIO_BASE as ESP32S3_GPIO_BASE,
+  UART0_BASE as ESP32S3_UART0_BASE,
+  UART1_BASE as ESP32S3_UART1_BASE,
+};
