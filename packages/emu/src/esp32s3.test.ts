@@ -185,6 +185,7 @@ const MCPWM_PWM1_OUT0A = 166;
 const TWAI_RI_TI = 0x03;
 const TWAI_SELF_TEST_MODE = 1 << 2;
 const TWAI_ACCEPTANCE_FILTER_MODE = 1 << 3;
+const TWAI_TI_EI_BEI = (1 << 1) | (1 << 2) | (1 << 7);
 const TWAI_TX_REQUEST = 1 << 0;
 const TWAI_SELF_RX_REQUEST = 1 << 4;
 const TWAI_RELEASE_RX_BUFFER = 1 << 2;
@@ -658,6 +659,109 @@ describe('Esp32s3Core', () => {
     c.step(360);
     expect(c.drainTwaiTx()).toEqual([{ id: 0x401, data: [0xde, 0xad], dlc: 2, extended: false, rtr: false }]);
     expect(c.drainTwaiTx()).toEqual([]);
+  });
+
+  it('latches TWAI no-ACK transmit errors and increments TEC', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [TWAI, UART, 0x80, 0x20, 0xca, 0xfe],
+      [
+        L32R(2, 0), // TWAI
+        L32R(6, 1), // UART0
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, 0xff),
+        S32I(3, 2, 0x10), // enable all modeled TWAI interrupt bits
+        MOVI(3, 2),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=2
+        L32R(3, 2),
+        S32I(3, 2, 0x44), // std id 0x401 byte 0
+        L32R(3, 3),
+        S32I(3, 2, 0x48), // std id 0x401 byte 1
+        L32R(3, 4),
+        S32I(3, 2, 0x4c), // data 0
+        L32R(3, 5),
+        S32I(3, 2, 0x50), // data 1
+        MOVI(3, TWAI_TX_REQUEST),
+        S32I(3, 2, 0x04),
+        L32I(3, 2, 0x0c), // INTERRUPT: TI + EI + BEI for a no-ACK attempt
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x3c), // TX error counter
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x30), // error code capture: ACK slot
+        S32I(3, 6, 0),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(520);
+    expect(c.drainTwaiTx()).toEqual([{ id: 0x401, data: [0xca, 0xfe], dlc: 2, extended: false, rtr: false }]);
+    expect([...c.drainUart()]).toEqual([TWAI_TI_EI_BEI, 8, 25]);
+  });
+
+  it('delivers TWAI frames to a connected peer and ACKs without growing TEC', () => {
+    const tx = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI, UART, 0x80, 0x40, 0x10, 0x20, 0x30], [
+        L32R(2, 0), // TWAI
+        L32R(6, 1), // UART0
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, 3),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=3
+        L32R(3, 2),
+        S32I(3, 2, 0x44), // std id 0x402 byte 0
+        L32R(3, 3),
+        S32I(3, 2, 0x48), // std id 0x402 byte 1
+        L32R(3, 4),
+        S32I(3, 2, 0x4c), // data 0
+        L32R(3, 5),
+        S32I(3, 2, 0x50), // data 1
+        L32R(3, 6),
+        S32I(3, 2, 0x54), // data 2
+        MOVI(3, TWAI_TX_REQUEST),
+        S32I(3, 2, 0x04),
+        L32I(3, 2, 0x3c), // TX error counter stays zero on ACK
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x0c), // only TI is latched
+        S32I(3, 6, 0),
+        J(BR(-1)),
+      ]),
+    );
+    const rx = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI, UART], [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, TWAI_RI_TI),
+        S32I(3, 2, 0x10),
+        L32R(6, 1), // UART0
+        L32I(3, 2, 0x74), // RX message counter
+        BEQZ_TO(3, 5),
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x40), // frame info
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x44), // ID byte 0
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x48), // ID byte 1
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x4c), // data 0
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x50), // data 1
+        S32I(3, 6, 0),
+        L32I(3, 2, 0x54), // data 2
+        S32I(3, 6, 0),
+        J(BR(-1)),
+      ]),
+    );
+
+    tx.connectTwaiPeer(rx);
+    rx.step(120);
+    tx.step(520);
+    rx.step(700);
+
+    expect(tx.drainTwaiTx()).toEqual([{ id: 0x402, data: [0x10, 0x20, 0x30], dlc: 3, extended: false, rtr: false }]);
+    expect([...tx.drainUart()]).toEqual([0, 2]);
+    expect([...rx.drainUart()]).toEqual([1, 3, 0x80, 0x40, 0x10, 0x20, 0x30]);
   });
 
   it('routes RMT channel 0 TX symbols through the GPIO matrix to IO5', () => {

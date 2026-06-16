@@ -278,10 +278,12 @@ export interface Esp32s3TwaiFrame {
  * power/clock gating effects, or full driver object model yet.
  * TWAI/CAN now exposes the source-pinned ESP32-S3 register block, the
  * SJA1000-style 8-bit registers packed into 32-bit words, TX/RX frame
- * buffer bytes, self-reception loopback, RX buffer release, RI/TI
- * interrupts, and the CAN interrupt-matrix route. Cuts: no real CAN bus
- * object, bit timing/arbitration/ACK/error confinement, acceptance-filter
- * enforcement, alerts queue, or wire-level GPIO waveform yet.
+ * buffer bytes, self-reception loopback, RX buffer release, RI/TI/EI/BEI
+ * interrupts, acceptance-filter enforcement, typed host injection/drain,
+ * and a host-side peer bus that delivers standard frames, models ACK/no-ACK
+ * TX error-counter movement, and enters BUS_OFF after repeated ACK errors.
+ * Cuts: no bit timing/arbitration/retry scheduling, driver alert queue,
+ * exact dual-filter mode, or wire-level GPIO waveform yet.
  * Still missing: full light/deep sleep register policy, remaining wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
@@ -592,6 +594,8 @@ const TWAI_ACCEPTANCE_BYTES = 8;
 const TWAI_RX_MESSAGE_COUNTER = 0x74;
 const TWAI_CLOCK_DIVIDER = 0x7c;
 const TWAI_MODE_RESET = 1 << 0;
+const TWAI_MODE_LISTEN_ONLY = 1 << 1;
+const TWAI_MODE_NO_ACK = 1 << 2;
 const TWAI_MODE_MASK = 0x0f;
 const TWAI_CMD_TX_REQUEST = 1 << 0;
 const TWAI_CMD_ABORT_TX = 1 << 1;
@@ -602,10 +606,18 @@ const TWAI_STATUS_RX_BUFFER = 1 << 0;
 const TWAI_STATUS_DATA_OVERRUN = 1 << 1;
 const TWAI_STATUS_TX_BUFFER = 1 << 2;
 const TWAI_STATUS_TX_COMPLETE = 1 << 3;
+const TWAI_STATUS_ERROR = 1 << 6;
+const TWAI_STATUS_BUS = 1 << 7;
 const TWAI_INTR_RX = 1 << 0;
 const TWAI_INTR_TX = 1 << 1;
+const TWAI_INTR_ERR = 1 << 2;
 const TWAI_INTR_DATA_OVERRUN = 1 << 3;
+const TWAI_INTR_ERR_PASSIVE = 1 << 5;
+const TWAI_INTR_BUS_ERR = 1 << 7;
 const TWAI_INTR_CLEARABLE = 0xef;
+const TWAI_ERR_WARNING_LIMIT_RESET = 96;
+const TWAI_ERR_DELTA_TX_ACK = 8;
+const TWAI_ERR_SEG_ACK_SLOT = 25;
 const TWAI_CLOCK_DIVIDER_MASK = 0x1ff;
 const TWAI_FRAME_DLC_MASK = 0x0f;
 const TWAI_FRAME_RTR = 1 << 6;
@@ -1764,6 +1776,7 @@ interface TwaiController {
   rxFifo: number[][];
   txLog: number[][];
   dataOverrun: boolean;
+  busOff: boolean;
   interrupt: number;
   interruptEna: number;
   clockDivider: number;
@@ -1998,7 +2011,7 @@ const freshTwaiController = (): TwaiController => ({
   busTiming1: 0,
   arbLostCapture: 0,
   errCodeCapture: 0,
-  errWarningLimit: 0,
+  errWarningLimit: TWAI_ERR_WARNING_LIMIT_RESET,
   rxErrCounter: 0,
   txErrCounter: 0,
   buffer: Array(TWAI_BUFFER_BYTES).fill(0) as number[],
@@ -2006,6 +2019,7 @@ const freshTwaiController = (): TwaiController => ({
   rxFifo: [],
   txLog: [],
   dataOverrun: false,
+  busOff: false,
   interrupt: 0,
   interruptEna: 0,
   clockDivider: 0,
@@ -2245,6 +2259,7 @@ export class Esp32s3Core implements McuCore {
   private adcContinuousOverflows: Esp32s3AdcContinuousOverflowEvent[] = [];
   /** Bench wiring — survives reset(), like loaded firmware. */
   private sampler: AdcSampler | null = null;
+  private twaiPeers = new Set<Esp32s3Core>();
   /** Last driven level per pin; undefined while not output-enabled. */
   private driven: (DigitalLevel | undefined)[] = new Array<DigitalLevel | undefined>(PIN_COUNT).fill(undefined);
   private events: PinEvent[] = [];
@@ -2539,6 +2554,17 @@ export class Esp32s3Core implements McuCore {
     const out = this.twai.txLog.map((frame) => this.twaiDecodeFrame(frame));
     this.twai.txLog = [];
     return out;
+  }
+
+  connectTwaiPeer(peer: Esp32s3Core): void {
+    if (peer === this) throw new Error('connectTwaiPeer requires a different ESP32-S3 core');
+    this.twaiPeers.add(peer);
+    peer.twaiPeers.add(this);
+  }
+
+  disconnectTwaiPeer(peer: Esp32s3Core): void {
+    this.twaiPeers.delete(peer);
+    peer.twaiPeers.delete(this);
   }
 
   setAdcSampler(fn: AdcSampler): void {
@@ -4422,6 +4448,10 @@ export class Esp32s3Core implements McuCore {
     let status = TWAI_STATUS_TX_BUFFER | TWAI_STATUS_TX_COMPLETE;
     if (this.twai.rxFifo.length > 0) status |= TWAI_STATUS_RX_BUFFER;
     if (this.twai.dataOverrun) status |= TWAI_STATUS_DATA_OVERRUN;
+    if (this.twai.busOff || this.twai.txErrCounter >= this.twai.errWarningLimit || this.twai.rxErrCounter >= this.twai.errWarningLimit) {
+      status |= TWAI_STATUS_ERROR;
+    }
+    if (this.twai.busOff) status |= TWAI_STATUS_BUS;
     return status >>> 0;
   }
 
@@ -4489,6 +4519,22 @@ export class Esp32s3Core implements McuCore {
     return true;
   }
 
+  private twaiActiveOnBus(): boolean {
+    return (this.twai.mode & TWAI_MODE_RESET) === 0 && !this.twai.busOff;
+  }
+
+  private twaiCanAckBusFrame(): boolean {
+    return this.twaiActiveOnBus() && (this.twai.mode & TWAI_MODE_LISTEN_ONLY) === 0;
+  }
+
+  private twaiReceiveFromBus(frame: readonly number[]): boolean {
+    if (!this.twaiActiveOnBus()) return false;
+    const canAck = this.twaiCanAckBusFrame();
+    this.twaiPushRxFrame(Array.from(frame, (b) => b & 0xff), true);
+    this.recomputeIrq();
+    return canAck;
+  }
+
   private twaiFormatFrame(frame: Esp32s3TwaiFrame): number[] {
     const data = Array.from(frame.data ?? [], (b) => {
       if (!Number.isInteger(b) || b < 0 || b > 0xff) {
@@ -4537,11 +4583,37 @@ export class Esp32s3Core implements McuCore {
     return { id, data, dlc, extended, rtr };
   }
 
+  private twaiRecordSuccessfulTransmit(): void {
+    if (this.twai.txErrCounter > 0) this.twai.txErrCounter--;
+  }
+
+  private twaiRecordAckError(): void {
+    const nextTec = this.twai.txErrCounter + TWAI_ERR_DELTA_TX_ACK;
+    this.twai.errCodeCapture = TWAI_ERR_SEG_ACK_SLOT;
+    this.twai.interrupt |= TWAI_INTR_ERR | TWAI_INTR_BUS_ERR;
+    if (nextTec >= 256) {
+      this.twai.busOff = true;
+      this.twai.mode |= TWAI_MODE_RESET;
+      this.twai.txErrCounter = 128;
+      this.twai.rxErrCounter = 0;
+      this.twai.interrupt |= TWAI_INTR_ERR_PASSIVE;
+      return;
+    }
+    this.twai.txErrCounter = nextTec & 0xff;
+    if (this.twai.txErrCounter >= 128) this.twai.interrupt |= TWAI_INTR_ERR_PASSIVE;
+  }
+
   private twaiTransmit(selfReceive: boolean): void {
     if ((this.twai.mode & TWAI_MODE_RESET) !== 0) return;
-    const frame = this.twai.buffer.slice(0, TWAI_BUFFER_BYTES);
-    this.twai.txLog.push(frame.map((b) => b & 0xff));
+    const frame = this.twai.buffer.slice(0, TWAI_BUFFER_BYTES).map((b) => b & 0xff);
+    this.twai.txLog.push(frame);
+    let acknowledged = (this.twai.mode & TWAI_MODE_NO_ACK) !== 0;
     if (selfReceive) this.twaiPushRxFrame(frame, true);
+    if (!selfReceive) {
+      for (const peer of this.twaiPeers) acknowledged = peer.twaiReceiveFromBus(frame) || acknowledged;
+    }
+    if (acknowledged) this.twaiRecordSuccessfulTransmit();
+    else this.twaiRecordAckError();
     this.twai.interrupt |= TWAI_INTR_TX;
   }
 
@@ -4577,6 +4649,7 @@ export class Esp32s3Core implements McuCore {
     const v = value >>> 0;
     if (off === TWAI_MODE) {
       this.twai.mode = v & TWAI_MODE_MASK;
+      if ((this.twai.mode & TWAI_MODE_RESET) !== 0) this.twai.busOff = false;
       this.recomputeIrq();
       return;
     }
@@ -4623,6 +4696,7 @@ export class Esp32s3Core implements McuCore {
     }
     if (off === TWAI_TX_ERR_COUNTER) {
       this.twai.txErrCounter = v & 0xff;
+      this.twai.busOff = false;
       return;
     }
     if (off >= TWAI_BUFFER_START && off < TWAI_BUFFER_START + TWAI_BUFFER_BYTES * 4 && (off & 3) === 0) {

@@ -2,6 +2,38 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 103: TWAI virtual peer bus + ACK errors
+
+### Added
+- **TWAI/CAN peer bus first cut** (@protopulse/emu):
+  ESP32-S3 cores can now be linked with `connectTwaiPeer()` /
+  `disconnectTwaiPeer()` so firmware `TR` transmissions on one core are
+  delivered into a connected peer's TWAI RX FIFO and can be ACKed by
+  that active peer.
+- **ACK/no-ACK error accounting** for the register-level TWAI path:
+  a lone normal transmit still drains to the host bench, but now latches
+  `TI|EI|BEI`, increments TEC by 8, records the ACK-slot error segment,
+  and progresses toward BUS_OFF on repeated ACK failures. No-ACK/self
+  test mode remains the non-error loopback path.
+
+### Verified
+- Added hand-assembled Xtensa firmware proving a no-ACK `TR` attempt
+  surfaces the transmitted frame, latches `TI|EI|BEI`, raises TEC to 8,
+  and exposes ACK-slot error capture through the TWAI registers.
+- Added a two-core peer-bus test proving a connected receiver gets the
+  frame bytes through the RX buffer while the transmitter's TEC stays at
+  zero and only `TI` is latched.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 170 ESP32-S3 tests.
+- `npm run check:packages` passed.
+- `npm run test:packages` passed across package workspaces with 1,512 tests.
+
+### Honest cuts
+- Still no bit timing, arbitration, retry scheduling, driver alert
+  queue, wire-level GPIO waveform, or exact dual-filter mode. This is a
+  host-side virtual bus/ACK substrate for bridge and probe work, not a
+  physical CAN transceiver simulation.
+
 ## 2026-06-16 — ESP32-S3 slice 102: TWAI host injection + acceptance filters
 
 ### Added

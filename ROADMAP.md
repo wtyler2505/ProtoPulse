@@ -1419,6 +1419,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       bus, arbitration, ACK/retry timing, error confinement, driver
       alert queue, wire-level GPIO waveform, or exact dual-filter mode
       yet
+- [x] ESP32-S3 core slice 103 — TWAI virtual peer bus + ACK errors
+      (landed 2026-06-16): ESP32-S3 cores can now be linked with
+      `connectTwaiPeer()` / `disconnectTwaiPeer()` so one core's `TR`
+      transmission is delivered into a connected peer's TWAI RX FIFO
+      and ACKed by that active peer. Lone normal transmissions still
+      drain to the host bench, but now latch `TI|EI|BEI`, increment TEC
+      by 8, record the ACK-slot error segment, and progress toward
+      BUS_OFF on repeated ACK failures. Proven by hand-assembled
+      firmware that checks the no-ACK interrupt/counter/capture path and
+      a two-core peer-bus test that verifies RX delivery with TEC held
+      at zero. Cuts: no bit timing, arbitration, retry scheduling,
+      driver alert queue, wire-level GPIO waveform, or exact
+      dual-filter mode yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
