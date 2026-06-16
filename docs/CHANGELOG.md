@@ -2,6 +2,30 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 95: RTC slow-clock elapsed rebase
+
+### Added
+- **RTC slow-clock live rebase** (@protopulse/emu):
+  RTC main-timer ticks and RWDT elapsed ticks now carry forward when
+  firmware writes RTC_CNTL_CLK_CONF or RTC_CNTL_SLOW_CLK_CONF. Changing
+  the RTC_SLOW_CLK source or RC_SLOW divider now affects future time
+  without reinterpreting elapsed time under the new rate.
+
+### Verified
+- Added hand-assembled Xtensa firmware that latches the RTC main timer
+  after 1 ms, switches to XTAL32K, proves the latched count does not move
+  backward, and then keeps aging on the new source.
+- Added hand-assembled Xtensa firmware that arms RWDT under RC_SLOW,
+  ages one RTC-slow tick, switches to XTAL32K mid-timeout, and still
+  resets after the remaining tick with RTCWDT_SYS_RESET.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 152 ESP32-S3 tests.
+
+### Honest cuts
+- Sub-tick oscillator phase is still integer-rounded; this closes the
+  larger elapsed-time rebase gap without claiming analog clock phase
+  fidelity.
+
 ## 2026-06-16 — ESP32-S3 slice 94: RC_SLOW divider for RTC slow clock
 
 ### Added
@@ -17,9 +41,9 @@ All notable changes to ProtoPulse are documented in this file.
 - `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
   passed with 150 ESP32-S3 tests.
 
-### Honest cuts
-- Changing the divider while a timeout is already aging still uses
-  simple virtual-time math instead of re-basing elapsed time.
+### Follow-up
+- The live elapsed-time rebase gap called out here is closed by
+  ESP32-S3 slice 95.
 
 ## 2026-06-16 — ESP32-S3 slice 93: RTC slow-clock mux for RWDT
 
@@ -37,9 +61,9 @@ All notable changes to ProtoPulse are documented in this file.
 - `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
   passed with 149 ESP32-S3 tests.
 
-### Honest cuts
-- Changing RTC_SLOW_CLK while a timeout is already aging still uses
-  simple virtual-time math instead of re-basing elapsed time.
+### Follow-up
+- The live elapsed-time rebase gap called out here is closed by
+  ESP32-S3 slice 95.
 
 ## 2026-06-16 — ESP32-S3 slices 21-92: IDF runway catch-up
 

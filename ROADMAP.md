@@ -1303,8 +1303,8 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       Proven by hand-assembled firmware that selects XTAL32K before
       arming a raw RWDT stage0=1 timeout, survives beyond the old
       RC_SLOW x2 deadline, then later reboots with RTCWDT_SYS_RESET.
-      Cuts: elapsed time is not re-based when firmware switches
-      RTC_SLOW_CLK mid-timeout
+      Follow-up: live elapsed rebase across RTC_SLOW_CLK changes is
+      covered by slice 95
 - [x] ESP32-S3 core slice 94 — RC_SLOW divider for RTC slow clock
       (landed 2026-06-16): RTC_CNTL_SLOW_CLK_CONF.ANA_CLK_DIV now
       updates the modeled RC_SLOW divider when ANA_CLK_DIV_VLD is set,
@@ -1312,8 +1312,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       contract. Proven by hand-assembled firmware that divides RC_SLOW
       by 4 before arming a raw RWDT stage0=1 timeout, survives beyond
       the undivided RC_SLOW x2 deadline, then later reboots with
-      RTCWDT_SYS_RESET. Cuts: elapsed time is not re-based when
-      firmware changes the divider mid-timeout
+      RTCWDT_SYS_RESET. Follow-up: live elapsed rebase across divider
+      changes is covered by slice 95
+- [x] ESP32-S3 core slice 95 — RTC slow-clock elapsed rebase
+      (landed 2026-06-16): RTC main-timer ticks and RWDT elapsed
+      ticks now carry forward when firmware writes RTC_CNTL_CLK_CONF
+      or RTC_CNTL_SLOW_CLK_CONF, so changing the RTC_SLOW_CLK source
+      or RC_SLOW divider affects only future time instead of
+      reinterpreting the past. Proven by hand-assembled firmware that
+      latches the RTC timer after 1 ms, switches to XTAL32K without
+      moving backward, then keeps aging on the new source; and by an
+      RWDT proof that ages one RC_SLOW tick, switches to XTAL32K
+      mid-timeout, and still resets after the remaining tick with
+      RTCWDT_SYS_RESET. Cut: sub-tick oscillator phase remains
+      integer-rounded
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

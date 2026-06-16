@@ -3206,6 +3206,7 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
   const RTCIO = 0x60008400;
   const RTC_OPTIONS0 = 0x60008000;
   const RTC_TIME_UPDATE = 0x6000800c;
+  const RTC_CLK_CONF_XTAL32K = 0x5158321c;
   const RTC_RESET_STATE = 0x60008038;
   const INTMTX = 0x600c2000;
   const SYS = 0x600c0000;
@@ -3318,6 +3319,43 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     const c = core(image);
     c.step(250_000);
     expect([...c.drainUart()]).toEqual([0, 136, 0]);
+  });
+
+  it('the RTC slow-clock counter keeps elapsed ticks when CLK_CONF switches source', () => {
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [RTCCNTL, UART, RTC_CLK_CONF_XTAL32K, 0x40000600, 6000], [
+      ADDI(3, 1, -16),
+      S32I(1, 3, 4),
+      L32R(2, 0), // RTC_CNTL base
+      L32R(6, 1), // UART
+      L32R(7, 2), // CLK_CONF.ANA_CLK_RTC_SEL = XTAL32K
+      L32R(8, 3), // ets_delay_us
+      MOVI(10, 1000),
+      CALLXN(2, 8),
+      MOVI(9, 1),
+      SLLI(9, 9, 31),
+      S32I(9, 2, 0x0c), // TIME_UPDATE latch at RC_SLOW
+      L32I(4, 2, 0x10),
+      S32I(4, 6, 0), // tx ~136
+      S32I(7, 2, 0x74), // switch to XTAL32K
+      S32I(9, 2, 0x0c), // latch immediately after switch
+      L32I(4, 2, 0x10),
+      S32I(4, 6, 0), // must not fall back to the slower absolute-time value
+      L32R(10, 4),
+      ADDI(10, 10, -1),
+      BNEZ(10, BR(-2)),
+      S32I(9, 2, 0x0c),
+      L32I(4, 2, 0x10),
+      S32I(4, 6, 0), // then keeps aging on the new slow source
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    c.step(500_000);
+    const out = [...c.drainUart()];
+    expect(out[0]).toBe(136);
+    expect(out[1]).toBeGreaterThanOrEqual(out[0] ?? 0);
+    expect(out[1]).toBeLessThanOrEqual((out[0] ?? 0) + 1);
+    expect(out[2]).toBeGreaterThan(out[1] ?? 0);
+    expect(out[2]).toBeLessThanOrEqual((out[1] ?? 0) + 3);
   });
 
   it('eFuse MAC registers serve the documented synthetic MAC 7A:C0:DE:00:53:33', () => {
@@ -6651,6 +6689,33 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
     c.step(7_000);
     expect([...c.drainUart()]).toEqual([1, 42]);
     c.step(10_000);
+    c.step(500);
+    expect([...c.drainUart()]).toEqual([9]);
+  });
+
+  it('RWDT keeps elapsed RTC-slow ticks when CLK_CONF changes mid-timeout', () => {
+    const image = causeRoundTrip([RTCCNTL, WDT_KEY, RWDT_EN_STG0_SYS, RTC_CLK_CONF_XTAL32K, 5000], [
+      L32R(8, 2),
+      L32R(9, 3),
+      L32R(7, 5),
+      S32I(9, 8, 0xb0), // unlock RWDT
+      MOVI(10, 1),
+      S32I(10, 8, 0x9c), // raw stage0 register value 1 -> 2 RTC-slow ticks
+      L32R(10, 4),
+      S32I(10, 8, 0x98), // arm under default RC_SLOW
+      MOVI(10, 1000),
+      ADDI(10, 10, -1),
+      BNEZ(10, BR(-2)), // age past one RC_SLOW tick, but not two
+      S32I(7, 8, 0x74), // switch the live timeout to XTAL32K
+      L32R(10, 6),
+      ADDI(10, 10, -1),
+      BNEZ(10, BR(-2)), // one more XTAL32K tick should finish the timeout
+      L32R(11, 1),
+      MOVI(12, 42),
+      S32I(12, 11, 0), // only reaches here if the pre-switch elapsed tick was lost
+    ]);
+    const c = core(image);
+    c.step(15_000);
     c.step(500);
     expect([...c.drainUart()]).toEqual([9]);
   });

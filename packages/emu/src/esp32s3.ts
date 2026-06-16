@@ -1594,6 +1594,8 @@ export class Esp32s3Core implements McuCore {
   private rtcClkConf = RTC_CLK_CONF_RESET;
   private rtcSlowClkConf = RTC_SLOW_CLK_CONF_RESET;
   private rtcRcSlowDiv = 1;
+  private rtcTickBase = 0;
+  private rtcTickBaseCycle = 0;
   private rtcSleepRejectSource = 0;
   private rtcSdioIdle = false;
   private rtcExtWakeupConf = 0;
@@ -2592,6 +2594,8 @@ export class Esp32s3Core implements McuCore {
     this.rtcClkConf = RTC_CLK_CONF_RESET;
     this.rtcSlowClkConf = RTC_SLOW_CLK_CONF_RESET;
     this.rtcRcSlowDiv = 1;
+    this.rtcTickBase = 0;
+    this.rtcTickBaseCycle = 0;
     this.rtcExtWakeupConf = 0;
     this.rtcIoExtWakeup0 = 0;
     this.rtcExtWakeup1 = 0;
@@ -2802,7 +2806,7 @@ export class Esp32s3Core implements McuCore {
       w.epoch += this.cpu.cycles - this.rwdtPauseStartCycle;
       this.rwdtPauseStartCycle = null;
     }
-    const ticks = Math.floor(((this.cpu.cycles - w.epoch) * this.rtcSlowHz()) / CLOCK_HZ);
+    const ticks = this.rwdtElapsedTicks();
     this.runWdtStages(
       w,
       ticks,
@@ -2833,7 +2837,10 @@ export class Esp32s3Core implements McuCore {
   }
 
   private rtcTicks(): number {
-    return Math.floor((this.cpu.cycles * this.rtcSlowHz()) / CLOCK_HZ);
+    return (
+      this.rtcTickBase +
+      Math.floor(((this.cpu.cycles - this.rtcTickBaseCycle) * this.rtcSlowHz()) / CLOCK_HZ)
+    );
   }
 
   private rtcSlowHz(): number {
@@ -2853,6 +2860,28 @@ export class Esp32s3Core implements McuCore {
     if ((this.rtcSlowClkConf & RTC_ANA_CLK_DIV_VLD) === 0) return;
     this.rtcRcSlowDiv = (((this.rtcSlowClkConf >>> RTC_ANA_CLK_DIV_SHIFT) & RTC_ANA_CLK_DIV_MASK) + 1) >>> 0;
     if (this.rtcRcSlowDiv === 0) this.rtcRcSlowDiv = 1;
+  }
+
+  private rwdtActiveEndCycle(): number {
+    return this.rwdtPauseStartCycle ?? this.cpu.cycles;
+  }
+
+  private rwdtElapsedTicks(hz = this.rtcSlowHz()): number {
+    return Math.floor(((this.rwdtActiveEndCycle() - this.rwdt.epoch) * hz) / CLOCK_HZ);
+  }
+
+  private setRwdtElapsedTicks(ticks: number, hz = this.rtcSlowHz()): void {
+    const elapsedCycles = Math.floor((ticks * CLOCK_HZ) / hz);
+    this.rwdt.epoch = this.rwdtActiveEndCycle() - elapsedCycles;
+  }
+
+  private rebaseRtcSlowClock(update: () => void): void {
+    const ticks = this.rtcTicks();
+    const rwdtTicks = this.rwdtElapsedTicks();
+    update();
+    this.rtcTickBase = ticks;
+    this.rtcTickBaseCycle = this.cpu.cycles;
+    this.setRwdtElapsedTicks(rwdtTicks);
   }
 
   private rtcSleepAlarmTarget(): number {
@@ -5293,10 +5322,14 @@ export class Esp32s3Core implements McuCore {
       } else if (off === RTC_SLP_REJECT_CONF) {
         this.rtcSlpRejectConf = value >>> 0;
       } else if (off === RTC_CLK_CONF) {
-        this.rtcClkConf = value >>> 0;
+        this.rebaseRtcSlowClock(() => {
+          this.rtcClkConf = value >>> 0;
+        });
       } else if (off === RTC_SLOW_CLK_CONF) {
-        this.rtcSlowClkConf = value >>> 0;
-        this.updateRtcSlowDivider();
+        this.rebaseRtcSlowClock(() => {
+          this.rtcSlowClkConf = value >>> 0;
+          this.updateRtcSlowDivider();
+        });
       } else if (off === RTC_TIME_UPDATE) {
         if ((value & (1 << 31)) !== 0) {
           // Latch the 48-bit RTC main timer: CPU cycles → RTC_SLOW ticks.
