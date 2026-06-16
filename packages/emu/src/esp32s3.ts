@@ -22,10 +22,13 @@ export interface Esp32s3TwaiErrorFlags {
   ackErr?: true;
 }
 
+export type Esp32s3TwaiErrorState = 'active' | 'warning' | 'passive' | 'bus_off';
+
 export type Esp32s3TwaiEvent =
   | { type: 'tx_done'; success: boolean; frame: Esp32s3TwaiFrame }
   | { type: 'rx_done'; frame: Esp32s3TwaiFrame }
-  | { type: 'error'; flags: Esp32s3TwaiErrorFlags };
+  | { type: 'error'; flags: Esp32s3TwaiErrorFlags }
+  | { type: 'state_change'; oldState: Esp32s3TwaiErrorState; newState: Esp32s3TwaiErrorState };
 
 /**
  * ESP32-S3 v0 — a from-scratch Xtensa LX7 core, the first slice of the
@@ -291,10 +294,10 @@ export type Esp32s3TwaiEvent =
  * interrupts, acceptance-filter enforcement, typed host injection/drain,
  * and a host-side peer bus that delivers standard frames, models ACK/no-ACK
  * TX error-counter movement, enters BUS_OFF after repeated ACK errors, and
- * exposes host-drained TX/RX/error events for bridge-style callback data.
+ * exposes host-drained TX/RX/error/state-change events for bridge-style
+ * callback data.
  * Cuts: no bit timing/arbitration/retry scheduling, full driver alert queue,
- * TWAI state-change callback stream, exact dual-filter mode, or wire-level
- * GPIO waveform yet.
+ * exact dual-filter mode, or wire-level GPIO waveform yet.
  * Still missing: full light/deep sleep register policy, remaining wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
@@ -4625,14 +4628,32 @@ export class Esp32s3Core implements McuCore {
         return { type: 'rx_done', frame: this.twaiCloneDecodedFrame(event.frame) };
       case 'error':
         return { type: 'error', flags: event.flags.ackErr === true ? { ackErr: true } : {} };
+      case 'state_change':
+        return { type: 'state_change', oldState: event.oldState, newState: event.newState };
     }
   }
 
+  private twaiErrorState(): Esp32s3TwaiErrorState {
+    if (this.twai.busOff) return 'bus_off';
+    const errorCount = Math.max(this.twai.txErrCounter, this.twai.rxErrCounter);
+    if (errorCount >= 128) return 'passive';
+    if (errorCount >= this.twai.errWarningLimit) return 'warning';
+    return 'active';
+  }
+
+  private twaiPushStateChange(oldState: Esp32s3TwaiErrorState): void {
+    const newState = this.twaiErrorState();
+    if (newState !== oldState) this.twai.events.push({ type: 'state_change', oldState, newState });
+  }
+
   private twaiRecordSuccessfulTransmit(): void {
+    const oldState = this.twaiErrorState();
     if (this.twai.txErrCounter > 0) this.twai.txErrCounter--;
+    this.twaiPushStateChange(oldState);
   }
 
   private twaiRecordAckError(): void {
+    const oldState = this.twaiErrorState();
     const nextTec = this.twai.txErrCounter + TWAI_ERR_DELTA_TX_ACK;
     this.twai.errCodeCapture = TWAI_ERR_SEG_ACK_SLOT;
     this.twai.interrupt |= TWAI_INTR_ERR | TWAI_INTR_BUS_ERR;
@@ -4643,10 +4664,12 @@ export class Esp32s3Core implements McuCore {
       this.twai.txErrCounter = 128;
       this.twai.rxErrCounter = 0;
       this.twai.interrupt |= TWAI_INTR_ERR_PASSIVE;
+      this.twaiPushStateChange(oldState);
       return;
     }
     this.twai.txErrCounter = nextTec & 0xff;
     if (this.twai.txErrCounter >= 128) this.twai.interrupt |= TWAI_INTR_ERR_PASSIVE;
+    this.twaiPushStateChange(oldState);
   }
 
   private twaiTransmit(selfReceive: boolean): void {

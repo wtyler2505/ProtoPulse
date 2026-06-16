@@ -834,6 +834,40 @@ describe('Esp32s3Core', () => {
     ]);
   });
 
+  it('drains TWAI state-change events as ACK errors escalate TEC', () => {
+    const txBurst: XtInstr[] = [];
+    for (let i = 0; i < 32; i++) {
+      txBurst.push(MOVI(3, TWAI_TX_REQUEST), S32I(3, 2, 0x04));
+    }
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [TWAI, 0x80, 0xa0, 0x66],
+      [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, 1),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=1
+        L32R(3, 1),
+        S32I(3, 2, 0x44), // std id 0x405 byte 0
+        L32R(3, 2),
+        S32I(3, 2, 0x48), // std id 0x405 byte 1
+        L32R(3, 3),
+        S32I(3, 2, 0x4c), // data 0
+        ...txBurst,
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(4000);
+
+    expect(c.drainTwaiEvents().filter((event) => event.type === 'state_change')).toEqual([
+      { type: 'state_change', oldState: 'active', newState: 'warning' },
+      { type: 'state_change', oldState: 'warning', newState: 'passive' },
+      { type: 'state_change', oldState: 'passive', newState: 'bus_off' },
+    ]);
+  });
+
   it('routes RMT channel 0 TX symbols through the GPIO matrix to IO5', () => {
     const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB;
     const rmtCh0Conf = (1 << 8) | (1 << 16) | RMT_IDLE_OUT_EN;

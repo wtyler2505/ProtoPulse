@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 105: TWAI state-change events
+
+### Added
+- **TWAI/CAN state-change event drain** (@protopulse/emu):
+  `drainTwaiEvents()` now includes `state_change` events with
+  ESP-IDF-shaped old/new error states when TEC/REC movement crosses
+  `active`, `warning`, `passive`, and `bus_off` thresholds.
+- No-ACK transmit escalation now records state changes as TEC crosses
+  96, 128, and 256, preserving the existing ACK-error and `tx_done`
+  event stream.
+
+### Verified
+- Added hand-assembled Xtensa firmware that sends 32 no-ACK TWAI
+  transmissions and proves the drained state-change stream is
+  `active -> warning -> passive -> bus_off`.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 173 ESP32-S3 tests.
+- `npm run check:packages` passed.
+- `npm run test:packages` passed across package workspaces with 1,515 tests.
+
+### Honest cuts
+- This still is not the full ESP-IDF driver alert queue. Bit-timing,
+  arbitration, retry scheduling, wire-level GPIO waveform, and exact
+  dual-filter mode remain open.
+
 ## 2026-06-16 — ESP32-S3 slice 104: TWAI host event drain
 
 ### Added

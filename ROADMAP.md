@@ -1440,8 +1440,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       firmware paths: connected peers emit sender `tx_done(success:
       true)` plus receiver `rx_done`, while a lone normal transmit emits
       ACK error then `tx_done(success: false)`. Cuts: still no full
-      ESP-IDF driver alert queue, TWAI state-change callback stream,
-      bit timing, arbitration, retry scheduling, wire-level GPIO
+      ESP-IDF driver alert queue, bit timing, arbitration, retry
+      scheduling, wire-level GPIO waveform, or exact dual-filter mode
+      yet
+- [x] ESP32-S3 core slice 105 — TWAI state-change events (landed
+      2026-06-16): `drainTwaiEvents()` now includes `state_change`
+      events with old/new error states matching ESP-IDF's
+      `twai_state_change_event_data_t` shape. No-ACK TEC escalation now
+      emits `active -> warning` at TEC 96, `warning -> passive` at TEC
+      128, and `passive -> bus_off` at TEC 256. Proven by
+      hand-assembled firmware that issues 32 normal no-ACK
+      transmissions and filters the drained event stream for those
+      three transitions. Cuts: still no full ESP-IDF driver alert
+      queue, bit timing, arbitration, retry scheduling, wire-level GPIO
       waveform, or exact dual-filter mode yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,

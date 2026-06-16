@@ -39,6 +39,7 @@ export {
   Esp32s3Core,
   type Esp32s3AdcContinuousOverflowEvent,
   type Esp32s3TwaiErrorFlags,
+  type Esp32s3TwaiErrorState,
   type Esp32s3TwaiEvent,
   type Esp32s3TwaiFrame,
   esp32s3PinId,
