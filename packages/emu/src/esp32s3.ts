@@ -727,6 +727,7 @@ const RTC_TIME_UPDATE = 0x0c; // TIME_UPDATE bit 31 latches the main timer
 const RTC_TIME_LOW0 = 0x10; // latched timer [31:0]
 const RTC_TIME_HIGH0 = 0x14; // latched timer [47:32] in [15:0]
 const RTC_STATE0 = 0x18; // SLEEP_EN/SLP_WAKEUP/SLP_REJECT status and command bits
+const RTC_ANA_CONF = 0x34; // GLITCH_RST_EN bit 20; analog/I2C power defaults below
 const RTC_RESET_STATE = 0x38; // RESET_CAUSE_PROCPU [5:0], RESET_CAUSE_APPCPU [11:6]
 const RTC_WAKEUP_STATE = 0x3c; // WAKEUP_ENA [31:15], raw trigger bitmap
 const RTC_INT_ENA = 0x40;
@@ -815,6 +816,8 @@ const RTC_XTAL32K_DEAD_TRIG_EN = 1 << 12;
 const RTC_COCPU_TRAP_TRIG_EN = 1 << 13;
 const RTC_XTAL32K_WDT_EN = 1 << 0;
 const RTC_XTAL32K_WDT_RESET = 1 << 2;
+const RTC_GLITCH_RST_EN = 1 << 20;
+const RTC_ANA_CONF_RESET = ((1 << 22) | (1 << 18)) >>> 0;
 const RTC_EXT_XTL_CONF_RESET = ((3 << 17) | (3 << 13) | (3 << 10) | (1 << 7)) >>> 0;
 const RTC_XTAL32K_CONF_RESET = 0xff << 20;
 // Reset causes (esp_rom/include/esp32s3/rom/rtc.h RESET_REASON —
@@ -833,6 +836,7 @@ const RESET_CAUSE_BROWNOUT = 15; // RTCWDT_BROWN_OUT_RESET
 const RESET_CAUSE_RTCWDT_RTC = 16; // RTCWDT_RTC_RESET
 const RESET_CAUSE_TG1WDT_CPU = 17; // TG1WDT_CPU_RESET
 const RESET_CAUSE_SUPER_WDT = 18; // SUPER_WDT_RESET
+const RESET_CAUSE_GLITCH_RTC = 19; // GLITCH_RTC_RESET
 const RESET_CAUSE_POWER_GLITCH = 23; // POWER_GLITCH_RESET
 // The RTC main timer counts the ~136 kHz RC_SLOW clock
 // (clk_tree_defs.h SOC_CLK_RC_SLOW_FREQ_APPROX). 48 bits wide.
@@ -1569,6 +1573,8 @@ export class Esp32s3Core implements McuCore {
   private rtcRejectCause = 0;
   private rtcWakeupCause = 0;
   private rtcCocpuCtrl = RTC_COCPU_CTRL_RESET;
+  private rtcAnaConf = RTC_ANA_CONF_RESET;
+  private clockGlitchDetected = false;
   private rtcBrownOut = RTC_BROWN_OUT_RESET;
   private brownoutDetected = false;
   private rtcPgCtrl = RTC_PG_CTRL_RESET;
@@ -1950,6 +1956,11 @@ export class Esp32s3Core implements McuCore {
   setPowerGlitchDetected(detected: boolean): void {
     this.powerGlitchDetected = detected;
     this.updatePowerGlitchDetector();
+  }
+
+  setClockGlitchDetected(detected: boolean): void {
+    this.clockGlitchDetected = detected;
+    this.updateClockGlitchDetector();
   }
 
   setRtcSleepRejectSource(sourceMask: number): void {
@@ -2550,6 +2561,7 @@ export class Esp32s3Core implements McuCore {
     this.rtcRejectCause = 0;
     this.rtcWakeupCause = 0;
     this.rtcCocpuCtrl = RTC_COCPU_CTRL_RESET;
+    this.rtcAnaConf = RTC_ANA_CONF_RESET;
     this.rtcBrownOut = RTC_BROWN_OUT_RESET;
     this.rtcPgCtrl = RTC_PG_CTRL_RESET;
     this.rtcFibSel = RTC_FIB_SEL_RESET;
@@ -2907,6 +2919,19 @@ export class Esp32s3Core implements McuCore {
     if ((this.rtcFibSel & RTC_FIB_GLITCH_RST) === 0) {
       this.resetCause = RESET_CAUSE_POWER_GLITCH;
       this.appResetCause = RESET_CAUSE_POWER_GLITCH;
+      this.pendingReset = true;
+    }
+    this.recomputeIrq();
+  }
+
+  private updateClockGlitchDetector(): void {
+    const softwareResetEnabled =
+      this.clockGlitchDetected &&
+      (this.rtcAnaConf & RTC_GLITCH_RST_EN) !== 0 &&
+      (this.rtcFibSel & RTC_FIB_GLITCH_RST) === 0;
+    if (softwareResetEnabled) {
+      this.resetCause = RESET_CAUSE_GLITCH_RTC;
+      this.appResetCause = RESET_CAUSE_GLITCH_RTC;
       this.pendingReset = true;
     }
     this.recomputeIrq();
@@ -4451,6 +4476,7 @@ export class Esp32s3Core implements McuCore {
       if (off === RTC_TIME_LOW0) return this.rtcTimeLatchLo >>> 0;
       if (off === RTC_TIME_HIGH0) return this.rtcTimeLatchHi & 0xffff;
       if (off === RTC_STATE0) return (this.rtcState0 & ~(RTC_SLP_REJECT_CAUSE_CLR | RTC_SW_CPU_INT)) >>> 0;
+      if (off === RTC_ANA_CONF) return this.rtcAnaConf >>> 0;
       if (off === RTC_RESET_STATE) {
         // Per-core cause fields (slice 12): PROCPU [5:0], APPCPU [11:6].
         return ((this.appResetCause << 6) | this.resetCause) >>> 0;
@@ -4499,7 +4525,7 @@ export class Esp32s3Core implements McuCore {
       throw new Error(
         `read of unmodeled RTC_CNTL register 0x${addr.toString(16)} — this core models only ` +
           `OPTIONS0(+0x0), SLP_TIMER0/1(+0x4/+0x8), TIME_UPDATE(+0xc), TIME_LOW0/HIGH0(+0x10/0x14), ` +
-          `STATE0(+0x18), RESET_STATE(+0x38), WAKEUP_STATE(+0x3c), INT_* (+0x40..+0x4c), ` +
+          `STATE0(+0x18), ANA_CONF(+0x34), RESET_STATE(+0x38), WAKEUP_STATE(+0x3c), INT_* (+0x40..+0x4c), ` +
           `EXT_XTL_CONF(+0x60), SLP_REJECT_CONF(+0x68), ` +
           `the RWDT block (+0x98..+0xb0), SWD(+0xb4/+0xb8), SW_CPU_STALL(+0xbc), LOW_POWER_ST(+0xd0), ` +
           `ULP_CP_TIMER/CTRL(+0xfc/+0x100), COCPU_CTRL(+0x104), ` +
@@ -5170,6 +5196,9 @@ export class Esp32s3Core implements McuCore {
           this.rtcIntRaw &= ~RTC_XTAL32K_DEAD_INT;
         }
         this.updateXtal32kDead();
+      } else if (off === RTC_ANA_CONF) {
+        this.rtcAnaConf = value >>> 0;
+        this.updateClockGlitchDetector();
       } else if (off === RTC_EXT_WAKEUP_CONF) {
         this.rtcExtWakeupConf = value & RTC_EXT_WAKEUP_CONF_MASK;
         this.updateRtcExt0Wakeup();
@@ -5264,6 +5293,7 @@ export class Esp32s3Core implements McuCore {
         this.updatePowerGlitchDetector();
       } else if (off === RTC_FIB_SEL) {
         this.rtcFibSel = value & RTC_FIB_SEL_MASK;
+        this.updateClockGlitchDetector();
       } else if (off === RTC_EXT_WAKEUP1) {
         if ((value & RTC_EXT_WAKEUP1_STATUS_CLR) !== 0) this.rtcExtWakeup1Status = 0;
         this.rtcExtWakeup1 = value & RTC_EXT_WAKEUP1_SEL_MASK;

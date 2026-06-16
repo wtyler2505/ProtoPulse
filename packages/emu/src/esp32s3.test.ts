@@ -4580,6 +4580,34 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('clock-glitch reset follows ANA_CONF and FIB_SEL software control', () => {
+    // Source-checked against ESP-IDF v5.5.4: ANA_CONF is +0x34,
+    // GLITCH_RST_EN is bit 20, FIB_SEL bit 0 is FIB_GLITCH_RST, and
+    // esp32s3/rom/rtc.h reports clock-glitch resets as cause 19.
+    const RTC_GLITCH_RST_EN = 1 << 20;
+    const RTC_ANA_CONF_RESET = (1 << 22) | (1 << 18);
+    const FIB_GLITCH_RST = 1;
+    const fibSoftwareGlitchReset = 0x7 & ~FIB_GLITCH_RST;
+    const anaConfGlitchReset = (RTC_ANA_CONF_RESET | RTC_GLITCH_RST_EN) >>> 0;
+    const image = causeRoundTrip([RTCCNTL, fibSoftwareGlitchReset, anaConfGlitchReset], [
+      L32R(8, 2),
+      L32R(9, 3),
+      S32I(9, 8, 0x148), // FIB_SEL: software controls glitch reset
+      L32R(9, 4),
+      S32I(9, 8, 0x34), // ANA_CONF.GLITCH_RST_EN
+    ]);
+    const c = core(image);
+    c.step(800);
+    expect([...c.drainUart()]).toEqual([1]);
+    c.setClockGlitchDetected(true);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([19]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('RTC FIB_SEL resets and writes only the documented three-bit selector', () => {
     // Source-checked against ESP-IDF release/v5.5 rtc_cntl_reg.h:
     // RTC_CNTL_FIB_SEL is an R/W field at PG_CTRL+0x4, bitpos [2:0],

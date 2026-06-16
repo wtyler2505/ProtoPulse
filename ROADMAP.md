@@ -1233,8 +1233,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       cause (23). Proven by hand-assembled firmware that first reports
       POWERON, configures software-owned glitch reset, receives a host
       power-glitch trip, reboots, and reports reset cause 23. Cuts: no
-      analog glitch model, no RTC_CNTL_GLITCH_RST_EN clock-glitch reset
-      path, and no POWER_GLITCH_EFUSE_SEL/eFuse routing model yet
+      analog glitch model and no POWER_GLITCH_EFUSE_SEL/eFuse routing
+      model yet
+- [x] ESP32-S3 core slice 87 — clock-glitch reset via ANA_CONF/FIB_SEL
+      (landed 2026-06-16): RTC_CNTL_ANA_CONF now round-trips its
+      documented reset defaults plus GLITCH_RST_EN, and host-injected
+      clock-glitch trips reset through the software-owned FIB_GLITCH_RST
+      route with ROM reset cause GLITCH_RTC_RESET (19). Proven by
+      hand-assembled firmware that first reports POWERON, clears
+      FIB_GLITCH_RST, enables ANA_CONF.GLITCH_RST_EN, receives a host
+      clock-glitch trip, reboots, and reports reset cause 19. Cuts: no
+      analog glitch waveform/timing model and no eFuse strap routing
+      model yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
