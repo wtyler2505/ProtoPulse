@@ -2,6 +2,33 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 99: SPI master CPU-FIFO first cut
+
+### Added
+- **SPI master peripheral surface** (@protopulse/emu):
+  ESP32-S3 GPSPI2/GPSPI3 now expose source-pinned register blocks at
+  0x60024000/0x60025000, CPU-buffer command/address/MOSI/MISO phase
+  handling, `cmd.usr` self-clear, TRANS_DONE raw/status/enable/clear/set
+  bits, and SPI2_DMA/SPI3_DMA interrupt-matrix routing.
+
+### Verified
+- Added hand-assembled Xtensa firmware that runs a GPSPI2
+  command/address/MOSI transaction through the SPI2_DMA completion ISR,
+  verifies polling completion via `cmd.usr`, captures emitted phase
+  bytes, checks zero-filled MISO reads and TRANS_DONE clear behavior, and
+  routes GPSPI3 independently while draining MOSI from W8 with
+  USR_MOSI_HIGHPART.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 161 ESP32-S3 tests.
+- `npm run check:packages` passed.
+- `npm run test:packages` passed with 1,503 package tests.
+
+### Honest cuts
+- No SPI DMA descriptor movement yet; this slice is CPU FIFO only.
+- No attached-device response model: MISO reads synthesize zero bytes.
+- SPI clock timing, chip-select pin behavior, multi-line modes, and slave
+  mode remain future slices.
+
 ## 2026-06-16 — ESP32-S3 slice 98: I2C master command/FIFO first cut
 
 ### Added

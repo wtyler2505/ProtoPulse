@@ -256,7 +256,13 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * RTC_CNTL_TOUCH_TIMEOUT_INT. Touch proximity pads accumulate
  * deterministic approach counts and latch TOUCH_APPROACH_LOOP_DONE when
  * they reach the configured total scan count.
- * Cuts: no driver ringbuffer API yet.
+ * GPSPI2/GPSPI3 now expose a first CPU-FIFO master path: command,
+ * address, and MOSI phases drain from the W0..W15 buffer, MISO phases
+ * synthesize zero bytes into that same buffer, cmd.usr self-clears, and
+ * TRANS_DONE routes through SPI2/3_DMA interrupt-matrix sources. Cuts:
+ * no DMA descriptor movement, attached-device response model, timing,
+ * chip-select pins, line modes beyond the recorded phase bytes, or
+ * driver ringbuffer API yet.
  * Still missing: full light/deep sleep register policy, remaining wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
@@ -424,6 +430,58 @@ const I2C_LL_CMD_READ = 3;
 const I2C_LL_CMD_END = 4;
 const I2C_LL_CMD_RESTART = 6;
 
+// General-purpose SPI controllers GPSPI2/GPSPI3 (ESP-IDF v5.5.4
+// ESP32-S3): reg_base.h pins GPSPI2=0x60024000, GPSPI3=0x60025000.
+// This first cut executes CPU-buffer master transactions instantly,
+// matching the polling path's observable completion bit without modeling
+// SPI clock timing or attached devices yet.
+const SPI2_BASE = 0x60024000;
+const SPI3_BASE = 0x60025000;
+const SPI_BLOCK_BYTES = 0x1000;
+const SPI_CONTROLLER_COUNT = 2;
+const SPI_WORD_COUNT = 16;
+const SPI_CMD = 0x00;
+const SPI_ADDR = 0x04;
+const SPI_CTRL = 0x08;
+const SPI_CLOCK = 0x0c;
+const SPI_USER = 0x10;
+const SPI_USER1 = 0x14;
+const SPI_USER2 = 0x18;
+const SPI_MS_DLEN = 0x1c;
+const SPI_MISC = 0x20;
+const SPI_DMA_CONF = 0x30;
+const SPI_DMA_INT_ENA = 0x34;
+const SPI_DMA_INT_CLR = 0x38;
+const SPI_DMA_INT_RAW = 0x3c;
+const SPI_DMA_INT_ST = 0x40;
+const SPI_DMA_INT_SET = 0x44;
+const SPI_W0 = 0x98;
+const SPI_SLAVE = 0xe0;
+const SPI_SLAVE1 = 0xe4;
+const SPI_CLK_GATE = 0xe8;
+const SPI_DATE = 0xf0;
+const SPI_CMD_UPDATE = 1 << 23;
+const SPI_CMD_USR = 1 << 24;
+const SPI_USR_COMMAND = 0x80000000;
+const SPI_USR_ADDR = 0x40000000;
+const SPI_USR_MISO = 0x10000000;
+const SPI_USR_MOSI = 0x08000000;
+const SPI_USR_MOSI_HIGHPART = 0x02000000;
+const SPI_USR_MISO_HIGHPART = 0x01000000;
+const SPI_USR_ADDR_BITLEN_SHIFT = 27;
+const SPI_USR_COMMAND_BITLEN_SHIFT = 28;
+const SPI_PHASE_BITLEN_MASK = 0x1f;
+const SPI_COMMAND_BITLEN_MASK = 0x0f;
+const SPI_MS_DATA_BITLEN_MASK = 0x3ffff;
+const SPI_TRANS_DONE_INT = 1 << 12;
+const SPI_INT_CLEARABLE = 0x1fffff;
+const SPI_DMA_CONF_WT_MASK = 0xe0000000;
+const SPI_CLOCK_RESET = 0x80003043;
+const SPI_USER_RESET = SPI_USR_COMMAND;
+const SPI_USER1_RESET = ((23 << 27) | (1 << 22) | 7) >>> 0;
+const SPI_USER2_RESET = ((7 << 28) | (1 << 27)) >>> 0;
+const SPI_DATE_RESET = 0x02101190;
+
 // The interrupt matrix (reg_base.h DR_REG_INTERRUPT_BASE +
 // interrupt_core0_reg.h / interrupt_core1_reg.h): each peripheral
 // source has a 5-bit map register per CPU core selecting which CPU
@@ -442,6 +500,8 @@ const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
 const INTMTX_PCNT_MAP = 0x0a4; // INTERRUPT_CORE0_PCNT_INTR_MAP_REG
 const INTMTX_I2C_EXT0_MAP = 0x0a8; // INTERRUPT_CORE0_I2C_EXT0_INTR_MAP_REG
 const INTMTX_I2C_EXT1_MAP = 0x0ac; // INTERRUPT_CORE0_I2C_EXT1_INTR_MAP_REG
+const INTMTX_SPI2_DMA_MAP = 0x0b0; // INTERRUPT_CORE0_SPI2_DMA_INT_MAP_REG
+const INTMTX_SPI3_DMA_MAP = 0x0b4; // INTERRUPT_CORE0_SPI3_DMA_INT_MAP_REG
 // The six TIMG sources sit contiguously (interrupt_core0_reg.h):
 // TG_T0 +0xC8, TG_T1 +0xCC, TG_WDT +0xD0, TG1_T0 +0xD4, TG1_T1
 // +0xD8, TG1_WDT +0xDC — group-major, [t0, t1, wdt] within a group.
@@ -1513,6 +1573,15 @@ interface I2cController {
   lastAck: 0 | 1;
 }
 
+interface SpiController {
+  regs: Map<number, number>;
+  words: number[];
+  intRaw: number;
+  intEna: number;
+  maps: InterruptMapPair;
+  writeLog: number[];
+}
+
 const freshGpTimer = (): GpTimer => ({
   config: 0,
   base: 0,
@@ -1679,6 +1748,29 @@ const freshI2cController = (): I2cController => ({
   lastAck: 0,
 });
 
+const freshSpiController = (): SpiController => ({
+  regs: new Map<number, number>([
+    [SPI_CMD, 0],
+    [SPI_ADDR, 0],
+    [SPI_CTRL, 0],
+    [SPI_CLOCK, SPI_CLOCK_RESET],
+    [SPI_USER, SPI_USER_RESET],
+    [SPI_USER1, SPI_USER1_RESET],
+    [SPI_USER2, SPI_USER2_RESET],
+    [SPI_MS_DLEN, 0],
+    [SPI_MISC, 0],
+    [SPI_DMA_CONF, 0],
+    [SPI_SLAVE, 0],
+    [SPI_SLAVE1, 0],
+    [SPI_CLK_GATE, 0],
+  ]),
+  words: Array(SPI_WORD_COUNT).fill(0) as number[],
+  intRaw: 0,
+  intEna: 0,
+  maps: freshInterruptMapPair(),
+  writeLog: [],
+});
+
 const freshEfuseBlocks = (): number[][] => {
   const blocks = Array.from({ length: EFUSE_BLOCK_COUNT }, () => Array(EFUSE_BLOCK_WORDS).fill(0) as number[]);
   const macBlock = blocks[1];
@@ -1752,6 +1844,7 @@ export class Esp32s3Core implements McuCore {
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
   private i2c: I2cController[] = Array.from({ length: I2C_CONTROLLER_COUNT }, freshI2cController);
+  private spi: SpiController[] = Array.from({ length: SPI_CONTROLLER_COUNT }, freshSpiController);
 
   // UART0/1 interrupt state + the interrupt matrix maps.
   private uartIntEna = 0;
@@ -2179,6 +2272,14 @@ export class Esp32s3Core implements McuCore {
   drainI2cWrites(port: 0 | 1 = 0): Uint8Array {
     const ctrl = this.i2c[port];
     if (ctrl === undefined) throw new Error(`drainI2cWrites expects port 0 or 1 (got ${String(port)})`);
+    const out = Uint8Array.from(ctrl.writeLog);
+    ctrl.writeLog = [];
+    return out;
+  }
+
+  drainSpiWrites(port: 2 | 3 = 2): Uint8Array {
+    const ctrl = this.spi[port - 2];
+    if (ctrl === undefined) throw new Error(`drainSpiWrites expects port 2 or 3 (got ${String(port)})`);
     const out = Uint8Array.from(ctrl.writeLog);
     ctrl.writeLog = [];
     return out;
@@ -2783,6 +2884,7 @@ export class Esp32s3Core implements McuCore {
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
     this.i2c = Array.from({ length: I2C_CONTROLLER_COUNT }, freshI2cController);
+    this.spi = Array.from({ length: SPI_CONTROLLER_COUNT }, freshSpiController);
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
@@ -3600,6 +3702,112 @@ export class Esp32s3Core implements McuCore {
     ctrl.txFifo = [];
     ctrl.txMem.fill(0);
     this.i2cUpdateWatermarks(ctrl);
+  }
+
+  private spiForAddress(addr: number): { port: 2 | 3; ctrl: SpiController; off: number } | null {
+    const bases = [SPI2_BASE, SPI3_BASE] as const;
+    for (const idx of [0, 1] as const) {
+      const base = bases[idx];
+      if (addr >= base && addr < base + SPI_BLOCK_BYTES) {
+        const ctrl = this.spi[idx];
+        if (ctrl === undefined) throw new Error(`missing GPSPI${String(idx + 2)} controller`);
+        return { port: (idx + 2) as 2 | 3, ctrl, off: addr - base };
+      }
+    }
+    return null;
+  }
+
+  private spiBufferByte(ctrl: SpiController, byteIndex: number): number {
+    const word = ctrl.words[byteIndex >> 2] ?? 0;
+    return (word >>> ((byteIndex & 3) * 8)) & 0xff;
+  }
+
+  private spiSetBufferByte(ctrl: SpiController, byteIndex: number, byte: number): void {
+    const wordIndex = byteIndex >> 2;
+    const shift = (byteIndex & 3) * 8;
+    const cur = ctrl.words[wordIndex] ?? 0;
+    ctrl.words[wordIndex] = ((cur & ~(0xff << shift)) | ((byte & 0xff) << shift)) >>> 0;
+  }
+
+  private spiAppendMsbField(out: number[], value: number, bitLength: number): void {
+    const bytes = Math.ceil(Math.max(1, bitLength) / 8);
+    for (let i = bytes - 1; i >= 0; i--) out.push((value >>> (i * 8)) & 0xff);
+  }
+
+  private spiRunTransaction(ctrl: SpiController): void {
+    const user = ctrl.regs.get(SPI_USER) ?? SPI_USER_RESET;
+    const user1 = ctrl.regs.get(SPI_USER1) ?? SPI_USER1_RESET;
+    const user2 = ctrl.regs.get(SPI_USER2) ?? SPI_USER2_RESET;
+    const dataBits = ((ctrl.regs.get(SPI_MS_DLEN) ?? 0) & SPI_MS_DATA_BITLEN_MASK) + 1;
+    const dataBytes = Math.ceil(dataBits / 8);
+    if ((user & SPI_USR_COMMAND) !== 0) {
+      const bits = ((user2 >>> SPI_USR_COMMAND_BITLEN_SHIFT) & SPI_COMMAND_BITLEN_MASK) + 1;
+      this.spiAppendMsbField(ctrl.writeLog, user2 & 0xffff, bits);
+    }
+    if ((user & SPI_USR_ADDR) !== 0) {
+      const bits = ((user1 >>> SPI_USR_ADDR_BITLEN_SHIFT) & SPI_PHASE_BITLEN_MASK) + 1;
+      this.spiAppendMsbField(ctrl.writeLog, ctrl.regs.get(SPI_ADDR) ?? 0, bits);
+    }
+    if ((user & SPI_USR_MOSI) !== 0) {
+      const startByte = (user & SPI_USR_MOSI_HIGHPART) !== 0 ? 8 * 4 : 0;
+      const available = SPI_WORD_COUNT * 4 - startByte;
+      for (let i = 0; i < Math.min(dataBytes, available); i++) ctrl.writeLog.push(this.spiBufferByte(ctrl, startByte + i));
+    }
+    if ((user & SPI_USR_MISO) !== 0) {
+      const startByte = (user & SPI_USR_MISO_HIGHPART) !== 0 ? 8 * 4 : 0;
+      const available = SPI_WORD_COUNT * 4 - startByte;
+      for (let i = 0; i < Math.min(dataBytes, available); i++) this.spiSetBufferByte(ctrl, startByte + i, 0);
+    }
+    ctrl.intRaw |= SPI_TRANS_DONE_INT;
+  }
+
+  private spiRead(ctrl: SpiController, off: number): number {
+    if (off >= SPI_W0 && off < SPI_W0 + SPI_WORD_COUNT * 4 && (off & 3) === 0) {
+      return ctrl.words[(off - SPI_W0) >> 2] ?? 0;
+    }
+    if (off === SPI_DMA_INT_RAW) return ctrl.intRaw >>> 0;
+    if (off === SPI_DMA_INT_ST) return (ctrl.intRaw & ctrl.intEna) >>> 0;
+    if (off === SPI_DMA_INT_ENA) return ctrl.intEna >>> 0;
+    if (off === SPI_DMA_INT_CLR || off === SPI_DMA_INT_SET) return 0;
+    if (off === SPI_DATE) return SPI_DATE_RESET;
+    return ctrl.regs.get(off) ?? 0;
+  }
+
+  private spiWrite(ctrl: SpiController, off: number, value: number): void {
+    const v = value >>> 0;
+    if (off >= SPI_W0 && off < SPI_W0 + SPI_WORD_COUNT * 4 && (off & 3) === 0) {
+      ctrl.words[(off - SPI_W0) >> 2] = v;
+      return;
+    }
+    if (off === SPI_DMA_INT_ENA) {
+      ctrl.intEna = v & SPI_INT_CLEARABLE;
+      this.recomputeIrq();
+      return;
+    }
+    if (off === SPI_DMA_INT_CLR) {
+      ctrl.intRaw &= ~(v & SPI_INT_CLEARABLE);
+      this.recomputeIrq();
+      return;
+    }
+    if (off === SPI_DMA_INT_SET) {
+      ctrl.intRaw |= v & SPI_INT_CLEARABLE;
+      this.recomputeIrq();
+      return;
+    }
+    if (off === SPI_DMA_CONF) {
+      ctrl.regs.set(SPI_DMA_CONF, v & ~SPI_DMA_CONF_WT_MASK);
+      return;
+    }
+    if (off === SPI_CMD) {
+      ctrl.regs.set(SPI_CMD, v & ~(SPI_CMD_UPDATE | SPI_CMD_USR));
+      if ((v & SPI_CMD_USR) !== 0) {
+        this.spiRunTransaction(ctrl);
+        this.recomputeIrq();
+      }
+      return;
+    }
+    if (off === SPI_DATE) return;
+    ctrl.regs.set(off, v);
   }
 
   private ledcTimerDivider(t: LedcTimer): number {
@@ -4512,6 +4720,8 @@ export class Esp32s3Core implements McuCore {
     const pcntPending = (this.pcntIntRaw & this.pcntIntEna) !== 0;
     const i2c0Pending = ((this.i2c[0]?.intRaw ?? 0) & (this.i2c[0]?.intEna ?? 0)) !== 0;
     const i2c1Pending = ((this.i2c[1]?.intRaw ?? 0) & (this.i2c[1]?.intEna ?? 0)) !== 0;
+    const spi2Pending = ((this.spi[0]?.intRaw ?? 0) & (this.spi[0]?.intEna ?? 0)) !== 0;
+    const spi3Pending = ((this.spi[1]?.intRaw ?? 0) & (this.spi[1]?.intEna ?? 0)) !== 0;
     const apbAdcPending = (this.apbSaradcIntRaw & this.apbSaradcIntEna) !== 0;
     const rtcPending = (this.rtcIntRaw & this.rtcIntEna) !== 0;
     const masks: InterruptMapPair = [0, 0];
@@ -4528,6 +4738,8 @@ export class Esp32s3Core implements McuCore {
     if (pcntPending) raise(this.pcntIntMaps);
     if (i2c0Pending) raise(this.i2c[0]?.maps ?? freshInterruptMapPair());
     if (i2c1Pending) raise(this.i2c[1]?.maps ?? freshInterruptMapPair());
+    if (spi2Pending) raise(this.spi[0]?.maps ?? freshInterruptMapPair());
+    if (spi3Pending) raise(this.spi[1]?.maps ?? freshInterruptMapPair());
     if (apbAdcPending) raise(this.apbSaradcIntMaps);
     if (rtcPending) raise(this.rtcCoreIntMaps);
     for (let i = 0; i < SYSTEM_CPU_INTR_FROM_CPU_COUNT; i++) {
@@ -4870,6 +5082,8 @@ export class Esp32s3Core implements McuCore {
     }
     const i2c = this.i2cForAddress(addr);
     if (i2c !== null) return this.i2cRead(i2c.ctrl, i2c.off);
+    const spi = this.spiForAddress(addr);
+    if (spi !== null) return this.spiRead(spi.ctrl, spi.off);
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
@@ -4884,6 +5098,8 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_PCNT_MAP) return this.pcntIntMaps[core];
       if (sourceOff === INTMTX_I2C_EXT0_MAP) return this.i2c[0]?.maps[core] ?? INTMTX_DEFAULT_MAP;
       if (sourceOff === INTMTX_I2C_EXT1_MAP) return this.i2c[1]?.maps[core] ?? INTMTX_DEFAULT_MAP;
+      if (sourceOff === INTMTX_SPI2_DMA_MAP) return this.spi[0]?.maps[core] ?? INTMTX_DEFAULT_MAP;
+      if (sourceOff === INTMTX_SPI3_DMA_MAP) return this.spi[1]?.maps[core] ?? INTMTX_DEFAULT_MAP;
       if (sourceOff >= INTMTX_TG_MAPS && sourceOff < INTMTX_TG_MAPS + 24 && (sourceOff & 3) === 0) {
         const idx = (sourceOff - INTMTX_TG_MAPS) >> 2; // group-major [t0,t1,wdt]
         return this.timg[idx < 3 ? 0 : 1]?.maps[core][idx % 3] ?? INTMTX_DEFAULT_MAP;
@@ -5411,6 +5627,11 @@ export class Esp32s3Core implements McuCore {
       this.i2cWrite(i2c.ctrl, i2c.off, value);
       return;
     }
+    const spi = this.spiForAddress(addr);
+    if (spi !== null) {
+      this.spiWrite(spi.ctrl, spi.off, value);
+      return;
+    }
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
@@ -5428,6 +5649,12 @@ export class Esp32s3Core implements McuCore {
         if (ctrl !== undefined) ctrl.maps[core] = value & 0x1f;
       } else if (sourceOff === INTMTX_I2C_EXT1_MAP) {
         const ctrl = this.i2c[1];
+        if (ctrl !== undefined) ctrl.maps[core] = value & 0x1f;
+      } else if (sourceOff === INTMTX_SPI2_DMA_MAP) {
+        const ctrl = this.spi[0];
+        if (ctrl !== undefined) ctrl.maps[core] = value & 0x1f;
+      } else if (sourceOff === INTMTX_SPI3_DMA_MAP) {
+        const ctrl = this.spi[1];
         if (ctrl !== undefined) ctrl.maps[core] = value & 0x1f;
       }
       else if (sourceOff >= INTMTX_TG_MAPS && sourceOff < INTMTX_TG_MAPS + 24 && (sourceOff & 3) === 0) {
@@ -6229,6 +6456,8 @@ export {
   I2C0_BASE as ESP32S3_I2C0_BASE,
   I2C1_BASE as ESP32S3_I2C1_BASE,
   PCNT_BASE as ESP32S3_PCNT_BASE,
+  SPI2_BASE as ESP32S3_SPI2_BASE,
+  SPI3_BASE as ESP32S3_SPI3_BASE,
   UART0_BASE as ESP32S3_UART0_BASE,
   UART1_BASE as ESP32S3_UART1_BASE,
   UART2_BASE as ESP32S3_UART2_BASE,

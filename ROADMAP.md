@@ -1361,6 +1361,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       Cuts: no real attached-device model yet, no SCL/SDA waveform
       timing, no clock-stretch/arbitration/timeout timing, no slave
       mode, and reads synthesize zero bytes
+- [x] ESP32-S3 core slice 99 — SPI master CPU-FIFO first cut
+      (landed 2026-06-16): GPSPI2/GPSPI3 now expose source-pinned
+      ESP32-S3 register blocks at 0x60024000/0x60025000, command,
+      address, MOSI, and MISO phase register handling through the
+      W0..W15 CPU buffer, cmd.usr self-clear, TRANS_DONE
+      raw/status/enable/clear/set behavior, and SPI2_DMA/SPI3_DMA
+      interrupt-matrix routing at +0x0B0/+0x0B4. Proven by
+      hand-assembled firmware that runs a GPSPI2 command/address/MOSI
+      transaction through the completion ISR, verifies cmd.usr polling
+      completion and emitted bytes, reads zero-filled MISO bytes, clears
+      TRANS_DONE, and routes GPSPI3 independently while draining MOSI
+      from W8 with USR_MOSI_HIGHPART. Cuts: no DMA descriptor movement,
+      attached-device response model, SPI timing, chip-select pin
+      behavior, multi-line modes, or slave mode yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

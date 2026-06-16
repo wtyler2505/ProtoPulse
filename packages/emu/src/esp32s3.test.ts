@@ -8,6 +8,8 @@ import {
   ESP32S3_I2C1_BASE,
   ESP32S3_IRAM_BASE,
   ESP32S3_PCNT_BASE,
+  ESP32S3_SPI2_BASE,
+  ESP32S3_SPI3_BASE,
   ESP32S3_UART0_BASE,
   ESP32S3_UART1_BASE,
   ESP32S3_UART2_BASE,
@@ -82,6 +84,8 @@ const UART1 = ESP32S3_UART1_BASE;
 const UART2 = ESP32S3_UART2_BASE;
 const I2C0 = ESP32S3_I2C0_BASE;
 const I2C1 = ESP32S3_I2C1_BASE;
+const SPI2 = ESP32S3_SPI2_BASE;
+const SPI3 = ESP32S3_SPI3_BASE;
 const INTMTX = 0x600c2000;
 const LEDC = 0x60019000;
 const RMT = 0x60016000;
@@ -152,6 +156,20 @@ const I2C_CMD_WRITE1_ACK_EXPECT_NACK = 1 | (1 << 8) | (1 << 9) | (1 << 11);
 const I2C_CMD_READ2 = 2 | (3 << 11);
 const I2C_CMD_STOP = 2 << 11;
 const I2C_CMD_END = 4 << 11;
+const SPI_TRANS_DONE_INT = 1 << 12;
+const SPI_ALL_INTS = 0x1fffff;
+const SPI_CMD_UPDATE = 1 << 23;
+const SPI_CMD_USR = 1 << 24;
+const SPI_USR_COMMAND = 0x80000000;
+const SPI_USR_ADDR = 0x40000000;
+const SPI_USR_MISO = 0x10000000;
+const SPI_USR_MOSI = 0x08000000;
+const SPI_USR_MOSI_HIGHPART = 0x02000000;
+const SPI_USER_COMMAND_ADDR_MOSI = (SPI_USR_COMMAND | SPI_USR_ADDR | SPI_USR_MOSI) >>> 0;
+const SPI_USER1_ADDR_24_BITS = (23 << 27) >>> 0;
+const SPI_USER2_CMD_9F = ((7 << 28) | 0x9f) >>> 0;
+const SPI_MS_DLEN_16_BITS = 15;
+const SPI_MS_DLEN_32_BITS = 31;
 const GDMA_OUT_CH0_INT_RAW = 0x68;
 const GDMA_OUT_CH0_INT_CLR = 0x74;
 const GDMA_OUT_CH0_LINK = 0x80;
@@ -2606,6 +2624,208 @@ describe('Esp32s3Core — peripheral interrupt lines through the matrix (slice 6
     c.step(1_000);
     expect([...c.drainUart()]).toEqual([1, 1]);
     expect([...c.drainI2cWrites(1)]).toEqual([0xa0]);
+  });
+
+  it('runs a GPSPI2 CPU-FIFO master write and routes TRANS_DONE through SPI2_DMA', () => {
+    // Context7: ESP-IDF v5.5.4 SPI master polling completion waits for
+    // cmd.usr to clear; source-checked against spi_reg.h/GPSPI2 plus
+    // SPI2_DMA_INT_MAP at +0x0B0.
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        SPI2,
+        UART,
+        ESP32S3_IRAM_BASE,
+        INTMTX,
+        SPI_TRANS_DONE_INT,
+        SPI_ALL_INTS,
+        SPI_CMD_USR,
+        SPI_CMD_UPDATE,
+        SPI_USER_COMMAND_ADDR_MOSI,
+        SPI_USER1_ADDR_24_BITS,
+        SPI_USER2_CMD_9F,
+        SPI_MS_DLEN_32_BITS,
+        0x44332211,
+        0x123456,
+      ],
+      [
+        L32R(2, 0), // a2 = GPSPI2
+        L32R(6, 1), // a6 = UART0
+        L32R(5, 2),
+        WSR(5, SR.VECBASE),
+        L32R(3, 5),
+        S32I(3, 2, 0x38), // clear stale SPI DMA raw bits
+        L32R(3, 4),
+        S32I(3, 2, 0x34), // enable TRANS_DONE
+        L32R(7, 3),
+        MOVI(3, 1),
+        S32I(3, 7, 0xb0), // SPI2_DMA -> CPU line 1
+        MOVI(3, 2),
+        WSR(3, SR.INTENABLE),
+        L32R(3, 13),
+        S32I(3, 2, 0x04), // address 0x123456
+        L32R(3, 9),
+        S32I(3, 2, 0x14), // 24-bit address phase
+        L32R(3, 10),
+        S32I(3, 2, 0x18), // 8-bit command 0x9f
+        L32R(3, 11),
+        S32I(3, 2, 0x1c), // 32-bit data phase
+        L32R(3, 12),
+        S32I(3, 2, 0x98), // W0 bytes 11 22 33 44
+        L32R(3, 8),
+        S32I(3, 2, 0x10), // command + address + MOSI phases
+        L32R(3, 7),
+        S32I(3, 2, 0x00), // UPDATE self-clears
+        RSIL(12, 12),
+        L32R(3, 6),
+        S32I(3, 2, 0x00), // USR starts and self-clears
+        WAITI(0),
+        L32I(4, 2, 0x00), // CMD.USR should now be clear
+        L32R(5, 6),
+        AND(4, 4, 5),
+        MOVI(5, 0),
+        BEQZ(4, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0),
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(6, 1),
+        L32I(3, 2, 0x40), // DMA_INT_ST
+        L32R(4, 4),
+        AND(3, 3, 4),
+        MOVI(5, 0),
+        BEQZ(3, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0), // report completion IRQ
+        L32R(3, 4),
+        S32I(3, 2, 0x38), // clear completion
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 0]);
+    expect([...c.drainSpiWrites(2)]).toEqual([0x9f, 0x12, 0x34, 0x56, 0x11, 0x22, 0x33, 0x44]);
+  });
+
+  it('fills GPSPI2 MISO bytes with zeros and clears TRANS_DONE raw', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [SPI2, UART, SPI_TRANS_DONE_INT, SPI_ALL_INTS, SPI_USR_MISO, SPI_MS_DLEN_16_BITS, SPI_CMD_USR, 0xdeadbeef],
+      [
+        L32R(2, 0), // GPSPI2
+        L32R(6, 1), // UART0
+        L32R(3, 3),
+        S32I(3, 2, 0x38), // clear all SPI raw bits
+        L32R(3, 7),
+        S32I(3, 2, 0x98), // W0 starts nonzero
+        L32R(3, 5),
+        S32I(3, 2, 0x1c), // 16-bit read data phase
+        L32R(3, 4),
+        S32I(3, 2, 0x10), // MISO phase
+        L32R(3, 6),
+        S32I(3, 2, 0x00), // USR start
+        L32I(4, 2, 0x3c), // DMA_INT_RAW
+        L32R(5, 2),
+        AND(4, 4, 5),
+        MOVI(5, 0),
+        BEQZ(4, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0), // completion raw present
+        L32I(4, 2, 0x98),
+        S32I(4, 6, 0), // low byte zero-filled
+        SRLI(4, 4, 8),
+        S32I(4, 6, 0), // high byte zero-filled
+        L32R(3, 2),
+        S32I(3, 2, 0x38), // clear TRANS_DONE
+        L32I(4, 2, 0x3c),
+        L32R(5, 2),
+        AND(4, 4, 5),
+        MOVI(5, 0),
+        BEQZ(4, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(600);
+    expect([...c.drainUart()]).toEqual([1, 0, 0, 0]);
+  });
+
+  it('routes GPSPI3 independently and drains MOSI from W8 when highpart is selected', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [
+        SPI3,
+        UART,
+        ESP32S3_IRAM_BASE,
+        INTMTX,
+        SPI_TRANS_DONE_INT,
+        SPI_ALL_INTS,
+        SPI_CMD_USR,
+        (SPI_USR_MOSI | SPI_USR_MOSI_HIGHPART) >>> 0,
+        SPI_MS_DLEN_32_BITS,
+        0x88776655,
+      ],
+      [
+        L32R(2, 0), // GPSPI3
+        L32R(6, 1), // UART0
+        L32R(5, 2),
+        WSR(5, SR.VECBASE),
+        L32R(3, 5),
+        S32I(3, 2, 0x38), // clear SPI raw bits
+        L32R(3, 4),
+        S32I(3, 2, 0x34), // enable TRANS_DONE
+        L32R(7, 3),
+        MOVI(3, 1),
+        S32I(3, 7, 0xb4), // SPI3_DMA -> CPU line 1
+        MOVI(3, 2),
+        WSR(3, SR.INTENABLE),
+        L32R(3, 8),
+        S32I(3, 2, 0x1c), // 32-bit data phase
+        L32R(3, 9),
+        S32I(3, 2, 0xb8), // W8 bytes 55 66 77 88
+        L32R(3, 7),
+        S32I(3, 2, 0x10), // MOSI from high half
+        RSIL(12, 12),
+        L32R(3, 6),
+        S32I(3, 2, 0x00), // USR starts and self-clears
+        WAITI(0),
+        L32I(4, 2, 0x00),
+        L32R(5, 6),
+        AND(4, 4, 5),
+        MOVI(5, 0),
+        BEQZ(4, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0),
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 0),
+        L32R(6, 1),
+        L32I(3, 2, 0x40), // DMA_INT_ST
+        L32R(4, 4),
+        AND(3, 3, 4),
+        MOVI(5, 0),
+        BEQZ(3, BR(1)),
+        MOVI(5, 1),
+        S32I(5, 6, 0),
+        L32R(3, 4),
+        S32I(3, 2, 0x38),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([1, 0]);
+    expect([...c.drainSpiWrites(3)]).toEqual([0x55, 0x66, 0x77, 0x88]);
   });
 });
 
