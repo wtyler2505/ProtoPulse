@@ -232,9 +232,10 @@ export interface Esp32s3AdcContinuousOverflowEvent {
  * the documented TOUCH_APPROACH_LOOP_DONE R/W raw bit; producer-owned
  * raw bits stay read-only. FIB_SEL preserves the documented three-bit
  * selector reset/readback and gates software-controlled brownout analog
- * reset routing. COCPU_CTRL keeps the documented reset timing
- * fields/COCPU_SEL bit while COCPU_DONE/SHUT_RESET_EN reflect through
- * LOW_POWER_ST's COCPU done/sleep bits.
+ * reset plus power-glitch reset routing. COCPU_CTRL keeps the
+ * documented reset timing fields/COCPU_SEL bit while
+ * COCPU_DONE/SHUT_RESET_EN reflect through LOW_POWER_ST's COCPU
+ * done/sleep bits.
  * COCPU_SW_INT_TRIGGER wakes RTC sleep when RTC_COCPU_TRIG_EN is armed.
  * SENS_SAR_COCPU_STATE.DBG_TRIGGER
  * models a synthetic COCPU trap producer, latching RTC_CNTL_COCPU_TRAP_INT
@@ -640,6 +641,7 @@ const RTC_POWER_GLITCH_EN = 1 << 31;
 const RTC_PG_CTRL_RESET = 0;
 const RTC_FIB_SEL_MASK = 0x7;
 const RTC_FIB_SEL_RESET = 0x7;
+const RTC_FIB_GLITCH_RST = 1 << 0;
 const RTC_FIB_BOD_RST = 1 << 1;
 const RWDT_CONFIG0_RESET = ((1 << 16) | (1 << 13) | (1 << 12) | (1 << 9)) >>> 0;
 
@@ -831,6 +833,7 @@ const RESET_CAUSE_BROWNOUT = 15; // RTCWDT_BROWN_OUT_RESET
 const RESET_CAUSE_RTCWDT_RTC = 16; // RTCWDT_RTC_RESET
 const RESET_CAUSE_TG1WDT_CPU = 17; // TG1WDT_CPU_RESET
 const RESET_CAUSE_SUPER_WDT = 18; // SUPER_WDT_RESET
+const RESET_CAUSE_POWER_GLITCH = 23; // POWER_GLITCH_RESET
 // The RTC main timer counts the ~136 kHz RC_SLOW clock
 // (clk_tree_defs.h SOC_CLK_RC_SLOW_FREQ_APPROX). 48 bits wide.
 const RTC_SLOW_HZ = 136_000;
@@ -2901,6 +2904,11 @@ export class Esp32s3Core implements McuCore {
       return;
     }
     this.rtcIntRaw |= RTC_GLITCH_DET_INT;
+    if ((this.rtcFibSel & RTC_FIB_GLITCH_RST) === 0) {
+      this.resetCause = RESET_CAUSE_POWER_GLITCH;
+      this.appResetCause = RESET_CAUSE_POWER_GLITCH;
+      this.pendingReset = true;
+    }
     this.recomputeIrq();
   }
 

@@ -4554,6 +4554,32 @@ describe('Esp32s3Core — RTC/eFuse/SYSTEM (slice 11)', () => {
     expect([...c.drainUart()]).toEqual([]);
   });
 
+  it('power-glitch reset follows FIB_SEL software control and reports the ROM power-glitch cause', () => {
+    // Source-checked against ESP-IDF release/v5.5: PG_CTRL has
+    // POWER_GLITCH_EN, FIB_SEL bit 0 is FIB_GLITCH_RST, and
+    // esp32s3/rom/rtc.h reports power-glitch resets as cause 23.
+    const POWER_GLITCH_EN = 0x80000000;
+    const FIB_GLITCH_RST = 1;
+    const fibSoftwareGlitchReset = 0x7 & ~FIB_GLITCH_RST;
+    const image = causeRoundTrip([RTCCNTL, fibSoftwareGlitchReset, POWER_GLITCH_EN], [
+      L32R(8, 2),
+      L32R(9, 3),
+      S32I(9, 8, 0x148), // FIB_SEL: software controls glitch reset
+      L32R(9, 4),
+      S32I(9, 8, 0x144), // PG_CTRL: enable power-glitch detector
+    ]);
+    const c = core(image);
+    c.step(800);
+    expect([...c.drainUart()]).toEqual([1]);
+    c.setPowerGlitchDetected(true);
+    c.step(1_000);
+    expect([...c.drainUart()]).toEqual([]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([23]);
+    c.step(300);
+    expect([...c.drainUart()]).toEqual([]);
+  });
+
   it('RTC FIB_SEL resets and writes only the documented three-bit selector', () => {
     // Source-checked against ESP-IDF release/v5.5 rtc_cntl_reg.h:
     // RTC_CNTL_FIB_SEL is an R/W field at PG_CTRL+0x4, bitpos [2:0],

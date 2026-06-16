@@ -1224,6 +1224,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       reset, receives a host brownout trip, reboots, and reports reset
       cause 15. Cuts: no analog voltage threshold/counter timing model
       and no delayed BROWN_OUT_INT_WAIT/RST_WAIT sequencing yet
+- [x] ESP32-S3 core slice 86 — power-glitch reset via FIB_SEL
+      (landed 2026-06-16): RTC_CNTL_PG_CTRL POWER_GLITCH_EN still
+      supports the interrupt-only detector path by default, and
+      RTC_CNTL_FIB_SEL now gates software-owned glitch reset routing:
+      firmware can clear FIB_GLITCH_RST, enable POWER_GLITCH_EN, and a
+      host-injected power-glitch trip resets with the ROM power-glitch
+      cause (23). Proven by hand-assembled firmware that first reports
+      POWERON, configures software-owned glitch reset, receives a host
+      power-glitch trip, reboots, and reports reset cause 23. Cuts: no
+      analog glitch model, no RTC_CNTL_GLITCH_RST_EN clock-glitch reset
+      path, and no POWER_GLITCH_EFUSE_SEL/eFuse routing model yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
