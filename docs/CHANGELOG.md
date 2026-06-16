@@ -2,6 +2,25 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 94: RC_SLOW divider for RTC slow clock
+
+### Added
+- **RTC slow-clock divider** (@protopulse/emu):
+  RTC_CNTL_SLOW_CLK_CONF.ANA_CLK_DIV now updates the modeled RC_SLOW
+  divider when ANA_CLK_DIV_VLD is set. RWDT and RTC main-timer ticks
+  now age at RC_SLOW / (ANA_CLK_DIV + 1) when RC_SLOW is selected.
+
+### Verified
+- Added hand-assembled Xtensa firmware that divides RC_SLOW by 4,
+  arms a raw RWDT stage0=1 timeout, survives beyond the undivided
+  RC_SLOW x2 deadline, and then reboots later with RTCWDT_SYS_RESET.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 150 ESP32-S3 tests.
+
+### Honest cuts
+- Changing the divider while a timeout is already aging still uses
+  simple virtual-time math instead of re-basing elapsed time.
+
 ## 2026-06-16 — ESP32-S3 slice 93: RTC slow-clock mux for RWDT
 
 ### Added
@@ -19,8 +38,6 @@ All notable changes to ProtoPulse are documented in this file.
   passed with 149 ESP32-S3 tests.
 
 ### Honest cuts
-- RTC_CNTL_SLOW_CLK_CONF.ANA_CLK_DIV is stored for readback but not
-  applied to tick math yet.
 - Changing RTC_SLOW_CLK while a timeout is already aging still uses
   simple virtual-time math instead of re-basing elapsed time.
 

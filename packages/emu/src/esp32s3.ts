@@ -854,6 +854,9 @@ const RTC_CLK_CONF_RESET = 0x1158321c; // rtc_cntl_reg.h reset fields
 const RTC_SLOW_CLK_CONF_RESET = 1 << 22; // ANA_CLK_DIV_VLD reset bit
 const RTC_ANA_CLK_RTC_SEL_SHIFT = 30;
 const RTC_ANA_CLK_RTC_SEL_MASK = 0x3;
+const RTC_ANA_CLK_DIV_SHIFT = 23;
+const RTC_ANA_CLK_DIV_MASK = 0xff;
+const RTC_ANA_CLK_DIV_VLD = 1 << 22;
 const RTC_SLOW_SRC_RC_SLOW = 0;
 const RTC_SLOW_SRC_XTAL32K = 1;
 const RTC_SLOW_SRC_RC_FAST_D256 = 2;
@@ -1590,6 +1593,7 @@ export class Esp32s3Core implements McuCore {
   private rtcSlpRejectConf = 0;
   private rtcClkConf = RTC_CLK_CONF_RESET;
   private rtcSlowClkConf = RTC_SLOW_CLK_CONF_RESET;
+  private rtcRcSlowDiv = 1;
   private rtcSleepRejectSource = 0;
   private rtcSdioIdle = false;
   private rtcExtWakeupConf = 0;
@@ -2587,6 +2591,7 @@ export class Esp32s3Core implements McuCore {
     this.rtcSlpRejectConf = 0;
     this.rtcClkConf = RTC_CLK_CONF_RESET;
     this.rtcSlowClkConf = RTC_SLOW_CLK_CONF_RESET;
+    this.rtcRcSlowDiv = 1;
     this.rtcExtWakeupConf = 0;
     this.rtcIoExtWakeup0 = 0;
     this.rtcExtWakeup1 = 0;
@@ -2840,8 +2845,14 @@ export class Esp32s3Core implements McuCore {
         return RTC_RC_FAST_D256_HZ;
       case RTC_SLOW_SRC_RC_SLOW:
       default:
-        return RTC_RC_SLOW_HZ;
+        return Math.floor(RTC_RC_SLOW_HZ / this.rtcRcSlowDiv);
     }
+  }
+
+  private updateRtcSlowDivider(): void {
+    if ((this.rtcSlowClkConf & RTC_ANA_CLK_DIV_VLD) === 0) return;
+    this.rtcRcSlowDiv = (((this.rtcSlowClkConf >>> RTC_ANA_CLK_DIV_SHIFT) & RTC_ANA_CLK_DIV_MASK) + 1) >>> 0;
+    if (this.rtcRcSlowDiv === 0) this.rtcRcSlowDiv = 1;
   }
 
   private rtcSleepAlarmTarget(): number {
@@ -5285,6 +5296,7 @@ export class Esp32s3Core implements McuCore {
         this.rtcClkConf = value >>> 0;
       } else if (off === RTC_SLOW_CLK_CONF) {
         this.rtcSlowClkConf = value >>> 0;
+        this.updateRtcSlowDivider();
       } else if (off === RTC_TIME_UPDATE) {
         if ((value & (1 << 31)) !== 0) {
           // Latch the 48-bit RTC main timer: CPU cycles → RTC_SLOW ticks.

@@ -1303,8 +1303,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       Proven by hand-assembled firmware that selects XTAL32K before
       arming a raw RWDT stage0=1 timeout, survives beyond the old
       RC_SLOW x2 deadline, then later reboots with RTCWDT_SYS_RESET.
-      Cuts: ANA_CLK_DIV is stored but not applied, and elapsed time is
-      not re-based when firmware switches RTC_SLOW_CLK mid-timeout
+      Cuts: elapsed time is not re-based when firmware switches
+      RTC_SLOW_CLK mid-timeout
+- [x] ESP32-S3 core slice 94 — RC_SLOW divider for RTC slow clock
+      (landed 2026-06-16): RTC_CNTL_SLOW_CLK_CONF.ANA_CLK_DIV now
+      updates the modeled RC_SLOW divider when ANA_CLK_DIV_VLD is set,
+      matching `clk_ll_rc_slow_set_divider(divider)`'s register+1
+      contract. Proven by hand-assembled firmware that divides RC_SLOW
+      by 4 before arming a raw RWDT stage0=1 timeout, survives beyond
+      the undivided RC_SLOW x2 deadline, then later reboots with
+      RTCWDT_SYS_RESET. Cuts: elapsed time is not re-based when
+      firmware changes the divider mid-timeout
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

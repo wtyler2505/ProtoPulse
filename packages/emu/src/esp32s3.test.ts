@@ -6340,7 +6340,9 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
   //                       RTC-slow ticks), WDTFEED +0xAC, WDTWPROTECT +0xB0
   //                       (same 0x50D83AA1 key — hal/esp32s3 rwdt_ll.h)
   //                       and CLK_CONF +0x74 ANA_CLK_RTC_SEL [31:30]
-  //                       selecting RC_SLOW(0), XTAL32K(1), RC_FAST_D256(2)
+  //                       selecting RC_SLOW(0), XTAL32K(1), RC_FAST_D256(2);
+  //                       SLOW_CLK_CONF +0x78 ANA_CLK_DIV [30:23] divides
+  //                       RC_SLOW by register+1 when ANA_CLK_DIV_VLD is set
   //   interrupt_core0_reg.h — TG1_T1_INT_MAP +0x0D8
   // Stage actions (hal/wdt_types.h): 0 off, 1 interrupt, 2 reset CPU,
   // 3 reset system, 4 reset RTC (RWDT only). Reset causes
@@ -6354,6 +6356,7 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
   const RTC_RESET_STATE = 0x60008038;
   const RTCCNTL = 0x60008000;
   const RTC_CLK_CONF_XTAL32K = 0x5158321c;
+  const RTC_SLOW_CLK_DIV4 = (3 << 23) | (1 << 22);
   const WDT_KEY = 0x50d83aa1;
   const EFUSE_WRITE_OP_CODE = 0x5a5a;
   const EFUSE_PGM_DONE = 1 << 1;
@@ -6612,6 +6615,34 @@ describe('Esp32s3Core — timers + watchdogs (slice 13)', () => {
       MOVI(10, 2000),
       ADDI(10, 10, -1),
       BNEZ(10, BR(-2)), // far past RC_SLOW x2, before XTAL32K x2
+      L32R(11, 1),
+      MOVI(12, 42),
+      S32I(12, 11, 0),
+    ]);
+    const c = core(image);
+    c.step(7_000);
+    expect([...c.drainUart()]).toEqual([1, 42]);
+    c.step(10_000);
+    c.step(500);
+    expect([...c.drainUart()]).toEqual([9]);
+  });
+
+  it('RWDT stage-0 follows RTC_CNTL_SLOW_CLK_CONF RC_SLOW divider', () => {
+    // clk_ll_rc_slow_set_divider(4) writes ANA_CLK_DIV=3 and sets VLD,
+    // slowing the same raw stage0=1/eFuse x2 timeout by 4x.
+    const image = causeRoundTrip([RTCCNTL, WDT_KEY, RWDT_EN_STG0_SYS, RTC_SLOW_CLK_DIV4], [
+      L32R(8, 2),
+      L32R(9, 3),
+      L32R(7, 5),
+      S32I(7, 8, 0x78), // SLOW_CLK_CONF.ANA_CLK_DIV = 3, VLD = 1
+      S32I(9, 8, 0xb0), // unlock RWDT
+      MOVI(10, 1),
+      S32I(10, 8, 0x9c), // WDTCONFIG1: raw stage0 register value 1
+      L32R(10, 4),
+      S32I(10, 8, 0x98), // WDTCONFIG0: EN | STG0=reset-system
+      MOVI(10, 2000),
+      ADDI(10, 10, -1),
+      BNEZ(10, BR(-2)), // far past undivided RC_SLOW x2
       L32R(11, 1),
       MOVI(12, 42),
       S32I(12, 11, 0),
