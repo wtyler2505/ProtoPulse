@@ -764,6 +764,76 @@ describe('Esp32s3Core', () => {
     expect([...rx.drainUart()]).toEqual([1, 3, 0x80, 0x40, 0x10, 0x20, 0x30]);
   });
 
+  it('drains TWAI tx/rx done events for a connected peer frame', () => {
+    const tx = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI, 0x80, 0x60, 0x44], [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, 1),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=1
+        L32R(3, 1),
+        S32I(3, 2, 0x44), // std id 0x403 byte 0
+        L32R(3, 2),
+        S32I(3, 2, 0x48), // std id 0x403 byte 1
+        L32R(3, 3),
+        S32I(3, 2, 0x4c), // data 0
+        MOVI(3, TWAI_TX_REQUEST),
+        S32I(3, 2, 0x04),
+        J(BR(-1)),
+      ]),
+    );
+    const rx = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI], [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        J(BR(-1)),
+      ]),
+    );
+
+    tx.connectTwaiPeer(rx);
+    rx.step(80);
+    tx.step(320);
+
+    expect(tx.drainTwaiEvents()).toEqual([
+      { type: 'tx_done', success: true, frame: { id: 0x403, data: [0x44], dlc: 1, extended: false, rtr: false } },
+    ]);
+    expect(rx.drainTwaiEvents()).toEqual([
+      { type: 'rx_done', frame: { id: 0x403, data: [0x44], dlc: 1, extended: false, rtr: false } },
+    ]);
+  });
+
+  it('drains TWAI ACK-error events with failed tx_done callbacks', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [TWAI, 0x80, 0x80, 0x55],
+      [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, 1),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=1
+        L32R(3, 1),
+        S32I(3, 2, 0x44), // std id 0x404 byte 0
+        L32R(3, 2),
+        S32I(3, 2, 0x48), // std id 0x404 byte 1
+        L32R(3, 3),
+        S32I(3, 2, 0x4c), // data 0
+        MOVI(3, TWAI_TX_REQUEST),
+        S32I(3, 2, 0x04),
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(320);
+
+    expect(c.drainTwaiEvents()).toEqual([
+      { type: 'error', flags: { ackErr: true } },
+      { type: 'tx_done', success: false, frame: { id: 0x404, data: [0x55], dlc: 1, extended: false, rtr: false } },
+    ]);
+  });
+
   it('routes RMT channel 0 TX symbols through the GPIO matrix to IO5', () => {
     const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB;
     const rmtCh0Conf = (1 << 8) | (1 << 16) | RMT_IDLE_OUT_EN;

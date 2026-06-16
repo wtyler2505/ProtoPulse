@@ -1432,6 +1432,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       at zero. Cuts: no bit timing, arbitration, retry scheduling,
       driver alert queue, wire-level GPIO waveform, or exact
       dual-filter mode yet
+- [x] ESP32-S3 core slice 104 — TWAI host event drain (landed
+      2026-06-16): `drainTwaiEvents()` now exposes typed host-side TWAI
+      events for callback-style bridge work: `tx_done` with decoded
+      frame + success/failure, `rx_done` with decoded frame, and
+      `error` with ACK-error flags. Proven by two new hand-assembled
+      firmware paths: connected peers emit sender `tx_done(success:
+      true)` plus receiver `rx_done`, while a lone normal transmit emits
+      ACK error then `tx_done(success: false)`. Cuts: still no full
+      ESP-IDF driver alert queue, TWAI state-change callback stream,
+      bit timing, arbitration, retry scheduling, wire-level GPIO
+      waveform, or exact dual-filter mode yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

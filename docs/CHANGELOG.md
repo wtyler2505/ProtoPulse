@@ -2,6 +2,37 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-16 — ESP32-S3 slice 104: TWAI host event drain
+
+### Added
+- **TWAI/CAN host event drain first cut** (@protopulse/emu):
+  `Esp32s3Core.drainTwaiEvents()` now exposes typed host-side events
+  for firmware-visible TWAI callback paths: `tx_done` with decoded frame
+  and success/failure, `rx_done` with decoded frame, and `error` with
+  ACK-error flags.
+- The virtual peer-bus path now records a successful TX event on the
+  sender and an RX event on the receiving core. Lone normal
+  transmissions record the ACK error before the failed `tx_done` event,
+  matching the callback evidence a host bridge needs to inspect.
+
+### Verified
+- Added a two-core Xtensa firmware test proving `drainTwaiEvents()`
+  returns `tx_done(success: true)` on the sender and `rx_done` with the
+  delivered frame on the receiver.
+- Added no-ACK firmware coverage proving `drainTwaiEvents()` returns an
+  ACK-error event before `tx_done(success: false)` for a failed normal
+  transmit.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 172 ESP32-S3 tests.
+- `npm run check:packages` passed.
+- `npm run test:packages` passed across package workspaces with 1,514 tests.
+
+### Honest cuts
+- This is a host-drain substrate for TWAI TX/RX/error callback data, not
+  the full ESP-IDF driver alert queue. State-change callbacks,
+  bit-timing, arbitration, retry scheduling, wire-level GPIO waveform,
+  and exact dual-filter mode remain open.
+
 ## 2026-06-16 — ESP32-S3 slice 103: TWAI virtual peer bus + ACK errors
 
 ### Added

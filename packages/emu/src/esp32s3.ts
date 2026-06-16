@@ -18,6 +18,15 @@ export interface Esp32s3TwaiFrame {
   rtr?: boolean;
 }
 
+export interface Esp32s3TwaiErrorFlags {
+  ackErr?: true;
+}
+
+export type Esp32s3TwaiEvent =
+  | { type: 'tx_done'; success: boolean; frame: Esp32s3TwaiFrame }
+  | { type: 'rx_done'; frame: Esp32s3TwaiFrame }
+  | { type: 'error'; flags: Esp32s3TwaiErrorFlags };
+
 /**
  * ESP32-S3 v0 — a from-scratch Xtensa LX7 core, the first slice of the
  * "no off-the-shelf JS emulator" epic. Every address and encoding is
@@ -281,9 +290,11 @@ export interface Esp32s3TwaiFrame {
  * buffer bytes, self-reception loopback, RX buffer release, RI/TI/EI/BEI
  * interrupts, acceptance-filter enforcement, typed host injection/drain,
  * and a host-side peer bus that delivers standard frames, models ACK/no-ACK
- * TX error-counter movement, and enters BUS_OFF after repeated ACK errors.
- * Cuts: no bit timing/arbitration/retry scheduling, driver alert queue,
- * exact dual-filter mode, or wire-level GPIO waveform yet.
+ * TX error-counter movement, enters BUS_OFF after repeated ACK errors, and
+ * exposes host-drained TX/RX/error events for bridge-style callback data.
+ * Cuts: no bit timing/arbitration/retry scheduling, full driver alert queue,
+ * TWAI state-change callback stream, exact dual-filter mode, or wire-level
+ * GPIO waveform yet.
  * Still missing: full light/deep sleep register policy, remaining wake
  * sources, wake-stub/deep-sleep reset behavior, clock/power-domain
  * gating, full touch deep-sleep/proximity/timeout behavior, real ULP
@@ -1775,6 +1786,7 @@ interface TwaiController {
   acceptance: number[];
   rxFifo: number[][];
   txLog: number[][];
+  events: Esp32s3TwaiEvent[];
   dataOverrun: boolean;
   busOff: boolean;
   interrupt: number;
@@ -2018,6 +2030,7 @@ const freshTwaiController = (): TwaiController => ({
   acceptance: [0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff],
   rxFifo: [],
   txLog: [],
+  events: [],
   dataOverrun: false,
   busOff: false,
   interrupt: 0,
@@ -2551,8 +2564,14 @@ export class Esp32s3Core implements McuCore {
   }
 
   drainTwaiTx(): Esp32s3TwaiFrame[] {
-    const out = this.twai.txLog.map((frame) => this.twaiDecodeFrame(frame));
+    const out = this.twai.txLog.map((frame) => this.twaiFrameEvent(frame));
     this.twai.txLog = [];
+    return out;
+  }
+
+  drainTwaiEvents(): Esp32s3TwaiEvent[] {
+    const out = this.twai.events.map((event) => this.twaiCloneEvent(event));
+    this.twai.events = [];
     return out;
   }
 
@@ -4516,6 +4535,7 @@ export class Esp32s3Core implements McuCore {
     }
     this.twai.rxFifo.push(frame.map((b) => b & 0xff));
     this.twai.interrupt |= TWAI_INTR_RX;
+    this.twai.events.push({ type: 'rx_done', frame: this.twaiFrameEvent(frame) });
     return true;
   }
 
@@ -4583,6 +4603,31 @@ export class Esp32s3Core implements McuCore {
     return { id, data, dlc, extended, rtr };
   }
 
+  private twaiCloneDecodedFrame(frame: Esp32s3TwaiFrame): Esp32s3TwaiFrame {
+    return {
+      id: frame.id,
+      data: Array.from(frame.data ?? []),
+      dlc: frame.dlc,
+      extended: frame.extended,
+      rtr: frame.rtr,
+    };
+  }
+
+  private twaiFrameEvent(frame: readonly number[]): Esp32s3TwaiFrame {
+    return this.twaiCloneDecodedFrame(this.twaiDecodeFrame(frame));
+  }
+
+  private twaiCloneEvent(event: Esp32s3TwaiEvent): Esp32s3TwaiEvent {
+    switch (event.type) {
+      case 'tx_done':
+        return { type: 'tx_done', success: event.success, frame: this.twaiCloneDecodedFrame(event.frame) };
+      case 'rx_done':
+        return { type: 'rx_done', frame: this.twaiCloneDecodedFrame(event.frame) };
+      case 'error':
+        return { type: 'error', flags: event.flags.ackErr === true ? { ackErr: true } : {} };
+    }
+  }
+
   private twaiRecordSuccessfulTransmit(): void {
     if (this.twai.txErrCounter > 0) this.twai.txErrCounter--;
   }
@@ -4591,6 +4636,7 @@ export class Esp32s3Core implements McuCore {
     const nextTec = this.twai.txErrCounter + TWAI_ERR_DELTA_TX_ACK;
     this.twai.errCodeCapture = TWAI_ERR_SEG_ACK_SLOT;
     this.twai.interrupt |= TWAI_INTR_ERR | TWAI_INTR_BUS_ERR;
+    this.twai.events.push({ type: 'error', flags: { ackErr: true } });
     if (nextTec >= 256) {
       this.twai.busOff = true;
       this.twai.mode |= TWAI_MODE_RESET;
@@ -4614,6 +4660,7 @@ export class Esp32s3Core implements McuCore {
     }
     if (acknowledged) this.twaiRecordSuccessfulTransmit();
     else this.twaiRecordAckError();
+    this.twai.events.push({ type: 'tx_done', success: acknowledged, frame: this.twaiFrameEvent(frame) });
     this.twai.interrupt |= TWAI_INTR_TX;
   }
 
