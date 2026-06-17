@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 114: TWAI arbitration-lost capture latch
+
+### Added
+- **ALC/ALI capture latch + re-arm** (@protopulse/emu): closes the slice
+  113 cut. The SJA1000 arbitration-lost capture now latches on the first
+  loss — a second arbitration loss before software reads the ALC register
+  produces no new ALC value, no new ALI interrupt, and no new error event.
+  Reading ALC re-arms the capture (mirroring ESP-IDF
+  `twai_ll_clear_arb_lost_cap`'s dummy read). Arbitration is otherwise
+  unchanged: a latched loser still keeps its frame armed and retransmits.
+
+### Verified
+- Added a three-node contention test where one node loses twice in a
+  single bus resolution (to id 0x100, then to id 0x480 on its retransmit
+  round) yet emits exactly one arbitration-lost event and reads ALC=1 —
+  the first loss's bit (ID.10), latched over the second loss's bit
+  (ID.8 → 3).
+- `npm run -w @protopulse/emu test` passed with 269 package tests
+  (182 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- Single-shot (one-shot) transmit abort is still not modeled; a latched
+  loser always retransmits. Bit-timing, retry scheduling, and wire-level
+  GPIO waveform remain open.
+
 ## 2026-06-17 — ESP32-S3 slice 113: TWAI arbitration-lost modeling
 
 ### Added

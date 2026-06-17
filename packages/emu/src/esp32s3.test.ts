@@ -985,6 +985,67 @@ describe('Esp32s3Core', () => {
     expect(b.drainTwaiTx()).toEqual([{ id: 0x04000000, data: [0xbb], dlc: 1, extended: true, rtr: false }]);
   });
 
+  it('latches the TWAI arbitration-lost capture on the first loss until ALC is read', () => {
+    // A (id 0x500) loses twice in a single bus resolution: first to C (id 0x100),
+    // then to B (id 0x480) on the retransmit round. The SJA1000 ALC/ALI capture
+    // locks on the first loss and is suppressed until the ALC register is read, so
+    // A must report exactly one arbitration-lost event and ALC must hold the first
+    // loss's bit (ID.10 -> 1), NOT the second loss's bit (ID.8 -> 3).
+    const a = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI, UART], [
+        L32R(2, 0), // TWAI
+        L32R(6, 1), // UART0
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, 1),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=1
+        MOVI(3, 0xa0),
+        S32I(3, 2, 0x44), // std id 0x500 byte 0
+        MOVI(3, 0),
+        S32I(3, 2, 0x48), // std id 0x500 byte 1
+        MOVI(3, 0xdd),
+        S32I(3, 2, 0x4c), // data 0
+        MOVI(3, TWAI_TX_REQUEST),
+        S32I(3, 2, 0x04), // request transmit -> three-way arbitration resolves here
+        L32I(3, 2, 0x2c), // ALC capture (must be the first loss's bit, latched)
+        S32I(3, 6, 0), // -> UART
+        J(BR(-1)),
+      ]),
+    );
+    const idle = (twaiOnly: readonly number[]) =>
+      core(
+        assembleXtensa(ESP32S3_IRAM_BASE, [...twaiOnly], [
+          L32R(2, 0), // TWAI
+          MOVI(3, 0),
+          S32I(3, 2, 0x00), // leave reset mode
+          J(BR(-1)),
+        ]),
+      );
+    const b = idle([TWAI]);
+    const c = idle([TWAI]);
+
+    // Full mesh so every winner's frame reaches both other nodes.
+    a.connectTwaiPeer(b);
+    a.connectTwaiPeer(c);
+    b.connectTwaiPeer(c);
+    b.step(80);
+    c.step(80);
+    b.armTwaiTransmit({ id: 0x480, data: [0xbb] });
+    c.armTwaiTransmit({ id: 0x100, data: [0xcc] });
+    a.step(240);
+
+    // A loses once (latched), receives both winning frames in priority order, then
+    // retransmits its own frame.
+    expect(a.drainTwaiEvents()).toEqual([
+      { type: 'error', flags: { arbLost: true } },
+      { type: 'rx_done', frame: { id: 0x100, data: [0xcc], dlc: 1, extended: false, rtr: false } },
+      { type: 'rx_done', frame: { id: 0x480, data: [0xbb], dlc: 1, extended: false, rtr: false } },
+      { type: 'tx_done', success: true, frame: { id: 0x500, data: [0xdd], dlc: 1, extended: false, rtr: false } },
+    ]);
+    // ALC latched the FIRST loss (vs 0x100 at ID.10 -> 1), not the second (ID.8 -> 3).
+    expect([...a.drainUart()]).toEqual([1]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

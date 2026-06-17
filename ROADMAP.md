@@ -1535,10 +1535,24 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       next bus-idle slot; crucially the TEC is NOT incremented
       (arbitration loss is normal traffic, per Linux `bd0ccb92`).
       Proven by a two-node test where id 0x500 loses to id 0x100,
-      retransmits successfully, and reports ALC=1 with TEC=0. Cuts:
-      contention is host-driven (a turn-based core cannot have two
-      guests transmit within one bit window); single-shot abort and
-      ALC re-arm-on-read are not yet modeled
+      retransmits successfully, and reports ALC=1 with TEC=0, plus a
+      standard-beats-extended discriminating test guarding the wire-order
+      key. Cuts: contention is host-driven (a turn-based core cannot have
+      two guests transmit within one bit window); single-shot abort is
+      not yet modeled
+- [x] ESP32-S3 core slice 114 — TWAI arbitration-lost capture latch
+      (landed 2026-06-17): closes the slice 113 ALC re-arm cut. The
+      SJA1000 ALC/ALI capture now latches on the first arbitration loss
+      and is suppressed until software reads the ALC register, which
+      re-arms it — matching `twai_ll_clear_arb_lost_cap`'s dummy-read.
+      Arbitration itself is unaffected: a latched loser still keeps its
+      frame armed and retransmits; only the ALC value and ALI interrupt
+      freeze. Proven by a three-node test where one node loses twice in a
+      single bus resolution (to id 0x100, then id 0x480 on the retransmit
+      round) yet reports exactly one arbitration-lost event with ALC
+      latched at the first loss's bit (ID.10 -> 1), not the second
+      (ID.8 -> 3). Cuts: single-shot transmit abort, and no bit timing,
+      retry scheduling, or wire-level GPIO waveform yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -1788,6 +1788,7 @@ interface TwaiController {
   busTiming0: number;
   busTiming1: number;
   arbLostCapture: number;
+  arbLostCaptureArmed: boolean;
   errCodeCapture: number;
   errWarningLimit: number;
   rxErrCounter: number;
@@ -2034,6 +2035,7 @@ const freshTwaiController = (): TwaiController => ({
   busTiming0: 0,
   busTiming1: 0,
   arbLostCapture: 0,
+  arbLostCaptureArmed: true,
   errCodeCapture: 0,
   errWarningLimit: TWAI_ERR_WARNING_LIMIT_RESET,
   rxErrCounter: 0,
@@ -4809,7 +4811,13 @@ export class Esp32s3Core implements McuCore {
       // losing arbitration is normal traffic, not a bus error.
       for (const node of contenders) {
         if (node === winner) continue;
+        // The SJA1000 ALC/ALI capture latches on the first loss and is suppressed
+        // until software reads ALC (re-arm). Arbitration itself still happens — the
+        // loser keeps its frame armed below and retransmits regardless — but a
+        // second loss before ALC is read produces no new capture or interrupt.
+        if (!node.twai.arbLostCaptureArmed) continue;
         node.twai.arbLostCapture = node.twaiArbLostBit(node.twai.pendingTx!, winningFrame);
+        node.twai.arbLostCaptureArmed = false;
         node.twai.interrupt |= TWAI_INTR_ARB_LOST;
         node.twai.events.push({ type: 'error', flags: { arbLost: true } });
         node.recomputeIrq();
@@ -4906,7 +4914,11 @@ export class Esp32s3Core implements McuCore {
     if (off === TWAI_INTERRUPT_ENABLE) return this.twai.interruptEna >>> 0;
     if (off === TWAI_BUS_TIMING_0) return this.twai.busTiming0 >>> 0;
     if (off === TWAI_BUS_TIMING_1) return this.twai.busTiming1 >>> 0;
-    if (off === TWAI_ARB_LOST_CAPTURE) return this.twai.arbLostCapture >>> 0;
+    if (off === TWAI_ARB_LOST_CAPTURE) {
+      const value = this.twai.arbLostCapture >>> 0;
+      this.twai.arbLostCaptureArmed = true; // reading ALC re-arms the capture mechanism
+      return value;
+    }
     if (off === TWAI_ERR_CODE_CAPTURE) return this.twai.errCodeCapture >>> 0;
     if (off === TWAI_ERR_WARNING_LIMIT) return this.twai.errWarningLimit >>> 0;
     if (off === TWAI_RX_ERR_COUNTER) return this.twai.rxErrCounter >>> 0;
