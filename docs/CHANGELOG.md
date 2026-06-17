@@ -31,8 +31,12 @@ All notable changes to ProtoPulse are documented in this file.
   the arbitration-lost error, receives the winning frame, then
   retransmits its own frame successfully; reads back ALC=1 (loss at
   ID.10) and TEC=0 through the guest register interface.
-- `npm run -w @protopulse/emu test` passed with 267 package tests
-  (180 ESP32-S3); `npm run check:packages` clean.
+- Added a wire-order tiebreak test: a standard data frame (id 0x100)
+  beats an extended frame sharing the same 11-bit base id, proving the
+  arbitration key resolves the dominant-RTR vs recessive-SRR case the way
+  CAN 2.0B requires (a naive integer id compare would get this backwards).
+- `npm run -w @protopulse/emu test` passed with 268 package tests
+  (181 ESP32-S3); `npm run check:packages` clean.
 
 ### Honest cuts
 - Contention is host-driven: a turn-based core cannot have two guests

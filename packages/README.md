@@ -31,7 +31,7 @@ Screenshots are artifacts of [`tools/screenshots/`](../tools/screenshots/README.
 
 ## Packages
 
-Sixteen workspaces, **1,522 tests**, one CI gate. Status per stage lives
+Sixteen workspaces, **1,523 tests**, one CI gate. Status per stage lives
 in [`ROADMAP.md`](../ROADMAP.md) — never here.
 
 | Package | What it is | Depends on |
@@ -93,7 +93,7 @@ even while the same run fails your pipeline.
 
 ```bash
 npm run check:packages           # typecheck every package (one program)
-npm run test:packages            # all 1,522 engine tests
+npm run test:packages            # all 1,523 engine tests
 npm run -w @protopulse/app dev   # editor on http://localhost:5174
 npm run -w @protopulse/relay dev # sync relay (optional, for live collaboration)
 npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>

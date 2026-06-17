@@ -931,6 +931,60 @@ describe('Esp32s3Core', () => {
     expect([...a.drainUart()]).toEqual([1, 0]);
   });
 
+  it('wins TWAI arbitration for a standard frame over an extended frame sharing the base id', () => {
+    // The wire-order tiebreak: a standard data frame and an extended frame with the
+    // same 11-bit base id (0x100) tie through the identifier, then diverge at bit 12 —
+    // the standard frame sends a dominant RTR (0) while the extended frame sends a
+    // recessive SRR (1). The standard frame therefore wins (CAN 2.0B). A naive
+    // full-integer id compare would wrongly pick the extended frame here, so this
+    // guards the arbitration key's most error-prone case.
+    const a = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI], [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, 1),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=1
+        MOVI(3, 0x20),
+        S32I(3, 2, 0x44), // std id 0x100 byte 0 (0x100 >> 3 = 0x20)
+        MOVI(3, 0),
+        S32I(3, 2, 0x48), // std id 0x100 byte 1
+        MOVI(3, 0xdd),
+        S32I(3, 2, 0x4c), // data 0
+        MOVI(3, TWAI_TX_REQUEST),
+        S32I(3, 2, 0x04), // request transmit -> arbitration resolves here
+        J(BR(-1)),
+      ]),
+    );
+    const b = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI], [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        J(BR(-1)),
+      ]),
+    );
+
+    a.connectTwaiPeer(b);
+    b.step(80); // b leaves reset mode
+    // Extended frame, base id 0x100 (0x100 << 18), extension bits all zero.
+    b.armTwaiTransmit({ id: 0x04000000, data: [0xbb], extended: true });
+    a.step(200);
+
+    // A (standard) wins immediately; B (extended) loses and retransmits.
+    expect(a.drainTwaiEvents()).toEqual([
+      { type: 'tx_done', success: true, frame: { id: 0x100, data: [0xdd], dlc: 1, extended: false, rtr: false } },
+      { type: 'rx_done', frame: { id: 0x04000000, data: [0xbb], dlc: 1, extended: true, rtr: false } },
+    ]);
+    expect(b.drainTwaiEvents()).toEqual([
+      { type: 'error', flags: { arbLost: true } },
+      { type: 'rx_done', frame: { id: 0x100, data: [0xdd], dlc: 1, extended: false, rtr: false } },
+      { type: 'tx_done', success: true, frame: { id: 0x04000000, data: [0xbb], dlc: 1, extended: true, rtr: false } },
+    ]);
+    expect(a.drainTwaiTx()).toEqual([{ id: 0x100, data: [0xdd], dlc: 1, extended: false, rtr: false }]);
+    expect(b.drainTwaiTx()).toEqual([{ id: 0x04000000, data: [0xbb], dlc: 1, extended: true, rtr: false }]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
