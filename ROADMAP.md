@@ -1472,6 +1472,14 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       the overrun flag. Cuts: still no full ESP-IDF driver alert queue,
       bit timing, arbitration, retry scheduling, wire-level GPIO
       waveform, or exact dual-filter mode yet
+- [x] ESP32-S3 core slice 108 — TWAI ACK bus-error events (landed
+      2026-06-17): `drainTwaiEvents()` now marks no-ACK transmit
+      failures with both `ackErr` and `busError`, matching ESP-IDF's
+      legacy TWAI alert model where ACK errors are bus errors. Proven by
+      the no-ACK transmit test, which now requires the bus-error flag
+      before the failed `tx_done` callback. Cuts: still no full ESP-IDF
+      driver alert queue, bit timing, arbitration, retry scheduling,
+      wire-level GPIO waveform, or exact dual-filter mode yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

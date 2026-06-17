@@ -805,7 +805,7 @@ describe('Esp32s3Core', () => {
     ]);
   });
 
-  it('drains TWAI ACK-error events with failed tx_done callbacks', () => {
+  it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
       [TWAI, 0x80, 0x80, 0x55],
@@ -830,7 +830,7 @@ describe('Esp32s3Core', () => {
     c.step(320);
 
     expect(c.drainTwaiEvents()).toEqual([
-      { type: 'error', flags: { ackErr: true } },
+      { type: 'error', flags: { ackErr: true, busError: true } },
       { type: 'tx_done', success: false, frame: { id: 0x404, data: [0x55], dlc: 1, extended: false, rtr: false } },
     ]);
   });

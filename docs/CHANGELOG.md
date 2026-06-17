@@ -2,6 +2,28 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 108: TWAI ACK bus-error events
+
+### Added
+- **TWAI/CAN ACK errors now carry bus-error evidence** (@protopulse/emu):
+  `drainTwaiEvents()` reports `busError` alongside `ackErr` when a
+  transmit request reaches the modeled ACK slot without any peer ACK.
+- This aligns the host-facing event stream with ESP-IDF's legacy TWAI
+  alert model, where ACK errors are bus errors and also drive the bus
+  error interrupt path.
+
+### Verified
+- Tightened the existing no-ACK transmit test so the drained error event
+  must include both `ackErr` and `busError`, followed by the failed
+  `tx_done` callback.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 175 ESP32-S3 tests.
+
+### Honest cuts
+- This still is not the full ESP-IDF driver alert queue. Bit-timing,
+  arbitration, retry scheduling, wire-level GPIO waveform, and exact
+  dual-filter mode remain open.
+
 ## 2026-06-17 — ESP32-S3 slice 107: TWAI RX FIFO overrun events
 
 ### Added

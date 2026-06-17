@@ -20,6 +20,7 @@ export interface Esp32s3TwaiFrame {
 
 export interface Esp32s3TwaiErrorFlags {
   ackErr?: true;
+  busError?: true;
   rxFifoOverrun?: true;
 }
 
@@ -4634,6 +4635,7 @@ export class Esp32s3Core implements McuCore {
           type: 'error',
           flags: {
             ...(event.flags.ackErr === true ? { ackErr: true } : {}),
+            ...(event.flags.busError === true ? { busError: true } : {}),
             ...(event.flags.rxFifoOverrun === true ? { rxFifoOverrun: true } : {}),
           },
         };
@@ -4666,7 +4668,7 @@ export class Esp32s3Core implements McuCore {
     const nextTec = this.twai.txErrCounter + TWAI_ERR_DELTA_TX_ACK;
     this.twai.errCodeCapture = TWAI_ERR_SEG_ACK_SLOT;
     this.twai.interrupt |= TWAI_INTR_ERR | TWAI_INTR_BUS_ERR;
-    this.twai.events.push({ type: 'error', flags: { ackErr: true } });
+    this.twai.events.push({ type: 'error', flags: { ackErr: true, busError: true } });
     if (nextTec >= 256) {
       this.twai.busOff = true;
       this.twai.mode |= TWAI_MODE_RESET;
