@@ -2,6 +2,28 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 130: deep-sleep EXT0 + EXT1 wake coverage
+
+### Added
+- **Deep-sleep EXT0 and EXT1 wake coverage** (@protopulse/emu): two new tests
+  extend slice 129's GPIO coverage to the remaining RTC-IO wake families,
+  confirming the source-agnostic deep-sleep branch resets the core with
+  `DEEPSLEEP_RESET` for each. EXT0 arms `EXT_WAKEUP_CONF.EXT_WAKEUP0_LV`
+  (RTC_CNTL + 0x64, bit 30) + `RTC_IO_EXT_WAKEUP0_SEL` (RTC_IO + 0xdc); EXT1
+  arms `EXT_WAKEUP1_LV` (bit 31) + the `EXT_WAKEUP1_SEL` RTC-GPIO bitmask
+  (RTC_CNTL + 0xe0). Both enter deep sleep, drive `IO7` high, and confirm the
+  reboot marker. No production change — pure coverage of real paths.
+
+### Verified
+- `npm run -w @protopulse/emu test` passed with 285 package tests
+  (198 ESP32-S3); a fresh `tsc --noEmit --incremental false` on the package
+  reported 0 errors (exit 0) — the reliable check per the slice-129 lesson.
+
+### Honest cuts
+- Touch-controller deep-sleep wake (`RTC_TOUCH_TRIG_EN`) is driven by the touch
+  state machine rather than a `setPin` edge, so its deep-sleep coverage remains
+  a follow-on.
+
 ## 2026-06-17 — ESP32-S3 slice 129: deep-sleep GPIO wake coverage + slice-128 typecheck fix
 
 ### Fixed

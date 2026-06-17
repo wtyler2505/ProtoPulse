@@ -1727,6 +1727,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       previously-untested real path. Also repairs a noUncheckedIndexedAccess
       typecheck regression the slice-128 PCNT filter introduced (a false "0
       errors" from an OOM-terminating local typecheck had masked it)
+- [x] ESP32-S3 core slice 130 — deep-sleep EXT0 + EXT1 wake coverage
+      (landed 2026-06-17): two tests extend slice 129 to the RTC-IO wake
+      families (EXT0 single-pin LV + SEL; EXT1 RTC-GPIO bitmask), each
+      confirming the source-agnostic deep-sleep branch resets with
+      DEEPSLEEP_RESET. No production change. Cut: touch-controller
+      deep-sleep wake (state-machine driven, not a setPin edge) is follow-on
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

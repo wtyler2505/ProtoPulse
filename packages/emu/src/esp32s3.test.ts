@@ -1648,6 +1648,100 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([0xcd]);
   });
 
+  it('wakes from deep sleep via an EXT0 RTC-IO source by resetting the core', () => {
+    // Same source-agnostic deep-sleep path as the GPIO/timer cases, but driven by
+    // the EXT0 RTC-IO wake: EXT_WAKEUP_CONF.EXT_WAKEUP0_LV (RTC_CNTL + 0x64, bit 30
+    // = high) plus RTC_IO_EXT_WAKEUP0_SEL (RTC_IO + 0xdc, GPIO num in [31:27]),
+    // armed via RTC_EXT0_TRIG_EN = BIT(0) in the WAKEUP_ENA field. RTC GPIO7 -> IO7.
+    const RTCCNTL = 0x60008000;
+    const RTCIO = 0x60008400;
+    const dgWrapPdEn = 0x80000000;
+    const wakeupExt0 = (1 << 0) << 15; // RTC_EXT0_TRIG_EN in the WAKEUP_ENA field
+    const ext0LvHigh = 1 << 30; // EXT_WAKEUP0_LV = wake on high level
+    const ext0Gpio7 = 7 << 27; // EXT_WAKEUP0_SEL = RTC GPIO7
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [RTCCNTL, UART, dgWrapPdEn, wakeupExt0, ext0LvHigh, ext0Gpio7, RTCIO], [
+        L32R(2, 0), // RTC_CNTL
+        L32R(8, 6), // RTC_IO
+        L32R(6, 1), // UART
+        L32I(3, 2, 0x38), // RESET_STATE
+        MOVI(4, 0x3f),
+        AND(3, 3, 4), // reset cause [5:0]
+        MOVI(5, 5), // DEEPSLEEP_RESET
+        BNE(3, 5, BR(1)), // first boot (cause != 5) -> deep-sleep setup
+        J(BR(11)), // woke from deep sleep -> emit marker
+
+        L32R(4, 2),
+        S32I(4, 2, 0x90), // DIG_PWC = DG_WRAP_PD_EN (select deep sleep)
+        L32R(4, 3),
+        S32I(4, 2, 0x3c), // WAKEUP_STATE = EXT0 wake source
+        L32R(4, 4),
+        S32I(4, 2, 0x64), // EXT_WAKEUP_CONF.EXT_WAKEUP0_LV = high
+        L32R(4, 5),
+        S32I(4, 8, 0xdc), // RTC_IO_EXT_WAKEUP0_SEL = RTC GPIO7
+        L32R(4, 2),
+        S32I(4, 2, 0x18), // STATE0.SLEEP_EN -> enter deep sleep
+        J(BR(-1)), // spin until the EXT0 wake resets the chip
+
+        MOVI(3, 0xce),
+        S32I(3, 6, 0), // marker: we rebooted from deep sleep
+        J(BR(-1)),
+      ]),
+    );
+    c.step(2_000); // boot 1: configure deep sleep, then spin armed
+    expect([...c.drainUart()]).toEqual([]); // still asleep, no reset yet
+    c.setPin('IO7', 1); // high level on the armed EXT0 RTC IO -> wake -> deep-sleep reset
+    c.step(2_000); // consume the pending reset: the core reboots and step() returns
+    c.step(2_000); // boot 2: reboot reads DEEPSLEEP_RESET and emits the marker
+    expect([...c.drainUart()]).toEqual([0xce]);
+  });
+
+  it('wakes from deep sleep via an EXT1 RTC-GPIO-mask source by resetting the core', () => {
+    // EXT1 deep-sleep wake through the same source-agnostic reset path: a RTC-GPIO
+    // bitmask in EXT_WAKEUP1_SEL (RTC_CNTL + 0xe0) plus EXT_WAKEUP_CONF.EXT_WAKEUP1_LV
+    // (RTC_CNTL + 0x64, bit 31 = any-high), armed via RTC_EXT1_TRIG_EN = BIT(1) in the
+    // WAKEUP_ENA field. Bit 7 of the mask selects RTC GPIO7 -> IO7.
+    const RTCCNTL = 0x60008000;
+    const dgWrapPdEn = 0x80000000;
+    const wakeupExt1 = (1 << 1) << 15; // RTC_EXT1_TRIG_EN in the WAKEUP_ENA field
+    const ext1LvHigh = 1 << 31; // EXT_WAKEUP1_LV = wake on high level
+    const ext1Gpio7 = 1 << 7; // EXT_WAKEUP1_SEL mask bit for RTC GPIO7
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [RTCCNTL, UART, dgWrapPdEn, wakeupExt1, ext1LvHigh, ext1Gpio7], [
+        L32R(2, 0), // RTC_CNTL
+        L32R(6, 1), // UART
+        L32I(3, 2, 0x38), // RESET_STATE
+        MOVI(4, 0x3f),
+        AND(3, 3, 4), // reset cause [5:0]
+        MOVI(5, 5), // DEEPSLEEP_RESET
+        BNE(3, 5, BR(1)), // first boot (cause != 5) -> deep-sleep setup
+        J(BR(11)), // woke from deep sleep -> emit marker
+
+        L32R(4, 2),
+        S32I(4, 2, 0x90), // DIG_PWC = DG_WRAP_PD_EN (select deep sleep)
+        L32R(4, 3),
+        S32I(4, 2, 0x3c), // WAKEUP_STATE = EXT1 wake source
+        L32R(4, 4),
+        S32I(4, 2, 0x64), // EXT_WAKEUP_CONF.EXT_WAKEUP1_LV = high
+        L32R(4, 5),
+        S32I(4, 2, 0xe0), // EXT_WAKEUP1_SEL = RTC GPIO7 mask
+        L32R(4, 2),
+        S32I(4, 2, 0x18), // STATE0.SLEEP_EN -> enter deep sleep
+        J(BR(-1)), // spin until the EXT1 wake resets the chip
+
+        MOVI(3, 0xcf),
+        S32I(3, 6, 0), // marker: we rebooted from deep sleep
+        J(BR(-1)),
+      ]),
+    );
+    c.step(2_000); // boot 1: configure deep sleep, then spin armed
+    expect([...c.drainUart()]).toEqual([]); // still asleep, no reset yet
+    c.setPin('IO7', 1); // high level on the armed EXT1 RTC GPIO -> wake -> deep-sleep reset
+    c.step(2_000); // consume the pending reset: the core reboots and step() returns
+    c.step(2_000); // boot 2: reboot reads DEEPSLEEP_RESET and emits the marker
+    expect([...c.drainUart()]).toEqual([0xcf]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
