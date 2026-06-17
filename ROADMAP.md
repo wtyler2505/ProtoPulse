@@ -1697,6 +1697,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       GDMA test now asserts the descriptor stays DMA-owned by default.
       Cuts: OUT_CHECK_OWNER (OUT_CONF1 bit 12) and CONF0 burst-length
       fields remain follow-on
+- [x] ESP32-S3 core slice 127 — GDMA OUT_CHECK_OWNER descriptor gate
+      (landed 2026-06-17): the TX owner-check counterpart to slice 125's
+      RX gate. The TX engine previously treated a CPU-owned outlink
+      descriptor as a hard OUT_DSCR_ERR unconditionally; it is now gated by
+      GDMA_OUT_CONF1 bit 12 (OUT_CHECK_OWNER), which resets to 0 per
+      gdma_reg.h — so by default the engine ignores the OWNER bit and
+      transmits the descriptor normally. The change is additive (existing
+      TX tests use owner=DMA); a new test drives an RMT TX from a CPU-owned
+      descriptor and confirms it completes (DONE|EOF|TOTAL_EOF, not
+      DSCR_ERR). Cuts: CONF0 burst-length fields remain follow-on
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

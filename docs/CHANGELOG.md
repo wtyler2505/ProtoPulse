@@ -2,6 +2,30 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 127: GDMA OUT_CHECK_OWNER descriptor gate
+
+### Added
+- **GDMA TX owner-check gate** (@protopulse/emu): the TX counterpart to
+  slice 125's RX gate. The TX engine previously treated a CPU-owned outlink
+  descriptor as a hard `OUT_DSCR_ERR` unconditionally; it is now gated by
+  `GDMA_OUT_CONF1` bit 12 (`OUT_CHECK_OWNER`), which resets to 0 per
+  `gdma_reg.h`. By default the engine ignores the OWNER bit and transmits
+  the descriptor normally. With the three descriptor controls now modeled
+  (`IN_CHECK_OWNER`, `OUT_AUTO_WRBACK`, `OUT_CHECK_OWNER`), the GDMA
+  owner-handshake matches the hardware's reset defaults.
+
+### Verified
+- The change is additive (existing TX tests use owner=DMA). A new test
+  drives an RMT TX from a CPU-owned descriptor and confirms it completes
+  (`DONE | EOF | TOTAL_EOF`, not `DSCR_ERR`).
+- `npm run -w @protopulse/emu test` passed with 281 package tests
+  (194 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- The CONF0 burst-length fields (`IN/OUT_DATA_BURST_LEN`,
+  `IN/OUT_MEM_BURST_LEN`) and WEIGHT/PRI channel arbitration remain
+  follow-on.
+
 ## 2026-06-17 — ESP32-S3 slice 126: GDMA OUT_AUTO_WRBACK descriptor gate
 
 ### Added

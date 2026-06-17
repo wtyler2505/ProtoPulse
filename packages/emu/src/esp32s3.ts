@@ -1590,6 +1590,7 @@ const GDMA_DESC_SUC_EOF = 1 << 30;
 const GDMA_DESC_OWNER_DMA = 1 << 31;
 const GDMA_IN_CHECK_OWNER = 1 << 12; // IN_CONF1 bit 12 — gate descriptor owner checking (reset 0 = off)
 const GDMA_OUT_AUTO_WRBACK = 1 << 2; // OUT_CONF0 bit 2 — auto-clear OWNER after TX (reset 0 = off)
+const GDMA_OUT_CHECK_OWNER = 1 << 12; // OUT_CONF1 bit 12 — gate TX descriptor owner checking (reset 0 = off)
 const ADC_DIGI_RESULT_BYTES = 4;
 
 // ESP-IDF app-image format (esp_app_format.h; checksum from esptool):
@@ -3143,7 +3144,8 @@ export class Esp32s3Core implements McuCore {
       const bytes = length > 0 ? Math.min(length, size === 0 ? length : size) : size;
       const buffer = this.sramU32(desc + 4);
       const next = this.sramU32(desc + 8);
-      if ((dw0 & GDMA_DESC_OWNER_DMA) === 0 || bytes < 4) {
+      const ownerErr = (dw0 & GDMA_DESC_OWNER_DMA) === 0 && (ch.conf1 & GDMA_OUT_CHECK_OWNER) !== 0;
+      if (ownerErr || bytes < 4) {
         this.gdmaMarkTxDscrErr(ch, desc);
         break;
       }

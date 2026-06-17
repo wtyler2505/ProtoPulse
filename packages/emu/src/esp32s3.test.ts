@@ -2165,6 +2165,66 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([gdmaDoneMask, RMT_CH3_TX_END, 0, 1]);
   });
 
+  it('consumes a CPU-owned GDMA OUT descriptor when OUT_CHECK_OWNER is disabled (reset default)', () => {
+    // gdma_reg.h: OUT_CHECK_OWNER (OUT_CONF1 bit 12) resets to 0. Without it the TX
+    // engine does not inspect the descriptor OWNER bit, so a CPU-owned outlink is
+    // transmitted normally instead of raising OUT_DSCR_ERR.
+    const desc = ESP32S3_DRAM_BASE + 0x1280;
+    const buf = ESP32S3_DRAM_BASE + 0x12c0;
+    const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB;
+    const rmtCh3Conf = (1 << 8) | (1 << 16) | RMT_IDLE_OUT_EN | RMT_MEM_TX_WRAP_EN | RMT_DMA_ACCESS_EN;
+    const symbol0 = 2 | (1 << 15) | (2 << 16);
+    const symbol1 = 1 | (1 << 15) | (1 << 16);
+    const descWordCpu = GDMA_DESC_SUC_EOF | 8; // no OWNER_DMA: CPU-owned
+    const outLinkStart = (desc & 0x000f_ffff) | GDMA_OUT_LINK_START;
+    const gdmaDoneMask = GDMA_OUT_DONE | GDMA_OUT_EOF | GDMA_OUT_TOTAL_EOF;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [desc, buf, descWordCpu, symbol0, symbol1, GDMA, outLinkStart, RMT, UART, rmtSysConf, rmtCh3Conf, rmtCh3Conf | RMT_TX_START],
+      [
+        L32R(2, 0), // descriptor
+        L32R(3, 2),
+        S32I(3, 2, 0), // dw0: CPU-owned, EOF, 8 bytes
+        L32R(3, 1),
+        S32I(3, 2, 4), // buffer
+        MOVI(3, 0),
+        S32I(3, 2, 8), // next = NULL
+        L32R(4, 1), // buffer
+        L32R(5, 3),
+        S32I(5, 4, 0),
+        L32R(5, 4),
+        S32I(5, 4, 4),
+
+        L32R(6, 5), // GDMA
+        MOVI(7, GDMA_PERI_RMT),
+        S32I(7, 6, GDMA_OUT_CH0_PERI_SEL),
+        // OUT_CONF1 left at reset (owner checking disabled)
+        L32R(7, 6),
+        S32I(7, 6, GDMA_OUT_CH0_LINK),
+
+        L32R(8, 7), // RMT
+        L32R(9, 9),
+        S32I(9, 8, 0xc0), // SYS_CONF
+        L32R(9, 10),
+        S32I(9, 8, 0x2c), // CH3CONF0: DMA access
+        L32R(9, 11),
+        S32I(9, 8, 0x2c), // CH3 tx_start (RMT_TX_START)
+
+        MOVI(10, 80),
+        ADDI(10, 10, -1),
+        BNEZ(10, BR(-2)),
+
+        L32R(11, 8), // UART
+        L32I(12, 6, GDMA_OUT_CH0_INT_RAW),
+        S32I(12, 11, 0), // GDMA OUT raw = DONE|EOF|TOTAL_EOF (consumed, NOT DSCR_ERR)
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(560);
+    expect([...c.drainUart()]).toEqual([gdmaDoneMask]);
+  });
+
   it('latches RMT TX threshold and finite-loop interrupts', () => {
     const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB;
     const rmtCh0Conf = (1 << 8) | (1 << 16) | RMT_IDLE_OUT_EN | RMT_TX_CONTI_MODE;
