@@ -23,6 +23,7 @@ export interface Esp32s3TwaiErrorFlags {
   busError?: true;
   rxFifoOverrun?: true;
   busOff?: true;
+  arbLost?: true;
 }
 
 export type Esp32s3TwaiErrorState = 'active' | 'warning' | 'passive' | 'bus_off';
@@ -632,6 +633,7 @@ const TWAI_INTR_TX = 1 << 1;
 const TWAI_INTR_ERR = 1 << 2;
 const TWAI_INTR_DATA_OVERRUN = 1 << 3;
 const TWAI_INTR_ERR_PASSIVE = 1 << 5;
+const TWAI_INTR_ARB_LOST = 1 << 6; // ALI — SJA1000 IR.6 / TWAI_LL_INTR_ALI
 const TWAI_INTR_BUS_ERR = 1 << 7;
 const TWAI_INTR_CLEARABLE = 0xef;
 const TWAI_ERR_WARNING_LIMIT_RESET = 96;
@@ -1795,6 +1797,8 @@ interface TwaiController {
   rxFifo: number[][];
   txLog: number[][];
   events: Esp32s3TwaiEvent[];
+  pendingTx: number[] | null;
+  pendingTxSelfReceive: boolean;
   dataOverrun: boolean;
   busOff: boolean;
   interrupt: number;
@@ -2039,6 +2043,8 @@ const freshTwaiController = (): TwaiController => ({
   rxFifo: [],
   txLog: [],
   events: [],
+  pendingTx: null,
+  pendingTxSelfReceive: false,
   dataOverrun: false,
   busOff: false,
   interrupt: 0,
@@ -2569,6 +2575,21 @@ export class Esp32s3Core implements McuCore {
     const accepted = this.twaiPushRxFrame(raw, true);
     this.recomputeIrq();
     return accepted;
+  }
+
+  /**
+   * Stage a frame as a simultaneous bus contender without resolving the bus yet.
+   * A turn-based core cannot have two guests transmitting within the same bit
+   * window, so contention is host-driven: arm one or more peers, then let another
+   * node's TX request trigger arbitration. Arming a node that cannot transmit
+   * (reset or listen-only) is a no-op and returns false.
+   */
+  armTwaiTransmit(frame: Esp32s3TwaiFrame): boolean {
+    if ((this.twai.mode & TWAI_MODE_RESET) !== 0) return false;
+    if ((this.twai.mode & TWAI_MODE_LISTEN_ONLY) !== 0) return false;
+    this.twai.pendingTx = this.twaiFormatFrame(frame);
+    this.twai.pendingTxSelfReceive = false;
+    return true;
   }
 
   drainTwaiTx(): Esp32s3TwaiFrame[] {
@@ -4696,6 +4717,7 @@ export class Esp32s3Core implements McuCore {
             ...(event.flags.busError === true ? { busError: true } : {}),
             ...(event.flags.rxFifoOverrun === true ? { rxFifoOverrun: true } : {}),
             ...(event.flags.busOff === true ? { busOff: true } : {}),
+            ...(event.flags.arbLost === true ? { arbLost: true } : {}),
           },
         };
       case 'state_change':
@@ -4746,7 +4768,60 @@ export class Esp32s3Core implements McuCore {
   private twaiTransmit(selfReceive: boolean): void {
     if ((this.twai.mode & TWAI_MODE_RESET) !== 0) return;
     if ((this.twai.mode & TWAI_MODE_LISTEN_ONLY) !== 0) return;
-    const frame = this.twai.buffer.slice(0, TWAI_BUFFER_BYTES).map((b) => b & 0xff);
+    this.twai.pendingTx = this.twai.buffer.slice(0, TWAI_BUFFER_BYTES).map((b) => b & 0xff);
+    this.twai.pendingTxSelfReceive = selfReceive;
+    this.twaiResolveBus();
+  }
+
+  /**
+   * Resolve all frames pending on the bus by CAN bitwise arbitration. Each round the
+   * numerically lowest identifier wins and is delivered; every loser captures the
+   * arbitration-lost bit (ALC), raises ALI, and — because CAN is non-destructive —
+   * keeps its frame armed to retransmit on the next round. The winner clears its
+   * pending frame, so the contender set strictly shrinks and the loop terminates.
+   * With a single armed node (the common case) it wins uncontested and delivers
+   * exactly as a plain transmit.
+   */
+  private twaiResolveBus(): void {
+    const bus = [this, ...this.twaiPeers];
+    for (;;) {
+      const contenders = bus.filter(
+        (node) =>
+          node.twai.pendingTx !== null &&
+          (node.twai.mode & TWAI_MODE_RESET) === 0 &&
+          (node.twai.mode & TWAI_MODE_LISTEN_ONLY) === 0 &&
+          !node.twai.busOff,
+      );
+      if (contenders.length === 0) return;
+      let winner = contenders[0]!;
+      let winnerKey = winner.twaiArbitrationKey(winner.twai.pendingTx!);
+      for (let i = 1; i < contenders.length; i++) {
+        const node = contenders[i]!;
+        const key = node.twaiArbitrationKey(node.twai.pendingTx!);
+        if (key < winnerKey) {
+          winner = node;
+          winnerKey = key;
+        }
+      }
+      const winningFrame = winner.twai.pendingTx!;
+      // Losers detect the collision during the arbitration field, before the frame
+      // completes: capture the losing bit, raise ALI, but do NOT touch the TEC —
+      // losing arbitration is normal traffic, not a bus error.
+      for (const node of contenders) {
+        if (node === winner) continue;
+        node.twai.arbLostCapture = node.twaiArbLostBit(node.twai.pendingTx!, winningFrame);
+        node.twai.interrupt |= TWAI_INTR_ARB_LOST;
+        node.twai.events.push({ type: 'error', flags: { arbLost: true } });
+        node.recomputeIrq();
+      }
+      winner.twai.pendingTx = null;
+      const selfReceive = winner.twai.pendingTxSelfReceive;
+      winner.twai.pendingTxSelfReceive = false;
+      winner.twaiDeliver(winningFrame, selfReceive);
+    }
+  }
+
+  private twaiDeliver(frame: number[], selfReceive: boolean): void {
     this.twai.txLog.push(frame);
     let acknowledged = (this.twai.mode & TWAI_MODE_NO_ACK) !== 0;
     if (selfReceive) this.twaiPushRxFrame(frame, true);
@@ -4757,6 +4832,65 @@ export class Esp32s3Core implements McuCore {
     else this.twaiRecordAckError();
     this.twai.events.push({ type: 'tx_done', success: acknowledged, frame: this.twaiFrameEvent(frame) });
     this.twai.interrupt |= TWAI_INTR_TX;
+    this.recomputeIrq();
+  }
+
+  private twaiArbitrationKey(frame: readonly number[]): number {
+    // Wire-order priority — lower key wins. CAN arbitrates the 11-bit base id first
+    // (identical position in both formats), then bit 12 (RTR for standard frames,
+    // recessive SRR=1 for extended), then bit 13 (IDE: dominant 0 for standard,
+    // recessive 1 for extended), then the 18-bit extension + RTR for extended frames.
+    // This makes a standard frame beat an extended frame sharing the same base id,
+    // and a data frame beat a remote frame with the same id — both per CAN 2.0B.
+    const info = frame[0] ?? 0;
+    const rtr = (info & TWAI_FRAME_RTR) !== 0 ? 1 : 0;
+    if ((info & TWAI_FRAME_EXTENDED) !== 0) {
+      const id =
+        ((((frame[1] ?? 0) << 21) | ((frame[2] ?? 0) << 13) | ((frame[3] ?? 0) << 5) | ((frame[4] ?? 0) >>> 3)) &
+          TWAI_EXT_ID_MASK) >>>
+        0;
+      const base = (id >>> 18) & TWAI_STD_ID_MASK;
+      const ext18 = id & 0x3ffff;
+      return base * 0x200000 + 0x100000 + 0x80000 + ((ext18 << 1) | rtr);
+    }
+    const id = ((((frame[1] ?? 0) << 3) | ((frame[2] ?? 0) >>> 5)) & TWAI_STD_ID_MASK) >>> 0;
+    return id * 0x200000 + rtr * 0x100000;
+  }
+
+  private twaiArbitrationBits(frame: readonly number[]): number[] {
+    // Arbitration field in transmission order, MSB first, excluding the SOF bit.
+    const info = frame[0] ?? 0;
+    const rtr = (info & TWAI_FRAME_RTR) !== 0 ? 1 : 0;
+    const bits: number[] = [];
+    if ((info & TWAI_FRAME_EXTENDED) !== 0) {
+      const id =
+        ((((frame[1] ?? 0) << 21) | ((frame[2] ?? 0) << 13) | ((frame[3] ?? 0) << 5) | ((frame[4] ?? 0) >>> 3)) &
+          TWAI_EXT_ID_MASK) >>>
+        0;
+      for (let b = 28; b >= 18; b--) bits.push((id >>> b) & 1); // base ID.28..18
+      bits.push(1); // SRR (recessive)
+      bits.push(1); // IDE (recessive)
+      for (let b = 17; b >= 0; b--) bits.push((id >>> b) & 1); // ID.17..0
+      bits.push(rtr); // RTR
+    } else {
+      const id = ((((frame[1] ?? 0) << 3) | ((frame[2] ?? 0) >>> 5)) & TWAI_STD_ID_MASK) >>> 0;
+      for (let b = 10; b >= 0; b--) bits.push((id >>> b) & 1); // ID.10..0
+      bits.push(rtr); // RTR
+      bits.push(0); // IDE (dominant)
+    }
+    return bits;
+  }
+
+  private twaiArbLostBit(loser: readonly number[], winner: readonly number[]): number {
+    // ALC captures the bit number (SJA1000 numbering: SOF=0, ID.MSB=1, …) at which
+    // the loser's recessive bit was first overridden by the winner's dominant bit.
+    const lb = this.twaiArbitrationBits(loser);
+    const wb = this.twaiArbitrationBits(winner);
+    const n = Math.min(lb.length, wb.length);
+    for (let i = 0; i < n; i++) {
+      if (lb[i] !== wb[i]) return Math.min(0x1f, i + 1);
+    }
+    return Math.min(0x1f, n + 1);
   }
 
   private twaiRead(off: number): number {

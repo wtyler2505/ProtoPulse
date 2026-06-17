@@ -870,6 +870,67 @@ describe('Esp32s3Core', () => {
     ]);
   });
 
+  it('loses TWAI arbitration to a lower-id contender and retransmits non-destructively', () => {
+    // A (id 0x500) and B (id 0x100) contend for the same bus slot. CAN arbitration
+    // is bitwise: the numerically lower id wins (more dominant bits early), so B wins.
+    // A loses at the first differing identifier bit (ID.10), sets the ALI interrupt,
+    // captures the bit position in ALC (SOF=0, ID.10=bit 1 -> ALC=1), does NOT increment
+    // its TEC (arbitration loss is not an error), receives B's winning frame, then
+    // retransmits its own frame successfully on the next bus-idle slot.
+    const a = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI, UART], [
+        L32R(2, 0), // TWAI
+        L32R(6, 1), // UART0
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, 1),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=1
+        MOVI(3, 0xa0),
+        S32I(3, 2, 0x44), // std id 0x500 byte 0 (0x500 >> 3 = 0xa0)
+        MOVI(3, 0),
+        S32I(3, 2, 0x48), // std id 0x500 byte 1
+        MOVI(3, 0xdd),
+        S32I(3, 2, 0x4c), // data 0
+        MOVI(3, TWAI_TX_REQUEST),
+        S32I(3, 2, 0x04), // request transmit -> bus arbitration resolves here
+        L32I(3, 2, 0x2c), // ALC capture (arbitration-lost bit number)
+        S32I(3, 6, 0), // -> UART
+        L32I(3, 2, 0x3c), // TX error counter (must stay zero: arbitration loss is not an error)
+        S32I(3, 6, 0), // -> UART
+        J(BR(-1)),
+      ]),
+    );
+    const b = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI], [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        J(BR(-1)),
+      ]),
+    );
+
+    a.connectTwaiPeer(b);
+    b.step(80); // b leaves reset mode
+    b.armTwaiTransmit({ id: 0x100, data: [0xbb] }); // pre-arm the lower-id contender
+    a.step(220);
+
+    // A: loses arbitration (ALI), receives B's frame, then retransmits its own.
+    expect(a.drainTwaiEvents()).toEqual([
+      { type: 'error', flags: { arbLost: true } },
+      { type: 'rx_done', frame: { id: 0x100, data: [0xbb], dlc: 1, extended: false, rtr: false } },
+      { type: 'tx_done', success: true, frame: { id: 0x500, data: [0xdd], dlc: 1, extended: false, rtr: false } },
+    ]);
+    // B: wins immediately, then receives A's retransmitted frame.
+    expect(b.drainTwaiEvents()).toEqual([
+      { type: 'tx_done', success: true, frame: { id: 0x100, data: [0xbb], dlc: 1, extended: false, rtr: false } },
+      { type: 'rx_done', frame: { id: 0x500, data: [0xdd], dlc: 1, extended: false, rtr: false } },
+    ]);
+    expect(a.drainTwaiTx()).toEqual([{ id: 0x500, data: [0xdd], dlc: 1, extended: false, rtr: false }]);
+    expect(b.drainTwaiTx()).toEqual([{ id: 0x100, data: [0xbb], dlc: 1, extended: false, rtr: false }]);
+    // ALC captured the losing bit (ID.10 -> 1); TX error counter stayed zero.
+    expect([...a.drainUart()]).toEqual([1, 0]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

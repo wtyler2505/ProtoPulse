@@ -1520,6 +1520,25 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       two extended IDs (with the low 13 ID bits proven don't-care) and
       rejecting a third. Cuts: no bit timing, arbitration, retry
       scheduling, or wire-level GPIO waveform yet
+- [x] ESP32-S3 core slice 113 — TWAI arbitration-lost modeling
+      (landed 2026-06-17): two nodes can now contend for the bus.
+      `armTwaiTransmit()` stages a peer as a simultaneous contender;
+      when another node requests transmission the bus resolves by CAN
+      bitwise arbitration — the numerically lower identifier wins,
+      compared in wire order (11-bit base id, then SRR/IDE, then the
+      18-bit extension + RTR) so a standard frame beats an extended
+      frame sharing the same base id and a data frame beats a remote
+      frame. The loser raises the ALI interrupt (IR.6), captures the
+      losing bit in ALC (SJA1000 numbering, SOF=0), pushes an
+      `{ arbLost: true }` error event, and — because CAN is
+      non-destructive — keeps its frame armed and retransmits on the
+      next bus-idle slot; crucially the TEC is NOT incremented
+      (arbitration loss is normal traffic, per Linux `bd0ccb92`).
+      Proven by a two-node test where id 0x500 loses to id 0x100,
+      retransmits successfully, and reports ALC=1 with TEC=0. Cuts:
+      contention is host-driven (a turn-based core cannot have two
+      guests transmit within one bit window); single-shot abort and
+      ALC re-arm-on-read are not yet modeled
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

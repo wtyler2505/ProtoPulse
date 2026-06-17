@@ -2,6 +2,45 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 113: TWAI arbitration-lost modeling
+
+### Added
+- **CAN bitwise arbitration** (@protopulse/emu): two TWAI nodes can now
+  contend for the bus. A new host primitive `armTwaiTransmit(frame)`
+  stages a peer as a simultaneous contender without resolving; when
+  another node requests transmission, the bus resolves by CAN bitwise
+  arbitration. The winner is the numerically lower identifier, compared
+  in true wire order — 11-bit base id, then bit 12 (RTR for standard /
+  recessive SRR for extended), then bit 13 (IDE), then the 18-bit
+  extension + RTR — so a standard frame beats an extended frame sharing
+  the same base id, and a data frame beats a remote frame with the same
+  id (both per CAN 2.0B).
+- **Arbitration-lost capture** (@protopulse/emu): the loser raises the
+  ALI interrupt (IR.6 / `TWAI_LL_INTR_ALI`), records the losing bit
+  number in the ALC register (SJA1000 numbering, SOF=0), and emits an
+  `{ arbLost: true }` error event (mirroring `twai_error_flags_t.arb_lost`
+  / `TWAI_ALERT_ARB_LOST`). The TEC is left untouched — losing
+  arbitration is normal traffic, not a bus error (Linux `bd0ccb92`).
+- **Non-destructive retransmit** (@protopulse/emu): because CAN never
+  drops the loser's frame, the loser keeps its frame armed and the bus
+  re-resolves until every armed frame has been sent, so an arbitration
+  loss is followed by a successful retransmission on the next slot.
+
+### Verified
+- Added a two-node contention test: id 0x500 loses to id 0x100, emits
+  the arbitration-lost error, receives the winning frame, then
+  retransmits its own frame successfully; reads back ALC=1 (loss at
+  ID.10) and TEC=0 through the guest register interface.
+- `npm run -w @protopulse/emu test` passed with 267 package tests
+  (180 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- Contention is host-driven: a turn-based core cannot have two guests
+  transmit within a single bit window, so a peer contender is staged via
+  `armTwaiTransmit()`. Single-shot (one-shot) transmit abort and the
+  ALC re-arm-on-read behavior are not yet modeled. Bit-timing, retry
+  scheduling, and wire-level GPIO waveform remain open.
+
 ## 2026-06-17 — ESP32-S3 slice 112: TWAI extended-frame dual filtering
 
 ### Added
