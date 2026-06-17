@@ -83,7 +83,7 @@ Engine monorepo scripts (no database required — see [Section 15](#15-the-engin
 | Script | Description |
 |---|---|
 | `npm run check:packages` | Typecheck every `@protopulse/*` package |
-| `npm run test:packages` | Run all 1,520 engine tests |
+| `npm run test:packages` | Run all 1,521 engine tests |
 | `npm run -w @protopulse/app dev` | New schematic editor on `http://localhost:5174` |
 | `npm run -w @protopulse/cli build` | Build the CLI → `node packages/cli/dist/protopulse.js` |
 
@@ -1626,7 +1626,7 @@ One canonical design graph, many projections. Every mutation is a typed operatio
 
 ```bash
 npm run check:packages           # typecheck every package (one program)
-npm run test:packages            # all 1,520 package tests
+npm run test:packages            # all 1,521 package tests
 npm run -w @protopulse/app dev   # new editor → http://localhost:5174
 npm run -w @protopulse/cli build # then: node packages/cli/dist/protopulse.js check <design>
 ```

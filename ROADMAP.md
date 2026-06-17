@@ -1511,6 +1511,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       filtering still falls back to the single-filter coarse compare;
       no bit timing, arbitration, retry scheduling, or wire-level GPIO
       waveform yet
+- [x] ESP32-S3 core slice 112 — TWAI extended-frame dual filtering
+      (landed 2026-06-17): closes the slice 111 cut. In dual-filter mode
+      an extended (29-bit) frame is matched per the SJA1000 EFF layout —
+      each filter compares only ID[28:13] (top 16 bits): filter 1 =
+      ACR0/ACR1, filter 2 = ACR2/ACR3, RTR and data bytes excluded;
+      accept if either matches. Proven by a dual-filter test accepting
+      two extended IDs (with the low 13 ID bits proven don't-care) and
+      rejecting a third. Cuts: no bit timing, arbitration, retry
+      scheduling, or wire-level GPIO waveform yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

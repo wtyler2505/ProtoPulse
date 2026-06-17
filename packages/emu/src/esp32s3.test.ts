@@ -665,6 +665,39 @@ describe('Esp32s3Core', () => {
     expect(c.injectTwaiFrame({ id: 0x150, data: [0xcc] })).toBe(false); // neither
   });
 
+  it('accepts extended TWAI frames through either dual-mode acceptance filter', () => {
+    // SJA1000 EFF dual-filter mode: each filter compares only ID[28:13] (top 16
+    // bits). Filter 1 = ID[28:13] 0xABCD, Filter 2 = ID[28:13] 0x1234.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [TWAI], [
+      L32R(2, 0), // TWAI
+      MOVI(3, 0xab),
+      S32I(3, 2, 0x40), // ACR0: filter 1 ID[28:21]
+      MOVI(3, 0xcd),
+      S32I(3, 2, 0x44), // ACR1: filter 1 ID[20:13]
+      MOVI(3, 0x12),
+      S32I(3, 2, 0x48), // ACR2: filter 2 ID[28:21]
+      MOVI(3, 0x34),
+      S32I(3, 2, 0x4c), // ACR3: filter 2 ID[20:13]
+      MOVI(3, 0x00),
+      S32I(3, 2, 0x50), // AMR0: compare filter 1 ID[28:21] exactly
+      S32I(3, 2, 0x54), // AMR1: compare filter 1 ID[20:13] exactly
+      S32I(3, 2, 0x58), // AMR2: compare filter 2 ID[28:21] exactly
+      S32I(3, 2, 0x5c), // AMR3: compare filter 2 ID[20:13] exactly
+      S32I(3, 2, 0x00), // leave reset, AFM clear -> dual filter mode
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    c.step(260);
+
+    // Filter 1: 0xABCD << 13 = 0x1579A000; the low 13 ID bits are not compared.
+    expect(c.injectTwaiFrame({ id: 0x1579a000, data: [0x01], extended: true })).toBe(true);
+    expect(c.injectTwaiFrame({ id: 0x1579a123, data: [0x02], extended: true })).toBe(true);
+    // Filter 2: 0x1234 << 13 = 0x02468000.
+    expect(c.injectTwaiFrame({ id: 0x02468000, data: [0x03], extended: true })).toBe(true);
+    // Neither (ID[28:13] = 0xABCE).
+    expect(c.injectTwaiFrame({ id: 0x1579c000, data: [0x04], extended: true })).toBe(false);
+  });
+
   it('surfaces firmware TWAI transmissions to the host bench', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

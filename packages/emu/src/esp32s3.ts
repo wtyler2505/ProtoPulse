@@ -4526,17 +4526,38 @@ export class Esp32s3Core implements McuCore {
   private twaiAcceptsFrame(frame: readonly number[]): boolean {
     // SJA1000 AMR semantics: mask bit 1 means "do not compare". AFM (mode bit
     // 3) selects single (set) vs dual (clear) filter mode. Dual-filter mode is
-    // modeled exactly for standard frames; extended frames in dual mode fall
-    // back to the single-filter compare (exact EFF dual layout is a later cut).
+    // modeled exactly for both standard and extended frames.
     const single = (this.twai.mode & TWAI_MODE_ACCEPTANCE_FILTER) !== 0;
-    const extended = ((frame[0] ?? 0) & TWAI_FRAME_EXTENDED) !== 0;
-    if (single || extended) {
+    if (single) {
       const code = this.twaiAcceptanceCode();
       const mask = this.twaiAcceptanceMask();
       const word = this.twaiFrameAcceptanceWord(frame);
       return (((word ^ code) & ~mask) >>> 0) === 0;
     }
-    return this.twaiAcceptsDualFilterStandard(frame);
+    const extended = ((frame[0] ?? 0) & TWAI_FRAME_EXTENDED) !== 0;
+    return extended
+      ? this.twaiAcceptsDualFilterExtended(frame)
+      : this.twaiAcceptsDualFilterStandard(frame);
+  }
+
+  private twaiAcceptsDualFilterExtended(frame: readonly number[]): boolean {
+    // Dual-filter EFF: each filter compares only ID[28:13] (top 16 bits);
+    // RTR and data bytes do not participate. Filter 1 = ACR0/ACR1,
+    // Filter 2 = ACR2/ACR3. Accept if either matches (mask bit 1 = don't care).
+    const id =
+      ((((frame[1] ?? 0) << 21) | ((frame[2] ?? 0) << 13) | ((frame[3] ?? 0) << 5) | ((frame[4] ?? 0) >>> 3)) &
+        TWAI_EXT_ID_MASK) >>>
+      0;
+    const [acr0, acr1, acr2, acr3, amr0, amr1, amr2, amr3] = [0, 1, 2, 3, 4, 5, 6, 7].map(
+      (i) => this.twai.acceptance[i] ?? 0,
+    ) as [number, number, number, number, number, number, number, number];
+    const compare = 0x1fffe000; // ID[28:13]
+    const code1 = (((acr0 << 21) | (acr1 << 13)) & compare) >>> 0;
+    const mask1 = (((amr0 << 21) | (amr1 << 13)) & compare) >>> 0;
+    if ((((id ^ code1) & ~mask1 & compare) >>> 0) === 0) return true;
+    const code2 = (((acr2 << 21) | (acr3 << 13)) & compare) >>> 0;
+    const mask2 = (((amr2 << 21) | (amr3 << 13)) & compare) >>> 0;
+    return (((id ^ code2) & ~mask2 & compare) >>> 0) === 0;
   }
 
   private twaiAcceptsDualFilterStandard(frame: readonly number[]): boolean {
