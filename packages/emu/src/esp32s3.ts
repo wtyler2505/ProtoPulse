@@ -614,6 +614,7 @@ const TWAI_CLOCK_DIVIDER = 0x7c;
 const TWAI_MODE_RESET = 1 << 0;
 const TWAI_MODE_LISTEN_ONLY = 1 << 1;
 const TWAI_MODE_NO_ACK = 1 << 2;
+const TWAI_MODE_ACCEPTANCE_FILTER = 1 << 3; // AFM: 1 = single filter, 0 = dual filter
 const TWAI_MODE_MASK = 0x0f;
 const TWAI_CMD_TX_REQUEST = 1 << 0;
 const TWAI_CMD_ABORT_TX = 1 << 1;
@@ -4523,13 +4524,48 @@ export class Esp32s3Core implements McuCore {
   }
 
   private twaiAcceptsFrame(frame: readonly number[]): boolean {
-    const code = this.twaiAcceptanceCode();
-    const mask = this.twaiAcceptanceMask();
-    const word = this.twaiFrameAcceptanceWord(frame);
-    // SJA1000-style AMR semantics: mask bit 1 means "do not compare".
-    // This slice models the single-filter register path; dual-filter
-    // mode still uses the same coarse 32-bit compare as an honest cut.
-    return (((word ^ code) & ~mask) >>> 0) === 0;
+    // SJA1000 AMR semantics: mask bit 1 means "do not compare". AFM (mode bit
+    // 3) selects single (set) vs dual (clear) filter mode. Dual-filter mode is
+    // modeled exactly for standard frames; extended frames in dual mode fall
+    // back to the single-filter compare (exact EFF dual layout is a later cut).
+    const single = (this.twai.mode & TWAI_MODE_ACCEPTANCE_FILTER) !== 0;
+    const extended = ((frame[0] ?? 0) & TWAI_FRAME_EXTENDED) !== 0;
+    if (single || extended) {
+      const code = this.twaiAcceptanceCode();
+      const mask = this.twaiAcceptanceMask();
+      const word = this.twaiFrameAcceptanceWord(frame);
+      return (((word ^ code) & ~mask) >>> 0) === 0;
+    }
+    return this.twaiAcceptsDualFilterStandard(frame);
+  }
+
+  private twaiAcceptsDualFilterStandard(frame: readonly number[]): boolean {
+    const info = frame[0] ?? 0;
+    const rtr = (info & TWAI_FRAME_RTR) !== 0 ? 1 : 0;
+    const id = ((((frame[1] ?? 0) << 3) | ((frame[2] ?? 0) >>> 5)) & TWAI_STD_ID_MASK) >>> 0;
+    const data0 = (frame[3] ?? 0) & 0xff;
+    const [acr0, acr1, acr2, acr3, amr0, amr1, amr2, amr3] = [0, 1, 2, 3, 4, 5, 6, 7].map(
+      (i) => this.twai.acceptance[i] ?? 0,
+    ) as [number, number, number, number, number, number, number, number];
+
+    // Filter 1: ID[10:3]=ACR0, ID[2:0]=ACR1[7:5], RTR=ACR1[4],
+    // data byte 1 = ACR1[3:0]<<4 | ACR3[3:0].
+    const f1IdCode = ((acr0 << 3) | (acr1 >>> 5)) & TWAI_STD_ID_MASK;
+    const f1IdMask = ((amr0 << 3) | (amr1 >>> 5)) & TWAI_STD_ID_MASK;
+    const f1IdMatch = (((id ^ f1IdCode) & ~f1IdMask) & TWAI_STD_ID_MASK) === 0;
+    const f1RtrMatch = ((amr1 >>> 4) & 1) === 1 || ((acr1 >>> 4) & 1) === rtr;
+    const f1DataCode = (((acr1 & 0x0f) << 4) | (acr3 & 0x0f)) & 0xff;
+    const f1DataMask = (((amr1 & 0x0f) << 4) | (amr3 & 0x0f)) & 0xff;
+    // Data filtering applies to data frames only; remote frames carry no data.
+    const f1DataMatch = rtr === 1 || (((data0 ^ f1DataCode) & ~f1DataMask) & 0xff) === 0;
+    if (f1IdMatch && f1RtrMatch && f1DataMatch) return true;
+
+    // Filter 2: ID[10:3]=ACR2, ID[2:0]=ACR3[7:5], RTR=ACR3[4]; ID+RTR only.
+    const f2IdCode = ((acr2 << 3) | (acr3 >>> 5)) & TWAI_STD_ID_MASK;
+    const f2IdMask = ((amr2 << 3) | (amr3 >>> 5)) & TWAI_STD_ID_MASK;
+    const f2IdMatch = (((id ^ f2IdCode) & ~f2IdMask) & TWAI_STD_ID_MASK) === 0;
+    const f2RtrMatch = ((amr3 >>> 4) & 1) === 1 || ((acr3 >>> 4) & 1) === rtr;
+    return f2IdMatch && f2RtrMatch;
   }
 
   private twaiPushRxFrame(frame: number[], applyFilter: boolean): boolean {

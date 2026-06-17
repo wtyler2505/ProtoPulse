@@ -1500,6 +1500,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       129-recessive-bit recovery wait is not modeled (recovery is
       immediate), and recovery via a direct TEC-counter write does not
       yet emit the state-change event
+- [x] ESP32-S3 core slice 111 — TWAI dual-filter acceptance mode
+      (landed 2026-06-17): the AFM mode bit (mode bit 3) now selects
+      single (set) vs dual (clear) acceptance filtering. Dual mode is
+      modeled exactly for standard frames per the SJA1000 layout — two
+      ID+RTR filters (ACR0/ACR1 and ACR2/ACR3), filter 1 also matching
+      data byte 1 (ACR1[3:0]<<4 | ACR3[3:0]); a frame is accepted if
+      either filter matches. Proven by a dual-filter test accepting two
+      distinct IDs and rejecting a third. Cuts: extended-frame dual
+      filtering still falls back to the single-filter coarse compare;
+      no bit timing, arbitration, retry scheduling, or wire-level GPIO
+      waveform yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

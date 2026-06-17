@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 111: TWAI dual-filter acceptance mode
+
+### Added
+- **TWAI/CAN dual-filter acceptance mode** (@protopulse/emu): the AFM
+  mode bit (mode register bit 3) now selects single-filter (set) vs
+  dual-filter (clear) acceptance. Dual mode is modeled exactly for
+  standard frames per the SJA1000 layout — two ID+RTR filters
+  (ACR0/ACR1 and ACR2/ACR3); filter 1 additionally matches data byte 1
+  (high nibble ACR1[3:0], low nibble ACR3[3:0]). A frame is accepted if
+  either filter matches. This closes the prior honest cut where dual
+  mode reused the coarse single-filter 32-bit compare.
+
+### Verified
+- Added a dual-filter test configuring filter 1 for std ID 0x123 and
+  filter 2 for std ID 0x200, asserting both IDs are accepted and a third
+  (0x150) is rejected via `injectTwaiFrame`.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 178 ESP32-S3 tests.
+
+### Honest cuts
+- Extended-frame dual filtering still falls back to the single-filter
+  coarse compare (exact EFF dual layout is a later slice). Bit-timing,
+  arbitration, retry scheduling, and wire-level GPIO waveform remain
+  open.
+
 ## 2026-06-17 — ESP32-S3 slice 110: TWAI bus-off recovery
 
 ### Added

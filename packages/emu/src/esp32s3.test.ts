@@ -633,6 +633,38 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([1, 1, 2, TWAI_STD_ID_0X123_BYTE0, TWAI_STD_ID_0X123_BYTE1, 0xaa, 0xbb]);
   });
 
+  it('accepts host-injected TWAI frames through either dual-mode acceptance filter', () => {
+    // SJA1000 dual-filter mode (AFM clear): two standard-frame ID filters,
+    // accept if EITHER matches. Filter 1 = std ID 0x123, Filter 2 = std ID 0x200.
+    const image = assembleXtensa(ESP32S3_IRAM_BASE, [TWAI], [
+      L32R(2, 0), // TWAI
+      MOVI(3, 0x24),
+      S32I(3, 2, 0x40), // ACR0: filter 1 std ID 0x123 bits 10..3
+      MOVI(3, 0x60),
+      S32I(3, 2, 0x44), // ACR1: filter 1 ID 0x123 bits 2..0 (<<5)
+      MOVI(3, 0x40),
+      S32I(3, 2, 0x48), // ACR2: filter 2 std ID 0x200 bits 10..3
+      MOVI(3, 0x00),
+      S32I(3, 2, 0x4c), // ACR3: filter 2 ID 0x200 bits 2..0 (zero)
+      S32I(3, 2, 0x50), // AMR0: compare filter 1 ID bits 10..3
+      MOVI(3, 0x1f),
+      S32I(3, 2, 0x54), // AMR1: compare ID bits 2..0, ignore RTR + data nibble
+      MOVI(3, 0x00),
+      S32I(3, 2, 0x58), // AMR2: compare filter 2 ID bits 10..3
+      MOVI(3, 0x1f),
+      S32I(3, 2, 0x5c), // AMR3: compare ID bits 2..0, ignore RTR + data nibble
+      MOVI(3, 0),
+      S32I(3, 2, 0x00), // leave reset, AFM clear -> dual filter mode
+      J(BR(-1)),
+    ]);
+    const c = core(image);
+    c.step(260);
+
+    expect(c.injectTwaiFrame({ id: 0x123, data: [0xaa] })).toBe(true); // filter 1
+    expect(c.injectTwaiFrame({ id: 0x200, data: [0xbb] })).toBe(true); // filter 2
+    expect(c.injectTwaiFrame({ id: 0x150, data: [0xcc] })).toBe(false); // neither
+  });
+
   it('surfaces firmware TWAI transmissions to the host bench', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
