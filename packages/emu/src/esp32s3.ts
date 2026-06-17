@@ -662,6 +662,7 @@ const INTMTX_UART2_MAP = 0x074; // INTERRUPT_CORE0_UART2_INTR_MAP_REG
 const INTMTX_PWM0_MAP = 0x07c; // INTERRUPT_CORE0_PWM0_INTR_MAP_REG
 const INTMTX_PWM1_MAP = 0x080; // INTERRUPT_CORE0_PWM1_INTR_MAP_REG
 const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
+const INTMTX_EFUSE_MAP = 0x090; // INTERRUPT_CORE0_EFUSE_INT_MAP_REG (source 36)
 const INTMTX_CAN_MAP = 0x094; // INTERRUPT_CORE0_CAN_INT_MAP_REG
 const INTMTX_RTC_CORE_MAP = 0x09c; // INTERRUPT_CORE0_RTC_CORE_INTR_MAP_REG
 const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
@@ -2340,6 +2341,7 @@ export class Esp32s3Core implements McuCore {
   private efuseConf = 0;
   private efuseIntRaw = 0;
   private efuseIntEna = 0;
+  private efuseIntMaps: InterruptMapPair = freshInterruptMapPair();
   private efuseDacConf = EFUSE_DAC_CONF_RESET;
   private efuseRdTimConf = EFUSE_RD_TIM_CONF_RESET;
   private efuseWrTimConf1 = EFUSE_WR_TIM_CONF1_RESET;
@@ -3417,6 +3419,7 @@ export class Esp32s3Core implements McuCore {
     this.efuseConf = 0;
     this.efuseIntRaw = 0;
     this.efuseIntEna = 0;
+    this.efuseIntMaps = freshInterruptMapPair();
     this.efuseDacConf = EFUSE_DAC_CONF_RESET;
     this.efuseRdTimConf = EFUSE_RD_TIM_CONF_RESET;
     this.efuseWrTimConf1 = EFUSE_WR_TIM_CONF1_RESET;
@@ -6274,6 +6277,7 @@ export class Esp32s3Core implements McuCore {
     if (spi3Pending) raise(this.spi[1]?.maps ?? freshInterruptMapPair());
     if (apbAdcPending) raise(this.apbSaradcIntMaps);
     if (rtcPending) raise(this.rtcCoreIntMaps);
+    if ((this.efuseIntRaw & this.efuseIntEna) !== 0) raise(this.efuseIntMaps);
     for (let n = 0; n < this.systimer.comps.length; n++) {
       const c = this.systimer.comps[n];
       if (c !== undefined && (this.systimer.intRaw & this.systimer.intEna & (1 << n)) !== 0) raise(c.maps);
@@ -6637,6 +6641,7 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_PWM1_MAP) return this.mcpwm[1]?.maps[core] ?? INTMTX_DEFAULT_MAP;
       if (sourceOff === INTMTX_LEDC_MAP) return this.ledcIntMaps[core];
       if (sourceOff === INTMTX_CAN_MAP) return this.twai.maps[core];
+      if (sourceOff === INTMTX_EFUSE_MAP) return this.efuseIntMaps[core];
       if (sourceOff === INTMTX_RTC_CORE_MAP) return this.rtcCoreIntMaps[core];
       if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
       if (sourceOff === INTMTX_PCNT_MAP) return this.pcntIntMaps[core];
@@ -7213,7 +7218,10 @@ export class Esp32s3Core implements McuCore {
         if (group !== undefined) group.maps[core] = value & 0x1f;
       } else if (sourceOff === INTMTX_LEDC_MAP) this.ledcIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_CAN_MAP) this.twai.maps[core] = value & 0x1f;
-      else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
+      else if (sourceOff === INTMTX_EFUSE_MAP) {
+        this.efuseIntMaps[core] = value & 0x1f;
+        this.recomputeIrq();
+      } else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_PCNT_MAP) this.pcntIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_I2C_EXT0_MAP) {
@@ -7958,18 +7966,22 @@ export class Esp32s3Core implements McuCore {
         if ((v & EFUSE_PGM_CMD) !== 0 && this.efuseConf === EFUSE_WRITE_OP_CODE) {
           this.efuseProgramBlock((v & EFUSE_BLK_NUM_MASK) >>> EFUSE_BLK_NUM_SHIFT);
         }
+        this.recomputeIrq();
         return;
       }
       if (off === EFUSE_INT_RAW) {
         this.efuseIntRaw |= v & EFUSE_DONE_INTS;
+        this.recomputeIrq();
         return;
       }
       if (off === EFUSE_INT_ENA) {
         this.efuseIntEna = v & EFUSE_DONE_INTS;
+        this.recomputeIrq();
         return;
       }
       if (off === EFUSE_INT_CLR) {
         this.efuseIntRaw &= ~(v & EFUSE_DONE_INTS);
+        this.recomputeIrq();
         return;
       }
       if (off === EFUSE_DAC_CONF) {

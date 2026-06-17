@@ -2,6 +2,28 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 123: eFuse interrupt-matrix routing
+
+### Added
+- **eFuse interrupt → CPU** (@protopulse/emu): closes a remaining
+  interrupt-delivery gap. The eFuse read/program-done interrupt (its
+  `INT_RAW/ST/ENA/CLR` registers were already modeled) now reaches a CPU
+  interrupt: `INTERRUPT_CORE0_EFUSE_INT_MAP_REG` (matrix offset `0x090`,
+  source 36 — verified against esp-idf `interrupt_core0_reg.h`) routes it,
+  and `recomputeIrq` raises it while `INT_RAW & INT_ENA` holds. The eFuse
+  INT register writes now recompute the IRQ line.
+
+### Verified
+- Added a level-1 handler test: a read command (`CONF = READ_OP_CODE`,
+  `CMD = READ_CMD`) latches the read-done interrupt, which routes via
+  source 36 to the CPU; the ISR runs once and clears it.
+- `npm run -w @protopulse/emu test` passed with 278 package tests
+  (191 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- Real ESP-IDF firmware polls eFuse status during burns, so this is a
+  completeness fix (the interrupt path) rather than a critical path.
+
 ## 2026-06-17 — ESP32-S3 slice 122: SYSTIMER COMP1/COMP2 + TIMER_UNIT_SEL
 
 ### Added

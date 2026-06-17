@@ -1497,6 +1497,68 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([1, 0]);
   });
 
+  it('routes the eFuse read-done interrupt through the interrupt matrix to a level-1 handler', () => {
+    // interrupt_core0_reg.h: INTERRUPT_CORE0_EFUSE_INT_MAP_REG = +0x090 (source 36).
+    // A read command (CONF = READ_OP_CODE, CMD = READ_CMD) latches the eFuse
+    // read-done interrupt, which the matrix routes to a CPU interrupt; the ISR clears
+    // it. (Real firmware usually polls, but the interrupt path is now wired.)
+    const SCRATCH = ESP32S3_DRAM_BASE + 0x9c0;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [UART, 0x60007000, INTMTX, SCRATCH, ESP32S3_IRAM_BASE, 0x5aa5],
+      [
+        L32R(13, 3), // scratch
+        MOVI(14, 0),
+        S32I(14, 13, 0), // ISR counter = 0
+        L32R(14, 4),
+        WSR(14, SR.VECBASE),
+
+        L32R(3, 1), // EFUSE
+        L32R(4, 5),
+        S32I(4, 3, 0x1cc), // EFUSE_CONF = READ_OP_CODE (0x5aa5)
+        MOVI(4, 1),
+        S32I(4, 3, 0x1e0), // EFUSE_INT_ENA = READ_DONE
+
+        L32R(15, 2), // interrupt matrix
+        MOVI(4, 0),
+        S32I(4, 15, 0x90), // EFUSE source (36) -> CPU line 0
+        MOVI(4, 1),
+        WSR(4, SR.INTENABLE),
+        RSIL(12, 0),
+
+        MOVI(4, 1),
+        S32I(4, 3, 0x1d4), // EFUSE_CMD = READ_CMD -> latches read-done interrupt
+
+        MOVI(11, 1),
+        L32I(4, 13, 0),
+        BNE(4, 11, BR(-2)), // spin until the ISR has run
+
+        L32R(2, 0), // UART
+        S32I(4, 2, 0x00), // ISR counter (expect 1)
+        L32I(5, 3, 0x1d8),
+        S32I(5, 2, 0x00), // INT_RAW after clear (expect 0)
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 3),
+        S32I(3, 2, 8),
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0), // ISR counter++
+        L32R(3, 1), // EFUSE
+        MOVI(4, 1),
+        S32I(4, 3, 0x1e4), // EFUSE_INT_CLR = READ_DONE
+        L32I(3, 2, 8),
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(800);
+    expect([...c.drainUart()]).toEqual([1, 0]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

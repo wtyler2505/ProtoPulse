@@ -1648,6 +1648,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       UNIT1 through matrix source 58. SYSTIMER now models both counters,
       all three comparators, one-shot + periodic modes, unit selection, and
       full interrupt delivery
+- [x] ESP32-S3 core slice 123 — eFuse interrupt-matrix routing
+      (landed 2026-06-17): closes a remaining interrupt-delivery gap. The
+      eFuse read/program-done interrupt (its INT_RAW/ST/ENA/CLR registers
+      were already modeled) now reaches the CPU:
+      INTERRUPT_CORE0_EFUSE_INT_MAP_REG (matrix offset 0x090, source 36,
+      verified against esp-idf interrupt_core0_reg.h via the source-16
+      offset formula) routes it, and recomputeIrq raises it while
+      INT_RAW & INT_ENA holds (the eFuse INT register writes now recompute
+      the IRQ line). Proven by a level-1 handler test where a read command
+      latches the interrupt, the ISR runs and clears it. Real IDF firmware
+      polls eFuse status, so this is a completeness fix rather than a
+      critical path
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
