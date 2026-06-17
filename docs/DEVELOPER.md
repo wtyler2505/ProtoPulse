@@ -83,7 +83,7 @@ Engine monorepo scripts (no database required — see [Section 15](#15-the-engin
 | Script | Description |
 |---|---|
 | `npm run check:packages` | Typecheck every `@protopulse/*` package |
-| `npm run test:packages` | Run all 1,377 engine tests |
+| `npm run test:packages` | Run all 1,517 engine tests |
 | `npm run -w @protopulse/app dev` | New schematic editor on `http://localhost:5174` |
 | `npm run -w @protopulse/cli build` | Build the CLI → `node packages/cli/dist/protopulse.js` |
 
@@ -1617,7 +1617,7 @@ One canonical design graph, many projections. Every mutation is a typed operatio
 | `@protopulse/drc` | Width/clearance/annular/drill/edge/zone checks against the selected fab deck — flatbush broad phase, exact distance math. Every code maps to a concept article. |
 | `@protopulse/route` | Interactive routing engine: walkaround (hull walks), shove with spring-back and cascade, zone pours (martinez clipping, thermal reliefs). |
 | `@protopulse/sim` | Graph→SPICE with model fidelity tiers; ngspice-WASM engine (eecircuit-engine); op/tran/dc/ac/noise, Monte Carlo, parameter stepping, FFT. |
-| `@protopulse/emu` | MCU cores under one `McuCore` contract: ATmega328P on avr8js (timers 0/1/2, UART, ADC, SPI, TWI, EEPROM, watchdog) and RP2040 on rp2040js — each with a hand-assembler test rig running real machine code. |
+| `@protopulse/emu` | MCU cores under one `McuCore` contract: ATmega328P on avr8js (timers 0/1/2, UART, ADC, SPI, TWI, EEPROM, watchdog), RP2040 on rp2040js, and a from-scratch ESP32-S3 Xtensa LX7 core with app-image/XIP loading, interrupts, ADC/TIMG/GDMA/LEDC/RMT/RTC/touch/PCNT/I2C/SPI/MCPWM/TWAI surfaces, and host-drained TWAI TX/RX/error/state-change events through slice 108. Each core has a hand-assembler test rig running real machine code. |
 | `@protopulse/cosim` | The firmware↔analog loop: GPIO edges as PWL sources into SPICE; solved voltages back through comparator inputs and the ADC; honest from-zero re-solve accounting. |
 | `@protopulse/review` | Design review as an artifact: versioned decks (enable/disable, severity overrides, extraChecks), executable fixes, stored reports with opened/closed deltas. |
 | `@protopulse/relay` | The sync relay: WebSocket rooms that union op-log envelopes across ALL branches; optional token auth and JSONL room persistence. The relay carries, never owns. |
@@ -1626,7 +1626,7 @@ One canonical design graph, many projections. Every mutation is a typed operatio
 
 ```bash
 npm run check:packages           # typecheck every package (one program)
-npm run test:packages            # all 1,377 package tests
+npm run test:packages            # all 1,517 package tests
 npm run -w @protopulse/app dev   # new editor → http://localhost:5174
 npm run -w @protopulse/cli build # then: node packages/cli/dist/protopulse.js check <design>
 ```

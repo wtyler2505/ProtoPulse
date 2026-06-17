@@ -15,7 +15,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![Engine Tests](https://img.shields.io/badge/Engine_Tests-1,377_passing-6da13f?style=flat-square&logo=vitest&logoColor=white)](packages/README.md)
+[![Engine Tests](https://img.shields.io/badge/Engine_Tests-1,517_passing-6da13f?style=flat-square&logo=vitest&logoColor=white)](packages/README.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-00F0FF?style=flat-square)](LICENSE)
 
 [**Features**](#features) · [**Why ProtoPulse**](#why-protopulse) · [**Quick Start**](#quick-start) · [**The Engine**](#the-engine-packages) · [**AI Engine**](#ai-engine) · [**Architecture**](#architecture) · [**Roadmap**](#roadmap) · [**Docs**](#documentation)
@@ -210,7 +210,7 @@ npm start               # Production server
 npm run check           # TypeScript type check (must pass clean)
 npm run db:push         # Sync Drizzle schema to PostgreSQL
 npm test                # Legacy suite (725 files, ~30.5k tests)
-npm run test:packages   # Engine suite (1,377 tests, all green)
+npm run test:packages   # Engine suite (1,517 tests, all green)
 npm run test:watch      # Vitest interactive watch mode
 npm run test:coverage   # Tests with v8 coverage report
 npx eslint .            # Lint (strict TypeScript rules)
@@ -263,17 +263,17 @@ The thesis: **one canonical design graph, many projections.** Every mutation is 
 | `@protopulse/graph` | The core — typed ops, integer-nm coordinates, branch/diff/merge, `.ppx` stores. 100% branch coverage gate, enforced in CI. |
 | `@protopulse/parts` · `erc` · `export` | 18-part seed library with provenance tiers + community part packs · pin-conflict ERC with executable fixes · byte-exact KiCad netlist, BOM, Gerber X2, Excellon, pick-and-place, panelization |
 | `@protopulse/drc` · `route` | DRC against versioned fab decks (JLC / OSHPark / PCBWay) · walkaround + shove-with-spring-back routing, zone pours with thermal reliefs |
-| `@protopulse/sim` · `cosim` · `emu` | ngspice-WASM simulation with fidelity tiers, Monte Carlo, FFT · the closed firmware↔analog co-sim loop · ATmega328P, RP2040, and a from-scratch ESP32-S3 Xtensa core (windowed ABI, interrupts, ADC, timers, XIP from real `.bin` app images) running real machine code |
+| `@protopulse/sim` · `cosim` · `emu` | ngspice-WASM simulation with fidelity tiers, Monte Carlo, FFT · the closed firmware↔analog co-sim loop · ATmega328P, RP2040, and a from-scratch ESP32-S3 Xtensa core (windowed ABI, interrupts, ADC, timers, XIP from real `.bin` app images, plus PCNT/I2C/SPI/MCPWM/TWAI surfaces) running real machine code |
 | `@protopulse/cli` | `protopulse check` / `export` / `import-legacy` — headless ERC, "CI for circuits" (exit 0/1/2), the legacy-Postgres migration path |
 | `@protopulse/renderer` · `app` | WebGL2 scene graph with SDF text + GPU picking · the editor: schematic + PCB modes, sim panels, branches with merge resolver, replay, live sync, fab exports |
 | `@protopulse/ai` · `review` · `relay` | The **six-member crew** (Draftsman · Analyst · Professor · Router · Architect · Buyer) on one runtime with op-log blame · versioned design-review decks · the zero-conflict sync relay |
 | `@protopulse/content` | Fab rule decks, review decks, sourcing catalog, the complete 88-article concepts wiki, curriculum Track 1 "First Light" |
 
-**1,377 tests**, own CI (`.github/workflows/packages-ci.yml`): typecheck, lint, tests, golden smoke, builds.
+**1,517 tests**, own CI (`.github/workflows/packages-ci.yml`): typecheck, lint, tests, golden smoke, builds.
 
 ```bash
 npm run check:packages           # typecheck every package
-npm run test:packages            # all 1,377 engine tests
+npm run test:packages            # all 1,517 engine tests
 npm run -w @protopulse/app dev   # new editor → http://localhost:5174
 npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
 ```
@@ -469,7 +469,7 @@ shared/
 <tr>
 <td align="center"><strong>725</strong><br><sub>legacy test files</sub></td>
 <td align="center"><strong>~30.5k</strong><br><sub>legacy tests passing</sub></td>
-<td align="center"><strong>1,377</strong><br><sub>engine tests, all green</sub></td>
+<td align="center"><strong>1,517</strong><br><sub>engine tests, all green</sub></td>
 <td align="center"><strong>0</strong><br><sub>TypeScript errors</sub></td>
 <td align="center"><strong>47</strong><br><sub>database tables</sub></td>
 <td align="center"><strong>50+</strong><br><sub>API endpoints</sub></td>
@@ -482,7 +482,7 @@ shared/
 - **v8 coverage** reporting
 - **ESLint** strict TypeScript rules + **Prettier** formatting (covers `packages/` too — zero errors policy)
 - **Zod** validation on every API boundary
-- The engine adds its own **1,377 tests** (`npm run test:packages`), byte-exact golden-file export tests in `tools/golden/`, and a **100% branch coverage gate** on the graph core — all enforced in a separate, fully green CI workflow
+- The engine adds its own **1,517 tests** (`npm run test:packages`), byte-exact golden-file export tests in `tools/golden/`, and a **100% branch coverage gate** on the graph core — all enforced in a separate, fully green CI workflow
 - Honest note: ~421 legacy tests are env-dependent and failing on `main` (tracked in [ROADMAP — off-vision work items](ROADMAP.md#off-vision-work-items)); the engine workflow is the merge gate and stays green
 
 <br>
