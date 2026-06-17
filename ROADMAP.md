@@ -1636,6 +1636,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       once enabled. Cuts: COMP1/COMP2 comparators (matrix sources 58/59)
       and TIMER_UNIT_SEL (which UNIT drives each comparator) remain
       follow-on slices
+- [x] ESP32-S3 core slice 122 — SYSTIMER COMP1/COMP2 + TIMER_UNIT_SEL
+      (landed 2026-06-17): completes the SYSTIMER peripheral. The single
+      comparator was refactored into a clean 3-comparator array, so COMP1
+      and COMP2 share the COMP0 one-shot/period alarm logic, each with its
+      own TARGETn registers (HI 0x1c+8n, LO 0x20+8n, CONF 0x34+4n),
+      COMPn_LOAD (0x50+4n), INT bit n, CONF enable (bit 7+n), and
+      interrupt-matrix source (57/58/59 at map offsets 0x0e4+4n). Added
+      TARGETn_CONF bit 31 (TIMER_UNIT_SEL) so any comparator can be driven
+      by UNIT0 or UNIT1. Proven by a COMP1 level-1 handler test driven by
+      UNIT1 through matrix source 58. SYSTIMER now models both counters,
+      all three comparators, one-shot + periodic modes, unit selection, and
+      full interrupt delivery
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

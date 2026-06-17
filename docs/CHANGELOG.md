@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 122: SYSTIMER COMP1/COMP2 + TIMER_UNIT_SEL
+
+### Added
+- **SYSTIMER comparators 1 & 2 + unit selection** (@protopulse/emu):
+  completes the SYSTIMER peripheral. The single comparator was refactored
+  into a clean 3-comparator array, so COMP1/COMP2 share COMP0's
+  one-shot/period alarm logic — each with its own `TARGETn` registers
+  (HI `0x1c+8n`, LO `0x20+8n`, CONF `0x34+4n`), `COMPn_LOAD` (`0x50+4n`),
+  `INT` bit n, CONF enable (bit `7+n`), and interrupt-matrix source
+  (57/58/59 at map offsets `0x0e4+4n`). `TARGETn_CONF` bit 31
+  (`TIMER_UNIT_SEL`) now lets any comparator be driven by UNIT0 or UNIT1.
+
+### Verified
+- Added a COMP1 level-1 handler test driven by **UNIT1** (exercising
+  `TIMER_UNIT_SEL`) and routed through interrupt-matrix **source 58**
+  (offset `0x0e8`). The existing COMP0 tests guard the array refactor.
+- `npm run -w @protopulse/emu test` passed with 277 package tests
+  (190 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- SYSTIMER is now functionally complete (two counters, three comparators,
+  one-shot + periodic, unit selection, full interrupt delivery). The
+  core-stall gating bits remain unmodeled (no functional effect in the
+  current scheduler).
+
 ## 2026-06-17 — ESP32-S3 slice 121: SYSTIMER second counter (UNIT1)
 
 ### Added

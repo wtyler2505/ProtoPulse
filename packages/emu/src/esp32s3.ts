@@ -1101,16 +1101,13 @@ const SYSTIMER_UNIT1_VALUE_HI = 0x48;
 const SYSTIMER_UNIT1_VALUE_LO = 0x4c;
 const SYSTIMER_UNIT1_LOAD = 0x60;
 const SYSTIMER_TIMER_UNIT1_WORK_EN = 1 << 2; // CONF bit 2
-const SYSTIMER_TARGET0_HI = 0x1c;
-const SYSTIMER_TARGET0_LO = 0x20;
-const SYSTIMER_TARGET0_CONF = 0x34;
-const SYSTIMER_COMP0_LOAD = 0x50;
 const SYSTIMER_INT_ENA = 0x64;
 const SYSTIMER_INT_RAW = 0x68;
 const SYSTIMER_INT_CLR = 0x6c;
 const SYSTIMER_INT_ST = 0x70;
 const SYSTIMER_TIMER_UNIT0_WORK_EN = 1 << 1; // CONF bit 1
-const SYSTIMER_TARGET0_WORK_EN = 1 << 7; // CONF bit 7 — enable COMP0
+const SYSTIMER_TARGET0_WORK_EN = 1 << 7; // CONF bit 7 — enable COMP0 (COMP1=8, COMP2=9)
+const SYSTIMER_TARGET_UNIT_SEL = 1 << 31; // TARGETn_CONF bit 31 — 0=UNIT0, 1=UNIT1
 const SYSTIMER_TIMER_UNIT0_UPDATE = 1 << 30; // UNIT0_OP write strobe
 const SYSTIMER_TIMER_UNIT0_VALUE_VALID = 1 << 29; // UNIT0_OP read-only flag
 const SYSTIMER_TARGET0_INT = 1 << 0; // INT_* bit 0 — COMP0/TARGET0 alarm
@@ -2100,6 +2097,21 @@ const freshTwaiController = (): TwaiController => ({
   maps: freshInterruptMapPair(),
 });
 
+/** One SYSTIMER comparator (COMP0/1/2). Each compares the counter selected by
+ *  TARGET_UNIT_SEL against an alarm value, in one-shot or auto-reload mode, and
+ *  drives its own interrupt-matrix source (57/58/59). */
+interface SystimerComparator {
+  targetHi: number; // staged alarm value (applied on COMPn_LOAD)
+  targetLo: number;
+  conf: number; // staged TARGETn_CONF (period/mode/unit-sel)
+  active: number; // active comparator value
+  loaded: boolean;
+  periodMode: boolean; // auto-reload (period) vs one-shot (target)
+  period: number; // PERIOD ticks for auto-reload
+  unit1: boolean; // TARGET_UNIT_SEL: drive from UNIT1 instead of UNIT0
+  maps: InterruptMapPair; // TARGETn -> CPU interrupt routing
+}
+
 interface SystimerController {
   conf: number;
   unit0Base: number; // counter value at unit0Sync
@@ -2116,16 +2128,9 @@ interface SystimerController {
   unit1ValueHi: number;
   unit1ValueLo: number;
   unit1ValueValid: boolean;
-  target0Hi: number; // staged alarm value (applied to comp0 on COMP0_LOAD)
-  target0Lo: number;
-  target0Conf: number;
-  comp0Target: number; // active comparator value
-  comp0Loaded: boolean;
-  comp0PeriodMode: boolean; // auto-reload (period) vs one-shot (target)
-  comp0Period: number; // PERIOD ticks for auto-reload
+  comps: SystimerComparator[]; // COMP0/1/2
   intRaw: number; // TARGET0/1/2 alarm latches (bits 0..2)
   intEna: number;
-  maps: InterruptMapPair; // TARGET0 -> CPU interrupt routing (matrix source 57)
 }
 
 const freshSystimer = (): SystimerController => ({
@@ -2144,15 +2149,20 @@ const freshSystimer = (): SystimerController => ({
   unit1ValueHi: 0,
   unit1ValueLo: 0,
   unit1ValueValid: false,
-  target0Hi: 0,
-  target0Lo: 0,
-  target0Conf: 0,
-  comp0Target: 0,
-  comp0Loaded: false,
-  comp0PeriodMode: false,
-  comp0Period: 0,
+  comps: [freshSystimerComparator(), freshSystimerComparator(), freshSystimerComparator()],
   intRaw: 0,
   intEna: 0,
+});
+
+const freshSystimerComparator = (): SystimerComparator => ({
+  targetHi: 0,
+  targetLo: 0,
+  conf: 0,
+  active: 0,
+  loaded: false,
+  periodMode: false,
+  period: 0,
+  unit1: false,
   maps: freshInterruptMapPair(),
 });
 
@@ -3535,6 +3545,10 @@ export class Esp32s3Core implements McuCore {
   }
 
   private systimerRead(off: number): number {
+    // Comparator register banks (COMP0/1/2): HI 0x1c+8n, LO 0x20+8n, CONF 0x34+4n.
+    if (off === 0x1c || off === 0x24 || off === 0x2c) return (this.systimer.comps[(off - 0x1c) / 8]?.targetHi ?? 0) >>> 0;
+    if (off === 0x20 || off === 0x28 || off === 0x30) return (this.systimer.comps[(off - 0x20) / 8]?.targetLo ?? 0) >>> 0;
+    if (off === 0x34 || off === 0x38 || off === 0x3c) return (this.systimer.comps[(off - 0x34) / 4]?.conf ?? 0) >>> 0;
     switch (off) {
       case SYSTIMER_CONF:
         return this.systimer.conf >>> 0;
@@ -3558,12 +3572,6 @@ export class Esp32s3Core implements McuCore {
         return this.systimer.unit1ValueHi >>> 0;
       case SYSTIMER_UNIT1_VALUE_LO:
         return this.systimer.unit1ValueLo >>> 0;
-      case SYSTIMER_TARGET0_HI:
-        return this.systimer.target0Hi >>> 0;
-      case SYSTIMER_TARGET0_LO:
-        return this.systimer.target0Lo >>> 0;
-      case SYSTIMER_TARGET0_CONF:
-        return this.systimer.target0Conf >>> 0;
       case SYSTIMER_INT_ENA:
         return this.systimer.intEna >>> 0;
       case SYSTIMER_INT_RAW:
@@ -3577,6 +3585,26 @@ export class Esp32s3Core implements McuCore {
 
   private systimerWrite(off: number, value: number): void {
     const v = value >>> 0;
+    // Comparator banks: HI 0x1c+8n, LO 0x20+8n, CONF 0x34+4n, COMPn_LOAD 0x50+4n.
+    if (off === 0x1c || off === 0x24 || off === 0x2c) {
+      const c = this.systimer.comps[(off - 0x1c) / 8];
+      if (c) c.targetHi = v & 0xfffff;
+      return;
+    }
+    if (off === 0x20 || off === 0x28 || off === 0x30) {
+      const c = this.systimer.comps[(off - 0x20) / 8];
+      if (c) c.targetLo = v;
+      return;
+    }
+    if (off === 0x34 || off === 0x38 || off === 0x3c) {
+      const c = this.systimer.comps[(off - 0x34) / 4];
+      if (c) c.conf = v;
+      return;
+    }
+    if (off === 0x50 || off === 0x54 || off === 0x58) {
+      this.systimerLoadComparator((off - 0x50) / 4);
+      return;
+    }
     switch (off) {
       case SYSTIMER_CONF:
         // Freeze both counters under the old run-state before applying the new one.
@@ -3622,29 +3650,6 @@ export class Esp32s3Core implements McuCore {
         this.systimer.unit1Base = (this.systimer.unit1LoadHi * 0x100000000 + this.systimer.unit1LoadLo) % SYSTIMER_COUNT_MOD;
         this.systimer.unit1Sync = this.cpu.cycles;
         return;
-      case SYSTIMER_TARGET0_HI:
-        this.systimer.target0Hi = v & 0xfffff;
-        return;
-      case SYSTIMER_TARGET0_LO:
-        this.systimer.target0Lo = v;
-        return;
-      case SYSTIMER_TARGET0_CONF:
-        this.systimer.target0Conf = v;
-        return;
-      case SYSTIMER_COMP0_LOAD: {
-        // Apply the staged comparator config (sync strobe). Period mode arms the
-        // first alarm one PERIOD ahead of the counter and auto-reloads; target mode
-        // uses the absolute TARGET0_HI/LO value.
-        const periodMode = (this.systimer.target0Conf & SYSTIMER_TARGET0_PERIOD_MODE) !== 0;
-        this.systimer.comp0PeriodMode = periodMode;
-        this.systimer.comp0Period = this.systimer.target0Conf & SYSTIMER_TARGET0_PERIOD_MASK;
-        this.systimer.comp0Target = periodMode
-          ? this.systimerUnit0Value() + this.systimer.comp0Period
-          : this.systimer.target0Hi * 0x100000000 + this.systimer.target0Lo;
-        this.systimer.comp0Loaded = true;
-        this.systimerCheckAlarms();
-        return;
-      }
       case SYSTIMER_INT_ENA:
         this.systimer.intEna = v & SYSTIMER_INT_MASK;
         this.recomputeIrq();
@@ -3658,25 +3663,44 @@ export class Esp32s3Core implements McuCore {
     }
   }
 
-  /** Per-instruction comparator check (mirrors checkAlarm). COMP0 in one-shot/target
-   *  mode latches TARGET0's interrupt while UNIT0's counter has reached the target;
-   *  software clears it and reprograms the target forward (as esp_timer does). */
+  /** Apply a comparator's staged TARGETn config on a COMPn_LOAD strobe. Period mode
+   *  arms the first alarm one PERIOD ahead of its selected counter and auto-reloads;
+   *  target mode uses the absolute TARGETn_HI/LO value. */
+  private systimerLoadComparator(n: number): void {
+    const c = this.systimer.comps[n];
+    if (c === undefined) return;
+    c.periodMode = (c.conf & SYSTIMER_TARGET0_PERIOD_MODE) !== 0;
+    c.period = c.conf & SYSTIMER_TARGET0_PERIOD_MASK;
+    c.unit1 = (c.conf & SYSTIMER_TARGET_UNIT_SEL) !== 0;
+    c.active = c.periodMode
+      ? (c.unit1 ? this.systimerUnit1Value() : this.systimerUnit0Value()) + c.period
+      : c.targetHi * 0x100000000 + c.targetLo;
+    c.loaded = true;
+    this.systimerCheckAlarms();
+  }
+
+  /** Per-instruction comparator check (mirrors checkAlarm). Each enabled comparator
+   *  latches its TARGETn interrupt once the counter it watches reaches the target;
+   *  period mode auto-reloads, one-shot mode holds the level until the target is
+   *  rewritten (as esp_timer's ISR does). */
   private systimerCheckAlarms(): void {
-    if (!this.systimer.comp0Loaded) return;
-    if ((this.systimer.conf & SYSTIMER_TARGET0_WORK_EN) === 0) return;
-    const value = this.systimerUnit0Value();
-    if (value < this.systimer.comp0Target) return;
-    const wasSet = (this.systimer.intRaw & SYSTIMER_TARGET0_INT) !== 0;
-    this.systimer.intRaw |= SYSTIMER_TARGET0_INT;
-    if (this.systimer.comp0PeriodMode && this.systimer.comp0Period > 0) {
-      // Auto-reload: advance the comparator past the counter so it fires again
-      // every PERIOD ticks without software reprogramming. In target/one-shot mode
-      // the comparator output is a level that holds until the target is rewritten.
-      do {
-        this.systimer.comp0Target += this.systimer.comp0Period;
-      } while (value >= this.systimer.comp0Target);
+    let changed = false;
+    for (let n = 0; n < this.systimer.comps.length; n++) {
+      const c = this.systimer.comps[n];
+      if (c === undefined || !c.loaded) continue;
+      if ((this.systimer.conf & (SYSTIMER_TARGET0_WORK_EN << n)) === 0) continue;
+      const value = c.unit1 ? this.systimerUnit1Value() : this.systimerUnit0Value();
+      if (value < c.active) continue;
+      const bit = SYSTIMER_TARGET0_INT << n;
+      if ((this.systimer.intRaw & bit) === 0) changed = true;
+      this.systimer.intRaw |= bit;
+      if (c.periodMode && c.period > 0) {
+        do {
+          c.active += c.period;
+        } while (value >= c.active);
+      }
     }
-    if (!wasSet) this.recomputeIrq();
+    if (changed) this.recomputeIrq();
   }
 
   /** Alarm comparator, run after every instruction while armed. On a
@@ -6250,7 +6274,10 @@ export class Esp32s3Core implements McuCore {
     if (spi3Pending) raise(this.spi[1]?.maps ?? freshInterruptMapPair());
     if (apbAdcPending) raise(this.apbSaradcIntMaps);
     if (rtcPending) raise(this.rtcCoreIntMaps);
-    if ((this.systimer.intRaw & this.systimer.intEna) !== 0) raise(this.systimer.maps);
+    for (let n = 0; n < this.systimer.comps.length; n++) {
+      const c = this.systimer.comps[n];
+      if (c !== undefined && (this.systimer.intRaw & this.systimer.intEna & (1 << n)) !== 0) raise(c.maps);
+    }
     for (let i = 0; i < SYSTEM_CPU_INTR_FROM_CPU_COUNT; i++) {
       const maps = this.fromCpuIntMaps[i];
       if ((this.fromCpuIntRaw[i] ?? 0) !== 0 && maps !== undefined) raise(maps);
@@ -6622,7 +6649,13 @@ export class Esp32s3Core implements McuCore {
         return this.timg[idx < 3 ? 0 : 1]?.maps[core][idx % 3] ?? INTMTX_DEFAULT_MAP;
       }
       if (sourceOff === INTMTX_APB_ADC_MAP) return this.apbSaradcIntMaps[core];
-      if (sourceOff === INTMTX_SYSTIMER_TARGET0_MAP) return this.systimer.maps[core];
+      if (
+        sourceOff >= INTMTX_SYSTIMER_TARGET0_MAP &&
+        sourceOff <= INTMTX_SYSTIMER_TARGET0_MAP + 8 &&
+        ((sourceOff - INTMTX_SYSTIMER_TARGET0_MAP) & 3) === 0
+      ) {
+        return this.systimer.comps[(sourceOff - INTMTX_SYSTIMER_TARGET0_MAP) >> 2]?.maps[core] ?? INTMTX_DEFAULT_MAP;
+      }
       if (sourceOff >= INTMTX_GDMA_IN_MAPS && sourceOff < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (sourceOff & 3) === 0) {
         return this.gdmaRx[(sourceOff - INTMTX_GDMA_IN_MAPS) >> 2]?.maps[core] ?? INTMTX_DEFAULT_MAP;
       }
@@ -7202,8 +7235,13 @@ export class Esp32s3Core implements McuCore {
         if (grp !== undefined) grp.maps[core][idx % 3] = value & 0x1f;
       } else if (sourceOff === INTMTX_APB_ADC_MAP) {
         this.apbSaradcIntMaps[core] = value & 0x1f;
-      } else if (sourceOff === INTMTX_SYSTIMER_TARGET0_MAP) {
-        this.systimer.maps[core] = value & 0x1f;
+      } else if (
+        sourceOff >= INTMTX_SYSTIMER_TARGET0_MAP &&
+        sourceOff <= INTMTX_SYSTIMER_TARGET0_MAP + 8 &&
+        ((sourceOff - INTMTX_SYSTIMER_TARGET0_MAP) & 3) === 0
+      ) {
+        const c = this.systimer.comps[(sourceOff - INTMTX_SYSTIMER_TARGET0_MAP) >> 2];
+        if (c !== undefined) c.maps[core] = value & 0x1f;
         this.recomputeIrq();
       } else if (sourceOff >= INTMTX_GDMA_IN_MAPS && sourceOff < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (sourceOff & 3) === 0) {
         const ch = this.gdmaRx[(sourceOff - INTMTX_GDMA_IN_MAPS) >> 2];
