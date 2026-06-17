@@ -1,14 +1,4 @@
-[2J[3J[H8:42:24 AM - Starting compilation in watch mode...
-
-client/src/components/circuit-editor/breadboard-canvas/__tests__/canvas-layers.test.tsx(121,14): error TS2352: Conversion of type '{ currentMagnitude: number; currentDirection: 1; animationSpeed: number; intensity: number; }' to type 'WireVisualState' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
-  Type '{ currentMagnitude: number; currentDirection: 1; animationSpeed: number; intensity: number; }' is missing the following properties from type 'WireVisualState': sourceVoltage, targetVoltage
-
-8:53:12 AM - Found 1 error. Watching for file changes.
-[2J[3J[H8:53:12 AM - File change detected. Starting incremental compilation...
+[2J[3J[H9:03:53 PM - Starting compilation in watch mode...
 
 
-8:53:16 AM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:53:18 AM - File change detected. Starting incremental compilation...
-
-
-8:53:20 AM - Found 0 errors. Watching for file changes.
+9:14:13 PM - Found 0 errors. Watching for file changes.
