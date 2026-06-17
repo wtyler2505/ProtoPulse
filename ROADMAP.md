@@ -1464,6 +1464,14 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       and interrupt state remain quiet. Cuts: still no full ESP-IDF
       driver alert queue, bit timing, arbitration, retry scheduling,
       wire-level GPIO waveform, or exact dual-filter mode yet
+- [x] ESP32-S3 core slice 107 — TWAI RX FIFO overrun events (landed
+      2026-06-17): `drainTwaiEvents()` now emits an `error` event with
+      `rxFifoOverrun` when an incoming TWAI frame is dropped because the
+      modeled RX FIFO is already full. Proven by a host-injection test
+      that fills the 64-frame FIFO, rejects the 65th frame, and drains
+      the overrun flag. Cuts: still no full ESP-IDF driver alert queue,
+      bit timing, arbitration, retry scheduling, wire-level GPIO
+      waveform, or exact dual-filter mode yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

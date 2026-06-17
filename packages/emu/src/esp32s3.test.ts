@@ -903,6 +903,29 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([0, 0]);
   });
 
+  it('surfaces TWAI RX FIFO overruns to the host bench', () => {
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [TWAI],
+      [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode so host-injected frames enter RX FIFO
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(80);
+
+    for (let i = 0; i < 64; i++) {
+      expect(c.injectTwaiFrame({ id: 0x410 + i, data: [i] })).toBe(true);
+    }
+    expect(c.drainTwaiEvents()).toHaveLength(64);
+
+    expect(c.injectTwaiFrame({ id: 0x450, data: [0xee] })).toBe(false);
+    expect(c.drainTwaiEvents()).toEqual([{ type: 'error', flags: { rxFifoOverrun: true } }]);
+  });
+
   it('routes RMT channel 0 TX symbols through the GPIO matrix to IO5', () => {
     const rmtSysConf = RMT_CLK_EN | RMT_SCLK_ACTIVE | RMT_SCLK_SEL_APB;
     const rmtCh0Conf = (1 << 8) | (1 << 16) | RMT_IDLE_OUT_EN;

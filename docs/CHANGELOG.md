@@ -2,6 +2,29 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 107: TWAI RX FIFO overrun events
+
+### Added
+- **TWAI/CAN RX FIFO overrun event flag** (@protopulse/emu):
+  `drainTwaiEvents()` now reports a host-visible `error` event with
+  `rxFifoOverrun` when an incoming TWAI frame is dropped because the
+  receive FIFO is full.
+- The existing data-overrun status and interrupt latch now has matching
+  bridge-facing evidence, so HIL and cosim hosts can distinguish a
+  filtered/rejected frame from a full-RX-FIFO drop.
+
+### Verified
+- Added a host-injection test that fills the modeled TWAI RX FIFO with
+  64 frames, proves the 65th frame is rejected, and checks the drained
+  event stream for `rxFifoOverrun`.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 175 ESP32-S3 tests.
+
+### Honest cuts
+- This still is not the full ESP-IDF driver alert queue. Bit-timing,
+  arbitration, retry scheduling, wire-level GPIO waveform, and exact
+  dual-filter mode remain open.
+
 ## 2026-06-16 — ESP32-S3 slice 106: TWAI listen-only TX suppression
 
 ### Added

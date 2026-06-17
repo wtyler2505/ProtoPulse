@@ -20,6 +20,7 @@ export interface Esp32s3TwaiFrame {
 
 export interface Esp32s3TwaiErrorFlags {
   ackErr?: true;
+  rxFifoOverrun?: true;
 }
 
 export type Esp32s3TwaiErrorState = 'active' | 'warning' | 'passive' | 'bus_off';
@@ -295,7 +296,8 @@ export type Esp32s3TwaiEvent =
  * and a host-side peer bus that delivers standard frames, models ACK/no-ACK
  * TX error-counter movement, enters BUS_OFF after repeated ACK errors, and
  * suppresses listen-only transmissions while exposing host-drained
- * TX/RX/error/state-change events for bridge-style callback data.
+ * TX/RX/error/state-change events, including RX FIFO overrun errors, for
+ * bridge-style callback data.
  * Cuts: no bit timing/arbitration/retry scheduling, full driver alert queue,
  * exact dual-filter mode, or wire-level GPIO waveform yet.
  * Still missing: full light/deep sleep register policy, remaining wake
@@ -4534,6 +4536,7 @@ export class Esp32s3Core implements McuCore {
     if (this.twai.rxFifo.length >= 64) {
       this.twai.dataOverrun = true;
       this.twai.interrupt |= TWAI_INTR_DATA_OVERRUN;
+      this.twai.events.push({ type: 'error', flags: { rxFifoOverrun: true } });
       return false;
     }
     this.twai.rxFifo.push(frame.map((b) => b & 0xff));
@@ -4627,7 +4630,13 @@ export class Esp32s3Core implements McuCore {
       case 'rx_done':
         return { type: 'rx_done', frame: this.twaiCloneDecodedFrame(event.frame) };
       case 'error':
-        return { type: 'error', flags: event.flags.ackErr === true ? { ackErr: true } : {} };
+        return {
+          type: 'error',
+          flags: {
+            ...(event.flags.ackErr === true ? { ackErr: true } : {}),
+            ...(event.flags.rxFifoOverrun === true ? { rxFifoOverrun: true } : {}),
+          },
+        };
       case 'state_change':
         return { type: 'state_change', oldState: event.oldState, newState: event.newState };
     }
