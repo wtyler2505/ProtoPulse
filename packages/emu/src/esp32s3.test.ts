@@ -2146,6 +2146,11 @@ describe('Esp32s3Core', () => {
         S32I(12, 6, GDMA_OUT_CH0_INT_CLR),
         L32I(12, 6, GDMA_OUT_CH0_INT_RAW),
         S32I(12, 11, 0), // clear worked
+        L32I(12, 2, 0), // descriptor dw0 after TX
+        SRLI(12, 12, 15),
+        SRLI(12, 12, 15),
+        SRLI(12, 12, 1), // OWNER bit (31) -> bit 0
+        S32I(12, 11, 0), // 1 = still DMA-owned: no auto-writeback (OUT_AUTO_WRBACK off by default)
         J(BR(-1)),
       ],
     );
@@ -2155,7 +2160,9 @@ describe('Esp32s3Core', () => {
 
     expect(io5.map((e) => e.level)).toEqual([1, 0, 1, 0]);
     expect(io5.slice(1).map((e, i) => e.cycle - (io5[i]?.cycle ?? 0))).toEqual([6, 6, 3]);
-    expect([...c.drainUart()]).toEqual([gdmaDoneMask, RMT_CH3_TX_END, 0]);
+    // The descriptor's OWNER bit is still set: without OUT_AUTO_WRBACK the engine
+    // does not write the descriptor back to the CPU after transmission.
+    expect([...c.drainUart()]).toEqual([gdmaDoneMask, RMT_CH3_TX_END, 0, 1]);
   });
 
   it('latches RMT TX threshold and finite-loop interrupts', () => {

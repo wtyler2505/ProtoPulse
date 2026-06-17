@@ -1686,6 +1686,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       owner-checking is a configured behavior, not unconditional. Cuts:
       OUT_CHECK_OWNER / OUT_AUTO_WRBACK and CONF0 burst-length fields
       remain follow-on
+- [x] ESP32-S3 core slice 126 — GDMA OUT_AUTO_WRBACK descriptor gate
+      (landed 2026-06-17): the TX-side counterpart. The automatic
+      descriptor write-back (clearing the OWNER bit to return it to the
+      CPU after transmission) is now gated by GDMA_OUT_CONF0 bit 2
+      (OUT_AUTO_WRBACK), which resets to 0 per gdma_reg.h — so by default
+      the engine leaves the descriptor OWNER bit untouched and firmware
+      recycles it. The prior model wrote back unconditionally. The change
+      is additive (no test read the post-TX owner bit); the RMT-TX-from-
+      GDMA test now asserts the descriptor stays DMA-owned by default.
+      Cuts: OUT_CHECK_OWNER (OUT_CONF1 bit 12) and CONF0 burst-length
+      fields remain follow-on
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

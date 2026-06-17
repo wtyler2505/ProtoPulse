@@ -2,6 +2,30 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 126: GDMA OUT_AUTO_WRBACK descriptor gate
+
+### Added
+- **GDMA TX auto-writeback gate** (@protopulse/emu): the TX-side
+  counterpart to slice 125. The automatic descriptor write-back — clearing
+  the `OWNER` bit to return the descriptor to the CPU after transmission —
+  is now gated by `GDMA_OUT_CONF0` bit 2 (`OUT_AUTO_WRBACK`), which resets
+  to 0 per `gdma_reg.h`. By default the engine leaves the descriptor
+  untouched and firmware recycles it; the prior model wrote back
+  unconditionally. The ESP-IDF gdma driver sets the bit explicitly when it
+  wants hardware writeback.
+
+### Verified
+- The change is additive (no test read the post-TX owner bit). The
+  RMT-TX-from-GDMA test now asserts the descriptor stays DMA-owned after
+  transmission with `OUT_AUTO_WRBACK` at its reset default.
+- `npm run -w @protopulse/emu test` passed with 280 package tests
+  (193 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- `OUT_CHECK_OWNER` (OUT_CONF1 bit 12) and CONF0 burst-length fields
+  remain follow-on. The writeback-when-enabled path is the unchanged
+  pre-gate code.
+
 ## 2026-06-17 — ESP32-S3 slice 125: GDMA IN_CHECK_OWNER descriptor gate
 
 ### Added

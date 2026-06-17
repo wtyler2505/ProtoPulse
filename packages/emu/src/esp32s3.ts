@@ -1589,6 +1589,7 @@ const GDMA_DESC_LENGTH_MASK = 0xfff << 12;
 const GDMA_DESC_SUC_EOF = 1 << 30;
 const GDMA_DESC_OWNER_DMA = 1 << 31;
 const GDMA_IN_CHECK_OWNER = 1 << 12; // IN_CONF1 bit 12 — gate descriptor owner checking (reset 0 = off)
+const GDMA_OUT_AUTO_WRBACK = 1 << 2; // OUT_CONF0 bit 2 — auto-clear OWNER after TX (reset 0 = off)
 const ADC_DIGI_RESULT_BYTES = 4;
 
 // ESP-IDF app-image format (esp_app_format.h; checksum from esptool):
@@ -3155,7 +3156,10 @@ export class Esp32s3Core implements McuCore {
       ch.eofDesc = desc >>> 0;
       ch.intRaw |= GDMA_OUT_DONE_INT | GDMA_OUT_EOF_INT;
       if ((dw0 & GDMA_DESC_SUC_EOF) !== 0 || next === 0) ch.intRaw |= GDMA_OUT_TOTAL_EOF_INT;
-      this.setSramU32(desc, dw0 & ~GDMA_DESC_OWNER_DMA);
+      // OUT_AUTO_WRBACK (OUT_CONF0 bit 2, reset 0) gates the automatic descriptor
+      // write-back that returns ownership to the CPU; without it the OWNER bit is
+      // left untouched and firmware must recycle the descriptor itself.
+      if ((ch.conf0 & GDMA_OUT_AUTO_WRBACK) !== 0) this.setSramU32(desc, dw0 & ~GDMA_DESC_OWNER_DMA);
       desc = next >>> 0;
       ch.currentDesc = desc;
       if ((dw0 & GDMA_DESC_SUC_EOF) !== 0 || next === 0) break;
