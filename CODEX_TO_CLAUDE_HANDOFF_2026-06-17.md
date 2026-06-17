@@ -14,44 +14,62 @@
 
 Tyler is about to run out of weekly Codex usage and needs to swap to Claude. This document is meant to let Claude resume without reconstructing the whole interrupted thread.
 
-The active engineering lane is v0.5 Bridge, specifically ESP32-S3 TWAI/CAN long-tail work in `@protopulse/emu`. Codex just landed two TWAI slices on `main`:
+The active engineering lane is v0.5 Bridge, specifically ESP32-S3 TWAI/CAN long-tail work in `@protopulse/emu`. Codex landed two TWAI slices on `main` and then pushed a doc-refresh commit:
 
 - `6c6b5528 emu: surface ESP32-S3 TWAI RX overruns`
 - `eba8961d emu: mark TWAI ACK errors as bus errors`
+- `c9346b36 docs: refresh ESP32-S3 TWAI status`
 
-`main` is pushed to `origin/main`, and all GitHub workflows for the latest commit are green.
+`origin/main` is at `c9346b36`, and all GitHub workflows for that pushed commit are green.
+
+Important: after the docs push, the repo's local auto-commit hook created an unpushed local commit:
+
+```text
+72cccadf Auto: 5 files |  5 files changed, 424 insertions(+), 13 deletions(-)
+```
+
+That local commit includes the handoff plus generated/runtime dirt:
+
+```text
+M  .claude/.tsc-errors.log
+A  CODEX_TO_CLAUDE_HANDOFF_2026-06-17.md
+M  data/metrics.json
+A  ops/sessions/29071c6b-370c-4701-85e7-ccb6861a7c26.json
+A  ops/sessions/4265838a-3019-4437-8fc5-5ebe713d1ebc.json
+```
+
+Do not push `72cccadf` blindly. Review or clean that auto-commit first.
 
 ## Current Live State
 
 Last checked by Codex:
 
 ```text
-time: 2026-06-16T21:10:49-05:00 local / 2026-06-17 UTC for GitHub and docs
-branch: main...origin/main
-latest commit: eba8961d emu: mark TWAI ACK errors as bus errors
+time: 2026-06-16T21:29:19-05:00 local / 2026-06-17 UTC for GitHub and docs
+branch: main...origin/main [ahead 1]
+local HEAD: 72cccadf Auto: 5 files |  5 files changed, 424 insertions(+), 13 deletions(-)
+origin/main: c9346b36 docs: refresh ESP32-S3 TWAI status
 servers: off; no listeners on :5000 or :5174 after Tyler rebooted
 ```
 
-Current dirty worktree at last check:
+Current tracked worktree after the auto-commit was clean before this handoff update. If this file is modified after this paragraph, that is intentional handoff freshness.
+
+The unpushed auto-commit contains these generated/runtime files:
 
 ```text
  M .claude/.tsc-errors.log
- M .ref/project-dna.md
- M .ref/project-map.md
- M README.md
  M data/metrics.json
- M docs/DEVELOPER.md
- M packages/README.md
-?? CODEX_TO_CLAUDE_HANDOFF_2026-06-17.md
+ A ops/sessions/29071c6b-370c-4701-85e7-ccb6861a7c26.json
+ A ops/sessions/4265838a-3019-4437-8fc5-5ebe713d1ebc.json
 ```
 
-Intentional doc refresh after this handoff was first written:
+Intentional doc refresh that is already pushed and green at `c9346b36`:
 
 - `README.md`: refreshed engine test badge/counts to 1,517 and broadened the high-level ESP32-S3 emulator summary through PCNT/I2C/SPI/MCPWM/TWAI surfaces.
 - `docs/DEVELOPER.md`: refreshed engine test count and `@protopulse/emu` package description through ESP32-S3 TWAI slice 108.
 - `packages/README.md`: made the `@protopulse/emu` row explicit about TWAI host-drained events, peer ACK/no-ACK behavior, listen-only suppression, RX FIFO overrun, and ACK bus-error flags.
 - `.ref/project-dna.md` and `.ref/project-map.md`: refreshed navigation/status counts and ESP32-S3/TWAI wording.
-- `CODEX_TO_CLAUDE_HANDOFF_2026-06-17.md`: this handoff file, still untracked unless Tyler/Codex decides to commit it.
+- Verification for `c9346b36`: Packages CI, CI, and Tauri build matrix all completed successfully on GitHub.
 
 Do not stage the generated runtime files casually.
 
