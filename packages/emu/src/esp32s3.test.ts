@@ -1192,6 +1192,62 @@ describe('Esp32s3Core', () => {
     expect(out[2]).toBeLessThan(200); // ~16 ticks over ~240 cycles, no wrap
   });
 
+  it('raises the SYSTIMER TARGET0 alarm when UNIT0 reaches the comparator target', () => {
+    // COMP0 in one-shot/target mode latches the TARGET0 interrupt (INT_RAW bit 0)
+    // once UNIT0 >= the loaded target. INT_ST gates the raw latch by INT_ENA, and
+    // INT_CLR clears it once the target is reprogrammed forward (as esp_timer's ISR
+    // does). The whole comparator + interrupt register set is exercised here; routing
+    // TARGET0 (matrix source 57) to a CPU interrupt is a follow-on slice.
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [0x60023000, UART], [
+        L32R(2, 0), // SYSTIMER base
+        L32R(6, 1), // UART0
+        // Program comparator 0 for target = 50 (one-shot/target mode, UNIT0).
+        MOVI(3, 50),
+        S32I(3, 2, 0x20), // TARGET0_LO = 50
+        MOVI(3, 0),
+        S32I(3, 2, 0x1c), // TARGET0_HI = 0
+        MOVI(3, 0),
+        S32I(3, 2, 0x34), // TARGET0_CONF = 0 (target mode, UNIT0)
+        MOVI(3, 1),
+        S32I(3, 2, 0x50), // COMP0_LOAD: apply target into the comparator
+        // Enable UNIT0 counting (bit 1) and COMP0 (bit 7).
+        MOVI(3, 0x82),
+        S32I(3, 2, 0x00), // CONF
+        // Burn ~1000 cycles so UNIT0 climbs past 50 ticks.
+        MOVI(5, 500),
+        ADDI(5, 5, -1),
+        BNEZ(5, BR(-2)),
+        L32I(3, 2, 0x68),
+        S32I(3, 6, 0), // INT_RAW -> UART (expect 1: alarm latched)
+        // INT_ST is gated by INT_ENA.
+        MOVI(3, 0),
+        S32I(3, 2, 0x64), // INT_ENA = 0
+        L32I(3, 2, 0x70),
+        S32I(3, 6, 0), // INT_ST -> UART (expect 0: masked)
+        MOVI(3, 1),
+        S32I(3, 2, 0x64), // INT_ENA = TARGET0
+        L32I(3, 2, 0x70),
+        S32I(3, 6, 0), // INT_ST -> UART (expect 1: enabled)
+        // Reprogram the target far forward, clear, and confirm it stays clear.
+        MOVI(3, 1),
+        S32I(3, 2, 0x1c), // TARGET0_HI = 1 (target = 2^32, well beyond the counter)
+        MOVI(3, 0),
+        S32I(3, 2, 0x20), // TARGET0_LO = 0
+        MOVI(3, 1),
+        S32I(3, 2, 0x50), // COMP0_LOAD
+        MOVI(3, 1),
+        S32I(3, 2, 0x6c), // INT_CLR = TARGET0
+        L32I(3, 2, 0x68),
+        S32I(3, 6, 0), // INT_RAW -> UART (expect 0: cleared, no re-fire)
+        J(BR(-1)),
+      ]),
+    );
+    c.step(2000);
+
+    expect([...c.drainUart()]).toEqual([1, 0, 1, 0]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

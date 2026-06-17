@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 118: SYSTIMER COMP0 alarm + interrupt latches
+
+### Added
+- **SYSTIMER comparator 0 (TARGET0 alarm)** (@protopulse/emu): builds on
+  the slice 117 counter. `TARGET0_HI/LO` stage an alarm value, `COMP0_LOAD`
+  applies it to the comparator, and with `CONF.TARGET0_WORK_EN` (bit 7)
+  set a per-instruction check (mirroring the TIMG `checkAlarm`) latches
+  `INT_RAW` bit 0 once UNIT0 reaches the target in one-shot/target mode.
+  `INT_ST` masks the raw latch by `INT_ENA`; `INT_CLR` clears it. As on
+  hardware, the comparator output is a level (it keeps matching while the
+  counter exceeds the target), so software reprograms the target forward
+  to disarm it — exactly how `esp_timer`'s ISR re-arms.
+
+### Verified
+- Added a test that counts UNIT0 past the target, reads `INT_RAW` set,
+  confirms `INT_ST` is masked with `INT_ENA=0` then set with `INT_ENA=1`,
+  reprograms the target far forward, clears, and confirms no re-fire.
+- `npm run -w @protopulse/emu test` passed with 273 package tests
+  (186 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- Routing TARGET0 (interrupt-matrix source 57) to a CPU interrupt level,
+  period (auto-reload) mode, and UNIT1/COMP1/COMP2 are follow-on slices.
+  The alarm is observed through the INT registers, not yet a CPU interrupt.
+
 ## 2026-06-17 — ESP32-S3 slice 117: a first SYSTIMER counter path
 
 ### Added

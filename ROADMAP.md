@@ -1591,6 +1591,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       comparators/alarms (TARGET0/1/2 one-shot + period mode), the
       SYSTIMER_TARGET interrupts (matrix sources 57/58/59), and core-stall
       gating
+- [x] ESP32-S3 core slice 118 — SYSTIMER COMP0 alarm + interrupt latches
+      (landed 2026-06-17): comparator 0 now generates the TARGET0 alarm.
+      TARGET0_HI/LO stage the alarm value; COMP0_LOAD applies it; with
+      CONF's TARGET0_WORK_EN (bit 7) set, a per-instruction check (mirroring
+      the TIMG checkAlarm) latches INT_RAW bit 0 once UNIT0 reaches the
+      target in one-shot/target mode. INT_ST gates the raw latch by INT_ENA,
+      and INT_CLR clears it (the comparator only re-fires while the counter
+      still exceeds the target, so software reprograms the target forward
+      like esp_timer's ISR). Proven by counting UNIT0 past the target,
+      reading INT_RAW set, INT_ST masked then enabled, and clearing after a
+      forward reprogram. Cuts (follow-on slices): routing TARGET0 (matrix
+      source 57) to a CPU interrupt, period mode, UNIT1/COMP1/COMP2
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

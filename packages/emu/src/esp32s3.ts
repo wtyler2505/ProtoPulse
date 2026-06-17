@@ -1093,9 +1093,20 @@ const SYSTIMER_UNIT0_LOAD_LO = 0x10;
 const SYSTIMER_UNIT0_VALUE_HI = 0x40;
 const SYSTIMER_UNIT0_VALUE_LO = 0x44;
 const SYSTIMER_UNIT0_LOAD = 0x5c;
+const SYSTIMER_TARGET0_HI = 0x1c;
+const SYSTIMER_TARGET0_LO = 0x20;
+const SYSTIMER_TARGET0_CONF = 0x34;
+const SYSTIMER_COMP0_LOAD = 0x50;
+const SYSTIMER_INT_ENA = 0x64;
+const SYSTIMER_INT_RAW = 0x68;
+const SYSTIMER_INT_CLR = 0x6c;
+const SYSTIMER_INT_ST = 0x70;
 const SYSTIMER_TIMER_UNIT0_WORK_EN = 1 << 1; // CONF bit 1
+const SYSTIMER_TARGET0_WORK_EN = 1 << 7; // CONF bit 7 — enable COMP0
 const SYSTIMER_TIMER_UNIT0_UPDATE = 1 << 30; // UNIT0_OP write strobe
 const SYSTIMER_TIMER_UNIT0_VALUE_VALID = 1 << 29; // UNIT0_OP read-only flag
+const SYSTIMER_TARGET0_INT = 1 << 0; // INT_* bit 0 — COMP0/TARGET0 alarm
+const SYSTIMER_INT_MASK = 0x7; // TARGET0/1/2
 /** Walk-the-bus guard for strlen / %s — a missing NUL must refuse,
  *  not spin forever. */
 const ROM_STR_MAX = 0x10000;
@@ -2088,6 +2099,13 @@ interface SystimerController {
   unit0ValueHi: number; // latched by an UPDATE strobe
   unit0ValueLo: number;
   unit0ValueValid: boolean;
+  target0Hi: number; // staged alarm value (applied to comp0 on COMP0_LOAD)
+  target0Lo: number;
+  target0Conf: number;
+  comp0Target: number; // active comparator value
+  comp0Loaded: boolean;
+  intRaw: number; // TARGET0/1/2 alarm latches (bits 0..2)
+  intEna: number;
 }
 
 const freshSystimer = (): SystimerController => ({
@@ -2099,6 +2117,13 @@ const freshSystimer = (): SystimerController => ({
   unit0ValueHi: 0,
   unit0ValueLo: 0,
   unit0ValueValid: false,
+  target0Hi: 0,
+  target0Lo: 0,
+  target0Conf: 0,
+  comp0Target: 0,
+  comp0Loaded: false,
+  intRaw: 0,
+  intEna: 0,
 });
 
 const freshEfuseBlocks = (): number[][] => {
@@ -3482,6 +3507,18 @@ export class Esp32s3Core implements McuCore {
         return this.systimer.unit0ValueHi >>> 0;
       case SYSTIMER_UNIT0_VALUE_LO:
         return this.systimer.unit0ValueLo >>> 0;
+      case SYSTIMER_TARGET0_HI:
+        return this.systimer.target0Hi >>> 0;
+      case SYSTIMER_TARGET0_LO:
+        return this.systimer.target0Lo >>> 0;
+      case SYSTIMER_TARGET0_CONF:
+        return this.systimer.target0Conf >>> 0;
+      case SYSTIMER_INT_ENA:
+        return this.systimer.intEna >>> 0;
+      case SYSTIMER_INT_RAW:
+        return this.systimer.intRaw >>> 0;
+      case SYSTIMER_INT_ST:
+        return (this.systimer.intRaw & this.systimer.intEna) >>> 0;
       default:
         return 0;
     }
@@ -3515,8 +3552,45 @@ export class Esp32s3Core implements McuCore {
         this.systimer.unit0Base = (this.systimer.unit0LoadHi * 0x100000000 + this.systimer.unit0LoadLo) % SYSTIMER_COUNT_MOD;
         this.systimer.unit0Sync = this.cpu.cycles;
         return;
+      case SYSTIMER_TARGET0_HI:
+        this.systimer.target0Hi = v & 0xfffff;
+        return;
+      case SYSTIMER_TARGET0_LO:
+        this.systimer.target0Lo = v;
+        return;
+      case SYSTIMER_TARGET0_CONF:
+        this.systimer.target0Conf = v;
+        return;
+      case SYSTIMER_COMP0_LOAD:
+        // Apply the staged TARGET0_HI/LO into the active comparator (sync strobe).
+        this.systimer.comp0Target = this.systimer.target0Hi * 0x100000000 + this.systimer.target0Lo;
+        this.systimer.comp0Loaded = true;
+        this.systimerCheckAlarms();
+        return;
+      case SYSTIMER_INT_ENA:
+        this.systimer.intEna = v & SYSTIMER_INT_MASK;
+        this.recomputeIrq();
+        return;
+      case SYSTIMER_INT_CLR:
+        this.systimer.intRaw &= ~(v & SYSTIMER_INT_MASK);
+        this.recomputeIrq();
+        return;
       default:
         return;
+    }
+  }
+
+  /** Per-instruction comparator check (mirrors checkAlarm). COMP0 in one-shot/target
+   *  mode latches TARGET0's interrupt while UNIT0's counter has reached the target;
+   *  software clears it and reprograms the target forward (as esp_timer does). */
+  private systimerCheckAlarms(): void {
+    if (!this.systimer.comp0Loaded) return;
+    if ((this.systimer.conf & SYSTIMER_TARGET0_WORK_EN) === 0) return;
+    if (this.systimerUnit0Value() >= this.systimer.comp0Target) {
+      if ((this.systimer.intRaw & SYSTIMER_TARGET0_INT) === 0) {
+        this.systimer.intRaw |= SYSTIMER_TARGET0_INT;
+        this.recomputeIrq();
+      }
     }
   }
 
@@ -3947,6 +4021,7 @@ export class Esp32s3Core implements McuCore {
     this.checkMcpwm();
     this.checkLedcTimers();
     this.checkRmt();
+    this.systimerCheckAlarms();
   }
 
   /** UART0's raw interrupt bits: RXFIFO_FULL tracks the live FIFO
