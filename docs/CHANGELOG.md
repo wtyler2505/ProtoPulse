@@ -2,6 +2,27 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 121: SYSTIMER second counter (UNIT1)
+
+### Added
+- **SYSTIMER UNIT1** (@protopulse/emu): the second independent 52-bit /
+  16 MHz counter, with its own `UNIT1_OP`/`LOAD`/`VALUE` registers
+  (offsets `0x08`, `0x14`/`0x18`, `0x48`/`0x4c`, `0x60`) and CONF enable
+  (`UNIT1_WORK_EN`, bit 2). Same epoch substrate and UPDATE/VALUE_VALID
+  latch handshake as UNIT0; a CONF write now freezes both counters before
+  applying the new run-state so neither replays old time.
+
+### Verified
+- Added a test that loads a frozen base into UNIT1, reads it back through
+  the latch handshake, and confirms it advances once `UNIT1_WORK_EN` is set.
+- `npm run -w @protopulse/emu test` passed with 276 package tests
+  (189 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- The COMP1/COMP2 comparators (interrupt-matrix sources 58/59) and
+  `TIMER_UNIT_SEL` (selecting which UNIT drives each comparator) remain
+  follow-on slices. `esp_timer` uses UNIT0/COMP0, which is already complete.
+
 ## 2026-06-17 — ESP32-S3 slice 120: SYSTIMER COMP0 period (auto-reload) mode
 
 ### Added

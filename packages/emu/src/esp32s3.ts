@@ -1094,6 +1094,13 @@ const SYSTIMER_UNIT0_LOAD_LO = 0x10;
 const SYSTIMER_UNIT0_VALUE_HI = 0x40;
 const SYSTIMER_UNIT0_VALUE_LO = 0x44;
 const SYSTIMER_UNIT0_LOAD = 0x5c;
+const SYSTIMER_UNIT1_OP = 0x08;
+const SYSTIMER_UNIT1_LOAD_HI = 0x14;
+const SYSTIMER_UNIT1_LOAD_LO = 0x18;
+const SYSTIMER_UNIT1_VALUE_HI = 0x48;
+const SYSTIMER_UNIT1_VALUE_LO = 0x4c;
+const SYSTIMER_UNIT1_LOAD = 0x60;
+const SYSTIMER_TIMER_UNIT1_WORK_EN = 1 << 2; // CONF bit 2
 const SYSTIMER_TARGET0_HI = 0x1c;
 const SYSTIMER_TARGET0_LO = 0x20;
 const SYSTIMER_TARGET0_CONF = 0x34;
@@ -2102,6 +2109,13 @@ interface SystimerController {
   unit0ValueHi: number; // latched by an UPDATE strobe
   unit0ValueLo: number;
   unit0ValueValid: boolean;
+  unit1Base: number; // the second 52-bit counter (UNIT1)
+  unit1Sync: number;
+  unit1LoadHi: number;
+  unit1LoadLo: number;
+  unit1ValueHi: number;
+  unit1ValueLo: number;
+  unit1ValueValid: boolean;
   target0Hi: number; // staged alarm value (applied to comp0 on COMP0_LOAD)
   target0Lo: number;
   target0Conf: number;
@@ -2123,6 +2137,13 @@ const freshSystimer = (): SystimerController => ({
   unit0ValueHi: 0,
   unit0ValueLo: 0,
   unit0ValueValid: false,
+  unit1Base: 0,
+  unit1Sync: 0,
+  unit1LoadHi: 0,
+  unit1LoadLo: 0,
+  unit1ValueHi: 0,
+  unit1ValueLo: 0,
+  unit1ValueValid: false,
   target0Hi: 0,
   target0Lo: 0,
   target0Conf: 0,
@@ -3502,6 +3523,17 @@ export class Esp32s3Core implements McuCore {
     this.systimer.unit0Sync = this.cpu.cycles;
   }
 
+  private systimerUnit1Value(): number {
+    if ((this.systimer.conf & SYSTIMER_TIMER_UNIT1_WORK_EN) === 0) return this.systimer.unit1Base;
+    const ticks = Math.floor((this.cpu.cycles - this.systimer.unit1Sync) / SYSTIMER_CYCLES_PER_TICK);
+    return (this.systimer.unit1Base + ticks) % SYSTIMER_COUNT_MOD;
+  }
+
+  private systimerUnit1Resync(): void {
+    this.systimer.unit1Base = this.systimerUnit1Value();
+    this.systimer.unit1Sync = this.cpu.cycles;
+  }
+
   private systimerRead(off: number): number {
     switch (off) {
       case SYSTIMER_CONF:
@@ -3516,6 +3548,16 @@ export class Esp32s3Core implements McuCore {
         return this.systimer.unit0ValueHi >>> 0;
       case SYSTIMER_UNIT0_VALUE_LO:
         return this.systimer.unit0ValueLo >>> 0;
+      case SYSTIMER_UNIT1_OP:
+        return this.systimer.unit1ValueValid ? SYSTIMER_TIMER_UNIT0_VALUE_VALID : 0;
+      case SYSTIMER_UNIT1_LOAD_HI:
+        return this.systimer.unit1LoadHi >>> 0;
+      case SYSTIMER_UNIT1_LOAD_LO:
+        return this.systimer.unit1LoadLo >>> 0;
+      case SYSTIMER_UNIT1_VALUE_HI:
+        return this.systimer.unit1ValueHi >>> 0;
+      case SYSTIMER_UNIT1_VALUE_LO:
+        return this.systimer.unit1ValueLo >>> 0;
       case SYSTIMER_TARGET0_HI:
         return this.systimer.target0Hi >>> 0;
       case SYSTIMER_TARGET0_LO:
@@ -3537,8 +3579,9 @@ export class Esp32s3Core implements McuCore {
     const v = value >>> 0;
     switch (off) {
       case SYSTIMER_CONF:
-        // Freeze the counter under the old run-state before applying the new one.
+        // Freeze both counters under the old run-state before applying the new one.
         this.systimerUnit0Resync();
+        this.systimerUnit1Resync();
         this.systimer.conf = v;
         return;
       case SYSTIMER_UNIT0_OP:
@@ -3560,6 +3603,24 @@ export class Esp32s3Core implements McuCore {
         // Apply LOAD_HI/LO into the counter base.
         this.systimer.unit0Base = (this.systimer.unit0LoadHi * 0x100000000 + this.systimer.unit0LoadLo) % SYSTIMER_COUNT_MOD;
         this.systimer.unit0Sync = this.cpu.cycles;
+        return;
+      case SYSTIMER_UNIT1_OP:
+        if ((v & SYSTIMER_TIMER_UNIT0_UPDATE) !== 0) {
+          const count = this.systimerUnit1Value();
+          this.systimer.unit1ValueLo = count % 0x100000000;
+          this.systimer.unit1ValueHi = Math.floor(count / 0x100000000) & 0xfffff;
+          this.systimer.unit1ValueValid = true;
+        }
+        return;
+      case SYSTIMER_UNIT1_LOAD_HI:
+        this.systimer.unit1LoadHi = v & 0xfffff;
+        return;
+      case SYSTIMER_UNIT1_LOAD_LO:
+        this.systimer.unit1LoadLo = v;
+        return;
+      case SYSTIMER_UNIT1_LOAD:
+        this.systimer.unit1Base = (this.systimer.unit1LoadHi * 0x100000000 + this.systimer.unit1LoadLo) % SYSTIMER_COUNT_MOD;
+        this.systimer.unit1Sync = this.cpu.cycles;
         return;
       case SYSTIMER_TARGET0_HI:
         this.systimer.target0Hi = v & 0xfffff;

@@ -1625,6 +1625,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       three times — the contrast to the one-shot path where the ISR had to
       reprogram the target forward. Cuts: UNIT1 + COMP1/COMP2 (matrix
       sources 58/59) and TIMER_UNIT_SEL remain follow-on slices
+- [x] ESP32-S3 core slice 121 — SYSTIMER second counter (UNIT1)
+      (landed 2026-06-17): adds UNIT1, the second independent 52-bit/16 MHz
+      counter, with its own OP/LOAD/VALUE registers (UNIT1_OP 0x08,
+      LOAD_HI/LO 0x14/0x18, VALUE_HI/LO 0x48/0x4c, LOAD 0x60) and CONF
+      enable (UNIT1_WORK_EN, bit 2). Same epoch substrate and UPDATE/
+      VALUE_VALID latch handshake as UNIT0; CONF writes now freeze both
+      counters before applying the new run-state. Proven by loading a
+      frozen base into UNIT1, reading it back, and confirming it advances
+      once enabled. Cuts: COMP1/COMP2 comparators (matrix sources 58/59)
+      and TIMER_UNIT_SEL (which UNIT drives each comparator) remain
+      follow-on slices
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

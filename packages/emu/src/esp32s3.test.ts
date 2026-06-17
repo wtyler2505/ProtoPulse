@@ -1382,6 +1382,49 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([3]);
   });
 
+  it('loads, latches and counts the second SYSTIMER counter (UNIT1)', () => {
+    // UNIT1 is the second independent 52-bit/16 MHz counter, with its own OP/LOAD/
+    // VALUE registers and CONF enable (UNIT1_WORK_EN = bit 2). Same latch handshake
+    // as UNIT0: frozen it reads the loaded base, enabled it advances.
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [0x60023000, UART, 0x40000000], [
+        L32R(2, 0), // SYSTIMER base
+        L32R(6, 1), // UART0
+        MOVI(3, 100),
+        S32I(3, 2, 0x18), // UNIT1_LOAD_LO = 100
+        MOVI(3, 0),
+        S32I(3, 2, 0x14), // UNIT1_LOAD_HI = 0
+        MOVI(3, 1),
+        S32I(3, 2, 0x60), // UNIT1_LOAD: apply
+        L32R(3, 2),
+        S32I(3, 2, 0x08), // UNIT1_OP = UPDATE
+        L32I(3, 2, 0x4c),
+        S32I(3, 6, 0), // UNIT1 VALUE_LO -> UART (expect 100)
+        L32I(3, 2, 0x08),
+        SRLI(3, 3, 15),
+        SRLI(3, 3, 14), // VALUE_VALID (bit 29) -> bit 0
+        S32I(3, 6, 0), // -> UART (expect 1)
+        MOVI(3, 4),
+        S32I(3, 2, 0x00), // CONF = UNIT1_WORK_EN (bit 2)
+        MOVI(5, 120),
+        ADDI(5, 5, -1),
+        BNEZ(5, BR(-2)),
+        L32R(3, 2),
+        S32I(3, 2, 0x08), // UPDATE
+        L32I(3, 2, 0x4c),
+        S32I(3, 6, 0), // UNIT1 VALUE_LO -> UART (expect > 100)
+        J(BR(-1)),
+      ]),
+    );
+    c.step(600);
+
+    const out = [...c.drainUart()];
+    expect(out[0]).toBe(100);
+    expect(out[1]).toBe(1);
+    expect(out[2]).toBeGreaterThan(100);
+    expect(out[2]).toBeLessThan(200);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
