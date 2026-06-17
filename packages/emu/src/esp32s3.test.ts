@@ -1046,6 +1046,58 @@ describe('Esp32s3Core', () => {
     expect([...a.drainUart()]).toEqual([1]);
   });
 
+  it('drops a single-shot TWAI frame on arbitration loss instead of retransmitting', () => {
+    // A single-shot transmission (CMR = TR|AT = 0x03, ESP-IDF TWAI_MSG_FLAG_SS) is
+    // attempted exactly once. When A (id 0x500) loses arbitration to B (id 0x100),
+    // a normal frame would retransmit (slice 113); a single-shot frame is dropped —
+    // the TX buffer is released with a failed tx_done (TWAI_ALERT_TX_FAILED) and the
+    // frame never reaches the bus.
+    const a = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI], [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, 1),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=1
+        MOVI(3, 0xa0),
+        S32I(3, 2, 0x44), // std id 0x500 byte 0
+        MOVI(3, 0),
+        S32I(3, 2, 0x48), // std id 0x500 byte 1
+        MOVI(3, 0xdd),
+        S32I(3, 2, 0x4c), // data 0
+        MOVI(3, 3),
+        S32I(3, 2, 0x04), // single-shot transmit: TR | AT
+        J(BR(-1)),
+      ]),
+    );
+    const b = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI], [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        J(BR(-1)),
+      ]),
+    );
+
+    a.connectTwaiPeer(b);
+    b.step(80);
+    b.armTwaiTransmit({ id: 0x100, data: [0xbb] });
+    a.step(200);
+
+    // A loses, receives B's frame, and reports a failed transmit — no retransmit.
+    expect(a.drainTwaiEvents()).toEqual([
+      { type: 'error', flags: { arbLost: true } },
+      { type: 'rx_done', frame: { id: 0x100, data: [0xbb], dlc: 1, extended: false, rtr: false } },
+      { type: 'tx_done', success: false, frame: { id: 0x500, data: [0xdd], dlc: 1, extended: false, rtr: false } },
+    ]);
+    // B wins and never receives A's frame, because A dropped it.
+    expect(b.drainTwaiEvents()).toEqual([
+      { type: 'tx_done', success: true, frame: { id: 0x100, data: [0xbb], dlc: 1, extended: false, rtr: false } },
+    ]);
+    expect(a.drainTwaiTx()).toEqual([]); // single-shot frame dropped, never on the bus
+    expect(b.drainTwaiTx()).toEqual([{ id: 0x100, data: [0xbb], dlc: 1, extended: false, rtr: false }]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

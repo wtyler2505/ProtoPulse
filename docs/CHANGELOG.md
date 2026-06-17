@@ -2,6 +2,34 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 115: TWAI single-shot transmit
+
+### Added
+- **Single-shot transmission** (@protopulse/emu): closes the slice 114
+  cut. Writing the TWAI command register with TR|AT together (0x03 —
+  ESP-IDF's `twai_ll_set_cmd_tx_single_shot`, exposed as the
+  `TWAI_MSG_FLAG_SS` message flag) now requests a one-shot transmit. On
+  arbitration loss the single-shot frame is dropped instead of being
+  retried: the TX buffer is released with a failed `tx_done`
+  (`TWAI_ALERT_TX_FAILED`) and the frame never reaches the bus. SRR|AT
+  (0x12) is the single-shot self-reception variant. AT written on its own
+  is now a no-op (no pending transmission to cancel in this synchronous
+  model) rather than spuriously latching a TX interrupt.
+
+### Verified
+- Added a two-node test where a single-shot id 0x500 loses arbitration to
+  id 0x100: it captures the arbitration-lost event, receives the winning
+  frame, reports a failed `tx_done`, and leaves an empty TX log — the
+  direct contrast to slice 113's auto-retransmit.
+- `npm run -w @protopulse/emu test` passed with 270 package tests
+  (183 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- The TCS (Transmission Complete Status) status bit still always reads
+  complete; success/failure is surfaced through the `tx_done` event, not
+  the status register. Bit-timing, retry scheduling, and wire-level GPIO
+  waveform remain open.
+
 ## 2026-06-17 — ESP32-S3 slice 114: TWAI arbitration-lost capture latch
 
 ### Added

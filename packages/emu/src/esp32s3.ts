@@ -1800,6 +1800,7 @@ interface TwaiController {
   events: Esp32s3TwaiEvent[];
   pendingTx: number[] | null;
   pendingTxSelfReceive: boolean;
+  pendingTxSingleShot: boolean;
   dataOverrun: boolean;
   busOff: boolean;
   interrupt: number;
@@ -2047,6 +2048,7 @@ const freshTwaiController = (): TwaiController => ({
   events: [],
   pendingTx: null,
   pendingTxSelfReceive: false,
+  pendingTxSingleShot: false,
   dataOverrun: false,
   busOff: false,
   interrupt: 0,
@@ -2591,6 +2593,7 @@ export class Esp32s3Core implements McuCore {
     if ((this.twai.mode & TWAI_MODE_LISTEN_ONLY) !== 0) return false;
     this.twai.pendingTx = this.twaiFormatFrame(frame);
     this.twai.pendingTxSelfReceive = false;
+    this.twai.pendingTxSingleShot = false;
     return true;
   }
 
@@ -4767,11 +4770,12 @@ export class Esp32s3Core implements McuCore {
     this.twaiPushStateChange(oldState);
   }
 
-  private twaiTransmit(selfReceive: boolean): void {
+  private twaiTransmit(selfReceive: boolean, singleShot: boolean): void {
     if ((this.twai.mode & TWAI_MODE_RESET) !== 0) return;
     if ((this.twai.mode & TWAI_MODE_LISTEN_ONLY) !== 0) return;
     this.twai.pendingTx = this.twai.buffer.slice(0, TWAI_BUFFER_BYTES).map((b) => b & 0xff);
     this.twai.pendingTxSelfReceive = selfReceive;
+    this.twai.pendingTxSingleShot = singleShot;
     this.twaiResolveBus();
   }
 
@@ -4825,7 +4829,21 @@ export class Esp32s3Core implements McuCore {
       winner.twai.pendingTx = null;
       const selfReceive = winner.twai.pendingTxSelfReceive;
       winner.twai.pendingTxSelfReceive = false;
+      winner.twai.pendingTxSingleShot = false;
       winner.twaiDeliver(winningFrame, selfReceive);
+      // Single-shot losers do not retransmit: the controller releases the TX buffer
+      // and reports a failed transmission (TWAI_ALERT_TX_FAILED) rather than
+      // re-arming the frame. This happens after the winning frame is received.
+      for (const node of contenders) {
+        if (node === winner || !node.twai.pendingTxSingleShot) continue;
+        const dropped = node.twai.pendingTx!;
+        node.twai.pendingTx = null;
+        node.twai.pendingTxSingleShot = false;
+        node.twai.pendingTxSelfReceive = false;
+        node.twai.events.push({ type: 'tx_done', success: false, frame: node.twaiFrameEvent(dropped) });
+        node.twai.interrupt |= TWAI_INTR_TX;
+        node.recomputeIrq();
+      }
     }
   }
 
@@ -4958,9 +4976,14 @@ export class Esp32s3Core implements McuCore {
         this.twai.dataOverrun = false;
         this.twai.interrupt &= ~TWAI_INTR_DATA_OVERRUN;
       }
-      if ((v & TWAI_CMD_ABORT_TX) !== 0) this.twai.interrupt |= TWAI_INTR_TX;
-      if ((v & TWAI_CMD_TX_REQUEST) !== 0) this.twaiTransmit(false);
-      if ((v & TWAI_CMD_SELF_RX_REQUEST) !== 0) this.twaiTransmit(true);
+      // AT (abort) latched together with TR/SRR requests single-shot: the frame is
+      // transmitted once and dropped on arbitration loss or error instead of being
+      // retried (ESP-IDF writes CMR=0x03 for single-shot TX, 0x12 for single-shot
+      // self-reception). AT on its own has no pending transmission to cancel in this
+      // synchronous model, so it is a no-op.
+      const singleShot = (v & TWAI_CMD_ABORT_TX) !== 0;
+      if ((v & TWAI_CMD_TX_REQUEST) !== 0) this.twaiTransmit(false, singleShot);
+      else if ((v & TWAI_CMD_SELF_RX_REQUEST) !== 0) this.twaiTransmit(true, singleShot);
       this.recomputeIrq();
       return;
     }

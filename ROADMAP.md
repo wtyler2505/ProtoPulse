@@ -1551,7 +1551,22 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       single bus resolution (to id 0x100, then id 0x480 on the retransmit
       round) yet reports exactly one arbitration-lost event with ALC
       latched at the first loss's bit (ID.10 -> 1), not the second
-      (ID.8 -> 3). Cuts: single-shot transmit abort, and no bit timing,
+      (ID.8 -> 3). Cuts: no bit timing, retry scheduling, or wire-level
+      GPIO waveform yet
+- [x] ESP32-S3 core slice 115 — TWAI single-shot transmit
+      (landed 2026-06-17): closes the slice 114 single-shot cut. Writing
+      the command register with TR|AT (0x03, ESP-IDF's
+      `twai_ll_set_cmd_tx_single_shot`, surfaced as `TWAI_MSG_FLAG_SS`)
+      now requests a single-shot transmission: the frame is attempted
+      once and, on arbitration loss, dropped instead of retried — the TX
+      buffer is released with a failed `tx_done` (mirroring
+      `TWAI_ALERT_TX_FAILED`) and the frame never reaches the bus. SRR|AT
+      (0x12) is the single-shot self-reception variant; AT on its own is a
+      no-op (no pending transmission to cancel in this synchronous model).
+      Proven by a two-node test where a single-shot id 0x500 loses to id
+      0x100, reports a failed transmit, and — unlike the slice 113
+      auto-retransmit path — leaves an empty TX log. Cuts: TCS (status
+      transmit-complete bit) still always reads complete; no bit timing,
       retry scheduling, or wire-level GPIO waveform yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
