@@ -1660,6 +1660,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       latches the interrupt, the ISR runs and clears it. Real IDF firmware
       polls eFuse status, so this is a completeness fix rather than a
       critical path
+- [x] ESP32-S3 core slice 124 — deep-sleep timer wake (reset on wake)
+      (landed 2026-06-17): models the sleep/wake long-tail item. Deep sleep
+      is distinguished from light sleep by RTC_CNTL_DIG_PWC_REG (+0x90)
+      bit 31 (DG_WRAP_PD_EN): when SLEEP_EN fires with that bit set, the
+      digital core is powered down, so the RTC timer wake is a full chip
+      RESET rather than a WAITI resume. The reboot records DEEPSLEEP_RESET
+      (5) in RESET_STATE[5:0] (which survives in the always-on RTC domain),
+      reusing the existing reset-cause + pending-reset machinery. All
+      registers verified against esp-idf rtc_cntl_reg.h / rom/rtc.h. Proven
+      by a two-boot test: first boot arms a deep-sleep timer wake and
+      sleeps; the timer resets the chip; the reboot reads DEEPSLEEP_RESET
+      and emits a marker. Light sleep (DG_WRAP_PD_EN clear) still resumes
+      via WAITI as before. Cuts: other wake sources (GPIO/EXT/touch) in
+      deep sleep, and RTC slow-memory retention, are follow-on
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

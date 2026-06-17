@@ -1141,6 +1141,8 @@ const RTC_TIME_LOW0 = 0x10; // latched timer [31:0]
 const RTC_TIME_HIGH0 = 0x14; // latched timer [47:32] in [15:0]
 const RTC_STATE0 = 0x18; // SLEEP_EN/SLP_WAKEUP/SLP_REJECT status and command bits
 const RTC_ANA_CONF = 0x34; // GLITCH_RST_EN bit 20; analog/I2C power defaults below
+const RTC_DIG_PWC = 0x90; // RTC_CNTL_DIG_PWC_REG
+const RTC_DG_WRAP_PD_EN = 0x80000000; // DG_WRAP_PD_EN bit 31 — powers down the digital core (deep sleep)
 const RTC_RESET_STATE = 0x38; // RESET_CAUSE_PROCPU [5:0], RESET_CAUSE_APPCPU [11:6]
 const RTC_WAKEUP_STATE = 0x3c; // WAKEUP_ENA [31:15], raw trigger bitmap
 const RTC_INT_ENA = 0x40;
@@ -1243,6 +1245,7 @@ const RTC_XTAL32K_CONF_RESET = 0xff << 20;
 const RESET_CAUSE_POWERON = 1; // POWERON_RESET
 const RESET_CAUSE_SW_SYS = 3; // RTC_SW_SYS_RESET — ROM software_reset / SW_SYS_RST
 const RESET_CAUSE_SW_CPU = 12; // RTC_SW_CPU_RESET — SW_PROCPU_RST (esp_restart's path)
+const RESET_CAUSE_DEEPSLEEP = 5; // DEEPSLEEP_RESET — wake from deep sleep boots fresh
 // Watchdog reset causes (same rom/rtc.h enum — slice 13):
 const RESET_CAUSE_TG0WDT_SYS = 7; // TG0WDT_SYS_RESET
 const RESET_CAUSE_TG1WDT_SYS = 8; // TG1WDT_SYS_RESET
@@ -2292,6 +2295,8 @@ export class Esp32s3Core implements McuCore {
   private rtcSleepTimerHi = 0;
   private rtcMainTimerAlarmArmed = false;
   private rtcState0 = 0;
+  private rtcDigPwc = 0; // RTC_CNTL_DIG_PWC_REG (DG_WRAP_PD_EN selects deep sleep)
+  private rtcDeepSleep = false; // captured at sleep entry: wake resets instead of resuming
   private rtcWakeupState = RTC_WAKEUP_STATE_RESET;
   private rtcIntRaw = 0;
   private rtcIntEna = 0;
@@ -3379,6 +3384,8 @@ export class Esp32s3Core implements McuCore {
     this.rtcSleepTimerHi = 0;
     this.rtcMainTimerAlarmArmed = false;
     this.rtcState0 = 0;
+    this.rtcDigPwc = 0;
+    this.rtcDeepSleep = false;
     this.rtcWakeupState = RTC_WAKEUP_STATE_RESET;
     this.rtcIntRaw = 0;
     this.rtcIntEna = 0;
@@ -3941,8 +3948,18 @@ export class Esp32s3Core implements McuCore {
   private latchRtcWakeupSource(source: number): void {
     if ((this.rtcState0 & RTC_SLEEP_EN) === 0 || (this.rtcWakeupEnabledSources() & source) === 0) return;
     this.rtcState0 = (this.rtcState0 & ~RTC_SLEEP_EN) | RTC_SLP_WAKEUP;
-    this.resetUartWakeEdgeCounts();
     this.rtcWakeupCause |= source;
+    if (this.rtcDeepSleep) {
+      // Deep sleep powered the digital core down; any wake source boots the chip
+      // fresh from the reset vector with DEEPSLEEP_RESET as the recorded cause,
+      // rather than resuming WAITI the way light sleep does.
+      this.rtcDeepSleep = false;
+      this.resetCause = RESET_CAUSE_DEEPSLEEP;
+      this.appResetCause = RESET_CAUSE_DEEPSLEEP;
+      this.pendingReset = true;
+      return;
+    }
+    this.resetUartWakeEdgeCounts();
     this.rtcIntRaw |= RTC_SLP_WAKEUP_INT;
   }
 
@@ -7736,6 +7753,7 @@ export class Esp32s3Core implements McuCore {
           this.triggerUlpWake();
         } else {
           if ((value & RTC_SLEEP_EN) !== 0 && this.rejectRtcSleepIfNeeded()) return;
+          if ((value & RTC_SLEEP_EN) !== 0) this.rtcDeepSleep = (this.rtcDigPwc & RTC_DG_WRAP_PD_EN) !== 0;
           if ((value & RTC_SLEEP_EN) !== 0) this.resetUartWakeEdgeCounts();
           if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcSleepTimer();
           if ((value & RTC_SLEEP_EN) !== 0) this.updateRtcExt0Wakeup();
@@ -7747,6 +7765,8 @@ export class Esp32s3Core implements McuCore {
           if ((value & RTC_SLEEP_EN) !== 0) this.checkRtcTouchSleepTimer();
           this.recomputeIrq();
         }
+      } else if (off === RTC_DIG_PWC) {
+        this.rtcDigPwc = value >>> 0;
       } else if (off === RTC_SW_CPU_STALL) {
         this.rtcSwCpuStall = value >>> 0;
         this.maybeStartCore1();

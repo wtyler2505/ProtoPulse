@@ -2,6 +2,30 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 124: deep-sleep timer wake (reset on wake)
+
+### Added
+- **Deep sleep** (@protopulse/emu): models the sleep/wake long-tail item.
+  Deep sleep is distinguished from light sleep by `RTC_CNTL_DIG_PWC_REG`
+  (+0x90) bit 31 (`DG_WRAP_PD_EN`): when `STATE0.SLEEP_EN` fires with that
+  bit set, the digital core powers down, so an RTC-timer wake is a full
+  chip **reset** (not a WAITI resume). The reboot records `DEEPSLEEP_RESET`
+  (5) in `RESET_STATE[5:0]` — which survives in the always-on RTC domain —
+  reusing the existing reset-cause + pending-reset machinery. Light sleep
+  (`DG_WRAP_PD_EN` clear) still resumes via WAITI exactly as before.
+
+### Verified
+- Added a two-boot test: first boot arms a deep-sleep timer wake and
+  sleeps; the timer resets the chip; the reboot reads `DEEPSLEEP_RESET`
+  from `RESET_STATE` and emits a marker. Registers verified against
+  esp-idf `rtc_cntl_reg.h` / `rom/rtc.h`.
+- `npm run -w @protopulse/emu test` passed with 279 package tests
+  (192 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- Only the RTC-timer wake source is modeled for deep sleep; other deep-sleep
+  wake sources (GPIO/EXT/touch) and RTC slow-memory retention are follow-on.
+
 ## 2026-06-17 — ESP32-S3 slice 123: eFuse interrupt-matrix routing
 
 ### Added
