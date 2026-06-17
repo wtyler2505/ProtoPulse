@@ -1707,6 +1707,19 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       TX tests use owner=DMA); a new test drives an RMT TX from a CPU-owned
       descriptor and confirms it completes (DONE|EOF|TOTAL_EOF, not
       DSCR_ERR). Cuts: CONF0 burst-length fields remain follow-on
+- [x] ESP32-S3 core slice 128 — PCNT input glitch filter (landed
+      2026-06-17): models U0_CONF0 FILTER_EN (bit 10) + FILTER_THRES
+      (bits [9:0], APB cycles), verified against pcnt_reg.h / pcnt_struct.h.
+      When the filter is enabled an input pulse narrower than FILTER_THRES
+      cycles is ignored entirely — both edges dropped — matching the
+      hardware "any pulse with width < threshold is ignored" rule. Modeled
+      as a debounce in the event-driven input-capture path: each edge is
+      deferred until its level has held >= FILTER_THRES cycles (confirmed
+      on the next capture or on a counter read), so a glitch never reaches
+      the counter and never latches a threshold event. Additive — the
+      existing PCNT tests write CONF0 without FILTER_EN, so the filter is
+      off there. Cuts: ctrl-input filtering and exact read-during-glitch
+      timing remain follow-on
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

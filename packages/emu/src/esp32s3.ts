@@ -873,6 +873,7 @@ const PCNT_U_STATUS_STRIDE = 0x04;
 const PCNT_CTRL = 0x60;
 const PCNT_DATE = 0xfc;
 const PCNT_FILTER_EN = 1 << 10;
+const PCNT_FILTER_THRES_MASK = 0x3ff; // U0_CONF0[9:0]: glitch-filter threshold in APB cycles
 const PCNT_THR_ZERO_EN = 1 << 11;
 const PCNT_THR_H_LIM_EN = 1 << 12;
 const PCNT_THR_L_LIM_EN = 1 << 13;
@@ -1770,6 +1771,8 @@ interface PcntUnit {
   status: number;
   lastPulse: Array<DigitalLevel | null>;
   lastCtrl: Array<DigitalLevel | null>;
+  pendingPulse: Array<DigitalLevel | null>; // glitch filter: candidate level awaiting >= FILTER_THRES cycles
+  pendingPulseCycle: number[];
 }
 
 interface I2cController {
@@ -1986,6 +1989,8 @@ const freshPcntUnit = (): PcntUnit => ({
   status: 0,
   lastPulse: Array(PCNT_CHANNELS).fill(null) as Array<DigitalLevel | null>,
   lastCtrl: Array(PCNT_CHANNELS).fill(null) as Array<DigitalLevel | null>,
+  pendingPulse: Array(PCNT_CHANNELS).fill(null) as Array<DigitalLevel | null>,
+  pendingPulseCycle: Array(PCNT_CHANNELS).fill(0) as number[],
 });
 
 const freshI2cController = (): I2cController => ({
@@ -5800,10 +5805,31 @@ export class Esp32s3Core implements McuCore {
     }
   }
 
+  // Glitch filter (U0_CONF0 FILTER_EN/FILTER_THRES): confirm a deferred edge once its
+  // candidate level has held for >= FILTER_THRES APB cycles. Pulses narrower than the
+  // threshold never reach pcntApplyEdgeAction, so both of their edges are dropped.
+  private pcntFlushPending(unitIndex: number, channel: number): void {
+    const unit = this.pcntUnits[unitIndex];
+    if (unit === undefined) return;
+    const pending = unit.pendingPulse[channel];
+    if (pending === null) return;
+    if ((unit.conf0 & PCNT_FILTER_EN) === 0) {
+      unit.pendingPulse[channel] = null;
+      return;
+    }
+    const thres = unit.conf0 & PCNT_FILTER_THRES_MASK;
+    if (this.cpu.cycles - unit.pendingPulseCycle[channel] >= thres) {
+      this.pcntApplyEdgeAction(unitIndex, channel, pending === 1);
+      unit.lastPulse[channel] = pending;
+      unit.pendingPulse[channel] = null;
+    }
+  }
+
   private capturePcntInputs(countEdges = true): void {
     for (let unitIndex = 0; unitIndex < PCNT_UNITS; unitIndex++) {
       const unit = this.pcntUnits[unitIndex];
       if (unit === undefined) continue;
+      const filtered = (unit.conf0 & PCNT_FILTER_EN) !== 0;
       for (let channel = 0; channel < PCNT_CHANNELS; channel++) {
         const pulse = this.pcntMatrixLevel(this.pcntSignalIndex(unitIndex, channel));
         const ctrl = this.pcntMatrixLevel(this.pcntCtrlIndex(unitIndex, channel));
@@ -5811,10 +5837,24 @@ export class Esp32s3Core implements McuCore {
         unit.lastCtrl[channel] = ctrl;
         if (pulse === null) {
           unit.lastPulse[channel] = null;
+          unit.pendingPulse[channel] = null;
           continue;
         }
         if (!countEdges || last === null) {
           unit.lastPulse[channel] = pulse;
+          unit.pendingPulse[channel] = null;
+          continue;
+        }
+        if (filtered) {
+          // First confirm any candidate that has aged past the threshold, then re-evaluate.
+          this.pcntFlushPending(unitIndex, channel);
+          const confirmed = unit.lastPulse[channel];
+          if (pulse === confirmed) {
+            unit.pendingPulse[channel] = null; // returned to the confirmed level: candidate was a glitch
+          } else if (unit.pendingPulse[channel] !== pulse) {
+            unit.pendingPulse[channel] = pulse; // start a new candidate, timestamped now
+            unit.pendingPulseCycle[channel] = this.cpu.cycles;
+          }
           continue;
         }
         if (pulse !== last) this.pcntApplyEdgeAction(unitIndex, channel, pulse === 1);
@@ -6760,7 +6800,11 @@ export class Esp32s3Core implements McuCore {
         return 0;
       }
       if (off >= PCNT_U_CNT && off < PCNT_U_CNT + PCNT_UNITS * PCNT_U_CNT_STRIDE && (off & 3) === 0) {
-        const unit = this.pcntUnits[(off - PCNT_U_CNT) >> 2];
+        const unitIndex = (off - PCNT_U_CNT) >> 2;
+        // Confirm any glitch-filter candidate that has now held >= FILTER_THRES cycles,
+        // so a long pulse counts before the guest observes the counter mid-pulse.
+        for (let ch = 0; ch < PCNT_CHANNELS; ch++) this.pcntFlushPending(unitIndex, ch);
+        const unit = this.pcntUnits[unitIndex];
         return unit === undefined ? 0 : unit.count & 0xffff;
       }
       if (off === PCNT_INT_RAW) return this.pcntIntRaw >>> 0;

@@ -2,6 +2,33 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 128: PCNT input glitch filter
+
+### Added
+- **PCNT glitch filter** (@protopulse/emu): models `U0_CONF0` `FILTER_EN`
+  (bit 10) and `FILTER_THRES` (bits [9:0], in APB cycles), verified against
+  `pcnt_reg.h` / `pcnt_struct.h`. When enabled, an input pulse narrower than
+  `FILTER_THRES` cycles is ignored entirely — both edges dropped — matching
+  the hardware rule "any pulse with width < threshold is ignored." It is
+  modeled as a debounce on the event-driven input-capture path: each edge is
+  deferred (`pendingPulse` / `pendingPulseCycle`) until its level has held
+  `>= FILTER_THRES` cycles, confirmed either on the next input capture or on
+  a counter read. A sub-threshold glitch therefore never reaches the counter
+  and never latches a threshold/limit event.
+
+### Verified
+- Additive: the two existing PCNT tests write `CONF0` without `FILTER_EN`, so
+  the filter is off for them (the direct-edge path is unchanged). A new test
+  drives a GPIO-matrix PCNT input with `FILTER_EN` + `FILTER_THRES`=4: a
+  2-cycle pulse is filtered (no count), an 8-cycle pulse counts once — the
+  counter ends at 1, never 2.
+- `npm run -w @protopulse/emu test` passed with 282 package tests
+  (195 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- Control-input (ctrl) filtering and exact read-during-glitch timing remain
+  follow-on; the filter currently gates the pulse (sig) input.
+
 ## 2026-06-17 — ESP32-S3 slice 127: GDMA OUT_CHECK_OWNER descriptor gate
 
 ### Added

@@ -2537,6 +2537,51 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([3, PCNT_UNIT0_INT, PCNT_H_LIM_STATUS, 0]);
   });
 
+  it('filters PCNT input glitches shorter than FILTER_THRES APB cycles', () => {
+    // pcnt_reg.h: FILTER_THRES = U0_CONF0[9:0], FILTER_EN = bit 10. When enabled, an
+    // input pulse narrower than FILTER_THRES cycles is ignored entirely (both edges
+    // dropped). Here THRES=4: a 2-cycle high pulse is filtered (no count), an 8-cycle
+    // high pulse counts. So the counter ends at 1, never 2.
+    const PCNT_FILTER_EN = 1 << 10;
+    const conf0 = PCNT_CH0_POS_INC | PCNT_FILTER_EN | 4; // ch0 rising increments, filter on, THRES=4
+    const pulseRoute = 4 | GPIO_SIG_IN_SEL; // IO4 -> PCNT_SIG_CH0_IN0
+    const literals = [PCNT, GPIO_FUNC33_IN_SEL_CFG, UART, conf0, pulseRoute, 0, 0xff];
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, literals, [
+        L32R(2, 0), // PCNT
+        L32R(3, 3),
+        S32I(3, 2, 0x00), // U0_CONF0: rising increment, filter on, THRES=4
+        L32R(4, 1),
+        L32R(5, 4),
+        S32I(5, 4, 0x00), // GPIO input matrix: PCNT_SIG_CH0_IN0 <- IO4
+        L32R(3, 5),
+        S32I(3, 2, 0x60), // CTRL: release unit reset bits
+        L32R(12, 2), // UART
+        L32R(10, 6), // 0xff
+        L32I(6, 2, 0x30), // U0_CNT
+        AND(11, 6, 10),
+        S32I(11, 12, 0x00), // count low byte -> UART
+        J(BR(-4)), // loop back to the U0_CNT read
+      ]),
+    );
+    c.setPin('IO4', 0);
+    c.step(60);
+    // Short pulse: 2 cycles high (< THRES 4) -> filtered, no count.
+    c.setPin('IO4', 1);
+    c.step(2);
+    c.setPin('IO4', 0);
+    c.step(60);
+    // Long pulse: 8 cycles high (>= THRES 4) -> counts once.
+    c.setPin('IO4', 1);
+    c.step(8);
+    c.setPin('IO4', 0);
+    c.step(60);
+
+    const out = [...c.drainUart()];
+    expect(out.at(-1)).toBe(1); // only the long pulse counted
+    expect(out).not.toContain(2); // the short pulse was filtered, never incremented
+  });
+
   it('honors PCNT level-control inversion on pulse edges', () => {
     const conf0 = PCNT_CH0_POS_INC | PCNT_CH0_LCTRL_INVERT;
     const pulseRoute = 4 | GPIO_SIG_IN_SEL; // IO4 -> PCNT_SIG_CH0_IN0
