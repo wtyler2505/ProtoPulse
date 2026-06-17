@@ -1144,6 +1144,54 @@ describe('Esp32s3Core', () => {
     expect([...a.drainUart()]).toEqual([0]);
   });
 
+  it('loads, latches and counts the SYSTIMER UNIT0 counter (16 MHz)', () => {
+    // SYSTIMER UNIT0 is a 52-bit up-counter at 16 MHz (XTAL/2.5). Software reads it
+    // with a latch handshake: write UPDATE (bit 30) to UNIT0_OP, then VALUE_VALID
+    // (bit 29) reads set and UNIT0_VALUE_HI/LO hold a coherent snapshot. With the
+    // counter disabled the latched value equals the loaded base; once UNIT0_WORK_EN
+    // is set the value advances. (esp_timer polls exactly this counter.)
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [0x60023000, UART, 0x40000000], [
+        L32R(2, 0), // SYSTIMER base
+        L32R(6, 1), // UART0
+        // Load base = 100 while UNIT0 is not counting (CONF reset = work disabled).
+        MOVI(3, 100),
+        S32I(3, 2, 0x10), // UNIT0_LOAD_LO = 100
+        MOVI(3, 0),
+        S32I(3, 2, 0x0c), // UNIT0_LOAD_HI = 0
+        MOVI(3, 1),
+        S32I(3, 2, 0x5c), // UNIT0_LOAD: apply LOAD_HI/LO into the counter
+        // Latch and read back: frozen counter -> exactly the loaded base.
+        L32R(3, 2),
+        S32I(3, 2, 0x04), // UNIT0_OP = UPDATE (bit 30)
+        L32I(3, 2, 0x44),
+        S32I(3, 6, 0), // VALUE_LO -> UART (expect 100)
+        L32I(3, 2, 0x04),
+        SRLI(3, 3, 15),
+        SRLI(3, 3, 14), // bit 29 -> bit 0 (SRLI immediate max is 15)
+        S32I(3, 6, 0), // VALUE_VALID (bit 29) -> UART (expect 1)
+        // Enable UNIT0 counting, burn ~240 cycles, latch again.
+        MOVI(3, 2),
+        S32I(3, 2, 0x00), // CONF = UNIT0_WORK_EN (bit 1)
+        MOVI(5, 120),
+        ADDI(5, 5, -1),
+        BNEZ(5, BR(-2)),
+        L32R(3, 2),
+        S32I(3, 2, 0x04), // UPDATE
+        L32I(3, 2, 0x44),
+        S32I(3, 6, 0), // VALUE_LO -> UART (expect > 100: counter advanced)
+        J(BR(-1)),
+      ]),
+    );
+    c.step(600);
+
+    const out = [...c.drainUart()];
+    expect(out[0]).toBe(100); // frozen counter latched the loaded base
+    expect(out[1]).toBe(1); // VALUE_VALID set after UPDATE
+    expect(out[2]).toBeGreaterThan(100); // counter advanced once enabled
+    expect(out[2]).toBeLessThan(200); // ~16 ticks over ~240 cycles, no wrap
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

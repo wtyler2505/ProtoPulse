@@ -1577,6 +1577,20 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       clear, the inverse of the self-reception test where a successful
       transmit reads TCS set. Cuts: no bit timing, retry scheduling, or
       wire-level GPIO waveform yet
+- [x] ESP32-S3 core slice 117 — a first SYSTIMER counter path
+      (landed 2026-06-17): a new SYSTIMER peripheral at 0x60023000. UNIT0
+      is modeled as a 52-bit up-counter at 16 MHz (XTAL/2.5, so one tick =
+      15 CPU cycles) on the existing epoch substrate (base + ticks since
+      sync, frozen while UNIT0_WORK_EN is clear). Software reads it through
+      the hardware latch handshake: writing UPDATE (UNIT0_OP bit 30)
+      snapshots the counter into UNIT0_VALUE_HI/LO and sets VALUE_VALID
+      (bit 29); UNIT0_LOAD_HI/LO + UNIT0_LOAD set the base. This is exactly
+      the counter esp_timer polls. Proven by a test that loads a frozen
+      base and reads it back, checks VALUE_VALID, then enables counting and
+      sees the value advance. Cuts (follow-on slices): UNIT1, the three
+      comparators/alarms (TARGET0/1/2 one-shot + period mode), the
+      SYSTIMER_TARGET interrupts (matrix sources 57/58/59), and core-stall
+      gating
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

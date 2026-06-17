@@ -1076,6 +1076,26 @@ const ROM_FN_LIST = Object.entries(ROM_FNS)
 /** The stub every ROM function serves: ENTRY a1,16 ; RETW. */
 const ROM_STUB = Uint8Array.from([0x36, 0x21, 0x00, 0x90, 0x00, 0x00]);
 const CYCLES_PER_US = CLOCK_HZ / 1_000_000; // 240
+
+// SYSTIMER (systimer_reg.h): two 52-bit up-counters + three comparators at
+// 0x60023000. UNIT0 counts at 16 MHz (XTAL 40 MHz / 2.5, hardwired), so one
+// SYSTIMER tick is CLOCK_HZ / 16 MHz = 15 CPU cycles. This first slice models
+// UNIT0's counter and its UPDATE/VALUE_VALID latch read path (what esp_timer
+// polls); comparators/alarms/interrupts land in a follow-on slice.
+const SYSTIMER_BASE = 0x60023000;
+const SYSTIMER_BLOCK_BYTES = 0x100;
+const SYSTIMER_CYCLES_PER_TICK = CLOCK_HZ / 16_000_000; // 15
+const SYSTIMER_COUNT_MOD = 0x10000000000000; // 2^52 (counter width)
+const SYSTIMER_CONF = 0x00;
+const SYSTIMER_UNIT0_OP = 0x04;
+const SYSTIMER_UNIT0_LOAD_HI = 0x0c;
+const SYSTIMER_UNIT0_LOAD_LO = 0x10;
+const SYSTIMER_UNIT0_VALUE_HI = 0x40;
+const SYSTIMER_UNIT0_VALUE_LO = 0x44;
+const SYSTIMER_UNIT0_LOAD = 0x5c;
+const SYSTIMER_TIMER_UNIT0_WORK_EN = 1 << 1; // CONF bit 1
+const SYSTIMER_TIMER_UNIT0_UPDATE = 1 << 30; // UNIT0_OP write strobe
+const SYSTIMER_TIMER_UNIT0_VALUE_VALID = 1 << 29; // UNIT0_OP read-only flag
 /** Walk-the-bus guard for strlen / %s — a missing NUL must refuse,
  *  not spin forever. */
 const ROM_STR_MAX = 0x10000;
@@ -2059,6 +2079,28 @@ const freshTwaiController = (): TwaiController => ({
   maps: freshInterruptMapPair(),
 });
 
+interface SystimerController {
+  conf: number;
+  unit0Base: number; // counter value at unit0Sync
+  unit0Sync: number; // cpu.cycles when unit0Base was captured
+  unit0LoadHi: number;
+  unit0LoadLo: number;
+  unit0ValueHi: number; // latched by an UPDATE strobe
+  unit0ValueLo: number;
+  unit0ValueValid: boolean;
+}
+
+const freshSystimer = (): SystimerController => ({
+  conf: 0,
+  unit0Base: 0,
+  unit0Sync: 0,
+  unit0LoadHi: 0,
+  unit0LoadLo: 0,
+  unit0ValueHi: 0,
+  unit0ValueLo: 0,
+  unit0ValueValid: false,
+});
+
 const freshEfuseBlocks = (): number[][] => {
   const blocks = Array.from({ length: EFUSE_BLOCK_COUNT }, () => Array(EFUSE_BLOCK_WORDS).fill(0) as number[]);
   const macBlock = blocks[1];
@@ -2135,6 +2177,7 @@ export class Esp32s3Core implements McuCore {
   private spi: SpiController[] = Array.from({ length: SPI_CONTROLLER_COUNT }, freshSpiController);
   private mcpwm: McpwmGroup[] = Array.from({ length: MCPWM_GROUPS }, freshMcpwmGroup);
   private twai: TwaiController = freshTwaiController();
+  private systimer: SystimerController = freshSystimer();
 
   // UART0/1 interrupt state + the interrupt matrix maps.
   private uartIntEna = 0;
@@ -3224,6 +3267,7 @@ export class Esp32s3Core implements McuCore {
     this.spi = Array.from({ length: SPI_CONTROLLER_COUNT }, freshSpiController);
     this.mcpwm = Array.from({ length: MCPWM_GROUPS }, freshMcpwmGroup);
     this.twai = freshTwaiController();
+    this.systimer = freshSystimer();
     this.uartIntEna = 0;
     this.uartTxDone = false;
     this.uartRxThrhd = 96;
@@ -3406,6 +3450,74 @@ export class Esp32s3Core implements McuCore {
   private timerResync(t: GpTimer): void {
     t.base = this.timerValue(t);
     t.sync = this.cpu.cycles;
+  }
+
+  /** Current SYSTIMER UNIT0 count: base plus 16 MHz ticks elapsed since the
+   *  base was captured, but only while UNIT0_WORK_EN is set (otherwise frozen).
+   *  Wrapped to the 52-bit counter width. */
+  private systimerUnit0Value(): number {
+    if ((this.systimer.conf & SYSTIMER_TIMER_UNIT0_WORK_EN) === 0) return this.systimer.unit0Base;
+    const ticks = Math.floor((this.cpu.cycles - this.systimer.unit0Sync) / SYSTIMER_CYCLES_PER_TICK);
+    return (this.systimer.unit0Base + ticks) % SYSTIMER_COUNT_MOD;
+  }
+
+  /** Freeze UNIT0 into base before any CONF change so old run-state time doesn't
+   *  replay (mirrors timerResync). */
+  private systimerUnit0Resync(): void {
+    this.systimer.unit0Base = this.systimerUnit0Value();
+    this.systimer.unit0Sync = this.cpu.cycles;
+  }
+
+  private systimerRead(off: number): number {
+    switch (off) {
+      case SYSTIMER_CONF:
+        return this.systimer.conf >>> 0;
+      case SYSTIMER_UNIT0_OP:
+        return this.systimer.unit0ValueValid ? SYSTIMER_TIMER_UNIT0_VALUE_VALID : 0;
+      case SYSTIMER_UNIT0_LOAD_HI:
+        return this.systimer.unit0LoadHi >>> 0;
+      case SYSTIMER_UNIT0_LOAD_LO:
+        return this.systimer.unit0LoadLo >>> 0;
+      case SYSTIMER_UNIT0_VALUE_HI:
+        return this.systimer.unit0ValueHi >>> 0;
+      case SYSTIMER_UNIT0_VALUE_LO:
+        return this.systimer.unit0ValueLo >>> 0;
+      default:
+        return 0;
+    }
+  }
+
+  private systimerWrite(off: number, value: number): void {
+    const v = value >>> 0;
+    switch (off) {
+      case SYSTIMER_CONF:
+        // Freeze the counter under the old run-state before applying the new one.
+        this.systimerUnit0Resync();
+        this.systimer.conf = v;
+        return;
+      case SYSTIMER_UNIT0_OP:
+        if ((v & SYSTIMER_TIMER_UNIT0_UPDATE) !== 0) {
+          // Latch a coherent counter snapshot into VALUE_HI/LO and signal VALID.
+          const count = this.systimerUnit0Value();
+          this.systimer.unit0ValueLo = count % 0x100000000;
+          this.systimer.unit0ValueHi = Math.floor(count / 0x100000000) & 0xfffff;
+          this.systimer.unit0ValueValid = true;
+        }
+        return;
+      case SYSTIMER_UNIT0_LOAD_HI:
+        this.systimer.unit0LoadHi = v & 0xfffff;
+        return;
+      case SYSTIMER_UNIT0_LOAD_LO:
+        this.systimer.unit0LoadLo = v;
+        return;
+      case SYSTIMER_UNIT0_LOAD:
+        // Apply LOAD_HI/LO into the counter base.
+        this.systimer.unit0Base = (this.systimer.unit0LoadHi * 0x100000000 + this.systimer.unit0LoadLo) % SYSTIMER_COUNT_MOD;
+        this.systimer.unit0Sync = this.cpu.cycles;
+        return;
+      default:
+        return;
+    }
   }
 
   /** Alarm comparator, run after every instruction while armed. On a
@@ -6324,6 +6436,7 @@ export class Esp32s3Core implements McuCore {
     if (mcpwm !== null) return this.mcpwmRead(mcpwm.group, mcpwm.off);
     const twai = this.twaiForAddress(addr);
     if (twai !== null) return this.twaiRead(twai);
+    if (addr >= SYSTIMER_BASE && addr < SYSTIMER_BASE + SYSTIMER_BLOCK_BYTES) return this.systimerRead(addr - SYSTIMER_BASE);
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {
       const off = addr - INTMTX_BASE;
       const core = (off >= INTMTX_CORE1_OFFSET ? 1 : 0) as InterruptCore;
@@ -6883,6 +6996,10 @@ export class Esp32s3Core implements McuCore {
     const twai = this.twaiForAddress(addr);
     if (twai !== null) {
       this.twaiWrite(twai, value);
+      return;
+    }
+    if (addr >= SYSTIMER_BASE && addr < SYSTIMER_BASE + SYSTIMER_BLOCK_BYTES) {
+      this.systimerWrite(addr - SYSTIMER_BASE, value);
       return;
     }
     if (addr >= INTMTX_BASE && addr < INTMTX_BASE + 0x1000) {

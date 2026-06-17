@@ -2,6 +2,33 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 117: a first SYSTIMER counter path
+
+### Added
+- **SYSTIMER peripheral (UNIT0 counter)** (@protopulse/emu): a new system
+  timer at `0x60023000`. UNIT0 is a 52-bit up-counter running at 16 MHz
+  (XTAL 40 MHz / 2.5, so one tick is 15 of the 240 MHz CPU cycles),
+  modeled on the same epoch substrate as the TIMG timers (base + ticks
+  since sync, frozen while `UNIT0_WORK_EN` is clear). Software reads it via
+  the hardware latch handshake: write `UPDATE` (UNIT0_OP bit 30) to
+  snapshot the counter into `UNIT0_VALUE_HI/LO` and set `VALUE_VALID`
+  (bit 29); `UNIT0_LOAD_HI/LO` + `UNIT0_LOAD` set the base. This is the
+  counter `esp_timer` polls — a prerequisite for unmodified ESP-IDF
+  firmware that schedules WiFi/BT and library callbacks through it.
+
+### Verified
+- Added a test that loads a frozen base and reads it back exactly through
+  the latch handshake, checks `VALUE_VALID`, then enables `UNIT0_WORK_EN`
+  and confirms the latched value advances.
+- `npm run -w @protopulse/emu test` passed with 272 package tests
+  (185 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- This first slice models UNIT0's counter + latch read only. UNIT1, the
+  three comparators/alarms (TARGET0/1/2, one-shot + period mode), the
+  SYSTIMER_TARGET interrupts (matrix sources 57/58/59), and the core-stall
+  gating bits are deferred to follow-on slices.
+
 ## 2026-06-17 — ESP32-S3 slice 116: TWAI transmit-complete status bit
 
 ### Added
