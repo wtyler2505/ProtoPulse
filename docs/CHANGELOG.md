@@ -2,6 +2,29 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 119: SYSTIMER TARGET0 interrupt-matrix route
+
+### Added
+- **SYSTIMER TARGET0 → CPU interrupt** (@protopulse/emu): closes the slice
+  118 routing cut. `INTERRUPT_CORE0_SYSTIMER_TARGET0_INT_MAP_REG`
+  (interrupt-matrix offset `0x0e4`, source 57 — verified against esp-idf
+  `interrupt_core0_reg.h`) routes the COMP0 alarm to a CPU interrupt line,
+  and `recomputeIrq` raises it while `INT_RAW & INT_ENA` holds. This
+  completes `esp_timer`'s counter → alarm → interrupt cycle on UNIT0/COMP0.
+
+### Verified
+- Added a level-1 handler test mirroring the APB_SARADC interrupt path:
+  UNIT0 counts past the target, the ISR fires once, reprograms the target
+  forward (as `esp_timer`'s ISR does) and clears the latch, leaving
+  `INT_RAW` empty with no re-fire.
+- `npm run -w @protopulse/emu test` passed with 274 package tests
+  (187 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- Period (auto-reload) mode and the second counter / other comparators
+  (UNIT1, COMP1/COMP2, interrupt-matrix sources 58/59) remain follow-on
+  slices.
+
 ## 2026-06-17 — ESP32-S3 slice 118: SYSTIMER COMP0 alarm + interrupt latches
 
 ### Added

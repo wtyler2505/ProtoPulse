@@ -670,6 +670,7 @@ const INTMTX_I2C_EXT0_MAP = 0x0a8; // INTERRUPT_CORE0_I2C_EXT0_INTR_MAP_REG
 const INTMTX_I2C_EXT1_MAP = 0x0ac; // INTERRUPT_CORE0_I2C_EXT1_INTR_MAP_REG
 const INTMTX_SPI2_DMA_MAP = 0x0b0; // INTERRUPT_CORE0_SPI2_DMA_INT_MAP_REG
 const INTMTX_SPI3_DMA_MAP = 0x0b4; // INTERRUPT_CORE0_SPI3_DMA_INT_MAP_REG
+const INTMTX_SYSTIMER_TARGET0_MAP = 0x0e4; // INTERRUPT_CORE0_SYSTIMER_TARGET0_INT_MAP_REG (source 57)
 // The six TIMG sources sit contiguously (interrupt_core0_reg.h):
 // TG_T0 +0xC8, TG_T1 +0xCC, TG_WDT +0xD0, TG1_T0 +0xD4, TG1_T1
 // +0xD8, TG1_WDT +0xDC — group-major, [t0, t1, wdt] within a group.
@@ -2106,6 +2107,7 @@ interface SystimerController {
   comp0Loaded: boolean;
   intRaw: number; // TARGET0/1/2 alarm latches (bits 0..2)
   intEna: number;
+  maps: InterruptMapPair; // TARGET0 -> CPU interrupt routing (matrix source 57)
 }
 
 const freshSystimer = (): SystimerController => ({
@@ -2124,6 +2126,7 @@ const freshSystimer = (): SystimerController => ({
   comp0Loaded: false,
   intRaw: 0,
   intEna: 0,
+  maps: freshInterruptMapPair(),
 });
 
 const freshEfuseBlocks = (): number[][] => {
@@ -6165,6 +6168,7 @@ export class Esp32s3Core implements McuCore {
     if (spi3Pending) raise(this.spi[1]?.maps ?? freshInterruptMapPair());
     if (apbAdcPending) raise(this.apbSaradcIntMaps);
     if (rtcPending) raise(this.rtcCoreIntMaps);
+    if ((this.systimer.intRaw & this.systimer.intEna) !== 0) raise(this.systimer.maps);
     for (let i = 0; i < SYSTEM_CPU_INTR_FROM_CPU_COUNT; i++) {
       const maps = this.fromCpuIntMaps[i];
       if ((this.fromCpuIntRaw[i] ?? 0) !== 0 && maps !== undefined) raise(maps);
@@ -6536,6 +6540,7 @@ export class Esp32s3Core implements McuCore {
         return this.timg[idx < 3 ? 0 : 1]?.maps[core][idx % 3] ?? INTMTX_DEFAULT_MAP;
       }
       if (sourceOff === INTMTX_APB_ADC_MAP) return this.apbSaradcIntMaps[core];
+      if (sourceOff === INTMTX_SYSTIMER_TARGET0_MAP) return this.systimer.maps[core];
       if (sourceOff >= INTMTX_GDMA_IN_MAPS && sourceOff < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (sourceOff & 3) === 0) {
         return this.gdmaRx[(sourceOff - INTMTX_GDMA_IN_MAPS) >> 2]?.maps[core] ?? INTMTX_DEFAULT_MAP;
       }
@@ -7115,6 +7120,9 @@ export class Esp32s3Core implements McuCore {
         if (grp !== undefined) grp.maps[core][idx % 3] = value & 0x1f;
       } else if (sourceOff === INTMTX_APB_ADC_MAP) {
         this.apbSaradcIntMaps[core] = value & 0x1f;
+      } else if (sourceOff === INTMTX_SYSTIMER_TARGET0_MAP) {
+        this.systimer.maps[core] = value & 0x1f;
+        this.recomputeIrq();
       } else if (sourceOff >= INTMTX_GDMA_IN_MAPS && sourceOff < INTMTX_GDMA_IN_MAPS + GDMA_RX_CHANNELS * 4 && (sourceOff & 3) === 0) {
         const ch = this.gdmaRx[(sourceOff - INTMTX_GDMA_IN_MAPS) >> 2];
         if (ch !== undefined) ch.maps[core] = value & 0x1f;

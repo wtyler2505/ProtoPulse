@@ -1248,6 +1248,79 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([1, 0, 1, 0]);
   });
 
+  it('routes SYSTIMER TARGET0 through the interrupt matrix to a level-1 handler', () => {
+    // interrupt_core0_reg.h: INTERRUPT_CORE0_SYSTIMER_TARGET0_INT_MAP_REG = +0x0E4
+    // (source 57). The COMP0 alarm, once latched and enabled, routes to a CPU
+    // interrupt; the ISR reprograms the target forward (as esp_timer does) so the
+    // level comparator does not immediately re-fire after the clear.
+    const SCRATCH = ESP32S3_DRAM_BASE + 0x960;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [UART, 0x60023000, INTMTX, SCRATCH, ESP32S3_IRAM_BASE],
+      [
+        L32R(13, 3), // scratch
+        MOVI(14, 0),
+        S32I(14, 13, 0), // ISR counter = 0
+        L32R(14, 4),
+        WSR(14, SR.VECBASE),
+
+        L32R(3, 1), // SYSTIMER
+        MOVI(4, 50),
+        S32I(4, 3, 0x20), // TARGET0_LO = 50
+        MOVI(4, 0),
+        S32I(4, 3, 0x1c), // TARGET0_HI = 0
+        MOVI(4, 0),
+        S32I(4, 3, 0x34), // TARGET0_CONF = target mode
+        MOVI(4, 1),
+        S32I(4, 3, 0x50), // COMP0_LOAD
+        MOVI(4, 1),
+        S32I(4, 3, 0x64), // INT_ENA = TARGET0
+        MOVI(4, 0x82),
+        S32I(4, 3, 0x00), // CONF = UNIT0_WORK_EN | TARGET0_WORK_EN
+
+        L32R(15, 2), // interrupt matrix
+        MOVI(4, 0),
+        S32I(4, 15, 0xe4), // SYSTIMER_TARGET0 source -> CPU line 0
+        MOVI(4, 1),
+        WSR(4, SR.INTENABLE),
+        RSIL(12, 0),
+
+        MOVI(11, 1),
+        L32I(4, 13, 0),
+        BNE(4, 11, BR(-2)), // spin until the ISR has run once
+
+        L32R(2, 0), // UART
+        S32I(4, 2, 0x00), // ISR counter (expect 1)
+        L32I(5, 3, 0x68), // INT_RAW after the ISR cleared it (expect 0)
+        S32I(5, 2, 0x00),
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 3), // scratch
+        S32I(3, 2, 8), // save a3
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0), // ISR counter++
+        L32R(3, 1), // SYSTIMER
+        MOVI(4, 1),
+        S32I(4, 3, 0x1c), // TARGET0_HI = 1 (reprogram forward, target = 2^32)
+        MOVI(4, 0),
+        S32I(4, 3, 0x20), // TARGET0_LO = 0
+        MOVI(4, 1),
+        S32I(4, 3, 0x50), // COMP0_LOAD
+        MOVI(4, 1),
+        S32I(4, 3, 0x6c), // INT_CLR = TARGET0
+        L32I(3, 2, 8), // restore a3
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(2000);
+    expect([...c.drainUart()]).toEqual([1, 0]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

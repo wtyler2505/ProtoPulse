@@ -1603,6 +1603,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       reading INT_RAW set, INT_ST masked then enabled, and clearing after a
       forward reprogram. Cuts (follow-on slices): routing TARGET0 (matrix
       source 57) to a CPU interrupt, period mode, UNIT1/COMP1/COMP2
+- [x] ESP32-S3 core slice 119 — SYSTIMER TARGET0 interrupt-matrix route
+      (landed 2026-06-17): closes the slice 118 routing cut. The COMP0
+      alarm now reaches a CPU interrupt — INTERRUPT_CORE0_SYSTIMER_TARGET0
+      _INT_MAP_REG (matrix offset 0x0e4, source 57, verified against
+      esp-idf interrupt_core0_reg.h) routes the source to a CPU line and
+      recomputeIrq raises it while INT_RAW & INT_ENA holds. Proven by a
+      level-1 handler test mirroring the APB_SARADC path: the counter
+      passes the target, the ISR fires once, reprograms the target forward
+      (as esp_timer does) and clears the latch, leaving INT_RAW empty with
+      no re-fire. This completes esp_timer's counter -> alarm -> interrupt
+      cycle on UNIT0/COMP0. Cuts: period (auto-reload) mode and
+      UNIT1/COMP1/COMP2 (sources 58/59) remain follow-on slices
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
