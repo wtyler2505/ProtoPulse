@@ -2,6 +2,32 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 110: TWAI bus-off recovery
+
+### Added
+- **TWAI/CAN bus-off recovery now surfaces as a state change**
+  (@protopulse/emu): when firmware returns the controller to operating
+  mode (clears the reset-mode bit) while the node is bus-off, the node
+  rejoins the bus error-active with cleared error counters and
+  `drainTwaiEvents()` emits a `bus_off` -> `active` state-change event.
+- This mirrors ESP-IDF's `on_state_change` callback, which fires on
+  exit from bus-off as well as entry, so hosts can observe a recovered
+  node without polling the error counters.
+
+### Verified
+- Extended the no-ACK burst test to saturate the TEC into bus-off, then
+  return to operating mode, asserting the full
+  active -> warning -> passive -> bus_off -> active state-change
+  sequence.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 177 ESP32-S3 tests.
+
+### Honest cuts
+- The 129-recessive-bit recovery wait is not modeled — recovery is
+  immediate. Recovery via a direct TEC-counter write does not yet emit
+  the state-change event. Bit-timing, arbitration, retry scheduling,
+  wire-level GPIO waveform, and exact dual-filter mode remain open.
+
 ## 2026-06-17 — ESP32-S3 slice 109: TWAI bus-off host event
 
 ### Added

@@ -1490,6 +1490,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       and the ordering. Cuts: still no full ESP-IDF driver alert queue,
       bit timing, arbitration, retry scheduling, wire-level GPIO
       waveform, exact dual-filter mode, or bus-off recovery slice yet
+- [x] ESP32-S3 core slice 110 — TWAI bus-off recovery (landed
+      2026-06-17): returning to operating mode (clearing the reset bit)
+      while bus-off now completes recovery — counters clear and
+      `drainTwaiEvents()` emits a `bus_off` -> `active` state change,
+      mirroring ESP-IDF's `on_state_change` firing when a node exits
+      bus-off. Proven by extending the no-ACK burst test to recover and
+      assert the fourth state-change transition. Cuts: the
+      129-recessive-bit recovery wait is not modeled (recovery is
+      immediate), and recovery via a direct TEC-counter write does not
+      yet emit the state-change event
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -4733,8 +4733,19 @@ export class Esp32s3Core implements McuCore {
   private twaiWrite(off: number, value: number): void {
     const v = value >>> 0;
     if (off === TWAI_MODE) {
+      const wasResetMode = (this.twai.mode & TWAI_MODE_RESET) !== 0;
       this.twai.mode = v & TWAI_MODE_MASK;
-      if ((this.twai.mode & TWAI_MODE_RESET) !== 0) this.twai.busOff = false;
+      const inResetMode = (this.twai.mode & TWAI_MODE_RESET) !== 0;
+      if (this.twai.busOff && wasResetMode && !inResetMode) {
+        // Bus-off recovery: returning to operating mode rejoins the bus
+        // error-active with cleared counters. ESP-IDF fires on_state_change
+        // when the node exits bus-off; the 129-recessive-bit wait is not
+        // modeled, so recovery here is immediate.
+        this.twai.busOff = false;
+        this.twai.txErrCounter = 0;
+        this.twai.rxErrCounter = 0;
+        this.twai.events.push({ type: 'state_change', oldState: 'bus_off', newState: 'active' });
+      }
       this.recomputeIrq();
       return;
     }
