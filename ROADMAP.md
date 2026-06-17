@@ -1733,6 +1733,13 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       confirming the source-agnostic deep-sleep branch resets with
       DEEPSLEEP_RESET. No production change. Cut: touch-controller
       deep-sleep wake (state-machine driven, not a setPin edge) is follow-on
+- [x] ESP32-S3 core slice 131 — deep-sleep touch wake coverage (landed
+      2026-06-17): the final deep-sleep wake family. The touch wake fires
+      from a firmware-triggered one-shot scan (TOUCH_CTRL2.TOUCH_START_EN)
+      that latches RTC_TOUCH_TRIG_EN; the test confirms it resets the core
+      with DEEPSLEEP_RESET. All five deep-sleep wake families (timer/GPIO/
+      EXT0/EXT1/touch, slices 124+129+130+131) now have coverage. No
+      production change
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

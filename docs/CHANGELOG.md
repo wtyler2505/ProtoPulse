@@ -2,6 +2,24 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 131: deep-sleep touch wake coverage (all wake families covered)
+
+### Added
+- **Deep-sleep touch-controller wake coverage** (@protopulse/emu): the final
+  deep-sleep wake family. Unlike the pin-edge GPIO/EXT sources, the touch wake
+  fires from a one-shot scan triggered in firmware while asleep
+  (`TOUCH_CTRL2.TOUCH_START_EN`, RTC_CNTL + 0x10c), which latches
+  `RTC_TOUCH_TRIG_EN` = BIT(8). A new test arms the touch scan (SCAN_CTRL pad 1
+  + THRES1) in deep sleep and confirms the scan resets the core with
+  `DEEPSLEEP_RESET`. With this, **all five deep-sleep wake families — timer
+  (124), GPIO (129), EXT0/EXT1 (130), and touch (131) — now have coverage**
+  proving the source-agnostic deep-sleep reset path. No production change.
+
+### Verified
+- `npm run -w @protopulse/emu test` passed with 286 package tests
+  (199 ESP32-S3); a fresh `tsc --noEmit --incremental false` on the package
+  reported 0 errors (exit 0).
+
 ## 2026-06-17 — ESP32-S3 slice 130: deep-sleep EXT0 + EXT1 wake coverage
 
 ### Added

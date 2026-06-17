@@ -1742,6 +1742,54 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([0xcf]);
   });
 
+  it('wakes from deep sleep via a touch one-shot scan by resetting the core', () => {
+    // The last deep-sleep wake family: the touch controller. Unlike the GPIO/EXT
+    // pin-edge sources, the touch wake fires from a one-shot scan triggered in
+    // firmware (TOUCH_CTRL2.TOUCH_START_EN, RTC_CNTL + 0x10c) while asleep — the
+    // scan latches RTC_TOUCH_TRIG_EN = BIT(8). Same source-agnostic deep-sleep
+    // reset path. Arming mirrors the touch one-shot light-sleep test.
+    const RTCCNTL = 0x60008000;
+    const SENS = 0x60008800;
+    const dgWrapPdEn = 0x80000000;
+    const wakeupTouch = (1 << 8) << 15; // RTC_TOUCH_TRIG_EN in the WAKEUP_ENA field
+    const TOUCH_SCAN_PAD1 = ((0xf << 28) | (1 << 11) | (1 << 8) | 2) >>> 0;
+    const TOUCH_CTRL2_START = ((4 << 17) | (1 << 16) | (1 << 15) | (1 << 14) | (3 << 6) | (3 << 2)) >>> 0;
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [RTCCNTL, UART, dgWrapPdEn, SENS, wakeupTouch, TOUCH_SCAN_PAD1, TOUCH_CTRL2_START, 1], [
+        L32R(2, 0), // RTC_CNTL
+        L32R(4, 3), // SENS
+        L32R(6, 1), // UART
+        L32I(3, 2, 0x38), // RESET_STATE
+        MOVI(5, 0x3f),
+        AND(3, 3, 5), // reset cause [5:0]
+        MOVI(5, 5), // DEEPSLEEP_RESET
+        BNE(3, 5, BR(1)), // first boot (cause != 5) -> deep-sleep setup
+        J(BR(13)), // woke from deep sleep -> emit marker
+
+        L32R(5, 2),
+        S32I(5, 2, 0x90), // DIG_PWC = DG_WRAP_PD_EN (select deep sleep)
+        L32R(5, 4),
+        S32I(5, 2, 0x3c), // WAKEUP_STATE = touch wake source
+        L32R(5, 5),
+        S32I(5, 2, 0x110), // TOUCH_SCAN_CTRL: scan pad 1
+        L32R(5, 7),
+        S32I(5, 4, 0x64), // TOUCH_THRES1: make pad 1 active
+        L32R(5, 2),
+        S32I(5, 2, 0x18), // STATE0.SLEEP_EN -> enter deep sleep
+        L32R(5, 6),
+        S32I(5, 2, 0x10c), // TOUCH_CTRL2.TOUCH_START_EN -> scan -> wake -> reset
+        J(BR(-1)), // spin until the touch scan resets the chip
+
+        MOVI(3, 0xc0),
+        S32I(3, 6, 0), // marker: we rebooted from deep sleep
+        J(BR(-1)),
+      ]),
+    );
+    c.step(2_000); // boot 1: arm + trigger the touch scan, which resets the chip
+    c.step(2_000); // boot 2: reboot reads DEEPSLEEP_RESET and emits the marker
+    expect([...c.drainUart()]).toEqual([0xc0]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
