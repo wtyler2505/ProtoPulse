@@ -2,6 +2,30 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 125: GDMA IN_CHECK_OWNER descriptor gate
+
+### Added
+- **GDMA RX owner-check gate** (@protopulse/emu): the RX descriptor
+  owner-check is now gated by `GDMA_IN_CONF1` bit 12 (`IN_CHECK_OWNER`),
+  which resets to 0 (disabled) per `gdma_reg.h`. By default the DMA now
+  ignores the descriptor `OWNER` bit and consumes CPU-owned descriptors
+  (overwriting) instead of latching `DSCR_EMPTY` backpressure — the
+  previous model checked unconditionally, which was stricter than
+  hardware. The ESP-IDF gdma driver enables the bit explicitly, which is
+  what the ADC-continuous owner-handshake path represents.
+
+### Verified
+- The existing ADC-continuous backpressure/flush tests now write
+  `IN_CONF1` bit 12 (modeling the driver), and a new test proves the
+  reset-default no-check path: a CPU-owned descriptor is consumed
+  (`DONE | SUC_EOF`, not `DSCR_EMPTY`) with no overflow event.
+- `npm run -w @protopulse/emu test` passed with 280 package tests
+  (193 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- `OUT_CHECK_OWNER` / `OUT_AUTO_WRBACK` (TX side) and the CONF0
+  burst-length fields remain follow-on slices.
+
 ## 2026-06-17 — ESP32-S3 slice 124: deep-sleep timer wake (reset on wake)
 
 ### Added

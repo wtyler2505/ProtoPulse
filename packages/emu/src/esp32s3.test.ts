@@ -9200,6 +9200,9 @@ describe('Esp32s3Core — ADC continuous GDMA frames (slice 16)', () => {
         L32R(6, 3), // GDMA
         MOVI(7, ADC_DAC_PERI),
         S32I(7, 6, 0x48),
+        MOVI(7, 1),
+        SLLI(7, 7, 12),
+        S32I(7, 6, 0x04), // IN_CONF1: enable descriptor owner checking (IDF gdma driver default)
         L32R(7, 4),
         S32I(7, 6, 0x20),
 
@@ -9253,6 +9256,64 @@ describe('Esp32s3Core — ADC continuous GDMA frames (slice 16)', () => {
     expect(c.drainAdcContinuousOverflows().map((event) => event.policy)).toEqual(['drop-new']);
   });
 
+  it('ignores descriptor ownership when GDMA IN_CHECK_OWNER is disabled (the reset default)', () => {
+    // gdma_reg.h: IN_CHECK_OWNER (IN_CONF1 bit 12) resets to 0. Without it, the RX
+    // engine does not inspect the descriptor OWNER bit, so a CPU-owned descriptor is
+    // consumed (overwritten) rather than latching DSCR_EMPTY backpressure. This test
+    // omits the CONF1 write the owner-checking tests above add.
+    const desc4BytesDma = 0x80000004;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [DESC, BUF, desc4BytesDma, GDMA, DESC_LINK_START, APB_SARADC, ADC1_CH2_PATTERN, UART],
+      [
+        L32R(2, 0), // descriptor
+        L32R(3, 1), // buffer
+        L32R(4, 2), // owner=DMA, size=4
+        S32I(4, 2, 0),
+        S32I(3, 2, 4),
+        S32I(2, 2, 8), // circular: descriptor -> itself
+
+        L32R(6, 3), // GDMA
+        MOVI(7, ADC_DAC_PERI),
+        S32I(7, 6, 0x48),
+        // IN_CONF1 left at reset (owner checking disabled)
+        L32R(7, 4),
+        S32I(7, 6, 0x20),
+
+        L32R(8, 5), // APB_SARADC
+        L32R(9, 6),
+        S32I(9, 8, 0x18),
+        MOVI(10, 2),
+        S32I(10, 8, 0x00), // sample 1 fills + returns the descriptor to CPU ownership
+        MOVI(10, 0),
+        S32I(10, 8, 0x00),
+
+        L32R(12, 7), // UART
+        L32I(11, 6, 0x08),
+        S32I(11, 12, 0), // INT_RAW after sample 1 = DONE | SUC_EOF (3)
+        MOVI(11, 3),
+        S32I(11, 6, 0x14), // clear DONE | SUC_EOF
+        MOVI(10, 2),
+        S32I(10, 8, 0x00), // sample 2 arrives while the descriptor is CPU-owned
+        MOVI(10, 0),
+        S32I(10, 8, 0x00),
+
+        L32I(11, 6, 0x08),
+        S32I(11, 12, 0), // INT_RAW = DONE | SUC_EOF (3) again, NOT DSCR_EMPTY (16)
+        L32I(11, 3, 0),
+        SRLI(11, 11, 8),
+        S32I(11, 12, 0), // buffer overwritten by sample 2
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.setAdcSampler((channel) => (channel === 2 ? 0.825 : 0));
+    c.step(700);
+
+    expect([...c.drainUart()]).toEqual([3, 3, 0x44]);
+    expect(c.drainAdcContinuousOverflows()).toEqual([]); // no backpressure event
+  });
+
   it('flushes old circular GDMA RX frame data when the ADC continuous flush_pool policy is enabled', () => {
     const desc4BytesDma = 0x80000004;
     const image = assembleXtensa(
@@ -9269,6 +9330,9 @@ describe('Esp32s3Core — ADC continuous GDMA frames (slice 16)', () => {
         L32R(6, 3), // GDMA
         MOVI(7, ADC_DAC_PERI),
         S32I(7, 6, 0x48),
+        MOVI(7, 1),
+        SLLI(7, 7, 12),
+        S32I(7, 6, 0x04), // IN_CONF1: enable descriptor owner checking (IDF gdma driver default)
         L32R(7, 4),
         S32I(7, 6, 0x20),
 

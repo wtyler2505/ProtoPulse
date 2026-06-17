@@ -1674,6 +1674,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       and emits a marker. Light sleep (DG_WRAP_PD_EN clear) still resumes
       via WAITI as before. Cuts: other wake sources (GPIO/EXT/touch) in
       deep sleep, and RTC slow-memory retention, are follow-on
+- [x] ESP32-S3 core slice 125 — GDMA IN_CHECK_OWNER descriptor gate
+      (landed 2026-06-17): the RX descriptor owner-check is now gated by
+      GDMA_IN_CONF1 bit 12 (IN_CHECK_OWNER), which resets to 0 (disabled)
+      per gdma_reg.h — so by default the DMA ignores the descriptor OWNER
+      bit and consumes CPU-owned descriptors (overwriting) rather than
+      latching DSCR_EMPTY backpressure. The prior model always checked;
+      now the existing ADC-continuous owner-handshake tests set the bit
+      (as the IDF gdma driver does) and a new test proves the reset-default
+      no-check path. This corrects the backpressure long-tail item:
+      owner-checking is a configured behavior, not unconditional. Cuts:
+      OUT_CHECK_OWNER / OUT_AUTO_WRBACK and CONF0 burst-length fields
+      remain follow-on
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -1588,6 +1588,7 @@ const GDMA_DESC_SIZE_MASK = 0xfff;
 const GDMA_DESC_LENGTH_MASK = 0xfff << 12;
 const GDMA_DESC_SUC_EOF = 1 << 30;
 const GDMA_DESC_OWNER_DMA = 1 << 31;
+const GDMA_IN_CHECK_OWNER = 1 << 12; // IN_CONF1 bit 12 — gate descriptor owner checking (reset 0 = off)
 const ADC_DIGI_RESULT_BYTES = 4;
 
 // ESP-IDF app-image format (esp_app_format.h; checksum from esptool):
@@ -3226,7 +3227,7 @@ export class Esp32s3Core implements McuCore {
       this.gdmaMarkDscrErr(ch, desc);
       return;
     }
-    if ((dw0 & GDMA_DESC_OWNER_DMA) === 0) {
+    if ((dw0 & GDMA_DESC_OWNER_DMA) === 0 && (ch.conf1 & GDMA_IN_CHECK_OWNER) !== 0) {
       const recycled = this.gdmaHandleCpuOwnedDescriptor(ch, desc, dw0, word);
       if (recycled === null) return;
       dw0 = recycled;
@@ -3251,7 +3252,7 @@ export class Esp32s3Core implements McuCore {
         this.gdmaMarkDscrErr(ch, desc);
         return;
       }
-      if ((dw0 & GDMA_DESC_OWNER_DMA) === 0) {
+      if ((dw0 & GDMA_DESC_OWNER_DMA) === 0 && (ch.conf1 & GDMA_IN_CHECK_OWNER) !== 0) {
         const recycled = this.gdmaHandleCpuOwnedDescriptor(ch, desc, dw0, word);
         if (recycled === null) return;
         dw0 = recycled;
