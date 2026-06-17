@@ -2,6 +2,28 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 120: SYSTIMER COMP0 period (auto-reload) mode
+
+### Added
+- **SYSTIMER period mode** (@protopulse/emu): closes the slice 119 cut.
+  `TARGET0_CONF` bit 30 (PERIOD_MODE) with `PERIOD[25:0]` selects periodic
+  operation. `COMP0_LOAD` arms the first alarm one PERIOD ahead of the
+  current counter, and each fire auto-advances the comparator by PERIOD so
+  the alarm re-fires every period — the hardware auto-reload `esp_timer`
+  uses for its periodic tick — without software reprogramming the target.
+
+### Verified
+- Added a level-1 handler test whose ISR only clears the latch (no
+  reprogram) yet runs three times, driven purely by the auto-reload — the
+  direct contrast to the one-shot path where the ISR reprograms the target.
+- `npm run -w @protopulse/emu test` passed with 275 package tests
+  (188 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- The second counter and other comparators (UNIT1, COMP1/COMP2,
+  interrupt-matrix sources 58/59) and `TIMER_UNIT_SEL` remain follow-on
+  slices.
+
 ## 2026-06-17 — ESP32-S3 slice 119: SYSTIMER TARGET0 interrupt-matrix route
 
 ### Added

@@ -1321,6 +1321,67 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([1, 0]);
   });
 
+  it('re-fires the SYSTIMER COMP0 alarm every period in auto-reload mode', () => {
+    // TARGET0_CONF bit 30 selects period (auto-reload) mode: the comparator advances
+    // its target by PERIOD ticks on each fire, so the alarm re-fires without the ISR
+    // reprogramming it. The handler here only clears the latch, yet it runs three
+    // times — the contrast to the one-shot path, where the ISR had to reprogram.
+    const SCRATCH = ESP32S3_DRAM_BASE + 0x980;
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [UART, 0x60023000, INTMTX, SCRATCH, ESP32S3_IRAM_BASE, 0x4000001e],
+      [
+        L32R(13, 3), // scratch
+        MOVI(14, 0),
+        S32I(14, 13, 0), // ISR counter = 0
+        L32R(14, 4),
+        WSR(14, SR.VECBASE),
+
+        L32R(3, 1), // SYSTIMER
+        L32R(4, 5),
+        S32I(4, 3, 0x34), // TARGET0_CONF = PERIOD_MODE | period 30
+        MOVI(4, 1),
+        S32I(4, 3, 0x50), // COMP0_LOAD: arm first alarm one period ahead
+        MOVI(4, 1),
+        S32I(4, 3, 0x64), // INT_ENA = TARGET0
+        MOVI(4, 0x82),
+        S32I(4, 3, 0x00), // CONF = UNIT0_WORK_EN | TARGET0_WORK_EN
+
+        L32R(15, 2), // interrupt matrix
+        MOVI(4, 0),
+        S32I(4, 15, 0xe4), // SYSTIMER_TARGET0 -> CPU line 0
+        MOVI(4, 1),
+        WSR(4, SR.INTENABLE),
+        RSIL(12, 0),
+
+        MOVI(11, 3),
+        L32I(4, 13, 0),
+        BNE(4, 11, BR(-2)), // spin until the alarm has fired three times
+
+        L32R(2, 0), // UART
+        S32I(4, 2, 0x00), // ISR counter (expect 3)
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 3), // scratch
+        S32I(3, 2, 8), // save a3
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0), // ISR counter++
+        L32R(3, 1), // SYSTIMER
+        MOVI(4, 1),
+        S32I(4, 3, 0x6c), // INT_CLR only — auto-reload re-arms the next alarm
+        L32I(3, 2, 8), // restore a3
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ],
+    );
+    const c = core(image);
+    c.step(4000);
+    expect([...c.drainUart()]).toEqual([3]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

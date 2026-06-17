@@ -1615,6 +1615,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       no re-fire. This completes esp_timer's counter -> alarm -> interrupt
       cycle on UNIT0/COMP0. Cuts: period (auto-reload) mode and
       UNIT1/COMP1/COMP2 (sources 58/59) remain follow-on slices
+- [x] ESP32-S3 core slice 120 — SYSTIMER COMP0 period (auto-reload) mode
+      (landed 2026-06-17): closes the slice 119 period-mode cut.
+      TARGET0_CONF bit 30 (PERIOD_MODE) with PERIOD[25:0] selects periodic
+      operation: COMP0_LOAD arms the first alarm one PERIOD ahead of the
+      counter, and each fire auto-advances the comparator by PERIOD so the
+      alarm re-fires every period without software reprogramming. Proven by
+      a level-1 handler that only clears the latch (no reprogram) yet runs
+      three times — the contrast to the one-shot path where the ISR had to
+      reprogram the target forward. Cuts: UNIT1 + COMP1/COMP2 (matrix
+      sources 58/59) and TIMER_UNIT_SEL remain follow-on slices
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

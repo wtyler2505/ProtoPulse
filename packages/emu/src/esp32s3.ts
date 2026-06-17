@@ -1108,6 +1108,8 @@ const SYSTIMER_TIMER_UNIT0_UPDATE = 1 << 30; // UNIT0_OP write strobe
 const SYSTIMER_TIMER_UNIT0_VALUE_VALID = 1 << 29; // UNIT0_OP read-only flag
 const SYSTIMER_TARGET0_INT = 1 << 0; // INT_* bit 0 — COMP0/TARGET0 alarm
 const SYSTIMER_INT_MASK = 0x7; // TARGET0/1/2
+const SYSTIMER_TARGET0_PERIOD_MODE = 1 << 30; // TARGET0_CONF bit 30
+const SYSTIMER_TARGET0_PERIOD_MASK = 0x03ffffff; // TARGET0_CONF bits [25:0]
 /** Walk-the-bus guard for strlen / %s — a missing NUL must refuse,
  *  not spin forever. */
 const ROM_STR_MAX = 0x10000;
@@ -2105,6 +2107,8 @@ interface SystimerController {
   target0Conf: number;
   comp0Target: number; // active comparator value
   comp0Loaded: boolean;
+  comp0PeriodMode: boolean; // auto-reload (period) vs one-shot (target)
+  comp0Period: number; // PERIOD ticks for auto-reload
   intRaw: number; // TARGET0/1/2 alarm latches (bits 0..2)
   intEna: number;
   maps: InterruptMapPair; // TARGET0 -> CPU interrupt routing (matrix source 57)
@@ -2124,6 +2128,8 @@ const freshSystimer = (): SystimerController => ({
   target0Conf: 0,
   comp0Target: 0,
   comp0Loaded: false,
+  comp0PeriodMode: false,
+  comp0Period: 0,
   intRaw: 0,
   intEna: 0,
   maps: freshInterruptMapPair(),
@@ -3564,12 +3570,20 @@ export class Esp32s3Core implements McuCore {
       case SYSTIMER_TARGET0_CONF:
         this.systimer.target0Conf = v;
         return;
-      case SYSTIMER_COMP0_LOAD:
-        // Apply the staged TARGET0_HI/LO into the active comparator (sync strobe).
-        this.systimer.comp0Target = this.systimer.target0Hi * 0x100000000 + this.systimer.target0Lo;
+      case SYSTIMER_COMP0_LOAD: {
+        // Apply the staged comparator config (sync strobe). Period mode arms the
+        // first alarm one PERIOD ahead of the counter and auto-reloads; target mode
+        // uses the absolute TARGET0_HI/LO value.
+        const periodMode = (this.systimer.target0Conf & SYSTIMER_TARGET0_PERIOD_MODE) !== 0;
+        this.systimer.comp0PeriodMode = periodMode;
+        this.systimer.comp0Period = this.systimer.target0Conf & SYSTIMER_TARGET0_PERIOD_MASK;
+        this.systimer.comp0Target = periodMode
+          ? this.systimerUnit0Value() + this.systimer.comp0Period
+          : this.systimer.target0Hi * 0x100000000 + this.systimer.target0Lo;
         this.systimer.comp0Loaded = true;
         this.systimerCheckAlarms();
         return;
+      }
       case SYSTIMER_INT_ENA:
         this.systimer.intEna = v & SYSTIMER_INT_MASK;
         this.recomputeIrq();
@@ -3589,12 +3603,19 @@ export class Esp32s3Core implements McuCore {
   private systimerCheckAlarms(): void {
     if (!this.systimer.comp0Loaded) return;
     if ((this.systimer.conf & SYSTIMER_TARGET0_WORK_EN) === 0) return;
-    if (this.systimerUnit0Value() >= this.systimer.comp0Target) {
-      if ((this.systimer.intRaw & SYSTIMER_TARGET0_INT) === 0) {
-        this.systimer.intRaw |= SYSTIMER_TARGET0_INT;
-        this.recomputeIrq();
-      }
+    const value = this.systimerUnit0Value();
+    if (value < this.systimer.comp0Target) return;
+    const wasSet = (this.systimer.intRaw & SYSTIMER_TARGET0_INT) !== 0;
+    this.systimer.intRaw |= SYSTIMER_TARGET0_INT;
+    if (this.systimer.comp0PeriodMode && this.systimer.comp0Period > 0) {
+      // Auto-reload: advance the comparator past the counter so it fires again
+      // every PERIOD ticks without software reprogramming. In target/one-shot mode
+      // the comparator output is a level that holds until the target is rewritten.
+      do {
+        this.systimer.comp0Target += this.systimer.comp0Period;
+      } while (value >= this.systimer.comp0Target);
     }
+    if (!wasSet) this.recomputeIrq();
   }
 
   /** Alarm comparator, run after every instruction while armed. On a
