@@ -2,6 +2,30 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 116: TWAI transmit-complete status bit
+
+### Added
+- **TCS status bit** (@protopulse/emu): closes the slice 115 cut. The
+  TWAI status register's Transmission Complete Status bit (SR bit 3) now
+  tracks the real outcome of the last transmission — set on a successful
+  transmit, cleared on a single-shot drop or an unacknowledged transmit —
+  rather than always reading complete. The transmit buffer (TBS) bit
+  stays set (the buffer is always free in this synchronous model).
+
+### Verified
+- Added a test reading the status register after a single-shot frame
+  loses arbitration: TCS reads clear (transmission did not complete),
+  the inverse of the existing self-reception test where a successful
+  transmit reads TCS set.
+- `npm run -w @protopulse/emu test` passed with 271 package tests
+  (184 ESP32-S3); `npm run check:packages` clean.
+
+### Honest cuts
+- Bit-timing, retry scheduling, and wire-level GPIO waveform remain open.
+  TWAI arbitration and transmit modeling (acceptance filtering, ACK/TEC,
+  bus-off + recovery, bitwise arbitration with ALC latch, non-destructive
+  retransmit, single-shot, and the TCS status bit) is now complete.
+
 ## 2026-06-17 — ESP32-S3 slice 115: TWAI single-shot transmit
 
 ### Added

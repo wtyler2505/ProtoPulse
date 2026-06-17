@@ -1801,6 +1801,7 @@ interface TwaiController {
   pendingTx: number[] | null;
   pendingTxSelfReceive: boolean;
   pendingTxSingleShot: boolean;
+  txComplete: boolean;
   dataOverrun: boolean;
   busOff: boolean;
   interrupt: number;
@@ -2049,6 +2050,7 @@ const freshTwaiController = (): TwaiController => ({
   pendingTx: null,
   pendingTxSelfReceive: false,
   pendingTxSingleShot: false,
+  txComplete: true,
   dataOverrun: false,
   busOff: false,
   interrupt: 0,
@@ -4498,7 +4500,11 @@ export class Esp32s3Core implements McuCore {
   }
 
   private twaiStatus(): number {
-    let status = TWAI_STATUS_TX_BUFFER | TWAI_STATUS_TX_COMPLETE;
+    // TBS (transmit buffer) is always free in this synchronous model; TCS reflects
+    // whether the last transmission actually completed (cleared by a single-shot drop
+    // or an unacknowledged transmit).
+    let status = TWAI_STATUS_TX_BUFFER;
+    if (this.twai.txComplete) status |= TWAI_STATUS_TX_COMPLETE;
     if (this.twai.rxFifo.length > 0) status |= TWAI_STATUS_RX_BUFFER;
     if (this.twai.dataOverrun) status |= TWAI_STATUS_DATA_OVERRUN;
     if (this.twai.busOff || this.twai.txErrCounter >= this.twai.errWarningLimit || this.twai.rxErrCounter >= this.twai.errWarningLimit) {
@@ -4840,6 +4846,7 @@ export class Esp32s3Core implements McuCore {
         node.twai.pendingTx = null;
         node.twai.pendingTxSingleShot = false;
         node.twai.pendingTxSelfReceive = false;
+        node.twai.txComplete = false; // single-shot drop did not complete (TCS = 0)
         node.twai.events.push({ type: 'tx_done', success: false, frame: node.twaiFrameEvent(dropped) });
         node.twai.interrupt |= TWAI_INTR_TX;
         node.recomputeIrq();
@@ -4854,6 +4861,7 @@ export class Esp32s3Core implements McuCore {
     if (!selfReceive) {
       for (const peer of this.twaiPeers) acknowledged = peer.twaiReceiveFromBus(frame) || acknowledged;
     }
+    this.twai.txComplete = acknowledged;
     if (acknowledged) this.twaiRecordSuccessfulTransmit();
     else this.twaiRecordAckError();
     this.twai.events.push({ type: 'tx_done', success: acknowledged, frame: this.twaiFrameEvent(frame) });

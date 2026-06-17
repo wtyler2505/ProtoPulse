@@ -1098,6 +1098,52 @@ describe('Esp32s3Core', () => {
     expect(b.drainTwaiTx()).toEqual([{ id: 0x100, data: [0xbb], dlc: 1, extended: false, rtr: false }]);
   });
 
+  it('clears the TWAI transmit-complete status bit after a single-shot transmission is dropped', () => {
+    // TCS (Status register bit 3) reads 1 when the last transmission completed and 0
+    // when it was aborted. A single-shot frame (CMR = TR|AT) that loses arbitration is
+    // dropped, so TCS must read 0 afterwards — distinguishing a dropped single-shot
+    // from a successful transmit (which the self-reception test proves reads TCS=1).
+    const a = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI, UART], [
+        L32R(2, 0), // TWAI
+        L32R(6, 1), // UART0
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, 1),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=1
+        MOVI(3, 0xa0),
+        S32I(3, 2, 0x44), // std id 0x500 byte 0
+        MOVI(3, 0),
+        S32I(3, 2, 0x48), // std id 0x500 byte 1
+        MOVI(3, 0xdd),
+        S32I(3, 2, 0x4c), // data 0
+        MOVI(3, 3),
+        S32I(3, 2, 0x04), // single-shot transmit: TR | AT
+        L32I(3, 2, 0x08), // status register
+        MOVI(4, 8), // TCS = bit 3
+        AND(3, 3, 4),
+        S32I(3, 6, 0), // -> UART (0 because the single-shot frame was dropped)
+        J(BR(-1)),
+      ]),
+    );
+    const b = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [TWAI], [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        J(BR(-1)),
+      ]),
+    );
+
+    a.connectTwaiPeer(b);
+    b.step(80);
+    b.armTwaiTransmit({ id: 0x100, data: [0xbb] });
+    a.step(220);
+
+    // TCS clear: the single-shot transmission did not complete.
+    expect([...a.drainUart()]).toEqual([0]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

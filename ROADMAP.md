@@ -1565,9 +1565,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       no-op (no pending transmission to cancel in this synchronous model).
       Proven by a two-node test where a single-shot id 0x500 loses to id
       0x100, reports a failed transmit, and — unlike the slice 113
-      auto-retransmit path — leaves an empty TX log. Cuts: TCS (status
-      transmit-complete bit) still always reads complete; no bit timing,
+      auto-retransmit path — leaves an empty TX log. Cuts: no bit timing,
       retry scheduling, or wire-level GPIO waveform yet
+- [x] ESP32-S3 core slice 116 — TWAI transmit-complete status bit
+      (landed 2026-06-17): closes the slice 115 TCS cut. The status
+      register's TCS bit (SR bit 3) now reflects whether the last
+      transmission actually completed — set after a successful transmit,
+      cleared after a single-shot drop or an unacknowledged transmit —
+      instead of reading complete unconditionally. Proven by reading the
+      status register after a single-shot frame loses arbitration: TCS is
+      clear, the inverse of the self-reception test where a successful
+      transmit reads TCS set. Cuts: no bit timing, retry scheduling, or
+      wire-level GPIO waveform yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
