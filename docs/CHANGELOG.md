@@ -2,6 +2,32 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 109: TWAI bus-off host event
+
+### Added
+- **TWAI/CAN bus-off now surfaces as a host event** (@protopulse/emu):
+  when repeated no-ACK transmits drive the Transmit Error Counter to its
+  256 saturation point, `drainTwaiEvents()` emits a standalone `error`
+  event carrying `busOff`, placed immediately before the
+  `passive` -> `bus_off` state-change event.
+- This mirrors ESP-IDF's distinct legacy `TWAI_ALERT_BUS_OFF` alert,
+  which is separate from the ACK/bus-error alert, so HIL and cosim hosts
+  can detect the node going offline without inferring it from the TEC.
+
+### Verified
+- Added a 32-frame no-ACK burst test that asserts exactly one
+  `{ busOff: true }` error event, confirms the existing
+  active -> warning -> passive -> bus_off state-change escalation is
+  unchanged, and checks the bus-off error event immediately precedes the
+  bus_off transition.
+- `npm run -w @protopulse/emu test -- src/esp32s3.test.ts`
+  passed with 176 ESP32-S3 tests.
+
+### Honest cuts
+- Still not the full ESP-IDF driver alert queue. Bit-timing,
+  arbitration, retry scheduling, wire-level GPIO waveform, exact
+  dual-filter mode, and a bus-off recovery slice remain open.
+
 ## 2026-06-17 — ESP32-S3 slice 108: TWAI ACK bus-error events
 
 ### Added

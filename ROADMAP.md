@@ -1480,6 +1480,16 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       before the failed `tx_done` callback. Cuts: still no full ESP-IDF
       driver alert queue, bit timing, arbitration, retry scheduling,
       wire-level GPIO waveform, or exact dual-filter mode yet
+- [x] ESP32-S3 core slice 109 — TWAI bus-off host event (landed
+      2026-06-17): when repeated no-ACK transmits saturate the TEC at
+      256, `drainTwaiEvents()` now emits a standalone `error` event with
+      `busOff` immediately before the `passive` -> `bus_off` state
+      change, mirroring ESP-IDF's distinct legacy `TWAI_ALERT_BUS_OFF`
+      alert. Proven by a 32-frame no-ACK burst test that asserts the
+      single bus-off error event, the unchanged state-change escalation,
+      and the ordering. Cuts: still no full ESP-IDF driver alert queue,
+      bit timing, arbitration, retry scheduling, wire-level GPIO
+      waveform, exact dual-filter mode, or bus-off recovery slice yet
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

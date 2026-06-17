@@ -869,6 +869,56 @@ describe('Esp32s3Core', () => {
     ]);
   });
 
+  it('surfaces TWAI bus-off as a host error event when the TEC saturates', () => {
+    const txBurst: XtInstr[] = [];
+    for (let i = 0; i < 32; i++) {
+      txBurst.push(MOVI(3, TWAI_TX_REQUEST), S32I(3, 2, 0x04));
+    }
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [TWAI, 0x80, 0xa0, 0x66],
+      [
+        L32R(2, 0), // TWAI
+        MOVI(3, 0),
+        S32I(3, 2, 0x00), // leave reset mode
+        MOVI(3, 1),
+        S32I(3, 2, 0x40), // frame info: standard data frame, DLC=1
+        L32R(3, 1),
+        S32I(3, 2, 0x44), // std id 0x405 byte 0
+        L32R(3, 2),
+        S32I(3, 2, 0x48), // std id 0x405 byte 1
+        L32R(3, 3),
+        S32I(3, 2, 0x4c), // data 0
+        ...txBurst,
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.step(4000);
+
+    const events = c.drainTwaiEvents();
+
+    // Bus-off is surfaced exactly once, as its own host error event (mirrors the
+    // legacy TWAI_ALERT_BUS_OFF alert, distinct from the ACK/bus-error alert).
+    expect(events.filter((event) => event.type === 'error' && event.flags.busOff === true)).toEqual([
+      { type: 'error', flags: { busOff: true } },
+    ]);
+
+    // Existing state-change escalation is unchanged by the new error event.
+    expect(events.filter((event) => event.type === 'state_change')).toEqual([
+      { type: 'state_change', oldState: 'active', newState: 'warning' },
+      { type: 'state_change', oldState: 'warning', newState: 'passive' },
+      { type: 'state_change', oldState: 'passive', newState: 'bus_off' },
+    ]);
+
+    // The bus-off error event immediately precedes the passive -> bus_off transition.
+    const busOffIdx = events.findIndex((event) => event.type === 'error' && event.flags.busOff === true);
+    const busOffStateIdx = events.findIndex(
+      (event) => event.type === 'state_change' && event.newState === 'bus_off',
+    );
+    expect(busOffStateIdx).toBe(busOffIdx + 1);
+  });
+
   it('does not transmit TWAI frames while listen-only mode is active', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

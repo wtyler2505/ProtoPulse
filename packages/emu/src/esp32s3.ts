@@ -22,6 +22,7 @@ export interface Esp32s3TwaiErrorFlags {
   ackErr?: true;
   busError?: true;
   rxFifoOverrun?: true;
+  busOff?: true;
 }
 
 export type Esp32s3TwaiErrorState = 'active' | 'warning' | 'passive' | 'bus_off';
@@ -4637,6 +4638,7 @@ export class Esp32s3Core implements McuCore {
             ...(event.flags.ackErr === true ? { ackErr: true } : {}),
             ...(event.flags.busError === true ? { busError: true } : {}),
             ...(event.flags.rxFifoOverrun === true ? { rxFifoOverrun: true } : {}),
+            ...(event.flags.busOff === true ? { busOff: true } : {}),
           },
         };
       case 'state_change':
@@ -4675,6 +4677,7 @@ export class Esp32s3Core implements McuCore {
       this.twai.txErrCounter = 128;
       this.twai.rxErrCounter = 0;
       this.twai.interrupt |= TWAI_INTR_ERR_PASSIVE;
+      this.twai.events.push({ type: 'error', flags: { busOff: true } });
       this.twaiPushStateChange(oldState);
       return;
     }
