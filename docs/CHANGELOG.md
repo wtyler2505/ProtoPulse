@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 129: deep-sleep GPIO wake coverage + slice-128 typecheck fix
+
+### Fixed
+- **Typecheck regression in the slice-128 PCNT glitch filter** (@protopulse/emu):
+  `pcntFlushPending` indexed into `pendingPulse` / `pendingPulseCycle` without
+  accounting for `noUncheckedIndexedAccess`, so a fresh `tsc` reported two
+  errors (`pendingPulseCycle[channel]` possibly undefined; `pending` typed
+  `DigitalLevel | undefined` on the `lastPulse` assignment). The local
+  verification missed it because the typecheck process was OOM-terminating and
+  reporting a false "0 errors." Fixed with a `== null` guard, a `?? 0` fallback,
+  and an explicitly-typed `confirmed: DigitalLevel`. A fresh
+  `tsc --incremental false` on the package now reports 0 errors.
+
+### Added
+- **Deep-sleep GPIO wake coverage** (@protopulse/emu): a new test proves the
+  source-agnostic deep-sleep branch resets the core with `DEEPSLEEP_RESET` when
+  the wake comes from an armed GPIO high-level source (not just the RTC timer
+  exercised in slice 124) — arm `GPIO_PIN7` WAKEUP_ENABLE + high-level, enter
+  deep sleep, drive `IO7` high, and confirm the reboot marker. Locks a
+  previously-untested real path; no production change.
+
+### Verified
+- `npm run -w @protopulse/emu test` passed with 283 package tests
+  (196 ESP32-S3); fresh package `tsc` clean.
+
 ## 2026-06-17 — ESP32-S3 slice 128: PCNT input glitch filter
 
 ### Added

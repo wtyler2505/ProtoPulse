@@ -5812,15 +5812,16 @@ export class Esp32s3Core implements McuCore {
     const unit = this.pcntUnits[unitIndex];
     if (unit === undefined) return;
     const pending = unit.pendingPulse[channel];
-    if (pending === null) return;
+    if (pending == null) return; // narrows out both null and undefined
     if ((unit.conf0 & PCNT_FILTER_EN) === 0) {
       unit.pendingPulse[channel] = null;
       return;
     }
     const thres = unit.conf0 & PCNT_FILTER_THRES_MASK;
-    if (this.cpu.cycles - unit.pendingPulseCycle[channel] >= thres) {
-      this.pcntApplyEdgeAction(unitIndex, channel, pending === 1);
-      unit.lastPulse[channel] = pending;
+    if (this.cpu.cycles - (unit.pendingPulseCycle[channel] ?? 0) >= thres) {
+      const confirmed: DigitalLevel = pending;
+      this.pcntApplyEdgeAction(unitIndex, channel, confirmed === 1);
+      unit.lastPulse[channel] = confirmed;
       unit.pendingPulse[channel] = null;
     }
   }

@@ -1720,6 +1720,13 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       existing PCNT tests write CONF0 without FILTER_EN, so the filter is
       off there. Cuts: ctrl-input filtering and exact read-during-glitch
       timing remain follow-on
+- [x] ESP32-S3 core slice 129 — deep-sleep GPIO wake coverage + slice-128
+      typecheck fix (landed 2026-06-17): a new test proves the source-agnostic
+      deep-sleep branch resets the core with DEEPSLEEP_RESET on an armed GPIO
+      high-level wake (not just the RTC timer of slice 124); locks a
+      previously-untested real path. Also repairs a noUncheckedIndexedAccess
+      typecheck regression the slice-128 PCNT filter introduced (a false "0
+      errors" from an OOM-terminating local typecheck had masked it)
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
