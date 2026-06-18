@@ -2,6 +2,31 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 133: SHA accelerator SHA-1 + SHA-224 modes
+
+### Added
+- **SHA-1 and SHA-224 modes** (@protopulse/emu): extends slice 132's SHA
+  accelerator to two more algorithms selected via `SHA_MODE` (SHA-1 = 0,
+  SHA-224 = 1). SHA-224 reuses the SHA-256 block compression with the FIPS 180-4
+  SHA-224 initial vector and a truncated 7-word digest. SHA-1 adds a from-scratch
+  80-round SHA-1 compression onto a 5-word digest (the rotate-lefts are expressed
+  via the shared rotate-right helper). `SHA_START` now loads the per-mode IV and
+  runs the matching compression; `SHA_CONTINUE` accumulates onto the running
+  state for the selected mode.
+
+### Verified
+- Two new known-answer tests feed the padded "abc" block: SHA-1("abc") =
+  `a9993e36…9cd0d89d` (5 words) and SHA-224("abc") = `23097d22…e36c9da7`
+  (7 words), both matching the NIST vectors — so any compression bug fails
+  immediately.
+- `npm run -w @protopulse/emu test` passed with 289 package tests
+  (202 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- SHA-384 / SHA-512 (64-bit-word algorithms), the DMA path, and the SHA
+  interrupt remain follow-on. The SHA accelerator now models the three 32-bit
+  algorithms (SHA-1/224/256).
+
 ## 2026-06-17 — ESP32-S3 slice 132: SHA-256 hardware accelerator (new peripheral)
 
 ### Added

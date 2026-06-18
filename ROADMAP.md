@@ -1748,6 +1748,14 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       scratch. Firmware owns the padding (engine compresses padded blocks).
       A known-answer test confirms SHA-256("abc") = the NIST vector. Cuts:
       SHA-1/224/384/512, the DMA path, and the SHA interrupt are follow-on
+- [x] ESP32-S3 core slice 133 — SHA accelerator SHA-1 + SHA-224 modes
+      (landed 2026-06-17): extends slice 132 to two more algorithms via
+      SHA_MODE (SHA-1 = 0, SHA-224 = 1). SHA-224 reuses the SHA-256
+      compression with the SHA-224 IV + 7-word digest; SHA-1 adds a
+      from-scratch 80-round compression onto a 5-word digest. Two
+      known-answer tests confirm SHA-1("abc") + SHA-224("abc") = the NIST
+      vectors. The accelerator now covers the three 32-bit algorithms; cuts:
+      SHA-384/512 (64-bit words), the DMA path, and the SHA interrupt
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -1849,6 +1849,111 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([0xbf, 0xea, 0xde, 0x23, 0xa3, 0x9c, 0x61, 0xad]);
   });
 
+  it('hashes a one-block message through the SHA-1 mode', () => {
+    // SHA-1 (SHA_MODE = 0) reuses the same message/digest registers but runs the
+    // 80-round SHA-1 compression onto a 5-word digest. The padded "abc" block is
+    // identical to the SHA-256 case; the digest is the NIST SHA-1("abc") =
+    // a9993e36 4706816a ba3e2571 7850c26c 9cd0d89d. The guest emits each digest
+    // word's low byte (5 words).
+    const SHA = 0x6003b000;
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [SHA, UART, 0x61626380], [
+        L32R(2, 0), // SHA base
+        L32R(6, 1), // UART
+        MOVI(4, 0),
+        S32I(4, 2, 0x00), // SHA_MODE = SHA-1
+        L32R(4, 2),
+        S32I(4, 2, 0x80), // M[0] = 'a','b','c',0x80
+        MOVI(4, 0),
+        S32I(4, 2, 0x84), // M[1]
+        S32I(4, 2, 0x88), // M[2]
+        S32I(4, 2, 0x8c), // M[3]
+        S32I(4, 2, 0x90), // M[4]
+        S32I(4, 2, 0x94), // M[5]
+        S32I(4, 2, 0x98), // M[6]
+        S32I(4, 2, 0x9c), // M[7]
+        S32I(4, 2, 0xa0), // M[8]
+        S32I(4, 2, 0xa4), // M[9]
+        S32I(4, 2, 0xa8), // M[10]
+        S32I(4, 2, 0xac), // M[11]
+        S32I(4, 2, 0xb0), // M[12]
+        S32I(4, 2, 0xb4), // M[13]
+        S32I(4, 2, 0xb8), // M[14]
+        MOVI(4, 0x18),
+        S32I(4, 2, 0xbc), // M[15] = bit length 24
+        MOVI(4, 1),
+        S32I(4, 2, 0x10), // SHA_START = 1
+        L32I(4, 2, 0x40),
+        S32I(4, 6, 0), // H[0] (0x36)
+        L32I(4, 2, 0x44),
+        S32I(4, 6, 0), // H[1] (0x6a)
+        L32I(4, 2, 0x48),
+        S32I(4, 6, 0), // H[2] (0x71)
+        L32I(4, 2, 0x4c),
+        S32I(4, 6, 0), // H[3] (0x6c)
+        L32I(4, 2, 0x50),
+        S32I(4, 6, 0), // H[4] (0x9d)
+        J(BR(-1)), // spin
+      ]),
+    );
+    c.step(200);
+    expect([...c.drainUart()]).toEqual([0x36, 0x6a, 0x71, 0x6c, 0x9d]);
+  });
+
+  it('hashes a one-block message through the SHA-224 mode', () => {
+    // SHA-224 (SHA_MODE = 1) runs the SHA-256 compression with the SHA-224 initial
+    // vector and a truncated 7-word (224-bit) digest. Padded "abc" block as before;
+    // digest = NIST SHA-224("abc") = 23097d22 3405d822 8642a477 bda255b3 2aadbce4
+    // bda0b3f7 e36c9da7. The guest emits each of the 7 digest words' low byte.
+    const SHA = 0x6003b000;
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [SHA, UART, 0x61626380], [
+        L32R(2, 0), // SHA base
+        L32R(6, 1), // UART
+        MOVI(4, 1),
+        S32I(4, 2, 0x00), // SHA_MODE = SHA-224
+        L32R(4, 2),
+        S32I(4, 2, 0x80), // M[0]
+        MOVI(4, 0),
+        S32I(4, 2, 0x84),
+        S32I(4, 2, 0x88),
+        S32I(4, 2, 0x8c),
+        S32I(4, 2, 0x90),
+        S32I(4, 2, 0x94),
+        S32I(4, 2, 0x98),
+        S32I(4, 2, 0x9c),
+        S32I(4, 2, 0xa0),
+        S32I(4, 2, 0xa4),
+        S32I(4, 2, 0xa8),
+        S32I(4, 2, 0xac),
+        S32I(4, 2, 0xb0),
+        S32I(4, 2, 0xb4),
+        S32I(4, 2, 0xb8),
+        MOVI(4, 0x18),
+        S32I(4, 2, 0xbc), // M[15] = bit length 24
+        MOVI(4, 1),
+        S32I(4, 2, 0x10), // SHA_START = 1
+        L32I(4, 2, 0x40),
+        S32I(4, 6, 0), // H[0] (0x22)
+        L32I(4, 2, 0x44),
+        S32I(4, 6, 0), // H[1] (0x22)
+        L32I(4, 2, 0x48),
+        S32I(4, 6, 0), // H[2] (0x77)
+        L32I(4, 2, 0x4c),
+        S32I(4, 6, 0), // H[3] (0xb3)
+        L32I(4, 2, 0x50),
+        S32I(4, 6, 0), // H[4] (0xe4)
+        L32I(4, 2, 0x54),
+        S32I(4, 6, 0), // H[5] (0xf7)
+        L32I(4, 2, 0x58),
+        S32I(4, 6, 0), // H[6] (0xa7)
+        J(BR(-1)), // spin
+      ]),
+    );
+    c.step(200);
+    expect([...c.drainUart()]).toEqual([0x22, 0x22, 0x77, 0xb3, 0xe4, 0xf7, 0xa7]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

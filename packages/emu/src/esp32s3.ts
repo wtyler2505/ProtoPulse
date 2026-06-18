@@ -914,7 +914,12 @@ const SHA_CONTINUE = 0x14;
 const SHA_BUSY = 0x18;
 const SHA_H_BASE = 0x40; // digest output: 8 words for SHA-256
 const SHA_TEXT_BASE = 0x80; // message input: 16 words for SHA-256
+const SHA_MODE_SHA1 = 0;
+const SHA_MODE_SHA224 = 1;
 const SHA_MODE_SHA256 = 2;
+const SHA1_IV = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
+// SHA-224 shares the SHA-256 block compression but uses a distinct initial vector.
+const SHA224_IV = [0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4];
 const SHA256_IV = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
 const SHA256_K = [
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -6667,6 +6672,48 @@ export class Esp32s3Core implements McuCore {
     this.shaH[7] = ((this.shaH[7] ?? 0) + h) >>> 0;
   }
 
+  // One SHA-1 block compression (FIPS 180-4, 80 rounds onto a 5-word digest).
+  private sha1Compress(): void {
+    const w = new Array<number>(80);
+    for (let t = 0; t < 16; t++) w[t] = (this.shaText[t] ?? 0) >>> 0;
+    for (let t = 16; t < 80; t++) {
+      w[t] = sha256Rotr(((w[t - 3] ?? 0) ^ (w[t - 8] ?? 0) ^ (w[t - 14] ?? 0) ^ (w[t - 16] ?? 0)) >>> 0, 31);
+    }
+    let a = this.shaH[0] ?? 0;
+    let b = this.shaH[1] ?? 0;
+    let c = this.shaH[2] ?? 0;
+    let d = this.shaH[3] ?? 0;
+    let e = this.shaH[4] ?? 0;
+    for (let t = 0; t < 80; t++) {
+      let f: number;
+      let k: number;
+      if (t < 20) {
+        f = ((b & c) ^ (~b & d)) >>> 0;
+        k = 0x5a827999;
+      } else if (t < 40) {
+        f = (b ^ c ^ d) >>> 0;
+        k = 0x6ed9eba1;
+      } else if (t < 60) {
+        f = ((b & c) ^ (b & d) ^ (c & d)) >>> 0;
+        k = 0x8f1bbcdc;
+      } else {
+        f = (b ^ c ^ d) >>> 0;
+        k = 0xca62c1d6;
+      }
+      const temp = ((sha256Rotr(a, 27) + f + e + k + (w[t] ?? 0)) >>> 0) >>> 0;
+      e = d;
+      d = c;
+      c = sha256Rotr(b, 2); // rotate-left 30 == rotate-right 2
+      b = a;
+      a = temp;
+    }
+    this.shaH[0] = ((this.shaH[0] ?? 0) + a) >>> 0;
+    this.shaH[1] = ((this.shaH[1] ?? 0) + b) >>> 0;
+    this.shaH[2] = ((this.shaH[2] ?? 0) + c) >>> 0;
+    this.shaH[3] = ((this.shaH[3] ?? 0) + d) >>> 0;
+    this.shaH[4] = ((this.shaH[4] ?? 0) + e) >>> 0;
+  }
+
   private busRead(addr: number, bytes: 1 | 2 | 4): number {
     const idx = this.sramIndex(addr);
     if (idx !== null) {
@@ -7245,14 +7292,21 @@ export class Esp32s3Core implements McuCore {
       } else if (off === SHA_MODE) {
         this.shaMode = v;
       } else if (off === SHA_START) {
-        // First block: load the SHA-256 IV, then run the per-block compression.
-        if (this.shaMode === SHA_MODE_SHA256) {
+        // First block: load the mode's initial vector, then run its compression.
+        if (this.shaMode === SHA_MODE_SHA1) {
+          this.shaH = SHA1_IV.slice();
+          this.sha1Compress();
+        } else if (this.shaMode === SHA_MODE_SHA224) {
+          this.shaH = SHA224_IV.slice();
+          this.sha256Compress();
+        } else if (this.shaMode === SHA_MODE_SHA256) {
           this.shaH = SHA256_IV.slice();
           this.sha256Compress();
         }
       } else if (off === SHA_CONTINUE) {
         // Subsequent block: accumulate onto the running digest state.
-        if (this.shaMode === SHA_MODE_SHA256) this.sha256Compress();
+        if (this.shaMode === SHA_MODE_SHA1) this.sha1Compress();
+        else if (this.shaMode === SHA_MODE_SHA224 || this.shaMode === SHA_MODE_SHA256) this.sha256Compress();
       }
       return;
     }
