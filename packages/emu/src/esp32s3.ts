@@ -929,6 +929,28 @@ const AES_BLOCK_MODE = 0x94; // esp_aes_mode_t: ECB=0, CBC=1, OFB=2, CTR=3, CFB8
 const AES_BLOCK_NUM = 0x98; // number of 16-byte blocks to process
 const AES_BLOCK_MODE_CBC = 1;
 const AES_BLOCK_MODE_CTR = 3;
+const AES_BLOCK_MODE_GCM = 6;
+const AES_H_MEM = 0x60; // GCM hash subkey H = E(0) (read)
+const AES_J0_MEM = 0x70; // GCM initial counter block J0 (written by firmware)
+const AES_T0_MEM = 0x80; // GCM authentication tag T0 (read)
+const AES_AAD_BLOCK_NUM = 0xa0; // number of leading AAD blocks in the DMA stream
+
+// GHASH GF(2^128) multiply (NIST SP 800-38D), on 16-byte big-endian blocks. Bits of
+// `x` are consumed MSB-first; the reduction polynomial is x^128 + x^7 + x^2 + x + 1.
+const gf128Mul = (x: number[], h: number[]): number[] => {
+  const z = new Array<number>(16).fill(0);
+  const v = h.slice(0, 16);
+  for (let i = 0; i < 128; i++) {
+    if ((((x[i >> 3] ?? 0) >> (7 - (i & 7))) & 1) !== 0) {
+      for (let j = 0; j < 16; j++) z[j] = (z[j] ?? 0) ^ (v[j] ?? 0);
+    }
+    const lsb = (v[15] ?? 0) & 1;
+    for (let j = 15; j > 0; j--) v[j] = (((v[j] ?? 0) >> 1) | (((v[j - 1] ?? 0) & 1) << 7)) & 0xff;
+    v[0] = ((v[0] ?? 0) >> 1) & 0xff;
+    if (lsb !== 0) v[0] = (v[0] ?? 0) ^ 0xe1;
+  }
+  return z;
+};
 // RSA / MPI big-number accelerator (DR_REG_RSA_BASE). Operand memory blocks hold
 // little-endian 32-bit words (up to 128 = 4096 bits). Block bases and operation
 // registers verified against esp-idf bignum_alt.c (non-ESP32 branch) + mpi_ll.h.
@@ -2660,8 +2682,12 @@ export class Esp32s3Core implements McuCore {
   private aesState = 0; // 0 idle / 2 done
   private aesIv: number[] = new Array(4).fill(0); // CBC/CTR IV (4 words)
   private aesDmaEnable = 0;
-  private aesBlockMode = 0; // 0 = ECB, 1 = CBC, 3 = CTR
+  private aesBlockMode = 0; // 0 = ECB, 1 = CBC, 3 = CTR, 6 = GCM
   private aesBlockNum = 0;
+  private aesH: number[] = new Array(4).fill(0); // GCM hash subkey H = E(0)
+  private aesJ0: number[] = new Array(4).fill(0); // GCM initial counter block J0
+  private aesT0: number[] = new Array(4).fill(0); // GCM authentication tag
+  private aesAadBlockNum = 0;
   private aesIntRaw = 0;
   private aesIntEna = 0;
   private aesIntMaps: InterruptMapPair = freshInterruptMapPair();
@@ -3784,6 +3810,50 @@ export class Esp32s3Core implements McuCore {
       }
       return out;
     };
+    if (this.aesBlockMode === AES_BLOCK_MODE_GCM) {
+      // GCM: GCTR-encrypt the plaintext, GHASH(AAD ‖ ciphertext ‖ lengths), and the
+      // tag = GHASH ⊕ E(J0). J0 (the firmware-derived initial counter) is in J0_MEM;
+      // the data counter starts at inc32(J0). H = E(0) is exposed at H_MEM.
+      const hBytes = aesEncryptBlock(new Array<number>(16).fill(0), rk, nr);
+      this.aesH = toWords(hBytes);
+      const j0 = [this.aesJ0[0] ?? 0, this.aesJ0[1] ?? 0, this.aesJ0[2] ?? 0, this.aesJ0[3] ?? 0];
+      const ej0 = aesEncryptBlock(toBytes(j0), rk, nr); // E(J0) bytes for the tag
+      let ghash = new Array<number>(16).fill(0);
+      const ghashBlock = (block: number[]): void => {
+        const xored = ghash.map((g, i) => ((g ?? 0) ^ (block[i] ?? 0)) & 0xff);
+        ghash = gf128Mul(xored, hBytes);
+      };
+      const aadBlocks = this.aesAadBlockNum & 0xffff;
+      const dataBlocks = Math.max(0, blocks - aadBlocks);
+      const ctr = [j0[0] ?? 0, j0[1] ?? 0, j0[2] ?? 0, ((j0[3] ?? 0) + 1) >>> 0];
+      for (let b = 0; b < aadBlocks; b++) {
+        ghashBlock(toBytes([inWords[b * 4] ?? 0, inWords[b * 4 + 1] ?? 0, inWords[b * 4 + 2] ?? 0, inWords[b * 4 + 3] ?? 0]));
+      }
+      for (let b = 0; b < dataBlocks; b++) {
+        const idx = aadBlocks + b;
+        const pblk = [inWords[idx * 4] ?? 0, inWords[idx * 4 + 1] ?? 0, inWords[idx * 4 + 2] ?? 0, inWords[idx * 4 + 3] ?? 0];
+        const ks = toWords(aesEncryptBlock(toBytes(ctr), rk, nr));
+        const cblk = [0, 0, 0, 0];
+        for (let w = 0; w < 4; w++) cblk[w] = ((pblk[w] ?? 0) ^ (ks[w] ?? 0)) >>> 0;
+        for (const cw of cblk) this.gdmaPushRxWord(rxCh, cw >>> 0);
+        ghashBlock(toBytes(cblk));
+        ctr[3] = ((ctr[3] ?? 0) + 1) >>> 0;
+      }
+      const aadBits = aadBlocks * 128;
+      const cBits = dataBlocks * 128;
+      const lenBlock = new Array<number>(16).fill(0);
+      lenBlock[4] = (aadBits >>> 24) & 0xff;
+      lenBlock[5] = (aadBits >>> 16) & 0xff;
+      lenBlock[6] = (aadBits >>> 8) & 0xff;
+      lenBlock[7] = aadBits & 0xff;
+      lenBlock[12] = (cBits >>> 24) & 0xff;
+      lenBlock[13] = (cBits >>> 16) & 0xff;
+      lenBlock[14] = (cBits >>> 8) & 0xff;
+      lenBlock[15] = cBits & 0xff;
+      ghashBlock(lenBlock);
+      this.aesT0 = toWords(ghash.map((g, i) => ((g ?? 0) ^ (ej0[i] ?? 0)) & 0xff));
+      return;
+    }
     for (let b = 0; b < blocks; b++) {
       const blk = [inWords[b * 4] ?? 0, inWords[b * 4 + 1] ?? 0, inWords[b * 4 + 2] ?? 0, inWords[b * 4 + 3] ?? 0];
       let outWords: number[];
@@ -3907,6 +3977,10 @@ export class Esp32s3Core implements McuCore {
     this.aesDmaEnable = 0;
     this.aesBlockMode = 0;
     this.aesBlockNum = 0;
+    this.aesH = new Array(4).fill(0);
+    this.aesJ0 = new Array(4).fill(0);
+    this.aesT0 = new Array(4).fill(0);
+    this.aesAadBlockNum = 0;
     this.aesIntRaw = 0;
     this.aesIntEna = 0;
     this.aesIntMaps = freshInterruptMapPair();
@@ -7345,6 +7419,9 @@ export class Esp32s3Core implements McuCore {
       }
       if (off === AES_MODE) return this.aesMode >>> 0;
       if (off === AES_INT_ENA) return this.aesIntEna >>> 0;
+      if (off >= AES_H_MEM && off < AES_H_MEM + 4 * 4 && (off & 3) === 0) return (this.aesH[(off - AES_H_MEM) >> 2] ?? 0) >>> 0;
+      if (off >= AES_T0_MEM && off < AES_T0_MEM + 4 * 4 && (off & 3) === 0) return (this.aesT0[(off - AES_T0_MEM) >> 2] ?? 0) >>> 0;
+      if (off >= AES_J0_MEM && off < AES_J0_MEM + 4 * 4 && (off & 3) === 0) return (this.aesJ0[(off - AES_J0_MEM) >> 2] ?? 0) >>> 0;
       return 0;
     }
     if (addr >= RSA_BASE && addr < RSA_BASE + 0x1000) {
@@ -7966,6 +8043,10 @@ export class Esp32s3Core implements McuCore {
         this.aesBlockMode = v;
       } else if (off === AES_BLOCK_NUM) {
         this.aesBlockNum = v;
+      } else if (off >= AES_J0_MEM && off < AES_J0_MEM + 4 * 4 && (off & 3) === 0) {
+        this.aesJ0[(off - AES_J0_MEM) >> 2] = v;
+      } else if (off === AES_AAD_BLOCK_NUM) {
+        this.aesAadBlockNum = v;
       } else if (off === AES_TRIGGER && this.aesDmaEnable !== 0) {
         if ((v & 1) !== 0) {
           this.aesRunDma(); // CBC/CTR via GDMA-fed data

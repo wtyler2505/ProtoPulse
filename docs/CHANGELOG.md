@@ -2,6 +2,29 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 156: AES-GCM (authenticated encryption)
+
+### Added
+- **AES-GCM** (@protopulse/emu): the authenticated-encryption mode modern TLS uses
+  (`AES_BLOCK_MODE` = 6). The firmware-derived J0 is written to `AES_J0_MEM` (+0x70);
+  the engine GCTR-encrypts the plaintext (counter from inc32(J0)), GHASHes the
+  ciphertext, and computes the authentication tag = GHASH ⊕ E(J0) at `AES_T0_MEM`
+  (+0x80). The hash subkey H = E(0) is exposed at `AES_H_MEM` (+0x60), and
+  `AES_AAD_BLOCK_NUM` (+0xA0) marks leading AAD blocks. Adds a from-scratch GHASH
+  GF(2¹²⁸) multiply (NIST SP 800-38D, x¹²⁸+x⁷+x²+x+1). Verified against esp-idf
+  `esp_aes_gcm.c`.
+
+### Verified
+- A known-answer test runs NIST GCM Test Case 3 (no AAD, 64-byte plaintext) end-to-end
+  through GDMA: ciphertext 42831ec2…473f5985 and tag 4d5c2af3…2ba6fab4, both read back
+  from the descriptors and the tag register.
+- `npm run -w @protopulse/emu test` passed with 316 package tests
+  (229 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- GCM with AAD (the path is implemented via `AES_AAD_BLOCK_NUM`) and partial final
+  blocks remain to be exercised by tests.
+
 ## 2026-06-18 — ESP32-S3 slice 155: SHA-512 over the SHA-DMA path
 
 ### Added

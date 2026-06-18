@@ -1890,6 +1890,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       shaRunDma() selects the 1024-bit (32-word) block size for the 64-bit-word
       algorithms (SHA-512/384) and feeds sha512Compress, so GDMA hashing covers the
       full SHA family. KAT: padded "abc" SHA-512 block over GDMA → ddaf35a1…a54ca49f
+- [x] ESP32-S3 core slice 156 — AES-GCM authenticated encryption (landed 2026-06-18):
+      AES_BLOCK_MODE = 6. Firmware-derived J0 -> J0_MEM (+0x70); the engine GCTR-encrypts
+      (counter from inc32(J0)), GHASHes the ciphertext, computes tag = GHASH ⊕ E(J0) at
+      T0_MEM (+0x80); H = E(0) at H_MEM (+0x60), AAD_BLOCK_NUM (+0xA0). Adds a
+      from-scratch GHASH GF(2^128) multiply. KAT: NIST GCM Test Case 3 (ct + tag)
+      end-to-end through GDMA. Cuts: GCM-with-AAD + partial-block tests
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
