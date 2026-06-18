@@ -663,6 +663,7 @@ const INTMTX_PWM0_MAP = 0x07c; // INTERRUPT_CORE0_PWM0_INTR_MAP_REG
 const INTMTX_PWM1_MAP = 0x080; // INTERRUPT_CORE0_PWM1_INTR_MAP_REG
 const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
 const INTMTX_EFUSE_MAP = 0x090; // INTERRUPT_CORE0_EFUSE_INT_MAP_REG (source 36)
+const INTMTX_SHA_MAP = 0x150; // INTERRUPT_CORE0_SHA_INT_MAP_REG (source 84: 0x040 + 4*(84-16))
 const INTMTX_CAN_MAP = 0x094; // INTERRUPT_CORE0_CAN_INT_MAP_REG
 const INTMTX_RTC_CORE_MAP = 0x09c; // INTERRUPT_CORE0_RTC_CORE_INTR_MAP_REG
 const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
@@ -912,6 +913,8 @@ const SHA_MODE = 0x00;
 const SHA_START = 0x10;
 const SHA_CONTINUE = 0x14;
 const SHA_BUSY = 0x18;
+const SHA_CLEAR_IRQ = 0x24; // write 1 to clear the completion interrupt
+const SHA_INT_ENA = 0x28; // write 1 to enable the completion interrupt
 const SHA_H_BASE = 0x40; // digest output: 8 words for SHA-256
 const SHA_TEXT_BASE = 0x80; // message input: 16 words for SHA-256
 const SHA_MODE_SHA1 = 0;
@@ -2282,6 +2285,9 @@ export class Esp32s3Core implements McuCore {
   private shaMode = 0;
   private shaText: number[] = new Array(16).fill(0);
   private shaH: number[] = new Array(8).fill(0);
+  private shaIntRaw = 0;
+  private shaIntEna = 0;
+  private shaIntMaps: InterruptMapPair = freshInterruptMapPair();
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
@@ -3382,6 +3388,9 @@ export class Esp32s3Core implements McuCore {
     this.shaMode = 0;
     this.shaText = new Array(16).fill(0);
     this.shaH = new Array(8).fill(0);
+    this.shaIntRaw = 0;
+    this.shaIntEna = 0;
+    this.shaIntMaps = freshInterruptMapPair();
     this.pcntIntRaw = 0;
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
@@ -6381,6 +6390,7 @@ export class Esp32s3Core implements McuCore {
     if (apbAdcPending) raise(this.apbSaradcIntMaps);
     if (rtcPending) raise(this.rtcCoreIntMaps);
     if ((this.efuseIntRaw & this.efuseIntEna) !== 0) raise(this.efuseIntMaps);
+    if ((this.shaIntRaw & this.shaIntEna) !== 0) raise(this.shaIntMaps);
     for (let n = 0; n < this.systimer.comps.length; n++) {
       const c = this.systimer.comps[n];
       if (c !== undefined && (this.systimer.intRaw & this.systimer.intEna & (1 << n)) !== 0) raise(c.maps);
@@ -6737,6 +6747,7 @@ export class Esp32s3Core implements McuCore {
     if (addr >= SHA_BASE && addr < SHA_BASE + 0x1000) {
       const off = addr - SHA_BASE;
       if (off === SHA_BUSY) return 0; // compression is instantaneous in the model
+      if (off === SHA_INT_ENA) return this.shaIntEna >>> 0;
       if (off >= SHA_H_BASE && off < SHA_H_BASE + 8 * 4 && (off & 3) === 0) {
         return (this.shaH[(off - SHA_H_BASE) >> 2] ?? 0) >>> 0;
       }
@@ -6846,6 +6857,7 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_LEDC_MAP) return this.ledcIntMaps[core];
       if (sourceOff === INTMTX_CAN_MAP) return this.twai.maps[core];
       if (sourceOff === INTMTX_EFUSE_MAP) return this.efuseIntMaps[core];
+      if (sourceOff === INTMTX_SHA_MAP) return this.shaIntMaps[core];
       if (sourceOff === INTMTX_RTC_CORE_MAP) return this.rtcCoreIntMaps[core];
       if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
       if (sourceOff === INTMTX_PCNT_MAP) return this.pcntIntMaps[core];
@@ -7303,10 +7315,20 @@ export class Esp32s3Core implements McuCore {
           this.shaH = SHA256_IV.slice();
           this.sha256Compress();
         }
+        this.shaIntRaw = 1; // block complete asserts the (level) done interrupt
+        this.recomputeIrq();
       } else if (off === SHA_CONTINUE) {
         // Subsequent block: accumulate onto the running digest state.
         if (this.shaMode === SHA_MODE_SHA1) this.sha1Compress();
         else if (this.shaMode === SHA_MODE_SHA224 || this.shaMode === SHA_MODE_SHA256) this.sha256Compress();
+        this.shaIntRaw = 1;
+        this.recomputeIrq();
+      } else if (off === SHA_INT_ENA) {
+        this.shaIntEna = v;
+        this.recomputeIrq();
+      } else if (off === SHA_CLEAR_IRQ) {
+        this.shaIntRaw = 0;
+        this.recomputeIrq();
       }
       return;
     }
@@ -7454,6 +7476,9 @@ export class Esp32s3Core implements McuCore {
       else if (sourceOff === INTMTX_CAN_MAP) this.twai.maps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_EFUSE_MAP) {
         this.efuseIntMaps[core] = value & 0x1f;
+        this.recomputeIrq();
+      } else if (sourceOff === INTMTX_SHA_MAP) {
+        this.shaIntMaps[core] = value & 0x1f;
         this.recomputeIrq();
       } else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;

@@ -1756,6 +1756,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       known-answer tests confirm SHA-1("abc") + SHA-224("abc") = the NIST
       vectors. The accelerator now covers the three 32-bit algorithms; cuts:
       SHA-384/512 (64-bit words), the DMA path, and the SHA interrupt
+- [x] ESP32-S3 core slice 134 — SHA accelerator interrupt routing (landed
+      2026-06-17): routes the SHA done interrupt through the interrupt matrix
+      (source 84 → map at INTMTX + 0x150; SHA_INT_ENA +0x28 arms, block
+      completion asserts, SHA_CLEAR_IRQ +0x24 clears), same recomputeIrq/raise
+      pattern as the eFuse routing. A test confirms the ISR runs once and
+      stays cleared. Cuts: SHA-384/512 and the DMA path remain follow-on
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

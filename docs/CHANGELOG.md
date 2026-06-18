@@ -2,6 +2,30 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 134: SHA accelerator interrupt routing
+
+### Added
+- **SHA completion interrupt** (@protopulse/emu): the SHA accelerator now routes
+  its done interrupt through the interrupt matrix. SHA is interrupt source 84
+  (`interrupts.h` ETS_SHA_INTR_SOURCE), so its map register sits at
+  `INTERRUPT_CORE0` + 0x150 (`0x040 + 4*(84-16)`). `SHA_INT_ENA` (+0x28) arms the
+  level interrupt; completing a block (`SHA_START`/`SHA_CONTINUE`) asserts it;
+  `SHA_CLEAR_IRQ` (+0x24) clears it. Implemented with the same
+  `recomputeIrq`/`raise` pattern as the eFuse routing (slice 123) —
+  `shaIntRaw`/`shaIntEna`/`shaIntMaps` plus the matrix read/write dispatch.
+
+### Verified
+- A new test arms `SHA_INT_ENA`, maps source 84 to a CPU level-1 line, hashes the
+  padded "abc" block, and confirms the ISR runs exactly once and stays cleared
+  (no re-fire of the level interrupt after `SHA_CLEAR_IRQ`).
+- `npm run -w @protopulse/emu test` passed with 290 package tests
+  (203 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- SHA-384 / SHA-512 (64-bit-word algorithms) and the DMA path remain follow-on;
+  the SHA accelerator now models the three 32-bit algorithms plus the completion
+  interrupt.
+
 ## 2026-06-17 — ESP32-S3 slice 133: SHA accelerator SHA-1 + SHA-224 modes
 
 ### Added

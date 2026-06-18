@@ -1954,6 +1954,86 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([0x22, 0x22, 0x77, 0xb3, 0xe4, 0xf7, 0xa7]);
   });
 
+  it('routes the SHA done interrupt through the interrupt matrix to a level-1 handler', () => {
+    // SHA is interrupt source 84 (interrupts.h ETS_SHA_INTR_SOURCE), so its matrix
+    // map sits at INTMTX + 0x150 (0x040 + 4*(84-16)). SHA_INT_ENA (+0x28) arms the
+    // level interrupt; completing a block (SHA_START) asserts it; the ISR clears it
+    // through SHA_CLEAR_IRQ (+0x24). The guest hashes the padded "abc" block and the
+    // ISR runs exactly once — the counter stays 1 after the clear (no re-fire).
+    const SHA = 0x6003b000;
+    const SCRATCH = ESP32S3_DRAM_BASE + 0x9c0;
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [UART, SHA, INTMTX, SCRATCH, ESP32S3_IRAM_BASE, 0x61626380], [
+        L32R(13, 3), // scratch
+        MOVI(14, 0),
+        S32I(14, 13, 0), // ISR counter = 0
+        L32R(14, 4),
+        WSR(14, SR.VECBASE),
+
+        L32R(3, 1), // SHA base
+        MOVI(4, 1),
+        S32I(4, 3, 0x28), // SHA_INT_ENA = 1
+
+        L32R(15, 2), // interrupt matrix
+        MOVI(4, 0),
+        S32I(4, 15, 0x150), // SHA source (84) -> CPU line 0
+        MOVI(4, 1),
+        WSR(4, SR.INTENABLE),
+        RSIL(12, 0),
+
+        MOVI(4, 2),
+        S32I(4, 3, 0x00), // SHA_MODE = SHA-256
+        L32R(4, 5),
+        S32I(4, 3, 0x80), // M[0]
+        MOVI(4, 0),
+        S32I(4, 3, 0x84),
+        S32I(4, 3, 0x88),
+        S32I(4, 3, 0x8c),
+        S32I(4, 3, 0x90),
+        S32I(4, 3, 0x94),
+        S32I(4, 3, 0x98),
+        S32I(4, 3, 0x9c),
+        S32I(4, 3, 0xa0),
+        S32I(4, 3, 0xa4),
+        S32I(4, 3, 0xa8),
+        S32I(4, 3, 0xac),
+        S32I(4, 3, 0xb0),
+        S32I(4, 3, 0xb4),
+        S32I(4, 3, 0xb8),
+        MOVI(4, 0x18),
+        S32I(4, 3, 0xbc), // M[15]
+        MOVI(4, 1),
+        S32I(4, 3, 0x10), // SHA_START -> block done -> interrupt asserts
+
+        MOVI(11, 1),
+        L32I(4, 13, 0),
+        BNE(4, 11, BR(-2)), // spin until the ISR has run
+
+        L32R(2, 0), // UART
+        S32I(4, 2, 0x00), // ISR counter (expect 1)
+        L32I(4, 13, 0),
+        S32I(4, 2, 0x00), // counter again — still 1 (no re-fire after clear)
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 3), // scratch
+        S32I(3, 2, 8), // save a3
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0), // ISR counter++
+        L32R(3, 1), // SHA base
+        MOVI(4, 1),
+        S32I(4, 3, 0x24), // SHA_CLEAR_IRQ
+        L32I(3, 2, 8), // restore a3
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ]),
+    );
+    c.step(800);
+    expect([...c.drainUart()]).toEqual([1, 1]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
