@@ -3725,6 +3725,99 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([1, 1]);
   });
 
+  it('hashes a block through the SHA-DMA path (GDMA-fed)', () => {
+    // The S3 SHA accelerator can take its (pre-padded) message over GDMA: a TX
+    // descriptor feeds the blocks, the digest stays in the H registers. The guest
+    // sets SHA_MODE (+0x00) = SHA-256, SHA_DMA_BLOCK_NUM (+0x0c) = 1, then SHA_DMA_START
+    // (+0x1c). The padded "abc" block (0x61626380, 0×14, 0x18) hashes to NIST
+    // ba7816bf…f20015ad. The guest emits digest word[0] and word[7] MSB-first.
+    const SHA = 0x6003b000;
+    const txDesc = ESP32S3_DRAM_BASE + 0x1200;
+    const msgBuf = ESP32S3_DRAM_BASE + 0x1240;
+    const txDw0 = (GDMA_DESC_OWNER_DMA | GDMA_DESC_SUC_EOF | (64 << 12) | 64) >>> 0;
+    const outLinkStart = ((txDesc & 0x000f_ffff) | GDMA_OUT_LINK_START) >>> 0;
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [txDesc, msgBuf, txDw0, GDMA, outLinkStart, SHA, UART, 0x61626380, 0x18],
+        [
+          L32R(2, 0), // txDesc
+          L32R(3, 2),
+          S32I(3, 2, 0), // dw0
+          L32R(3, 1),
+          S32I(3, 2, 4), // dw1 = msgBuf
+          MOVI(3, 0),
+          S32I(3, 2, 8), // dw2 = 0
+          L32R(4, 1), // msgBuf
+          L32R(3, 7),
+          S32I(3, 4, 0), // word0 = 0x61626380
+          MOVI(3, 0),
+          S32I(3, 4, 4),
+          S32I(3, 4, 8),
+          S32I(3, 4, 12),
+          S32I(3, 4, 16),
+          S32I(3, 4, 20),
+          S32I(3, 4, 24),
+          S32I(3, 4, 28),
+          S32I(3, 4, 32),
+          S32I(3, 4, 36),
+          S32I(3, 4, 40),
+          S32I(3, 4, 44),
+          S32I(3, 4, 48),
+          S32I(3, 4, 52),
+          S32I(3, 4, 56), // words 1..14 = 0
+          L32R(3, 8),
+          S32I(3, 4, 60), // word15 = 0x18 (bit length of "abc")
+
+          L32R(6, 3), // GDMA
+          MOVI(7, 7), // GDMA_PERI_SHA
+          S32I(7, 6, 0xa8), // OUT_CH0_PERI_SEL = SHA
+          L32R(7, 4),
+          S32I(7, 6, 0x80), // OUT_CH0_LINK = start
+
+          L32R(9, 5), // SHA base
+          MOVI(4, 2),
+          S32I(4, 9, 0x00), // SHA_MODE = SHA-256
+          MOVI(4, 1),
+          S32I(4, 9, 0x0c), // SHA_DMA_BLOCK_NUM = 1
+          MOVI(4, 1),
+          S32I(4, 9, 0x1c), // SHA_DMA_START
+
+          L32R(6, 6), // UART
+          L32I(5, 9, 0x40), // H[0]
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0xba
+          L32I(5, 9, 0x40),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0x78
+          L32I(5, 9, 0x40),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0x16
+          L32I(5, 9, 0x40),
+          S32I(5, 6, 0), // 0xbf
+          L32I(5, 9, 0x5c), // H[7]
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0xf2
+          L32I(5, 9, 0x5c),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0x00
+          L32I(5, 9, 0x5c),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0x15
+          L32I(5, 9, 0x5c),
+          S32I(5, 6, 0), // 0xad
+          J(BR(-1)),
+        ],
+      ),
+    );
+    c.step(600);
+    expect([...c.drainUart()]).toEqual([0xba, 0x78, 0x16, 0xbf, 0xf2, 0x00, 0x15, 0xad]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

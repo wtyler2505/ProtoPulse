@@ -1881,6 +1881,11 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       0x134), same matrix path as ECB. KAT: a CBC-DMA encrypt with the interrupt armed
       fires the ISR exactly once. **AES-DMA / CBC mode COMPLETE** (CBC encrypt +
       decrypt + CTR + completion interrupt, all GDMA-verified end-to-end)
+- [x] ESP32-S3 core slice 154 — SHA-DMA path (landed 2026-06-18): the SHA accelerator
+      takes its pre-padded message over GDMA (peripheral SHA0 = trigger id 7), digest
+      in the H registers. New regs SHA_DMA_BLOCK_NUM (+0x0c), SHA_DMA_START (+0x1c),
+      SHA_DMA_CONTINUE (+0x20); new shaRunDma() reuses the block-compression core.
+      KAT: padded "abc" block over GDMA → NIST SHA-256 ba7816bf…f20015ad
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

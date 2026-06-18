@@ -990,6 +990,9 @@ const SHA_BASE = 0x6003b000;
 const SHA_MODE = 0x00;
 const SHA_START = 0x10;
 const SHA_CONTINUE = 0x14;
+const SHA_DMA_BLOCK_NUM = 0x0c; // number of (pre-padded) message blocks for the DMA hash
+const SHA_DMA_START = 0x1c; // write 1 -> hash the GDMA-fed blocks from the IV
+const SHA_DMA_CONTINUE = 0x20; // write 1 -> hash more GDMA-fed blocks onto the running state
 const SHA_BUSY = 0x18;
 const SHA_CLEAR_IRQ = 0x24; // write 1 to clear the completion interrupt
 const SHA_INT_ENA = 0x28; // write 1 to enable the completion interrupt
@@ -1977,6 +1980,7 @@ const GDMA_OUTLINK_START = 1 << 21;
 const GDMA_OUTLINK_RESTART = 1 << 22;
 const GDMA_OUTLINK_PARK = 1 << 23;
 const GDMA_PERI_AES = 6; // SOC_GDMA_TRIG_PERIPH_AES0
+const GDMA_PERI_SHA = 7; // SOC_GDMA_TRIG_PERIPH_SHA0
 const GDMA_PERI_ADC_DAC = 8;
 const GDMA_PERI_RMT = 9;
 const GDMA_PERI_NONE = 0x3f;
@@ -2643,6 +2647,7 @@ export class Esp32s3Core implements McuCore {
   private pcntUnits: PcntUnit[] = Array.from({ length: PCNT_UNITS }, freshPcntUnit);
   private pcntCtrl = PCNT_CTRL_RESET;
   private shaMode = 0;
+  private shaDmaBlockNum = 0;
   private shaText: number[] = new Array(32).fill(0); // 32 words: 16 for SHA-256, 32 for SHA-512
   private shaH: number[] = new Array(16).fill(0); // 16 words: 8 for SHA-256, 16 for SHA-512
   private shaIntRaw = 0;
@@ -3807,6 +3812,24 @@ export class Esp32s3Core implements McuCore {
     this.aesIv = [prev[0] ?? 0, prev[1] ?? 0, prev[2] ?? 0, prev[3] ?? 0];
   }
 
+  // DMA-SHA: the (pre-padded) message blocks arrive over the GDMA OUT channel bound
+  // to peripheral SHA0; the digest stays in the H registers. `cont` continues onto
+  // the running digest instead of reloading the IV.
+  private shaRunDma(cont: boolean): void {
+    const txCh = this.gdmaTx.find((t) => (t.active || t.started) && t.periSel === GDMA_PERI_SHA);
+    if (txCh === undefined) return;
+    const inWords = this.gdmaReadTxSymbols(txCh);
+    const blocks = this.shaDmaBlockNum > 0 ? this.shaDmaBlockNum : inWords.length >> 4;
+    if (!cont) {
+      this.shaH = this.shaMode === SHA_MODE_SHA1 ? SHA1_IV.slice() : this.shaMode === SHA_MODE_SHA224 ? SHA224_IV.slice() : SHA256_IV.slice();
+    }
+    for (let b = 0; b < blocks; b++) {
+      for (let w = 0; w < 16; w++) this.shaText[w] = inWords[b * 16 + w] ?? 0;
+      if (this.shaMode === SHA_MODE_SHA1) this.sha1Compress();
+      else this.sha256Compress();
+    }
+  }
+
   /** esp_cpu_stall's split 0x86 code, both halves present. */
   private core1RtcStalled(): boolean {
     return (
@@ -3863,6 +3886,7 @@ export class Esp32s3Core implements McuCore {
     this.pcntCtrl = PCNT_CTRL_RESET;
     this.shaMode = 0;
     this.shaText = new Array(32).fill(0);
+    this.shaDmaBlockNum = 0;
     this.shaH = new Array(16).fill(0);
     this.shaIntRaw = 0;
     this.shaIntEna = 0;
@@ -8088,6 +8112,16 @@ export class Esp32s3Core implements McuCore {
         this.shaText[(off - SHA_TEXT_BASE) >> 2] = v;
       } else if (off === SHA_MODE) {
         this.shaMode = v;
+      } else if (off === SHA_DMA_BLOCK_NUM) {
+        this.shaDmaBlockNum = v;
+      } else if (off === SHA_DMA_START) {
+        this.shaRunDma(false); // hash the GDMA-fed blocks from the IV
+        this.shaIntRaw = 1;
+        this.recomputeIrq();
+      } else if (off === SHA_DMA_CONTINUE) {
+        this.shaRunDma(true); // continue onto the running digest
+        this.shaIntRaw = 1;
+        this.recomputeIrq();
       } else if (off === SHA_START) {
         // First block: load the mode's initial vector, then run its compression.
         if (this.shaMode === SHA_MODE_SHA1) {

@@ -2,6 +2,22 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 154: SHA-DMA path (GDMA-fed hashing)
+
+### Added
+- **SHA through GDMA** (@protopulse/emu): the SHA accelerator can take its
+  (pre-padded) message over GDMA — real IDF hashes large buffers this way. The
+  message blocks arrive on the GDMA OUT channel bound to peripheral SHA0 (trigger id
+  7); the digest stays in the H registers. New registers: `SHA_DMA_BLOCK_NUM` (+0x0c),
+  `SHA_DMA_START` (+0x1c), `SHA_DMA_CONTINUE` (+0x20). The new `shaRunDma()` reuses the
+  existing block-compression core; `CONTINUE` accumulates onto the running digest.
+
+### Verified
+- A known-answer test feeds the pre-padded "abc" block over GDMA and confirms the
+  digest read from the H registers is NIST SHA-256 ba7816bf…f20015ad.
+- `npm run -w @protopulse/emu test` passed with 314 package tests
+  (227 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 153: AES-DMA completion interrupt (CBC/CTR)
 
 ### Added
