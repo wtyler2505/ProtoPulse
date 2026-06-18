@@ -1955,8 +1955,10 @@ describe('Esp32s3Core', () => {
   });
 
   it('routes the SHA done interrupt through the interrupt matrix to a level-1 handler', () => {
-    // SHA is interrupt source 84 (interrupts.h ETS_SHA_INTR_SOURCE), so its matrix
-    // map sits at INTMTX + 0x150 (0x040 + 4*(84-16)). SHA_INT_ENA (+0x28) arms the
+    // SHA is interrupt source 77 (periph_defs.h ETS_SHA_INTR_SOURCE); its matrix
+    // map sits at the explicit silicon offset INTERRUPT_CORE0_SHA_INT_MAP_REG =
+    // INTMTX + 0x138 (read directly from interrupt_core0_reg.h, not a source-number
+    // formula — the enum has gaps past the I2C/SPI region). SHA_INT_ENA (+0x28) arms the
     // level interrupt; completing a block (SHA_START) asserts it; the ISR clears it
     // through SHA_CLEAR_IRQ (+0x24). The guest hashes the padded "abc" block and the
     // ISR runs exactly once — the counter stays 1 after the clear (no re-fire).
@@ -1976,7 +1978,7 @@ describe('Esp32s3Core', () => {
 
         L32R(15, 2), // interrupt matrix
         MOVI(4, 0),
-        S32I(4, 15, 0x150), // SHA source (84) -> CPU line 0
+        S32I(4, 15, 0x138), // SHA source (77) -> CPU line 0
         MOVI(4, 1),
         WSR(4, SR.INTENABLE),
         RSIL(12, 0),
@@ -2381,8 +2383,10 @@ describe('Esp32s3Core', () => {
   });
 
   it('routes the AES done interrupt through the interrupt matrix to a level-1 handler', () => {
-    // AES is interrupt source 83 (interrupts.h ETS_AES_INTR_SOURCE, one slot before
-    // SHA=84), so its matrix map sits at INTMTX + 0x14c (0x040 + 4*(83-16)).
+    // AES is interrupt source 76 (periph_defs.h ETS_AES_INTR_SOURCE, one slot before
+    // SHA=77); its matrix map sits at the explicit silicon offset
+    // INTERRUPT_CORE0_AES_INT_MAP_REG = INTMTX + 0x134 (read directly from
+    // interrupt_core0_reg.h, not a source-number formula).
     // AES_INT_ENA (+0xb0) arms the level interrupt; completing a block (TRIGGER
     // +0x48) asserts it; the ISR clears it through AES_INT_CLR (+0xac). The guest
     // encrypts one AES-128 block (plaintext left zero — only the interrupt matters)
@@ -2403,7 +2407,7 @@ describe('Esp32s3Core', () => {
 
         L32R(15, 2), // interrupt matrix
         MOVI(4, 0),
-        S32I(4, 15, 0x14c), // AES source (83) -> CPU line 0
+        S32I(4, 15, 0x134), // AES source (76) -> CPU line 0
         MOVI(4, 1),
         WSR(4, SR.INTENABLE),
         RSIL(12, 0),

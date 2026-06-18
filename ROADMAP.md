@@ -1802,6 +1802,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       (one before SHA=84), matrix map at INTMTX + 0x14c (0x040 + 4*(83-16)),
       same eFuse/SHA pattern. A known-answer test confirms the ISR fires
       exactly once and does not re-fire after the clear. Cuts: CBC/CTR, DMA path
+- [x] ESP32-S3 core slice 141 — correct SHA/AES interrupt-matrix map offsets
+      (landed 2026-06-18): SHA/AES maps were at 0x150/0x14c (wrong `4*source`
+      formula, sources 84/83); the silicon header gives explicit offsets
+      SHA = INTMTX + 0x138 (source 77), AES = INTMTX + 0x134 (source 76). The
+      source enum has gaps vs the map layout past I2C/SPI, so map offsets are now
+      read directly from interrupt_core0_reg.h, never computed. Tests still green
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

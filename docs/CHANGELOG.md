@@ -2,6 +2,25 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 141: correct SHA/AES interrupt-matrix map offsets
+
+### Fixed
+- **SHA/AES interrupt-matrix map offsets** (@protopulse/emu): the SHA and AES
+  done-interrupt matrix-map registers were placed at 0x150 / 0x14c, extrapolated
+  with a `4·source` formula using wrong source numbers (84/83). The ESP32-S3
+  `interrupt_core0_reg.h` gives the authoritative explicit offsets:
+  `INTERRUPT_CORE0_SHA_INT_MAP_REG` = INTMTX + 0x138 (source 77) and
+  `INTERRUPT_CORE0_AES_INT_MAP_REG` = INTMTX + 0x134 (source 76). The source enum
+  has gaps relative to the map-register layout past the I2C/SPI region, so the
+  formula silently diverges from silicon — every map offset is now read directly
+  from the header. (The earlier tests passed only because the model stored and
+  dispatched at the same offset; eFuse and all maps below 0x0b4 were already
+  correct.)
+
+### Verified
+- The SHA and AES done-interrupt known-answer tests still pass at the corrected
+  offsets; `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 140: AES done-interrupt routing
 
 ### Added
