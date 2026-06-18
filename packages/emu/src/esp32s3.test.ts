@@ -3592,6 +3592,139 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([0x87, 0x4d, 0x61, 0x91, 0x99, 0x0d, 0xb6, 0xce]);
   });
 
+  it('fires the AES done interrupt on AES-DMA (CBC) completion', () => {
+    // Completing an AES-DMA operation raises the same AES done interrupt as the ECB
+    // path. The guest arms AES_INT_ENA (+0xb0), maps AES (source 76) to CPU line 0 at
+    // INTMTX + 0x134, sets up the GDMA CBC encrypt, and triggers it; the ISR clears
+    // AES_INT_CLR (+0xac) and runs exactly once.
+    const AES = 0x6003a000;
+    const SCRATCH = ESP32S3_DRAM_BASE + 0x9c0;
+    const txDesc = ESP32S3_DRAM_BASE + 0x1200;
+    const ptBuf = ESP32S3_DRAM_BASE + 0x1240;
+    const rxDesc = ESP32S3_DRAM_BASE + 0x1280;
+    const ctBuf = ESP32S3_DRAM_BASE + 0x12c0;
+    const txDw0 = (GDMA_DESC_OWNER_DMA | GDMA_DESC_SUC_EOF | (16 << 12) | 16) >>> 0;
+    const rxDw0 = (GDMA_DESC_OWNER_DMA | 16) >>> 0;
+    const outLinkStart = ((txDesc & 0x000f_ffff) | GDMA_OUT_LINK_START) >>> 0;
+    const inLinkStart = ((rxDesc & 0x000f_ffff) | GDMA_INLINK_AUTO_RET | GDMA_INLINK_START) >>> 0;
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [
+          UART, AES, INTMTX, SCRATCH, ESP32S3_IRAM_BASE,
+          txDesc, ptBuf, rxDesc, ctBuf, txDw0, rxDw0, GDMA, outLinkStart, inLinkStart,
+          0x6bc1bee2, 0x2e409f96, 0xe93d7e11, 0x7393172a, // plaintext
+          0x2b7e1516, 0x28aed2a6, 0xabf71588, 0x09cf4f3c, // key
+          0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, // IV
+        ],
+        [
+          L32R(13, 3), // scratch
+          MOVI(14, 0),
+          S32I(14, 13, 0), // ISR counter = 0
+          L32R(14, 4),
+          WSR(14, SR.VECBASE),
+
+          L32R(2, 5), // txDesc
+          L32R(3, 9),
+          S32I(3, 2, 0),
+          L32R(3, 6),
+          S32I(3, 2, 4),
+          MOVI(3, 0),
+          S32I(3, 2, 8),
+          L32R(4, 6), // ptBuf
+          L32R(3, 14),
+          S32I(3, 4, 0),
+          L32R(3, 15),
+          S32I(3, 4, 4),
+          L32R(3, 16),
+          S32I(3, 4, 8),
+          L32R(3, 17),
+          S32I(3, 4, 12),
+          L32R(2, 7), // rxDesc
+          L32R(3, 10),
+          S32I(3, 2, 0),
+          L32R(3, 8),
+          S32I(3, 2, 4),
+          MOVI(3, 0),
+          S32I(3, 2, 8),
+
+          L32R(6, 11), // GDMA
+          MOVI(7, 6),
+          S32I(7, 6, 0xa8),
+          L32R(7, 12),
+          S32I(7, 6, 0x80),
+          MOVI(7, 6),
+          S32I(7, 6, 0x48),
+          L32R(7, 13),
+          S32I(7, 6, 0x20),
+
+          L32R(9, 1), // AES base
+          MOVI(4, 1),
+          S32I(4, 9, 0xb0), // AES_INT_ENA = 1
+          L32R(15, 2), // INTMTX
+          MOVI(4, 0),
+          S32I(4, 15, 0x134), // AES source (76) -> CPU line 0
+          MOVI(4, 1),
+          WSR(4, SR.INTENABLE),
+          RSIL(12, 0),
+
+          L32R(4, 18),
+          S32I(4, 9, 0x00), // KEY[0]
+          L32R(4, 19),
+          S32I(4, 9, 0x04),
+          L32R(4, 20),
+          S32I(4, 9, 0x08),
+          L32R(4, 21),
+          S32I(4, 9, 0x0c),
+          MOVI(4, 0),
+          S32I(4, 9, 0x40), // MODE = AES-128 encrypt
+          L32R(4, 22),
+          S32I(4, 9, 0x50), // IV[0]
+          L32R(4, 23),
+          S32I(4, 9, 0x54),
+          L32R(4, 24),
+          S32I(4, 9, 0x58),
+          L32R(4, 25),
+          S32I(4, 9, 0x5c),
+          MOVI(4, 1),
+          S32I(4, 9, 0x94), // BLOCK_MODE = CBC
+          MOVI(4, 1),
+          S32I(4, 9, 0x98), // BLOCK_NUM = 1
+          MOVI(4, 1),
+          S32I(4, 9, 0x90), // DMA_ENABLE = 1
+          MOVI(4, 1),
+          S32I(4, 9, 0x48), // TRIGGER -> DMA op -> interrupt
+
+          MOVI(11, 1),
+          L32I(4, 13, 0),
+          BNE(4, 11, BR(-2)), // spin until the ISR has run
+
+          L32R(8, 0), // UART
+          S32I(4, 8, 0), // ISR counter (expect 1)
+          L32I(4, 13, 0),
+          S32I(4, 8, 0), // counter again — still 1 (no re-fire)
+          J(BR(-1)),
+
+          PAD_TO(0x340),
+          WSR(2, SR.EXCSAVE1),
+          L32R(2, 3), // scratch
+          S32I(3, 2, 8), // save a3
+          L32I(3, 2, 0),
+          ADDI(3, 3, 1),
+          S32I(3, 2, 0), // ISR counter++
+          L32R(3, 1), // AES base
+          MOVI(4, 1),
+          S32I(4, 3, 0xac), // AES_INT_CLR
+          L32I(3, 2, 8), // restore a3
+          RSR(2, SR.EXCSAVE1),
+          RFE(),
+        ],
+      ),
+    );
+    c.step(800);
+    expect([...c.drainUart()]).toEqual([1, 1]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

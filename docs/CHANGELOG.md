@@ -2,6 +2,22 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 153: AES-DMA completion interrupt (CBC/CTR)
+
+### Added
+- **AES-DMA completion interrupt** (@protopulse/emu): completing an AES-DMA operation
+  (CBC/CTR) raises the same AES done interrupt as the ECB path, routed through the
+  interrupt matrix (source 76 → INTMTX + 0x134). This closes out the AES-DMA mode —
+  CBC encrypt + CBC decrypt + CTR + the completion interrupt are now all modeled and
+  end-to-end verified through real GDMA descriptors.
+
+### Verified
+- A known-answer test arms `AES_INT_ENA`, maps the AES source to CPU line 0, runs a
+  CBC-DMA encrypt, and confirms the ISR fires exactly once (clearing `AES_INT_CLR`,
+  no re-fire).
+- `npm run -w @protopulse/emu test` passed with 313 package tests
+  (226 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 152: AES-CTR via the AES-DMA path
 
 ### Added

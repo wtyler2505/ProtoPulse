@@ -1876,6 +1876,11 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       KAT: NIST SP 800-38A AES-128-CTR vector (counter f0f1f2f3…ff) through GDMA.
       The AES done interrupt already fires on DMA completion via the existing matrix
       routing (slice 140/141). AES-DMA now does CBC enc/dec + CTR + done interrupt
+- [x] ESP32-S3 core slice 153 — AES-DMA completion interrupt (landed 2026-06-18):
+      completing a CBC/CTR DMA op raises the AES done interrupt (source 76 → INTMTX +
+      0x134), same matrix path as ECB. KAT: a CBC-DMA encrypt with the interrupt armed
+      fires the ISR exactly once. **AES-DMA / CBC mode COMPLETE** (CBC encrypt +
+      decrypt + CTR + completion interrupt, all GDMA-verified end-to-end)
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
