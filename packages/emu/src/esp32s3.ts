@@ -940,6 +940,14 @@ const RSA_CLEAR_INTERRUPT = 0x81c; // write 1 -> clear the done status
 const RSA_INT_ENA = 0x82c; // RSA_INTERRUPT_REG: matrix-interrupt enable
 const RSA_MEM_WORDS = 128; // 512-byte block / 4 = up to 4096-bit operands
 
+// USB-Serial-JTAG controller (DR_REG_USB_DEVICE_BASE) — the default console on
+// modern ESP32-S3 boards (CDC-ACM over USB).
+const USJ_BASE = 0x60038000;
+const USJ_EP1 = 0x00; // RDWR_BYTE [7:0]: the byte FIFO (write TX, read RX)
+const USJ_EP1_CONF = 0x04; // WR_DONE (bit0, W), IN_EP_DATA_FREE (bit1, RO), OUT_EP_DATA_AVAIL (bit2, RO)
+const USJ_WR_DONE = 1 << 0; // write 1 to flush the staged TX bytes to the host
+const USJ_IN_EP_DATA_FREE = 1 << 1; // TX FIFO has room (always, in the model)
+
 const SHA_BASE = 0x6003b000;
 const SHA_MODE = 0x00;
 const SHA_START = 0x10;
@@ -2558,6 +2566,8 @@ export class Esp32s3Core implements McuCore {
   private rsaIntRaw = 0; // done status (RSA_QUERY_INTERRUPT: 1 = done)
   private rsaIntEna = 0;
   private rsaIntMaps: InterruptMapPair = freshInterruptMapPair();
+  private usjTxStaging: number[] = []; // bytes written to EP1 not yet flushed
+  private usjTxBuffer: number[] = []; // flushed console output, drained by the host
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
@@ -2991,6 +3001,12 @@ export class Esp32s3Core implements McuCore {
   drainUart(): Uint8Array {
     const out = Uint8Array.from(this.txBuffer);
     this.txBuffer = [];
+    return out;
+  }
+
+  drainUsbSerialJtag(): Uint8Array {
+    const out = Uint8Array.from(this.usjTxBuffer);
+    this.usjTxBuffer = [];
     return out;
   }
 
@@ -3678,6 +3694,8 @@ export class Esp32s3Core implements McuCore {
     this.rsaIntRaw = 0;
     this.rsaIntEna = 0;
     this.rsaIntMaps = freshInterruptMapPair();
+    this.usjTxStaging = [];
+    this.usjTxBuffer = [];
     this.pcntIntRaw = 0;
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
@@ -7112,6 +7130,12 @@ export class Esp32s3Core implements McuCore {
         return (this.rsaM[(off - RSA_MEM_M) >> 2] ?? 0) >>> 0;
       return 0;
     }
+    if (addr >= USJ_BASE && addr < USJ_BASE + 0x1000) {
+      const off = addr - USJ_BASE;
+      if (off === USJ_EP1) return 0; // RX FIFO empty in the TX-only model
+      if (off === USJ_EP1_CONF) return USJ_IN_EP_DATA_FREE; // TX FIFO always has room
+      return 0;
+    }
     if (addr >= SHA_BASE && addr < SHA_BASE + 0x1000) {
       const off = addr - SHA_BASE;
       if (off === SHA_BUSY) return 0; // compression is instantaneous in the model
@@ -7771,6 +7795,20 @@ export class Esp32s3Core implements McuCore {
       } else if (off === RSA_CLEAR_INTERRUPT) {
         this.rsaIntRaw = 0;
         this.recomputeIrq();
+      }
+      return;
+    }
+    if (addr >= USJ_BASE && addr < USJ_BASE + 0x1000) {
+      const off = addr - USJ_BASE;
+      const v = value >>> 0;
+      if (off === USJ_EP1) {
+        this.usjTxStaging.push(v & 0xff); // stage a byte into the TX FIFO
+      } else if (off === USJ_EP1_CONF) {
+        if ((v & USJ_WR_DONE) !== 0) {
+          // flush the staged bytes to the host
+          for (const b of this.usjTxStaging) this.usjTxBuffer.push(b);
+          this.usjTxStaging = [];
+        }
       }
       return;
     }

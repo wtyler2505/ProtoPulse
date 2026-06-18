@@ -2,6 +2,29 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 145: USB-Serial-JTAG TX console
+
+### Added
+- **USB-Serial-JTAG controller — TX console** (@protopulse/emu): a new peripheral
+  at `DR_REG_USB_DEVICE_BASE` (0x60038000), the default console on modern ESP32-S3
+  boards. Bytes written to `EP1_REG` (+0x00, RDWR_BYTE) stage into the TX FIFO;
+  writing `WR_DONE` (bit0 of `EP1_CONF_REG` +0x04) flushes them to the host.
+  `EP1_CONF_REG` reads back `SERIAL_IN_EP_DATA_FREE` (bit1, the TX FIFO always has
+  room in the model). A new `drainUsbSerialJtag()` host method returns the flushed
+  console bytes, mirroring `drainUart()`.
+
+### Verified
+- A known-answer test reads `EP1_CONF` (confirms the data-free bit), writes 'H','i'
+  to the FIFO, flushes with `WR_DONE`, and confirms the two bytes land in
+  `drainUsbSerialJtag()`.
+- `npm run -w @protopulse/emu test` passed with 304 package tests
+  (217 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- The RX path (host → guest bytes via `SERIAL_OUT_EP_DATA_AVAIL`), and the
+  USB-Serial-JTAG interrupts (`SERIAL_IN_EMPTY` / `SERIAL_OUT_RECV_PKT`, matrix
+  map at INTMTX + 0x180), remain follow-on.
+
 ## 2026-06-18 — ESP32-S3 slice 144: RSA done-interrupt routing
 
 ### Added

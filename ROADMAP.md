@@ -1829,6 +1829,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       source 75, matrix map at the explicit silicon offset INTMTX + 0x130. A
       known-answer test confirms the ISR fires once and does not re-fire after the
       clear. RSA peripheral now complete (MODEXP + MOD_MULT + MULT + done interrupt)
+- [x] ESP32-S3 core slice 145 — USB-Serial-JTAG TX console (landed 2026-06-18):
+      new peripheral DR_REG_USB_DEVICE_BASE 0x60038000, the default S3 console.
+      Bytes -> EP1_REG (+0x00) stage into the TX FIFO; WR_DONE (bit0 of EP1_CONF
+      +0x04) flushes to the host; EP1_CONF reads SERIAL_IN_EP_DATA_FREE (bit1). New
+      drainUsbSerialJtag() host method mirrors drainUart(). KAT: writes "Hi" and
+      drains [0x48,0x69]. Cuts: RX path, USB-Serial-JTAG interrupts (INTMTX + 0x180)
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
