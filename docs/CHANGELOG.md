@@ -2,6 +2,33 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 136: SHA-512 and SHA-384 modes (64-bit algorithms)
+
+### Added
+- **SHA-512 and SHA-384** (@protopulse/emu): the SHA accelerator now models the
+  64-bit-word algorithms (`SHA_MODE` 384=3, 512=4). These use 1024-bit (128-byte
+  = 32-word) message blocks and a 512-bit (16-word) digest region, with 64-bit
+  values laid out hi-32-bit-word-first — so `shaText` is now 32 words and `shaH`
+  16 words. The FIPS 180-4 SHA-512 compression (80 rounds, the σ/Σ functions,
+  the 80×64-bit K table, the SHA-512 and SHA-384 IVs) is implemented from scratch
+  over `[hi, lo]` 32-bit pairs with add-with-carry and cross-boundary
+  rotate/shift helpers. SHA-384 reuses the SHA-512 compression with the SHA-384
+  IV and a truncated 6×64-bit (12-word) digest. The K table and IVs were taken
+  from canonical sources (mbed-TLS `sha512.c`, Linux `sha2.h`), not transcribed.
+
+### Verified
+- Two new known-answer tests confirm SHA-512("abc") = `ddaf35a1…a54ca49f`
+  (16 words) and SHA-384("abc") = `cb00753f…34c825a7` (12 words) against the NIST
+  vectors — both passed on the first run, validating the 64-bit arithmetic, the
+  80 round constants, and the hi-word-first layout.
+- `npm run -w @protopulse/emu test` passed with 293 package tests
+  (206 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- The SHA DMA path (`SHA_DMA_START`, `SHA_BLOCK_NUM`) remains follow-on. With
+  this, the SHA accelerator models all of SHA-1/224/256/384/512 plus the
+  completion interrupt and multi-block accumulation.
+
 ## 2026-06-17 — ESP32-S3 slice 135: SHA multi-block (START + CONTINUE) coverage
 
 ### Added

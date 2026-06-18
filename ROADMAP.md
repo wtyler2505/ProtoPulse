@@ -1767,6 +1767,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       with SHA_START hashing block 1 and SHA_CONTINUE accumulating block 2,
       confirming the digest matches the NIST vector. Locks the previously
       untested multi-block accumulation path; no production change
+- [x] ESP32-S3 core slice 136 — SHA-512 + SHA-384 modes (landed 2026-06-18):
+      the 64-bit-word SHA algorithms (SHA_MODE 384=3, 512=4) with 128-byte
+      (32-word) blocks and a 16-word digest, hi-word-first. The FIPS 180-4
+      SHA-512 compression (80 rounds, K[80], the SHA-512/384 IVs) is
+      implemented from scratch over [hi,lo] pairs; constants taken from
+      mbed-TLS / Linux sources, not transcribed. Two NIST known-answer tests
+      (SHA-512/384 of "abc") confirm it. The accelerator now models
+      SHA-1/224/256/384/512 + interrupt + multi-block; only the DMA path
+      remains follow-on
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
