@@ -1896,6 +1896,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       T0_MEM (+0x80); H = E(0) at H_MEM (+0x60), AAD_BLOCK_NUM (+0xA0). Adds a
       from-scratch GHASH GF(2^128) multiply. KAT: NIST GCM Test Case 3 (ct + tag)
       end-to-end through GDMA. Cuts: GCM-with-AAD + partial-block tests
+- [x] ESP32-S3 core slice 157 — AES-GCM with AAD (landed 2026-06-18): exercises the
+      AES_AAD_BLOCK_NUM path — leading DMA blocks GHASHed but not encrypted, tag folds
+      in the AAD. KAT: Test Case 3 + a 16-byte AAD block → ciphertext unchanged, tag
+      e5d06dc2…88d624ee. AES now covers ECB/CBC/CTR/GCM(+AAD). Cuts: partial-block GCM
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -2,6 +2,20 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 157: AES-GCM with additional authenticated data
+
+### Added
+- **AES-GCM AAD coverage** (@protopulse/emu): exercises the `AES_AAD_BLOCK_NUM` path —
+  the leading DMA blocks are GHASHed but not encrypted, only the plaintext blocks
+  become ciphertext, and the authentication tag folds in the AAD.
+
+### Verified
+- A known-answer test runs the Test Case 3 key/IV/plaintext plus a 16-byte AAD block:
+  the ciphertext is unchanged (42831ec2…) but the tag now reflects the AAD
+  (e5d06dc2…88d624ee), confirmed end-to-end through GDMA.
+- `npm run -w @protopulse/emu test` passed with 317 package tests
+  (230 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 156: AES-GCM (authenticated encryption)
 
 ### Added
