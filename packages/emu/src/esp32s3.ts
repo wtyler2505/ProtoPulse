@@ -1087,6 +1087,53 @@ const aesEncryptBlock = (input: number[], roundKeys: number[], nr: number): numb
   }
   return s;
 };
+const AES_INV_SBOX: number[] = (() => {
+  const inv: number[] = new Array(256).fill(0);
+  for (let i = 0; i < 256; i++) inv[AES_SBOX[i] ?? 0] = i;
+  return inv;
+})();
+const aesInvSub = (b: number): number => AES_INV_SBOX[b & 0xff] ?? 0;
+// GF(2^8) multiply (reduction polynomial 0x11b) — used by InvMixColumns.
+const aesGmul = (a: number, b: number): number => {
+  let p = 0;
+  let x = a & 0xff;
+  let y = b & 0xff;
+  for (let i = 0; i < 8; i++) {
+    if ((y & 1) !== 0) p ^= x;
+    const hi = x & 0x80;
+    x = (x << 1) & 0xff;
+    if (hi !== 0) x ^= 0x1b;
+    y >>= 1;
+  }
+  return p & 0xff;
+};
+// AES decrypt one 16-byte block over Nr rounds (FIPS-197 inverse cipher).
+const aesDecryptBlock = (input: number[], roundKeys: number[], nr: number): number[] => {
+  const s: number[] = new Array(16);
+  for (let i = 0; i < 16; i++) s[i] = ((input[i] ?? 0) ^ (roundKeys[16 * nr + i] ?? 0)) & 0xff; // AddRoundKey Nr
+  for (let round = nr - 1; round >= 0; round--) {
+    // InvShiftRows: row r rotates right by r
+    for (let r = 1; r < 4; r++) {
+      const row = [s[r] ?? 0, s[r + 4] ?? 0, s[r + 8] ?? 0, s[r + 12] ?? 0];
+      for (let c = 0; c < 4; c++) s[r + 4 * c] = row[(c - r + 4) % 4] ?? 0;
+    }
+    for (let i = 0; i < 16; i++) s[i] = aesInvSub(s[i] ?? 0); // InvSubBytes
+    for (let i = 0; i < 16; i++) s[i] = (s[i] ?? 0) ^ (roundKeys[16 * round + i] ?? 0); // AddRoundKey
+    if (round !== 0) {
+      for (let c = 0; c < 4; c++) {
+        const a0 = s[4 * c] ?? 0;
+        const a1 = s[4 * c + 1] ?? 0;
+        const a2 = s[4 * c + 2] ?? 0;
+        const a3 = s[4 * c + 3] ?? 0;
+        s[4 * c] = (aesGmul(a0, 14) ^ aesGmul(a1, 11) ^ aesGmul(a2, 13) ^ aesGmul(a3, 9)) & 0xff;
+        s[4 * c + 1] = (aesGmul(a0, 9) ^ aesGmul(a1, 14) ^ aesGmul(a2, 11) ^ aesGmul(a3, 13)) & 0xff;
+        s[4 * c + 2] = (aesGmul(a0, 13) ^ aesGmul(a1, 9) ^ aesGmul(a2, 14) ^ aesGmul(a3, 11)) & 0xff;
+        s[4 * c + 3] = (aesGmul(a0, 11) ^ aesGmul(a1, 13) ^ aesGmul(a2, 9) ^ aesGmul(a3, 14)) & 0xff;
+      }
+    }
+  }
+  return s;
+};
 
 // Timer groups 0 and 1 (timer_group_reg.h; flow per hal timer_ll.h
 // and the gptimer driver): each group has two 54-bit general-purpose
@@ -7530,8 +7577,10 @@ export class Esp32s3Core implements McuCore {
         this.aesMode = v;
       } else if (off === AES_TRIGGER) {
         if ((v & 1) !== 0) {
-          // Encrypt modes: 0 = AES-128, 1 = AES-192, 2 = AES-256.
-          const nk = this.aesMode === 0 ? 4 : this.aesMode === 1 ? 6 : this.aesMode === 2 ? 8 : 0;
+          // Modes: 0/1/2 = AES-128/192/256 encrypt, 4/5/6 = the same decrypt.
+          const decrypt = this.aesMode >= 4;
+          const sizeSel = this.aesMode & 3; // 0=128, 1=192, 2=256
+          const nk = sizeSel === 0 ? 4 : sizeSel === 1 ? 6 : sizeSel === 2 ? 8 : 0;
           if (nk !== 0) {
             const keyBytes: number[] = [];
             for (let w = 0; w < nk; w++) {
@@ -7543,7 +7592,8 @@ export class Esp32s3Core implements McuCore {
               const t = this.aesIn[w] ?? 0;
               inBytes.push((t >>> 24) & 0xff, (t >>> 16) & 0xff, (t >>> 8) & 0xff, t & 0xff);
             }
-            const out = aesEncryptBlock(inBytes, aesExpandKey(keyBytes, nk), nk + 6);
+            const rk = aesExpandKey(keyBytes, nk);
+            const out = decrypt ? aesDecryptBlock(inBytes, rk, nk + 6) : aesEncryptBlock(inBytes, rk, nk + 6);
             for (let w = 0; w < 4; w++) {
               this.aesOut[w] =
                 (((out[4 * w] ?? 0) << 24) | ((out[4 * w + 1] ?? 0) << 16) | ((out[4 * w + 2] ?? 0) << 8) | (out[4 * w + 3] ?? 0)) >>> 0;

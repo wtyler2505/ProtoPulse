@@ -2,6 +2,28 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 139: AES ECB decrypt (128/192/256)
+
+### Added
+- **AES decrypt** (@protopulse/emu): the AES accelerator now does the inverse
+  cipher for all three key sizes (`AES_MODE` 4/5/6 = AES-128/192/256 decrypt).
+  Implements the FIPS-197 inverse cipher — the inverse S-box (derived from the
+  computed forward S-box), InvShiftRows, InvSubBytes, and InvMixColumns via a
+  general GF(2⁸) multiply — reusing the shared key schedule. The mode dispatch
+  selects encrypt vs decrypt from the mode's high bit and the key size from its
+  low bits.
+
+### Verified
+- Two new known-answer tests round-trip the FIPS-197 vectors: AES-128 decrypt of
+  `69c4e0d8…70b4c55a` and AES-256 decrypt of `8ea2b7ca…4b496089` both recover the
+  plaintext `00112233…ff`.
+- `npm run -w @protopulse/emu test` passed with 298 package tests
+  (211 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- CBC/CTR chaining with IV, the DMA path, and the AES interrupt remain follow-on.
+  The accelerator now does AES-128/192/256 ECB encrypt **and** decrypt.
+
 ## 2026-06-18 — ESP32-S3 slice 138: AES-192 and AES-256 ECB modes
 
 ### Added

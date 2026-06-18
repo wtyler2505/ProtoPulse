@@ -2522,6 +2522,145 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([2, 0x8e, 0xca, 0x51, 0xbf, 0xea, 0x90, 0x4b, 0x89]);
   });
 
+  it('decrypts a block through the AES-128 ECB accelerator', () => {
+    // AES-128 decrypt (AES_MODE = 4): the FIPS-197 ciphertext 69c4e0d8 6a7b0430
+    // d8cdb780 70b4c55a under key 000102..0f decrypts back to plaintext
+    // 00112233..ff. The guest emits STATE then the high+low byte of each word.
+    const AES = 0x6003a000;
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [AES, UART, 0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x69c4e0d8, 0x6a7b0430, 0xd8cdb780, 0x70b4c55a],
+        [
+          L32R(2, 0),
+          L32R(6, 1),
+          L32R(4, 2),
+          S32I(4, 2, 0x00),
+          L32R(4, 3),
+          S32I(4, 2, 0x04),
+          L32R(4, 4),
+          S32I(4, 2, 0x08),
+          L32R(4, 5),
+          S32I(4, 2, 0x0c),
+          MOVI(4, 4),
+          S32I(4, 2, 0x40), // MODE = AES-128 decrypt
+          L32R(4, 6),
+          S32I(4, 2, 0x20),
+          L32R(4, 7),
+          S32I(4, 2, 0x24),
+          L32R(4, 8),
+          S32I(4, 2, 0x28),
+          L32R(4, 9),
+          S32I(4, 2, 0x2c),
+          MOVI(4, 1),
+          S32I(4, 2, 0x48),
+          L32I(4, 2, 0x4c),
+          S32I(4, 6, 0),
+          L32I(5, 2, 0x30),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0),
+          L32I(4, 2, 0x30),
+          S32I(4, 6, 0),
+          L32I(5, 2, 0x34),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0),
+          L32I(4, 2, 0x34),
+          S32I(4, 6, 0),
+          L32I(5, 2, 0x38),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0),
+          L32I(4, 2, 0x38),
+          S32I(4, 6, 0),
+          L32I(5, 2, 0x3c),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0),
+          L32I(4, 2, 0x3c),
+          S32I(4, 6, 0),
+          J(BR(-1)),
+        ],
+      ),
+    );
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([2, 0x00, 0x33, 0x44, 0x77, 0x88, 0xbb, 0xcc, 0xff]);
+  });
+
+  it('decrypts a block through the AES-256 ECB accelerator', () => {
+    // AES-256 decrypt (AES_MODE = 6): ciphertext 8ea2b7ca 516745bf eafc4990
+    // 4b496089 under key 000102..1f decrypts back to plaintext 00112233..ff.
+    const AES = 0x6003a000;
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [AES, UART, 0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f, 0x8ea2b7ca, 0x516745bf, 0xeafc4990, 0x4b496089],
+        [
+          L32R(2, 0),
+          L32R(6, 1),
+          L32R(4, 2),
+          S32I(4, 2, 0x00),
+          L32R(4, 3),
+          S32I(4, 2, 0x04),
+          L32R(4, 4),
+          S32I(4, 2, 0x08),
+          L32R(4, 5),
+          S32I(4, 2, 0x0c),
+          L32R(4, 6),
+          S32I(4, 2, 0x10),
+          L32R(4, 7),
+          S32I(4, 2, 0x14),
+          L32R(4, 8),
+          S32I(4, 2, 0x18),
+          L32R(4, 9),
+          S32I(4, 2, 0x1c),
+          MOVI(4, 6),
+          S32I(4, 2, 0x40), // MODE = AES-256 decrypt
+          L32R(4, 10),
+          S32I(4, 2, 0x20),
+          L32R(4, 11),
+          S32I(4, 2, 0x24),
+          L32R(4, 12),
+          S32I(4, 2, 0x28),
+          L32R(4, 13),
+          S32I(4, 2, 0x2c),
+          MOVI(4, 1),
+          S32I(4, 2, 0x48),
+          L32I(4, 2, 0x4c),
+          S32I(4, 6, 0),
+          L32I(5, 2, 0x30),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0),
+          L32I(4, 2, 0x30),
+          S32I(4, 6, 0),
+          L32I(5, 2, 0x34),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0),
+          L32I(4, 2, 0x34),
+          S32I(4, 6, 0),
+          L32I(5, 2, 0x38),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0),
+          L32I(4, 2, 0x38),
+          S32I(4, 6, 0),
+          L32I(5, 2, 0x3c),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0),
+          L32I(4, 2, 0x3c),
+          S32I(4, 6, 0),
+          J(BR(-1)),
+        ],
+      ),
+    );
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([2, 0x00, 0x33, 0x44, 0x77, 0x88, 0xbb, 0xcc, 0xff]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

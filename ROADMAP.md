@@ -1790,6 +1790,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       tests confirm AES-192/256; they caught a refactor bug (MixColumns guard
       left hardcoded round!==10 instead of round!==Nr). Cuts: decrypt, CBC/CTR,
       DMA path, AES interrupt
+- [x] ESP32-S3 core slice 139 — AES ECB decrypt 128/192/256 (landed
+      2026-06-18): the FIPS-197 inverse cipher (inverse S-box, InvShiftRows,
+      InvSubBytes, InvMixColumns via a general GF(2^8) multiply), modes 4/5/6.
+      Two known-answer tests round-trip the FIPS-197 vectors back to plaintext.
+      The accelerator now does AES-128/192/256 ECB encrypt AND decrypt. Cuts:
+      CBC/CTR, DMA path, AES interrupt
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
