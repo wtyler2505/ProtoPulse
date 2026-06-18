@@ -2,6 +2,28 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 138: AES-192 and AES-256 ECB modes
+
+### Added
+- **AES-192 and AES-256 encrypt** (@protopulse/emu): extends slice 137's AES
+  accelerator to the larger key sizes (`AES_MODE` 1 = AES-192, 2 = AES-256). The
+  key expansion is generalized over `Nk` = 4/6/8 (including the AES-256 extra
+  `SubWord` at `wordIdx % Nk == 4`) and the cipher runs `Nr` = `Nk`+6 rounds.
+
+### Verified
+- Two new FIPS-197 known-answer tests confirm AES-192("00112233…ff") =
+  `dda97ca4…ec0d7191` and AES-256(…) = `8ea2b7ca…4b496089`. These caught a
+  refactor bug — the MixColumns guard had been left hardcoded as `round !== 10`
+  instead of `round !== Nr`, which only affected the 12/14-round modes; the
+  self-checking vectors flagged it immediately and the fix was verified.
+- `npm run -w @protopulse/emu test` passed with 296 package tests
+  (209 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- AES decrypt (inverse S-box + InvMixColumns), CBC/CTR with IV, the DMA path,
+  and the AES interrupt remain follow-on; the accelerator now does AES-128/192/
+  256 ECB encrypt.
+
 ## 2026-06-18 — ESP32-S3 slice 137: AES-128 ECB accelerator (new peripheral)
 
 ### Added

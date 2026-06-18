@@ -1025,43 +1025,52 @@ const AES_SBOX: number[] = (() => {
   return box;
 })();
 const aesSub = (b: number): number => AES_SBOX[b & 0xff] ?? 0;
-// AES-128 key expansion: 16-byte key -> 11 round keys (each 16 bytes).
-const aesExpandKey128 = (key: number[]): number[] => {
-  const rk: number[] = new Array(176).fill(0);
-  for (let i = 0; i < 16; i++) rk[i] = key[i] ?? 0;
-  const rcon = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
-  for (let i = 16; i < 176; i += 4) {
+// AES key expansion for Nk = 4/6/8 (AES-128/192/256): key bytes -> 16*(Nr+1)
+// round-key bytes, Nr = Nk + 6.
+const aesExpandKey = (key: number[], nk: number): number[] => {
+  const nr = nk + 6;
+  const total = 16 * (nr + 1);
+  const keyBytes = nk * 4;
+  const rk: number[] = new Array(total).fill(0);
+  for (let i = 0; i < keyBytes; i++) rk[i] = key[i] ?? 0;
+  const rcon = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d];
+  for (let i = keyBytes; i < total; i += 4) {
     let t0 = rk[i - 4] ?? 0;
     let t1 = rk[i - 3] ?? 0;
     let t2 = rk[i - 2] ?? 0;
     let t3 = rk[i - 1] ?? 0;
-    if (i % 16 === 0) {
-      const r = rcon[i / 16 - 1] ?? 0;
+    const wordIdx = i / 4;
+    if (wordIdx % nk === 0) {
       const a0 = t0;
-      t0 = aesSub(t1) ^ r; // RotWord + SubWord + Rcon
+      t0 = aesSub(t1) ^ (rcon[wordIdx / nk - 1] ?? 0); // RotWord + SubWord + Rcon
       t1 = aesSub(t2);
       t2 = aesSub(t3);
       t3 = aesSub(a0);
+    } else if (nk > 6 && wordIdx % nk === 4) {
+      t0 = aesSub(t0); // AES-256 extra SubWord
+      t1 = aesSub(t1);
+      t2 = aesSub(t2);
+      t3 = aesSub(t3);
     }
-    rk[i] = (rk[i - 16] ?? 0) ^ t0;
-    rk[i + 1] = (rk[i - 15] ?? 0) ^ t1;
-    rk[i + 2] = (rk[i - 14] ?? 0) ^ t2;
-    rk[i + 3] = (rk[i - 13] ?? 0) ^ t3;
+    rk[i] = (rk[i - keyBytes] ?? 0) ^ t0;
+    rk[i + 1] = (rk[i - keyBytes + 1] ?? 0) ^ t1;
+    rk[i + 2] = (rk[i - keyBytes + 2] ?? 0) ^ t2;
+    rk[i + 3] = (rk[i - keyBytes + 3] ?? 0) ^ t3;
   }
   return rk;
 };
-// AES-128 encrypt one 16-byte block (column-major state, s[r + 4c]).
-const aesEncryptBlock128 = (input: number[], roundKeys: number[]): number[] => {
+// AES encrypt one 16-byte block over Nr rounds (column-major state, s[r + 4c]).
+const aesEncryptBlock = (input: number[], roundKeys: number[], nr: number): number[] => {
   const s: number[] = new Array(16);
   for (let i = 0; i < 16; i++) s[i] = ((input[i] ?? 0) ^ (roundKeys[i] ?? 0)) & 0xff; // AddRoundKey 0
-  for (let round = 1; round <= 10; round++) {
+  for (let round = 1; round <= nr; round++) {
     for (let i = 0; i < 16; i++) s[i] = aesSub(s[i] ?? 0); // SubBytes
     // ShiftRows: row r rotates left by r (state is column-major, row r at indices r,r+4,r+8,r+12)
     for (let r = 1; r < 4; r++) {
       const row = [s[r] ?? 0, s[r + 4] ?? 0, s[r + 8] ?? 0, s[r + 12] ?? 0];
       for (let c = 0; c < 4; c++) s[r + 4 * c] = row[(c + r) % 4] ?? 0;
     }
-    if (round !== 10) {
+    if (round !== nr) {
       for (let c = 0; c < 4; c++) {
         // MixColumns on column c (bytes s[4c..4c+3])
         const a0 = s[4 * c] ?? 0;
@@ -7521,16 +7530,20 @@ export class Esp32s3Core implements McuCore {
         this.aesMode = v;
       } else if (off === AES_TRIGGER) {
         if ((v & 1) !== 0) {
-          if (this.aesMode === AES_MODE_AES128_ENC) {
+          // Encrypt modes: 0 = AES-128, 1 = AES-192, 2 = AES-256.
+          const nk = this.aesMode === 0 ? 4 : this.aesMode === 1 ? 6 : this.aesMode === 2 ? 8 : 0;
+          if (nk !== 0) {
             const keyBytes: number[] = [];
-            const inBytes: number[] = [];
-            for (let w = 0; w < 4; w++) {
+            for (let w = 0; w < nk; w++) {
               const k = this.aesKey[w] ?? 0;
               keyBytes.push((k >>> 24) & 0xff, (k >>> 16) & 0xff, (k >>> 8) & 0xff, k & 0xff);
+            }
+            const inBytes: number[] = [];
+            for (let w = 0; w < 4; w++) {
               const t = this.aesIn[w] ?? 0;
               inBytes.push((t >>> 24) & 0xff, (t >>> 16) & 0xff, (t >>> 8) & 0xff, t & 0xff);
             }
-            const out = aesEncryptBlock128(inBytes, aesExpandKey128(keyBytes));
+            const out = aesEncryptBlock(inBytes, aesExpandKey(keyBytes, nk), nk + 6);
             for (let w = 0; w < 4; w++) {
               this.aesOut[w] =
                 (((out[4 * w] ?? 0) << 24) | ((out[4 * w + 1] ?? 0) << 16) | ((out[4 * w + 2] ?? 0) << 8) | (out[4 * w + 3] ?? 0)) >>> 0;

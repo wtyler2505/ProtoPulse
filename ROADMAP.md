@@ -1784,6 +1784,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       A FIPS-197 known-answer test confirms it. Unblocked by reading ESP-IDF
       headers locally (PlatformIO Arduino-ESP32) when network/DNS was down.
       Cuts: AES-192/256, decrypt, CBC/CTR, DMA path, AES interrupt
+- [x] ESP32-S3 core slice 138 — AES-192 + AES-256 ECB modes (landed
+      2026-06-18): generalizes the key expansion over Nk=4/6/8 (with the
+      AES-256 extra SubWord) and runs Nr=Nk+6 rounds. Two FIPS-197 known-answer
+      tests confirm AES-192/256; they caught a refactor bug (MixColumns guard
+      left hardcoded round!==10 instead of round!==Nr). Cuts: decrypt, CBC/CTR,
+      DMA path, AES interrupt
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
