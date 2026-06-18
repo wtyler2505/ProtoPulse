@@ -1790,6 +1790,65 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([0xc0]);
   });
 
+  it('hashes a one-block message through the SHA-256 accelerator', () => {
+    // SHA accelerator (DR_REG_SHA_BASE 0x6003B000, hwcrypto_reg.h): MODE +0x00
+    // (SHA-256 = 2), START +0x10 (first block: load IV + compress), CONTINUE +0x14,
+    // BUSY +0x18, digest H_BASE +0x40 (8 words BE), message TEXT_BASE +0x80 (16 words
+    // BE). Padding is done in software, so firmware feeds an already-padded 64-byte
+    // block. Here the block is the padded "abc" message; the digest must be the NIST
+    // SHA-256("abc") = ba7816bf 8f01cfea 414140de 5dae2223 b00361a3 96177a9c b410ff61
+    // f20015ad. The guest emits the low byte of each digest word.
+    const SHA = 0x6003b000;
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [SHA, UART, 0x61626380], [
+        L32R(2, 0), // SHA base
+        L32R(6, 1), // UART
+        MOVI(4, 2),
+        S32I(4, 2, 0x00), // SHA_MODE = SHA-256
+        L32R(4, 2),
+        S32I(4, 2, 0x80), // M[0] = 'a','b','c',0x80
+        MOVI(4, 0),
+        S32I(4, 2, 0x84), // M[1]
+        S32I(4, 2, 0x88), // M[2]
+        S32I(4, 2, 0x8c), // M[3]
+        S32I(4, 2, 0x90), // M[4]
+        S32I(4, 2, 0x94), // M[5]
+        S32I(4, 2, 0x98), // M[6]
+        S32I(4, 2, 0x9c), // M[7]
+        S32I(4, 2, 0xa0), // M[8]
+        S32I(4, 2, 0xa4), // M[9]
+        S32I(4, 2, 0xa8), // M[10]
+        S32I(4, 2, 0xac), // M[11]
+        S32I(4, 2, 0xb0), // M[12]
+        S32I(4, 2, 0xb4), // M[13]
+        S32I(4, 2, 0xb8), // M[14]
+        MOVI(4, 0x18),
+        S32I(4, 2, 0xbc), // M[15] = bit length 24
+        MOVI(4, 1),
+        S32I(4, 2, 0x10), // SHA_START = 1 -> hash the block
+        L32I(4, 2, 0x40),
+        S32I(4, 6, 0), // H[0] low byte -> UART (0xbf)
+        L32I(4, 2, 0x44),
+        S32I(4, 6, 0), // H[1] (0xea)
+        L32I(4, 2, 0x48),
+        S32I(4, 6, 0), // H[2] (0xde)
+        L32I(4, 2, 0x4c),
+        S32I(4, 6, 0), // H[3] (0x23)
+        L32I(4, 2, 0x50),
+        S32I(4, 6, 0), // H[4] (0xa3)
+        L32I(4, 2, 0x54),
+        S32I(4, 6, 0), // H[5] (0x9c)
+        L32I(4, 2, 0x58),
+        S32I(4, 6, 0), // H[6] (0x61)
+        L32I(4, 2, 0x5c),
+        S32I(4, 6, 0), // H[7] (0xad)
+        J(BR(-1)), // spin
+      ]),
+    );
+    c.step(200);
+    expect([...c.drainUart()]).toEqual([0xbf, 0xea, 0xde, 0x23, 0xa3, 0x9c, 0x61, 0xad]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

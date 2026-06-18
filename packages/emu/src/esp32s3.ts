@@ -901,6 +901,33 @@ const PCNT_STATUS_L_LIM_LAT = 1 << 4;
 const PCNT_STATUS_H_LIM_LAT = 1 << 5;
 const PCNT_STATUS_ZERO_LAT = 1 << 6;
 
+// SHA accelerator (hwcrypto_reg.h, DR_REG_SHA_BASE 0x6003B000). The non-DMA
+// path: write SHA_MODE, write a software-padded 64-byte block to the message
+// region, write SHA_START (first block: load the IV then run the per-block
+// compression) or SHA_CONTINUE (accumulate onto the running state), poll
+// SHA_BUSY (instant here), then read the digest words. Padding is done in
+// firmware, so the engine only models the block compression.
+const SHA_BASE = 0x6003b000;
+const SHA_MODE = 0x00;
+const SHA_START = 0x10;
+const SHA_CONTINUE = 0x14;
+const SHA_BUSY = 0x18;
+const SHA_H_BASE = 0x40; // digest output: 8 words for SHA-256
+const SHA_TEXT_BASE = 0x80; // message input: 16 words for SHA-256
+const SHA_MODE_SHA256 = 2;
+const SHA256_IV = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+const SHA256_K = [
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+];
+const sha256Rotr = (x: number, n: number): number => ((x >>> n) | (x << (32 - n))) >>> 0;
+
 // Timer groups 0 and 1 (timer_group_reg.h; flow per hal timer_ll.h
 // and the gptimer driver): each group has two 54-bit general-purpose
 // timers counting APB ticks (80 MHz — soc.h APB_CLK_FREQ) through a
@@ -2247,6 +2274,9 @@ export class Esp32s3Core implements McuCore {
   private rmtIntMaps = freshInterruptMapPair();
   private pcntUnits: PcntUnit[] = Array.from({ length: PCNT_UNITS }, freshPcntUnit);
   private pcntCtrl = PCNT_CTRL_RESET;
+  private shaMode = 0;
+  private shaText: number[] = new Array(16).fill(0);
+  private shaH: number[] = new Array(8).fill(0);
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
@@ -3344,6 +3374,9 @@ export class Esp32s3Core implements McuCore {
     this.rmtIntMaps = freshInterruptMapPair();
     this.pcntUnits = Array.from({ length: PCNT_UNITS }, freshPcntUnit);
     this.pcntCtrl = PCNT_CTRL_RESET;
+    this.shaMode = 0;
+    this.shaText = new Array(16).fill(0);
+    this.shaH = new Array(8).fill(0);
     this.pcntIntRaw = 0;
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
@@ -6587,6 +6620,53 @@ export class Esp32s3Core implements McuCore {
     return (addr >= IROM_LOW && addr < IROM_HIGH) || (addr >= DROM_LOW && addr < DROM_HIGH);
   }
 
+  // One SHA-256 block compression (FIPS 180-4). `this.shaH` holds the running
+  // digest state and the 16 big-endian words of `this.shaText` are the message
+  // block; the new state is written back into `this.shaH`.
+  private sha256Compress(): void {
+    const w = new Array<number>(64);
+    for (let t = 0; t < 16; t++) w[t] = (this.shaText[t] ?? 0) >>> 0;
+    for (let t = 16; t < 64; t++) {
+      const w15 = w[t - 15] ?? 0;
+      const w2 = w[t - 2] ?? 0;
+      const s0 = (sha256Rotr(w15, 7) ^ sha256Rotr(w15, 18) ^ (w15 >>> 3)) >>> 0;
+      const s1 = (sha256Rotr(w2, 17) ^ sha256Rotr(w2, 19) ^ (w2 >>> 10)) >>> 0;
+      w[t] = (((w[t - 16] ?? 0) + s0 + (w[t - 7] ?? 0) + s1) >>> 0) >>> 0;
+    }
+    let a = this.shaH[0] ?? 0;
+    let b = this.shaH[1] ?? 0;
+    let c = this.shaH[2] ?? 0;
+    let d = this.shaH[3] ?? 0;
+    let e = this.shaH[4] ?? 0;
+    let f = this.shaH[5] ?? 0;
+    let g = this.shaH[6] ?? 0;
+    let h = this.shaH[7] ?? 0;
+    for (let t = 0; t < 64; t++) {
+      const big1 = (sha256Rotr(e, 6) ^ sha256Rotr(e, 11) ^ sha256Rotr(e, 25)) >>> 0;
+      const ch = ((e & f) ^ (~e & g)) >>> 0;
+      const temp1 = ((h + big1 + ch + (SHA256_K[t] ?? 0) + (w[t] ?? 0)) >>> 0) >>> 0;
+      const big0 = (sha256Rotr(a, 2) ^ sha256Rotr(a, 13) ^ sha256Rotr(a, 22)) >>> 0;
+      const maj = ((a & b) ^ (a & c) ^ (b & c)) >>> 0;
+      const temp2 = ((big0 + maj) >>> 0) >>> 0;
+      h = g;
+      g = f;
+      f = e;
+      e = (d + temp1) >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (temp1 + temp2) >>> 0;
+    }
+    this.shaH[0] = ((this.shaH[0] ?? 0) + a) >>> 0;
+    this.shaH[1] = ((this.shaH[1] ?? 0) + b) >>> 0;
+    this.shaH[2] = ((this.shaH[2] ?? 0) + c) >>> 0;
+    this.shaH[3] = ((this.shaH[3] ?? 0) + d) >>> 0;
+    this.shaH[4] = ((this.shaH[4] ?? 0) + e) >>> 0;
+    this.shaH[5] = ((this.shaH[5] ?? 0) + f) >>> 0;
+    this.shaH[6] = ((this.shaH[6] ?? 0) + g) >>> 0;
+    this.shaH[7] = ((this.shaH[7] ?? 0) + h) >>> 0;
+  }
+
   private busRead(addr: number, bytes: 1 | 2 | 4): number {
     const idx = this.sramIndex(addr);
     if (idx !== null) {
@@ -6606,6 +6686,18 @@ export class Esp32s3Core implements McuCore {
     }
     if ((addr >= ROM0_LOW && addr < ROM0_HIGH) || (addr >= ROM1_LOW && addr < ROM1_HIGH)) {
       return this.romRead(addr, bytes);
+    }
+    if (addr >= SHA_BASE && addr < SHA_BASE + 0x1000) {
+      const off = addr - SHA_BASE;
+      if (off === SHA_BUSY) return 0; // compression is instantaneous in the model
+      if (off >= SHA_H_BASE && off < SHA_H_BASE + 8 * 4 && (off & 3) === 0) {
+        return (this.shaH[(off - SHA_H_BASE) >> 2] ?? 0) >>> 0;
+      }
+      if (off >= SHA_TEXT_BASE && off < SHA_TEXT_BASE + 16 * 4 && (off & 3) === 0) {
+        return (this.shaText[(off - SHA_TEXT_BASE) >> 2] ?? 0) >>> 0;
+      }
+      if (off === SHA_MODE) return this.shaMode >>> 0;
+      return 0;
     }
     if (addr >= GPIO_BASE && addr < GPIO_BASE + 0x1000) {
       const off = addr - GPIO_BASE;
@@ -7144,6 +7236,25 @@ export class Esp32s3Core implements McuCore {
     }
     if ((addr >= ROM0_LOW && addr < ROM0_HIGH) || (addr >= ROM1_LOW && addr < ROM1_HIGH)) {
       throw new Error(`write to ROM address 0x${addr.toString(16)} — the mask ROM is read-only`);
+    }
+    if (addr >= SHA_BASE && addr < SHA_BASE + 0x1000) {
+      const off = addr - SHA_BASE;
+      const v = value >>> 0;
+      if (off >= SHA_TEXT_BASE && off < SHA_TEXT_BASE + 16 * 4 && (off & 3) === 0) {
+        this.shaText[(off - SHA_TEXT_BASE) >> 2] = v;
+      } else if (off === SHA_MODE) {
+        this.shaMode = v;
+      } else if (off === SHA_START) {
+        // First block: load the SHA-256 IV, then run the per-block compression.
+        if (this.shaMode === SHA_MODE_SHA256) {
+          this.shaH = SHA256_IV.slice();
+          this.sha256Compress();
+        }
+      } else if (off === SHA_CONTINUE) {
+        // Subsequent block: accumulate onto the running digest state.
+        if (this.shaMode === SHA_MODE_SHA256) this.sha256Compress();
+      }
+      return;
     }
     if (addr >= GPIO_BASE && addr < GPIO_BASE + 0x1000) {
       const off = addr - GPIO_BASE;

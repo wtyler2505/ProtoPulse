@@ -2,6 +2,33 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 132: SHA-256 hardware accelerator (new peripheral)
+
+### Added
+- **SHA accelerator, SHA-256 non-DMA path** (@protopulse/emu): a new peripheral
+  at `DR_REG_SHA_BASE` (0x6003B000), verified against `hwcrypto_reg.h` /
+  `sha_ll.h` / `sha_hal.c`. Models `SHA_MODE` (+0x00, SHA-256 = 2), `SHA_START`
+  (+0x10: load the SHA-256 IV then run the per-block compression), `SHA_CONTINUE`
+  (+0x14: accumulate onto the running state), `SHA_BUSY` (+0x18: reads 0 —
+  compression is instantaneous in the model), the 16-word message region
+  `SHA_TEXT_BASE` (+0x80), and the 8-word digest region `SHA_H_BASE` (+0x40).
+  The FIPS 180-4 block compression (64-round schedule + K table + IV) is
+  implemented from scratch. Message padding is the firmware's responsibility on
+  real hardware (the engine only compresses already-padded 64-byte blocks), so
+  the model matches: it runs one compression per START/CONTINUE.
+
+### Verified
+- A new test feeds the padded "abc" block and confirms the digest equals the
+  NIST SHA-256("abc") vector (`ba7816bf 8f01cfea … f20015ad`) — a self-checking
+  known-answer test, so any compression-function bug fails immediately.
+- `npm run -w @protopulse/emu test` passed with 287 package tests
+  (200 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- SHA-1 / SHA-224 / SHA-384 / SHA-512 modes, the DMA path (`SHA_DMA_START`),
+  and the SHA interrupt remain follow-on; this slice lands the SHA-256
+  CPU-driven path that mbedTLS uses by default.
+
 ## 2026-06-17 — ESP32-S3 slice 131: deep-sleep touch wake coverage (all wake families covered)
 
 ### Added

@@ -1740,6 +1740,14 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       with DEEPSLEEP_RESET. All five deep-sleep wake families (timer/GPIO/
       EXT0/EXT1/touch, slices 124+129+130+131) now have coverage. No
       production change
+- [x] ESP32-S3 core slice 132 — SHA-256 hardware accelerator (landed
+      2026-06-17): a new peripheral at DR_REG_SHA_BASE 0x6003B000 (verified
+      vs hwcrypto_reg.h / sha_ll.h / sha_hal.c). Models the non-DMA SHA-256
+      path — MODE/START/CONTINUE/BUSY + the 16-word message and 8-word digest
+      regions — with the FIPS 180-4 block compression implemented from
+      scratch. Firmware owns the padding (engine compresses padded blocks).
+      A known-answer test confirms SHA-256("abc") = the NIST vector. Cuts:
+      SHA-1/224/384/512, the DMA path, and the SHA interrupt are follow-on
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
