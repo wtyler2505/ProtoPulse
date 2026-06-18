@@ -1910,6 +1910,14 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       3b3fd92e…e83cfb4a / 7789508d…c54ed825; vector pre-confirmed against OpenSSL.
       AES now covers ECB/CBC/CTR/OFB/GCM(+AAD). Cut: CFB128 (needs the hardware
       enc/dec direction convention verified against the TRM first), partial-block.
+- [x] ESP32-S3 core slice 160 — AES-CFB128 enc + dec (landed 2026-06-18): the AES-DMA
+      path adds cipher-feedback mode (AES_BLOCK_MODE = 5) both directions; keystream
+      E(feedback) from the IV, AES_MODE enc/dec bit selects the feedback source (output
+      ciphertext when encrypting, input when decrypting). The direction convention was
+      verified against esp-idf aes_ll_set_mode + esp_aes_crypt_cfb128 DMA path first
+      (not guessed). KAT: NIST SP 800-38A F.3.13/F.3.14 over two blocks, enc + dec,
+      pre-confirmed against OpenSSL. AES now covers ECB/CBC/CTR/OFB/CFB128/GCM(+AAD).
+      Remaining AES cut: CFB8 (byte-feedback), partial-block GCM.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

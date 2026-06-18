@@ -930,6 +930,7 @@ const AES_BLOCK_NUM = 0x98; // number of 16-byte blocks to process
 const AES_BLOCK_MODE_CBC = 1;
 const AES_BLOCK_MODE_OFB = 2;
 const AES_BLOCK_MODE_CTR = 3;
+const AES_BLOCK_MODE_CFB128 = 5;
 const AES_BLOCK_MODE_GCM = 6;
 const AES_H_MEM = 0x60; // GCM hash subkey H = E(0) (read)
 const AES_J0_MEM = 0x70; // GCM initial counter block J0 (written by firmware)
@@ -3873,6 +3874,16 @@ export class Esp32s3Core implements McuCore {
         outWords = [0, 0, 0, 0];
         for (let w = 0; w < 4; w++) outWords[w] = ((blk[w] ?? 0) ^ (ks[w] ?? 0)) >>> 0;
         prev = ks;
+      } else if (this.aesBlockMode === AES_BLOCK_MODE_CFB128) {
+        // CFB-128: keystream = E(feedback) starting from the IV; out = in XOR keystream.
+        // The block cipher always runs forward (E); the AES_MODE enc/dec bit selects the
+        // feedback source — the output ciphertext when encrypting, the input ciphertext
+        // when decrypting. (Verified against esp-idf aes_ll_set_mode + the esp_aes_crypt_cfb128
+        // DMA path, which writes the caller's direction to AES_MODE_REG for CFB.)
+        const ks = toWords(aesEncryptBlock(toBytes(prev), rk, nr));
+        outWords = [0, 0, 0, 0];
+        for (let w = 0; w < 4; w++) outWords[w] = ((blk[w] ?? 0) ^ (ks[w] ?? 0)) >>> 0;
+        prev = decrypt ? blk : outWords;
       } else if (decrypt) {
         // CBC decrypt: P = D(C) XOR prev; prev becomes this ciphertext block.
         const dec = toWords(aesDecryptBlock(toBytes(blk), rk, nr));

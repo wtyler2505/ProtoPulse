@@ -2,6 +2,26 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 160: AES-CFB128 (encrypt + decrypt) through the AES-DMA path
+
+### Added
+- **AES-CFB128 mode** (@protopulse/emu): the GDMA-fed AES-DMA path now supports
+  cipher feedback (`AES_BLOCK_MODE = 5`) in both directions. The keystream is
+  `E(feedback)` from the IV; the block cipher always runs forward, and the
+  `AES_MODE` encrypt/decrypt bit selects the feedback source — the output
+  ciphertext when encrypting, the input ciphertext when decrypting.
+
+### Verified
+- The hardware enc/dec direction convention was confirmed against primary
+  sources first (ESP-IDF `aes_ll_set_mode` + the `esp_aes_crypt_cfb128` DMA path,
+  which writes the caller's direction into `AES_MODE_REG` for CFB) — not guessed.
+- Two known-answer tests run NIST SP 800-38A F.3.13/F.3.14 over two blocks
+  (so the C₁→block-2 feedback chaining is exercised): encrypt
+  `6bc1bee2…`/`ae2d8a57…` → `3b3fd92e…e83cfb4a`/`c8a64537…9f1ce58b`, and decrypt
+  back. Both vectors were independently confirmed against OpenSSL (`aes-128-cfb`).
+- `npm run -w @protopulse/emu test` passed with 321 package tests
+  (234 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 159: AES-OFB through the AES-DMA path
 
 ### Added
