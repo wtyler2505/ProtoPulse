@@ -1870,6 +1870,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       (+0x50). New regs AES_DMA_ENABLE (+0x90), AES_BLOCK_MODE (+0x94, CBC=1),
       AES_BLOCK_NUM (+0x98). KAT: NIST SP 800-38A AES-128-CBC vectors round-trip
       end-to-end through real GDMA descriptors. Cuts: CTR mode, DMA-mode interrupt test
+- [x] ESP32-S3 core slice 152 — AES-CTR via the AES-DMA path (landed 2026-06-18):
+      AES_BLOCK_MODE = 3 (CTR); keystream = E(counter), output = input XOR keystream,
+      counter low 32 bits increment per block (INC32). Same GDMA data path as CBC.
+      KAT: NIST SP 800-38A AES-128-CTR vector (counter f0f1f2f3…ff) through GDMA.
+      The AES done interrupt already fires on DMA completion via the existing matrix
+      routing (slice 140/141). AES-DMA now does CBC enc/dec + CTR + done interrupt
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -2,6 +2,20 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 152: AES-CTR via the AES-DMA path
+
+### Added
+- **AES-CTR through GDMA** (@protopulse/emu): `AES_BLOCK_MODE` = 3 (CTR). The engine
+  encrypts the counter block to form a keystream, XORs it with the GDMA-fed input, and
+  increments the counter's low 32 bits (INC32) per block. The counter starts at the IV
+  register. Same GDMA OUT/IN data path as CBC.
+
+### Verified
+- A known-answer test runs the NIST SP 800-38A F.5.1 AES-128-CTR vector end-to-end
+  through GDMA: counter f0f1f2f3…ff, plaintext 6bc1bee2… → ciphertext 874d6191…990db6ce.
+- `npm run -w @protopulse/emu test` passed with 312 package tests
+  (225 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 151: AES-CBC via the AES-DMA path (encrypt + decrypt)
 
 ### Added
