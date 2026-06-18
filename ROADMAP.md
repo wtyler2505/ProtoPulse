@@ -1840,6 +1840,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       raises SERIAL_OUT_EP_DATA_AVAIL (bit2) while pending, each EP1_REG read pops
       the next RX byte. KAT: inject 'X', read status (6) -> byte (0x58) -> status
       (2). Console now does TX + RX. Cuts: USJ interrupts (INTMTX + 0x180)
+- [x] ESP32-S3 core slice 147 — USB-Serial-JTAG RX interrupt (landed 2026-06-18):
+      host input raises SERIAL_OUT_RECV_PKT (INT bit2); INT_ENA (+0x10) arms,
+      INT_CLR (+0x14) clears, INT_RAW/ST (+0x08/+0x0c) report; matrix map at the
+      explicit silicon offset INTMTX + 0x180. KAT: inject byte, ISR drains EP1 +
+      clears, fires once. USB-Serial-JTAG console complete (TX + RX + interrupt).
+      Cuts: SERIAL_IN_EMPTY (TX-empty) interrupt
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

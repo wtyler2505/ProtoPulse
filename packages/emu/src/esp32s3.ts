@@ -948,6 +948,12 @@ const USJ_EP1_CONF = 0x04; // WR_DONE (bit0, W), IN_EP_DATA_FREE (bit1, RO), OUT
 const USJ_WR_DONE = 1 << 0; // write 1 to flush the staged TX bytes to the host
 const USJ_IN_EP_DATA_FREE = 1 << 1; // TX FIFO has room (always, in the model)
 const USJ_OUT_EP_DATA_AVAIL = 1 << 2; // RX FIFO has host-injected data pending
+const USJ_INT_RAW = 0x08;
+const USJ_INT_ST = 0x0c;
+const USJ_INT_ENA = 0x10;
+const USJ_INT_CLR = 0x14;
+const USJ_SERIAL_OUT_RECV_PKT = 1 << 2; // host sent a packet (RX data arrived)
+const INTMTX_USJ_MAP = 0x180; // INTERRUPT_CORE0_USB_DEVICE_INT_MAP_REG (explicit silicon offset)
 
 const SHA_BASE = 0x6003b000;
 const SHA_MODE = 0x00;
@@ -2570,6 +2576,9 @@ export class Esp32s3Core implements McuCore {
   private usjTxStaging: number[] = []; // bytes written to EP1 not yet flushed
   private usjTxBuffer: number[] = []; // flushed console output, drained by the host
   private usjRxBuffer: number[] = []; // host-injected console input awaiting the guest
+  private usjIntRaw = 0;
+  private usjIntEna = 0;
+  private usjIntMaps: InterruptMapPair = freshInterruptMapPair();
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
@@ -3017,6 +3026,8 @@ export class Esp32s3Core implements McuCore {
       throw new Error(`usbSerialJtagWrite expects a byte 0..255 (got ${String(byte)})`);
     }
     this.usjRxBuffer.push(byte);
+    this.usjIntRaw |= USJ_SERIAL_OUT_RECV_PKT; // host packet received
+    this.recomputeIrq();
   }
 
   drainI2cWrites(port: 0 | 1 = 0): Uint8Array {
@@ -3706,6 +3717,9 @@ export class Esp32s3Core implements McuCore {
     this.usjTxStaging = [];
     this.usjTxBuffer = [];
     this.usjRxBuffer = [];
+    this.usjIntRaw = 0;
+    this.usjIntEna = 0;
+    this.usjIntMaps = freshInterruptMapPair();
     this.pcntIntRaw = 0;
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
@@ -6708,6 +6722,7 @@ export class Esp32s3Core implements McuCore {
     if ((this.shaIntRaw & this.shaIntEna) !== 0) raise(this.shaIntMaps);
     if ((this.aesIntRaw & this.aesIntEna) !== 0) raise(this.aesIntMaps);
     if ((this.rsaIntRaw & this.rsaIntEna) !== 0) raise(this.rsaIntMaps);
+    if ((this.usjIntRaw & this.usjIntEna) !== 0) raise(this.usjIntMaps);
     for (let n = 0; n < this.systimer.comps.length; n++) {
       const c = this.systimer.comps[n];
       if (c !== undefined && (this.systimer.intRaw & this.systimer.intEna & (1 << n)) !== 0) raise(c.maps);
@@ -7147,6 +7162,9 @@ export class Esp32s3Core implements McuCore {
         // TX always has room; OUT_EP_DATA_AVAIL set while host input is pending.
         return USJ_IN_EP_DATA_FREE | (this.usjRxBuffer.length > 0 ? USJ_OUT_EP_DATA_AVAIL : 0);
       }
+      if (off === USJ_INT_RAW) return this.usjIntRaw >>> 0;
+      if (off === USJ_INT_ST) return (this.usjIntRaw & this.usjIntEna) >>> 0;
+      if (off === USJ_INT_ENA) return this.usjIntEna >>> 0;
       return 0;
     }
     if (addr >= SHA_BASE && addr < SHA_BASE + 0x1000) {
@@ -7265,6 +7283,7 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_SHA_MAP) return this.shaIntMaps[core];
       if (sourceOff === INTMTX_AES_MAP) return this.aesIntMaps[core];
       if (sourceOff === INTMTX_RSA_MAP) return this.rsaIntMaps[core];
+      if (sourceOff === INTMTX_USJ_MAP) return this.usjIntMaps[core];
       if (sourceOff === INTMTX_RTC_CORE_MAP) return this.rtcCoreIntMaps[core];
       if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
       if (sourceOff === INTMTX_PCNT_MAP) return this.pcntIntMaps[core];
@@ -7822,6 +7841,12 @@ export class Esp32s3Core implements McuCore {
           for (const b of this.usjTxStaging) this.usjTxBuffer.push(b);
           this.usjTxStaging = [];
         }
+      } else if (off === USJ_INT_ENA) {
+        this.usjIntEna = v;
+        this.recomputeIrq();
+      } else if (off === USJ_INT_CLR) {
+        this.usjIntRaw &= ~v; // write 1 to a bit clears it
+        this.recomputeIrq();
       }
       return;
     }
@@ -8021,6 +8046,9 @@ export class Esp32s3Core implements McuCore {
         this.recomputeIrq();
       } else if (sourceOff === INTMTX_RSA_MAP) {
         this.rsaIntMaps[core] = value & 0x1f;
+        this.recomputeIrq();
+      } else if (sourceOff === INTMTX_USJ_MAP) {
+        this.usjIntMaps[core] = value & 0x1f;
         this.recomputeIrq();
       } else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;

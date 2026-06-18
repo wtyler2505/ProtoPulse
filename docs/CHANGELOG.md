@@ -2,6 +2,26 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 147: USB-Serial-JTAG RX interrupt
+
+### Added
+- **USB-Serial-JTAG controller — RX interrupt** (@protopulse/emu): host console
+  input now raises `SERIAL_OUT_RECV_PKT` (INT bit2). `INT_ENA_REG` (+0x10) arms it,
+  `INT_CLR_REG` (+0x14) clears it, `INT_RAW_REG` (+0x08) / `INT_ST_REG` (+0x0c) report
+  status, and the controller's matrix map sits at the explicit silicon offset
+  `INTERRUPT_CORE0_USB_DEVICE_INT_MAP_REG` = INTMTX + 0x180. This completes the
+  USB-Serial-JTAG console (TX + RX + interrupt).
+
+### Verified
+- A known-answer test injects a byte, arms `INT_ENA`, maps the source to CPU line 0,
+  and confirms the ISR fires exactly once: it drains `EP1_REG` and clears the raw bit,
+  and the counter stays 1 (no re-fire).
+- `npm run -w @protopulse/emu test` passed with 306 package tests
+  (219 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- The `SERIAL_IN_EMPTY` (TX-FIFO-empty) interrupt remains follow-on.
+
 ## 2026-06-18 — ESP32-S3 slice 146: USB-Serial-JTAG RX console
 
 ### Added

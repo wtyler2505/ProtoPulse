@@ -2993,6 +2993,64 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([6, 0x58, 2]);
   });
 
+  it('routes the USB-Serial-JTAG RX interrupt through the interrupt matrix', () => {
+    // Host console input raises SERIAL_OUT_RECV_PKT (INT bit2). INT_ENA_REG (+0x10)
+    // arms it, INT_CLR_REG (+0x14) clears it, and the controller's matrix map sits at
+    // the explicit silicon offset INTERRUPT_CORE0_USB_DEVICE_INT_MAP_REG = INTMTX +
+    // 0x180. A byte is injected before the run; arming INT_ENA asserts the pending
+    // interrupt. The ISR drains EP1 and clears the raw bit, firing exactly once.
+    const USJ = 0x60038000;
+    const SCRATCH = ESP32S3_DRAM_BASE + 0x9c0;
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [UART, USJ, INTMTX, SCRATCH, ESP32S3_IRAM_BASE], [
+        L32R(13, 3), // scratch
+        MOVI(14, 0),
+        S32I(14, 13, 0), // ISR counter = 0
+        L32R(14, 4),
+        WSR(14, SR.VECBASE),
+
+        L32R(3, 1), // USB-Serial-JTAG base
+        MOVI(4, 4),
+        S32I(4, 3, 0x10), // INT_ENA: SERIAL_OUT_RECV_PKT (bit2) = 1
+
+        L32R(15, 2), // interrupt matrix
+        MOVI(4, 0),
+        S32I(4, 15, 0x180), // USB_DEVICE source -> CPU line 0
+        MOVI(4, 1),
+        WSR(4, SR.INTENABLE),
+        RSIL(12, 0),
+
+        MOVI(11, 1),
+        L32I(4, 13, 0),
+        BNE(4, 11, BR(-2)), // spin until the ISR has run
+
+        L32R(8, 0), // UART
+        S32I(4, 8, 0), // ISR counter (expect 1)
+        L32I(4, 13, 0),
+        S32I(4, 8, 0), // counter again — still 1 (no re-fire after clear)
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 3), // scratch
+        S32I(3, 2, 8), // save a3
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0), // ISR counter++
+        L32R(3, 1), // USB-Serial-JTAG base
+        L32I(4, 3, 0x00), // drain the RX byte (EP1_REG)
+        MOVI(4, 4),
+        S32I(4, 3, 0x14), // INT_CLR: SERIAL_OUT_RECV_PKT (bit2)
+        L32I(3, 2, 8), // restore a3
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ]),
+    );
+    c.usbSerialJtagWrite(0x41); // host sends 'A' before the run
+    c.step(800);
+    expect([...c.drainUart()]).toEqual([1, 1]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
