@@ -1762,6 +1762,11 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       completion asserts, SHA_CLEAR_IRQ +0x24 clears), same recomputeIrq/raise
       pattern as the eFuse routing. A test confirms the ISR runs once and
       stays cleared. Cuts: SHA-384/512 and the DMA path remain follow-on
+- [x] ESP32-S3 core slice 135 — SHA multi-block (START + CONTINUE) coverage
+      (landed 2026-06-17): a test hashes the 56-byte NIST two-block message,
+      with SHA_START hashing block 1 and SHA_CONTINUE accumulating block 2,
+      confirming the digest matches the NIST vector. Locks the previously
+      untested multi-block accumulation path; no production change
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

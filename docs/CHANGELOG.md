@@ -2,6 +2,21 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-17 — ESP32-S3 slice 135: SHA multi-block (START + CONTINUE) coverage
+
+### Added
+- **Two-block SHA-256 coverage** (@protopulse/emu): a new test exercises the
+  multi-block path that `SHA_CONTINUE` implements but that had no coverage. It
+  hashes the 56-byte NIST message `"abcdbcde…nopq"`, which spans two padded
+  512-bit blocks: `SHA_START` hashes block 1, `SHA_CONTINUE` accumulates block 2
+  onto the running state. The digest matches the NIST SHA-256 vector
+  (`248d6a61…19db06c1`), confirming the running-state accumulation across blocks.
+  No production change — locks an untested real path.
+
+### Verified
+- `npm run -w @protopulse/emu test` passed with 291 package tests
+  (204 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-17 — ESP32-S3 slice 134: SHA accelerator interrupt routing
 
 ### Added

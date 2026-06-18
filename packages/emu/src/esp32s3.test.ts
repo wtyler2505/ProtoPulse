@@ -2034,6 +2034,104 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([1, 1]);
   });
 
+  it('hashes a two-block message through SHA_START then SHA_CONTINUE', () => {
+    // Exercises the multi-block path: the 56-byte NIST message
+    // "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" spans two padded
+    // 512-bit blocks. Block 1 = the 14 message words (which form the arithmetic
+    // sequence 0x61626364 + i*0x01010101) plus 0x80000000; block 2 is all zero
+    // except the 64-bit length (448 = 0x1c0). SHA_START hashes block 1, SHA_CONTINUE
+    // accumulates block 2. Digest = NIST SHA-256 of that message =
+    // 248d6a61 d20638b8 e5c02693 0c3e6039 a33ce459 64ff2167 f6ecedd4 19db06c1.
+    const SHA = 0x6003b000;
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [SHA, UART, 0x61626364, 0x01010101, 0x80000000, 0x1c0], [
+        L32R(2, 0), // SHA base
+        L32R(6, 1), // UART
+        MOVI(4, 2),
+        S32I(4, 2, 0x00), // SHA_MODE = SHA-256
+        MOVI(11, 0x80),
+        ADD(3, 2, 11), // a3 = TEXT base (SHA + 0x80)
+
+        L32R(5, 2), // word 0 = 0x61626364
+        L32R(7, 3), // increment = 0x01010101
+        S32I(5, 3, 0x00),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x04),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x08),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x0c),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x10),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x14),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x18),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x1c),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x20),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x24),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x28),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x2c),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x30),
+        ADD(5, 5, 7),
+        S32I(5, 3, 0x34), // word 13
+        L32R(5, 4),
+        S32I(5, 3, 0x38), // word 14 = 0x80000000
+        MOVI(5, 0),
+        S32I(5, 3, 0x3c), // word 15 = 0
+        MOVI(4, 1),
+        S32I(4, 2, 0x10), // SHA_START -> hash block 1
+
+        MOVI(5, 0), // block 2: zero words 0..14
+        S32I(5, 3, 0x00),
+        S32I(5, 3, 0x04),
+        S32I(5, 3, 0x08),
+        S32I(5, 3, 0x0c),
+        S32I(5, 3, 0x10),
+        S32I(5, 3, 0x14),
+        S32I(5, 3, 0x18),
+        S32I(5, 3, 0x1c),
+        S32I(5, 3, 0x20),
+        S32I(5, 3, 0x24),
+        S32I(5, 3, 0x28),
+        S32I(5, 3, 0x2c),
+        S32I(5, 3, 0x30),
+        S32I(5, 3, 0x34),
+        S32I(5, 3, 0x38), // word 14
+        L32R(5, 5),
+        S32I(5, 3, 0x3c), // word 15 = length 448 (0x1c0)
+        MOVI(4, 1),
+        S32I(4, 2, 0x14), // SHA_CONTINUE -> hash block 2
+
+        L32I(4, 2, 0x40),
+        S32I(4, 6, 0), // H[0] (0x61)
+        L32I(4, 2, 0x44),
+        S32I(4, 6, 0), // H[1] (0xb8)
+        L32I(4, 2, 0x48),
+        S32I(4, 6, 0), // H[2] (0x93)
+        L32I(4, 2, 0x4c),
+        S32I(4, 6, 0), // H[3] (0x39)
+        L32I(4, 2, 0x50),
+        S32I(4, 6, 0), // H[4] (0x59)
+        L32I(4, 2, 0x54),
+        S32I(4, 6, 0), // H[5] (0x67)
+        L32I(4, 2, 0x58),
+        S32I(4, 6, 0), // H[6] (0xd4)
+        L32I(4, 2, 0x5c),
+        S32I(4, 6, 0), // H[7] (0xc1)
+        J(BR(-1)), // spin
+      ]),
+    );
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([0x61, 0xb8, 0x93, 0x39, 0x59, 0x67, 0xd4, 0xc1]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
