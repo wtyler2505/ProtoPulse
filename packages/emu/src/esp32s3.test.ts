@@ -4074,6 +4074,84 @@ describe('Esp32s3Core', () => {
     ]);
   });
 
+  it('computes an RSA signature through the Digital Signature (DS) peripheral', () => {
+    // The DS peripheral (DR_REG_DIGITAL_SIGNATURE_BASE 0x6003D000) signs by decrypting the
+    // AES-256-CBC-encrypted private-key parameter block C (host-injected, as the firmware
+    // would store it) with the HMAC-derived key, reading Y (modexp exponent) and M (modulus)
+    // from their little-endian regions, and computing Z = X^Y mod M. The C block, key, IV, X,
+    // and expected Z come from a fixed 512-bit RSA key; the signature was round-trip-verified
+    // independently (Z^e mod n == X) when the vector was generated. The guest writes SET_START
+    // (+0xE00) then SET_ME (+0xE04), then emits Z word0 and Z word15 (MSB-first) and the
+    // QUERY_CHECK result (+0xE14, expect 0 = digest+padding valid).
+    const DS_CTRL = 0x6003de00; // SET_START +0x00, SET_ME +0x04, QUERY_CHECK +0x14
+    const DS_Z = 0x6003da00; // Z output, little-endian words
+    const KEY_WORDS = [
+      0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f,
+    ];
+    const IV_BYTES = [
+      0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00,
+    ];
+    const X_LE = [
+      0xf06547cd, 0xd1ca25b0, 0x0ab2ec78, 0x42c21981, 0x1ac1c085, 0xd4b0f6b5, 0x1af33e09, 0x121eb94d,
+      0xbcdd8e78, 0x92d5ac01, 0xac8869f1, 0xc0e00a1f, 0xf1916b32, 0x143b3fbb, 0x24c2f059, 0x3cdc45d2,
+    ];
+    // C = AES-256-CBC(key, iv, [Y_le(512) || M_le(512) || zeros(560)]), padding off, 1584 bytes.
+    const C_B64 =
+      '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';
+    const cBytes = Array.from(atob(C_B64), (ch) => ch.charCodeAt(0));
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [DS_CTRL, DS_Z, UART],
+        [
+          L32R(2, 0), // DS control base
+          MOVI(3, 1),
+          S32I(3, 2, 0x00), // SET_START -> decrypt C, expose Y/M
+          S32I(3, 2, 0x04), // SET_ME -> Z = X^Y mod M
+          L32R(4, 1), // DS_Z base
+          L32R(6, 2), // UART
+          L32I(5, 4, 0), // Z word0
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0x6c
+          L32I(5, 4, 0),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0x83
+          L32I(5, 4, 0),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0x68
+          L32I(5, 4, 0),
+          S32I(5, 6, 0), // 0xa0
+          L32I(5, 4, 60), // Z word15
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0x28
+          L32I(5, 4, 60),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0x04
+          L32I(5, 4, 60),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0x4c
+          L32I(5, 4, 60),
+          S32I(5, 6, 0), // 0xc5
+          L32I(5, 2, 0x14), // QUERY_CHECK
+          S32I(5, 6, 0), // 0x00
+          J(BR(-1)),
+        ],
+      ),
+    );
+    c.loadDsKey(KEY_WORDS);
+    c.loadDsCiphertext(cBytes);
+    c.loadDsIv(IV_BYTES);
+    c.loadDsX(X_LE);
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([
+      0x6c, 0x83, 0x68, 0xa0, 0x28, 0x04, 0x4c, 0xc5, 0x00,
+    ]);
+  });
+
   it('fires the AES done interrupt on AES-DMA (CBC) completion', () => {
     // Completing an AES-DMA operation raises the same AES done interrupt as the ECB
     // path. The guest arms AES_INT_ENA (+0xb0), maps AES (source 76) to CPU line 0 at

@@ -1005,6 +1005,28 @@ const HMAC_WR_MESSAGE_MEM = 0x80; // 16-word message block input
 const HMAC_RD_RESULT_MEM = 0xc0; // 8-word MAC output
 const HMAC_SET_START = 0x40;
 
+// Digital Signature (DS) accelerator (DR_REG_DIGITAL_SIGNATURE_BASE). Computes an RSA
+// signature Z = X^Y mod M where the private-key parameters (Y, M, Rb, M', MD) live
+// AES-256-CBC-encrypted in the C block and are decrypted at runtime with a key the HMAC
+// peripheral derives (downstream mode, purpose DS). Register map + the C-block region
+// layout verified against esp-idf soc/esp32s3 hwcrypto_reg.h + soc.h. The model decrypts C,
+// reads Y and M from their little-endian-word regions, and computes Z via the BigInt modexp;
+// Rb/M' (Montgomery constants) and the MD integrity digest are not needed for that and are
+// not modeled (the MD check + the HMAC-downstream key derivation are documented follow-ons).
+const DS_BASE = 0x6003d000;
+const DS_C_Y = 0x000; // decrypted Y (private exponent), 128 little-endian words
+const DS_C_M = 0x200; // decrypted M (modulus), 128 little-endian words
+const DS_X = 0x800; // X (message) input, 128 little-endian words
+const DS_Z = 0xa00; // Z (signature) output, 128 little-endian words
+const DS_SET_START = 0xe00; // write 1 -> AES-256-CBC-decrypt the C block
+const DS_SET_ME = 0xe04; // write 1 -> compute Z = X^Y mod M
+const DS_SET_FINISH = 0xe08; // write 1 -> release the peripheral
+const DS_QUERY_BUSY = 0xe0c; // bit0: busy (instantaneous in the model)
+const DS_QUERY_KEY_WRONG = 0xe10; // HMAC key error count (always 0 here)
+const DS_QUERY_CHECK = 0xe14; // bit0 = MD digest invalid, bit1 = padding invalid
+const DS_MEM_WORDS = 128; // 4096-bit operand fields
+const DS_C_BYTES = 1584; // AES-CBC ciphertext length (512+512+512+48)
+
 // Hardware RNG. esp_random() reads WDEV_RND_REG; the emulator returns a
 // deterministic-from-reset xorshift32 stream so guest runs are reproducible.
 const WDEV_RND_REG = 0x6003507c;
@@ -2711,6 +2733,14 @@ export class Esp32s3Core implements McuCore {
   private hmacKey: number[] = new Array(8).fill(0); // eFuse-sourced 256-bit key
   private hmacMsg: number[] = []; // accumulated message bytes
   private hmacResult: number[] = new Array(8).fill(0);
+  private dsKey: number[] = new Array(8).fill(0); // AES-256 key (HMAC-derived; host-injected)
+  private dsC: number[] = new Array(DS_C_BYTES).fill(0); // C ciphertext bytes
+  private dsIv: number[] = new Array(16).fill(0); // AES-CBC IV bytes
+  private dsX: number[] = new Array(DS_MEM_WORDS).fill(0); // X input, little-endian words
+  private dsY: number[] = new Array(DS_MEM_WORDS).fill(0); // decrypted Y, little-endian words
+  private dsM: number[] = new Array(DS_MEM_WORDS).fill(0); // decrypted M, little-endian words
+  private dsZ: number[] = new Array(DS_MEM_WORDS).fill(0); // Z output, little-endian words
+  private dsCheck = 0; // DS_QUERY_CHECK result (0 = MD + padding valid)
   private rngState = RNG_SEED; // xorshift32 PRNG behind WDEV_RND_REG
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
@@ -3166,6 +3196,65 @@ export class Esp32s3Core implements McuCore {
   loadHmacKey(words: number[]): void {
     // Represents an eFuse-programmed 256-bit HMAC key block (8 words).
     for (let i = 0; i < 8; i++) this.hmacKey[i] = (words[i] ?? 0) >>> 0;
+  }
+
+  /** The 256-bit AES key the HMAC peripheral would derive for DS (downstream mode). */
+  loadDsKey(words: number[]): void {
+    for (let i = 0; i < 8; i++) this.dsKey[i] = (words[i] ?? 0) >>> 0;
+  }
+
+  /** The encrypted private-key parameter block C (1584 bytes), as the firmware would store it. */
+  loadDsCiphertext(bytes: number[]): void {
+    for (let i = 0; i < DS_C_BYTES; i++) this.dsC[i] = (bytes[i] ?? 0) & 0xff;
+  }
+
+  /** The AES-CBC IV (16 bytes) the firmware writes to DS_IV before triggering. */
+  loadDsIv(bytes: number[]): void {
+    for (let i = 0; i < 16; i++) this.dsIv[i] = (bytes[i] ?? 0) & 0xff;
+  }
+
+  /** The X input (the message / padded digest to sign), little-endian words. */
+  loadDsX(words: number[]): void {
+    for (let i = 0; i < DS_MEM_WORDS; i++) this.dsX[i] = (words[i] ?? 0) >>> 0;
+  }
+
+  /** SET_START: AES-256-CBC-decrypt C, then read Y and M from their little-endian regions. */
+  private dsDecryptParams(): void {
+    const keyBytes: number[] = [];
+    for (let w = 0; w < 8; w++) {
+      const k = this.dsKey[w] ?? 0;
+      keyBytes.push((k >>> 24) & 0xff, (k >>> 16) & 0xff, (k >>> 8) & 0xff, k & 0xff);
+    }
+    const rk = aesExpandKey(keyBytes, 8);
+    const plain: number[] = new Array(DS_C_BYTES).fill(0);
+    let prev = this.dsIv.slice(0, 16);
+    for (let b = 0; b < DS_C_BYTES; b += 16) {
+      const cblk = this.dsC.slice(b, b + 16);
+      const dec = aesDecryptBlock(cblk, rk, 14); // AES-256 => 14 rounds
+      for (let i = 0; i < 16; i++) plain[b + i] = ((dec[i] ?? 0) ^ (prev[i] ?? 0)) & 0xff;
+      prev = cblk;
+    }
+    const wordAt = (byteBase: number): number =>
+      ((plain[byteBase] ?? 0) |
+        ((plain[byteBase + 1] ?? 0) << 8) |
+        ((plain[byteBase + 2] ?? 0) << 16) |
+        ((plain[byteBase + 3] ?? 0) << 24)) >>>
+      0;
+    for (let i = 0; i < DS_MEM_WORDS; i++) {
+      this.dsY[i] = wordAt(DS_C_Y + i * 4);
+      this.dsM[i] = wordAt(DS_C_M + i * 4);
+    }
+    // The MD digest + padding integrity check is not modeled; a well-formed C is valid.
+    this.dsCheck = 0;
+  }
+
+  /** SET_ME: Z = X^Y mod M over the 4096-bit little-endian operand fields. */
+  private dsComputeSignature(): void {
+    const x = rsaWordsToBig(this.dsX, DS_MEM_WORDS);
+    const y = rsaWordsToBig(this.dsY, DS_MEM_WORDS);
+    const m = rsaWordsToBig(this.dsM, DS_MEM_WORDS);
+    const zWords = rsaBigToWords(rsaModPow(x, y, m), DS_MEM_WORDS);
+    for (let i = 0; i < DS_MEM_WORDS; i++) this.dsZ[i] = zWords[i] ?? 0;
   }
 
   drainI2cWrites(port: 0 | 1 = 0): Uint8Array {
@@ -7461,6 +7550,15 @@ export class Esp32s3Core implements McuCore {
         return (this.rsaM[(off - RSA_MEM_M) >> 2] ?? 0) >>> 0;
       return 0;
     }
+    if (addr >= DS_BASE && addr < DS_BASE + 0x1000) {
+      const off = addr - DS_BASE;
+      if (off === DS_QUERY_BUSY) return 0; // instantaneous in the model
+      if (off === DS_QUERY_KEY_WRONG) return 0; // HMAC key always valid here
+      if (off === DS_QUERY_CHECK) return this.dsCheck >>> 0;
+      if (off >= DS_Z && off < DS_Z + DS_MEM_WORDS * 4 && (off & 3) === 0)
+        return (this.dsZ[(off - DS_Z) >> 2] ?? 0) >>> 0;
+      return 0;
+    }
     if (addr >= USJ_BASE && addr < USJ_BASE + 0x1000) {
       const off = addr - USJ_BASE;
       if (off === USJ_EP1) return (this.usjRxBuffer.shift() ?? 0) >>> 0; // pop the next RX byte
@@ -8170,6 +8268,20 @@ export class Esp32s3Core implements McuCore {
       } else if (off === RSA_CLEAR_INTERRUPT) {
         this.rsaIntRaw = 0;
         this.recomputeIrq();
+      }
+      return;
+    }
+    if (addr >= DS_BASE && addr < DS_BASE + 0x1000) {
+      const off = addr - DS_BASE;
+      const v = value >>> 0;
+      if (off >= DS_X && off < DS_X + DS_MEM_WORDS * 4 && (off & 3) === 0) {
+        this.dsX[(off - DS_X) >> 2] = v; // X input written word-by-word
+      } else if (off === DS_SET_START) {
+        if ((v & 1) !== 0) this.dsDecryptParams(); // decrypt C, expose Y/M, set QUERY_CHECK
+      } else if (off === DS_SET_ME) {
+        if ((v & 1) !== 0) this.dsComputeSignature(); // Z = X^Y mod M
+      } else if (off === DS_SET_FINISH) {
+        this.dsCheck = 0; // release the peripheral
       }
       return;
     }

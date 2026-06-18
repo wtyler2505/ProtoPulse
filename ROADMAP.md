@@ -1918,6 +1918,15 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       (not guessed). KAT: NIST SP 800-38A F.3.13/F.3.14 over two blocks, enc + dec,
       pre-confirmed against OpenSSL. AES now covers ECB/CBC/CTR/OFB/CFB128/GCM(+AAD).
       Remaining AES cut: CFB8 (byte-feedback), partial-block GCM.
+- [x] ESP32-S3 core slice 161 — Digital Signature (DS) peripheral (landed 2026-06-18): the
+      crypto capstone (5th S3 crypto block, DR_REG_DIGITAL_SIGNATURE_BASE 0x6003D000). SET_START
+      AES-256-CBC-decrypts the encrypted key-param block C and exposes Y/M; SET_ME computes
+      Z = X^Y mod M. Register map verified vs hwcrypto_reg.h (C-block decrypts in place
+      Y+0x000/M+0x200/Rb+0x400/Box+0x600, IV+0x630/X+0x800/Z+0xA00, ctrl +0xE00). KAT: fixed
+      512-bit RSA key, signature round-trip-verified (Z^e mod n == X) — first-GREEN. Cuts (need
+      primary-source verification, do not guess): the MD integrity check (exact SHA-256 input +
+      box byte-order) and the HMAC-downstream AES-key derivation. See [[project_emu_ds_peripheral]].
+      All 5 S3 crypto accelerators (SHA, AES, RSA, HMAC, DS) now modeled.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

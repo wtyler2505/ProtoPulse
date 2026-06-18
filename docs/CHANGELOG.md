@@ -2,6 +2,28 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 161: Digital Signature (DS) peripheral — the crypto capstone
+
+### Added
+- **Digital Signature (DS) accelerator** (@protopulse/emu, DR_REG_DIGITAL_SIGNATURE_BASE
+  0x6003D000): the fifth and final S3 crypto block, wiring together the AES, SHA, and RSA
+  primitives. `SET_START` AES-256-CBC-decrypts the encrypted private-key parameter block C
+  with the HMAC-derived key + IV and exposes Y (exponent) and M (modulus) from their
+  little-endian regions; `SET_ME` computes the signature `Z = X^Y mod M`. Register map +
+  C-block region layout (Y +0x000 / M +0x200 / Rb +0x400 / Box +0x600, IV +0x630, X +0x800,
+  Z +0xA00, control +0xE00) verified against `soc/esp32s3/hwcrypto_reg.h`. Host helpers
+  `loadDsKey`/`loadDsCiphertext`/`loadDsIv`/`loadDsX` stand in for the firmware writes.
+
+### Verified
+- A known-answer test signs with a fixed 512-bit RSA key: the C block was AES-256-CBC-built
+  from the key params, and the resulting signature `Z` was round-trip-verified independently
+  (`Z^e mod n == X`) when the vector was generated. The guest drives SET_START → SET_ME and
+  reads back Z word0 `0x6c8368a0`, Z word15 `0x28044cc5`, and QUERY_CHECK = 0 — first-GREEN.
+- The MD integrity check and the HMAC-downstream AES-key derivation are documented follow-ons
+  (their exact hash input / box byte-order are not yet verifiable from primary sources).
+- `npm run -w @protopulse/emu test` passed with 322 package tests
+  (235 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 160: AES-CFB128 (encrypt + decrypt) through the AES-DMA path
 
 ### Added
