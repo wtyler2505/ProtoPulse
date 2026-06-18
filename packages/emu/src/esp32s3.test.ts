@@ -4053,6 +4053,144 @@ describe('Esp32s3Core', () => {
     ]);
   });
 
+  it('authenticates AES-GCM additional data (AAD) through the AES-DMA path', () => {
+    // GCM with AAD: AES_AAD_BLOCK_NUM (+0xa0) marks the leading DMA blocks as AAD —
+    // they are GHASHed but not encrypted, and only the plaintext blocks become
+    // ciphertext. Same key/IV/plaintext as Test Case 3 plus a 16-byte AAD block; the
+    // ciphertext is unchanged (42831ec2…) but the tag now folds in the AAD:
+    // e5d06dc2…88d624ee. The guest emits CT word[0] and tag word[0]/word[3] MSB-first.
+    const AES = 0x6003a000;
+    const txDesc = ESP32S3_DRAM_BASE + 0x1200;
+    const msgBuf = ESP32S3_DRAM_BASE + 0x1240;
+    const rxDesc = ESP32S3_DRAM_BASE + 0x1300;
+    const ctBuf = ESP32S3_DRAM_BASE + 0x1340;
+    const txDw0 = (GDMA_DESC_OWNER_DMA | GDMA_DESC_SUC_EOF | (80 << 12) | 80) >>> 0;
+    const rxDw0 = (GDMA_DESC_OWNER_DMA | 64) >>> 0;
+    const outLinkStart = ((txDesc & 0x000f_ffff) | GDMA_OUT_LINK_START) >>> 0;
+    const inLinkStart = ((rxDesc & 0x000f_ffff) | GDMA_INLINK_AUTO_RET | GDMA_INLINK_START) >>> 0;
+    const msgStores: (number | ReturnType<typeof L32R>)[] = [];
+    for (let i = 0; i < 20; i++) {
+      msgStores.push(L32R(3, 11 + i));
+      msgStores.push(S32I(3, 4, i * 4));
+    }
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [
+          txDesc, msgBuf, rxDesc, ctBuf, txDw0, rxDw0, GDMA, outLinkStart, inLinkStart, AES, UART,
+          0x01234567, 0x89abcdef, 0xfedcba98, 0x76543210, // AAD block (idx 11-14)
+          0xd9313225, 0xf88406e5, 0xa55909c5, 0xaff5269a, 0x86a7a953, 0x1534f7da, 0x2e4c303d, 0x8a318a72,
+          0x1c3c0c95, 0x95680953, 0x2fcf0e24, 0x49a6b525, 0xb16aedf5, 0xaa0de657, 0xba637b39, 0x1aafd255, // plaintext (idx 15-30)
+          0xfeffe992, 0x8665731c, 0x6d6a8f94, 0x67308308, // key (idx 31-34)
+          0xcafebabe, 0xfacedbad, 0xdecaf888, 0x00000001, // J0 (idx 35-38)
+        ],
+        [
+          L32R(2, 0),
+          L32R(3, 4),
+          S32I(3, 2, 0),
+          L32R(3, 1),
+          S32I(3, 2, 4),
+          MOVI(3, 0),
+          S32I(3, 2, 8),
+          L32R(4, 1), // msgBuf
+          ...msgStores, // AAD block + 16 plaintext words
+          L32R(2, 2),
+          L32R(3, 5),
+          S32I(3, 2, 0),
+          L32R(3, 3),
+          S32I(3, 2, 4),
+          MOVI(3, 0),
+          S32I(3, 2, 8),
+
+          L32R(6, 6),
+          MOVI(7, 6),
+          S32I(7, 6, 0xa8),
+          L32R(7, 7),
+          S32I(7, 6, 0x80),
+          MOVI(7, 6),
+          S32I(7, 6, 0x48),
+          L32R(7, 8),
+          S32I(7, 6, 0x20),
+
+          L32R(9, 9),
+          L32R(4, 31),
+          S32I(4, 9, 0x00), // KEY[0]
+          L32R(4, 32),
+          S32I(4, 9, 0x04),
+          L32R(4, 33),
+          S32I(4, 9, 0x08),
+          L32R(4, 34),
+          S32I(4, 9, 0x0c),
+          MOVI(4, 0),
+          S32I(4, 9, 0x40), // MODE
+          L32R(4, 35),
+          S32I(4, 9, 0x70), // J0_MEM[0]
+          L32R(4, 36),
+          S32I(4, 9, 0x74),
+          L32R(4, 37),
+          S32I(4, 9, 0x78),
+          L32R(4, 38),
+          S32I(4, 9, 0x7c),
+          MOVI(4, 1),
+          S32I(4, 9, 0xa0), // AAD_BLOCK_NUM = 1
+          MOVI(4, 6),
+          S32I(4, 9, 0x94), // BLOCK_MODE = GCM
+          MOVI(4, 5),
+          S32I(4, 9, 0x98), // BLOCK_NUM = 5 (1 AAD + 4 data)
+          MOVI(4, 1),
+          S32I(4, 9, 0x90), // DMA_ENABLE
+          MOVI(4, 1),
+          S32I(4, 9, 0x48), // TRIGGER
+
+          L32R(6, 10),
+          L32R(8, 3), // ctBuf
+          L32I(5, 8, 0), // CT word0
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0x42
+          L32I(5, 8, 0),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0x83
+          L32I(5, 8, 0),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0x1e
+          L32I(5, 8, 0),
+          S32I(5, 6, 0), // 0xc2
+          L32I(5, 9, 0x80), // tag word0
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0xe5
+          L32I(5, 9, 0x80),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0xd0
+          L32I(5, 9, 0x80),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0x6d
+          L32I(5, 9, 0x80),
+          S32I(5, 6, 0), // 0xc2
+          L32I(5, 9, 0x8c), // tag word3
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0x88
+          L32I(5, 9, 0x8c),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0xd6
+          L32I(5, 9, 0x8c),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0x24
+          L32I(5, 9, 0x8c),
+          S32I(5, 6, 0), // 0xee
+          J(BR(-1)),
+        ],
+      ),
+    );
+    c.step(900);
+    expect([...c.drainUart()]).toEqual([0x42, 0x83, 0x1e, 0xc2, 0xe5, 0xd0, 0x6d, 0xc2, 0x88, 0xd6, 0x24, 0xee]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
