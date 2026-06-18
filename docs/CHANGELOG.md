@@ -2,6 +2,32 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 149: HMAC-SHA256 accelerator
+
+### Added
+- **HMAC accelerator** (@protopulse/emu): the fourth S3 crypto block, at
+  `DR_REG_HMAC_BASE` (0x6003E000), computing HMAC-SHA256. Flow:
+  `SET_PARA_PURPOSE` (+0x44) = 8 (upstream), `SET_PARA_KEY` (+0x48) = eFuse key
+  block, `SET_PARA_FINISH` (+0x4c); feed a 512-bit block to `WR_MESSAGE_MEM`
+  (+0x80, 16 words) + `SET_MESSAGE_ONE` (+0x50); `SET_RESULT_FINISH` (+0x5c) = 2;
+  read the 256-bit MAC from `RD_RESULT_MEM` (+0xc0, 8 words). The key is the
+  eFuse-programmed 256-bit block, loaded via a new `loadHmacKey()` host helper.
+  HMAC-SHA256 is computed exactly with a from-scratch pure SHA-256 digest (RFC 2104
+  inner/outer construction), not the block-by-block hardware path. Register offsets
+  and flow verified against esp-idf master (`hmac_reg.h` + `hmac_ll.h` + `hmac_hal.c`),
+  since the on-disk Arduino SDK ships no `hmac_reg.h`.
+
+### Verified
+- A known-answer test computes HMAC-SHA256(key = 32×0x0b, message = 64×0x61) =
+  `91acb47f…0e012f1e` and confirms result words [0] and [7] read from the MAC output.
+- `npm run -w @protopulse/emu test` passed with 308 package tests
+  (221 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- Multi-block message feeding and the partial-block padding path
+  (`SET_MESSAGE_PAD`/`SET_MESSAGE_ING`), the HMAC matrix interrupt, and the
+  downstream JTAG/DS key modes remain follow-on.
+
 ## 2026-06-18 — ESP32-S3 slice 148: USB-Serial-JTAG TX-empty interrupt
 
 ### Added

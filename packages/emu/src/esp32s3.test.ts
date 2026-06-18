@@ -3113,6 +3113,83 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUsbSerialJtag()]).toEqual([0x5a]);
   });
 
+  it('computes HMAC-SHA256 through the HMAC accelerator', () => {
+    // HMAC accelerator (DR_REG_HMAC_BASE 0x6003E000). The key comes from an eFuse key
+    // block (here loaded via the host helper). Flow: SET_PARA_PURPOSE (+0x44) = 8
+    // (upstream), SET_PARA_KEY (+0x48) = key block, SET_PARA_FINISH (+0x4c) = 1; feed
+    // one 512-bit block to WR_MESSAGE_MEM (+0x80, 16 words) and pulse SET_MESSAGE_ONE
+    // (+0x50); SET_RESULT_FINISH (+0x5c) = 2; read the 256-bit MAC from RD_RESULT_MEM
+    // (+0xc0, 8 words). Vector: key = 32×0x0b, message = 64×0x61 ('a') ->
+    // HMAC-SHA256 = 91acb47f…0e012f1e. The guest emits the 4 bytes of result word[0]
+    // and word[7].
+    const HMAC = 0x6003e000;
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [HMAC, UART, 0x61616161], [
+        L32R(2, 0), // HMAC base
+        L32R(6, 1), // UART
+        MOVI(4, 8),
+        S32I(4, 2, 0x44), // SET_PARA_PURPOSE = upstream (8)
+        MOVI(4, 0),
+        S32I(4, 2, 0x48), // SET_PARA_KEY = block 0
+        MOVI(4, 1),
+        S32I(4, 2, 0x4c), // SET_PARA_FINISH
+        L32R(4, 2), // 0x61616161
+        S32I(4, 2, 0x80), // WR_MESSAGE_MEM[0..15] = 64 bytes of 0x61
+        S32I(4, 2, 0x84),
+        S32I(4, 2, 0x88),
+        S32I(4, 2, 0x8c),
+        S32I(4, 2, 0x90),
+        S32I(4, 2, 0x94),
+        S32I(4, 2, 0x98),
+        S32I(4, 2, 0x9c),
+        S32I(4, 2, 0xa0),
+        S32I(4, 2, 0xa4),
+        S32I(4, 2, 0xa8),
+        S32I(4, 2, 0xac),
+        S32I(4, 2, 0xb0),
+        S32I(4, 2, 0xb4),
+        S32I(4, 2, 0xb8),
+        S32I(4, 2, 0xbc),
+        MOVI(4, 1),
+        S32I(4, 2, 0x50), // SET_MESSAGE_ONE (single/last block)
+        MOVI(4, 2),
+        S32I(4, 2, 0x5c), // SET_RESULT_FINISH = 2
+        // emit result word[0] MSB-first (0x91 0xac 0xb4 0x7f)
+        L32I(5, 2, 0xc0),
+        SRLI(5, 5, 15),
+        SRLI(5, 5, 9),
+        S32I(5, 6, 0),
+        L32I(5, 2, 0xc0),
+        SRLI(5, 5, 15),
+        SRLI(5, 5, 1),
+        S32I(5, 6, 0),
+        L32I(5, 2, 0xc0),
+        SRLI(5, 5, 8),
+        S32I(5, 6, 0),
+        L32I(5, 2, 0xc0),
+        S32I(5, 6, 0),
+        // emit result word[7] MSB-first (0x0e 0x01 0x2f 0x1e)
+        L32I(5, 2, 0xdc),
+        SRLI(5, 5, 15),
+        SRLI(5, 5, 9),
+        S32I(5, 6, 0),
+        L32I(5, 2, 0xdc),
+        SRLI(5, 5, 15),
+        SRLI(5, 5, 1),
+        S32I(5, 6, 0),
+        L32I(5, 2, 0xdc),
+        SRLI(5, 5, 8),
+        S32I(5, 6, 0),
+        L32I(5, 2, 0xdc),
+        S32I(5, 6, 0),
+        J(BR(-1)),
+      ]),
+    );
+    c.loadHmacKey([0x0b0b0b0b, 0x0b0b0b0b, 0x0b0b0b0b, 0x0b0b0b0b, 0x0b0b0b0b, 0x0b0b0b0b, 0x0b0b0b0b, 0x0b0b0b0b]);
+    c.step(800);
+    expect([...c.drainUart()]).toEqual([0x91, 0xac, 0xb4, 0x7f, 0x0e, 0x01, 0x2f, 0x1e]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

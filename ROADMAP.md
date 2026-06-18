@@ -1851,6 +1851,13 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       clears it, WR_DONE flush empties the FIFO and re-asserts it (reset default 1).
       KAT: stage a byte, arm, flush -> fires once. USB-Serial-JTAG interrupt surface
       now complete (RX OUT_RECV_PKT + TX IN_EMPTY)
+- [x] ESP32-S3 core slice 149 — HMAC-SHA256 accelerator (landed 2026-06-18): the
+      4th S3 crypto block (DR_REG_HMAC_BASE 0x6003E000). Purpose=8 (upstream),
+      eFuse key via loadHmacKey() host helper, WR_MESSAGE_MEM (+0x80) + SET_MESSAGE_ONE
+      (+0x50), SET_RESULT_FINISH (+0x5c)=2, MAC from RD_RESULT_MEM (+0xc0). Exact
+      HMAC-SHA256 via from-scratch pure SHA-256 (RFC 2104). KAT: HMAC(32×0x0b,
+      64×0x61) = 91acb47f…0e012f1e. Verified vs esp-idf hmac_reg.h/hmac_ll.h/hmac_hal.c.
+      Cuts: multi-block + partial-padding feed, HMAC interrupt, JTAG/DS key modes
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

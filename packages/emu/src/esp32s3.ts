@@ -956,6 +956,23 @@ const USJ_SERIAL_OUT_RECV_PKT = 1 << 2; // host sent a packet (RX data arrived)
 const USJ_SERIAL_IN_EMPTY = 1 << 3; // TX FIFO is empty (reset default 1)
 const INTMTX_USJ_MAP = 0x180; // INTERRUPT_CORE0_USB_DEVICE_INT_MAP_REG (explicit silicon offset)
 
+// HMAC-SHA256 accelerator (DR_REG_HMAC_BASE). Key is sourced from an eFuse key
+// block; here loaded via the host helper. Verified against esp-idf hmac_reg.h +
+// hmac_ll.h + hmac_hal.c. Single full-block message path; partial-block padding
+// (SET_MESSAGE_PAD) and multi-block feeding are follow-on.
+const HMAC_BASE = 0x6003e000;
+const HMAC_SET_PARA_PURPOSE = 0x44; // 8 = upstream (CPU-readable MAC)
+const HMAC_SET_PARA_KEY = 0x48; // eFuse key block id
+const HMAC_SET_PARA_FINISH = 0x4c;
+const HMAC_SET_MESSAGE_ONE = 0x50; // this 512-bit block is the only/last block
+const HMAC_SET_MESSAGE_END = 0x58;
+const HMAC_SET_RESULT_FINISH = 0x5c; // write 2 to finalize and expose the MAC
+const HMAC_QUERY_ERROR = 0x68; // 0 = config OK
+const HMAC_QUERY_BUSY = 0x6c; // 0 = idle
+const HMAC_WR_MESSAGE_MEM = 0x80; // 16-word message block input
+const HMAC_RD_RESULT_MEM = 0xc0; // 8-word MAC output
+const HMAC_SET_START = 0x40;
+
 const SHA_BASE = 0x6003b000;
 const SHA_MODE = 0x00;
 const SHA_START = 0x10;
@@ -983,6 +1000,66 @@ const SHA256_K = [
   0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ];
 const sha256Rotr = (x: number, n: number): number => ((x >>> n) | (x << (32 - n))) >>> 0;
+
+// Pure SHA-256 over a byte array (FIPS 180-4) for the HMAC accelerator — separate
+// from the stateful SHA-accelerator path so HMAC can hash arbitrary inputs.
+const sha256BlockInto = (h: number[], words: number[]): void => {
+  const w = new Array<number>(64);
+  for (let t = 0; t < 16; t++) w[t] = (words[t] ?? 0) >>> 0;
+  for (let t = 16; t < 64; t++) {
+    const w15 = w[t - 15] ?? 0;
+    const w2 = w[t - 2] ?? 0;
+    const s0 = (sha256Rotr(w15, 7) ^ sha256Rotr(w15, 18) ^ (w15 >>> 3)) >>> 0;
+    const s1 = (sha256Rotr(w2, 17) ^ sha256Rotr(w2, 19) ^ (w2 >>> 10)) >>> 0;
+    w[t] = (((w[t - 16] ?? 0) + s0 + (w[t - 7] ?? 0) + s1) >>> 0) >>> 0;
+  }
+  let a = h[0] ?? 0, b = h[1] ?? 0, c = h[2] ?? 0, d = h[3] ?? 0;
+  let e = h[4] ?? 0, f = h[5] ?? 0, g = h[6] ?? 0, hh = h[7] ?? 0;
+  for (let t = 0; t < 64; t++) {
+    const big1 = (sha256Rotr(e, 6) ^ sha256Rotr(e, 11) ^ sha256Rotr(e, 25)) >>> 0;
+    const ch = ((e & f) ^ (~e & g)) >>> 0;
+    const temp1 = ((hh + big1 + ch + (SHA256_K[t] ?? 0) + (w[t] ?? 0)) >>> 0) >>> 0;
+    const big0 = (sha256Rotr(a, 2) ^ sha256Rotr(a, 13) ^ sha256Rotr(a, 22)) >>> 0;
+    const maj = ((a & b) ^ (a & c) ^ (b & c)) >>> 0;
+    const temp2 = ((big0 + maj) >>> 0) >>> 0;
+    hh = g; g = f; f = e; e = (d + temp1) >>> 0; d = c; c = b; b = a; a = (temp1 + temp2) >>> 0;
+  }
+  h[0] = ((h[0] ?? 0) + a) >>> 0; h[1] = ((h[1] ?? 0) + b) >>> 0;
+  h[2] = ((h[2] ?? 0) + c) >>> 0; h[3] = ((h[3] ?? 0) + d) >>> 0;
+  h[4] = ((h[4] ?? 0) + e) >>> 0; h[5] = ((h[5] ?? 0) + f) >>> 0;
+  h[6] = ((h[6] ?? 0) + g) >>> 0; h[7] = ((h[7] ?? 0) + hh) >>> 0;
+};
+const sha256Digest = (bytes: number[]): number[] => {
+  const h = SHA256_IV.slice();
+  const padded = bytes.slice();
+  const bitLen = bytes.length * 8;
+  padded.push(0x80);
+  while (padded.length % 64 !== 56) padded.push(0);
+  for (let i = 7; i >= 0; i--) padded.push(Math.floor(bitLen / 2 ** (8 * i)) & 0xff);
+  for (let off = 0; off < padded.length; off += 64) {
+    const words = new Array<number>(16);
+    for (let i = 0; i < 16; i++) {
+      const o = off + i * 4;
+      words[i] = (((padded[o] ?? 0) << 24) | ((padded[o + 1] ?? 0) << 16) | ((padded[o + 2] ?? 0) << 8) | (padded[o + 3] ?? 0)) >>> 0;
+    }
+    sha256BlockInto(h, words);
+  }
+  return h;
+};
+const wordsToBytesBE = (words: number[]): number[] => {
+  const out: number[] = [];
+  for (const w of words) out.push((w >>> 24) & 0xff, (w >>> 16) & 0xff, (w >>> 8) & 0xff, w & 0xff);
+  return out;
+};
+// HMAC-SHA256 (RFC 2104): MAC = H((K⊕opad) ‖ H((K⊕ipad) ‖ msg)).
+const hmacSha256 = (key: number[], msg: number[]): number[] => {
+  let k0 = key.length > 64 ? wordsToBytesBE(sha256Digest(key)) : key.slice();
+  while (k0.length < 64) k0.push(0);
+  const ipad = k0.map((bb) => (bb ^ 0x36) & 0xff);
+  const opad = k0.map((bb) => (bb ^ 0x5c) & 0xff);
+  const inner = sha256Digest(ipad.concat(msg));
+  return sha256Digest(opad.concat(wordsToBytesBE(inner)));
+};
 
 // SHA-512/384 (64-bit-word algorithms). 64-bit values are carried as [hi32, lo32]
 // pairs; the registers lay each out hi-word-first. Constants are FIPS 180-4
@@ -2580,6 +2657,9 @@ export class Esp32s3Core implements McuCore {
   private usjIntRaw = USJ_SERIAL_IN_EMPTY; // TX FIFO starts empty
   private usjIntEna = 0;
   private usjIntMaps: InterruptMapPair = freshInterruptMapPair();
+  private hmacKey: number[] = new Array(8).fill(0); // eFuse-sourced 256-bit key
+  private hmacMsg: number[] = []; // accumulated message bytes
+  private hmacResult: number[] = new Array(8).fill(0);
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
@@ -3029,6 +3109,11 @@ export class Esp32s3Core implements McuCore {
     this.usjRxBuffer.push(byte);
     this.usjIntRaw |= USJ_SERIAL_OUT_RECV_PKT; // host packet received
     this.recomputeIrq();
+  }
+
+  loadHmacKey(words: number[]): void {
+    // Represents an eFuse-programmed 256-bit HMAC key block (8 words).
+    for (let i = 0; i < 8; i++) this.hmacKey[i] = (words[i] ?? 0) >>> 0;
   }
 
   drainI2cWrites(port: 0 | 1 = 0): Uint8Array {
@@ -3721,6 +3806,9 @@ export class Esp32s3Core implements McuCore {
     this.usjIntRaw = USJ_SERIAL_IN_EMPTY;
     this.usjIntEna = 0;
     this.usjIntMaps = freshInterruptMapPair();
+    this.hmacKey = new Array(8).fill(0);
+    this.hmacMsg = [];
+    this.hmacResult = new Array(8).fill(0);
     this.pcntIntRaw = 0;
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
@@ -7168,6 +7256,15 @@ export class Esp32s3Core implements McuCore {
       if (off === USJ_INT_ENA) return this.usjIntEna >>> 0;
       return 0;
     }
+    if (addr >= HMAC_BASE && addr < HMAC_BASE + 0x1000) {
+      const off = addr - HMAC_BASE;
+      if (off === HMAC_QUERY_ERROR) return 0; // config always OK in the model
+      if (off === HMAC_QUERY_BUSY) return 0; // instantaneous
+      if (off >= HMAC_RD_RESULT_MEM && off < HMAC_RD_RESULT_MEM + 8 * 4 && (off & 3) === 0) {
+        return (this.hmacResult[(off - HMAC_RD_RESULT_MEM) >> 2] ?? 0) >>> 0;
+      }
+      return 0;
+    }
     if (addr >= SHA_BASE && addr < SHA_BASE + 0x1000) {
       const off = addr - SHA_BASE;
       if (off === SHA_BUSY) return 0; // compression is instantaneous in the model
@@ -7853,6 +7950,22 @@ export class Esp32s3Core implements McuCore {
         this.usjIntRaw &= ~v; // write 1 to a bit clears it
         this.recomputeIrq();
       }
+      return;
+    }
+    if (addr >= HMAC_BASE && addr < HMAC_BASE + 0x1000) {
+      const off = addr - HMAC_BASE;
+      const v = value >>> 0;
+      if (off >= HMAC_WR_MESSAGE_MEM && off < HMAC_WR_MESSAGE_MEM + 16 * 4 && (off & 3) === 0) {
+        // append a message word as 4 big-endian bytes (SHA byte order)
+        this.hmacMsg.push((v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff);
+      } else if (off === HMAC_SET_PARA_FINISH) {
+        this.hmacMsg = []; // config committed — start a fresh message
+      } else if (off === HMAC_SET_RESULT_FINISH) {
+        // finalize: MAC = HMAC-SHA256(eFuse key, accumulated message)
+        const keyBytes = wordsToBytesBE(this.hmacKey);
+        this.hmacResult = hmacSha256(keyBytes, this.hmacMsg);
+      }
+      // SET_START / SET_PARA_PURPOSE / SET_PARA_KEY / SET_MESSAGE_ONE / END accepted (no-op)
       return;
     }
     if (addr >= SHA_BASE && addr < SHA_BASE + 0x1000) {
