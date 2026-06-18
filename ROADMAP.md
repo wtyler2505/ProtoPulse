@@ -1900,6 +1900,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       AES_AAD_BLOCK_NUM path — leading DMA blocks GHASHed but not encrypted, tag folds
       in the AAD. KAT: Test Case 3 + a 16-byte AAD block → ciphertext unchanged, tag
       e5d06dc2…88d624ee. AES now covers ECB/CBC/CTR/GCM(+AAD). Cuts: partial-block GCM
+- [x] ESP32-S3 core slice 158 — AES-256-GCM (landed 2026-06-18): proves the GDMA-fed
+      AES-GCM path works with a 256-bit key (AES_MODE = 2 / Nk=8), not just AES-128.
+      KAT: NIST GCM Test Case 15 (256-bit all-zero key/IV, one zero block) → ciphertext
+      cea7403d…baf39d18, tag d0d1c8a7…d48ab919; vector pre-confirmed against OpenSSL.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

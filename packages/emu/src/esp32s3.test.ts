@@ -4053,6 +4053,151 @@ describe('Esp32s3Core', () => {
     ]);
   });
 
+  it('encrypts and authenticates AES-256-GCM through the AES-DMA path', () => {
+    // AES-256 GCM (AES_MODE = 2 = 256-bit encrypt, AES_BLOCK_MODE = 6) over NIST GCM
+    // Test Case 15: 256-bit all-zero key, 96-bit all-zero IV -> J0 = 0…0 || 0x00000001,
+    // one all-zero plaintext block, no AAD. Independently confirmed via OpenSSL
+    // (aes-256-gcm): ciphertext cea7403d 4d606b6e 074ec5d3 baf39d18, tag d0d1c8a7
+    // 99996bf0 265b98b5 d48ab919. The guest emits CT word0, CT word3, tag word0,
+    // tag word3 (first/last word of each), MSB-first.
+    const AES = 0x6003a000;
+    const txDesc = ESP32S3_DRAM_BASE + 0x1200;
+    const ptBuf = ESP32S3_DRAM_BASE + 0x1240;
+    const rxDesc = ESP32S3_DRAM_BASE + 0x1300;
+    const ctBuf = ESP32S3_DRAM_BASE + 0x1340;
+    const txDw0 = (GDMA_DESC_OWNER_DMA | GDMA_DESC_SUC_EOF | (16 << 12) | 16) >>> 0;
+    const rxDw0 = (GDMA_DESC_OWNER_DMA | 16) >>> 0;
+    const outLinkStart = ((txDesc & 0x000f_ffff) | GDMA_OUT_LINK_START) >>> 0;
+    const inLinkStart = ((rxDesc & 0x000f_ffff) | GDMA_INLINK_AUTO_RET | GDMA_INLINK_START) >>> 0;
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [txDesc, ptBuf, rxDesc, ctBuf, txDw0, rxDw0, GDMA, outLinkStart, inLinkStart, AES, UART],
+        [
+          L32R(2, 0), // txDesc
+          L32R(3, 4), // txDw0
+          S32I(3, 2, 0),
+          L32R(3, 1), // ptBuf
+          S32I(3, 2, 4),
+          MOVI(3, 0),
+          S32I(3, 2, 8),
+          L32R(4, 1), // ptBuf
+          MOVI(3, 0), // plaintext block = all zero
+          S32I(3, 4, 0),
+          S32I(3, 4, 4),
+          S32I(3, 4, 8),
+          S32I(3, 4, 12),
+          L32R(2, 2), // rxDesc
+          L32R(3, 5), // rxDw0
+          S32I(3, 2, 0),
+          L32R(3, 3), // ctBuf
+          S32I(3, 2, 4),
+          MOVI(3, 0),
+          S32I(3, 2, 8),
+
+          L32R(6, 6), // GDMA base
+          MOVI(7, 6),
+          S32I(7, 6, 0xa8),
+          L32R(7, 7),
+          S32I(7, 6, 0x80),
+          MOVI(7, 6),
+          S32I(7, 6, 0x48),
+          L32R(7, 8),
+          S32I(7, 6, 0x20),
+
+          L32R(9, 9), // AES base
+          MOVI(4, 0), // 256-bit all-zero key
+          S32I(4, 9, 0x00),
+          S32I(4, 9, 0x04),
+          S32I(4, 9, 0x08),
+          S32I(4, 9, 0x0c),
+          S32I(4, 9, 0x10),
+          S32I(4, 9, 0x14),
+          S32I(4, 9, 0x18),
+          S32I(4, 9, 0x1c),
+          MOVI(4, 2),
+          S32I(4, 9, 0x40), // MODE = AES-256 encrypt
+          MOVI(4, 0),
+          S32I(4, 9, 0x70), // J0[0]
+          S32I(4, 9, 0x74), // J0[1]
+          S32I(4, 9, 0x78), // J0[2]
+          MOVI(4, 1),
+          S32I(4, 9, 0x7c), // J0[3] = 1
+          MOVI(4, 0),
+          S32I(4, 9, 0xa0), // AAD_BLOCK_NUM = 0
+          MOVI(4, 6),
+          S32I(4, 9, 0x94), // BLOCK_MODE = GCM
+          MOVI(4, 1),
+          S32I(4, 9, 0x98), // BLOCK_NUM = 1
+          MOVI(4, 1),
+          S32I(4, 9, 0x90), // DMA_ENABLE = 1
+          MOVI(4, 1),
+          S32I(4, 9, 0x48), // TRIGGER
+
+          L32R(6, 10), // UART
+          L32R(8, 3), // ctBuf
+          L32I(5, 8, 0), // CT word0
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0xce
+          L32I(5, 8, 0),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0xa7
+          L32I(5, 8, 0),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0x40
+          L32I(5, 8, 0),
+          S32I(5, 6, 0), // 0x3d
+          L32I(5, 8, 12), // CT word3
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0xba
+          L32I(5, 8, 12),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0xf3
+          L32I(5, 8, 12),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0x9d
+          L32I(5, 8, 12),
+          S32I(5, 6, 0), // 0x18
+          L32I(5, 9, 0x80), // tag word0 (T0_MEM)
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0xd0
+          L32I(5, 9, 0x80),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0xd1
+          L32I(5, 9, 0x80),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0xc8
+          L32I(5, 9, 0x80),
+          S32I(5, 6, 0), // 0xa7
+          L32I(5, 9, 0x8c), // tag word3
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0xd4
+          L32I(5, 9, 0x8c),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0x8a
+          L32I(5, 9, 0x8c),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0xb9
+          L32I(5, 9, 0x8c),
+          S32I(5, 6, 0), // 0x19
+          J(BR(-1)),
+        ],
+      ),
+    );
+    c.step(900);
+    expect([...c.drainUart()]).toEqual([
+      0xce, 0xa7, 0x40, 0x3d, 0xba, 0xf3, 0x9d, 0x18, 0xd0, 0xd1, 0xc8, 0xa7, 0xd4, 0x8a, 0xb9, 0x19,
+    ]);
+  });
+
   it('authenticates AES-GCM additional data (AAD) through the AES-DMA path', () => {
     // GCM with AAD: AES_AAD_BLOCK_NUM (+0xa0) marks the leading DMA blocks as AAD —
     // they are GHASHed but not encrypted, and only the plaintext blocks become

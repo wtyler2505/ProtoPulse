@@ -2,6 +2,21 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 158: AES-256-GCM through the AES-DMA path
+
+### Added
+- **AES-256 GCM coverage** (@protopulse/emu): proves the GDMA-fed AES-GCM path
+  works with a 256-bit key (`AES_MODE = 2`), not just AES-128 — the same GHASH +
+  GCTR + tag machinery driven through the Nk=8 key schedule.
+
+### Verified
+- A known-answer test runs NIST GCM Test Case 15 (256-bit all-zero key, 96-bit
+  all-zero IV, one all-zero plaintext block, no AAD) → ciphertext
+  `cea7403d…baf39d18`, tag `d0d1c8a7…d48ab919`. The vector was independently
+  confirmed against OpenSSL (`aes-256-gcm`) before the test was written.
+- `npm run -w @protopulse/emu test` passed with 318 package tests
+  (231 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 157: AES-GCM with additional authenticated data
 
 ### Added
