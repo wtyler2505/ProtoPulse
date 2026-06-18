@@ -2,6 +2,34 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 142: RSA accelerator modular exponentiation
+
+### Added
+- **RSA/MPI accelerator — modular exponentiation** (@protopulse/emu): a new
+  peripheral at `DR_REG_RSA_BASE` (0x6003C000). Operand memory blocks hold
+  little-endian 32-bit words — M @ +0x000, Z (result) @ +0x200, Y (exponent) @
+  +0x400, X (base) @ +0x600. Writing 1 to `RSA_MODEXP_START` (+0x80c) with
+  `RSA_LENGTH` (+0x804) = num_words − 1 computes Z = X^Y mod M; `RSA_QUERY_INTERRUPT`
+  (+0x818) reads 1 when the operation is done and `RSA_CLEAR_INTERRUPT` (+0x81c)
+  clears it. The big-number math is done exactly with arbitrary-precision BigInt
+  (square-and-multiply modpow over the little-endian operand words) — the
+  hardware's Montgomery Rinv/Mprime inputs are accepted and have no effect on the
+  result. Block bases, operation registers, length convention, operand endianness,
+  and the done-status polarity were all verified against esp-idf master
+  (`bignum_alt.c` non-ESP32 branch + `mpi_ll.h` + `mpi_periph.c`).
+
+### Verified
+- A known-answer test runs the textbook RSA vector (n=3233 = 61·53, e=17, m=65)
+  and confirms c = 65^17 mod 3233 = 2790 read back from the Z block, with the
+  done-status handshake (`QUERY_INTERRUPT` → `CLEAR_INTERRUPT`).
+- `npm run -w @protopulse/emu test` passed with 300 package tests
+  (213 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- The MOD_MULT (Z = X·Y mod M) and plain MULT (Z = X·Y, Y left-extended into the
+  Z block) operations, and the RSA done interrupt routed through the matrix
+  (source 75 → INTMTX + 0x130), remain follow-on.
+
 ## 2026-06-18 — ESP32-S3 slice 141: correct SHA/AES interrupt-matrix map offsets
 
 ### Fixed

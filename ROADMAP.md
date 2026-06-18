@@ -1808,6 +1808,14 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       SHA = INTMTX + 0x138 (source 77), AES = INTMTX + 0x134 (source 76). The
       source enum has gaps vs the map layout past I2C/SPI, so map offsets are now
       read directly from interrupt_core0_reg.h, never computed. Tests still green
+- [x] ESP32-S3 core slice 142 — RSA accelerator modular exponentiation (landed
+      2026-06-18): new peripheral DR_REG_RSA_BASE 0x6003C000; little-endian
+      operand blocks M@+0x000 / Z@+0x200 / Y@+0x400 / X@+0x600, LENGTH (+0x804)
+      = num_words-1, RSA_MODEXP_START (+0x80c) computes Z = X^Y mod M, done via
+      QUERY_INTERRUPT (+0x818) / CLEAR_INTERRUPT (+0x81c). BigInt modpow gives
+      the exact result (Montgomery Rinv/Mprime inputs accepted, no effect). KAT:
+      textbook RSA 65^17 mod 3233 = 2790. Verified vs esp-idf bignum_alt.c +
+      mpi_ll.h + mpi_periph.c. Cuts: MOD_MULT, MULT, RSA matrix interrupt (src 75)
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

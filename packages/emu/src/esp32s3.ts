@@ -920,6 +920,23 @@ const AES_MODE_AES128_ENC = 0;
 const AES_STATE_DONE = 2;
 const AES_INT_CLR = 0xac; // write 1 to clear the completion interrupt
 const AES_INT_ENA = 0xb0; // write 1 to enable the completion interrupt
+// RSA / MPI big-number accelerator (DR_REG_RSA_BASE). Operand memory blocks hold
+// little-endian 32-bit words (up to 128 = 4096 bits). Block bases and operation
+// registers verified against esp-idf bignum_alt.c (non-ESP32 branch) + mpi_ll.h.
+const RSA_BASE = 0x6003c000;
+const RSA_MEM_M = 0x000; // modulus M
+const RSA_MEM_Z = 0x200; // result Z (and Rinv input)
+const RSA_MEM_Y = 0x400; // exponent Y
+const RSA_MEM_X = 0x600; // base X
+const RSA_M_DASH = 0x800; // Mprime = -M^-1 mod 2^32 (HW-internal; accepted, unused for the math)
+const RSA_LENGTH = 0x804; // operand length in words minus 1
+const RSA_QUERY_CLEAN = 0x808; // reads 0 when memory init is complete (ready)
+const RSA_MODEXP_START = 0x80c; // write 1 -> Z = X^Y mod M
+const RSA_QUERY_INTERRUPT = 0x818; // reads 1 when an operation is done (0 while busy)
+const RSA_CLEAR_INTERRUPT = 0x81c; // write 1 -> clear the done status
+const RSA_INT_ENA = 0x82c; // RSA_INTERRUPT_REG: matrix-interrupt enable
+const RSA_MEM_WORDS = 128; // 512-byte block / 4 = up to 4096-bit operands
+
 const SHA_BASE = 0x6003b000;
 const SHA_MODE = 0x00;
 const SHA_START = 0x10;
@@ -1136,6 +1153,37 @@ const aesDecryptBlock = (input: number[], roundKeys: number[], nr: number): numb
     }
   }
   return s;
+};
+
+// RSA accelerator big-number helpers. The hardware works on little-endian word
+// arrays and reduces with Montgomery internally; an emulator reproduces the exact
+// mathematical result with arbitrary-precision BigInt (the HW's Rinv/Mprime inputs
+// have no effect on the value, so they are accepted and ignored).
+const rsaWordsToBig = (words: number[], n: number): bigint => {
+  let v = 0n;
+  for (let i = n - 1; i >= 0; i--) v = (v << 32n) | BigInt((words[i] ?? 0) >>> 0);
+  return v;
+};
+const rsaBigToWords = (value: bigint, n: number): number[] => {
+  const out: number[] = new Array(n).fill(0);
+  let x = value;
+  for (let i = 0; i < n; i++) {
+    out[i] = Number(x & 0xffffffffn) >>> 0;
+    x >>= 32n;
+  }
+  return out;
+};
+const rsaModPow = (base: bigint, exp: bigint, mod: bigint): bigint => {
+  if (mod <= 1n) return 0n;
+  let result = 1n;
+  let b = base % mod;
+  let e = exp;
+  while (e > 0n) {
+    if ((e & 1n) === 1n) result = (result * b) % mod;
+    e >>= 1n;
+    b = (b * b) % mod;
+  }
+  return result;
 };
 
 // Timer groups 0 and 1 (timer_group_reg.h; flow per hal timer_ll.h
@@ -2498,6 +2546,14 @@ export class Esp32s3Core implements McuCore {
   private aesIntRaw = 0;
   private aesIntEna = 0;
   private aesIntMaps: InterruptMapPair = freshInterruptMapPair();
+  private rsaM: number[] = new Array(RSA_MEM_WORDS).fill(0);
+  private rsaZ: number[] = new Array(RSA_MEM_WORDS).fill(0);
+  private rsaY: number[] = new Array(RSA_MEM_WORDS).fill(0);
+  private rsaX: number[] = new Array(RSA_MEM_WORDS).fill(0);
+  private rsaLength = 0;
+  private rsaMDash = 0;
+  private rsaIntRaw = 0; // done status (RSA_QUERY_INTERRUPT: 1 = done)
+  private rsaIntEna = 0;
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
@@ -3609,6 +3665,14 @@ export class Esp32s3Core implements McuCore {
     this.aesIntRaw = 0;
     this.aesIntEna = 0;
     this.aesIntMaps = freshInterruptMapPair();
+    this.rsaM = new Array(RSA_MEM_WORDS).fill(0);
+    this.rsaZ = new Array(RSA_MEM_WORDS).fill(0);
+    this.rsaY = new Array(RSA_MEM_WORDS).fill(0);
+    this.rsaX = new Array(RSA_MEM_WORDS).fill(0);
+    this.rsaLength = 0;
+    this.rsaMDash = 0;
+    this.rsaIntRaw = 0;
+    this.rsaIntEna = 0;
     this.pcntIntRaw = 0;
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
@@ -7025,6 +7089,23 @@ export class Esp32s3Core implements McuCore {
       if (off === AES_INT_ENA) return this.aesIntEna >>> 0;
       return 0;
     }
+    if (addr >= RSA_BASE && addr < RSA_BASE + 0x1000) {
+      const off = addr - RSA_BASE;
+      if (off === RSA_QUERY_INTERRUPT) return this.rsaIntRaw >>> 0; // 1 when an op is done
+      if (off === RSA_QUERY_CLEAN) return 0; // 0 = memory init complete (ready)
+      if (off === RSA_LENGTH) return this.rsaLength >>> 0;
+      if (off === RSA_M_DASH) return this.rsaMDash >>> 0;
+      if (off === RSA_INT_ENA) return this.rsaIntEna >>> 0;
+      if (off >= RSA_MEM_X && off < RSA_MEM_X + RSA_MEM_WORDS * 4 && (off & 3) === 0)
+        return (this.rsaX[(off - RSA_MEM_X) >> 2] ?? 0) >>> 0;
+      if (off >= RSA_MEM_Y && off < RSA_MEM_Y + RSA_MEM_WORDS * 4 && (off & 3) === 0)
+        return (this.rsaY[(off - RSA_MEM_Y) >> 2] ?? 0) >>> 0;
+      if (off >= RSA_MEM_Z && off < RSA_MEM_Z + RSA_MEM_WORDS * 4 && (off & 3) === 0)
+        return (this.rsaZ[(off - RSA_MEM_Z) >> 2] ?? 0) >>> 0;
+      if (off >= RSA_MEM_M && off < RSA_MEM_M + RSA_MEM_WORDS * 4 && (off & 3) === 0)
+        return (this.rsaM[(off - RSA_MEM_M) >> 2] ?? 0) >>> 0;
+      return 0;
+    }
     if (addr >= SHA_BASE && addr < SHA_BASE + 0x1000) {
       const off = addr - SHA_BASE;
       if (off === SHA_BUSY) return 0; // compression is instantaneous in the model
@@ -7621,6 +7702,39 @@ export class Esp32s3Core implements McuCore {
       } else if (off === AES_INT_CLR) {
         this.aesIntRaw = 0;
         this.recomputeIrq();
+      }
+      return;
+    }
+    if (addr >= RSA_BASE && addr < RSA_BASE + 0x1000) {
+      const off = addr - RSA_BASE;
+      const v = value >>> 0;
+      if (off >= RSA_MEM_X && off < RSA_MEM_X + RSA_MEM_WORDS * 4 && (off & 3) === 0) {
+        this.rsaX[(off - RSA_MEM_X) >> 2] = v;
+      } else if (off >= RSA_MEM_Y && off < RSA_MEM_Y + RSA_MEM_WORDS * 4 && (off & 3) === 0) {
+        this.rsaY[(off - RSA_MEM_Y) >> 2] = v;
+      } else if (off >= RSA_MEM_Z && off < RSA_MEM_Z + RSA_MEM_WORDS * 4 && (off & 3) === 0) {
+        this.rsaZ[(off - RSA_MEM_Z) >> 2] = v;
+      } else if (off >= RSA_MEM_M && off < RSA_MEM_M + RSA_MEM_WORDS * 4 && (off & 3) === 0) {
+        this.rsaM[(off - RSA_MEM_M) >> 2] = v;
+      } else if (off === RSA_LENGTH) {
+        this.rsaLength = v;
+      } else if (off === RSA_M_DASH) {
+        this.rsaMDash = v;
+      } else if (off === RSA_INT_ENA) {
+        this.rsaIntEna = v;
+      } else if (off === RSA_MODEXP_START) {
+        if ((v & 1) !== 0) {
+          // Z = X^Y mod M over (RSA_LENGTH + 1) little-endian words.
+          const nw = (this.rsaLength & (RSA_MEM_WORDS - 1)) + 1;
+          const x = rsaWordsToBig(this.rsaX, nw);
+          const y = rsaWordsToBig(this.rsaY, nw);
+          const m = rsaWordsToBig(this.rsaM, nw);
+          const zWords = rsaBigToWords(rsaModPow(x, y, m), nw);
+          for (let i = 0; i < nw; i++) this.rsaZ[i] = zWords[i] ?? 0;
+          this.rsaIntRaw = 1; // operation complete
+        }
+      } else if (off === RSA_CLEAR_INTERRUPT) {
+        this.rsaIntRaw = 0;
       }
       return;
     }

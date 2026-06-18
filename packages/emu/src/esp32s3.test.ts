@@ -2735,6 +2735,55 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([2, 0x00, 0x33, 0x44, 0x77, 0x88, 0xbb, 0xcc, 0xff]);
   });
 
+  it('computes a modular exponentiation through the RSA accelerator', () => {
+    // RSA/MPI accelerator (DR_REG_RSA_BASE 0x6003C000). Operand memory blocks
+    // (little-endian words): M @ +0x000, Z (result) @ +0x200, Y (exponent) @ +0x400,
+    // X (base) @ +0x600. RSA_LENGTH (+0x804) = num_words - 1. Writing 1 to
+    // RSA_MODEXP_START (+0x80c) computes Z = X^Y mod M; RSA_QUERY_INTERRUPT (+0x818)
+    // reads 1 when done (0 while busy) and RSA_CLEAR_INTERRUPT (+0x81c) clears it.
+    // Textbook RSA vector: n=3233 (61*53), e=17, m=65 -> c = 65^17 mod 3233 = 2790
+    // (= 0x0ae6). One 32-bit word, so LENGTH = 0. The guest emits the done flag (1)
+    // then the low and next byte of the result word (0xe6, 0x0a).
+    const RSA = 0x6003c000;
+    // S32I/L32I offsets are limited to 0..1020, so each block (and the control
+    // register bank at +0x800) is reached through its own base register.
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [RSA + 0x600, RSA + 0x400, RSA + 0x000, RSA + 0x200, RSA + 0x800, UART, 65, 17, 3233],
+        [
+          L32R(2, 0), // X block base
+          L32R(3, 1), // Y block base
+          L32R(5, 2), // M block base
+          L32R(9, 3), // Z block base
+          L32R(7, 4), // control bank base (RSA + 0x800)
+          L32R(6, 5), // UART
+          L32R(4, 6),
+          S32I(4, 2, 0), // X[0] = 65 (base)
+          L32R(4, 7),
+          S32I(4, 3, 0), // Y[0] = 17 (exponent)
+          L32R(4, 8),
+          S32I(4, 5, 0), // M[0] = 3233 (modulus)
+          MOVI(4, 0),
+          S32I(4, 7, 0x04), // RSA_LENGTH = num_words - 1 = 0
+          MOVI(4, 1),
+          S32I(4, 7, 0x0c), // RSA_MODEXP_START
+          L32I(8, 7, 0x18), // RSA_QUERY_INTERRUPT (done = 1)
+          S32I(8, 6, 0), // emit done flag (expect 1)
+          L32I(4, 9, 0), // Z[0] = 2790
+          S32I(4, 6, 0), // emit low byte (0xe6)
+          SRLI(4, 4, 8),
+          S32I(4, 6, 0), // emit next byte (0x0a)
+          MOVI(4, 1),
+          S32I(4, 7, 0x1c), // RSA_CLEAR_INTERRUPT
+          J(BR(-1)), // spin
+        ],
+      ),
+    );
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([1, 0xe6, 0x0a]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
