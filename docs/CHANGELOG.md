@@ -2,6 +2,24 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 148: USB-Serial-JTAG TX-empty interrupt
+
+### Added
+- **USB-Serial-JTAG controller — TX-empty interrupt** (@protopulse/emu): the
+  `SERIAL_IN_EMPTY` status (INT bit3) now tracks the TX FIFO — staging a byte
+  (EP1 write) clears it and flushing (`WR_DONE`) empties the FIFO and re-asserts it,
+  raising the interrupt when enabled (reset default 1, matching the hardware). This
+  completes the USB-Serial-JTAG interrupt surface (RX `SERIAL_OUT_RECV_PKT` + TX
+  `SERIAL_IN_EMPTY`).
+
+### Verified
+- A known-answer test stages a byte (clearing IN_EMPTY), arms `INT_ENA` bit3, maps
+  the source to CPU line 0, then flushes — the now-empty FIFO fires the interrupt
+  exactly once (ISR clears it, counter stays 1), and the flushed byte still reaches
+  the host.
+- `npm run -w @protopulse/emu test` passed with 307 package tests
+  (220 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 147: USB-Serial-JTAG RX interrupt
 
 ### Added

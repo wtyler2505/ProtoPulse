@@ -1846,6 +1846,11 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       explicit silicon offset INTMTX + 0x180. KAT: inject byte, ISR drains EP1 +
       clears, fires once. USB-Serial-JTAG console complete (TX + RX + interrupt).
       Cuts: SERIAL_IN_EMPTY (TX-empty) interrupt
+- [x] ESP32-S3 core slice 148 — USB-Serial-JTAG TX-empty interrupt (landed
+      2026-06-18): SERIAL_IN_EMPTY (INT bit3) tracks the TX FIFO — staging a byte
+      clears it, WR_DONE flush empties the FIFO and re-asserts it (reset default 1).
+      KAT: stage a byte, arm, flush -> fires once. USB-Serial-JTAG interrupt surface
+      now complete (RX OUT_RECV_PKT + TX IN_EMPTY)
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

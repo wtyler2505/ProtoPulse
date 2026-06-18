@@ -953,6 +953,7 @@ const USJ_INT_ST = 0x0c;
 const USJ_INT_ENA = 0x10;
 const USJ_INT_CLR = 0x14;
 const USJ_SERIAL_OUT_RECV_PKT = 1 << 2; // host sent a packet (RX data arrived)
+const USJ_SERIAL_IN_EMPTY = 1 << 3; // TX FIFO is empty (reset default 1)
 const INTMTX_USJ_MAP = 0x180; // INTERRUPT_CORE0_USB_DEVICE_INT_MAP_REG (explicit silicon offset)
 
 const SHA_BASE = 0x6003b000;
@@ -2576,7 +2577,7 @@ export class Esp32s3Core implements McuCore {
   private usjTxStaging: number[] = []; // bytes written to EP1 not yet flushed
   private usjTxBuffer: number[] = []; // flushed console output, drained by the host
   private usjRxBuffer: number[] = []; // host-injected console input awaiting the guest
-  private usjIntRaw = 0;
+  private usjIntRaw = USJ_SERIAL_IN_EMPTY; // TX FIFO starts empty
   private usjIntEna = 0;
   private usjIntMaps: InterruptMapPair = freshInterruptMapPair();
   private pcntIntRaw = 0;
@@ -3717,7 +3718,7 @@ export class Esp32s3Core implements McuCore {
     this.usjTxStaging = [];
     this.usjTxBuffer = [];
     this.usjRxBuffer = [];
-    this.usjIntRaw = 0;
+    this.usjIntRaw = USJ_SERIAL_IN_EMPTY;
     this.usjIntEna = 0;
     this.usjIntMaps = freshInterruptMapPair();
     this.pcntIntRaw = 0;
@@ -7835,11 +7836,15 @@ export class Esp32s3Core implements McuCore {
       const v = value >>> 0;
       if (off === USJ_EP1) {
         this.usjTxStaging.push(v & 0xff); // stage a byte into the TX FIFO
+        this.usjIntRaw &= ~USJ_SERIAL_IN_EMPTY; // FIFO no longer empty
+        this.recomputeIrq();
       } else if (off === USJ_EP1_CONF) {
         if ((v & USJ_WR_DONE) !== 0) {
-          // flush the staged bytes to the host
+          // flush the staged bytes to the host; the FIFO is now empty
           for (const b of this.usjTxStaging) this.usjTxBuffer.push(b);
           this.usjTxStaging = [];
+          this.usjIntRaw |= USJ_SERIAL_IN_EMPTY;
+          this.recomputeIrq();
         }
       } else if (off === USJ_INT_ENA) {
         this.usjIntEna = v;

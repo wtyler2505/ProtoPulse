@@ -3051,6 +3051,68 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([1, 1]);
   });
 
+  it('raises the USB-Serial-JTAG TX-empty interrupt when the FIFO flushes', () => {
+    // SERIAL_IN_EMPTY (INT bit3) tracks the TX FIFO: staging a byte (EP1 write)
+    // clears it, and flushing (WR_DONE) empties the FIFO and re-asserts it. The guest
+    // stages a byte (clearing IN_EMPTY), arms INT_ENA bit3, maps the source to CPU
+    // line 0, then flushes — the now-empty FIFO fires the interrupt. The ISR clears
+    // INT_CLR bit3, firing exactly once. (The flushed byte still lands for the host.)
+    const USJ = 0x60038000;
+    const SCRATCH = ESP32S3_DRAM_BASE + 0x9c0;
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [UART, USJ, INTMTX, SCRATCH, ESP32S3_IRAM_BASE, 0x5a], [
+        L32R(13, 3), // scratch
+        MOVI(14, 0),
+        S32I(14, 13, 0), // ISR counter = 0
+        L32R(14, 4),
+        WSR(14, SR.VECBASE),
+
+        L32R(3, 1), // USB-Serial-JTAG base
+        L32R(4, 5),
+        S32I(4, 3, 0x00), // EP1 <- 'Z' (stages a byte, clears IN_EMPTY)
+        MOVI(4, 8),
+        S32I(4, 3, 0x10), // INT_ENA: SERIAL_IN_EMPTY (bit3) = 1
+
+        L32R(15, 2), // interrupt matrix
+        MOVI(4, 0),
+        S32I(4, 15, 0x180), // USB_DEVICE source -> CPU line 0
+        MOVI(4, 1),
+        WSR(4, SR.INTENABLE),
+        RSIL(12, 0),
+
+        MOVI(4, 1),
+        S32I(4, 3, 0x04), // EP1_CONF WR_DONE -> flush -> FIFO empty -> interrupt
+
+        MOVI(11, 1),
+        L32I(4, 13, 0),
+        BNE(4, 11, BR(-2)), // spin until the ISR has run
+
+        L32R(8, 0), // UART
+        S32I(4, 8, 0), // ISR counter (expect 1)
+        L32I(4, 13, 0),
+        S32I(4, 8, 0), // counter again — still 1 (no re-fire after clear)
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 3), // scratch
+        S32I(3, 2, 8), // save a3
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0), // ISR counter++
+        L32R(3, 1), // USB-Serial-JTAG base
+        MOVI(4, 8),
+        S32I(4, 3, 0x14), // INT_CLR: SERIAL_IN_EMPTY (bit3)
+        L32I(3, 2, 8), // restore a3
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ]),
+    );
+    c.step(800);
+    expect([...c.drainUart()]).toEqual([1, 1]);
+    expect([...c.drainUsbSerialJtag()]).toEqual([0x5a]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
