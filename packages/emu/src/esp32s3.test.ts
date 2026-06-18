@@ -2864,6 +2864,82 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([0xfe, 0xff, 0x01]);
   });
 
+  it('routes the RSA done interrupt through the interrupt matrix to a level-1 handler', () => {
+    // RSA is interrupt source 75 (periph_defs.h ETS_RSA_INTR_SOURCE); its matrix
+    // map sits at the explicit silicon offset INTERRUPT_CORE0_RSA_INT_MAP_REG =
+    // INTMTX + 0x130 (read directly from interrupt_core0_reg.h). RSA_INTERRUPT_REG
+    // (+0x82c) arms the level interrupt; completing an operation (MODEXP_START)
+    // asserts it; the ISR clears it through RSA_CLEAR_INTERRUPT (+0x81c). The guest
+    // runs one modexp and the ISR fires exactly once — the counter stays 1 after
+    // the clear (no re-fire).
+    const RSA = 0x6003c000;
+    const SCRATCH = ESP32S3_DRAM_BASE + 0x9c0;
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [UART, RSA + 0x800, INTMTX, SCRATCH, ESP32S3_IRAM_BASE, RSA + 0x600, RSA + 0x400, RSA + 0x000, 65, 17, 3233],
+        [
+          L32R(13, 3), // scratch
+          MOVI(14, 0),
+          S32I(14, 13, 0), // ISR counter = 0
+          L32R(14, 4),
+          WSR(14, SR.VECBASE),
+
+          L32R(3, 1), // RSA control bank base (RSA + 0x800)
+          MOVI(4, 1),
+          S32I(4, 3, 0x2c), // RSA_INTERRUPT_REG (+0x82c) = 1 (enable)
+
+          L32R(15, 2), // interrupt matrix
+          MOVI(4, 0),
+          S32I(4, 15, 0x130), // RSA source (75) -> CPU line 0
+          MOVI(4, 1),
+          WSR(4, SR.INTENABLE),
+          RSIL(12, 0),
+
+          L32R(5, 5), // X block base
+          L32R(4, 8),
+          S32I(4, 5, 0), // X[0] = 65
+          L32R(6, 6), // Y block base
+          L32R(4, 9),
+          S32I(4, 6, 0), // Y[0] = 17
+          L32R(7, 7), // M block base
+          L32R(4, 10),
+          S32I(4, 7, 0), // M[0] = 3233
+          MOVI(4, 0),
+          S32I(4, 3, 0x04), // RSA_LENGTH = 0
+          MOVI(4, 1),
+          S32I(4, 3, 0x0c), // RSA_MODEXP_START -> done -> interrupt asserts
+
+          MOVI(11, 1),
+          L32I(4, 13, 0),
+          BNE(4, 11, BR(-2)), // spin until the ISR has run
+
+          L32R(8, 0), // UART
+          S32I(4, 8, 0), // ISR counter (expect 1)
+          L32I(4, 13, 0),
+          S32I(4, 8, 0), // counter again — still 1 (no re-fire after clear)
+          J(BR(-1)),
+
+          PAD_TO(0x340),
+          WSR(2, SR.EXCSAVE1),
+          L32R(2, 3), // scratch
+          S32I(3, 2, 8), // save a3
+          L32I(3, 2, 0),
+          ADDI(3, 3, 1),
+          S32I(3, 2, 0), // ISR counter++
+          L32R(3, 1), // RSA control bank base
+          MOVI(4, 1),
+          S32I(4, 3, 0x1c), // RSA_CLEAR_INTERRUPT (+0x81c)
+          L32I(3, 2, 8), // restore a3
+          RSR(2, SR.EXCSAVE1),
+          RFE(),
+        ],
+      ),
+    );
+    c.step(800);
+    expect([...c.drainUart()]).toEqual([1, 1]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

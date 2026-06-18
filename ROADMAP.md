@@ -1823,6 +1823,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       num_words*2-1, 2*num_words-word product read from Z. Exact BigInt. KATs:
       123456*789 mod 1000000 = 406784; 0xffffffff*2 = 0x1fffffffe. Cuts: RSA
       matrix interrupt (source 75 -> INTMTX + 0x130)
+- [x] ESP32-S3 core slice 144 — RSA done-interrupt routing (landed 2026-06-18):
+      completing a MODEXP/MOD_MULT/MULT op asserts a level interrupt gated by
+      RSA_INTERRUPT_REG (+0x82c) / cleared by RSA_CLEAR_INTERRUPT (+0x81c); RSA is
+      source 75, matrix map at the explicit silicon offset INTMTX + 0x130. A
+      known-answer test confirms the ISR fires once and does not re-fire after the
+      clear. RSA peripheral now complete (MODEXP + MOD_MULT + MULT + done interrupt)
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

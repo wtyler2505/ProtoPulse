@@ -665,6 +665,7 @@ const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
 const INTMTX_EFUSE_MAP = 0x090; // INTERRUPT_CORE0_EFUSE_INT_MAP_REG (source 36)
 const INTMTX_SHA_MAP = 0x138; // INTERRUPT_CORE0_SHA_INT_MAP_REG (explicit silicon offset; source 77)
 const INTMTX_AES_MAP = 0x134; // INTERRUPT_CORE0_AES_INT_MAP_REG (explicit silicon offset; source 76)
+const INTMTX_RSA_MAP = 0x130; // INTERRUPT_CORE0_RSA_INT_MAP_REG (explicit silicon offset; source 75)
 const INTMTX_CAN_MAP = 0x094; // INTERRUPT_CORE0_CAN_INT_MAP_REG
 const INTMTX_RTC_CORE_MAP = 0x09c; // INTERRUPT_CORE0_RTC_CORE_INTR_MAP_REG
 const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
@@ -2556,6 +2557,7 @@ export class Esp32s3Core implements McuCore {
   private rsaMDash = 0;
   private rsaIntRaw = 0; // done status (RSA_QUERY_INTERRUPT: 1 = done)
   private rsaIntEna = 0;
+  private rsaIntMaps: InterruptMapPair = freshInterruptMapPair();
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
@@ -3675,6 +3677,7 @@ export class Esp32s3Core implements McuCore {
     this.rsaMDash = 0;
     this.rsaIntRaw = 0;
     this.rsaIntEna = 0;
+    this.rsaIntMaps = freshInterruptMapPair();
     this.pcntIntRaw = 0;
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
@@ -6676,6 +6679,7 @@ export class Esp32s3Core implements McuCore {
     if ((this.efuseIntRaw & this.efuseIntEna) !== 0) raise(this.efuseIntMaps);
     if ((this.shaIntRaw & this.shaIntEna) !== 0) raise(this.shaIntMaps);
     if ((this.aesIntRaw & this.aesIntEna) !== 0) raise(this.aesIntMaps);
+    if ((this.rsaIntRaw & this.rsaIntEna) !== 0) raise(this.rsaIntMaps);
     for (let n = 0; n < this.systimer.comps.length; n++) {
       const c = this.systimer.comps[n];
       if (c !== undefined && (this.systimer.intRaw & this.systimer.intEna & (1 << n)) !== 0) raise(c.maps);
@@ -7223,6 +7227,7 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_EFUSE_MAP) return this.efuseIntMaps[core];
       if (sourceOff === INTMTX_SHA_MAP) return this.shaIntMaps[core];
       if (sourceOff === INTMTX_AES_MAP) return this.aesIntMaps[core];
+      if (sourceOff === INTMTX_RSA_MAP) return this.rsaIntMaps[core];
       if (sourceOff === INTMTX_RTC_CORE_MAP) return this.rtcCoreIntMaps[core];
       if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
       if (sourceOff === INTMTX_PCNT_MAP) return this.pcntIntMaps[core];
@@ -7723,7 +7728,8 @@ export class Esp32s3Core implements McuCore {
       } else if (off === RSA_M_DASH) {
         this.rsaMDash = v;
       } else if (off === RSA_INT_ENA) {
-        this.rsaIntEna = v;
+        this.rsaIntEna = v; // RSA_INTERRUPT_REG: matrix-interrupt enable
+        this.recomputeIrq();
       } else if (off === RSA_MODEXP_START) {
         if ((v & 1) !== 0) {
           // Z = X^Y mod M over (RSA_LENGTH + 1) little-endian words.
@@ -7734,6 +7740,7 @@ export class Esp32s3Core implements McuCore {
           const zWords = rsaBigToWords(rsaModPow(x, y, m), nw);
           for (let i = 0; i < nw; i++) this.rsaZ[i] = zWords[i] ?? 0;
           this.rsaIntRaw = 1; // operation complete
+          this.recomputeIrq();
         }
       } else if (off === RSA_MOD_MULT_START) {
         if ((v & 1) !== 0) {
@@ -7745,6 +7752,7 @@ export class Esp32s3Core implements McuCore {
           const zWords = rsaBigToWords(m <= 1n ? 0n : (x * y) % m, nw);
           for (let i = 0; i < nw; i++) this.rsaZ[i] = zWords[i] ?? 0;
           this.rsaIntRaw = 1;
+          this.recomputeIrq();
         }
       } else if (off === RSA_MULT_START) {
         if ((v & 1) !== 0) {
@@ -7758,9 +7766,11 @@ export class Esp32s3Core implements McuCore {
           const zWords = rsaBigToWords(x * y, total);
           for (let i = 0; i < total; i++) this.rsaZ[i] = zWords[i] ?? 0;
           this.rsaIntRaw = 1;
+          this.recomputeIrq();
         }
       } else if (off === RSA_CLEAR_INTERRUPT) {
         this.rsaIntRaw = 0;
+        this.recomputeIrq();
       }
       return;
     }
@@ -7957,6 +7967,9 @@ export class Esp32s3Core implements McuCore {
         this.recomputeIrq();
       } else if (sourceOff === INTMTX_AES_MAP) {
         this.aesIntMaps[core] = value & 0x1f;
+        this.recomputeIrq();
+      } else if (sourceOff === INTMTX_RSA_MAP) {
+        this.rsaIntMaps[core] = value & 0x1f;
         this.recomputeIrq();
       } else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;

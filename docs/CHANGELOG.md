@@ -2,6 +2,24 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 144: RSA done-interrupt routing
+
+### Added
+- **RSA completion interrupt** (@protopulse/emu): the RSA accelerator now raises
+  its done interrupt through the interrupt matrix. Completing an operation (MODEXP,
+  MOD_MULT, or MULT) asserts a level interrupt gated by `RSA_INTERRUPT_REG` (+0x82c)
+  and cleared by `RSA_CLEAR_INTERRUPT` (+0x81c). RSA is interrupt source 75
+  (`ETS_RSA_INTR_SOURCE`), so its matrix map sits at `INTERRUPT_CORE0_RSA_INT_MAP_REG`
+  = INTMTX + 0x130 (the explicit silicon offset, read directly from
+  interrupt_core0_reg.h). This completes the RSA peripheral.
+
+### Verified
+- A known-answer test arms `RSA_INTERRUPT_REG`, maps source 75 to CPU line 0, runs
+  one modexp, and confirms the ISR fires exactly once: the counter stays 1 after
+  the ISR clears `RSA_CLEAR_INTERRUPT` (no level re-fire).
+- `npm run -w @protopulse/emu test` passed with 303 package tests
+  (216 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 143: RSA modular multiply + full-width multiply
 
 ### Added
