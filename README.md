@@ -15,7 +15,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![Engine Tests](https://img.shields.io/badge/Engine_Tests-1,577_passing-6da13f?style=flat-square&logo=vitest&logoColor=white)](packages/README.md)
+[![Engine Tests](https://img.shields.io/badge/Engine_Tests-1,578_passing-6da13f?style=flat-square&logo=vitest&logoColor=white)](packages/README.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-00F0FF?style=flat-square)](LICENSE)
 
 [**Features**](#features) · [**Why ProtoPulse**](#why-protopulse) · [**Quick Start**](#quick-start) · [**The Engine**](#the-engine-packages) · [**AI Engine**](#ai-engine) · [**Architecture**](#architecture) · [**Roadmap**](#roadmap) · [**Docs**](#documentation)
@@ -210,7 +210,7 @@ npm start               # Production server
 npm run check           # TypeScript type check (must pass clean)
 npm run db:push         # Sync Drizzle schema to PostgreSQL
 npm test                # Legacy suite (725 files, ~30.5k tests)
-npm run test:packages   # Engine suite (1,577 tests, all green)
+npm run test:packages   # Engine suite (1,578 tests, all green)
 npm run test:watch      # Vitest interactive watch mode
 npm run test:coverage   # Tests with v8 coverage report
 npx eslint .            # Lint (strict TypeScript rules)
@@ -269,11 +269,11 @@ The thesis: **one canonical design graph, many projections.** Every mutation is 
 | `@protopulse/ai` · `review` · `relay` | The **six-member crew** (Draftsman · Analyst · Professor · Router · Architect · Buyer) on one runtime with op-log blame · versioned design-review decks · the zero-conflict sync relay |
 | `@protopulse/content` | Fab rule decks, review decks, sourcing catalog, the complete 88-article concepts wiki, curriculum Track 1 "First Light" |
 
-**1,577 tests**, own CI (`.github/workflows/packages-ci.yml`): typecheck, lint, tests, golden smoke, builds.
+**1,578 tests**, own CI (`.github/workflows/packages-ci.yml`): typecheck, lint, tests, golden smoke, builds.
 
 ```bash
 npm run check:packages           # typecheck every package
-npm run test:packages            # all 1,577 engine tests
+npm run test:packages            # all 1,578 engine tests
 npm run -w @protopulse/app dev   # new editor → http://localhost:5174
 npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
 ```
@@ -469,7 +469,7 @@ shared/
 <tr>
 <td align="center"><strong>725</strong><br><sub>legacy test files</sub></td>
 <td align="center"><strong>~30.5k</strong><br><sub>legacy tests passing</sub></td>
-<td align="center"><strong>1,577</strong><br><sub>engine tests, all green</sub></td>
+<td align="center"><strong>1,578</strong><br><sub>engine tests, all green</sub></td>
 <td align="center"><strong>0</strong><br><sub>TypeScript errors</sub></td>
 <td align="center"><strong>47</strong><br><sub>database tables</sub></td>
 <td align="center"><strong>50+</strong><br><sub>API endpoints</sub></td>
@@ -482,7 +482,7 @@ shared/
 - **v8 coverage** reporting
 - **ESLint** strict TypeScript rules + **Prettier** formatting (covers `packages/` too — zero errors policy)
 - **Zod** validation on every API boundary
-- The engine adds its own **1,577 tests** (`npm run test:packages`), byte-exact golden-file export tests in `tools/golden/`, and a **100% branch coverage gate** on the graph core — all enforced in a separate, fully green CI workflow
+- The engine adds its own **1,578 tests** (`npm run test:packages`), byte-exact golden-file export tests in `tools/golden/`, and a **100% branch coverage gate** on the graph core — all enforced in a separate, fully green CI workflow
 - Honest note: ~421 legacy tests are env-dependent and failing on `main` (tracked in [ROADMAP — off-vision work items](ROADMAP.md#off-vision-work-items)); the engine workflow is the merge gate and stays green
 
 <br>

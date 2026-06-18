@@ -1927,6 +1927,13 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       primary-source verification, do not guess): the MD integrity check (exact SHA-256 input +
       box byte-order) and the HMAC-downstream AES-key derivation. See [[project_emu_ds_peripheral]].
       All 5 S3 crypto accelerators (SHA, AES, RSA, HMAC, DS) now modeled.
+- [x] ESP32-S3 core slice 162 — AES-192-GCM (landed 2026-06-18): completes the GCM
+      key-size matrix (128/192/256) through the Nk=6 key schedule. KAT: NIST GCM Test
+      Case 8 (192-bit all-zero key/IV, one zero block) → ct 98e7247c…84b0f600, tag
+      2ff58d80…7514f0fb; pre-confirmed against OpenSSL. Follow-on (deferred, needs
+      primary-source verification — do NOT guess): the DS MD integrity check (exact
+      SHA-256 input + box byte-order live in the esp_secure_cert pip module, not yet
+      fetched) and the HMAC-downstream key derivation.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

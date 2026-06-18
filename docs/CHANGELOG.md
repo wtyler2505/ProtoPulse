@@ -2,6 +2,21 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 162: AES-192-GCM (completes the GCM key-size matrix)
+
+### Added
+- **AES-192 GCM coverage** (@protopulse/emu): proves the GDMA-fed AES-GCM path works
+  with a 192-bit key (`AES_MODE = 1`, the Nk=6 key schedule), completing the
+  128/192/256 matrix through the same GHASH + GCTR + tag machinery.
+
+### Verified
+- A known-answer test runs NIST GCM Test Case 8 (192-bit all-zero key, 96-bit all-zero
+  IV, one all-zero plaintext block, no AAD) → ciphertext `98e7247c…84b0f600`, tag
+  `2ff58d80…7514f0fb`; the vector was independently confirmed against OpenSSL
+  (`aes-192-gcm`) before the test was written.
+- `npm run -w @protopulse/emu test` passed with 323 package tests
+  (236 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 161: Digital Signature (DS) peripheral — the crypto capstone
 
 ### Added
