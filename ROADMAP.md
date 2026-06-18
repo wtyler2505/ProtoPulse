@@ -1858,6 +1858,11 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       HMAC-SHA256 via from-scratch pure SHA-256 (RFC 2104). KAT: HMAC(32×0x0b,
       64×0x61) = 91acb47f…0e012f1e. Verified vs esp-idf hmac_reg.h/hmac_ll.h/hmac_hal.c.
       Cuts: multi-block + partial-padding feed, HMAC interrupt, JTAG/DS key modes
+- [x] ESP32-S3 core slice 150 — hardware RNG (landed 2026-06-18): esp_random()
+      reads WDEV_RND_REG (0x6003507C); the emulator returns a deterministic-from-reset
+      xorshift32 stream (seed 0xa5a5a5a5) so runs are reproducible while each read
+      advances the word. KAT: v1=0x3330a88d, v2=0xe202683d. Used pervasively by real
+      IDF (mbedTLS/lwIP/BT)
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

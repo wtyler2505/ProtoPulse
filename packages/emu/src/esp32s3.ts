@@ -973,6 +973,11 @@ const HMAC_WR_MESSAGE_MEM = 0x80; // 16-word message block input
 const HMAC_RD_RESULT_MEM = 0xc0; // 8-word MAC output
 const HMAC_SET_START = 0x40;
 
+// Hardware RNG. esp_random() reads WDEV_RND_REG; the emulator returns a
+// deterministic-from-reset xorshift32 stream so guest runs are reproducible.
+const WDEV_RND_REG = 0x6003507c;
+const RNG_SEED = 0xa5a5a5a5;
+
 const SHA_BASE = 0x6003b000;
 const SHA_MODE = 0x00;
 const SHA_START = 0x10;
@@ -2660,6 +2665,7 @@ export class Esp32s3Core implements McuCore {
   private hmacKey: number[] = new Array(8).fill(0); // eFuse-sourced 256-bit key
   private hmacMsg: number[] = []; // accumulated message bytes
   private hmacResult: number[] = new Array(8).fill(0);
+  private rngState = RNG_SEED; // xorshift32 PRNG behind WDEV_RND_REG
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
@@ -3809,6 +3815,7 @@ export class Esp32s3Core implements McuCore {
     this.hmacKey = new Array(8).fill(0);
     this.hmacMsg = [];
     this.hmacResult = new Array(8).fill(0);
+    this.rngState = RNG_SEED;
     this.pcntIntRaw = 0;
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
@@ -7255,6 +7262,15 @@ export class Esp32s3Core implements McuCore {
       if (off === USJ_INT_ST) return (this.usjIntRaw & this.usjIntEna) >>> 0;
       if (off === USJ_INT_ENA) return this.usjIntEna >>> 0;
       return 0;
+    }
+    if (addr === WDEV_RND_REG) {
+      // Each read advances the xorshift32 generator and returns a fresh word.
+      let x = this.rngState >>> 0;
+      x = (x ^ (x << 13)) >>> 0;
+      x = (x ^ (x >>> 17)) >>> 0;
+      x = (x ^ (x << 5)) >>> 0;
+      this.rngState = x;
+      return x >>> 0;
     }
     if (addr >= HMAC_BASE && addr < HMAC_BASE + 0x1000) {
       const off = addr - HMAC_BASE;

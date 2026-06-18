@@ -2,6 +2,21 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 150: hardware RNG (WDEV_RND_REG)
+
+### Added
+- **Hardware RNG** (@protopulse/emu): `esp_random()` reads `WDEV_RND_REG`
+  (0x6003507C) for entropy — used pervasively by real IDF firmware (mbedTLS, lwIP,
+  BT). The emulator models a deterministic-from-reset xorshift32 generator (seed
+  0xa5a5a5a5) so guest runs are reproducible while each read advances the stream and
+  returns a fresh 32-bit word.
+
+### Verified
+- A known-answer test reads the register twice and confirms the deterministic stream
+  v1 = 0x3330a88d, v2 = 0xe202683d.
+- `npm run -w @protopulse/emu test` passed with 309 package tests
+  (222 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 149: HMAC-SHA256 accelerator
 
 ### Added

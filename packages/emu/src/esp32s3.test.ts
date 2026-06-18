@@ -3190,6 +3190,41 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([0x91, 0xac, 0xb4, 0x7f, 0x0e, 0x01, 0x2f, 0x1e]);
   });
 
+  it('returns fresh words from the hardware RNG (WDEV_RND_REG)', () => {
+    // esp_random() reads WDEV_RND_REG (0x6003507C) for entropy. The emulator models a
+    // deterministic-from-reset PRNG (xorshift32, seed 0xa5a5a5a5) so runs are
+    // reproducible while each read advances the word — firmware just needs varying
+    // values. The guest reads the register twice (caching each word, since every read
+    // advances the generator) and emits both words LSB-first: v1 = 0x3330a88d,
+    // v2 = 0xe202683d.
+    const RNG = 0x6003507c;
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [RNG, UART], [
+        L32R(2, 0), // RNG register address
+        L32R(6, 1), // UART
+        L32I(5, 2, 0), // v1 (read advances the PRNG)
+        S32I(5, 6, 0), // 0x8d
+        SRLI(5, 5, 8),
+        S32I(5, 6, 0), // 0xa8
+        SRLI(5, 5, 8),
+        S32I(5, 6, 0), // 0x30
+        SRLI(5, 5, 8),
+        S32I(5, 6, 0), // 0x33
+        L32I(5, 2, 0), // v2
+        S32I(5, 6, 0), // 0x3d
+        SRLI(5, 5, 8),
+        S32I(5, 6, 0), // 0x68
+        SRLI(5, 5, 8),
+        S32I(5, 6, 0), // 0x02
+        SRLI(5, 5, 8),
+        S32I(5, 6, 0), // 0xe2
+        J(BR(-1)),
+      ]),
+    );
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([0x8d, 0xa8, 0x30, 0x33, 0x3d, 0x68, 0x02, 0xe2]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
