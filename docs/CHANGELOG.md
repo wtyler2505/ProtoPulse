@@ -2,6 +2,19 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 155: SHA-512 over the SHA-DMA path
+
+### Added
+- **SHA-512 (and SHA-384) over DMA** (@protopulse/emu): `shaRunDma()` now selects the
+  1024-bit (32-word) block size for the 64-bit-word algorithms and feeds the
+  `sha512Compress` core, so the GDMA hashing path covers the full SHA family.
+
+### Verified
+- A known-answer test feeds the pre-padded "abc" SHA-512 block (32 words) over GDMA
+  and confirms the digest is NIST SHA-512 ddaf35a1…a54ca49f.
+- `npm run -w @protopulse/emu test` passed with 315 package tests
+  (228 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 154: SHA-DMA path (GDMA-fed hashing)
 
 ### Added

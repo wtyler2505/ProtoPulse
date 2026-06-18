@@ -1886,6 +1886,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       in the H registers. New regs SHA_DMA_BLOCK_NUM (+0x0c), SHA_DMA_START (+0x1c),
       SHA_DMA_CONTINUE (+0x20); new shaRunDma() reuses the block-compression core.
       KAT: padded "abc" block over GDMA → NIST SHA-256 ba7816bf…f20015ad
+- [x] ESP32-S3 core slice 155 — SHA-512 over the SHA-DMA path (landed 2026-06-18):
+      shaRunDma() selects the 1024-bit (32-word) block size for the 64-bit-word
+      algorithms (SHA-512/384) and feeds sha512Compress, so GDMA hashing covers the
+      full SHA family. KAT: padded "abc" SHA-512 block over GDMA → ddaf35a1…a54ca49f
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

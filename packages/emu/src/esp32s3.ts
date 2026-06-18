@@ -3819,13 +3819,20 @@ export class Esp32s3Core implements McuCore {
     const txCh = this.gdmaTx.find((t) => (t.active || t.started) && t.periSel === GDMA_PERI_SHA);
     if (txCh === undefined) return;
     const inWords = this.gdmaReadTxSymbols(txCh);
-    const blocks = this.shaDmaBlockNum > 0 ? this.shaDmaBlockNum : inWords.length >> 4;
+    const is512 = this.shaMode === SHA_MODE_SHA512 || this.shaMode === SHA_MODE_SHA384;
+    const wordsPerBlock = is512 ? 32 : 16; // SHA-512/384 use 1024-bit blocks
+    const blocks = this.shaDmaBlockNum > 0 ? this.shaDmaBlockNum : Math.floor(inWords.length / wordsPerBlock);
     if (!cont) {
-      this.shaH = this.shaMode === SHA_MODE_SHA1 ? SHA1_IV.slice() : this.shaMode === SHA_MODE_SHA224 ? SHA224_IV.slice() : SHA256_IV.slice();
+      if (this.shaMode === SHA_MODE_SHA1) this.shaH = SHA1_IV.slice();
+      else if (this.shaMode === SHA_MODE_SHA224) this.shaH = SHA224_IV.slice();
+      else if (this.shaMode === SHA_MODE_SHA384) this.shaH = SHA384_IV.flatMap((p) => [p[0], p[1]]);
+      else if (this.shaMode === SHA_MODE_SHA512) this.shaH = SHA512_IV.flatMap((p) => [p[0], p[1]]);
+      else this.shaH = SHA256_IV.slice();
     }
     for (let b = 0; b < blocks; b++) {
-      for (let w = 0; w < 16; w++) this.shaText[w] = inWords[b * 16 + w] ?? 0;
+      for (let w = 0; w < wordsPerBlock; w++) this.shaText[w] = inWords[b * wordsPerBlock + w] ?? 0;
       if (this.shaMode === SHA_MODE_SHA1) this.sha1Compress();
+      else if (is512) this.sha512Compress();
       else this.sha256Compress();
     }
   }
