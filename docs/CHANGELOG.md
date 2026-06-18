@@ -2,6 +2,30 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 151: AES-CBC via the AES-DMA path (encrypt + decrypt)
+
+### Added
+- **AES-CBC through GDMA** (@protopulse/emu): on the S3, all non-ECB AES modes run
+  through the AES-DMA path (GDMA-fed data), not the CPU-FIFO path. The AES engine now
+  consumes plaintext from the GDMA OUT channel connected to peripheral AES0 (trigger
+  id 6) and produces ciphertext into the GDMA IN channel, with CBC chaining seeded by
+  the IV register (`AES_IV_BASE` +0x50). New registers: `AES_DMA_ENABLE` (+0x90),
+  `AES_BLOCK_MODE` (+0x94, CBC=1), `AES_BLOCK_NUM` (+0x98). Both encrypt and decrypt
+  are supported, reusing the existing AES round core; the IV is updated to the last
+  cipher block for chaining. Verified against esp-idf `esp_aes.c` (`esp_aes_process_dma`)
+  + `aes_ll.h`.
+
+### Verified
+- Two known-answer tests run the NIST SP 800-38A F.2.1/F.2.2 AES-128-CBC vectors
+  end-to-end through real GDMA descriptors: plaintext 6bc1bee2… encrypts to
+  7649abac…12e9197d, and that ciphertext decrypts back to the plaintext.
+- `npm run -w @protopulse/emu test` passed with 311 package tests
+  (224 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- AES-CTR mode and a dedicated DMA-mode interrupt test remain follow-on (the AES done
+  interrupt already fires on DMA completion via the existing matrix routing).
+
 ## 2026-06-18 — ESP32-S3 slice 150: hardware RNG (WDEV_RND_REG)
 
 ### Added

@@ -3225,6 +3225,251 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([0x8d, 0xa8, 0x30, 0x33, 0x3d, 0x68, 0x02, 0xe2]);
   });
 
+  it('encrypts a CBC block through the AES-DMA path (GDMA-fed)', () => {
+    // On the S3, AES-CBC runs through GDMA: a TX (mem->AES) descriptor feeds the
+    // plaintext, an IN (AES->mem) descriptor receives the ciphertext. The guest sets
+    // AES_BLOCK_MODE (+0x94) = CBC, the IV (+0x50), AES_BLOCK_NUM (+0x98) = 1,
+    // AES_DMA_ENABLE (+0x90) = 1, then TRIGGER. NIST SP 800-38A F.2.1 vector:
+    // key 2b7e1516…, IV 000102…0f, plaintext 6bc1bee2… -> ciphertext 7649abac…12e9197d.
+    // The guest emits ciphertext word[0] and word[3] MSB-first.
+    const AES = 0x6003a000;
+    const txDesc = ESP32S3_DRAM_BASE + 0x1200;
+    const ptBuf = ESP32S3_DRAM_BASE + 0x1240;
+    const rxDesc = ESP32S3_DRAM_BASE + 0x1280;
+    const ctBuf = ESP32S3_DRAM_BASE + 0x12c0;
+    const txDw0 = (GDMA_DESC_OWNER_DMA | GDMA_DESC_SUC_EOF | (16 << 12) | 16) >>> 0;
+    const rxDw0 = (GDMA_DESC_OWNER_DMA | 16) >>> 0;
+    const outLinkStart = ((txDesc & 0x000f_ffff) | GDMA_OUT_LINK_START) >>> 0;
+    const inLinkStart = ((rxDesc & 0x000f_ffff) | GDMA_INLINK_AUTO_RET | GDMA_INLINK_START) >>> 0;
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [
+          txDesc, ptBuf, rxDesc, ctBuf, txDw0, rxDw0, GDMA, outLinkStart, inLinkStart, AES, UART,
+          0x6bc1bee2, 0x2e409f96, 0xe93d7e11, 0x7393172a, // plaintext
+          0x2b7e1516, 0x28aed2a6, 0xabf71588, 0x09cf4f3c, // key
+          0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, // IV
+        ],
+        [
+          L32R(2, 0), // txDesc
+          L32R(3, 4),
+          S32I(3, 2, 0), // dw0
+          L32R(3, 1),
+          S32I(3, 2, 4), // dw1 = ptBuf
+          MOVI(3, 0),
+          S32I(3, 2, 8), // dw2 = 0
+          L32R(4, 1), // ptBuf
+          L32R(3, 11),
+          S32I(3, 4, 0),
+          L32R(3, 12),
+          S32I(3, 4, 4),
+          L32R(3, 13),
+          S32I(3, 4, 8),
+          L32R(3, 14),
+          S32I(3, 4, 12),
+          L32R(2, 2), // rxDesc
+          L32R(3, 5),
+          S32I(3, 2, 0), // dw0
+          L32R(3, 3),
+          S32I(3, 2, 4), // dw1 = ctBuf
+          MOVI(3, 0),
+          S32I(3, 2, 8), // dw2 = 0
+
+          L32R(6, 6), // GDMA
+          MOVI(7, 6), // GDMA_PERI_AES
+          S32I(7, 6, 0xa8), // OUT_CH0_PERI_SEL
+          L32R(7, 7),
+          S32I(7, 6, 0x80), // OUT_CH0_LINK = start
+          MOVI(7, 6),
+          S32I(7, 6, 0x48), // IN_CH0_PERI_SEL
+          L32R(7, 8),
+          S32I(7, 6, 0x20), // IN_CH0_LINK = start
+
+          L32R(9, 9), // AES base
+          L32R(4, 15),
+          S32I(4, 9, 0x00), // KEY[0]
+          L32R(4, 16),
+          S32I(4, 9, 0x04),
+          L32R(4, 17),
+          S32I(4, 9, 0x08),
+          L32R(4, 18),
+          S32I(4, 9, 0x0c),
+          MOVI(4, 0),
+          S32I(4, 9, 0x40), // MODE = AES-128 encrypt
+          L32R(4, 19),
+          S32I(4, 9, 0x50), // IV[0]
+          L32R(4, 20),
+          S32I(4, 9, 0x54),
+          L32R(4, 21),
+          S32I(4, 9, 0x58),
+          L32R(4, 22),
+          S32I(4, 9, 0x5c),
+          MOVI(4, 1),
+          S32I(4, 9, 0x94), // BLOCK_MODE = CBC
+          MOVI(4, 1),
+          S32I(4, 9, 0x98), // BLOCK_NUM = 1
+          MOVI(4, 1),
+          S32I(4, 9, 0x90), // DMA_ENABLE = 1
+          MOVI(4, 1),
+          S32I(4, 9, 0x48), // TRIGGER
+
+          L32R(6, 10), // UART
+          L32R(3, 3), // ctBuf
+          L32I(5, 3, 0),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0x76
+          L32I(5, 3, 0),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0x49
+          L32I(5, 3, 0),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0xab
+          L32I(5, 3, 0),
+          S32I(5, 6, 0), // 0xac
+          L32I(5, 3, 12),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0x12
+          L32I(5, 3, 12),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0xe9
+          L32I(5, 3, 12),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0x19
+          L32I(5, 3, 12),
+          S32I(5, 6, 0), // 0x7d
+          J(BR(-1)),
+        ],
+      ),
+    );
+    c.step(600);
+    expect([...c.drainUart()]).toEqual([0x76, 0x49, 0xab, 0xac, 0x12, 0xe9, 0x19, 0x7d]);
+  });
+
+  it('decrypts a CBC block through the AES-DMA path (GDMA-fed)', () => {
+    // The inverse of the previous test (AES_MODE = 4 = AES-128 decrypt): the NIST
+    // ciphertext 7649abac…12e9197d with IV 000102…0f decrypts back to the plaintext
+    // 6bc1bee2…7393172a. The guest emits plaintext word[0] and word[3] MSB-first.
+    const AES = 0x6003a000;
+    const txDesc = ESP32S3_DRAM_BASE + 0x1200;
+    const inBuf = ESP32S3_DRAM_BASE + 0x1240;
+    const rxDesc = ESP32S3_DRAM_BASE + 0x1280;
+    const outBuf = ESP32S3_DRAM_BASE + 0x12c0;
+    const txDw0 = (GDMA_DESC_OWNER_DMA | GDMA_DESC_SUC_EOF | (16 << 12) | 16) >>> 0;
+    const rxDw0 = (GDMA_DESC_OWNER_DMA | 16) >>> 0;
+    const outLinkStart = ((txDesc & 0x000f_ffff) | GDMA_OUT_LINK_START) >>> 0;
+    const inLinkStart = ((rxDesc & 0x000f_ffff) | GDMA_INLINK_AUTO_RET | GDMA_INLINK_START) >>> 0;
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [
+          txDesc, inBuf, rxDesc, outBuf, txDw0, rxDw0, GDMA, outLinkStart, inLinkStart, AES, UART,
+          0x7649abac, 0x8119b246, 0xcee98e9b, 0x12e9197d, // ciphertext
+          0x2b7e1516, 0x28aed2a6, 0xabf71588, 0x09cf4f3c, // key
+          0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, // IV
+        ],
+        [
+          L32R(2, 0),
+          L32R(3, 4),
+          S32I(3, 2, 0),
+          L32R(3, 1),
+          S32I(3, 2, 4),
+          MOVI(3, 0),
+          S32I(3, 2, 8),
+          L32R(4, 1),
+          L32R(3, 11),
+          S32I(3, 4, 0),
+          L32R(3, 12),
+          S32I(3, 4, 4),
+          L32R(3, 13),
+          S32I(3, 4, 8),
+          L32R(3, 14),
+          S32I(3, 4, 12),
+          L32R(2, 2),
+          L32R(3, 5),
+          S32I(3, 2, 0),
+          L32R(3, 3),
+          S32I(3, 2, 4),
+          MOVI(3, 0),
+          S32I(3, 2, 8),
+
+          L32R(6, 6),
+          MOVI(7, 6),
+          S32I(7, 6, 0xa8),
+          L32R(7, 7),
+          S32I(7, 6, 0x80),
+          MOVI(7, 6),
+          S32I(7, 6, 0x48),
+          L32R(7, 8),
+          S32I(7, 6, 0x20),
+
+          L32R(9, 9),
+          L32R(4, 15),
+          S32I(4, 9, 0x00),
+          L32R(4, 16),
+          S32I(4, 9, 0x04),
+          L32R(4, 17),
+          S32I(4, 9, 0x08),
+          L32R(4, 18),
+          S32I(4, 9, 0x0c),
+          MOVI(4, 4),
+          S32I(4, 9, 0x40), // MODE = AES-128 decrypt
+          L32R(4, 19),
+          S32I(4, 9, 0x50),
+          L32R(4, 20),
+          S32I(4, 9, 0x54),
+          L32R(4, 21),
+          S32I(4, 9, 0x58),
+          L32R(4, 22),
+          S32I(4, 9, 0x5c),
+          MOVI(4, 1),
+          S32I(4, 9, 0x94), // BLOCK_MODE = CBC
+          MOVI(4, 1),
+          S32I(4, 9, 0x98), // BLOCK_NUM = 1
+          MOVI(4, 1),
+          S32I(4, 9, 0x90), // DMA_ENABLE = 1
+          MOVI(4, 1),
+          S32I(4, 9, 0x48), // TRIGGER
+
+          L32R(6, 10),
+          L32R(3, 3),
+          L32I(5, 3, 0),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0x6b
+          L32I(5, 3, 0),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0xc1
+          L32I(5, 3, 0),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0xbe
+          L32I(5, 3, 0),
+          S32I(5, 6, 0), // 0xe2
+          L32I(5, 3, 12),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // 0x73
+          L32I(5, 3, 12),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 1),
+          S32I(5, 6, 0), // 0x93
+          L32I(5, 3, 12),
+          SRLI(5, 5, 8),
+          S32I(5, 6, 0), // 0x17
+          L32I(5, 3, 12),
+          S32I(5, 6, 0), // 0x2a
+          J(BR(-1)),
+        ],
+      ),
+    );
+    c.step(600);
+    expect([...c.drainUart()]).toEqual([0x6b, 0xc1, 0xbe, 0xe2, 0x73, 0x93, 0x17, 0x2a]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

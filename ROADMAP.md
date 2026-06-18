@@ -1863,6 +1863,13 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       xorshift32 stream (seed 0xa5a5a5a5) so runs are reproducible while each read
       advances the word. KAT: v1=0x3330a88d, v2=0xe202683d. Used pervasively by real
       IDF (mbedTLS/lwIP/BT)
+- [x] ESP32-S3 core slice 151 — AES-CBC via the AES-DMA path, encrypt + decrypt
+      (landed 2026-06-18): on the S3 all non-ECB AES runs through GDMA. AES now
+      consumes plaintext from the GDMA OUT channel (peripheral AES0 = trigger id 6)
+      and writes ciphertext to the GDMA IN channel, CBC-chained from AES_IV_BASE
+      (+0x50). New regs AES_DMA_ENABLE (+0x90), AES_BLOCK_MODE (+0x94, CBC=1),
+      AES_BLOCK_NUM (+0x98). KAT: NIST SP 800-38A AES-128-CBC vectors round-trip
+      end-to-end through real GDMA descriptors. Cuts: CTR mode, DMA-mode interrupt test
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

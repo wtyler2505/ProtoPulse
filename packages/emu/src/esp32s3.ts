@@ -921,6 +921,13 @@ const AES_MODE_AES128_ENC = 0;
 const AES_STATE_DONE = 2;
 const AES_INT_CLR = 0xac; // write 1 to clear the completion interrupt
 const AES_INT_ENA = 0xb0; // write 1 to enable the completion interrupt
+// DMA-AES mode (CBC/CTR/... all go through GDMA on the S3): IV, DMA-enable,
+// block-mode and block-count registers (verified vs hwcrypto_reg.h + aes_ll.h).
+const AES_IV_BASE = 0x50; // 4-word (16-byte) IV / nonce
+const AES_DMA_ENABLE = 0x90; // 1 = DMA-AES path (vs the typical CPU path)
+const AES_BLOCK_MODE = 0x94; // esp_aes_mode_t: ECB=0, CBC=1, OFB=2, CTR=3, CFB8=4, CFB128=5
+const AES_BLOCK_NUM = 0x98; // number of 16-byte blocks to process
+const AES_BLOCK_MODE_CBC = 1;
 // RSA / MPI big-number accelerator (DR_REG_RSA_BASE). Operand memory blocks hold
 // little-endian 32-bit words (up to 128 = 4096 bits). Block bases and operation
 // registers verified against esp-idf bignum_alt.c (non-ESP32 branch) + mpi_ll.h.
@@ -1968,6 +1975,7 @@ const GDMA_OUTLINK_STOP = 1 << 20;
 const GDMA_OUTLINK_START = 1 << 21;
 const GDMA_OUTLINK_RESTART = 1 << 22;
 const GDMA_OUTLINK_PARK = 1 << 23;
+const GDMA_PERI_AES = 6; // SOC_GDMA_TRIG_PERIPH_AES0
 const GDMA_PERI_ADC_DAC = 8;
 const GDMA_PERI_RMT = 9;
 const GDMA_PERI_NONE = 0x3f;
@@ -2644,6 +2652,10 @@ export class Esp32s3Core implements McuCore {
   private aesIn: number[] = new Array(4).fill(0);
   private aesOut: number[] = new Array(4).fill(0);
   private aesState = 0; // 0 idle / 2 done
+  private aesIv: number[] = new Array(4).fill(0); // CBC/CTR IV (4 words)
+  private aesDmaEnable = 0;
+  private aesBlockMode = 0; // 0 = ECB, 1 = CBC, 3 = CTR
+  private aesBlockNum = 0;
   private aesIntRaw = 0;
   private aesIntEna = 0;
   private aesIntMaps: InterruptMapPair = freshInterruptMapPair();
@@ -3729,6 +3741,64 @@ export class Esp32s3Core implements McuCore {
     }
   }
 
+  // DMA-AES: pull plaintext (or ciphertext) words from the AES-connected GDMA OUT
+  // channel, run the cipher with CBC chaining, and push the result to the AES IN
+  // channel. Words use the same big-endian-block convention as the CPU-FIFO path;
+  // CBC's XOR is bitwise so it is applied word-wise. The IV register seeds block 0
+  // and is updated to the last cipher block for chaining the next call.
+  private aesRunDma(): void {
+    const decrypt = this.aesMode >= 4;
+    const sizeSel = this.aesMode & 3;
+    const nk = sizeSel === 0 ? 4 : sizeSel === 1 ? 6 : 8;
+    const keyBytes: number[] = [];
+    for (let w = 0; w < nk; w++) {
+      const k = this.aesKey[w] ?? 0;
+      keyBytes.push((k >>> 24) & 0xff, (k >>> 16) & 0xff, (k >>> 8) & 0xff, k & 0xff);
+    }
+    const rk = aesExpandKey(keyBytes, nk);
+    const nr = nk + 6;
+    const txCh = this.gdmaTx.find((t) => (t.active || t.started) && t.periSel === GDMA_PERI_AES);
+    const rxCh = this.gdmaRx.find((r) => (r.active || r.started) && r.periSel === GDMA_PERI_AES);
+    if (txCh === undefined || rxCh === undefined) return;
+    const inWords = this.gdmaReadTxSymbols(txCh);
+    const blocks = this.aesBlockNum > 0 ? this.aesBlockNum : inWords.length >> 2;
+    let prev = [this.aesIv[0] ?? 0, this.aesIv[1] ?? 0, this.aesIv[2] ?? 0, this.aesIv[3] ?? 0];
+    const toBytes = (words: number[]): number[] => {
+      const out: number[] = [];
+      for (let w = 0; w < 4; w++) {
+        const x = words[w] ?? 0;
+        out.push((x >>> 24) & 0xff, (x >>> 16) & 0xff, (x >>> 8) & 0xff, x & 0xff);
+      }
+      return out;
+    };
+    const toWords = (bytes: number[]): number[] => {
+      const out = [0, 0, 0, 0];
+      for (let w = 0; w < 4; w++) {
+        out[w] = (((bytes[4 * w] ?? 0) << 24) | ((bytes[4 * w + 1] ?? 0) << 16) | ((bytes[4 * w + 2] ?? 0) << 8) | (bytes[4 * w + 3] ?? 0)) >>> 0;
+      }
+      return out;
+    };
+    for (let b = 0; b < blocks; b++) {
+      const blk = [inWords[b * 4] ?? 0, inWords[b * 4 + 1] ?? 0, inWords[b * 4 + 2] ?? 0, inWords[b * 4 + 3] ?? 0];
+      let outWords: number[];
+      if (decrypt) {
+        // CBC decrypt: P = D(C) XOR prev; prev becomes this ciphertext block.
+        const dec = toWords(aesDecryptBlock(toBytes(blk), rk, nr));
+        outWords = [0, 0, 0, 0];
+        for (let w = 0; w < 4; w++) outWords[w] = ((dec[w] ?? 0) ^ (prev[w] ?? 0)) >>> 0;
+        prev = blk;
+      } else {
+        // CBC encrypt: C = E(P XOR prev); prev becomes this ciphertext block.
+        const x = [0, 0, 0, 0];
+        for (let w = 0; w < 4; w++) x[w] = ((blk[w] ?? 0) ^ (prev[w] ?? 0)) >>> 0;
+        outWords = toWords(aesEncryptBlock(toBytes(x), rk, nr));
+        prev = outWords;
+      }
+      for (const ow of outWords) this.gdmaPushRxWord(rxCh, ow >>> 0);
+    }
+    this.aesIv = [prev[0] ?? 0, prev[1] ?? 0, prev[2] ?? 0, prev[3] ?? 0];
+  }
+
   /** esp_cpu_stall's split 0x86 code, both halves present. */
   private core1RtcStalled(): boolean {
     return (
@@ -3794,6 +3864,10 @@ export class Esp32s3Core implements McuCore {
     this.aesIn = new Array(4).fill(0);
     this.aesOut = new Array(4).fill(0);
     this.aesState = 0;
+    this.aesIv = new Array(4).fill(0);
+    this.aesDmaEnable = 0;
+    this.aesBlockMode = 0;
+    this.aesBlockNum = 0;
     this.aesIntRaw = 0;
     this.aesIntEna = 0;
     this.aesIntMaps = freshInterruptMapPair();
@@ -7845,6 +7919,21 @@ export class Esp32s3Core implements McuCore {
         this.aesIn[(off - AES_TEXT_IN_BASE) >> 2] = v;
       } else if (off === AES_MODE) {
         this.aesMode = v;
+      } else if (off >= AES_IV_BASE && off < AES_IV_BASE + 4 * 4 && (off & 3) === 0) {
+        this.aesIv[(off - AES_IV_BASE) >> 2] = v;
+      } else if (off === AES_DMA_ENABLE) {
+        this.aesDmaEnable = v;
+      } else if (off === AES_BLOCK_MODE) {
+        this.aesBlockMode = v;
+      } else if (off === AES_BLOCK_NUM) {
+        this.aesBlockNum = v;
+      } else if (off === AES_TRIGGER && this.aesDmaEnable !== 0) {
+        if ((v & 1) !== 0) {
+          this.aesRunDma(); // CBC/CTR via GDMA-fed data
+          this.aesState = AES_STATE_DONE;
+          this.aesIntRaw = 1;
+          this.recomputeIrq();
+        }
       } else if (off === AES_TRIGGER) {
         if ((v & 1) !== 0) {
           // Modes: 0/1/2 = AES-128/192/256 encrypt, 4/5/6 = the same decrypt.
