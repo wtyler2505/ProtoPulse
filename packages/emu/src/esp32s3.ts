@@ -664,6 +664,7 @@ const INTMTX_PWM1_MAP = 0x080; // INTERRUPT_CORE0_PWM1_INTR_MAP_REG
 const INTMTX_LEDC_MAP = 0x08c; // INTERRUPT_CORE0_LEDC_INT_MAP_REG
 const INTMTX_EFUSE_MAP = 0x090; // INTERRUPT_CORE0_EFUSE_INT_MAP_REG (source 36)
 const INTMTX_SHA_MAP = 0x150; // INTERRUPT_CORE0_SHA_INT_MAP_REG (source 84: 0x040 + 4*(84-16))
+const INTMTX_AES_MAP = 0x14c; // INTERRUPT_CORE0_AES_INT_MAP_REG (source 83: 0x040 + 4*(83-16))
 const INTMTX_CAN_MAP = 0x094; // INTERRUPT_CORE0_CAN_INT_MAP_REG
 const INTMTX_RTC_CORE_MAP = 0x09c; // INTERRUPT_CORE0_RTC_CORE_INTR_MAP_REG
 const INTMTX_RMT_MAP = 0x0a0; // INTERRUPT_CORE0_RMT_INTR_MAP_REG
@@ -917,6 +918,8 @@ const AES_TRIGGER = 0x48; // write 1 to start
 const AES_STATE = 0x4c; // 0 idle / 1 busy / 2 done
 const AES_MODE_AES128_ENC = 0;
 const AES_STATE_DONE = 2;
+const AES_INT_CLR = 0xac; // write 1 to clear the completion interrupt
+const AES_INT_ENA = 0xb0; // write 1 to enable the completion interrupt
 const SHA_BASE = 0x6003b000;
 const SHA_MODE = 0x00;
 const SHA_START = 0x10;
@@ -2492,6 +2495,9 @@ export class Esp32s3Core implements McuCore {
   private aesIn: number[] = new Array(4).fill(0);
   private aesOut: number[] = new Array(4).fill(0);
   private aesState = 0; // 0 idle / 2 done
+  private aesIntRaw = 0;
+  private aesIntEna = 0;
+  private aesIntMaps: InterruptMapPair = freshInterruptMapPair();
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
@@ -3600,6 +3606,9 @@ export class Esp32s3Core implements McuCore {
     this.aesIn = new Array(4).fill(0);
     this.aesOut = new Array(4).fill(0);
     this.aesState = 0;
+    this.aesIntRaw = 0;
+    this.aesIntEna = 0;
+    this.aesIntMaps = freshInterruptMapPair();
     this.pcntIntRaw = 0;
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
@@ -6600,6 +6609,7 @@ export class Esp32s3Core implements McuCore {
     if (rtcPending) raise(this.rtcCoreIntMaps);
     if ((this.efuseIntRaw & this.efuseIntEna) !== 0) raise(this.efuseIntMaps);
     if ((this.shaIntRaw & this.shaIntEna) !== 0) raise(this.shaIntMaps);
+    if ((this.aesIntRaw & this.aesIntEna) !== 0) raise(this.aesIntMaps);
     for (let n = 0; n < this.systimer.comps.length; n++) {
       const c = this.systimer.comps[n];
       if (c !== undefined && (this.systimer.intRaw & this.systimer.intEna & (1 << n)) !== 0) raise(c.maps);
@@ -7012,6 +7022,7 @@ export class Esp32s3Core implements McuCore {
         return (this.aesKey[(off - AES_KEY_BASE) >> 2] ?? 0) >>> 0;
       }
       if (off === AES_MODE) return this.aesMode >>> 0;
+      if (off === AES_INT_ENA) return this.aesIntEna >>> 0;
       return 0;
     }
     if (addr >= SHA_BASE && addr < SHA_BASE + 0x1000) {
@@ -7128,6 +7139,7 @@ export class Esp32s3Core implements McuCore {
       if (sourceOff === INTMTX_CAN_MAP) return this.twai.maps[core];
       if (sourceOff === INTMTX_EFUSE_MAP) return this.efuseIntMaps[core];
       if (sourceOff === INTMTX_SHA_MAP) return this.shaIntMaps[core];
+      if (sourceOff === INTMTX_AES_MAP) return this.aesIntMaps[core];
       if (sourceOff === INTMTX_RTC_CORE_MAP) return this.rtcCoreIntMaps[core];
       if (sourceOff === INTMTX_RMT_MAP) return this.rmtIntMaps[core];
       if (sourceOff === INTMTX_PCNT_MAP) return this.pcntIntMaps[core];
@@ -7600,7 +7612,15 @@ export class Esp32s3Core implements McuCore {
             }
           }
           this.aesState = AES_STATE_DONE;
+          this.aesIntRaw = 1; // completion asserts the (level) done interrupt
+          this.recomputeIrq();
         }
+      } else if (off === AES_INT_ENA) {
+        this.aesIntEna = v;
+        this.recomputeIrq();
+      } else if (off === AES_INT_CLR) {
+        this.aesIntRaw = 0;
+        this.recomputeIrq();
       }
       return;
     }
@@ -7794,6 +7814,9 @@ export class Esp32s3Core implements McuCore {
         this.recomputeIrq();
       } else if (sourceOff === INTMTX_SHA_MAP) {
         this.shaIntMaps[core] = value & 0x1f;
+        this.recomputeIrq();
+      } else if (sourceOff === INTMTX_AES_MAP) {
+        this.aesIntMaps[core] = value & 0x1f;
         this.recomputeIrq();
       } else if (sourceOff === INTMTX_RTC_CORE_MAP) this.rtcCoreIntMaps[core] = value & 0x1f;
       else if (sourceOff === INTMTX_RMT_MAP) this.rmtIntMaps[core] = value & 0x1f;

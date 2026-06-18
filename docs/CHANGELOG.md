@@ -2,6 +2,29 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 140: AES done-interrupt routing
+
+### Added
+- **AES completion interrupt** (@protopulse/emu): the AES accelerator now raises
+  its done interrupt through the interrupt matrix. Completing a block (writing
+  `AES_TRIGGER` +0x48) asserts a level interrupt that is gated by `AES_INT_ENA`
+  (+0xb0) and cleared by `AES_INT_CLR` (+0xac). AES is interrupt source 83
+  (`ETS_AES_INTR_SOURCE`, one slot before SHA=84), so its matrix map sits at
+  `INTERRUPT_CORE0_AES_INT_MAP_REG` = INTMTX + 0x14c (0x040 + 4·(83−16)) — the
+  same eFuse/SHA routing pattern.
+
+### Verified
+- A new known-answer test arms `AES_INT_ENA`, maps source 83 to CPU line 0,
+  encrypts one AES-128 block, and confirms the ISR fires exactly once: the
+  counter stays 1 after the ISR clears `AES_INT_CLR` (no level re-fire).
+- `npm run -w @protopulse/emu test` passed with 299 package tests
+  (212 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- CBC/CTR chaining with IV and the AES DMA path remain follow-on. The AES
+  accelerator now does ECB encrypt/decrypt for all three key sizes plus its
+  completion interrupt.
+
 ## 2026-06-18 — ESP32-S3 slice 139: AES ECB decrypt (128/192/256)
 
 ### Added

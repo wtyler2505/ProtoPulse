@@ -1796,6 +1796,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       Two known-answer tests round-trip the FIPS-197 vectors back to plaintext.
       The accelerator now does AES-128/192/256 ECB encrypt AND decrypt. Cuts:
       CBC/CTR, DMA path, AES interrupt
+- [x] ESP32-S3 core slice 140 — AES done-interrupt routing (landed
+      2026-06-18): completing a block asserts a level interrupt gated by
+      AES_INT_ENA (+0xb0) / cleared by AES_INT_CLR (+0xac); AES is source 83
+      (one before SHA=84), matrix map at INTMTX + 0x14c (0x040 + 4*(83-16)),
+      same eFuse/SHA pattern. A known-answer test confirms the ISR fires
+      exactly once and does not re-fire after the clear. Cuts: CBC/CTR, DMA path
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

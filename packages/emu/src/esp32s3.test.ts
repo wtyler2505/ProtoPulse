@@ -2380,6 +2380,76 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([2, 0x69, 0xd8, 0x6a, 0x30, 0xd8, 0x80, 0x70, 0x5a]);
   });
 
+  it('routes the AES done interrupt through the interrupt matrix to a level-1 handler', () => {
+    // AES is interrupt source 83 (interrupts.h ETS_AES_INTR_SOURCE, one slot before
+    // SHA=84), so its matrix map sits at INTMTX + 0x14c (0x040 + 4*(83-16)).
+    // AES_INT_ENA (+0xb0) arms the level interrupt; completing a block (TRIGGER
+    // +0x48) asserts it; the ISR clears it through AES_INT_CLR (+0xac). The guest
+    // encrypts one AES-128 block (plaintext left zero — only the interrupt matters)
+    // and the ISR runs exactly once: the counter stays 1 after the clear (no re-fire).
+    const AES = 0x6003a000;
+    const SCRATCH = ESP32S3_DRAM_BASE + 0x9c0;
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [UART, AES, INTMTX, SCRATCH, ESP32S3_IRAM_BASE, 0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f], [
+        L32R(13, 3), // scratch
+        MOVI(14, 0),
+        S32I(14, 13, 0), // ISR counter = 0
+        L32R(14, 4),
+        WSR(14, SR.VECBASE),
+
+        L32R(3, 1), // AES base
+        MOVI(4, 1),
+        S32I(4, 3, 0xb0), // AES_INT_ENA = 1
+
+        L32R(15, 2), // interrupt matrix
+        MOVI(4, 0),
+        S32I(4, 15, 0x14c), // AES source (83) -> CPU line 0
+        MOVI(4, 1),
+        WSR(4, SR.INTENABLE),
+        RSIL(12, 0),
+
+        L32R(4, 5),
+        S32I(4, 3, 0x00), // KEY[0]
+        L32R(4, 6),
+        S32I(4, 3, 0x04), // KEY[1]
+        L32R(4, 7),
+        S32I(4, 3, 0x08), // KEY[2]
+        L32R(4, 8),
+        S32I(4, 3, 0x0c), // KEY[3]
+        MOVI(4, 0),
+        S32I(4, 3, 0x40), // MODE = AES-128 encrypt
+        MOVI(4, 1),
+        S32I(4, 3, 0x48), // TRIGGER -> block done -> interrupt asserts
+
+        MOVI(11, 1),
+        L32I(4, 13, 0),
+        BNE(4, 11, BR(-2)), // spin until the ISR has run
+
+        L32R(2, 0), // UART
+        S32I(4, 2, 0x00), // ISR counter (expect 1)
+        L32I(4, 13, 0),
+        S32I(4, 2, 0x00), // counter again — still 1 (no re-fire after clear)
+        J(BR(-1)),
+
+        PAD_TO(0x340),
+        WSR(2, SR.EXCSAVE1),
+        L32R(2, 3), // scratch
+        S32I(3, 2, 8), // save a3
+        L32I(3, 2, 0),
+        ADDI(3, 3, 1),
+        S32I(3, 2, 0), // ISR counter++
+        L32R(3, 1), // AES base
+        MOVI(4, 1),
+        S32I(4, 3, 0xac), // AES_INT_CLR
+        L32I(3, 2, 8), // restore a3
+        RSR(2, SR.EXCSAVE1),
+        RFE(),
+      ]),
+    );
+    c.step(800);
+    expect([...c.drainUart()]).toEqual([1, 1]);
+  });
+
   it('encrypts a block through the AES-192 ECB accelerator', () => {
     // AES-192 (AES_MODE = 1): 6 key words. FIPS-197 vector: key 000102..17,
     // plaintext 00112233..ff -> ciphertext dda97ca4 864cdfe0 6eaf70a0 ec0d7191.
