@@ -2784,6 +2784,86 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUart()]).toEqual([1, 0xe6, 0x0a]);
   });
 
+  it('computes a modular multiply through the RSA accelerator', () => {
+    // RSA_MOD_MULT_START (+0x810) computes Z = (X * Y) mod M, same operand block
+    // layout as MODEXP (X @ +0x600, Y @ +0x400, M @ +0x000, result Z @ +0x200),
+    // LENGTH (+0x804) = num_words - 1. One 32-bit word: 123456 * 789 = 97406784,
+    // mod 1000000 = 406784 (= 0x063500). The guest emits the three low bytes.
+    const RSA = 0x6003c000;
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [RSA + 0x600, RSA + 0x400, RSA + 0x000, RSA + 0x200, RSA + 0x800, UART, 123456, 789, 1000000],
+        [
+          L32R(2, 0), // X block base
+          L32R(3, 1), // Y block base
+          L32R(5, 2), // M block base
+          L32R(9, 3), // Z block base
+          L32R(7, 4), // control bank base
+          L32R(6, 5), // UART
+          L32R(4, 6),
+          S32I(4, 2, 0), // X[0] = 123456
+          L32R(4, 7),
+          S32I(4, 3, 0), // Y[0] = 789
+          L32R(4, 8),
+          S32I(4, 5, 0), // M[0] = 1000000
+          MOVI(4, 0),
+          S32I(4, 7, 0x04), // RSA_LENGTH = 0
+          MOVI(4, 1),
+          S32I(4, 7, 0x10), // RSA_MOD_MULT_START
+          L32I(4, 9, 0), // Z[0] = 406784 = 0x00063500
+          S32I(4, 6, 0), // 0x00
+          SRLI(4, 4, 8),
+          S32I(4, 6, 0), // 0x35
+          SRLI(4, 4, 8),
+          S32I(4, 6, 0), // 0x06
+          MOVI(4, 1),
+          S32I(4, 7, 0x1c), // RSA_CLEAR_INTERRUPT
+          J(BR(-1)),
+        ],
+      ),
+    );
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([0x00, 0x35, 0x06]);
+  });
+
+  it('computes a full-width multiply through the RSA accelerator', () => {
+    // RSA_MULT_START (+0x814) computes Z = X * Y (no modulus). X goes in the X
+    // block; Y is left-extended into the Z block at word-offset num_words; LENGTH
+    // (+0x804) = num_words*2 - 1; the 2*num_words-word product is read from the Z
+    // block. num_words=1: 0xffffffff * 2 = 0x1_fffffffe -> Z[0]=0xfffffffe, Z[1]=1.
+    const RSA = 0x6003c000;
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [RSA + 0x600, RSA + 0x200, RSA + 0x800, UART, 0xffffffff, 2],
+        [
+          L32R(2, 0), // X block base
+          L32R(9, 1), // Z block base
+          L32R(7, 2), // control bank base
+          L32R(6, 3), // UART
+          L32R(4, 4),
+          S32I(4, 2, 0), // X[0] = 0xffffffff
+          L32R(4, 5),
+          S32I(4, 9, 0x04), // Z[1] = 2 (Y left-extended into Z block at word 1)
+          MOVI(4, 1),
+          S32I(4, 7, 0x04), // RSA_LENGTH = num_words*2 - 1 = 1
+          MOVI(4, 1),
+          S32I(4, 7, 0x14), // RSA_MULT_START
+          L32I(4, 9, 0), // Z[0] = 0xfffffffe (low word)
+          S32I(4, 6, 0), // 0xfe
+          SRLI(4, 4, 8),
+          S32I(4, 6, 0), // 0xff
+          L32I(4, 9, 0x04), // Z[1] = 1 (high word)
+          S32I(4, 6, 0), // 0x01
+          J(BR(-1)),
+        ],
+      ),
+    );
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([0xfe, 0xff, 0x01]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

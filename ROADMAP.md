@@ -1816,6 +1816,13 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       the exact result (Montgomery Rinv/Mprime inputs accepted, no effect). KAT:
       textbook RSA 65^17 mod 3233 = 2790. Verified vs esp-idf bignum_alt.c +
       mpi_ll.h + mpi_periph.c. Cuts: MOD_MULT, MULT, RSA matrix interrupt (src 75)
+- [x] ESP32-S3 core slice 143 — RSA modular multiply + full-width multiply
+      (landed 2026-06-18): RSA_MOD_MULT_START (+0x810) -> Z = (X*Y) mod M (same
+      block layout as MODEXP); RSA_MULT_START (+0x814) -> Z = X*Y with Y
+      left-extended into the Z block at word-offset num_words, LENGTH =
+      num_words*2-1, 2*num_words-word product read from Z. Exact BigInt. KATs:
+      123456*789 mod 1000000 = 406784; 0xffffffff*2 = 0x1fffffffe. Cuts: RSA
+      matrix interrupt (source 75 -> INTMTX + 0x130)
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

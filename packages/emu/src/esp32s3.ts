@@ -932,6 +932,8 @@ const RSA_M_DASH = 0x800; // Mprime = -M^-1 mod 2^32 (HW-internal; accepted, unu
 const RSA_LENGTH = 0x804; // operand length in words minus 1
 const RSA_QUERY_CLEAN = 0x808; // reads 0 when memory init is complete (ready)
 const RSA_MODEXP_START = 0x80c; // write 1 -> Z = X^Y mod M
+const RSA_MOD_MULT_START = 0x810; // write 1 -> Z = (X * Y) mod M
+const RSA_MULT_START = 0x814; // write 1 -> Z = X * Y (Y left-extended into the Z block)
 const RSA_QUERY_INTERRUPT = 0x818; // reads 1 when an operation is done (0 while busy)
 const RSA_CLEAR_INTERRUPT = 0x81c; // write 1 -> clear the done status
 const RSA_INT_ENA = 0x82c; // RSA_INTERRUPT_REG: matrix-interrupt enable
@@ -7732,6 +7734,30 @@ export class Esp32s3Core implements McuCore {
           const zWords = rsaBigToWords(rsaModPow(x, y, m), nw);
           for (let i = 0; i < nw; i++) this.rsaZ[i] = zWords[i] ?? 0;
           this.rsaIntRaw = 1; // operation complete
+        }
+      } else if (off === RSA_MOD_MULT_START) {
+        if ((v & 1) !== 0) {
+          // Z = (X * Y) mod M over (RSA_LENGTH + 1) little-endian words.
+          const nw = (this.rsaLength & (RSA_MEM_WORDS - 1)) + 1;
+          const x = rsaWordsToBig(this.rsaX, nw);
+          const y = rsaWordsToBig(this.rsaY, nw);
+          const m = rsaWordsToBig(this.rsaM, nw);
+          const zWords = rsaBigToWords(m <= 1n ? 0n : (x * y) % m, nw);
+          for (let i = 0; i < nw; i++) this.rsaZ[i] = zWords[i] ?? 0;
+          this.rsaIntRaw = 1;
+        }
+      } else if (off === RSA_MULT_START) {
+        if ((v & 1) !== 0) {
+          // Z = X * Y. LENGTH = 2*num_words - 1; X is in the X block, Y is
+          // left-extended into the Z block at word-offset num_words. The
+          // 2*num_words-word product is written back to the Z block.
+          const total = (this.rsaLength & (2 * RSA_MEM_WORDS - 1)) + 1;
+          const half = total >> 1;
+          const x = rsaWordsToBig(this.rsaX, half);
+          const y = rsaWordsToBig(this.rsaZ.slice(half), half);
+          const zWords = rsaBigToWords(x * y, total);
+          for (let i = 0; i < total; i++) this.rsaZ[i] = zWords[i] ?? 0;
+          this.rsaIntRaw = 1;
         }
       } else if (off === RSA_CLEAR_INTERRUPT) {
         this.rsaIntRaw = 0;

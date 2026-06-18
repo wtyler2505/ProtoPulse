@@ -2,6 +2,27 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 143: RSA modular multiply + full-width multiply
+
+### Added
+- **RSA/MPI accelerator — MOD_MULT and MULT** (@protopulse/emu): two more
+  operations on the RSA peripheral. `RSA_MOD_MULT_START` (+0x810) computes
+  Z = (X · Y) mod M with the same operand-block layout as MODEXP. `RSA_MULT_START`
+  (+0x814) computes the full-width product Z = X · Y (no modulus): X sits in the
+  X block while Y is left-extended into the Z block at word-offset num_words, and
+  `RSA_LENGTH` (+0x804) = num_words·2 − 1; the 2·num_words-word product is read
+  back from the Z block. Both use exact BigInt arithmetic.
+
+### Verified
+- Known-answer tests: MOD_MULT of 123456·789 mod 1000000 = 406784, and MULT of
+  0xffffffff · 2 = 0x1fffffffe (Z[0]=0xfffffffe, Z[1]=1).
+- `npm run -w @protopulse/emu test` passed with 302 package tests
+  (215 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- The RSA done interrupt routed through the matrix (source 75 → INTMTX + 0x130)
+  remains follow-on. The accelerator now does MODEXP, MOD_MULT, and MULT.
+
 ## 2026-06-18 — ESP32-S3 slice 142: RSA accelerator modular exponentiation
 
 ### Added
