@@ -2,6 +2,23 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 159: AES-OFB through the AES-DMA path
+
+### Added
+- **AES-OFB mode** (@protopulse/emu): the GDMA-fed AES-DMA path now supports
+  output feedback (`AES_BLOCK_MODE = 2`). The keystream block `O_i = E(O_{i-1})`
+  starts from the IV and feeds back the cipher output itself, so encrypt and
+  decrypt are the identical operation.
+
+### Verified
+- A known-answer test runs NIST SP 800-38A F.4.1 over **two** blocks (so the
+  feedback chaining `O_2 = E(O_1)` is exercised, not just `E(IV)`): key
+  `2b7e1516…`, IV `000102…0f`, plaintext `6bc1bee2…` / `ae2d8a57…` → ciphertext
+  `3b3fd92e…e83cfb4a` / `7789508d…c54ed825`. The vector was independently
+  confirmed against OpenSSL (`aes-128-ofb`) before the test was written.
+- `npm run -w @protopulse/emu test` passed with 319 package tests
+  (232 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 158: AES-256-GCM through the AES-DMA path
 
 ### Added

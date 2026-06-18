@@ -1904,6 +1904,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       AES-GCM path works with a 256-bit key (AES_MODE = 2 / Nk=8), not just AES-128.
       KAT: NIST GCM Test Case 15 (256-bit all-zero key/IV, one zero block) → ciphertext
       cea7403d…baf39d18, tag d0d1c8a7…d48ab919; vector pre-confirmed against OpenSSL.
+- [x] ESP32-S3 core slice 159 — AES-OFB (landed 2026-06-18): the AES-DMA path adds
+      output-feedback mode (AES_BLOCK_MODE = 2), keystream O_i = E(O_{i-1}) from the IV,
+      enc == dec. KAT: NIST SP 800-38A F.4.1 over two blocks (exercises O_2 = E(O_1)) →
+      3b3fd92e…e83cfb4a / 7789508d…c54ed825; vector pre-confirmed against OpenSSL.
+      AES now covers ECB/CBC/CTR/OFB/GCM(+AAD). Cut: CFB128 (needs the hardware
+      enc/dec direction convention verified against the TRM first), partial-block.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

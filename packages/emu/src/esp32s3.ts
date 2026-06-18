@@ -928,6 +928,7 @@ const AES_DMA_ENABLE = 0x90; // 1 = DMA-AES path (vs the typical CPU path)
 const AES_BLOCK_MODE = 0x94; // esp_aes_mode_t: ECB=0, CBC=1, OFB=2, CTR=3, CFB8=4, CFB128=5
 const AES_BLOCK_NUM = 0x98; // number of 16-byte blocks to process
 const AES_BLOCK_MODE_CBC = 1;
+const AES_BLOCK_MODE_OFB = 2;
 const AES_BLOCK_MODE_CTR = 3;
 const AES_BLOCK_MODE_GCM = 6;
 const AES_H_MEM = 0x60; // GCM hash subkey H = E(0) (read)
@@ -3864,6 +3865,14 @@ export class Esp32s3Core implements McuCore {
         outWords = [0, 0, 0, 0];
         for (let w = 0; w < 4; w++) outWords[w] = ((blk[w] ?? 0) ^ (ks[w] ?? 0)) >>> 0;
         prev = [prev[0] ?? 0, prev[1] ?? 0, prev[2] ?? 0, ((prev[3] ?? 0) + 1) >>> 0];
+      } else if (this.aesBlockMode === AES_BLOCK_MODE_OFB) {
+        // OFB: the keystream block O_i = E(O_{i-1}) starting from the IV; out = in XOR O_i.
+        // The feedback is the cipher output itself (independent of the data), so encrypt
+        // and decrypt are the identical operation.
+        const ks = toWords(aesEncryptBlock(toBytes(prev), rk, nr));
+        outWords = [0, 0, 0, 0];
+        for (let w = 0; w < 4; w++) outWords[w] = ((blk[w] ?? 0) ^ (ks[w] ?? 0)) >>> 0;
+        prev = ks;
       } else if (decrypt) {
         // CBC decrypt: P = D(C) XOR prev; prev becomes this ciphertext block.
         const dec = toWords(aesDecryptBlock(toBytes(blk), rk, nr));
