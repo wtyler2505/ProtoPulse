@@ -2,6 +2,38 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 137: AES-128 ECB accelerator (new peripheral)
+
+### Added
+- **AES accelerator, AES-128 ECB encrypt** (@protopulse/emu): a new peripheral at
+  `DR_REG_AES_BASE` (0x6003A000), verified against `hwcrypto_reg.h` and the
+  `aes_ll.h` HAL. Models the CPU-driven path: `AES_KEY` (+0x00), `AES_TEXT_IN`
+  (+0x20), `AES_MODE` (+0x40, AES-128 encrypt = 0), `AES_TRIGGER` (+0x48, write 1
+  to start), `AES_STATE` (+0x4c, reads DONE=2 — instantaneous in the model), and
+  `AES_TEXT_OUT` (+0x30). The FIPS-197 cipher is implemented from scratch: the
+  S-box is **generated algebraically** (GF(2⁸) inverse via log/antilog tables +
+  the affine transform — no 256-byte constant table is transcribed), plus the
+  AES-128 key expansion and the round transforms (SubBytes/ShiftRows/MixColumns/
+  AddRoundKey).
+
+### Verified
+- A new known-answer test runs the FIPS-197 AES-128 vector (key `000102…0f`,
+  plaintext `00112233…ff`) and confirms the ciphertext `69c4e0d8…70b4c55a` and
+  `AES_STATE`=DONE — passed on the first run, validating the computed S-box, the
+  key schedule, and the cipher.
+- `npm run -w @protopulse/emu test` passed with 294 package tests
+  (207 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Note
+- This slice was unblocked by reading the ESP-IDF register headers **locally**
+  from the PlatformIO Arduino-ESP32 framework when outbound network/DNS was
+  unavailable — the offline fallback for peripheral register research.
+
+### Cuts (follow-on)
+- AES-192/256, decrypt (inverse S-box + InvMixColumns), CBC/CTR with IV, the DMA
+  path, and the AES interrupt remain follow-on; this lands the AES-128 ECB
+  encrypt path.
+
 ## 2026-06-18 — ESP32-S3 slice 136: SHA-512 and SHA-384 modes (64-bit algorithms)
 
 ### Added

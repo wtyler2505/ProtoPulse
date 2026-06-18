@@ -2311,6 +2311,75 @@ describe('Esp32s3Core', () => {
     ]);
   });
 
+  it('encrypts a block through the AES-128 ECB accelerator', () => {
+    // AES accelerator (DR_REG_AES_BASE 0x6003A000, hwcrypto_reg.h / aes_ll.h):
+    // KEY +0x00 (4 words for AES-128), TEXT_IN +0x20 (4), MODE +0x40 (AES-128
+    // encrypt = 0), TRIGGER +0x48 (write 1), STATE +0x4c (DONE = 2), TEXT_OUT
+    // +0x30 (4). FIPS-197 vector: key 000102..0f, plaintext 00112233..ff ->
+    // ciphertext 69c4e0d8 6a7b0430 d8cdb780 70b4c55a. The guest emits STATE then
+    // the high+low byte of each ciphertext word.
+    const AES = 0x6003a000;
+    const c = core(
+      assembleXtensa(
+        ESP32S3_IRAM_BASE,
+        [AES, UART, 0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff],
+        [
+          L32R(2, 0), // AES base
+          L32R(6, 1), // UART
+          L32R(4, 2),
+          S32I(4, 2, 0x00), // KEY[0]
+          L32R(4, 3),
+          S32I(4, 2, 0x04), // KEY[1]
+          L32R(4, 4),
+          S32I(4, 2, 0x08), // KEY[2]
+          L32R(4, 5),
+          S32I(4, 2, 0x0c), // KEY[3]
+          MOVI(4, 0),
+          S32I(4, 2, 0x40), // MODE = AES-128 encrypt
+          L32R(4, 6),
+          S32I(4, 2, 0x20), // TEXT_IN[0]
+          L32R(4, 7),
+          S32I(4, 2, 0x24), // TEXT_IN[1]
+          L32R(4, 8),
+          S32I(4, 2, 0x28), // TEXT_IN[2]
+          L32R(4, 9),
+          S32I(4, 2, 0x2c), // TEXT_IN[3]
+          MOVI(4, 1),
+          S32I(4, 2, 0x48), // TRIGGER
+          L32I(4, 2, 0x4c),
+          S32I(4, 6, 0), // STATE (expect 2)
+          L32I(5, 2, 0x30),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // out[0] high (0x69)
+          L32I(4, 2, 0x30),
+          S32I(4, 6, 0), // out[0] low (0xd8)
+          L32I(5, 2, 0x34),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // out[1] high (0x6a)
+          L32I(4, 2, 0x34),
+          S32I(4, 6, 0), // out[1] low (0x30)
+          L32I(5, 2, 0x38),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // out[2] high (0xd8)
+          L32I(4, 2, 0x38),
+          S32I(4, 6, 0), // out[2] low (0x80)
+          L32I(5, 2, 0x3c),
+          SRLI(5, 5, 15),
+          SRLI(5, 5, 9),
+          S32I(5, 6, 0), // out[3] high (0x70)
+          L32I(4, 2, 0x3c),
+          S32I(4, 6, 0), // out[3] low (0x5a)
+          J(BR(-1)), // spin
+        ],
+      ),
+    );
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([2, 0x69, 0xd8, 0x6a, 0x30, 0xd8, 0x80, 0x70, 0x5a]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

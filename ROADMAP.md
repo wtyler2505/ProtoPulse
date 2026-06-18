@@ -1776,6 +1776,14 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       (SHA-512/384 of "abc") confirm it. The accelerator now models
       SHA-1/224/256/384/512 + interrupt + multi-block; only the DMA path
       remains follow-on
+- [x] ESP32-S3 core slice 137 — AES-128 ECB accelerator (new peripheral,
+      landed 2026-06-18): DR_REG_AES_BASE 0x6003A000, the CPU-driven path
+      (KEY/TEXT_IN/MODE/TRIGGER/STATE/TEXT_OUT). FIPS-197 cipher from scratch
+      with an algebraically-GENERATED S-box (GF(2^8) inverse + affine, no
+      256-byte table transcribed), key expansion, and the round transforms.
+      A FIPS-197 known-answer test confirms it. Unblocked by reading ESP-IDF
+      headers locally (PlatformIO Arduino-ESP32) when network/DNS was down.
+      Cuts: AES-192/256, decrypt, CBC/CTR, DMA path, AES interrupt
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

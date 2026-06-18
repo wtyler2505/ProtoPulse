@@ -908,6 +908,15 @@ const PCNT_STATUS_ZERO_LAT = 1 << 6;
 // compression) or SHA_CONTINUE (accumulate onto the running state), poll
 // SHA_BUSY (instant here), then read the digest words. Padding is done in
 // firmware, so the engine only models the block compression.
+const AES_BASE = 0x6003a000;
+const AES_KEY_BASE = 0x00; // 8 key words (AES-128 uses the first 4)
+const AES_TEXT_IN_BASE = 0x20; // 4 input words
+const AES_TEXT_OUT_BASE = 0x30; // 4 output words
+const AES_MODE = 0x40; // AES-128 encrypt = 0
+const AES_TRIGGER = 0x48; // write 1 to start
+const AES_STATE = 0x4c; // 0 idle / 1 busy / 2 done
+const AES_MODE_AES128_ENC = 0;
+const AES_STATE_DONE = 2;
 const SHA_BASE = 0x6003b000;
 const SHA_MODE = 0x00;
 const SHA_START = 0x10;
@@ -991,6 +1000,83 @@ const rotr64 = (x: Word64, n: number): Word64 => {
 const shr64 = (x: Word64, n: number): Word64 => {
   if (n < 32) return [x[0] >>> n, ((x[1] >>> n) | (x[0] << (32 - n))) >>> 0];
   return [0, x[0] >>> (n - 32)];
+};
+
+// AES (FIPS-197), CPU-driven ECB path. The S-box is generated algebraically
+// (GF(2^8) multiplicative inverse via log/antilog tables with generator 3, then
+// the affine transform) so no 256-byte constant table is transcribed.
+const aesRotl8 = (x: number, n: number): number => ((x << n) | (x >>> (8 - n))) & 0xff;
+const aesXtime = (a: number): number => ((a << 1) ^ ((a & 0x80) !== 0 ? 0x1b : 0)) & 0xff;
+const AES_SBOX: number[] = (() => {
+  const exp: number[] = new Array(256).fill(0);
+  const log: number[] = new Array(256).fill(0);
+  let x = 1;
+  for (let i = 0; i < 255; i++) {
+    exp[i] = x;
+    log[x] = i;
+    x = (x ^ aesXtime(x)) & 0xff; // x *= 3 in GF(2^8)
+  }
+  const inv = (a: number): number => (a === 0 ? 0 : (exp[(255 - (log[a] ?? 0)) % 255] ?? 0));
+  const box: number[] = new Array(256).fill(0);
+  for (let i = 0; i < 256; i++) {
+    const s = inv(i);
+    box[i] = (s ^ aesRotl8(s, 1) ^ aesRotl8(s, 2) ^ aesRotl8(s, 3) ^ aesRotl8(s, 4) ^ 0x63) & 0xff;
+  }
+  return box;
+})();
+const aesSub = (b: number): number => AES_SBOX[b & 0xff] ?? 0;
+// AES-128 key expansion: 16-byte key -> 11 round keys (each 16 bytes).
+const aesExpandKey128 = (key: number[]): number[] => {
+  const rk: number[] = new Array(176).fill(0);
+  for (let i = 0; i < 16; i++) rk[i] = key[i] ?? 0;
+  const rcon = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
+  for (let i = 16; i < 176; i += 4) {
+    let t0 = rk[i - 4] ?? 0;
+    let t1 = rk[i - 3] ?? 0;
+    let t2 = rk[i - 2] ?? 0;
+    let t3 = rk[i - 1] ?? 0;
+    if (i % 16 === 0) {
+      const r = rcon[i / 16 - 1] ?? 0;
+      const a0 = t0;
+      t0 = aesSub(t1) ^ r; // RotWord + SubWord + Rcon
+      t1 = aesSub(t2);
+      t2 = aesSub(t3);
+      t3 = aesSub(a0);
+    }
+    rk[i] = (rk[i - 16] ?? 0) ^ t0;
+    rk[i + 1] = (rk[i - 15] ?? 0) ^ t1;
+    rk[i + 2] = (rk[i - 14] ?? 0) ^ t2;
+    rk[i + 3] = (rk[i - 13] ?? 0) ^ t3;
+  }
+  return rk;
+};
+// AES-128 encrypt one 16-byte block (column-major state, s[r + 4c]).
+const aesEncryptBlock128 = (input: number[], roundKeys: number[]): number[] => {
+  const s: number[] = new Array(16);
+  for (let i = 0; i < 16; i++) s[i] = ((input[i] ?? 0) ^ (roundKeys[i] ?? 0)) & 0xff; // AddRoundKey 0
+  for (let round = 1; round <= 10; round++) {
+    for (let i = 0; i < 16; i++) s[i] = aesSub(s[i] ?? 0); // SubBytes
+    // ShiftRows: row r rotates left by r (state is column-major, row r at indices r,r+4,r+8,r+12)
+    for (let r = 1; r < 4; r++) {
+      const row = [s[r] ?? 0, s[r + 4] ?? 0, s[r + 8] ?? 0, s[r + 12] ?? 0];
+      for (let c = 0; c < 4; c++) s[r + 4 * c] = row[(c + r) % 4] ?? 0;
+    }
+    if (round !== 10) {
+      for (let c = 0; c < 4; c++) {
+        // MixColumns on column c (bytes s[4c..4c+3])
+        const a0 = s[4 * c] ?? 0;
+        const a1 = s[4 * c + 1] ?? 0;
+        const a2 = s[4 * c + 2] ?? 0;
+        const a3 = s[4 * c + 3] ?? 0;
+        s[4 * c] = (aesXtime(a0) ^ (aesXtime(a1) ^ a1) ^ a2 ^ a3) & 0xff;
+        s[4 * c + 1] = (a0 ^ aesXtime(a1) ^ (aesXtime(a2) ^ a2) ^ a3) & 0xff;
+        s[4 * c + 2] = (a0 ^ a1 ^ aesXtime(a2) ^ (aesXtime(a3) ^ a3)) & 0xff;
+        s[4 * c + 3] = ((aesXtime(a0) ^ a0) ^ a1 ^ a2 ^ aesXtime(a3)) & 0xff;
+      }
+    }
+    for (let i = 0; i < 16; i++) s[i] = (s[i] ?? 0) ^ (roundKeys[16 * round + i] ?? 0); // AddRoundKey
+  }
+  return s;
 };
 
 // Timer groups 0 and 1 (timer_group_reg.h; flow per hal timer_ll.h
@@ -2345,6 +2431,11 @@ export class Esp32s3Core implements McuCore {
   private shaIntRaw = 0;
   private shaIntEna = 0;
   private shaIntMaps: InterruptMapPair = freshInterruptMapPair();
+  private aesMode = 0;
+  private aesKey: number[] = new Array(8).fill(0);
+  private aesIn: number[] = new Array(4).fill(0);
+  private aesOut: number[] = new Array(4).fill(0);
+  private aesState = 0; // 0 idle / 2 done
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
@@ -3448,6 +3539,11 @@ export class Esp32s3Core implements McuCore {
     this.shaIntRaw = 0;
     this.shaIntEna = 0;
     this.shaIntMaps = freshInterruptMapPair();
+    this.aesMode = 0;
+    this.aesKey = new Array(8).fill(0);
+    this.aesIn = new Array(4).fill(0);
+    this.aesOut = new Array(4).fill(0);
+    this.aesState = 0;
     this.pcntIntRaw = 0;
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
@@ -6847,6 +6943,21 @@ export class Esp32s3Core implements McuCore {
     if ((addr >= ROM0_LOW && addr < ROM0_HIGH) || (addr >= ROM1_LOW && addr < ROM1_HIGH)) {
       return this.romRead(addr, bytes);
     }
+    if (addr >= AES_BASE && addr < AES_BASE + 0x1000) {
+      const off = addr - AES_BASE;
+      if (off === AES_STATE) return this.aesState >>> 0;
+      if (off >= AES_TEXT_OUT_BASE && off < AES_TEXT_OUT_BASE + 4 * 4 && (off & 3) === 0) {
+        return (this.aesOut[(off - AES_TEXT_OUT_BASE) >> 2] ?? 0) >>> 0;
+      }
+      if (off >= AES_TEXT_IN_BASE && off < AES_TEXT_IN_BASE + 4 * 4 && (off & 3) === 0) {
+        return (this.aesIn[(off - AES_TEXT_IN_BASE) >> 2] ?? 0) >>> 0;
+      }
+      if (off >= AES_KEY_BASE && off < AES_KEY_BASE + 8 * 4 && (off & 3) === 0) {
+        return (this.aesKey[(off - AES_KEY_BASE) >> 2] ?? 0) >>> 0;
+      }
+      if (off === AES_MODE) return this.aesMode >>> 0;
+      return 0;
+    }
     if (addr >= SHA_BASE && addr < SHA_BASE + 0x1000) {
       const off = addr - SHA_BASE;
       if (off === SHA_BUSY) return 0; // compression is instantaneous in the model
@@ -7398,6 +7509,37 @@ export class Esp32s3Core implements McuCore {
     }
     if ((addr >= ROM0_LOW && addr < ROM0_HIGH) || (addr >= ROM1_LOW && addr < ROM1_HIGH)) {
       throw new Error(`write to ROM address 0x${addr.toString(16)} — the mask ROM is read-only`);
+    }
+    if (addr >= AES_BASE && addr < AES_BASE + 0x1000) {
+      const off = addr - AES_BASE;
+      const v = value >>> 0;
+      if (off >= AES_KEY_BASE && off < AES_KEY_BASE + 8 * 4 && (off & 3) === 0) {
+        this.aesKey[(off - AES_KEY_BASE) >> 2] = v;
+      } else if (off >= AES_TEXT_IN_BASE && off < AES_TEXT_IN_BASE + 4 * 4 && (off & 3) === 0) {
+        this.aesIn[(off - AES_TEXT_IN_BASE) >> 2] = v;
+      } else if (off === AES_MODE) {
+        this.aesMode = v;
+      } else if (off === AES_TRIGGER) {
+        if ((v & 1) !== 0) {
+          if (this.aesMode === AES_MODE_AES128_ENC) {
+            const keyBytes: number[] = [];
+            const inBytes: number[] = [];
+            for (let w = 0; w < 4; w++) {
+              const k = this.aesKey[w] ?? 0;
+              keyBytes.push((k >>> 24) & 0xff, (k >>> 16) & 0xff, (k >>> 8) & 0xff, k & 0xff);
+              const t = this.aesIn[w] ?? 0;
+              inBytes.push((t >>> 24) & 0xff, (t >>> 16) & 0xff, (t >>> 8) & 0xff, t & 0xff);
+            }
+            const out = aesEncryptBlock128(inBytes, aesExpandKey128(keyBytes));
+            for (let w = 0; w < 4; w++) {
+              this.aesOut[w] =
+                (((out[4 * w] ?? 0) << 24) | ((out[4 * w + 1] ?? 0) << 16) | ((out[4 * w + 2] ?? 0) << 8) | (out[4 * w + 3] ?? 0)) >>> 0;
+            }
+          }
+          this.aesState = AES_STATE_DONE;
+        }
+      }
+      return;
     }
     if (addr >= SHA_BASE && addr < SHA_BASE + 0x1000) {
       const off = addr - SHA_BASE;
