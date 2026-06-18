@@ -2968,6 +2968,31 @@ describe('Esp32s3Core', () => {
     expect([...c.drainUsbSerialJtag()]).toEqual([0x48, 0x69]);
   });
 
+  it('reads host console input through the USB-Serial-JTAG RX FIFO', () => {
+    // Host-injected bytes (usbSerialJtagWrite) appear in the OUT endpoint: EP1_CONF
+    // (+0x04) raises SERIAL_OUT_EP_DATA_AVAIL (bit2) while data is pending, and each
+    // read of EP1_REG (+0x00) pops the next RX byte. The guest reads EP1_CONF (expects
+    // data-avail+data-free = 0b110 = 6), pops the byte (0x58 = 'X'), then re-reads
+    // EP1_CONF (RX now empty -> data-free only = 2), emitting each over UART0.
+    const USJ = 0x60038000;
+    const c = core(
+      assembleXtensa(ESP32S3_IRAM_BASE, [USJ, UART], [
+        L32R(2, 0), // USB-Serial-JTAG base
+        L32R(6, 1), // UART
+        L32I(4, 2, 0x04), // EP1_CONF: data-avail(bit2) | data-free(bit1) = 6
+        S32I(4, 6, 0),
+        L32I(4, 2, 0x00), // EP1: pop RX byte 0x58
+        S32I(4, 6, 0),
+        L32I(4, 2, 0x04), // EP1_CONF: RX drained -> data-free only = 2
+        S32I(4, 6, 0),
+        J(BR(-1)),
+      ]),
+    );
+    c.usbSerialJtagWrite(0x58);
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([6, 0x58, 2]);
+  });
+
   it('drains TWAI ACK bus-error events with failed tx_done callbacks', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,

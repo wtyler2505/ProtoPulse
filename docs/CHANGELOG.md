@@ -2,6 +2,25 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-18 — ESP32-S3 slice 146: USB-Serial-JTAG RX console
+
+### Added
+- **USB-Serial-JTAG controller — RX console** (@protopulse/emu): host console input.
+  A new `usbSerialJtagWrite(byte)` host method (mirroring `uartWrite`) injects bytes
+  into the OUT endpoint. `EP1_CONF_REG` (+0x04) raises `SERIAL_OUT_EP_DATA_AVAIL`
+  (bit2) while input is pending, and each read of `EP1_REG` (+0x00) pops the next RX
+  byte from the FIFO.
+
+### Verified
+- A known-answer test injects 'X', confirms `EP1_CONF` reads data-avail+data-free
+  (0b110 = 6), pops the byte (0x58), then re-reads `EP1_CONF` (RX drained → 2).
+- `npm run -w @protopulse/emu test` passed with 305 package tests
+  (218 ESP32-S3); a fresh `tsc --noEmit --incremental false` reported 0 errors.
+
+### Cuts (follow-on)
+- The USB-Serial-JTAG interrupts (`SERIAL_IN_EMPTY` / `SERIAL_OUT_RECV_PKT`, matrix
+  map at INTMTX + 0x180) remain follow-on. The console now does TX and RX.
+
 ## 2026-06-18 — ESP32-S3 slice 145: USB-Serial-JTAG TX console
 
 ### Added

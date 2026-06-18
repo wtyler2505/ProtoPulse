@@ -1835,6 +1835,11 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       +0x04) flushes to the host; EP1_CONF reads SERIAL_IN_EP_DATA_FREE (bit1). New
       drainUsbSerialJtag() host method mirrors drainUart(). KAT: writes "Hi" and
       drains [0x48,0x69]. Cuts: RX path, USB-Serial-JTAG interrupts (INTMTX + 0x180)
+- [x] ESP32-S3 core slice 146 — USB-Serial-JTAG RX console (landed 2026-06-18):
+      host input via new usbSerialJtagWrite(byte) (mirrors uartWrite); EP1_CONF
+      raises SERIAL_OUT_EP_DATA_AVAIL (bit2) while pending, each EP1_REG read pops
+      the next RX byte. KAT: inject 'X', read status (6) -> byte (0x58) -> status
+      (2). Console now does TX + RX. Cuts: USJ interrupts (INTMTX + 0x180)
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

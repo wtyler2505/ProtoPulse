@@ -947,6 +947,7 @@ const USJ_EP1 = 0x00; // RDWR_BYTE [7:0]: the byte FIFO (write TX, read RX)
 const USJ_EP1_CONF = 0x04; // WR_DONE (bit0, W), IN_EP_DATA_FREE (bit1, RO), OUT_EP_DATA_AVAIL (bit2, RO)
 const USJ_WR_DONE = 1 << 0; // write 1 to flush the staged TX bytes to the host
 const USJ_IN_EP_DATA_FREE = 1 << 1; // TX FIFO has room (always, in the model)
+const USJ_OUT_EP_DATA_AVAIL = 1 << 2; // RX FIFO has host-injected data pending
 
 const SHA_BASE = 0x6003b000;
 const SHA_MODE = 0x00;
@@ -2568,6 +2569,7 @@ export class Esp32s3Core implements McuCore {
   private rsaIntMaps: InterruptMapPair = freshInterruptMapPair();
   private usjTxStaging: number[] = []; // bytes written to EP1 not yet flushed
   private usjTxBuffer: number[] = []; // flushed console output, drained by the host
+  private usjRxBuffer: number[] = []; // host-injected console input awaiting the guest
   private pcntIntRaw = 0;
   private pcntIntEna = 0;
   private pcntIntMaps = freshInterruptMapPair();
@@ -3008,6 +3010,13 @@ export class Esp32s3Core implements McuCore {
     const out = Uint8Array.from(this.usjTxBuffer);
     this.usjTxBuffer = [];
     return out;
+  }
+
+  usbSerialJtagWrite(byte: number): void {
+    if (!Number.isInteger(byte) || byte < 0 || byte > 0xff) {
+      throw new Error(`usbSerialJtagWrite expects a byte 0..255 (got ${String(byte)})`);
+    }
+    this.usjRxBuffer.push(byte);
   }
 
   drainI2cWrites(port: 0 | 1 = 0): Uint8Array {
@@ -3696,6 +3705,7 @@ export class Esp32s3Core implements McuCore {
     this.rsaIntMaps = freshInterruptMapPair();
     this.usjTxStaging = [];
     this.usjTxBuffer = [];
+    this.usjRxBuffer = [];
     this.pcntIntRaw = 0;
     this.pcntIntEna = 0;
     this.pcntIntMaps = freshInterruptMapPair();
@@ -7132,8 +7142,11 @@ export class Esp32s3Core implements McuCore {
     }
     if (addr >= USJ_BASE && addr < USJ_BASE + 0x1000) {
       const off = addr - USJ_BASE;
-      if (off === USJ_EP1) return 0; // RX FIFO empty in the TX-only model
-      if (off === USJ_EP1_CONF) return USJ_IN_EP_DATA_FREE; // TX FIFO always has room
+      if (off === USJ_EP1) return (this.usjRxBuffer.shift() ?? 0) >>> 0; // pop the next RX byte
+      if (off === USJ_EP1_CONF) {
+        // TX always has room; OUT_EP_DATA_AVAIL set while host input is pending.
+        return USJ_IN_EP_DATA_FREE | (this.usjRxBuffer.length > 0 ? USJ_OUT_EP_DATA_AVAIL : 0);
+      }
       return 0;
     }
     if (addr >= SHA_BASE && addr < SHA_BASE + 0x1000) {

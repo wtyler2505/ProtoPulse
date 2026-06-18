@@ -83,7 +83,7 @@ Engine monorepo scripts (no database required — see [Section 15](#15-the-engin
 | Script | Description |
 |---|---|
 | `npm run check:packages` | Typecheck every `@protopulse/*` package |
-| `npm run test:packages` | Run all 1,559 engine tests |
+| `npm run test:packages` | Run all 1,560 engine tests |
 | `npm run -w @protopulse/app dev` | New schematic editor on `http://localhost:5174` |
 | `npm run -w @protopulse/cli build` | Build the CLI → `node packages/cli/dist/protopulse.js` |
 
@@ -1446,7 +1446,7 @@ TypeScript strict mode (`strict: true`, no exceptions). Errors are errors — ne
 **Framework**: Vitest 4 with workspace projects (`vitest.config.ts`).
 
 ```bash
-npm test               # All 54 test files, ~1559 tests
+npm test               # All 54 test files, ~1560 tests
 npm run test:watch     # Interactive watch mode
 npm run test:coverage  # v8 coverage report → coverage/
 npx vitest run --project server   # Server tests (node env)
@@ -1626,7 +1626,7 @@ One canonical design graph, many projections. Every mutation is a typed operatio
 
 ```bash
 npm run check:packages           # typecheck every package (one program)
-npm run test:packages            # all 1,559 package tests
+npm run test:packages            # all 1,560 package tests
 npm run -w @protopulse/app dev   # new editor → http://localhost:5174
 npm run -w @protopulse/cli build # then: node packages/cli/dist/protopulse.js check <design>
 ```
