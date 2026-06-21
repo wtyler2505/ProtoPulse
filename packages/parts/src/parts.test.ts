@@ -34,6 +34,7 @@ describe('seed library', () => {
       'core:esp32-s3-wroom-1',
       'core:flame-sensor',
       'core:ir-obstacle',
+      'core:ky006-buzzer',
       'core:ky038',
       'core:l298n',
       'core:lcd1602',
@@ -360,6 +361,22 @@ describe('seed library', () => {
     expect(byKey.get('1')).toBe('power_in');
     expect(byKey.get('2')).toBe('power_in');
     expect(byKey.get('3')).toBe('output'); // push-pull digital
+  });
+
+  it('KY-006 passive buzzer pin map matches the verified 3-pin module', () => {
+    const b = SEED_PARTS.find((p) => p.id === 'core:ky006-buzzer');
+    expect(b).toBeDefined();
+    expect(b?.pins).toHaveLength(3);
+    const byNumber = new Map(b?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('S');
+    expect(byNumber.get('2')).toBe('VCC');
+    expect(byNumber.get('3')).toBe('GND');
+    // S receives the MCU square wave (input to the module); power pins power_in.
+    const byKey = new Map(b?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('input'); // S
+    expect(byKey.get('2')).toBe('power_in');
+    expect(byKey.get('3')).toBe('power_in');
+    expect(b?.refPrefix).toBe('LS');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
