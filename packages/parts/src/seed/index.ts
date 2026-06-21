@@ -1046,6 +1046,40 @@ const flameSensor = definePart({
     'Pin map web-verified 2026-06-21 against circuitdigest + SunFounder Ultimate Sensor Kit flame-sensor pinouts and the LM393 comparator basis (NOT taken from the shared component log): 4-pin module VCC, GND, DO (pot-threshold digital), AO (analog IR level). IR photodiode front-end, ~760–1100 nm. DO/AO outputs, power pins power_in; <7 mA. A 3-pin DO-only variant also ships in some kits — Tyler owns the 4-pin. Header silk order is board-revision-dependent (names/functions fixed). See inbox/2026-06-21-flame-sensor-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// IR obstacle-avoidance sensor module — active IR LED emitter + photodiode receiver +
+// LM393 comparator. 3-pin (digital-only, no analog out): VCC, GND, OUT. OUT is
+// active-LOW — goes low when reflected IR exceeds the pot threshold (obstacle within
+// ~2–20 cm). Schematic-only, footprint deferred.
+const irObstacle = definePart({
+  id: 'core:ir-obstacle',
+  name: 'IR obstacle-avoidance sensor module',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'IR-Obstacle-LM393',
+  manufacturer: 'generic (IR LED + photodiode + LM393)',
+  datasheetUrl: 'https://osoyoo.com/2018/12/21/ir-obstacle-avoidance-module/',
+  pins: [
+    pin('1', 'VCC', 'power_in', '1'), // 3.3–5 V
+    pin('2', 'GND', 'power_in', '2'),
+    pin('3', 'OUT', 'output', '3'), // digital, active-LOW when obstacle detected
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -3 * G, w: 6 * G, h: 6 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'IR-OBST', sizeNm: Math.round(G * 0.42) },
+    ],
+    pins: [
+      { key: '1', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC
+      { key: '2', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '3', at: { x: 4 * G, y: 0 }, dir: 'E' }, // OUT
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // 3.3–5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against Cirkit Designer + osoyoo + multiple IR-obstacle-module pinouts and the LM393 comparator basis (NOT taken from the shared component log): 3-pin module VCC, GND, OUT. Digital-only (no analog out); OUT is active-LOW — goes low when reflected IR exceeds the pot threshold (obstacle ~2–20 cm, 35° cone). Power pins power_in, OUT output. See inbox/2026-06-21-ir-obstacle-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1071,6 +1105,7 @@ export const SEED_PARTS: Part[] = [
   tb6612fng,
   ky038,
   flameSensor,
+  irObstacle,
   pushbutton,
   header2x10,
   usbcPower,

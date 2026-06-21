@@ -33,6 +33,7 @@ describe('seed library', () => {
       'core:ds3231',
       'core:esp32-s3-wroom-1',
       'core:flame-sensor',
+      'core:ir-obstacle',
       'core:ky038',
       'core:l298n',
       'core:lcd1602',
@@ -314,6 +315,20 @@ describe('seed library', () => {
     expect(byKey.get('1')).toBe('power_in');
     expect(byKey.get('3')).toBe('output'); // DO
     expect(byKey.get('4')).toBe('output'); // AO
+  });
+
+  it('IR obstacle sensor pin map matches the verified 3-pin digital module', () => {
+    const ir = SEED_PARTS.find((p) => p.id === 'core:ir-obstacle');
+    expect(ir).toBeDefined();
+    expect(ir?.pins).toHaveLength(3);
+    const byNumber = new Map(ir?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('VCC');
+    expect(byNumber.get('2')).toBe('GND');
+    expect(byNumber.get('3')).toBe('OUT');
+    const byKey = new Map(ir?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('power_in');
+    expect(byKey.get('2')).toBe('power_in');
+    expect(byKey.get('3')).toBe('output'); // active-low digital
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
