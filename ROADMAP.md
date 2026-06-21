@@ -250,7 +250,8 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
 - [x] Firmware-panel core picker (landed 2026-06-11): choose
       ATmega328P or RP2040 at load time; the session rebuilds the core
       on a kind switch (serial monitor + logic analyzer work for both;
-      co-sim bindings remain AVR-flavored pin names)
+      co-sim bindings became core-aware on 2026-06-20 — see the ESP32-S3
+      base completion gate below)
 - [x] AVR timers 1/2, SPI, TWI (landed 2026-06-11): timers 1/2 drive
       their OC pins through the existing port listeners (CTC toggles
       land cycle-exact in the pin-event stream); SPI master against a
@@ -1945,10 +1946,33 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       two blocks so the cross-block byte-feedback carry is exercised; independently
       confirmed via OpenSSL aes-128-cfb8. AES now covers ECB/CBC/CTR/OFB/CFB8/CFB128/
       GCM(+AAD) — the full AES_BLOCK_MODE matrix. Remaining AES cut: partial-block GCM.
+- [x] Co-sim bindings are core-aware (landed 2026-06-20): the Co-sim
+      panel's pin-binding editor now offers the LOADED core's own pin
+      names — ESP32-S3 `IO0`..`IO48` (matching esp32s3PinId), RP2040
+      `GP0`..`GP29`, AVR `PB`/`PD` — instead of a hardcoded AVR PB/PD
+      set. `CORE_KINDS[kind].defaultPins` is the source of truth and
+      `candidatePins` takes the core's defaults (falling back to AVR for
+      back-compat). Closes the last "AVR-flavored pin names" gap left by
+      the firmware-panel core picker.
+- [ ] **ESP32-S3 base — COMPLETION GATE** (the Definition of Done for the
+      ESP32 foundation, so board/sensor breadth can begin): "done" is by
+      app USABILITY, not exhaustive register fidelity — the long tail
+      below is opportunistic, never a gate. Criteria: (1) ✅ `npm run -w
+      @protopulse/emu test` green (236 ESP32-S3 unit tests); (2) ⬜ E2E app
+      smoke — pick ESP32-S3 in the core picker, load a blink `.bin`, a GPIO
+      visibly toggles in the serial monitor / logic analyzer at the
+      expected rate; (3) ⬜ co-sim closed loop — an analog node drives an
+      ADC channel and the firmware reads it back tracking the SPICE node;
+      (4) ✅ co-sim pin labels show ESP32 `IO{n}`, not AVR. (1) and (4) are
+      met in-repo; only the (2)/(3) manual app smoke remains to certify the
+      phase. After certification: pivot to breadth (boards, sensors,
+      modules) — each a bounded slice (host-bus/ADC device model + KAT +
+      bench demo).
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
-      peripherals — walked openly, slice by slice
+      peripherals — walked openly, slice by slice (opportunistic; NOT a
+      gate on the base completion above)
 
 ## v0.6 — The World 🔨 *(sync + community + fab foundations landed; registry and ordering are product decisions)*
 

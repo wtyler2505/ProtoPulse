@@ -140,14 +140,14 @@ export function CosimPanel() {
     );
   }
 
-  const availablePins = candidatePins(session.pins()).filter(
+  const availablePins = candidatePins(session.pins(), CORE_KINDS[session.coreKind].defaultPins).filter(
     (p) => !bindings.some((b) => b.pin === p),
   );
   const effectivePin = availablePins.includes(newPin) ? newPin : (availablePins[0] ?? '');
   const effectiveNet = nets.some((n) => n.id === newNet) ? newNet : (nets[0]?.id ?? '');
 
   // ── Closed-loop feedback candidates: a pin is one direction only. ──
-  const availableInputPins = candidatePins(session.pins()).filter(
+  const availableInputPins = candidatePins(session.pins(), CORE_KINDS[session.coreKind].defaultPins).filter(
     (p) => !bindings.some((b) => b.pin === p) && !inputs.some((i) => i.pin === p),
   );
   const effectiveInputPin = availableInputPins.includes(newInputPin)
