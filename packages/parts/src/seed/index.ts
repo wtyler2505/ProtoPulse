@@ -1355,6 +1355,42 @@ const slotOptocoupler = definePart({
     'Pin map web-verified 2026-06-21 against multiple LM393 slot-optocoupler/speed-sensor module listings (diymore, DAOKI, Geekstory, SAYAL) and the ITR9606 photo-interrupter basis (NOT taken from the shared component log): 3-pin VCC, GND, DO. IR emitter + phototransistor across a 5 mm slot, LM393 squares the output; DO is LOW when the slot is clear and HIGH when an object interrupts the beam (pot sets sensitivity). Used as an encoder/speed sensor with a slotted chopper wheel. A 4-pin VCC/GND/DO/AO variant also exists. Power pins power_in, DO output. See inbox/2026-06-21-slot-optocoupler-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// KY-016 RGB LED module — a 5 mm common-cathode RGB LED with three 150 Ω series
+// resistors on board. 4-pin: R, G, B (each an anode driven by a PWM line through its
+// resistor) and GND (the shared cathode). Drive R/G/B with PWM for full color.
+// Schematic-only, footprint deferred.
+const ky016RgbLed = definePart({
+  id: 'core:ky016-rgb-led',
+  name: 'KY-016 RGB LED module',
+  refPrefix: 'D',
+  class: 'ic',
+  mpn: 'KY-016',
+  manufacturer: 'generic (common-cathode RGB LED)',
+  datasheetUrl: 'https://arduinomodules.info/ky-016-rgb-full-color-led-module/',
+  pins: [
+    pin('1', 'R', 'input', '1'), // red anode (PWM drive via 150Ω)
+    pin('2', 'G', 'input', '2'), // green anode
+    pin('3', 'B', 'input', '3'), // blue anode
+    pin('4', 'GND', 'power_in', '4'), // common cathode / ground
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -3 * G, w: 6 * G, h: 6 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'RGB', sizeNm: Math.round(G * 0.5) },
+    ],
+    pins: [
+      { key: '4', at: { x: -4 * G, y: 0 }, dir: 'W' }, // GND (common cathode)
+      { key: '1', at: { x: 4 * G, y: 2 * G }, dir: 'E' }, // R
+      { key: '2', at: { x: 4 * G, y: 0 }, dir: 'E' }, // G
+      { key: '3', at: { x: 4 * G, y: -2 * G }, dir: 'E' }, // B
+    ],
+  },
+  parametrics: { maxVoltage: 5.5, currentDrawA: 0.06 }, // 3×20 mA per channel
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against arduinomodules + espboards + joy-it SensorKit + Cirkit Designer KY-016 pinouts (NOT taken from the shared component log): 4-pin R, G, B, GND. Common-CATHODE 5 mm RGB LED with three onboard 150 Ω series resistors; R/G/B are anodes driven by PWM lines (modeled as inputs to the module), GND is the shared cathode (power_in). 20 mA/channel; Vf ≈1.8 V red, ≈2.8 V green/blue. refPrefix D. Header silk order is board-revision-dependent (names/functions fixed). See inbox/2026-06-21-ky016-rgb-led-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1389,6 +1425,7 @@ export const SEED_PARTS: Part[] = [
   ky022IrReceiver,
   ky005IrTransmitter,
   slotOptocoupler,
+  ky016RgbLed,
   pushbutton,
   header2x10,
   usbcPower,

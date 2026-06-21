@@ -37,6 +37,7 @@ describe('seed library', () => {
       'core:ky005-ir-transmitter',
       'core:ky006-buzzer',
       'core:ky008-laser',
+      'core:ky016-rgb-led',
       'core:ky022-ir-receiver',
       'core:ky038',
       'core:l298n',
@@ -454,6 +455,22 @@ describe('seed library', () => {
     expect(byKey.get('1')).toBe('power_in');
     expect(byKey.get('2')).toBe('power_in');
     expect(byKey.get('3')).toBe('output'); // digital
+  });
+
+  it('KY-016 RGB LED pin map matches the verified 4-pin common-cathode module', () => {
+    const r = SEED_PARTS.find((p) => p.id === 'core:ky016-rgb-led');
+    expect(r).toBeDefined();
+    expect(r?.pins).toHaveLength(4);
+    const byNumber = new Map(r?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('R');
+    expect(byNumber.get('2')).toBe('G');
+    expect(byNumber.get('3')).toBe('B');
+    expect(byNumber.get('4')).toBe('GND');
+    const byKey = new Map(r?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('input'); // R drive
+    expect(byKey.get('3')).toBe('input'); // B drive
+    expect(byKey.get('4')).toBe('power_in'); // common cathode
+    expect(r?.refPrefix).toBe('D');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
