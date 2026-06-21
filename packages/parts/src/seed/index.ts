@@ -973,6 +973,43 @@ const tb6612fng = definePart({
     'Pin map web-verified 2026-06-21 against the Toshiba TB6612FNG datasheet plus the SparkFun TB6612FNG breakout hookup guide + Cirkit Designer (NOT taken from the shared component log): power VM (≤15 V) / VCC (2.7–5.5 V) / GND, motor outputs AO1/AO2 (A) and BO1/BO2 (B), control PWMA, AIN1, AIN2, STBY, BIN1, BIN2, PWMB. STBY is active-low (pull high to enable). PWMx = speed, xIN1/xIN2 = direction (CW/CCW/brake/stop). MOSFET H-bridge, 1.2 A continuous / 3.2 A peak per channel. Tyler owns the OSEPP shield variant; the TB6612FNG pin functions are identical. See inbox/2026-06-21-tb6612fng-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// KY-038 sound sensor module — electret microphone + LM393 comparator. The canonical
+// "comparator sensor module" pattern (shared by flame/IR/soil/etc.): VCC, GND, a
+// threshold DO (digital, set by the onboard pot) and a continuous AO (analog). Header
+// silk order is board-revision-dependent; pin names/functions are fixed. Schematic-
+// only, footprint deferred. Opens the Tier-2 sensor-module set.
+const ky038 = definePart({
+  id: 'core:ky038',
+  name: 'KY-038 sound sensor module',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'KY-038',
+  manufacturer: 'generic (LM393 comparator + electret mic)',
+  datasheetUrl: 'https://sensorkit.joy-it.net/en/sensors/ky-038',
+  pins: [
+    pin('1', 'VCC', 'power_in', '1'), // 3.3–5 V
+    pin('2', 'GND', 'power_in', '2'),
+    pin('3', 'DO', 'output', '3'), // digital threshold (HIGH when sound > pot setpoint)
+    pin('4', 'AO', 'output', '4'), // analog sound-level out
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -3 * G, w: 6 * G, h: 6 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'KY-038', sizeNm: Math.round(G * 0.5) },
+    ],
+    pins: [
+      { key: '1', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC
+      { key: '2', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '3', at: { x: 4 * G, y: G }, dir: 'E' }, // DO
+      { key: '4', at: { x: 4 * G, y: -G }, dir: 'E' }, // AO
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // 3.3–5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against espboards + circuitdigest + microcontrollerslab KY-038 pinouts and the LM393 comparator basis (NOT taken from the shared component log): pins VCC, GND, DO (digital threshold, set by onboard pot), AO (analog sound level). DO/AO are outputs; power pins power_in. Header silk ORDER is board-revision-dependent (espboards shows +V, GND, DO, AO) — pin names/functions are fixed, numbering follows that order. See inbox/2026-06-21-ky038-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -996,6 +1033,7 @@ export const SEED_PARTS: Part[] = [
   lcd1602,
   rc522,
   tb6612fng,
+  ky038,
   pushbutton,
   header2x10,
   usbcPower,
