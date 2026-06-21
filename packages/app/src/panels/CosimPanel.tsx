@@ -134,7 +134,7 @@ export function CosimPanel() {
             setTab('firmware');
           }}
         >
-          Load a .hex in the Firmware tab →
+          Load firmware in the Firmware tab →
         </button>
       </div>
     );
