@@ -37,6 +37,7 @@ describe('seed library', () => {
       'core:max7219',
       'core:mpu6050',
       'core:ne555',
+      'core:rc522',
       'core:tmp36',
       'core:uln2003-stepper',
     ]);
@@ -231,6 +232,29 @@ describe('seed library', () => {
     expect(byKey.get('6')).toBe('input'); // E
     expect(byKey.get('1')).toBe('power_in'); // VSS
     expect(byKey.get('15')).toBe('power_in'); // A (LED+)
+  });
+
+  it('RC522 RFID module pin map matches the verified 8-pin SPI header', () => {
+    const r = SEED_PARTS.find((p) => p.id === 'core:rc522');
+    expect(r).toBeDefined();
+    expect(r?.pins).toHaveLength(8);
+    const byNumber = new Map(r?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('SDA');
+    expect(byNumber.get('2')).toBe('SCK');
+    expect(byNumber.get('3')).toBe('MOSI');
+    expect(byNumber.get('4')).toBe('MISO');
+    expect(byNumber.get('5')).toBe('IRQ');
+    expect(byNumber.get('6')).toBe('GND');
+    expect(byNumber.get('7')).toBe('RST');
+    expect(byNumber.get('8')).toBe('3.3V');
+    // SPI slave: SDA(SS)/SCK/MOSI/RST are inputs, MISO/IRQ outputs, power pins power_in.
+    const byKey = new Map(r?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('input'); // SDA/SS
+    expect(byKey.get('3')).toBe('input'); // MOSI
+    expect(byKey.get('4')).toBe('output'); // MISO
+    expect(byKey.get('5')).toBe('output'); // IRQ
+    expect(byKey.get('7')).toBe('input'); // RST
+    expect(byKey.get('8')).toBe('power_in'); // 3.3V
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {

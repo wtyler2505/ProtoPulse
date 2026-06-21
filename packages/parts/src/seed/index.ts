@@ -872,6 +872,49 @@ const lcd1602 = definePart({
     'Pin map web-verified 2026-06-21 against the Hitachi HD44780U datasheet plus components101 + circuitdigest 16x2 LCD pinouts (NOT taken from the shared component log): 1 VSS, 2 VDD, 3 V0 (contrast), 4 RS, 5 RW, 6 E, 7–14 D0–D7, 15 A (LED+), 16 K (LED−). D0–D7 are a bidirectional bus (4-bit mode uses D4–D7; busy flag is read on D7) so modeled as bidi, not input-only. RS/RW/E are control inputs; V0 is the analog contrast input. See inbox/2026-06-21-lcd1602-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// RC522 RFID reader module (NXP MFRC522, 13.56 MHz). 8-pin SPI header. The module is
+// an SPI slave: SDA (= SS/CS), SCK, MOSI, RST are master-driven inputs; MISO and IRQ
+// are outputs. 3.3 V part (comms pins 5 V tolerant). Schematic-only, footprint deferred.
+const rc522 = definePart({
+  id: 'core:rc522',
+  name: 'RC522 RFID reader module (SPI)',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'RC522',
+  manufacturer: 'NXP (MFRC522)',
+  datasheetUrl: 'https://www.nxp.com/docs/en/data-sheet/MFRC522.pdf',
+  pins: [
+    pin('1', 'SDA', 'input', '1'), // SS/CS — slave select (master-driven)
+    pin('2', 'SCK', 'input', '2'), // SPI clock from master
+    pin('3', 'MOSI', 'input', '3'), // master out → slave in
+    pin('4', 'MISO', 'output', '4'), // slave out → master in
+    pin('5', 'IRQ', 'output', '5'), // interrupt request out
+    pin('6', 'GND', 'power_in', '6'),
+    pin('7', 'RST', 'input', '7'), // reset (master-driven)
+    pin('8', '3.3V', 'power_in', '8'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -5 * G, w: 6 * G, h: 10 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'RC522', sizeNm: Math.round(G * 0.5) },
+    ],
+    pins: [
+      { key: '8', at: { x: -4 * G, y: 3 * G }, dir: 'W' }, // 3.3V
+      { key: '6', at: { x: -4 * G, y: G }, dir: 'W' }, // GND
+      { key: '7', at: { x: -4 * G, y: -G }, dir: 'W' }, // RST
+      { key: '5', at: { x: -4 * G, y: -3 * G }, dir: 'W' }, // IRQ
+      { key: '1', at: { x: 4 * G, y: 3 * G }, dir: 'E' }, // SDA/SS
+      { key: '2', at: { x: 4 * G, y: G }, dir: 'E' }, // SCK
+      { key: '3', at: { x: 4 * G, y: -G }, dir: 'E' }, // MOSI
+      { key: '4', at: { x: 4 * G, y: -3 * G }, dir: 'E' }, // MISO
+    ],
+  },
+  parametrics: { maxVoltage: 3.6 }, // MFRC522 2.5–3.6 V; comms pins 5 V tolerant
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against the NXP MFRC522 datasheet plus components101 + microcontrollerslab + espboards RC522 module pinouts (NOT taken from the shared component log): 8-pin header order SDA (SS/CS), SCK, MOSI, MISO, IRQ, GND, RST, 3.3V. SPI slave: SDA/SCK/MOSI/RST are master-driven inputs, MISO and IRQ are outputs. 3.3 V part with 5 V-tolerant comms pins. The module also supports I²C/UART but the board is strapped for SPI. See inbox/2026-06-21-rc522-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -893,6 +936,7 @@ export const SEED_PARTS: Part[] = [
   l298n,
   max7219,
   lcd1602,
+  rc522,
   pushbutton,
   header2x10,
   usbcPower,
