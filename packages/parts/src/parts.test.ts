@@ -44,6 +44,7 @@ describe('seed library', () => {
       'core:soil-moisture',
       'core:tb6612fng',
       'core:tmp36',
+      'core:ttp223',
       'core:uln2003-stepper',
     ]);
     for (const part of verified) {
@@ -345,6 +346,20 @@ describe('seed library', () => {
     expect(byKey.get('1')).toBe('power_in');
     expect(byKey.get('3')).toBe('output'); // DO
     expect(byKey.get('4')).toBe('output'); // AO
+  });
+
+  it('TTP223 touch sensor pin map matches the verified 3-pin push-pull module', () => {
+    const t = SEED_PARTS.find((p) => p.id === 'core:ttp223');
+    expect(t).toBeDefined();
+    expect(t?.pins).toHaveLength(3);
+    const byNumber = new Map(t?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('VCC');
+    expect(byNumber.get('2')).toBe('GND');
+    expect(byNumber.get('3')).toBe('SIG');
+    const byKey = new Map(t?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('power_in');
+    expect(byKey.get('2')).toBe('power_in');
+    expect(byKey.get('3')).toBe('output'); // push-pull digital
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
