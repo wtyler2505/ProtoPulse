@@ -49,6 +49,7 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:ttp223` — TTP223 capacitive touch sensor (3-pin push-pull; web-verified). `814eb4bd`
 - [x] `core:ky006-buzzer` — KY-006 passive buzzer (3-pin, MCU-driven tone; web-verified). `d722b48c`
 - [x] `core:sw420-vibration` — SW-420 vibration sensor (3-pin digital, NC spring switch; web-verified). `8699e23a`
+- [x] `core:ky008-laser` — KY-008 laser diode module (3-pin emitter, 650nm; web-verified). `275d0c38`
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
@@ -70,7 +71,7 @@ Tier 2 — sensor modules (mostly simple 3-4 pin digital/analog):
 - [x] Soil moisture sensor module — done `2dcc3a01` (resistive FC-28; capacitive v1.2 still open)
 - [x] Capacitive touch sensor module — done `814eb4bd` (TTP223)
 - [ ] Slot-type optocoupler module
-- [x] Passive buzzer module — done `d722b48c` (KY-006). (laser diode module still open)
+- [x] Passive buzzer module — done `d722b48c` (KY-006). Laser diode module — done `275d0c38` (KY-008).
 - [ ] RGB LED modules, single LED module, tactile button module
 - [ ] 4-digit / single-digit 7-segment display, 8x8 LED dot matrix
 
