@@ -49,6 +49,7 @@ describe('seed library', () => {
       'core:mpu6050',
       'core:ne555',
       'core:nodemcu-esp8266',
+      'core:raspberry-pi-3bp',
       'core:rc522',
       'core:slot-optocoupler',
       'core:soil-moisture',
@@ -579,6 +580,29 @@ describe('seed library', () => {
     expect(byKey.get('15')).toBe('power_in'); // VIN
     expect(byKey.get('16')).toBe('bidi'); // D0 GPIO
     expect(n?.refPrefix).toBe('A');
+  });
+
+  it('Raspberry Pi 3 B+ pin map matches the verified 40-pin J8 header', () => {
+    const pi = SEED_PARTS.find((p) => p.id === 'core:raspberry-pi-3bp');
+    expect(pi).toBeDefined();
+    expect(pi?.pins).toHaveLength(40);
+    expect(new Set(pi?.pins.map((p) => p.key)).size).toBe(40);
+    const byNumber = new Map(pi?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('3V3');
+    expect(byNumber.get('2')).toBe('5V');
+    expect(byNumber.get('3')).toBe('GPIO2'); // I2C SDA
+    expect(byNumber.get('5')).toBe('GPIO3'); // I2C SCL
+    expect(byNumber.get('6')).toBe('GND');
+    expect(byNumber.get('19')).toBe('GPIO10'); // MOSI
+    expect(byNumber.get('40')).toBe('GPIO21');
+    const byKey = new Map(pi?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('power_out'); // 3V3
+    expect(byKey.get('2')).toBe('power_out'); // 5V
+    expect(byKey.get('6')).toBe('power_in'); // GND
+    expect(byKey.get('3')).toBe('bidi'); // GPIO
+    // exactly 8 grounds on the 40-pin J8 header (pins 6,9,14,20,25,30,34,39)
+    expect(pi?.pins.filter((p) => p.name === 'GND')).toHaveLength(8);
+    expect(pi?.refPrefix).toBe('A');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
