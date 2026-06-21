@@ -915,6 +915,64 @@ const rc522 = definePart({
     'Pin map web-verified 2026-06-21 against the NXP MFRC522 datasheet plus components101 + microcontrollerslab + espboards RC522 module pinouts (NOT taken from the shared component log): 8-pin header order SDA (SS/CS), SCK, MOSI, MISO, IRQ, GND, RST, 3.3V. SPI slave: SDA/SCK/MOSI/RST are master-driven inputs, MISO and IRQ are outputs. 3.3 V part with 5 V-tolerant comms pins. The module also supports I²C/UART but the board is strapped for SPI. See inbox/2026-06-21-rc522-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// TB6612FNG dual motor driver breakout — Toshiba TB6612FNG, a MOSFET H-bridge pair
+// (more efficient than the bipolar L298N). Drives 2 DC motors at 1.2 A continuous
+// (3.2 A peak). Per motor: AIN1/AIN2 (or BIN1/BIN2) set direction, PWMA/PWMB set
+// speed, STBY (active-low) enables the chip. VM = motor supply (≤15 V), VCC = logic
+// (2.7–5.5 V). Modeled as the 14 unique signals across the breakout's two headers.
+// Schematic-only, footprint deferred.
+const tb6612fng = definePart({
+  id: 'core:tb6612fng',
+  name: 'TB6612FNG dual motor driver',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'TB6612FNG',
+  manufacturer: 'Toshiba',
+  datasheetUrl: 'https://cdn.sparkfun.com/datasheets/Robotics/TB6612FNG.pdf',
+  pins: [
+    pin('1', 'VM', 'power_in', '1'), // motor supply ≤15 V
+    pin('2', 'VCC', 'power_in', '2'), // logic 2.7–5.5 V
+    pin('3', 'GND', 'power_in', '3'),
+    pin('4', 'AO1', 'output', '4'), // motor A output
+    pin('5', 'AO2', 'output', '5'),
+    pin('6', 'BO1', 'output', '6'), // motor B output
+    pin('7', 'BO2', 'output', '7'),
+    pin('8', 'PWMA', 'input', '8'), // motor A speed (PWM)
+    pin('9', 'AIN1', 'input', '9'), // motor A direction
+    pin('10', 'AIN2', 'input', '10'),
+    pin('11', 'STBY', 'input', '11'), // standby, active-low (pull high to enable)
+    pin('12', 'BIN1', 'input', '12'), // motor B direction
+    pin('13', 'BIN2', 'input', '13'),
+    pin('14', 'PWMB', 'input', '14'), // motor B speed (PWM)
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -4 * G, y: -7 * G, w: 8 * G, h: 14 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'TB6612', sizeNm: Math.round(G * 0.5) },
+    ],
+    pins: [
+      { key: '8', at: { x: -5 * G, y: 6 * G }, dir: 'W' }, // PWMA
+      { key: '9', at: { x: -5 * G, y: 4 * G }, dir: 'W' }, // AIN1
+      { key: '10', at: { x: -5 * G, y: 2 * G }, dir: 'W' }, // AIN2
+      { key: '11', at: { x: -5 * G, y: 0 }, dir: 'W' }, // STBY
+      { key: '12', at: { x: -5 * G, y: -2 * G }, dir: 'W' }, // BIN1
+      { key: '13', at: { x: -5 * G, y: -4 * G }, dir: 'W' }, // BIN2
+      { key: '14', at: { x: -5 * G, y: -6 * G }, dir: 'W' }, // PWMB
+      { key: '1', at: { x: 5 * G, y: 6 * G }, dir: 'E' }, // VM
+      { key: '2', at: { x: 5 * G, y: 4 * G }, dir: 'E' }, // VCC
+      { key: '3', at: { x: 5 * G, y: 2 * G }, dir: 'E' }, // GND
+      { key: '4', at: { x: 5 * G, y: 0 }, dir: 'E' }, // AO1
+      { key: '5', at: { x: 5 * G, y: -2 * G }, dir: 'E' }, // AO2
+      { key: '6', at: { x: 5 * G, y: -4 * G }, dir: 'E' }, // BO1
+      { key: '7', at: { x: 5 * G, y: -6 * G }, dir: 'E' }, // BO2
+    ],
+  },
+  parametrics: { maxVoltage: 15 }, // VM max 15 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against the Toshiba TB6612FNG datasheet plus the SparkFun TB6612FNG breakout hookup guide + Cirkit Designer (NOT taken from the shared component log): power VM (≤15 V) / VCC (2.7–5.5 V) / GND, motor outputs AO1/AO2 (A) and BO1/BO2 (B), control PWMA, AIN1, AIN2, STBY, BIN1, BIN2, PWMB. STBY is active-low (pull high to enable). PWMx = speed, xIN1/xIN2 = direction (CW/CCW/brake/stop). MOSFET H-bridge, 1.2 A continuous / 3.2 A peak per channel. Tyler owns the OSEPP shield variant; the TB6612FNG pin functions are identical. See inbox/2026-06-21-tb6612fng-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -937,6 +995,7 @@ export const SEED_PARTS: Part[] = [
   max7219,
   lcd1602,
   rc522,
+  tb6612fng,
   pushbutton,
   header2x10,
   usbcPower,

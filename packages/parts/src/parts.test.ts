@@ -38,6 +38,7 @@ describe('seed library', () => {
       'core:mpu6050',
       'core:ne555',
       'core:rc522',
+      'core:tb6612fng',
       'core:tmp36',
       'core:uln2003-stepper',
     ]);
@@ -255,6 +256,30 @@ describe('seed library', () => {
     expect(byKey.get('5')).toBe('output'); // IRQ
     expect(byKey.get('7')).toBe('input'); // RST
     expect(byKey.get('8')).toBe('power_in'); // 3.3V
+  });
+
+  it('TB6612FNG dual motor driver pin map matches the verified breakout (power, outputs, control)', () => {
+    const t = SEED_PARTS.find((p) => p.id === 'core:tb6612fng');
+    expect(t).toBeDefined();
+    expect(t?.pins).toHaveLength(14);
+    const byNumber = new Map(t?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('VM');
+    expect(byNumber.get('2')).toBe('VCC');
+    expect(byNumber.get('3')).toBe('GND');
+    expect(byNumber.get('4')).toBe('AO1');
+    expect(byNumber.get('7')).toBe('BO2');
+    expect(byNumber.get('8')).toBe('PWMA');
+    expect(byNumber.get('9')).toBe('AIN1');
+    expect(byNumber.get('11')).toBe('STBY');
+    expect(byNumber.get('14')).toBe('PWMB');
+    // Control pins inputs, motor pins outputs, power pins power_in.
+    const byKey = new Map(t?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('8')).toBe('input'); // PWMA
+    expect(byKey.get('11')).toBe('input'); // STBY
+    expect(byKey.get('4')).toBe('output'); // AO1
+    expect(byKey.get('7')).toBe('output'); // BO2
+    expect(byKey.get('1')).toBe('power_in'); // VM
+    expect(byKey.get('2')).toBe('power_in'); // VCC
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
