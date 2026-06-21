@@ -32,6 +32,7 @@ describe('seed library', () => {
       'core:ds1302',
       'core:ds3231',
       'core:esp32-s3-wroom-1',
+      'core:flame-sensor',
       'core:ky038',
       'core:l298n',
       'core:lcd1602',
@@ -298,6 +299,21 @@ describe('seed library', () => {
     expect(byKey.get('2')).toBe('power_in');
     expect(byKey.get('3')).toBe('output');
     expect(byKey.get('4')).toBe('output');
+  });
+
+  it('Flame sensor module pin map matches the verified 4-pin comparator module', () => {
+    const f = SEED_PARTS.find((p) => p.id === 'core:flame-sensor');
+    expect(f).toBeDefined();
+    expect(f?.pins).toHaveLength(4);
+    const byNumber = new Map(f?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('VCC');
+    expect(byNumber.get('2')).toBe('GND');
+    expect(byNumber.get('3')).toBe('DO');
+    expect(byNumber.get('4')).toBe('AO');
+    const byKey = new Map(f?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('power_in');
+    expect(byKey.get('3')).toBe('output'); // DO
+    expect(byKey.get('4')).toBe('output'); // AO
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
