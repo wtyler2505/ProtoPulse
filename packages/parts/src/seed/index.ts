@@ -1320,6 +1320,41 @@ const ky005IrTransmitter = definePart({
     'Pin map web-verified 2026-06-21 against arduinomodules + espboards + thegeekpub + joy-it KY-005 pinouts (NOT taken from the shared component log): 3-pin S (signal), middle VCC, GND. Single 940 nm IR LED; the MCU drives S with a 38 kHz-modulated signal (IRremote) through a series resistor (120Ω@3.3V / 220Ω@5V). On KY-005 the middle VCC pin is NC (no internal connection) — practically wire S → GPIO, – → GND. S is an input to the module; refPrefix D (LED emitter). Pairs with KY-022 receiver. See inbox/2026-06-21-ky005-ir-transmitter-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// Slot-type IR optocoupler module — an ITR9606-style photo-interrupter (IR emitter +
+// phototransistor facing across a 5 mm slot) + LM393 comparator + sensitivity pot.
+// Common as an encoder/speed sensor: a slotted wheel chops the beam. 3-pin: VCC, GND,
+// DO — DO is LOW when the slot is clear and HIGH when an object interrupts the beam.
+// (A 4-pin AO variant exists.) Schematic-only, footprint deferred.
+const slotOptocoupler = definePart({
+  id: 'core:slot-optocoupler',
+  name: 'Slot-type IR optocoupler module (LM393)',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'ITR9606-LM393',
+  manufacturer: 'generic (ITR9606 photo-interrupter + LM393)',
+  datasheetUrl: 'https://www.diymore.cc/products/slot-type-ir-optocoupler-speed-sensor-module-lm393-for-arduino',
+  pins: [
+    pin('1', 'VCC', 'power_in', '1'), // 3.3–5 V
+    pin('2', 'GND', 'power_in', '2'),
+    pin('3', 'DO', 'output', '3'), // digital: LOW slot clear, HIGH when beam interrupted
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -3 * G, w: 6 * G, h: 6 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'SLOT-OPTO', sizeNm: Math.round(G * 0.34) },
+    ],
+    pins: [
+      { key: '1', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC
+      { key: '2', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '3', at: { x: 4 * G, y: 0 }, dir: 'E' }, // DO
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // 3.3–5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against multiple LM393 slot-optocoupler/speed-sensor module listings (diymore, DAOKI, Geekstory, SAYAL) and the ITR9606 photo-interrupter basis (NOT taken from the shared component log): 3-pin VCC, GND, DO. IR emitter + phototransistor across a 5 mm slot, LM393 squares the output; DO is LOW when the slot is clear and HIGH when an object interrupts the beam (pot sets sensitivity). Used as an encoder/speed sensor with a slotted chopper wheel. A 4-pin VCC/GND/DO/AO variant also exists. Power pins power_in, DO output. See inbox/2026-06-21-slot-optocoupler-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1353,6 +1388,7 @@ export const SEED_PARTS: Part[] = [
   ky008Laser,
   ky022IrReceiver,
   ky005IrTransmitter,
+  slotOptocoupler,
   pushbutton,
   header2x10,
   usbcPower,
