@@ -30,6 +30,7 @@ describe('seed library', () => {
       'core:bat54s',
       'core:esp32-s3-wroom-1',
       'core:ne555',
+      'core:tmp36',
     ]);
     for (const part of verified) {
       expect(part.provenanceNote).toBeTruthy();
@@ -48,6 +49,21 @@ describe('seed library', () => {
     expect(byNumber.get('6')).toBe('THRES');
     expect(byNumber.get('7')).toBe('DISCH');
     expect(byNumber.get('8')).toBe('VCC');
+  });
+
+  it('TMP36 pin map matches the Analog Devices datasheet (TO-92)', () => {
+    const tmp36 = SEED_PARTS.find((p) => p.id === 'core:tmp36');
+    expect(tmp36).toBeDefined();
+    expect(tmp36?.pins).toHaveLength(3);
+    const byNumber = new Map(tmp36?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('+VS');
+    expect(byNumber.get('2')).toBe('VOUT');
+    expect(byNumber.get('3')).toBe('GND');
+    // VOUT drives the analog reading; supply pins are power_in for ERC.
+    const byKey = new Map(tmp36?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('2')).toBe('output');
+    expect(byKey.get('1')).toBe('power_in');
+    expect(byKey.get('3')).toBe('power_in');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
