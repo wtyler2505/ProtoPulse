@@ -43,6 +43,7 @@ of the now-certified ESP32-S3 emulator base.
 
 ### Tier-2 (in progress)
 - [x] `core:ky038` — KY-038 sound sensor (LM393 comparator module; web-verified). `3ccc12fb`
+- [x] `core:flame-sensor` — Flame sensor module (IR photodiode + LM393; web-verified). `23bfbae0`
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
@@ -58,7 +59,7 @@ Tier 1 — common, well-documented, high reuse:
 
 Tier 2 — sensor modules (mostly simple 3-4 pin digital/analog):
 - [x] KY-038 sound sensor — done `3ccc12fb` (sound detection sensor variant still open)
-- [ ] Flame sensor module
+- [x] Flame sensor module — done `23bfbae0`
 - [ ] Vibration sensor modules (spring / reed / piezo variants)
 - [ ] IR obstacle-avoidance sensor, IR receiver (38 kHz), IR LED transmitter
 - [ ] Soil moisture sensor module
