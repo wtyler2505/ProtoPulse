@@ -50,6 +50,8 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:ky006-buzzer` — KY-006 passive buzzer (3-pin, MCU-driven tone; web-verified). `d722b48c`
 - [x] `core:sw420-vibration` — SW-420 vibration sensor (3-pin digital, NC spring switch; web-verified). `8699e23a`
 - [x] `core:ky008-laser` — KY-008 laser diode module (3-pin emitter, 650nm; web-verified). `275d0c38`
+- [x] `core:ky022-ir-receiver` — KY-022 IR receiver (38kHz, VS1838B; web-verified). `0ebc6d3b`
+- [x] `core:ky005-ir-transmitter` — KY-005 IR transmitter (940nm IR LED; web-verified). `c343b70f`
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
@@ -67,7 +69,7 @@ Tier 2 — sensor modules (mostly simple 3-4 pin digital/analog):
 - [x] KY-038 sound sensor — done `3ccc12fb` (sound detection sensor variant still open)
 - [x] Flame sensor module — done `23bfbae0`
 - [x] Vibration sensor module — done `8699e23a` (SW-420 spring; reed/piezo variants still open)
-- [x] IR obstacle-avoidance sensor — done `f55dc4d4` (IR receiver 38 kHz + IR LED transmitter still open)
+- [x] IR obstacle-avoidance sensor — done `f55dc4d4`. IR receiver 38 kHz — done `0ebc6d3b` (KY-022). IR LED transmitter — done `c343b70f` (KY-005).
 - [x] Soil moisture sensor module — done `2dcc3a01` (resistive FC-28; capacitive v1.2 still open)
 - [x] Capacitive touch sensor module — done `814eb4bd` (TTP223)
 - [ ] Slot-type optocoupler module
