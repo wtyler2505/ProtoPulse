@@ -35,6 +35,7 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:uln2003-stepper` — ULN2003 stepper driver board (28BYJ-48 companion; web-verified). `22295bbb`
 - [x] `core:l298n` — L298N dual H-bridge motor driver (web-verified). `bbe20b15`
 - [x] `core:max7219` — MAX7219 LED matrix driver module (SPI, daisy-chain; web-verified). `dd5226b3`
+- [x] `core:lcd1602` — 1602A 16x2 character LCD (HD44780, 16-pin parallel; web-verified). `a55121c1`
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
@@ -45,7 +46,7 @@ Tier 1 — common, well-documented, high reuse:
 - [x] L298N dual H-bridge motor driver — done `bbe20b15`
 - [ ] TB6612 motor driver (OSEPP shield variant)
 - [x] MAX7219 dot-matrix / 7-seg driver — done `dd5226b3`
-- [ ] 1602A LCD (HD44780) display module
+- [x] 1602A LCD (HD44780) display module — done `a55121c1`
 - [ ] RC522 RFID module (SPI)
 
 Tier 2 — sensor modules (mostly simple 3-4 pin digital/analog):
