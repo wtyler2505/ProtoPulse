@@ -670,6 +670,48 @@ const ds3231 = definePart({
     'Pin map web-verified 2026-06-21 against the Analog Devices DS3231 datasheet plus components101 + Cirkit Designer ZS-042 module pinouts (NOT taken from the shared component log): 6-pin header names 32K, SQW, SCL, SDA, VCC, GND. DS3231 IS I²C (addr 0x68) — contrast the 3-wire DS1302. SCL=clock in, SDA=bidirectional; SQW (square-wave/alarm) and 32K (32.768 kHz) are open-drain outputs needing external pull-ups. ZS-042 board also has an AT24C32 EEPROM (0x57) on the same bus — not modeled here. Header silk order is board-revision-dependent (two mirrored 6-pin headers); pin names/functions are fixed, numbering follows the dominant published order. See inbox/2026-06-21-ds3231-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// ULN2003 stepper driver board — the ubiquitous board paired with the 28BYJ-48
+// 5-wire unipolar stepper. A ULN2003A Darlington array sinks the four motor phases;
+// IN1–IN4 are control inputs from the MCU, with VCC/GND (5 V) for motor power and a
+// removable enable jumper. The 5-wire 28BYJ-48 plugs into a keyed JST socket — that
+// socket is NOT modeled as header pins here (it mates with the motor, not breadboard
+// wiring); we model the 6 pins a user actually wires. Schematic-only, footprint deferred.
+const uln2003Stepper = definePart({
+  id: 'core:uln2003-stepper',
+  name: 'ULN2003 stepper driver board',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'ULN2003',
+  manufacturer: 'generic (ULN2003A Darlington array)',
+  datasheetUrl: 'https://www.ti.com/lit/ds/symlink/uln2003a.pdf',
+  pins: [
+    pin('1', 'IN1', 'input', '1'), // phase A control from MCU
+    pin('2', 'IN2', 'input', '2'), // phase B
+    pin('3', 'IN3', 'input', '3'), // phase C
+    pin('4', 'IN4', 'input', '4'), // phase D
+    pin('5', 'VCC', 'power_in', '5'), // motor power, 5 V (via enable jumper)
+    pin('6', 'GND', 'power_in', '6'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -4 * G, w: 6 * G, h: 8 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'ULN2003', sizeNm: Math.round(G * 0.5) },
+    ],
+    pins: [
+      { key: '1', at: { x: -4 * G, y: 3 * G }, dir: 'W' }, // IN1
+      { key: '2', at: { x: -4 * G, y: G }, dir: 'W' }, // IN2
+      { key: '3', at: { x: -4 * G, y: -G }, dir: 'W' }, // IN3
+      { key: '4', at: { x: -4 * G, y: -3 * G }, dir: 'W' }, // IN4
+      { key: '5', at: { x: 4 * G, y: 3 * G }, dir: 'E' }, // VCC
+      { key: '6', at: { x: 4 * G, y: -3 * G }, dir: 'E' }, // GND
+    ],
+  },
+  parametrics: { maxVoltage: 12 }, // ULN2003A outputs rated to ~50 V; board commonly 5 V for 28BYJ-48
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against lastminuteengineers + makerguides + DigiKey ULN2003/28BYJ-48 tutorials and the TI ULN2003A datasheet (NOT taken from the shared component log): control header IN1, IN2, IN3, IN4 (MCU inputs) plus VCC/GND power (5 V via the enable jumper). The 5-wire 28BYJ-48 plugs into a keyed JST socket that is intentionally NOT modeled as header pins. IN1–IN4 drive the four Darlington channels sinking the motor phases. See inbox/2026-06-21-uln2003-stepper-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -687,6 +729,7 @@ export const SEED_PARTS: Part[] = [
   mpu6050,
   ds1302,
   ds3231,
+  uln2003Stepper,
   pushbutton,
   header2x10,
   usbcPower,
