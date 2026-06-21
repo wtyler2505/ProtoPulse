@@ -28,6 +28,7 @@ describe('seed library', () => {
     const verified = SEED_PARTS.filter((p) => p.provenance === 'verified');
     expect(verified.map((p) => p.id).sort()).toEqual([
       'core:arduino-nano',
+      'core:arduino-uno-r3',
       'core:bat54s',
       'core:bme280',
       'core:ds1302',
@@ -529,6 +530,31 @@ describe('seed library', () => {
     expect(byKey.get('27')).toBe('power_out'); // 5V
     expect(byKey.get('30')).toBe('power_in'); // VIN
     expect(n?.refPrefix).toBe('A');
+  });
+
+  it('Arduino Uno R3 pin map matches the verified 31-pin 4-header layout', () => {
+    const u = SEED_PARTS.find((p) => p.id === 'core:arduino-uno-r3');
+    expect(u).toBeDefined();
+    expect(u?.pins).toHaveLength(31);
+    expect(new Set(u?.pins.map((p) => p.key)).size).toBe(31);
+    const byNumber = new Map(u?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('IOREF');
+    expect(byNumber.get('2')).toBe('RESET');
+    expect(byNumber.get('7')).toBe('VIN');
+    expect(byNumber.get('8')).toBe('A0');
+    expect(byNumber.get('14')).toBe('D0'); // RX
+    expect(byNumber.get('27')).toBe('D13');
+    expect(byNumber.get('29')).toBe('AREF');
+    expect(byNumber.get('30')).toBe('SDA');
+    expect(byNumber.get('31')).toBe('SCL');
+    const byKey = new Map(u?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('power_out'); // IOREF
+    expect(byKey.get('3')).toBe('power_out'); // 3V3
+    expect(byKey.get('4')).toBe('power_out'); // 5V
+    expect(byKey.get('7')).toBe('power_in'); // VIN
+    expect(byKey.get('16')).toBe('bidi'); // D2
+    expect(byKey.get('29')).toBe('input'); // AREF
+    expect(u?.refPrefix).toBe('A');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {

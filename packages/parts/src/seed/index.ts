@@ -1553,6 +1553,104 @@ const arduinoNano = definePart({
     'Pin map web-verified 2026-06-21 against the official Arduino Pinout-NANO PDF plus zbotic + nextpcb + electronicshub Nano references (NOT taken from the shared component log): 30 pins in two rows of 15. Left row 1–15: D1/TX, D0/RX, RST, GND, D2–D12. Right row 16–30: D13, 3V3, AREF, A0–A7, 5V, RST, GND, VIN. D0/D1 = UART; D10–D13 = SPI SS/MOSI/MISO/SCK; A4/A5 = I²C SDA/SCL; A6/A7 are analog-INPUT only (no digital, no pull-up). GPIO modeled bidi, analog-only input, AREF/RST input, 3V3 & 5V power_out (onboard regulators), VIN & GND power_in. Tyler owns the DCCduino clone (identical pinout). refPrefix A. See inbox/2026-06-21-arduino-nano-pinout.md. No footprint yet — board land pattern is a later slice.',
 });
 
+// Arduino Uno R3 (ATmega328P) — the iconic board, four female headers (31 modeled
+// pins). Power: IOREF, RESET, 3V3, 5V, GND×2, VIN. Analog A0–A5 (A4/A5 also = I²C).
+// Digital D0–D13 (D0/D1 UART, D10–D13 SPI, D3/5/6/9/10/11 PWM), plus the R3 additions:
+// GND/AREF and dedicated SDA/SCL near AREF (electrically the same nets as A4/A5).
+// GPIO = bidi, analog-only/RESET/AREF = input, 3V3/5V/IOREF = power_out, VIN/GND =
+// power_in. (Tyler also owns the OSEPP Uno R3 Plus — same pinout.) Footprint deferred.
+const arduinoUno = definePart({
+  id: 'core:arduino-uno-r3',
+  name: 'Arduino Uno R3 (ATmega328P)',
+  refPrefix: 'A',
+  class: 'ic',
+  mpn: 'Arduino Uno R3',
+  manufacturer: 'Arduino (ATmega328P; OSEPP Uno R3 Plus clone)',
+  datasheetUrl: 'https://content.arduino.cc/assets/Pinout-UNOrev3_latest.pdf',
+  pins: [
+    // POWER header
+    pin('1', 'IOREF', 'power_out', '1'), // logic-voltage reference out to shields
+    pin('2', 'RESET', 'input', '2'), // active-low reset
+    pin('3', '3V3', 'power_out', '3'), // regulated 3.3 V out
+    pin('4', '5V', 'power_out', '4'), // regulated 5 V out
+    pin('5', 'GND', 'power_in', '5'),
+    pin('6', 'GND', 'power_in', '6'),
+    pin('7', 'VIN', 'power_in', '7'), // 7–12 V unregulated in
+    // ANALOG header
+    pin('8', 'A0', 'bidi', '8'),
+    pin('9', 'A1', 'bidi', '9'),
+    pin('10', 'A2', 'bidi', '10'),
+    pin('11', 'A3', 'bidi', '11'),
+    pin('12', 'A4', 'bidi', '12'), // I²C SDA
+    pin('13', 'A5', 'bidi', '13'), // I²C SCL
+    // DIGITAL lower header (D0–D7)
+    pin('14', 'D0', 'bidi', '14'), // RX
+    pin('15', 'D1', 'bidi', '15'), // TX
+    pin('16', 'D2', 'bidi', '16'),
+    pin('17', 'D3', 'bidi', '17'), // PWM
+    pin('18', 'D4', 'bidi', '18'),
+    pin('19', 'D5', 'bidi', '19'), // PWM
+    pin('20', 'D6', 'bidi', '20'), // PWM
+    pin('21', 'D7', 'bidi', '21'),
+    // DIGITAL upper header (D8–D13 + GND, AREF, SDA, SCL)
+    pin('22', 'D8', 'bidi', '22'),
+    pin('23', 'D9', 'bidi', '23'), // PWM
+    pin('24', 'D10', 'bidi', '24'), // SPI SS / PWM
+    pin('25', 'D11', 'bidi', '25'), // SPI MOSI / PWM
+    pin('26', 'D12', 'bidi', '26'), // SPI MISO
+    pin('27', 'D13', 'bidi', '27'), // SPI SCK (onboard LED)
+    pin('28', 'GND', 'power_in', '28'),
+    pin('29', 'AREF', 'input', '29'), // ADC reference in
+    pin('30', 'SDA', 'bidi', '30'), // dedicated I²C (= A4 net)
+    pin('31', 'SCL', 'bidi', '31'), // dedicated I²C (= A5 net)
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -4 * G, y: -16 * G, w: 8 * G, h: 32 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'UNO R3', sizeNm: Math.round(G * 0.6) },
+    ],
+    pins: [
+      // left column: keys 1–16 (y 15G..−15G, odd multiples)
+      { key: '1', at: { x: -5 * G, y: 15 * G }, dir: 'W' },
+      { key: '2', at: { x: -5 * G, y: 13 * G }, dir: 'W' },
+      { key: '3', at: { x: -5 * G, y: 11 * G }, dir: 'W' },
+      { key: '4', at: { x: -5 * G, y: 9 * G }, dir: 'W' },
+      { key: '5', at: { x: -5 * G, y: 7 * G }, dir: 'W' },
+      { key: '6', at: { x: -5 * G, y: 5 * G }, dir: 'W' },
+      { key: '7', at: { x: -5 * G, y: 3 * G }, dir: 'W' },
+      { key: '8', at: { x: -5 * G, y: 1 * G }, dir: 'W' },
+      { key: '9', at: { x: -5 * G, y: -1 * G }, dir: 'W' },
+      { key: '10', at: { x: -5 * G, y: -3 * G }, dir: 'W' },
+      { key: '11', at: { x: -5 * G, y: -5 * G }, dir: 'W' },
+      { key: '12', at: { x: -5 * G, y: -7 * G }, dir: 'W' },
+      { key: '13', at: { x: -5 * G, y: -9 * G }, dir: 'W' },
+      { key: '14', at: { x: -5 * G, y: -11 * G }, dir: 'W' },
+      { key: '15', at: { x: -5 * G, y: -13 * G }, dir: 'W' },
+      { key: '16', at: { x: -5 * G, y: -15 * G }, dir: 'W' },
+      // right column: keys 17–31 (y 14G..−14G, even multiples)
+      { key: '17', at: { x: 5 * G, y: 14 * G }, dir: 'E' },
+      { key: '18', at: { x: 5 * G, y: 12 * G }, dir: 'E' },
+      { key: '19', at: { x: 5 * G, y: 10 * G }, dir: 'E' },
+      { key: '20', at: { x: 5 * G, y: 8 * G }, dir: 'E' },
+      { key: '21', at: { x: 5 * G, y: 6 * G }, dir: 'E' },
+      { key: '22', at: { x: 5 * G, y: 4 * G }, dir: 'E' },
+      { key: '23', at: { x: 5 * G, y: 2 * G }, dir: 'E' },
+      { key: '24', at: { x: 5 * G, y: 0 }, dir: 'E' },
+      { key: '25', at: { x: 5 * G, y: -2 * G }, dir: 'E' },
+      { key: '26', at: { x: 5 * G, y: -4 * G }, dir: 'E' },
+      { key: '27', at: { x: 5 * G, y: -6 * G }, dir: 'E' },
+      { key: '28', at: { x: 5 * G, y: -8 * G }, dir: 'E' },
+      { key: '29', at: { x: 5 * G, y: -10 * G }, dir: 'E' },
+      { key: '30', at: { x: 5 * G, y: -12 * G }, dir: 'E' },
+      { key: '31', at: { x: 5 * G, y: -14 * G }, dir: 'E' },
+    ],
+  },
+  parametrics: { maxVoltage: 12 }, // VIN 7–12 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against the official Arduino Pinout-UNOrev3 PDF plus circuito.io + deepbluembedded + etechnophiles Uno references (NOT taken from the shared component log): four headers, 31 modeled pins. POWER: IOREF, RESET, 3V3, 5V, GND, GND, VIN. ANALOG: A0–A5 (A4/A5 = I²C SDA/SCL). DIGITAL lower: D0/RX, D1/TX, D2–D7. DIGITAL upper: D8–D13, GND, AREF, SDA, SCL (R3 dedicated I²C, same ATmega nets as A4/A5). PWM on D3/5/6/9/10/11; SPI on D10–D13. GPIO bidi, analog-only/RESET/AREF input, IOREF/3V3/5V power_out, VIN/GND power_in. Tyler also owns the OSEPP Uno R3 Plus (same pinout). refPrefix A. See inbox/2026-06-21-arduino-uno-r3-pinout.md. No footprint yet — board land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1591,6 +1689,7 @@ export const SEED_PARTS: Part[] = [
   tm1637Display,
   ky004Button,
   arduinoNano,
+  arduinoUno,
   pushbutton,
   header2x10,
   usbcPower,
