@@ -35,6 +35,7 @@ describe('seed library', () => {
       'core:mpu6050',
       'core:ne555',
       'core:tmp36',
+      'core:uln2003-stepper',
     ]);
     for (const part of verified) {
       expect(part.provenanceNote).toBeTruthy();
@@ -136,6 +137,25 @@ describe('seed library', () => {
     expect(byKey.get('4')).toBe('bidi');
     expect(byKey.get('1')).toBe('output');
     expect(byKey.get('2')).toBe('output');
+    expect(byKey.get('5')).toBe('power_in');
+    expect(byKey.get('6')).toBe('power_in');
+  });
+
+  it('ULN2003 stepper driver board pin map matches the verified control header', () => {
+    const u = SEED_PARTS.find((p) => p.id === 'core:uln2003-stepper');
+    expect(u).toBeDefined();
+    expect(u?.pins).toHaveLength(6);
+    const byNumber = new Map(u?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('IN1');
+    expect(byNumber.get('2')).toBe('IN2');
+    expect(byNumber.get('3')).toBe('IN3');
+    expect(byNumber.get('4')).toBe('IN4');
+    expect(byNumber.get('5')).toBe('VCC');
+    expect(byNumber.get('6')).toBe('GND');
+    // IN1–IN4 are MCU-driven control inputs; power pins are power_in.
+    const byKey = new Map(u?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('input');
+    expect(byKey.get('4')).toBe('input');
     expect(byKey.get('5')).toBe('power_in');
     expect(byKey.get('6')).toBe('power_in');
   });
