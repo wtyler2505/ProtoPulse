@@ -458,6 +458,41 @@ const esp32s3 = definePart({
     'Pin map (all 41) verified 2026-06-11 against the Espressif ESP32-S3-WROOM-1/-1U datasheet pin-definition table, cross-checked against atomic14/esp32-s3-pinouts. See inbox/2026-06-11-esp32-s3-wroom-1-pinout.md. No footprint yet — land pattern is a later datasheet-exact slice.',
 });
 
+// TMP36 — low-voltage analog temperature sensor. VOUT is a voltage
+// proportional to temperature (10 mV/°C, 750 mV at 25°C, 500 mV offset so
+// sub-zero temps stay positive), readable straight off an MCU ADC channel —
+// the natural analog companion for the co-sim ADC path. Modeled schematic-only
+// (TO-92 land pattern is a later datasheet-exact slice, like the ESP32 module).
+const tmp36 = definePart({
+  id: 'core:tmp36',
+  name: 'TMP36 analog temperature sensor',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'TMP36GZ',
+  manufacturer: 'Analog Devices',
+  datasheetUrl: 'https://www.analog.com/media/en/technical-documentation/data-sheets/tmp35_36_37.pdf',
+  pins: [
+    pin('1', '+VS', 'power_in', '1'),
+    pin('2', 'VOUT', 'output', '2'),
+    pin('3', 'GND', 'power_in', '3'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -2 * G, y: -2 * G, w: 4 * G, h: 4 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'TMP36', sizeNm: Math.round(G * 0.7) },
+    ],
+    pins: [
+      { key: '1', at: { x: 0, y: 3 * G }, dir: 'N' },
+      { key: '2', at: { x: 3 * G, y: 0 }, dir: 'E' },
+      { key: '3', at: { x: 0, y: -3 * G }, dir: 'S' },
+    ],
+  },
+  parametrics: { currentDrawA: 0.00005, maxVoltage: 5.5 }, // 50 µA typ; VS 2.7–5.5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map verified 2026-06-20 against the Analog Devices TMP35/36/37 datasheet (Rev H, TO-92 3-lead, flat face toward you / leads down): pin 1 = +VS (2.7–5.5 V), pin 2 = VOUT, pin 3 = GND. Output 10 mV/°C, 750 mV at 25°C, −40 to +125 °C. Cross-checked against Adafruit TMP36 guide. See inbox/2026-06-20-tmp36-pinout.md. No footprint yet — TO-92 land pattern is a later datasheet-exact slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -470,6 +505,7 @@ export const SEED_PARTS: Part[] = [
   npn2n3904,
   nmosAo3400,
   ne555,
+  tmp36,
   pushbutton,
   header2x10,
   usbcPower,
