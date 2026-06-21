@@ -30,6 +30,7 @@ describe('seed library', () => {
       'core:bat54s',
       'core:bme280',
       'core:esp32-s3-wroom-1',
+      'core:mpu6050',
       'core:ne555',
       'core:tmp36',
     ]);
@@ -80,6 +81,21 @@ describe('seed library', () => {
     expect(byNumber.get('6')).toBe('VDDIO');
     expect(byNumber.get('7')).toBe('GND');
     expect(byNumber.get('8')).toBe('VDD');
+  });
+
+  it('MPU-6050 (GY-521) pin map matches the verified module header order', () => {
+    const mpu = SEED_PARTS.find((p) => p.id === 'core:mpu6050');
+    expect(mpu).toBeDefined();
+    expect(mpu?.pins).toHaveLength(8);
+    const byNumber = new Map(mpu?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('VCC');
+    expect(byNumber.get('2')).toBe('GND');
+    expect(byNumber.get('3')).toBe('SCL');
+    expect(byNumber.get('4')).toBe('SDA');
+    expect(byNumber.get('5')).toBe('XDA');
+    expect(byNumber.get('6')).toBe('XCL');
+    expect(byNumber.get('7')).toBe('AD0');
+    expect(byNumber.get('8')).toBe('INT');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
