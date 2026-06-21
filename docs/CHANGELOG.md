@@ -2,6 +2,27 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-20 — ESP32-S3 slice 163: AES-CFB8 (completes the AES_BLOCK_MODE matrix)
+
+### Added
+- **AES-CFB8 coverage** (@protopulse/emu): the GDMA-fed AES-DMA path now models 8-bit
+  (byte-segment) cipher-feedback mode (`AES_BLOCK_MODE = 4`), encrypt and decrypt. Each
+  input byte encrypts the 128-bit shift register, XORs the most-significant keystream
+  byte, then shifts the register left one byte and feeds the ciphertext byte back at the
+  least-significant end — the output byte when encrypting, the input byte when decrypting.
+  This is the last unmodeled AES block mode; AES now covers ECB/CBC/CTR/OFB/CFB8/CFB128/
+  GCM(+AAD) — the full enum.
+
+### Verified
+- Two known-answer tests run NIST SP 800-38A F.3.7 (AES-128-CFB8: key `2b7e1516…`,
+  IV `000102…0f`, plaintext `6bc1bee2…` → ciphertext `3b79424c…`), two blocks each so the
+  cross-block byte-feedback carry is exercised; the decrypt test round-trips the same
+  vector. Both were independently confirmed against OpenSSL (`aes-128-cfb8`) before the
+  tests were written. esp-idf's `esp_aes_crypt_cfb8` drives this exact DMA path
+  (`aes_hal_mode_init(ESP_AES_BLOCK_MODE_CFB8)` over full blocks).
+- `npm run -w @protopulse/emu test` passed with 325 package tests (236 ESP32-S3); a fresh
+  `tsc -p packages/emu --noEmit` and `npm run check:packages` both reported 0 errors.
+
 ## 2026-06-18 — ESP32-S3 slice 162: AES-192-GCM (completes the GCM key-size matrix)
 
 ### Added

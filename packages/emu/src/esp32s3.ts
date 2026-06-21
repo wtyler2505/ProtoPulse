@@ -930,6 +930,7 @@ const AES_BLOCK_NUM = 0x98; // number of 16-byte blocks to process
 const AES_BLOCK_MODE_CBC = 1;
 const AES_BLOCK_MODE_OFB = 2;
 const AES_BLOCK_MODE_CTR = 3;
+const AES_BLOCK_MODE_CFB8 = 4;
 const AES_BLOCK_MODE_CFB128 = 5;
 const AES_BLOCK_MODE_GCM = 6;
 const AES_H_MEM = 0x60; // GCM hash subkey H = E(0) (read)
@@ -3943,6 +3944,43 @@ export class Esp32s3Core implements McuCore {
       lenBlock[15] = cBits & 0xff;
       ghashBlock(lenBlock);
       this.aesT0 = toWords(ghash.map((g, i) => ((g ?? 0) ^ (ej0[i] ?? 0)) & 0xff));
+      return;
+    }
+    if (this.aesBlockMode === AES_BLOCK_MODE_CFB8) {
+      // CFB-8: 8-bit (one-byte) segment cipher feedback. For each input byte the engine
+      // encrypts the 128-bit shift register, XORs the most-significant keystream byte
+      // (byte 0 of the big-endian cipher output) with the input byte to make the output
+      // byte, then shifts the register left one byte and appends the ciphertext byte at the
+      // least-significant end. The block cipher always runs forward (E); AES_MODE's enc/dec
+      // bit selects whether the fed-back byte is the output (encrypt) or the input (decrypt)
+      // ciphertext — the same convention as CFB-128. Verified against esp-idf
+      // esp_aes_crypt_cfb8 (aes_hal_mode_init(ESP_AES_BLOCK_MODE_CFB8) over full DMA blocks)
+      // and OpenSSL aes-128-cfb8. The shift register's final state becomes the IV register.
+      const reg = toBytes(prev); // 16-byte shift register, big-endian, seeded from the IV
+      const inBytes: number[] = [];
+      for (let w = 0; w < blocks * 4; w++) {
+        const x = inWords[w] ?? 0;
+        inBytes.push((x >>> 24) & 0xff, (x >>> 16) & 0xff, (x >>> 8) & 0xff, x & 0xff);
+      }
+      const outBytes: number[] = [];
+      for (let i = 0; i < blocks * 16; i++) {
+        const ks = aesEncryptBlock(reg, rk, nr);
+        const inB = inBytes[i] ?? 0;
+        const outB = ((ks[0] ?? 0) ^ inB) & 0xff;
+        outBytes.push(outB);
+        reg.shift(); // drop the most-significant byte
+        reg.push(decrypt ? inB : outB); // append the ciphertext byte at the LSB end
+      }
+      for (let w = 0; w < blocks * 4; w++) {
+        const ow =
+          (((outBytes[4 * w] ?? 0) << 24) |
+            ((outBytes[4 * w + 1] ?? 0) << 16) |
+            ((outBytes[4 * w + 2] ?? 0) << 8) |
+            (outBytes[4 * w + 3] ?? 0)) >>>
+          0;
+        this.gdmaPushRxWord(rxCh, ow >>> 0);
+      }
+      this.aesIv = toWords(reg);
       return;
     }
     for (let b = 0; b < blocks; b++) {

@@ -1934,6 +1934,17 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       primary-source verification — do NOT guess): the DS MD integrity check (exact
       SHA-256 input + box byte-order live in the esp_secure_cert pip module, not yet
       fetched) and the HMAC-downstream key derivation.
+- [x] ESP32-S3 core slice 163 — AES-CFB8 enc + dec (landed 2026-06-20): the AES-DMA
+      path adds 8-bit (byte-segment) cipher-feedback mode (AES_BLOCK_MODE = 4), both
+      directions. Each input byte encrypts the 128-bit shift register, XORs the
+      most-significant keystream byte, then shifts the register left one byte and feeds
+      the ciphertext byte back at the LSB end (the output byte when encrypting, the input
+      byte when decrypting). esp-idf's esp_aes_crypt_cfb8 drives this exact DMA path —
+      aes_hal_mode_init(ESP_AES_BLOCK_MODE_CFB8) over full blocks. KAT: NIST SP 800-38A
+      F.3.7 (key 2b7e1516…, IV 000102…0f, plaintext 6bc1bee2… → ciphertext 3b79424c…),
+      two blocks so the cross-block byte-feedback carry is exercised; independently
+      confirmed via OpenSSL aes-128-cfb8. AES now covers ECB/CBC/CTR/OFB/CFB8/CFB128/
+      GCM(+AAD) — the full AES_BLOCK_MODE matrix. Remaining AES cut: partial-block GCM.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
