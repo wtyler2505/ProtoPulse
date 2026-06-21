@@ -539,6 +539,51 @@ const bme280 = definePart({
     'Pin map verified 2026-06-20 against the Bosch BME280 datasheet (LGA-8, numbered clockwise from top): 1 GND, 2 CSB, 3 SDI(=SDA), 4 SCK(=SCL), 5 SDO, 6 VDDIO, 7 GND, 8 VDD; corroborated across components101/watelectronics/espboards. I²C: CSB→VDDIO selects I²C, addr 0x77 default / 0x76 with SDO→GND. VDD 1.71–3.6 V, VDDIO 1.2–3.6 V. See inbox/2026-06-20-bme280-pinout.md. No footprint yet — LGA-8 land pattern is a later datasheet-exact slice.',
 });
 
+// GY-521 (MPU-6050) — InvenSense/TDK 6-axis IMU (3-axis accel + 3-axis gyro) on
+// the common GY-521 breakout, I²C. Another digital-bus part; also has an
+// auxiliary I²C master (XDA/XCL) for chaining e.g. a magnetometer, plus an INT
+// line. Module runs at 3.3 V via an onboard regulator (VCC tolerant 3–5 V).
+// Schematic-only (module land pattern deferred, like the ESP32 module).
+const mpu6050 = definePart({
+  id: 'core:mpu6050',
+  name: 'GY-521 (MPU-6050) 6-axis IMU (I²C)',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'GY-521',
+  manufacturer: 'InvenSense/TDK (MPU-6050)',
+  datasheetUrl: 'https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Datasheet1.pdf',
+  pins: [
+    pin('1', 'VCC', 'power_in', '1'),
+    pin('2', 'GND', 'power_in', '2'),
+    pin('3', 'SCL', 'input', '3'), // I²C clock in
+    pin('4', 'SDA', 'bidi', '4'), // I²C data
+    pin('5', 'XDA', 'bidi', '5'), // auxiliary I²C master data
+    pin('6', 'XCL', 'output', '6'), // auxiliary I²C master clock
+    pin('7', 'AD0', 'input', '7'), // address select: low→0x68, high→0x69
+    pin('8', 'INT', 'output', '8'), // data-ready / motion interrupt
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -4 * G, w: 6 * G, h: 8 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'MPU-6050', sizeNm: Math.round(G * 0.55) },
+    ],
+    pins: [
+      { key: '1', at: { x: -4 * G, y: 3 * G }, dir: 'W' }, // VCC
+      { key: '2', at: { x: -4 * G, y: G }, dir: 'W' }, // GND
+      { key: '7', at: { x: -4 * G, y: -G }, dir: 'W' }, // AD0
+      { key: '8', at: { x: -4 * G, y: -3 * G }, dir: 'W' }, // INT
+      { key: '3', at: { x: 4 * G, y: 3 * G }, dir: 'E' }, // SCL
+      { key: '4', at: { x: 4 * G, y: G }, dir: 'E' }, // SDA
+      { key: '5', at: { x: 4 * G, y: -G }, dir: 'E' }, // XDA
+      { key: '6', at: { x: 4 * G, y: -3 * G }, dir: 'E' }, // XCL
+    ],
+  },
+  parametrics: { currentDrawA: 0.0039, maxVoltage: 5 }, // ~3.9 mA accel+gyro; module VCC 3–5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against components101 + lastminuteengineers GY-521 pinouts and the InvenSense MPU-6000/6050 datasheet (NOT taken from the shared component log): header order 1 VCC, 2 GND, 3 SCL, 4 SDA, 5 XDA, 6 XCL, 7 AD0, 8 INT. I²C addr 0x68 (AD0 low) / 0x69 (AD0 high); XDA/XCL = auxiliary I²C master. Module is 3.3 V with onboard regulator, VCC tolerant 3–5 V. See inbox/2026-06-21-mpu6050-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -553,6 +598,7 @@ export const SEED_PARTS: Part[] = [
   ne555,
   tmp36,
   bme280,
+  mpu6050,
   pushbutton,
   header2x10,
   usbcPower,
