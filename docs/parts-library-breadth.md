@@ -52,6 +52,7 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:ky008-laser` — KY-008 laser diode module (3-pin emitter, 650nm; web-verified). `275d0c38`
 - [x] `core:ky022-ir-receiver` — KY-022 IR receiver (38kHz, VS1838B; web-verified). `0ebc6d3b`
 - [x] `core:ky005-ir-transmitter` — KY-005 IR transmitter (940nm IR LED; web-verified). `c343b70f`
+- [x] `core:slot-optocoupler` — Slot-type IR optocoupler (ITR9606 + LM393, 3-pin; web-verified). `e44a9ce7`
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
@@ -72,7 +73,7 @@ Tier 2 — sensor modules (mostly simple 3-4 pin digital/analog):
 - [x] IR obstacle-avoidance sensor — done `f55dc4d4`. IR receiver 38 kHz — done `0ebc6d3b` (KY-022). IR LED transmitter — done `c343b70f` (KY-005).
 - [x] Soil moisture sensor module — done `2dcc3a01` (resistive FC-28; capacitive v1.2 still open)
 - [x] Capacitive touch sensor module — done `814eb4bd` (TTP223)
-- [ ] Slot-type optocoupler module
+- [x] Slot-type optocoupler module — done `e44a9ce7`
 - [x] Passive buzzer module — done `d722b48c` (KY-006). Laser diode module — done `275d0c38` (KY-008).
 - [ ] RGB LED modules, single LED module, tactile button module
 - [ ] 4-digit / single-digit 7-segment display, 8x8 LED dot matrix
