@@ -1461,6 +1461,98 @@ const ky004Button = definePart({
     'Pin map web-verified 2026-06-21 against arduinomodules + espboards + joy-it SensorKit + Cirkit Designer KY-004 pinouts (NOT taken from the shared component log): 3-pin S (signal), middle VCC, GND. Tactile push button + onboard 10 kΩ; the standard (original Keyes) variant is pull-DOWN — S is LOW at rest and HIGH when pressed (active-high), so S is an OUTPUT from the module. Distinct from the bare 2-pin core:pushbutton. refPrefix SW. See inbox/2026-06-21-ky004-button-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// Arduino Nano (ATmega328P) — first Tier-3 board. 30 pins in two rows of 15. Digital
+// D0–D13 (D0/D1 = UART RX/TX; D10–D13 = SPI SS/MOSI/MISO/SCK), analog A0–A7 (A4/A5 =
+// I²C SDA/SCL; A6/A7 are analog-INPUT only), plus power (VIN in, regulated 5V & 3V3
+// out), two GND, two RESET, and AREF. Modeled as a board: GPIO = bidi, analog-only =
+// input, 5V/3V3 = power_out (onboard regulators source them), VIN/GND = power_in.
+// (Tyler's is the DCCduino clone — identical pinout.) Schematic-only, footprint deferred.
+const arduinoNano = definePart({
+  id: 'core:arduino-nano',
+  name: 'Arduino Nano (ATmega328P)',
+  refPrefix: 'A',
+  class: 'ic',
+  mpn: 'Arduino Nano',
+  manufacturer: 'Arduino (ATmega328P; DCCduino clone)',
+  datasheetUrl: 'https://content.arduino.cc/assets/Pinout-NANO_latest.pdf',
+  pins: [
+    pin('1', 'D1', 'bidi', '1'), // TX
+    pin('2', 'D0', 'bidi', '2'), // RX
+    pin('3', 'RST', 'input', '3'), // reset (active-low)
+    pin('4', 'GND', 'power_in', '4'),
+    pin('5', 'D2', 'bidi', '5'),
+    pin('6', 'D3', 'bidi', '6'),
+    pin('7', 'D4', 'bidi', '7'),
+    pin('8', 'D5', 'bidi', '8'),
+    pin('9', 'D6', 'bidi', '9'),
+    pin('10', 'D7', 'bidi', '10'),
+    pin('11', 'D8', 'bidi', '11'),
+    pin('12', 'D9', 'bidi', '12'),
+    pin('13', 'D10', 'bidi', '13'), // SPI SS
+    pin('14', 'D11', 'bidi', '14'), // SPI MOSI
+    pin('15', 'D12', 'bidi', '15'), // SPI MISO
+    pin('16', 'D13', 'bidi', '16'), // SPI SCK (onboard LED)
+    pin('17', '3V3', 'power_out', '17'), // regulated 3.3 V out (≤50 mA)
+    pin('18', 'AREF', 'input', '18'), // ADC reference in
+    pin('19', 'A0', 'bidi', '19'),
+    pin('20', 'A1', 'bidi', '20'),
+    pin('21', 'A2', 'bidi', '21'),
+    pin('22', 'A3', 'bidi', '22'),
+    pin('23', 'A4', 'bidi', '23'), // I²C SDA
+    pin('24', 'A5', 'bidi', '24'), // I²C SCL
+    pin('25', 'A6', 'input', '25'), // analog-input only
+    pin('26', 'A7', 'input', '26'), // analog-input only
+    pin('27', '5V', 'power_out', '27'), // regulated 5 V out
+    pin('28', 'RST', 'input', '28'), // second reset pin
+    pin('29', 'GND', 'power_in', '29'),
+    pin('30', 'VIN', 'power_in', '30'), // 7–12 V unregulated in
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -4 * G, y: -15 * G, w: 8 * G, h: 30 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'NANO', sizeNm: Math.round(G * 0.6) },
+    ],
+    pins: [
+      // left column: keys 1–15, top (14G) to bottom (−14G), step −2G
+      { key: '1', at: { x: -5 * G, y: 14 * G }, dir: 'W' },
+      { key: '2', at: { x: -5 * G, y: 12 * G }, dir: 'W' },
+      { key: '3', at: { x: -5 * G, y: 10 * G }, dir: 'W' },
+      { key: '4', at: { x: -5 * G, y: 8 * G }, dir: 'W' },
+      { key: '5', at: { x: -5 * G, y: 6 * G }, dir: 'W' },
+      { key: '6', at: { x: -5 * G, y: 4 * G }, dir: 'W' },
+      { key: '7', at: { x: -5 * G, y: 2 * G }, dir: 'W' },
+      { key: '8', at: { x: -5 * G, y: 0 }, dir: 'W' },
+      { key: '9', at: { x: -5 * G, y: -2 * G }, dir: 'W' },
+      { key: '10', at: { x: -5 * G, y: -4 * G }, dir: 'W' },
+      { key: '11', at: { x: -5 * G, y: -6 * G }, dir: 'W' },
+      { key: '12', at: { x: -5 * G, y: -8 * G }, dir: 'W' },
+      { key: '13', at: { x: -5 * G, y: -10 * G }, dir: 'W' },
+      { key: '14', at: { x: -5 * G, y: -12 * G }, dir: 'W' },
+      { key: '15', at: { x: -5 * G, y: -14 * G }, dir: 'W' },
+      // right column: keys 16–30
+      { key: '16', at: { x: 5 * G, y: 14 * G }, dir: 'E' },
+      { key: '17', at: { x: 5 * G, y: 12 * G }, dir: 'E' },
+      { key: '18', at: { x: 5 * G, y: 10 * G }, dir: 'E' },
+      { key: '19', at: { x: 5 * G, y: 8 * G }, dir: 'E' },
+      { key: '20', at: { x: 5 * G, y: 6 * G }, dir: 'E' },
+      { key: '21', at: { x: 5 * G, y: 4 * G }, dir: 'E' },
+      { key: '22', at: { x: 5 * G, y: 2 * G }, dir: 'E' },
+      { key: '23', at: { x: 5 * G, y: 0 }, dir: 'E' },
+      { key: '24', at: { x: 5 * G, y: -2 * G }, dir: 'E' },
+      { key: '25', at: { x: 5 * G, y: -4 * G }, dir: 'E' },
+      { key: '26', at: { x: 5 * G, y: -6 * G }, dir: 'E' },
+      { key: '27', at: { x: 5 * G, y: -8 * G }, dir: 'E' },
+      { key: '28', at: { x: 5 * G, y: -10 * G }, dir: 'E' },
+      { key: '29', at: { x: 5 * G, y: -12 * G }, dir: 'E' },
+      { key: '30', at: { x: 5 * G, y: -14 * G }, dir: 'E' },
+    ],
+  },
+  parametrics: { maxVoltage: 12 }, // VIN 7–12 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against the official Arduino Pinout-NANO PDF plus zbotic + nextpcb + electronicshub Nano references (NOT taken from the shared component log): 30 pins in two rows of 15. Left row 1–15: D1/TX, D0/RX, RST, GND, D2–D12. Right row 16–30: D13, 3V3, AREF, A0–A7, 5V, RST, GND, VIN. D0/D1 = UART; D10–D13 = SPI SS/MOSI/MISO/SCK; A4/A5 = I²C SDA/SCL; A6/A7 are analog-INPUT only (no digital, no pull-up). GPIO modeled bidi, analog-only input, AREF/RST input, 3V3 & 5V power_out (onboard regulators), VIN & GND power_in. Tyler owns the DCCduino clone (identical pinout). refPrefix A. See inbox/2026-06-21-arduino-nano-pinout.md. No footprint yet — board land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1498,6 +1590,7 @@ export const SEED_PARTS: Part[] = [
   ky016RgbLed,
   tm1637Display,
   ky004Button,
+  arduinoNano,
   pushbutton,
   header2x10,
   usbcPower,
