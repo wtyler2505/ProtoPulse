@@ -28,6 +28,7 @@ describe('seed library', () => {
     const verified = SEED_PARTS.filter((p) => p.provenance === 'verified');
     expect(verified.map((p) => p.id).sort()).toEqual([
       'core:bat54s',
+      'core:bme280',
       'core:esp32-s3-wroom-1',
       'core:ne555',
       'core:tmp36',
@@ -64,6 +65,21 @@ describe('seed library', () => {
     expect(byKey.get('2')).toBe('output');
     expect(byKey.get('1')).toBe('power_in');
     expect(byKey.get('3')).toBe('power_in');
+  });
+
+  it('BME280 pin map matches the Bosch datasheet (LGA-8)', () => {
+    const bme = SEED_PARTS.find((p) => p.id === 'core:bme280');
+    expect(bme).toBeDefined();
+    expect(bme?.pins).toHaveLength(8);
+    const byNumber = new Map(bme?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('GND');
+    expect(byNumber.get('2')).toBe('CSB');
+    expect(byNumber.get('3')).toBe('SDI'); // SDA in I²C
+    expect(byNumber.get('4')).toBe('SCK'); // SCL in I²C
+    expect(byNumber.get('5')).toBe('SDO');
+    expect(byNumber.get('6')).toBe('VDDIO');
+    expect(byNumber.get('7')).toBe('GND');
+    expect(byNumber.get('8')).toBe('VDD');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
