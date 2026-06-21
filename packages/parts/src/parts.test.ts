@@ -29,6 +29,7 @@ describe('seed library', () => {
     expect(verified.map((p) => p.id).sort()).toEqual([
       'core:bat54s',
       'core:bme280',
+      'core:ds1302',
       'core:esp32-s3-wroom-1',
       'core:mpu6050',
       'core:ne555',
@@ -96,6 +97,25 @@ describe('seed library', () => {
     expect(byNumber.get('6')).toBe('XCL');
     expect(byNumber.get('7')).toBe('AD0');
     expect(byNumber.get('8')).toBe('INT');
+  });
+
+  it('DS1302 RTC module pin map matches the verified 5-pin header (3-wire, not I²C)', () => {
+    const ds = SEED_PARTS.find((p) => p.id === 'core:ds1302');
+    expect(ds).toBeDefined();
+    expect(ds?.pins).toHaveLength(5);
+    const byNumber = new Map(ds?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('VCC');
+    expect(byNumber.get('2')).toBe('GND');
+    expect(byNumber.get('3')).toBe('CLK');
+    expect(byNumber.get('4')).toBe('DAT');
+    expect(byNumber.get('5')).toBe('RST');
+    // 3-wire serial: CLK/RST are MCU-driven inputs, DAT is bidirectional, power pins are power_in.
+    const byKey = new Map(ds?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('power_in');
+    expect(byKey.get('2')).toBe('power_in');
+    expect(byKey.get('3')).toBe('input');
+    expect(byKey.get('4')).toBe('bidi');
+    expect(byKey.get('5')).toBe('input');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {

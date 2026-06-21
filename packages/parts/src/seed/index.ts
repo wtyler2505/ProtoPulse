@@ -584,6 +584,47 @@ const mpu6050 = definePart({
     'Pin map web-verified 2026-06-21 against components101 + lastminuteengineers GY-521 pinouts and the InvenSense MPU-6000/6050 datasheet (NOT taken from the shared component log): header order 1 VCC, 2 GND, 3 SCL, 4 SDA, 5 XDA, 6 XCL, 7 AD0, 8 INT. I²C addr 0x68 (AD0 low) / 0x69 (AD0 high); XDA/XCL = auxiliary I²C master. Module is 3.3 V with onboard regulator, VCC tolerant 3–5 V. See inbox/2026-06-21-mpu6050-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// DS1302 RTC module — Maxim/Analog Devices DS1302 trickle-charge timekeeping chip
+// on the common 5-pin breakout (coin-cell backup + 32.768 kHz crystal onboard).
+// NOTE: 3-wire SERIAL interface, NOT I²C — a frequent misconception. The three
+// signal lines are CLK (serial clock, MCU→module), DAT (bidirectional data), and
+// RST/CE (chip enable, MCU-driven, active HIGH during a transfer). The chip is
+// 8-pin (VCC1/VCC2/GND/SCLK/I/O/CE/X1/X2); the module breaks out only the 5 useful
+// header pins. Schematic-only (module land pattern deferred, like the other modules).
+const ds1302 = definePart({
+  id: 'core:ds1302',
+  name: 'DS1302 RTC module (3-wire)',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'DS1302',
+  manufacturer: 'Maxim/Analog Devices',
+  datasheetUrl: 'https://www.analog.com/media/en/technical-documentation/data-sheets/ds1302.pdf',
+  pins: [
+    pin('1', 'VCC', 'power_in', '1'), // module power 2.0–5.5 V
+    pin('2', 'GND', 'power_in', '2'),
+    pin('3', 'CLK', 'input', '3'), // SCLK — serial clock from MCU
+    pin('4', 'DAT', 'bidi', '4'), // I/O — bidirectional serial data
+    pin('5', 'RST', 'input', '5'), // CE — chip enable, active HIGH during transfer
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -4 * G, w: 6 * G, h: 8 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'DS1302', sizeNm: Math.round(G * 0.55) },
+    ],
+    pins: [
+      { key: '1', at: { x: -4 * G, y: 3 * G }, dir: 'W' }, // VCC
+      { key: '2', at: { x: -4 * G, y: G }, dir: 'W' }, // GND
+      { key: '3', at: { x: 4 * G, y: 3 * G }, dir: 'E' }, // CLK
+      { key: '4', at: { x: 4 * G, y: G }, dir: 'E' }, // DAT
+      { key: '5', at: { x: 4 * G, y: -G }, dir: 'E' }, // RST
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // chip 2.0–5.5 V full operation
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against the Analog Devices DS1302 datasheet plus electropeak / espboards / SunFounder UMSK / components101 module pinouts (NOT taken from the shared component log): module 5-pin header order 1 VCC, 2 GND, 3 CLK, 4 DAT, 5 RST. DS1302 is a 3-WIRE SERIAL part (NOT I²C): CLK=serial clock (in), DAT=bidirectional I/O, RST/CE=chip enable (in, active HIGH). Chip is 8-pin (VCC1/VCC2/GND/SCLK/I/O/CE/X1/X2); the module exposes only the 5 useful pins and carries the 32.768 kHz crystal + coin-cell backup. See inbox/2026-06-21-ds1302-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -599,6 +640,7 @@ export const SEED_PARTS: Part[] = [
   tmp36,
   bme280,
   mpu6050,
+  ds1302,
   pushbutton,
   header2x10,
   usbcPower,
