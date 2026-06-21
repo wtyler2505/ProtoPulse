@@ -48,6 +48,7 @@ describe('seed library', () => {
       'core:max7219',
       'core:mpu6050',
       'core:ne555',
+      'core:nodemcu-esp8266',
       'core:rc522',
       'core:slot-optocoupler',
       'core:soil-moisture',
@@ -555,6 +556,29 @@ describe('seed library', () => {
     expect(byKey.get('16')).toBe('bidi'); // D2
     expect(byKey.get('29')).toBe('input'); // AREF
     expect(u?.refPrefix).toBe('A');
+  });
+
+  it('NodeMCU ESP8266 pin map matches the verified 30-pin Amica layout', () => {
+    const n = SEED_PARTS.find((p) => p.id === 'core:nodemcu-esp8266');
+    expect(n).toBeDefined();
+    expect(n?.pins).toHaveLength(30);
+    expect(new Set(n?.pins.map((p) => p.key)).size).toBe(30);
+    const byNumber = new Map(n?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('A0');
+    expect(byNumber.get('8')).toBe('SD0');
+    expect(byNumber.get('12')).toBe('EN');
+    expect(byNumber.get('15')).toBe('VIN');
+    expect(byNumber.get('16')).toBe('D0');
+    expect(byNumber.get('26')).toBe('D8');
+    expect(byNumber.get('27')).toBe('RX');
+    expect(byNumber.get('28')).toBe('TX');
+    const byKey = new Map(n?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('input'); // A0 ADC
+    expect(byKey.get('2')).toBe('nc'); // RSV
+    expect(byKey.get('11')).toBe('power_out'); // 3V3
+    expect(byKey.get('15')).toBe('power_in'); // VIN
+    expect(byKey.get('16')).toBe('bidi'); // D0 GPIO
+    expect(n?.refPrefix).toBe('A');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {

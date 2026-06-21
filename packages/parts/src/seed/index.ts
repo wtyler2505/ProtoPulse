@@ -1651,6 +1651,98 @@ const arduinoUno = definePart({
     'Pin map web-verified 2026-06-21 against the official Arduino Pinout-UNOrev3 PDF plus circuito.io + deepbluembedded + etechnophiles Uno references (NOT taken from the shared component log): four headers, 31 modeled pins. POWER: IOREF, RESET, 3V3, 5V, GND, GND, VIN. ANALOG: A0–A5 (A4/A5 = I²C SDA/SCL). DIGITAL lower: D0/RX, D1/TX, D2–D7. DIGITAL upper: D8–D13, GND, AREF, SDA, SCL (R3 dedicated I²C, same ATmega nets as A4/A5). PWM on D3/5/6/9/10/11; SPI on D10–D13. GPIO bidi, analog-only/RESET/AREF input, IOREF/3V3/5V power_out, VIN/GND power_in. Tyler also owns the OSEPP Uno R3 Plus (same pinout). refPrefix A. See inbox/2026-06-21-arduino-uno-r3-pinout.md. No footprint yet — board land pattern is a later slice.',
 });
 
+// NodeMCU ESP8266 (Amica) — 30-pin ESP-12E dev board. Canonical Amica layout: left
+// column A0, RSV, RSV, SD3, SD2, SD1, CMD, SD0, CLK, GND, 3V3, EN, RST, GND, VIN; right
+// column D0–D4, 3V3, GND, D5–D8, RX, TX, GND, 3V3. GPIO labels D0–D8 map to ESP GPIOs
+// (D0=16, D1=5, D2=4, D3=0, D4=2, D5=14, D6=12, D7=13, D8=15, RX=3, TX=1); D5–D8 are the
+// HSPI bus. A0 is a 0–1 V ADC (with onboard divider). SD0–SD3/CMD/CLK are the SDIO flash
+// bus (occupied by onboard flash). 3V3 = regulator out (≤600 mA). Footprint deferred.
+const nodemcuEsp8266 = definePart({
+  id: 'core:nodemcu-esp8266',
+  name: 'NodeMCU ESP8266 (Amica)',
+  refPrefix: 'A',
+  class: 'ic',
+  mpn: 'NodeMCU ESP8266',
+  manufacturer: 'Amica (ESP8266 ESP-12E)',
+  datasheetUrl: 'https://components101.com/development-boards/nodemcu-esp8266-pinout-features-and-datasheet',
+  pins: [
+    // left column
+    pin('1', 'A0', 'input', '1'), // ADC, 0–1 V (onboard divider)
+    pin('2', 'RSV', 'nc', '2'), // reserved
+    pin('3', 'RSV', 'nc', '3'), // reserved
+    pin('4', 'SD3', 'bidi', '4'), // SDIO flash bus
+    pin('5', 'SD2', 'bidi', '5'),
+    pin('6', 'SD1', 'bidi', '6'),
+    pin('7', 'CMD', 'bidi', '7'),
+    pin('8', 'SD0', 'bidi', '8'),
+    pin('9', 'CLK', 'bidi', '9'),
+    pin('10', 'GND', 'power_in', '10'),
+    pin('11', '3V3', 'power_out', '11'), // regulator out (≤600 mA)
+    pin('12', 'EN', 'input', '12'), // chip enable (CH_PD), pulled high
+    pin('13', 'RST', 'input', '13'),
+    pin('14', 'GND', 'power_in', '14'),
+    pin('15', 'VIN', 'power_in', '15'), // 5 V in
+    // right column
+    pin('16', 'D0', 'bidi', '16'), // GPIO16
+    pin('17', 'D1', 'bidi', '17'), // GPIO5 (I²C SCL by convention)
+    pin('18', 'D2', 'bidi', '18'), // GPIO4 (I²C SDA)
+    pin('19', 'D3', 'bidi', '19'), // GPIO0 (flash button)
+    pin('20', 'D4', 'bidi', '20'), // GPIO2 (onboard LED)
+    pin('21', '3V3', 'power_out', '21'),
+    pin('22', 'GND', 'power_in', '22'),
+    pin('23', 'D5', 'bidi', '23'), // GPIO14 (HSPI SCK)
+    pin('24', 'D6', 'bidi', '24'), // GPIO12 (HSPI MISO)
+    pin('25', 'D7', 'bidi', '25'), // GPIO13 (HSPI MOSI)
+    pin('26', 'D8', 'bidi', '26'), // GPIO15 (HSPI SS)
+    pin('27', 'RX', 'bidi', '27'), // GPIO3
+    pin('28', 'TX', 'bidi', '28'), // GPIO1
+    pin('29', 'GND', 'power_in', '29'),
+    pin('30', '3V3', 'power_out', '30'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -4 * G, y: -15 * G, w: 8 * G, h: 30 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'NodeMCU', sizeNm: Math.round(G * 0.5) },
+    ],
+    pins: [
+      { key: '1', at: { x: -5 * G, y: 14 * G }, dir: 'W' },
+      { key: '2', at: { x: -5 * G, y: 12 * G }, dir: 'W' },
+      { key: '3', at: { x: -5 * G, y: 10 * G }, dir: 'W' },
+      { key: '4', at: { x: -5 * G, y: 8 * G }, dir: 'W' },
+      { key: '5', at: { x: -5 * G, y: 6 * G }, dir: 'W' },
+      { key: '6', at: { x: -5 * G, y: 4 * G }, dir: 'W' },
+      { key: '7', at: { x: -5 * G, y: 2 * G }, dir: 'W' },
+      { key: '8', at: { x: -5 * G, y: 0 }, dir: 'W' },
+      { key: '9', at: { x: -5 * G, y: -2 * G }, dir: 'W' },
+      { key: '10', at: { x: -5 * G, y: -4 * G }, dir: 'W' },
+      { key: '11', at: { x: -5 * G, y: -6 * G }, dir: 'W' },
+      { key: '12', at: { x: -5 * G, y: -8 * G }, dir: 'W' },
+      { key: '13', at: { x: -5 * G, y: -10 * G }, dir: 'W' },
+      { key: '14', at: { x: -5 * G, y: -12 * G }, dir: 'W' },
+      { key: '15', at: { x: -5 * G, y: -14 * G }, dir: 'W' },
+      { key: '16', at: { x: 5 * G, y: 14 * G }, dir: 'E' },
+      { key: '17', at: { x: 5 * G, y: 12 * G }, dir: 'E' },
+      { key: '18', at: { x: 5 * G, y: 10 * G }, dir: 'E' },
+      { key: '19', at: { x: 5 * G, y: 8 * G }, dir: 'E' },
+      { key: '20', at: { x: 5 * G, y: 6 * G }, dir: 'E' },
+      { key: '21', at: { x: 5 * G, y: 4 * G }, dir: 'E' },
+      { key: '22', at: { x: 5 * G, y: 2 * G }, dir: 'E' },
+      { key: '23', at: { x: 5 * G, y: 0 }, dir: 'E' },
+      { key: '24', at: { x: 5 * G, y: -2 * G }, dir: 'E' },
+      { key: '25', at: { x: 5 * G, y: -4 * G }, dir: 'E' },
+      { key: '26', at: { x: 5 * G, y: -6 * G }, dir: 'E' },
+      { key: '27', at: { x: 5 * G, y: -8 * G }, dir: 'E' },
+      { key: '28', at: { x: 5 * G, y: -10 * G }, dir: 'E' },
+      { key: '29', at: { x: 5 * G, y: -12 * G }, dir: 'E' },
+      { key: '30', at: { x: 5 * G, y: -14 * G }, dir: 'E' },
+    ],
+  },
+  parametrics: { maxVoltage: 5 }, // VIN ~5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against components101 + lastminuteengineers + etechnophiles NodeMCU/ESP8266 references (NOT taken from the shared component log): canonical 30-pin Amica layout — left A0, RSV, RSV, SD3, SD2, SD1, CMD, SD0, CLK, GND, 3V3, EN, RST, GND, VIN; right D0, D1, D2, D3, D4, 3V3, GND, D5, D6, D7, D8, RX, TX, GND, 3V3. GPIO mapping confirmed (etechnophiles): D0=GPIO16, D1=5, D2=4, D3=0, D4=2, D5=14, D6=12, D7=13, D8=15, RX=3, TX=1; D5–D8 = HSPI. A0 = 0–1 V ADC (onboard divider, input). EN/RST input; SD0–SD3/CMD/CLK = SDIO flash bus (bidi, occupied by onboard flash); RSV = nc; 3V3 = regulator out (≤600 mA, power_out); VIN/GND power_in. refPrefix A. See inbox/2026-06-21-nodemcu-esp8266-pinout.md. No footprint yet — board land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1690,6 +1782,7 @@ export const SEED_PARTS: Part[] = [
   ky004Button,
   arduinoNano,
   arduinoUno,
+  nodemcuEsp8266,
   pushbutton,
   header2x10,
   usbcPower,
