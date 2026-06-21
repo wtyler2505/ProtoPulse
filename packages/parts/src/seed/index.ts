@@ -1118,6 +1118,40 @@ const soilMoisture = definePart({
     'Pin map web-verified 2026-06-21 against components101 + Random Nerd Tutorials + Cirkit Designer YL-69/FC-28 pinouts and the LM393 comparator basis (NOT taken from the shared component log): YL-38 comparator board MCU header VCC, GND, DO (pot threshold), AO (analog 0–VCC moisture). Resistive sensor — the YL-69 two-prong probe wires into the YL-38 board over a separate 2-pin terminal (not modeled). DO/AO outputs, power pins power_in. A 3-pin capacitive v1.2 variant exists separately. See inbox/2026-06-21-soil-moisture-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// TTP223 capacitive touch sensor module — a dedicated Tontek TTP223 touch IC (NOT an
+// LM393 comparator like the other Tier-2 sensors). 3-pin: VCC, GND, SIG. SIG is a
+// push-pull digital output (no pull-up needed), active-HIGH by default; solder pads A
+// (toggle mode) and B (invert to active-low) reconfigure it. Schematic-only, deferred.
+const ttp223 = definePart({
+  id: 'core:ttp223',
+  name: 'TTP223 capacitive touch sensor module',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'TTP223',
+  manufacturer: 'Tontek (TTP223 touch IC)',
+  datasheetUrl: 'https://electropeak.com/learn/interfacing-ttp223-capacitance-touch-sensor-with-arduino/',
+  pins: [
+    pin('1', 'VCC', 'power_in', '1'), // 2.0–5.5 V
+    pin('2', 'GND', 'power_in', '2'),
+    pin('3', 'SIG', 'output', '3'), // push-pull digital, active-HIGH default
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -3 * G, w: 6 * G, h: 6 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'TTP223', sizeNm: Math.round(G * 0.45) },
+    ],
+    pins: [
+      { key: '1', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC
+      { key: '2', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '3', at: { x: 4 * G, y: 0 }, dir: 'E' }, // SIG
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // 2.0–5.5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against componentindex + pcbsync + electropeak TTP223 module pinouts and the Tontek TTP223 touch-IC basis (NOT taken from the shared component log): 3-pin VCC, GND, SIG. SIG is a push-pull digital output (no external pull-up), active-HIGH by default; rear solder pad A = toggle mode, pad B = invert to active-LOW. 2.0–5.5 V. Power pins power_in, SIG output. Header silk order is board-revision-dependent (names/functions fixed). See inbox/2026-06-21-ttp223-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1145,6 +1179,7 @@ export const SEED_PARTS: Part[] = [
   flameSensor,
   irObstacle,
   soilMoisture,
+  ttp223,
   pushbutton,
   header2x10,
   usbcPower,
