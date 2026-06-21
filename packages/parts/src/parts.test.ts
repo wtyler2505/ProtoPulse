@@ -34,6 +34,7 @@ describe('seed library', () => {
       'core:esp32-s3-wroom-1',
       'core:flame-sensor',
       'core:ir-obstacle',
+      'core:ky005-ir-transmitter',
       'core:ky006-buzzer',
       'core:ky008-laser',
       'core:ky022-ir-receiver',
@@ -423,6 +424,21 @@ describe('seed library', () => {
     expect(byKey.get('1')).toBe('output'); // demodulated signal out
     expect(byKey.get('2')).toBe('power_in');
     expect(byKey.get('3')).toBe('power_in');
+  });
+
+  it('KY-005 IR transmitter pin map matches the verified 3-pin emitter module', () => {
+    const t = SEED_PARTS.find((p) => p.id === 'core:ky005-ir-transmitter');
+    expect(t).toBeDefined();
+    expect(t?.pins).toHaveLength(3);
+    const byNumber = new Map(t?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('S');
+    expect(byNumber.get('2')).toBe('VCC');
+    expect(byNumber.get('3')).toBe('GND');
+    const byKey = new Map(t?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('input'); // S drive
+    expect(byKey.get('2')).toBe('power_in');
+    expect(byKey.get('3')).toBe('power_in');
+    expect(t?.refPrefix).toBe('D');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
