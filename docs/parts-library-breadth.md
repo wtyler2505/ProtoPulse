@@ -47,6 +47,7 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:ir-obstacle` — IR obstacle-avoidance sensor (3-pin digital, active-low; web-verified). `f55dc4d4`
 - [x] `core:soil-moisture` — Soil moisture sensor (FC-28 resistive, 4-pin; web-verified). `2dcc3a01`
 - [x] `core:ttp223` — TTP223 capacitive touch sensor (3-pin push-pull; web-verified). `814eb4bd`
+- [x] `core:ky006-buzzer` — KY-006 passive buzzer (3-pin, MCU-driven tone; web-verified). `d722b48c`
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
@@ -68,7 +69,7 @@ Tier 2 — sensor modules (mostly simple 3-4 pin digital/analog):
 - [x] Soil moisture sensor module — done `2dcc3a01` (resistive FC-28; capacitive v1.2 still open)
 - [x] Capacitive touch sensor module — done `814eb4bd` (TTP223)
 - [ ] Slot-type optocoupler module
-- [ ] Passive buzzer module, laser diode module
+- [x] Passive buzzer module — done `d722b48c` (KY-006). (laser diode module still open)
 - [ ] RGB LED modules, single LED module, tactile button module
 - [ ] 4-digit / single-digit 7-segment display, 8x8 LED dot matrix
 
