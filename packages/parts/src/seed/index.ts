@@ -1427,6 +1427,40 @@ const tm1637Display = definePart({
     'Pin map web-verified 2026-06-21 against lastminuteengineers + makerguides + circuitdigest + Cirkit Designer TM1637 module pinouts and the Titan Micro TM1637 IC (NOT taken from the shared component log): 4-pin CLK, DIO, VCC, GND. 2-wire interface (I²C-like but not standard I²C); CLK is a clock input, DIO is bidirectional (data + optional key-scan readback) so modeled bidi. 3.3–5 V. Power pins power_in. See inbox/2026-06-21-tm1637-display-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// KY-004 button module — a tactile push button + onboard 10 kΩ resistor (distinct
+// from the bare `core:pushbutton`: this is a 3-pin module that outputs a clean logic
+// level). 3-pin: S (signal out), middle VCC, GND. Standard pull-DOWN variant: S sits
+// LOW at rest, HIGH when pressed (active-high). Schematic-only, footprint deferred.
+const ky004Button = definePart({
+  id: 'core:ky004-button',
+  name: 'KY-004 button module',
+  refPrefix: 'SW',
+  class: 'ic',
+  mpn: 'KY-004',
+  manufacturer: 'generic (tactile button + 10kΩ)',
+  datasheetUrl: 'https://arduinomodules.info/ky-004-key-switch-module/',
+  pins: [
+    pin('1', 'S', 'output', '1'), // logic level out: LOW at rest, HIGH pressed (pull-down)
+    pin('2', 'VCC', 'power_in', '2'), // middle pin — 3.3–5 V
+    pin('3', 'GND', 'power_in', '3'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -3 * G, w: 6 * G, h: 6 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'KY-004', sizeNm: Math.round(G * 0.45) },
+    ],
+    pins: [
+      { key: '2', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC
+      { key: '3', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '1', at: { x: 4 * G, y: 0 }, dir: 'E' }, // S
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // 3.3–5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against arduinomodules + espboards + joy-it SensorKit + Cirkit Designer KY-004 pinouts (NOT taken from the shared component log): 3-pin S (signal), middle VCC, GND. Tactile push button + onboard 10 kΩ; the standard (original Keyes) variant is pull-DOWN — S is LOW at rest and HIGH when pressed (active-high), so S is an OUTPUT from the module. Distinct from the bare 2-pin core:pushbutton. refPrefix SW. See inbox/2026-06-21-ky004-button-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1463,6 +1497,7 @@ export const SEED_PARTS: Part[] = [
   slotOptocoupler,
   ky016RgbLed,
   tm1637Display,
+  ky004Button,
   pushbutton,
   header2x10,
   usbcPower,
