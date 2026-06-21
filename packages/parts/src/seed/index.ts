@@ -1253,6 +1253,39 @@ const ky008Laser = definePart({
     'Pin map web-verified 2026-06-21 against arduinomodules + espboards + build-electronic-circuits + electropeak KY-008 pinouts (NOT taken from the shared component log): 3-pin S (signal), middle VCC (unlabeled on most silk; some boards run the laser from S alone so middle = NC), GND. 650 nm 5 mW, 5 V, <40 mA. Drive S HIGH/PWM to fire. S is an input to the module; power pins power_in. refPrefix D (diode emitter). See inbox/2026-06-21-ky008-laser-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// KY-022 IR receiver module (HW-490) — a VS1838B/TL1838 38 kHz IR demodulator. 3-pin:
+// S (demodulated signal OUT, idle-HIGH / LOW during bursts), middle VCC (2.7–5.5 V),
+// GND. Pairs with the KY-005 IR transmitter below. Schematic-only, footprint deferred.
+const ky022IrReceiver = definePart({
+  id: 'core:ky022-ir-receiver',
+  name: 'KY-022 IR receiver module (38 kHz)',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'KY-022',
+  manufacturer: 'generic (VS1838B / TL1838)',
+  datasheetUrl: 'https://arduinomodules.info/ky-022-infrared-receiver-module/',
+  pins: [
+    pin('1', 'S', 'output', '1'), // demodulated signal out (idle HIGH, LOW on burst)
+    pin('2', 'VCC', 'power_in', '2'), // middle pin — 2.7–5.5 V
+    pin('3', 'GND', 'power_in', '3'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -3 * G, w: 6 * G, h: 6 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'IR-RECV', sizeNm: Math.round(G * 0.4) },
+    ],
+    pins: [
+      { key: '2', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC
+      { key: '3', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '1', at: { x: 4 * G, y: 0 }, dir: 'E' }, // S
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // 2.7–5.5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against arduinomodules + thegeekpub + pinouts.net + espboards KY-022 pinouts and the VS1838B/TL1838 1838 IR-receiver IC (NOT taken from the shared component log): 3-pin S (signal), middle VCC (2.7–5.5 V), GND. 38 kHz band-pass demodulator; S is an OUTPUT — idle HIGH, pulled LOW during each IR burst. NOTE: the outer S and – order is NOT standardised across clones (middle is always VCC) — wire to the silk labels, not a fixed position. S output, power pins power_in. See inbox/2026-06-21-ky022-ir-receiver-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1284,6 +1317,7 @@ export const SEED_PARTS: Part[] = [
   ky006Buzzer,
   sw420Vibration,
   ky008Laser,
+  ky022IrReceiver,
   pushbutton,
   header2x10,
   usbcPower,

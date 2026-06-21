@@ -36,6 +36,7 @@ describe('seed library', () => {
       'core:ir-obstacle',
       'core:ky006-buzzer',
       'core:ky008-laser',
+      'core:ky022-ir-receiver',
       'core:ky038',
       'core:l298n',
       'core:lcd1602',
@@ -408,6 +409,20 @@ describe('seed library', () => {
     expect(byKey.get('2')).toBe('power_in');
     expect(byKey.get('3')).toBe('power_in');
     expect(l?.refPrefix).toBe('D');
+  });
+
+  it('KY-022 IR receiver pin map matches the verified 3-pin demodulator module', () => {
+    const r = SEED_PARTS.find((p) => p.id === 'core:ky022-ir-receiver');
+    expect(r).toBeDefined();
+    expect(r?.pins).toHaveLength(3);
+    const byNumber = new Map(r?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('S');
+    expect(byNumber.get('2')).toBe('VCC');
+    expect(byNumber.get('3')).toBe('GND');
+    const byKey = new Map(r?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('output'); // demodulated signal out
+    expect(byKey.get('2')).toBe('power_in');
+    expect(byKey.get('3')).toBe('power_in');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
