@@ -37,6 +37,9 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:max7219` — MAX7219 LED matrix driver module (SPI, daisy-chain; web-verified). `dd5226b3`
 - [x] `core:lcd1602` — 1602A 16x2 character LCD (HD44780, 16-pin parallel; web-verified). `a55121c1`
 - [x] `core:rc522` — RC522 RFID reader module (NXP MFRC522, SPI; web-verified). `611f031a`
+- [x] `core:tb6612fng` — TB6612FNG dual motor driver (Toshiba MOSFET H-bridge; web-verified). `482c6132`
+
+**Tier-1 is COMPLETE** (8/8): MPU-6050, DS1302, DS3231, ULN2003, L298N, TB6612FNG, MAX7219, 1602A LCD, RC522 all landed + web-verified (2026-06-21). Next: Tier-2 sensor modules.
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
@@ -45,7 +48,7 @@ Tier 1 — common, well-documented, high reuse:
 - [x] DS3231 RTC module (ZS-042, I²C) — done `372374b7`
 - [x] ULN2003 stepper driver module (+ 28BYJ-48 pairing) — done `22295bbb`
 - [x] L298N dual H-bridge motor driver — done `bbe20b15`
-- [ ] TB6612 motor driver (OSEPP shield variant)
+- [x] TB6612 motor driver (OSEPP shield variant) — done `482c6132`
 - [x] MAX7219 dot-matrix / 7-seg driver — done `dd5226b3`
 - [x] 1602A LCD (HD44780) display module — done `a55121c1`
 - [x] RC522 RFID module (SPI) — done `611f031a`
