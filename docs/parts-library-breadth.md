@@ -48,6 +48,7 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:soil-moisture` — Soil moisture sensor (FC-28 resistive, 4-pin; web-verified). `2dcc3a01`
 - [x] `core:ttp223` — TTP223 capacitive touch sensor (3-pin push-pull; web-verified). `814eb4bd`
 - [x] `core:ky006-buzzer` — KY-006 passive buzzer (3-pin, MCU-driven tone; web-verified). `d722b48c`
+- [x] `core:sw420-vibration` — SW-420 vibration sensor (3-pin digital, NC spring switch; web-verified). `8699e23a`
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
@@ -64,7 +65,7 @@ Tier 1 — common, well-documented, high reuse:
 Tier 2 — sensor modules (mostly simple 3-4 pin digital/analog):
 - [x] KY-038 sound sensor — done `3ccc12fb` (sound detection sensor variant still open)
 - [x] Flame sensor module — done `23bfbae0`
-- [ ] Vibration sensor modules (spring / reed / piezo variants)
+- [x] Vibration sensor module — done `8699e23a` (SW-420 spring; reed/piezo variants still open)
 - [x] IR obstacle-avoidance sensor — done `f55dc4d4` (IR receiver 38 kHz + IR LED transmitter still open)
 - [x] Soil moisture sensor module — done `2dcc3a01` (resistive FC-28; capacitive v1.2 still open)
 - [x] Capacitive touch sensor module — done `814eb4bd` (TTP223)
