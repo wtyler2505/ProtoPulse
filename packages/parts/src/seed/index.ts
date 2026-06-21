@@ -493,6 +493,52 @@ const tmp36 = definePart({
     'Pin map verified 2026-06-20 against the Analog Devices TMP35/36/37 datasheet (Rev H, TO-92 3-lead, flat face toward you / leads down): pin 1 = +VS (2.7–5.5 V), pin 2 = VOUT, pin 3 = GND. Output 10 mV/°C, 750 mV at 25°C, −40 to +125 °C. Cross-checked against Adafruit TMP36 guide. See inbox/2026-06-20-tmp36-pinout.md. No footprint yet — TO-92 land pattern is a later datasheet-exact slice.',
 });
 
+// BME280 — Bosch I²C/SPI environmental sensor (temp + humidity + pressure).
+// The digital-bus complement to the TMP36's analog path: it talks I²C, so it
+// exercises the SDA/SCL host-bus side of the breadboard. Datasheet pad names
+// kept (SDI=SDA, SCK=SCL in I²C mode); CSB→VDDIO selects I²C, SDO selects the
+// address (GND→0x76, VDDIO→0x77). Schematic-only (2.5×2.5 mm LGA-8 land
+// pattern is a later datasheet-exact slice, like the ESP32 module).
+const bme280 = definePart({
+  id: 'core:bme280',
+  name: 'BME280 temperature/humidity/pressure sensor (I²C/SPI)',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'BME280',
+  manufacturer: 'Bosch Sensortec',
+  datasheetUrl: 'https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bme280-ds002.pdf',
+  pins: [
+    pin('1', 'GND', 'power_in', '1'),
+    pin('2', 'CSB', 'input', '2'),
+    pin('3', 'SDI', 'bidi', '3'), // SDA in I²C mode
+    pin('4', 'SCK', 'input', '4'), // SCL in I²C mode
+    pin('5', 'SDO', 'bidi', '5'), // address select (GND→0x76, VDDIO→0x77); SPI MISO
+    pin('6', 'VDDIO', 'power_in', '6'),
+    pin('7', 'GND', 'power_in', '7'),
+    pin('8', 'VDD', 'power_in', '8'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -4 * G, w: 6 * G, h: 8 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'BME280', sizeNm: Math.round(G * 0.7) },
+    ],
+    pins: [
+      { key: '8', at: { x: -4 * G, y: 3 * G }, dir: 'W' }, // VDD
+      { key: '6', at: { x: -4 * G, y: G }, dir: 'W' }, // VDDIO
+      { key: '1', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '7', at: { x: -4 * G, y: -3 * G }, dir: 'W' }, // GND
+      { key: '4', at: { x: 4 * G, y: 3 * G }, dir: 'E' }, // SCK/SCL
+      { key: '3', at: { x: 4 * G, y: G }, dir: 'E' }, // SDI/SDA
+      { key: '5', at: { x: 4 * G, y: -G }, dir: 'E' }, // SDO
+      { key: '2', at: { x: 4 * G, y: -3 * G }, dir: 'E' }, // CSB
+    ],
+  },
+  parametrics: { currentDrawA: 0.000714, maxVoltage: 3.6 }, // ~714 µA during measurement; VDD 1.71–3.6 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map verified 2026-06-20 against the Bosch BME280 datasheet (LGA-8, numbered clockwise from top): 1 GND, 2 CSB, 3 SDI(=SDA), 4 SCK(=SCL), 5 SDO, 6 VDDIO, 7 GND, 8 VDD; corroborated across components101/watelectronics/espboards. I²C: CSB→VDDIO selects I²C, addr 0x77 default / 0x76 with SDO→GND. VDD 1.71–3.6 V, VDDIO 1.2–3.6 V. See inbox/2026-06-20-bme280-pinout.md. No footprint yet — LGA-8 land pattern is a later datasheet-exact slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -506,6 +552,7 @@ export const SEED_PARTS: Part[] = [
   nmosAo3400,
   ne555,
   tmp36,
+  bme280,
   pushbutton,
   header2x10,
   usbcPower,
