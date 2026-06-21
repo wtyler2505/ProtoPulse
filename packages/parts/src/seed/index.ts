@@ -625,6 +625,51 @@ const ds1302 = definePart({
     'Pin map web-verified 2026-06-21 against the Analog Devices DS1302 datasheet plus electropeak / espboards / SunFounder UMSK / components101 module pinouts (NOT taken from the shared component log): module 5-pin header order 1 VCC, 2 GND, 3 CLK, 4 DAT, 5 RST. DS1302 is a 3-WIRE SERIAL part (NOT I²C): CLK=serial clock (in), DAT=bidirectional I/O, RST/CE=chip enable (in, active HIGH). Chip is 8-pin (VCC1/VCC2/GND/SCLK/I/O/CE/X1/X2); the module exposes only the 5 useful pins and carries the 32.768 kHz crystal + coin-cell backup. See inbox/2026-06-21-ds1302-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// DS3231 RTC module (ZS-042) — Maxim/Analog Devices DS3231 extremely-accurate
+// TCXO I²C RTC. Unlike the DS1302 above, this part genuinely IS I²C (addr 0x68).
+// The ZS-042 board also carries an AT24C32 EEPROM (0x57) sharing the same SDA/SCL;
+// we model only the DS3231's 6-pin header here. Two open-drain outputs (SQW alarm/
+// square-wave, 32K 32.768 kHz clock) both need external pull-ups.
+// Header order note: the ZS-042 has two 6-pin headers on opposite edges and silk
+// order is board-revision-dependent (some boards reverse it); the pin NAMES and
+// functions are fixed. We number 1–6 in the dominant published order
+// (32K, SQW, SCL, SDA, VCC, GND). Schematic-only (module land pattern deferred).
+const ds3231 = definePart({
+  id: 'core:ds3231',
+  name: 'DS3231 RTC module (ZS-042, I²C)',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'DS3231',
+  manufacturer: 'Maxim/Analog Devices',
+  datasheetUrl: 'https://www.analog.com/media/en/technical-documentation/data-sheets/ds3231.pdf',
+  pins: [
+    pin('1', '32K', 'output', '1'), // 32.768 kHz output (open-drain, needs pull-up)
+    pin('2', 'SQW', 'output', '2'), // square-wave / alarm interrupt (open-drain, needs pull-up)
+    pin('3', 'SCL', 'input', '3'), // I²C clock in
+    pin('4', 'SDA', 'bidi', '4'), // I²C data
+    pin('5', 'VCC', 'power_in', '5'), // 3.3–5.5 V
+    pin('6', 'GND', 'power_in', '6'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -4 * G, w: 6 * G, h: 8 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'DS3231', sizeNm: Math.round(G * 0.55) },
+    ],
+    pins: [
+      { key: '5', at: { x: -4 * G, y: 3 * G }, dir: 'W' }, // VCC
+      { key: '6', at: { x: -4 * G, y: G }, dir: 'W' }, // GND
+      { key: '3', at: { x: 4 * G, y: 3 * G }, dir: 'E' }, // SCL
+      { key: '4', at: { x: 4 * G, y: G }, dir: 'E' }, // SDA
+      { key: '2', at: { x: 4 * G, y: -G }, dir: 'E' }, // SQW
+      { key: '1', at: { x: 4 * G, y: -3 * G }, dir: 'E' }, // 32K
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // module 3.3–5.5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against the Analog Devices DS3231 datasheet plus components101 + Cirkit Designer ZS-042 module pinouts (NOT taken from the shared component log): 6-pin header names 32K, SQW, SCL, SDA, VCC, GND. DS3231 IS I²C (addr 0x68) — contrast the 3-wire DS1302. SCL=clock in, SDA=bidirectional; SQW (square-wave/alarm) and 32K (32.768 kHz) are open-drain outputs needing external pull-ups. ZS-042 board also has an AT24C32 EEPROM (0x57) on the same bus — not modeled here. Header silk order is board-revision-dependent (two mirrored 6-pin headers); pin names/functions are fixed, numbering follows the dominant published order. See inbox/2026-06-21-ds3231-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -641,6 +686,7 @@ export const SEED_PARTS: Part[] = [
   bme280,
   mpu6050,
   ds1302,
+  ds3231,
   pushbutton,
   header2x10,
   usbcPower,
