@@ -33,6 +33,7 @@ describe('seed library', () => {
       'core:ds3231',
       'core:esp32-s3-wroom-1',
       'core:l298n',
+      'core:lcd1602',
       'core:max7219',
       'core:mpu6050',
       'core:ne555',
@@ -205,6 +206,31 @@ describe('seed library', () => {
     expect(byKey.get('6')).toBe('output'); // DOUT
     expect(byKey.get('1')).toBe('power_in');
     expect(byKey.get('2')).toBe('power_in');
+  });
+
+  it('1602A LCD (HD44780) pin map matches the verified 16-pin parallel header', () => {
+    const lcd = SEED_PARTS.find((p) => p.id === 'core:lcd1602');
+    expect(lcd).toBeDefined();
+    expect(lcd?.pins).toHaveLength(16);
+    const byNumber = new Map(lcd?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('VSS');
+    expect(byNumber.get('2')).toBe('VDD');
+    expect(byNumber.get('3')).toBe('V0');
+    expect(byNumber.get('4')).toBe('RS');
+    expect(byNumber.get('5')).toBe('RW');
+    expect(byNumber.get('6')).toBe('E');
+    expect(byNumber.get('7')).toBe('D0');
+    expect(byNumber.get('14')).toBe('D7');
+    expect(byNumber.get('15')).toBe('A');
+    expect(byNumber.get('16')).toBe('K');
+    // Data bus is bidirectional; RS/RW/E/V0 are inputs; power/backlight pins power_in.
+    const byKey = new Map(lcd?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('7')).toBe('bidi'); // D0
+    expect(byKey.get('14')).toBe('bidi'); // D7
+    expect(byKey.get('4')).toBe('input'); // RS
+    expect(byKey.get('6')).toBe('input'); // E
+    expect(byKey.get('1')).toBe('power_in'); // VSS
+    expect(byKey.get('15')).toBe('power_in'); // A (LED+)
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {

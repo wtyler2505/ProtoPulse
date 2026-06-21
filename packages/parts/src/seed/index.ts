@@ -811,6 +811,67 @@ const max7219 = definePart({
     'Pin map web-verified 2026-06-21 against the Analog Devices MAX7219/MAX7221 datasheet plus components101 + lastminuteengineers + Cirkit Designer module pinouts (NOT taken from the shared component log): input header VCC, GND, DIN, CS, CLK; output header VCC, GND, DOUT, CS, CLK (shares VCC/GND/CS/CLK). SPI-like 3-wire: DIN=serial data in, CLK=clock, CS=LOAD latch; DOUT cascades to the next module’s DIN. Modeled as the 6 unique signals. See inbox/2026-06-21-max7219-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// 1602A character LCD (HD44780 controller) — the classic 16-pin parallel 16x2
+// display. VSS/VDD power, V0 contrast (pot wiper), RS/RW/E control, D0–D7 an 8-bit
+// bidirectional data bus (4-bit mode uses only D4–D7; the busy flag is read back on
+// D7, hence the bus is bidi not input-only), and A/K backlight LED. Schematic-only,
+// footprint deferred. (The bare parallel module — an I²C-backpack variant is separate.)
+const lcd1602 = definePart({
+  id: 'core:lcd1602',
+  name: '1602A 16x2 character LCD (HD44780)',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: '1602A',
+  manufacturer: 'generic (Hitachi HD44780 controller)',
+  datasheetUrl: 'https://www.sparkfun.com/datasheets/LCD/HD44780.pdf',
+  pins: [
+    pin('1', 'VSS', 'power_in', '1'), // ground
+    pin('2', 'VDD', 'power_in', '2'), // +5 V (4.7–5.3 V)
+    pin('3', 'V0', 'input', '3'), // contrast (pot wiper)
+    pin('4', 'RS', 'input', '4'), // register select (command/data)
+    pin('5', 'RW', 'input', '5'), // read/write select
+    pin('6', 'E', 'input', '6'), // enable strobe
+    pin('7', 'D0', 'bidi', '7'),
+    pin('8', 'D1', 'bidi', '8'),
+    pin('9', 'D2', 'bidi', '9'),
+    pin('10', 'D3', 'bidi', '10'),
+    pin('11', 'D4', 'bidi', '11'),
+    pin('12', 'D5', 'bidi', '12'),
+    pin('13', 'D6', 'bidi', '13'),
+    pin('14', 'D7', 'bidi', '14'), // also carries the busy flag on read
+    pin('15', 'A', 'power_in', '15'), // backlight LED anode (+)
+    pin('16', 'K', 'power_in', '16'), // backlight LED cathode (−)
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -4 * G, y: -8 * G, w: 8 * G, h: 16 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: '1602 LCD', sizeNm: Math.round(G * 0.45) },
+    ],
+    pins: [
+      { key: '1', at: { x: -5 * G, y: 7 * G }, dir: 'W' }, // VSS
+      { key: '2', at: { x: -5 * G, y: 5 * G }, dir: 'W' }, // VDD
+      { key: '3', at: { x: -5 * G, y: 3 * G }, dir: 'W' }, // V0
+      { key: '4', at: { x: -5 * G, y: G }, dir: 'W' }, // RS
+      { key: '5', at: { x: -5 * G, y: -G }, dir: 'W' }, // RW
+      { key: '6', at: { x: -5 * G, y: -3 * G }, dir: 'W' }, // E
+      { key: '15', at: { x: -5 * G, y: -5 * G }, dir: 'W' }, // A
+      { key: '16', at: { x: -5 * G, y: -7 * G }, dir: 'W' }, // K
+      { key: '7', at: { x: 5 * G, y: 7 * G }, dir: 'E' }, // D0
+      { key: '8', at: { x: 5 * G, y: 5 * G }, dir: 'E' }, // D1
+      { key: '9', at: { x: 5 * G, y: 3 * G }, dir: 'E' }, // D2
+      { key: '10', at: { x: 5 * G, y: G }, dir: 'E' }, // D3
+      { key: '11', at: { x: 5 * G, y: -G }, dir: 'E' }, // D4
+      { key: '12', at: { x: 5 * G, y: -3 * G }, dir: 'E' }, // D5
+      { key: '13', at: { x: 5 * G, y: -5 * G }, dir: 'E' }, // D6
+      { key: '14', at: { x: 5 * G, y: -7 * G }, dir: 'E' }, // D7
+    ],
+  },
+  parametrics: { maxVoltage: 5.3 }, // VDD 4.7–5.3 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against the Hitachi HD44780U datasheet plus components101 + circuitdigest 16x2 LCD pinouts (NOT taken from the shared component log): 1 VSS, 2 VDD, 3 V0 (contrast), 4 RS, 5 RW, 6 E, 7–14 D0–D7, 15 A (LED+), 16 K (LED−). D0–D7 are a bidirectional bus (4-bit mode uses D4–D7; busy flag is read on D7) so modeled as bidi, not input-only. RS/RW/E are control inputs; V0 is the analog contrast input. See inbox/2026-06-21-lcd1602-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -831,6 +892,7 @@ export const SEED_PARTS: Part[] = [
   uln2003Stepper,
   l298n,
   max7219,
+  lcd1602,
   pushbutton,
   header2x10,
   usbcPower,
