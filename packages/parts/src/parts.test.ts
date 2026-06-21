@@ -43,6 +43,7 @@ describe('seed library', () => {
       'core:ne555',
       'core:rc522',
       'core:soil-moisture',
+      'core:sw420-vibration',
       'core:tb6612fng',
       'core:tmp36',
       'core:ttp223',
@@ -377,6 +378,20 @@ describe('seed library', () => {
     expect(byKey.get('2')).toBe('power_in');
     expect(byKey.get('3')).toBe('power_in');
     expect(b?.refPrefix).toBe('LS');
+  });
+
+  it('SW-420 vibration sensor pin map matches the verified 3-pin digital module', () => {
+    const v = SEED_PARTS.find((p) => p.id === 'core:sw420-vibration');
+    expect(v).toBeDefined();
+    expect(v?.pins).toHaveLength(3);
+    const byNumber = new Map(v?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('VCC');
+    expect(byNumber.get('2')).toBe('GND');
+    expect(byNumber.get('3')).toBe('DO');
+    const byKey = new Map(v?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('power_in');
+    expect(byKey.get('2')).toBe('power_in');
+    expect(byKey.get('3')).toBe('output'); // digital
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {

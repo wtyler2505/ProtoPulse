@@ -1186,6 +1186,39 @@ const ky006Buzzer = definePart({
     'Pin map web-verified 2026-06-21 against thegeekpub + espboards + arduinomodules + joy-it SensorKit KY-006 pinouts (NOT taken from the shared component log): 3-pin S (signal), middle VCC, GND. PASSIVE buzzer — no onboard oscillator; the MCU supplies a square wave on S (Arduino tone()), ~1.5–2.5 kHz, loudest near 2 kHz (contrast the active KY-012 which self-oscillates). On most KY-006/HW-508 boards the middle VCC pin is NC — wire S to a GPIO and GND to ground. S is an input to the module; power pins power_in. refPrefix LS (loudspeaker/sounder). See inbox/2026-06-21-ky006-buzzer-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// SW-420 vibration sensor module — a spring vibration switch (normally-closed) + LM393
+// comparator + sensitivity pot. 3-pin, digital-only: VCC, GND, DO. At rest DO reads
+// LOW; vibration opens the switch and DO goes HIGH. Schematic-only, footprint deferred.
+const sw420Vibration = definePart({
+  id: 'core:sw420-vibration',
+  name: 'SW-420 vibration sensor module',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'SW-420',
+  manufacturer: 'generic (SW-420 vibration switch + LM393)',
+  datasheetUrl: 'https://components101.com/sensors/sw-420-vibration-sensor-module',
+  pins: [
+    pin('1', 'VCC', 'power_in', '1'), // 3.3–5 V
+    pin('2', 'GND', 'power_in', '2'),
+    pin('3', 'DO', 'output', '3'), // digital: LOW at rest, HIGH on vibration
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -3 * G, w: 6 * G, h: 6 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'SW-420', sizeNm: Math.round(G * 0.45) },
+    ],
+    pins: [
+      { key: '1', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC
+      { key: '2', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '3', at: { x: 4 * G, y: 0 }, dir: 'E' }, // DO
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // 3.3–5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against components101 + microcontrollerslab + circuitdigest + SunFounder SW-420 pinouts and the LM393 comparator basis (NOT taken from the shared component log): 3-pin VCC, GND, DO. Digital-only (no analog). The SW-420 spring switch is normally-CLOSED — DO is LOW at rest and goes HIGH when vibration opens it; pot sets sensitivity. Power pins power_in, DO output. Header silk order is board-revision-dependent (names/functions fixed). See inbox/2026-06-21-sw420-vibration-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1215,6 +1248,7 @@ export const SEED_PARTS: Part[] = [
   soilMoisture,
   ttp223,
   ky006Buzzer,
+  sw420Vibration,
   pushbutton,
   header2x10,
   usbcPower,
