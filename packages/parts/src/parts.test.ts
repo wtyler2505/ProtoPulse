@@ -41,6 +41,7 @@ describe('seed library', () => {
       'core:mpu6050',
       'core:ne555',
       'core:rc522',
+      'core:soil-moisture',
       'core:tb6612fng',
       'core:tmp36',
       'core:uln2003-stepper',
@@ -329,6 +330,21 @@ describe('seed library', () => {
     expect(byKey.get('1')).toBe('power_in');
     expect(byKey.get('2')).toBe('power_in');
     expect(byKey.get('3')).toBe('output'); // active-low digital
+  });
+
+  it('Soil moisture sensor (FC-28) pin map matches the verified comparator-board header', () => {
+    const s = SEED_PARTS.find((p) => p.id === 'core:soil-moisture');
+    expect(s).toBeDefined();
+    expect(s?.pins).toHaveLength(4);
+    const byNumber = new Map(s?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('VCC');
+    expect(byNumber.get('2')).toBe('GND');
+    expect(byNumber.get('3')).toBe('DO');
+    expect(byNumber.get('4')).toBe('AO');
+    const byKey = new Map(s?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('power_in');
+    expect(byKey.get('3')).toBe('output'); // DO
+    expect(byKey.get('4')).toBe('output'); // AO
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
