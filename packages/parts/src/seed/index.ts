@@ -1080,6 +1080,44 @@ const irObstacle = definePart({
     'Pin map web-verified 2026-06-21 against Cirkit Designer + osoyoo + multiple IR-obstacle-module pinouts and the LM393 comparator basis (NOT taken from the shared component log): 3-pin module VCC, GND, OUT. Digital-only (no analog out); OUT is active-LOW — goes low when reflected IR exceeds the pot threshold (obstacle ~2–20 cm, 35° cone). Power pins power_in, OUT output. See inbox/2026-06-21-ir-obstacle-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// Soil moisture sensor module (FC-28) — resistive: a YL-69 two-prong probe wired into
+// a YL-38 comparator board (LM393 + pot). The KY-038 comparator-module pattern again:
+// the YL-38 board's MCU-facing header is VCC, GND, DO (pot threshold), AO (analog
+// moisture level). The probe connects to the board over a separate 2-pin terminal
+// (not modeled). (A 3-pin capacitive v1.2 variant also exists; this is the resistive
+// FC-28.) Schematic-only, footprint deferred.
+const soilMoisture = definePart({
+  id: 'core:soil-moisture',
+  name: 'Soil moisture sensor module (FC-28)',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'FC-28',
+  manufacturer: 'generic (YL-69 probe + YL-38/LM393 board)',
+  datasheetUrl: 'https://components101.com/modules/soil-moisture-sensor-module',
+  pins: [
+    pin('1', 'VCC', 'power_in', '1'), // 3.3–5 V
+    pin('2', 'GND', 'power_in', '2'),
+    pin('3', 'DO', 'output', '3'), // digital threshold (dry/wet, set by onboard pot)
+    pin('4', 'AO', 'output', '4'), // analog moisture level (0–VCC)
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -3 * G, w: 6 * G, h: 6 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'SOIL', sizeNm: Math.round(G * 0.5) },
+    ],
+    pins: [
+      { key: '1', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC
+      { key: '2', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '3', at: { x: 4 * G, y: G }, dir: 'E' }, // DO
+      { key: '4', at: { x: 4 * G, y: -G }, dir: 'E' }, // AO
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // 3.3–5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against components101 + Random Nerd Tutorials + Cirkit Designer YL-69/FC-28 pinouts and the LM393 comparator basis (NOT taken from the shared component log): YL-38 comparator board MCU header VCC, GND, DO (pot threshold), AO (analog 0–VCC moisture). Resistive sensor — the YL-69 two-prong probe wires into the YL-38 board over a separate 2-pin terminal (not modeled). DO/AO outputs, power pins power_in. A 3-pin capacitive v1.2 variant exists separately. See inbox/2026-06-21-soil-moisture-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1106,6 +1144,7 @@ export const SEED_PARTS: Part[] = [
   ky038,
   flameSensor,
   irObstacle,
+  soilMoisture,
   pushbutton,
   header2x10,
   usbcPower,
