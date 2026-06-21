@@ -84,7 +84,7 @@ Tier 2 — sensor modules (mostly simple 3-4 pin digital/analog):
 Tier 3 — boards/shields (larger pin counts; model as modules, footprint deferred):
 - [x] **Arduino Nano (ATmega328P)** — done `a9a729b1` (DCCduino clone; 30-pin, web-verified)
 - [ ] NodeMCU ESP-32S V1.1, NodeMCU Amica, ESP8266EX, Sparkfun Blynk Board
-- [ ] Arduino Uno R3 / OSEPP Uno R3 Plus, Nano DCCduino, Arduino MEGA proto shield
+- [x] Arduino Uno R3 / OSEPP Uno R3 Plus — done `86b285d0`. Nano DCCduino — done `a9a729b1`. (Arduino MEGA proto shield still open)
 - [ ] Raspberry Pi 3 B+ (+ Pi Display v1.1) — SBC, schematic-symbol only
 - [ ] Motor/servo/sensor shields (OSEPP, SainSmart, DK Electronics, Velleman Ethernet)
 
