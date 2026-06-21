@@ -1152,6 +1152,40 @@ const ttp223 = definePart({
     'Pin map web-verified 2026-06-21 against componentindex + pcbsync + electropeak TTP223 module pinouts and the Tontek TTP223 touch-IC basis (NOT taken from the shared component log): 3-pin VCC, GND, SIG. SIG is a push-pull digital output (no external pull-up), active-HIGH by default; rear solder pad A = toggle mode, pad B = invert to active-LOW. 2.0–5.5 V. Power pins power_in, SIG output. Header silk order is board-revision-dependent (names/functions fixed). See inbox/2026-06-21-ttp223-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// KY-006 passive piezo buzzer module — an OUTPUT transducer (first non-sensor Tier-2
+// part). Passive = no onboard oscillator; the MCU drives S with a square wave (tone())
+// to set pitch (~1.5–2.5 kHz, loudest near 2 kHz). 3-pin: S (signal in), middle VCC
+// (often NC on KY-006/HW-508), GND. Schematic-only, footprint deferred.
+const ky006Buzzer = definePart({
+  id: 'core:ky006-buzzer',
+  name: 'KY-006 passive buzzer module',
+  refPrefix: 'LS',
+  class: 'ic',
+  mpn: 'KY-006',
+  manufacturer: 'generic (passive piezo buzzer)',
+  datasheetUrl: 'https://sensorkit.joy-it.net/en/sensors/ky-006',
+  pins: [
+    pin('1', 'S', 'input', '1'), // square-wave drive from MCU (tone())
+    pin('2', 'VCC', 'power_in', '2'), // middle pin — often NC on KY-006/HW-508
+    pin('3', 'GND', 'power_in', '3'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -3 * G, w: 6 * G, h: 6 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'BUZZER', sizeNm: Math.round(G * 0.42) },
+    ],
+    pins: [
+      { key: '2', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC
+      { key: '3', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '1', at: { x: 4 * G, y: 0 }, dir: 'E' }, // S
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // 3.3–5 V drive
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against thegeekpub + espboards + arduinomodules + joy-it SensorKit KY-006 pinouts (NOT taken from the shared component log): 3-pin S (signal), middle VCC, GND. PASSIVE buzzer — no onboard oscillator; the MCU supplies a square wave on S (Arduino tone()), ~1.5–2.5 kHz, loudest near 2 kHz (contrast the active KY-012 which self-oscillates). On most KY-006/HW-508 boards the middle VCC pin is NC — wire S to a GPIO and GND to ground. S is an input to the module; power pins power_in. refPrefix LS (loudspeaker/sounder). See inbox/2026-06-21-ky006-buzzer-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1180,6 +1214,7 @@ export const SEED_PARTS: Part[] = [
   irObstacle,
   soilMoisture,
   ttp223,
+  ky006Buzzer,
   pushbutton,
   header2x10,
   usbcPower,
