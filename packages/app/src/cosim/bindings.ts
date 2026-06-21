@@ -21,9 +21,15 @@ export const DEFAULT_PIN_CANDIDATES: readonly string[] = [
 export const MAX_COSIM_STEPS = 1_000_000;
 
 /** Pins offered by the binding editor: everything the emulator has seen
- *  toggle, merged with the common defaults, deduped and sorted. */
-export function candidatePins(seenPins: readonly string[]): string[] {
-  return [...new Set([...seenPins, ...DEFAULT_PIN_CANDIDATES])].sort();
+ *  toggle, merged with the loaded core's default pin set, deduped and
+ *  sorted. `defaults` is the selected core's `CORE_KINDS[kind].defaultPins`
+ *  (AVR `PB`/`PD`, RP2040 `GP`, ESP32-S3 `IO`); it falls back to the AVR
+ *  set so callers without a core (and older tests) keep working. */
+export function candidatePins(
+  seenPins: readonly string[],
+  defaults: readonly string[] = DEFAULT_PIN_CANDIDATES,
+): string[] {
+  return [...new Set([...seenPins, ...defaults])].sort();
 }
 
 export interface NetOption {

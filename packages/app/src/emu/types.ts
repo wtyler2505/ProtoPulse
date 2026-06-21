@@ -72,11 +72,19 @@ export const CORE_KINDS = {
     ctor: 'Atmega328pCore',
     label: 'ATmega328P (AVR, 16 MHz)',
     adcChannels: [0, 1, 2, 3, 4, 5, 6, 7] as readonly number[],
+    // GPIO ports B and D — the pins AVR firmware most commonly toggles
+    // (PB0–7, PD0–7), matching the `PB{n}`/`PD{n}` labels the core emits.
+    defaultPins: [
+      ...Array.from({ length: 8 }, (_, i) => `PB${String(i)}`),
+      ...Array.from({ length: 8 }, (_, i) => `PD${String(i)}`),
+    ] as readonly string[],
   },
   rp2040: {
     ctor: 'Rp2040Core',
     label: 'RP2040 (Cortex-M0+, 125 MHz)',
     adcChannels: [0, 1, 2, 3] as readonly number[],
+    // GP0–GP29, matching the `GP{index}` labels the RP2040 core emits.
+    defaultPins: Array.from({ length: 30 }, (_, i) => `GP${String(i)}`) as readonly string[],
   },
   // The from-scratch core: raw images and SRAM-resident ESP-IDF app
   // images (no HEX, no flash cache), GPIO + UART0 with interrupt
@@ -89,6 +97,9 @@ export const CORE_KINDS = {
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
       10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
     ] as readonly number[],
+    // GPIO0–48 (bank 0 covers 0–31, bank 1 covers 32–48), matching the
+    // `IO{gpio}` labels the ESP32-S3 core emits (esp32s3PinId).
+    defaultPins: Array.from({ length: 49 }, (_, i) => `IO${String(i)}`) as readonly string[],
   },
 } as const;
 

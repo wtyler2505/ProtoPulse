@@ -20,6 +20,8 @@ import {
   validateSpec,
 } from './bindings.js';
 
+import { CORE_KINDS } from '../emu/types.js';
+
 import type { AdcBinding, ClosedLoopSpec, CosimWindowSpec, InputBinding, PinBinding } from './types.js';
 import type { DesignGraph, Net } from '@protopulse/graph';
 
@@ -60,6 +62,27 @@ describe('candidatePins', () => {
     expect(pins).toHaveLength(17); // PB5 already a default; PC0 is new
     expect(pins).toContain('PC0');
     expect([...pins].sort()).toEqual(pins);
+  });
+
+  it('offers the loaded core’s own pin names, not AVR-flavored ones', () => {
+    // ESP32-S3 emits IO0..IO48 (esp32s3PinId); the binding editor must offer
+    // those, not the AVR PB/PD defaults, once that core is loaded.
+    const esp = candidatePins([], CORE_KINDS.esp32s3.defaultPins);
+    expect(esp).toHaveLength(49);
+    expect(esp).toContain('IO0');
+    expect(esp).toContain('IO48');
+    expect(esp).not.toContain('PB0'); // no AVR leakage
+    expect([...esp].sort()).toEqual(esp);
+
+    // RP2040 emits GP0..GP29.
+    const rp = candidatePins([], CORE_KINDS.rp2040.defaultPins);
+    expect(rp).toHaveLength(30);
+    expect(rp).toContain('GP0');
+    expect(rp).toContain('GP29');
+    expect(rp).not.toContain('PB0');
+
+    // A seen pin still merges in on top of the core defaults.
+    expect(candidatePins(['IO5'], CORE_KINDS.esp32s3.defaultPins)).toContain('IO5');
   });
 });
 
