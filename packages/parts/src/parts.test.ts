@@ -30,6 +30,7 @@ describe('seed library', () => {
       'core:bat54s',
       'core:bme280',
       'core:ds1302',
+      'core:ds3231',
       'core:esp32-s3-wroom-1',
       'core:mpu6050',
       'core:ne555',
@@ -116,6 +117,27 @@ describe('seed library', () => {
     expect(byKey.get('3')).toBe('input');
     expect(byKey.get('4')).toBe('bidi');
     expect(byKey.get('5')).toBe('input');
+  });
+
+  it('DS3231 RTC module pin map matches the verified ZS-042 header (I²C, addr 0x68)', () => {
+    const ds = SEED_PARTS.find((p) => p.id === 'core:ds3231');
+    expect(ds).toBeDefined();
+    expect(ds?.pins).toHaveLength(6);
+    const byNumber = new Map(ds?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('32K');
+    expect(byNumber.get('2')).toBe('SQW');
+    expect(byNumber.get('3')).toBe('SCL');
+    expect(byNumber.get('4')).toBe('SDA');
+    expect(byNumber.get('5')).toBe('VCC');
+    expect(byNumber.get('6')).toBe('GND');
+    // I²C: SCL is a clock input, SDA bidirectional; SQW/32K are outputs; power pins power_in.
+    const byKey = new Map(ds?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('3')).toBe('input');
+    expect(byKey.get('4')).toBe('bidi');
+    expect(byKey.get('1')).toBe('output');
+    expect(byKey.get('2')).toBe('output');
+    expect(byKey.get('5')).toBe('power_in');
+    expect(byKey.get('6')).toBe('power_in');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
