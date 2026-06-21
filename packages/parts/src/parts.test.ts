@@ -45,6 +45,7 @@ describe('seed library', () => {
       'core:mpu6050',
       'core:ne555',
       'core:rc522',
+      'core:slot-optocoupler',
       'core:soil-moisture',
       'core:sw420-vibration',
       'core:tb6612fng',
@@ -439,6 +440,20 @@ describe('seed library', () => {
     expect(byKey.get('2')).toBe('power_in');
     expect(byKey.get('3')).toBe('power_in');
     expect(t?.refPrefix).toBe('D');
+  });
+
+  it('Slot optocoupler pin map matches the verified 3-pin photo-interrupter module', () => {
+    const s = SEED_PARTS.find((p) => p.id === 'core:slot-optocoupler');
+    expect(s).toBeDefined();
+    expect(s?.pins).toHaveLength(3);
+    const byNumber = new Map(s?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('VCC');
+    expect(byNumber.get('2')).toBe('GND');
+    expect(byNumber.get('3')).toBe('DO');
+    const byKey = new Map(s?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('power_in');
+    expect(byKey.get('2')).toBe('power_in');
+    expect(byKey.get('3')).toBe('output'); // digital
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
