@@ -1743,6 +1743,117 @@ const nodemcuEsp8266 = definePart({
     'Pin map web-verified 2026-06-21 against components101 + lastminuteengineers + etechnophiles NodeMCU/ESP8266 references (NOT taken from the shared component log): canonical 30-pin Amica layout — left A0, RSV, RSV, SD3, SD2, SD1, CMD, SD0, CLK, GND, 3V3, EN, RST, GND, VIN; right D0, D1, D2, D3, D4, 3V3, GND, D5, D6, D7, D8, RX, TX, GND, 3V3. GPIO mapping confirmed (etechnophiles): D0=GPIO16, D1=5, D2=4, D3=0, D4=2, D5=14, D6=12, D7=13, D8=15, RX=3, TX=1; D5–D8 = HSPI. A0 = 0–1 V ADC (onboard divider, input). EN/RST input; SD0–SD3/CMD/CLK = SDIO flash bus (bidi, occupied by onboard flash); RSV = nc; 3V3 = regulator out (≤600 mA, power_out); VIN/GND power_in. refPrefix A. See inbox/2026-06-21-nodemcu-esp8266-pinout.md. No footprint yet — board land pattern is a later slice.',
 });
 
+// Raspberry Pi 3 B+ — modeled as its standardized 40-pin J8 GPIO header (schematic
+// symbol only; the SBC is far more than this header, but the header is the EDA-relevant
+// interface). Physical pins 1–40, odd column left / even column right, BCM numbering.
+// 2×3V3 + 2×5V rails (board sources them, power_out), 8×GND. I²C on GPIO2/3 (pins 3/5),
+// SPI0 on GPIO7-11, UART on GPIO14/15. All GPIO modeled bidi, rails power_out, GND
+// power_in. Header layout is invariant across all 40-pin Pis. Footprint deferred.
+const raspberryPi3bp = definePart({
+  id: 'core:raspberry-pi-3bp',
+  name: 'Raspberry Pi 3 B+ (40-pin GPIO header)',
+  refPrefix: 'A',
+  class: 'ic',
+  mpn: 'Raspberry Pi 3 B+',
+  manufacturer: 'Raspberry Pi Foundation',
+  datasheetUrl: 'https://pinout.xyz/',
+  pins: [
+    pin('1', '3V3', 'power_out', '1'),
+    pin('2', '5V', 'power_out', '2'),
+    pin('3', 'GPIO2', 'bidi', '3'), // I²C1 SDA
+    pin('4', '5V', 'power_out', '4'),
+    pin('5', 'GPIO3', 'bidi', '5'), // I²C1 SCL
+    pin('6', 'GND', 'power_in', '6'),
+    pin('7', 'GPIO4', 'bidi', '7'),
+    pin('8', 'GPIO14', 'bidi', '8'), // UART TXD
+    pin('9', 'GND', 'power_in', '9'),
+    pin('10', 'GPIO15', 'bidi', '10'), // UART RXD
+    pin('11', 'GPIO17', 'bidi', '11'),
+    pin('12', 'GPIO18', 'bidi', '12'), // PCM CLK / PWM0
+    pin('13', 'GPIO27', 'bidi', '13'),
+    pin('14', 'GND', 'power_in', '14'),
+    pin('15', 'GPIO22', 'bidi', '15'),
+    pin('16', 'GPIO23', 'bidi', '16'),
+    pin('17', '3V3', 'power_out', '17'),
+    pin('18', 'GPIO24', 'bidi', '18'),
+    pin('19', 'GPIO10', 'bidi', '19'), // SPI0 MOSI
+    pin('20', 'GND', 'power_in', '20'),
+    pin('21', 'GPIO9', 'bidi', '21'), // SPI0 MISO
+    pin('22', 'GPIO25', 'bidi', '22'),
+    pin('23', 'GPIO11', 'bidi', '23'), // SPI0 SCLK
+    pin('24', 'GPIO8', 'bidi', '24'), // SPI0 CE0
+    pin('25', 'GND', 'power_in', '25'),
+    pin('26', 'GPIO7', 'bidi', '26'), // SPI0 CE1
+    pin('27', 'GPIO0', 'bidi', '27'), // ID_SD (EEPROM)
+    pin('28', 'GPIO1', 'bidi', '28'), // ID_SC (EEPROM)
+    pin('29', 'GPIO5', 'bidi', '29'),
+    pin('30', 'GND', 'power_in', '30'),
+    pin('31', 'GPIO6', 'bidi', '31'),
+    pin('32', 'GPIO12', 'bidi', '32'), // PWM0
+    pin('33', 'GPIO13', 'bidi', '33'), // PWM1
+    pin('34', 'GND', 'power_in', '34'),
+    pin('35', 'GPIO19', 'bidi', '35'), // SPI1 MISO / PCM FS
+    pin('36', 'GPIO16', 'bidi', '36'),
+    pin('37', 'GPIO26', 'bidi', '37'),
+    pin('38', 'GPIO20', 'bidi', '38'), // SPI1 MOSI
+    pin('39', 'GND', 'power_in', '39'),
+    pin('40', 'GPIO21', 'bidi', '40'), // SPI1 SCLK
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -4 * G, y: -20 * G, w: 8 * G, h: 40 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'Pi 3B+', sizeNm: Math.round(G * 0.6) },
+    ],
+    pins: [
+      // odd physical pins → left column (y 19G..−19G), even → right column
+      { key: '1', at: { x: -5 * G, y: 19 * G }, dir: 'W' },
+      { key: '3', at: { x: -5 * G, y: 17 * G }, dir: 'W' },
+      { key: '5', at: { x: -5 * G, y: 15 * G }, dir: 'W' },
+      { key: '7', at: { x: -5 * G, y: 13 * G }, dir: 'W' },
+      { key: '9', at: { x: -5 * G, y: 11 * G }, dir: 'W' },
+      { key: '11', at: { x: -5 * G, y: 9 * G }, dir: 'W' },
+      { key: '13', at: { x: -5 * G, y: 7 * G }, dir: 'W' },
+      { key: '15', at: { x: -5 * G, y: 5 * G }, dir: 'W' },
+      { key: '17', at: { x: -5 * G, y: 3 * G }, dir: 'W' },
+      { key: '19', at: { x: -5 * G, y: 1 * G }, dir: 'W' },
+      { key: '21', at: { x: -5 * G, y: -1 * G }, dir: 'W' },
+      { key: '23', at: { x: -5 * G, y: -3 * G }, dir: 'W' },
+      { key: '25', at: { x: -5 * G, y: -5 * G }, dir: 'W' },
+      { key: '27', at: { x: -5 * G, y: -7 * G }, dir: 'W' },
+      { key: '29', at: { x: -5 * G, y: -9 * G }, dir: 'W' },
+      { key: '31', at: { x: -5 * G, y: -11 * G }, dir: 'W' },
+      { key: '33', at: { x: -5 * G, y: -13 * G }, dir: 'W' },
+      { key: '35', at: { x: -5 * G, y: -15 * G }, dir: 'W' },
+      { key: '37', at: { x: -5 * G, y: -17 * G }, dir: 'W' },
+      { key: '39', at: { x: -5 * G, y: -19 * G }, dir: 'W' },
+      { key: '2', at: { x: 5 * G, y: 19 * G }, dir: 'E' },
+      { key: '4', at: { x: 5 * G, y: 17 * G }, dir: 'E' },
+      { key: '6', at: { x: 5 * G, y: 15 * G }, dir: 'E' },
+      { key: '8', at: { x: 5 * G, y: 13 * G }, dir: 'E' },
+      { key: '10', at: { x: 5 * G, y: 11 * G }, dir: 'E' },
+      { key: '12', at: { x: 5 * G, y: 9 * G }, dir: 'E' },
+      { key: '14', at: { x: 5 * G, y: 7 * G }, dir: 'E' },
+      { key: '16', at: { x: 5 * G, y: 5 * G }, dir: 'E' },
+      { key: '18', at: { x: 5 * G, y: 3 * G }, dir: 'E' },
+      { key: '20', at: { x: 5 * G, y: 1 * G }, dir: 'E' },
+      { key: '22', at: { x: 5 * G, y: -1 * G }, dir: 'E' },
+      { key: '24', at: { x: 5 * G, y: -3 * G }, dir: 'E' },
+      { key: '26', at: { x: 5 * G, y: -5 * G }, dir: 'E' },
+      { key: '28', at: { x: 5 * G, y: -7 * G }, dir: 'E' },
+      { key: '30', at: { x: 5 * G, y: -9 * G }, dir: 'E' },
+      { key: '32', at: { x: 5 * G, y: -11 * G }, dir: 'E' },
+      { key: '34', at: { x: 5 * G, y: -13 * G }, dir: 'E' },
+      { key: '36', at: { x: 5 * G, y: -15 * G }, dir: 'E' },
+      { key: '38', at: { x: 5 * G, y: -17 * G }, dir: 'E' },
+      { key: '40', at: { x: 5 * G, y: -19 * G }, dir: 'E' },
+    ],
+  },
+  parametrics: { maxVoltage: 5 }, // 5 V supply rail
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against pinout.xyz + Pi4J model-3b-plus + etechnophiles Pi 3B+ references (NOT taken from the shared component log): standardized 40-pin J8 header, BCM numbering, odd pins left / even right. 2×3V3 (1,17), 2×5V (2,4), 8×GND (6,9,14,20,25,30,34,39), I²C1 on GPIO2/3 (pins 3,5), UART on GPIO14/15 (8,10), SPI0 on GPIO7-11 (19,21,23,24,26), SPI1 on GPIO16-21. Modeled as the GPIO header only (schematic symbol, SBC). GPIO bidi, 3V3/5V power_out (board sources them), GND power_in. refPrefix A. Header layout is invariant across all 40-pin Pis. See inbox/2026-06-21-raspberry-pi-3bp-pinout.md. No footprint — board land pattern deferred.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1783,6 +1894,7 @@ export const SEED_PARTS: Part[] = [
   arduinoNano,
   arduinoUno,
   nodemcuEsp8266,
+  raspberryPi3bp,
   pushbutton,
   header2x10,
   usbcPower,
