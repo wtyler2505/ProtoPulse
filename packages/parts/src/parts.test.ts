@@ -27,6 +27,7 @@ describe('seed library', () => {
   it('verified parts carry datasheet-backed pin numbers and a provenance note', () => {
     const verified = SEED_PARTS.filter((p) => p.provenance === 'verified');
     expect(verified.map((p) => p.id).sort()).toEqual([
+      'core:arduino-nano',
       'core:bat54s',
       'core:bme280',
       'core:ds1302',
@@ -504,6 +505,30 @@ describe('seed library', () => {
     expect(byKey.get('2')).toBe('power_in');
     expect(byKey.get('3')).toBe('power_in');
     expect(b?.refPrefix).toBe('SW');
+  });
+
+  it('Arduino Nano pin map matches the verified 30-pin board layout', () => {
+    const n = SEED_PARTS.find((p) => p.id === 'core:arduino-nano');
+    expect(n).toBeDefined();
+    expect(n?.pins).toHaveLength(30);
+    expect(new Set(n?.pins.map((p) => p.key)).size).toBe(30);
+    const byNumber = new Map(n?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('D1'); // TX
+    expect(byNumber.get('2')).toBe('D0'); // RX
+    expect(byNumber.get('3')).toBe('RST');
+    expect(byNumber.get('16')).toBe('D13');
+    expect(byNumber.get('17')).toBe('3V3');
+    expect(byNumber.get('23')).toBe('A4'); // I2C SDA
+    expect(byNumber.get('24')).toBe('A5'); // I2C SCL
+    expect(byNumber.get('27')).toBe('5V');
+    expect(byNumber.get('30')).toBe('VIN');
+    const byKey = new Map(n?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('5')).toBe('bidi'); // D2 GPIO
+    expect(byKey.get('25')).toBe('input'); // A6 analog-only
+    expect(byKey.get('17')).toBe('power_out'); // 3V3
+    expect(byKey.get('27')).toBe('power_out'); // 5V
+    expect(byKey.get('30')).toBe('power_in'); // VIN
+    expect(n?.refPrefix).toBe('A');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
