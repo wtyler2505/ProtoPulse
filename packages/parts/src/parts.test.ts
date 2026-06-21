@@ -32,6 +32,7 @@ describe('seed library', () => {
       'core:ds1302',
       'core:ds3231',
       'core:esp32-s3-wroom-1',
+      'core:l298n',
       'core:mpu6050',
       'core:ne555',
       'core:tmp36',
@@ -158,6 +159,30 @@ describe('seed library', () => {
     expect(byKey.get('4')).toBe('input');
     expect(byKey.get('5')).toBe('power_in');
     expect(byKey.get('6')).toBe('power_in');
+  });
+
+  it('L298N dual H-bridge pin map matches the verified module (power, 6 control, 4 outputs)', () => {
+    const l = SEED_PARTS.find((p) => p.id === 'core:l298n');
+    expect(l).toBeDefined();
+    expect(l?.pins).toHaveLength(13);
+    const byNumber = new Map(l?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('+12V');
+    expect(byNumber.get('2')).toBe('GND');
+    expect(byNumber.get('3')).toBe('+5V');
+    expect(byNumber.get('4')).toBe('ENA');
+    expect(byNumber.get('5')).toBe('IN1');
+    expect(byNumber.get('8')).toBe('IN4');
+    expect(byNumber.get('9')).toBe('ENB');
+    expect(byNumber.get('10')).toBe('OUT1');
+    expect(byNumber.get('13')).toBe('OUT4');
+    // Control pins are inputs, motor pins are outputs, power pins power_in.
+    const byKey = new Map(l?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('4')).toBe('input'); // ENA
+    expect(byKey.get('5')).toBe('input'); // IN1
+    expect(byKey.get('10')).toBe('output'); // OUT1
+    expect(byKey.get('13')).toBe('output'); // OUT4
+    expect(byKey.get('1')).toBe('power_in'); // +12V
+    expect(byKey.get('3')).toBe('power_in'); // +5V
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
