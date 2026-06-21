@@ -33,6 +33,7 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:ds1302` — DS1302 RTC module (3-wire serial, NOT I²C; web-verified). `53e2a084`
 - [x] `core:ds3231` — DS3231 RTC module (ZS-042, I²C addr 0x68; web-verified). `372374b7`
 - [x] `core:uln2003-stepper` — ULN2003 stepper driver board (28BYJ-48 companion; web-verified). `22295bbb`
+- [x] `core:l298n` — L298N dual H-bridge motor driver (web-verified). `bbe20b15`
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
@@ -40,7 +41,7 @@ Tier 1 — common, well-documented, high reuse:
 - [x] DS1302 RTC module (3-wire serial) — done `53e2a084`. (DS1307 remains — it IS I²C)
 - [x] DS3231 RTC module (ZS-042, I²C) — done `372374b7`
 - [x] ULN2003 stepper driver module (+ 28BYJ-48 pairing) — done `22295bbb`
-- [ ] L298N dual H-bridge motor driver
+- [x] L298N dual H-bridge motor driver — done `bbe20b15`
 - [ ] TB6612 motor driver (OSEPP shield variant)
 - [ ] MAX7219 dot-matrix / 7-seg driver
 - [ ] 1602A LCD (HD44780) display module
