@@ -712,6 +712,63 @@ const uln2003Stepper = definePart({
     'Pin map web-verified 2026-06-21 against lastminuteengineers + makerguides + DigiKey ULN2003/28BYJ-48 tutorials and the TI ULN2003A datasheet (NOT taken from the shared component log): control header IN1, IN2, IN3, IN4 (MCU inputs) plus VCC/GND power (5 V via the enable jumper). The 5-wire 28BYJ-48 plugs into a keyed JST socket that is intentionally NOT modeled as header pins. IN1–IN4 drive the four Darlington channels sinking the motor phases. See inbox/2026-06-21-uln2003-stepper-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// L298N dual H-bridge motor driver module — the common red board with heatsink and
+// an onboard 78M05 regulator. Drives 2 DC motors (or one bipolar stepper). Vs (motor
+// supply) 2.5–46 V, 2 A/channel continuous. Control: ENA + IN1/IN2 for bridge A,
+// IN3/IN4 + ENB for bridge B (EN pins take PWM for speed, IN pins set direction).
+// The +5V pin is the 78M05's regulated output when the onboard jumper is fitted (the
+// usual case), or a 5 V logic INPUT if the jumper is removed for Vs > 12 V — we model
+// it as a power rail pin and document the dual role. Schematic-only, footprint deferred.
+const l298n = definePart({
+  id: 'core:l298n',
+  name: 'L298N dual H-bridge motor driver',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'L298N',
+  manufacturer: 'STMicroelectronics (L298)',
+  datasheetUrl: 'https://www.st.com/resource/en/datasheet/l298.pdf',
+  pins: [
+    pin('1', '+12V', 'power_in', '1'), // Vs — motor supply 2.5–46 V
+    pin('2', 'GND', 'power_in', '2'),
+    pin('3', '+5V', 'power_in', '3'), // VSS logic; 78M05 OUT when jumper fitted (dual role)
+    pin('4', 'ENA', 'input', '4'), // bridge-A enable / PWM
+    pin('5', 'IN1', 'input', '5'), // bridge-A direction
+    pin('6', 'IN2', 'input', '6'),
+    pin('7', 'IN3', 'input', '7'), // bridge-B direction
+    pin('8', 'IN4', 'input', '8'),
+    pin('9', 'ENB', 'input', '9'), // bridge-B enable / PWM
+    pin('10', 'OUT1', 'output', '10'), // bridge A
+    pin('11', 'OUT2', 'output', '11'),
+    pin('12', 'OUT3', 'output', '12'), // bridge B
+    pin('13', 'OUT4', 'output', '13'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -4 * G, y: -7 * G, w: 8 * G, h: 14 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'L298N', sizeNm: Math.round(G * 0.5) },
+    ],
+    pins: [
+      { key: '4', at: { x: -5 * G, y: 5 * G }, dir: 'W' }, // ENA
+      { key: '5', at: { x: -5 * G, y: 3 * G }, dir: 'W' }, // IN1
+      { key: '6', at: { x: -5 * G, y: G }, dir: 'W' }, // IN2
+      { key: '7', at: { x: -5 * G, y: -G }, dir: 'W' }, // IN3
+      { key: '8', at: { x: -5 * G, y: -3 * G }, dir: 'W' }, // IN4
+      { key: '9', at: { x: -5 * G, y: -5 * G }, dir: 'W' }, // ENB
+      { key: '10', at: { x: 5 * G, y: 6 * G }, dir: 'E' }, // OUT1
+      { key: '11', at: { x: 5 * G, y: 4 * G }, dir: 'E' }, // OUT2
+      { key: '12', at: { x: 5 * G, y: 2 * G }, dir: 'E' }, // OUT3
+      { key: '13', at: { x: 5 * G, y: 0 }, dir: 'E' }, // OUT4
+      { key: '1', at: { x: 5 * G, y: -2 * G }, dir: 'E' }, // +12V
+      { key: '2', at: { x: 5 * G, y: -4 * G }, dir: 'E' }, // GND
+      { key: '3', at: { x: 5 * G, y: -6 * G }, dir: 'E' }, // +5V
+    ],
+  },
+  parametrics: { maxVoltage: 46 }, // Vs up to 46 V (abs max 50 V)
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against the ST L298 datasheet plus components101 + etechnophiles + lastminuteengineers L298N module pinouts (NOT taken from the shared component log): power +12V (Vs 2.5–46 V) / GND / +5V (logic), control header ENA, IN1, IN2, IN3, IN4, ENB, motor outputs OUT1/OUT2 (bridge A) and OUT3/OUT4 (bridge B). ENA/ENB take PWM (speed), IN pins set direction. +5V is the onboard 78M05 regulator OUTPUT when the jumper is fitted (usual) or a 5 V logic INPUT when removed (Vs > 12 V) — modeled as a power rail pin, dual role documented. 2 A/channel continuous, 3 A peak. See inbox/2026-06-21-l298n-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -730,6 +787,7 @@ export const SEED_PARTS: Part[] = [
   ds1302,
   ds3231,
   uln2003Stepper,
+  l298n,
   pushbutton,
   header2x10,
   usbcPower,
