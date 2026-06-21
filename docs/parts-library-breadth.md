@@ -46,6 +46,7 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:flame-sensor` — Flame sensor module (IR photodiode + LM393; web-verified). `23bfbae0`
 - [x] `core:ir-obstacle` — IR obstacle-avoidance sensor (3-pin digital, active-low; web-verified). `f55dc4d4`
 - [x] `core:soil-moisture` — Soil moisture sensor (FC-28 resistive, 4-pin; web-verified). `2dcc3a01`
+- [x] `core:ttp223` — TTP223 capacitive touch sensor (3-pin push-pull; web-verified). `814eb4bd`
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
@@ -65,7 +66,7 @@ Tier 2 — sensor modules (mostly simple 3-4 pin digital/analog):
 - [ ] Vibration sensor modules (spring / reed / piezo variants)
 - [x] IR obstacle-avoidance sensor — done `f55dc4d4` (IR receiver 38 kHz + IR LED transmitter still open)
 - [x] Soil moisture sensor module — done `2dcc3a01` (resistive FC-28; capacitive v1.2 still open)
-- [ ] Capacitive touch sensor module
+- [x] Capacitive touch sensor module — done `814eb4bd` (TTP223)
 - [ ] Slot-type optocoupler module
 - [ ] Passive buzzer module, laser diode module
 - [ ] RGB LED modules, single LED module, tactile button module
