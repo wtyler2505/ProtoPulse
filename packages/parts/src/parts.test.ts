@@ -50,6 +50,7 @@ describe('seed library', () => {
       'core:soil-moisture',
       'core:sw420-vibration',
       'core:tb6612fng',
+      'core:tm1637-display',
       'core:tmp36',
       'core:ttp223',
       'core:uln2003-stepper',
@@ -471,6 +472,22 @@ describe('seed library', () => {
     expect(byKey.get('3')).toBe('input'); // B drive
     expect(byKey.get('4')).toBe('power_in'); // common cathode
     expect(r?.refPrefix).toBe('D');
+  });
+
+  it('TM1637 display pin map matches the verified 4-pin 2-wire module', () => {
+    const d = SEED_PARTS.find((p) => p.id === 'core:tm1637-display');
+    expect(d).toBeDefined();
+    expect(d?.pins).toHaveLength(4);
+    const byNumber = new Map(d?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('CLK');
+    expect(byNumber.get('2')).toBe('DIO');
+    expect(byNumber.get('3')).toBe('VCC');
+    expect(byNumber.get('4')).toBe('GND');
+    const byKey = new Map(d?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('input'); // CLK
+    expect(byKey.get('2')).toBe('bidi'); // DIO
+    expect(byKey.get('3')).toBe('power_in');
+    expect(byKey.get('4')).toBe('power_in');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
