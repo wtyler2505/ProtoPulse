@@ -31,11 +31,13 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:bme280` — BME280 I²C temp/humidity/pressure (I²C path). `51b8c466`
 - [x] `core:mpu6050` — GY-521 (MPU-6050) 6-axis IMU (I²C path, web-verified).
 - [x] `core:ds1302` — DS1302 RTC module (3-wire serial, NOT I²C; web-verified). `53e2a084`
+- [x] `core:ds3231` — DS3231 RTC module (ZS-042, I²C addr 0x68; web-verified). `372374b7`
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
 - [ ] MPU-6050 — I²C 6-axis IMU (GY-521 module) — addr 0x68/0x69
-- [x] DS1302 RTC module (3-wire serial) — done `53e2a084`. (DS1307/DS3231 remain — those ARE I²C)
+- [x] DS1302 RTC module (3-wire serial) — done `53e2a084`. (DS1307 remains — it IS I²C)
+- [x] DS3231 RTC module (ZS-042, I²C) — done `372374b7`
 - [ ] ULN2003 stepper driver module (+ 28BYJ-48 pairing)
 - [ ] L298N dual H-bridge motor driver
 - [ ] TB6612 motor driver (OSEPP shield variant)
