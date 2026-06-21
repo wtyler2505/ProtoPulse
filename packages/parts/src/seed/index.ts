@@ -1286,6 +1286,40 @@ const ky022IrReceiver = definePart({
     'Pin map web-verified 2026-06-21 against arduinomodules + thegeekpub + pinouts.net + espboards KY-022 pinouts and the VS1838B/TL1838 1838 IR-receiver IC (NOT taken from the shared component log): 3-pin S (signal), middle VCC (2.7–5.5 V), GND. 38 kHz band-pass demodulator; S is an OUTPUT — idle HIGH, pulled LOW during each IR burst. NOTE: the outer S and – order is NOT standardised across clones (middle is always VCC) — wire to the silk labels, not a fixed position. S output, power pins power_in. See inbox/2026-06-21-ky022-ir-receiver-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// KY-005 IR transmitter module — a single 940 nm IR LED (the transmit half of the IR
+// pair with KY-022 above). 3-pin: S (drive in — the MCU modulates a 38 kHz carrier via
+// IRremote, through a series resistor), middle VCC (NC — no internal connection on
+// KY-005), GND. Schematic-only, footprint deferred.
+const ky005IrTransmitter = definePart({
+  id: 'core:ky005-ir-transmitter',
+  name: 'KY-005 IR transmitter module',
+  refPrefix: 'D',
+  class: 'ic',
+  mpn: 'KY-005',
+  manufacturer: 'generic (940 nm IR LED)',
+  datasheetUrl: 'https://arduinomodules.info/ky-005-infrared-transmitter-sensor-module/',
+  pins: [
+    pin('1', 'S', 'input', '1'), // 38 kHz-modulated drive from MCU (via series R)
+    pin('2', 'VCC', 'power_in', '2'), // middle pin — NC on KY-005 (no internal connection)
+    pin('3', 'GND', 'power_in', '3'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -3 * G, w: 6 * G, h: 6 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'IR-XMIT', sizeNm: Math.round(G * 0.4) },
+    ],
+    pins: [
+      { key: '2', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC
+      { key: '3', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '1', at: { x: 4 * G, y: 0 }, dir: 'E' }, // S
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // 3.3–5 V drive (120Ω@3.3V / 220Ω@5V series R)
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against arduinomodules + espboards + thegeekpub + joy-it KY-005 pinouts (NOT taken from the shared component log): 3-pin S (signal), middle VCC, GND. Single 940 nm IR LED; the MCU drives S with a 38 kHz-modulated signal (IRremote) through a series resistor (120Ω@3.3V / 220Ω@5V). On KY-005 the middle VCC pin is NC (no internal connection) — practically wire S → GPIO, – → GND. S is an input to the module; refPrefix D (LED emitter). Pairs with KY-022 receiver. See inbox/2026-06-21-ky005-ir-transmitter-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1318,6 +1352,7 @@ export const SEED_PARTS: Part[] = [
   sw420Vibration,
   ky008Laser,
   ky022IrReceiver,
+  ky005IrTransmitter,
   pushbutton,
   header2x10,
   usbcPower,
