@@ -769,6 +769,48 @@ const l298n = definePart({
     'Pin map web-verified 2026-06-21 against the ST L298 datasheet plus components101 + etechnophiles + lastminuteengineers L298N module pinouts (NOT taken from the shared component log): power +12V (Vs 2.5–46 V) / GND / +5V (logic), control header ENA, IN1, IN2, IN3, IN4, ENB, motor outputs OUT1/OUT2 (bridge A) and OUT3/OUT4 (bridge B). ENA/ENB take PWM (speed), IN pins set direction. +5V is the onboard 78M05 regulator OUTPUT when the jumper is fitted (usual) or a 5 V logic INPUT when removed (Vs > 12 V) — modeled as a power rail pin, dual role documented. 2 A/channel continuous, 3 A peak. See inbox/2026-06-21-l298n-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// MAX7219 LED display driver module (8x8 dot-matrix / 7-seg). SPI-like 3-wire
+// interface: DIN (serial data in), CLK (clock), CS/LOAD (latch). The module has a
+// 5-pin INPUT header (VCC, GND, DIN, CS, CLK) wired to the MCU and a 5-pin OUTPUT
+// header for daisy-chaining (VCC, GND, DOUT, CS, CLK) — the two share VCC/GND/CS/CLK,
+// so the only distinct extra signal is DOUT. We model the 6 unique signals: chain by
+// wiring this module's DOUT to the next module's DIN. Schematic-only, footprint deferred.
+const max7219 = definePart({
+  id: 'core:max7219',
+  name: 'MAX7219 LED matrix driver module (SPI)',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'MAX7219',
+  manufacturer: 'Maxim/Analog Devices',
+  datasheetUrl: 'https://www.analog.com/media/en/technical-documentation/data-sheets/MAX7219-MAX7221.pdf',
+  pins: [
+    pin('1', 'VCC', 'power_in', '1'), // 5 V
+    pin('2', 'GND', 'power_in', '2'),
+    pin('3', 'DIN', 'input', '3'), // serial data in (from MCU MOSI)
+    pin('4', 'CS', 'input', '4'), // chip select / LOAD latch
+    pin('5', 'CLK', 'input', '5'), // serial clock
+    pin('6', 'DOUT', 'output', '6'), // daisy-chain data out → next module's DIN
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -5 * G, w: 6 * G, h: 10 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'MAX7219', sizeNm: Math.round(G * 0.45) },
+    ],
+    pins: [
+      { key: '1', at: { x: -4 * G, y: 4 * G }, dir: 'W' }, // VCC
+      { key: '2', at: { x: -4 * G, y: 2 * G }, dir: 'W' }, // GND
+      { key: '3', at: { x: -4 * G, y: 0 }, dir: 'W' }, // DIN
+      { key: '4', at: { x: -4 * G, y: -2 * G }, dir: 'W' }, // CS
+      { key: '5', at: { x: -4 * G, y: -4 * G }, dir: 'W' }, // CLK
+      { key: '6', at: { x: 4 * G, y: 0 }, dir: 'E' }, // DOUT
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // MAX7219 operates 4.0–5.5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against the Analog Devices MAX7219/MAX7221 datasheet plus components101 + lastminuteengineers + Cirkit Designer module pinouts (NOT taken from the shared component log): input header VCC, GND, DIN, CS, CLK; output header VCC, GND, DOUT, CS, CLK (shares VCC/GND/CS/CLK). SPI-like 3-wire: DIN=serial data in, CLK=clock, CS=LOAD latch; DOUT cascades to the next module’s DIN. Modeled as the 6 unique signals. See inbox/2026-06-21-max7219-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -788,6 +830,7 @@ export const SEED_PARTS: Part[] = [
   ds3231,
   uln2003Stepper,
   l298n,
+  max7219,
   pushbutton,
   header2x10,
   usbcPower,
