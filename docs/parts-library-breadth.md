@@ -41,6 +41,9 @@ of the now-certified ESP32-S3 emulator base.
 
 **Tier-1 is COMPLETE** (8/8): MPU-6050, DS1302, DS3231, ULN2003, L298N, TB6612FNG, MAX7219, 1602A LCD, RC522 all landed + web-verified (2026-06-21). Next: Tier-2 sensor modules.
 
+### Tier-2 (in progress)
+- [x] `core:ky038` — KY-038 sound sensor (LM393 comparator module; web-verified). `3ccc12fb`
+
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
 - [ ] MPU-6050 — I²C 6-axis IMU (GY-521 module) — addr 0x68/0x69
@@ -54,7 +57,7 @@ Tier 1 — common, well-documented, high reuse:
 - [x] RC522 RFID module (SPI) — done `611f031a`
 
 Tier 2 — sensor modules (mostly simple 3-4 pin digital/analog):
-- [ ] KY-038 sound sensor, sound detection sensor
+- [x] KY-038 sound sensor — done `3ccc12fb` (sound detection sensor variant still open)
 - [ ] Flame sensor module
 - [ ] Vibration sensor modules (spring / reed / piezo variants)
 - [ ] IR obstacle-avoidance sensor, IR receiver (38 kHz), IR LED transmitter
