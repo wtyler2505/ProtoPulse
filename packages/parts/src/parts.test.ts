@@ -33,6 +33,7 @@ describe('seed library', () => {
       'core:ds3231',
       'core:esp32-s3-wroom-1',
       'core:l298n',
+      'core:max7219',
       'core:mpu6050',
       'core:ne555',
       'core:tmp36',
@@ -183,6 +184,27 @@ describe('seed library', () => {
     expect(byKey.get('13')).toBe('output'); // OUT4
     expect(byKey.get('1')).toBe('power_in'); // +12V
     expect(byKey.get('3')).toBe('power_in'); // +5V
+  });
+
+  it('MAX7219 driver module pin map matches the verified SPI header + daisy-chain DOUT', () => {
+    const m = SEED_PARTS.find((p) => p.id === 'core:max7219');
+    expect(m).toBeDefined();
+    expect(m?.pins).toHaveLength(6);
+    const byNumber = new Map(m?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('VCC');
+    expect(byNumber.get('2')).toBe('GND');
+    expect(byNumber.get('3')).toBe('DIN');
+    expect(byNumber.get('4')).toBe('CS');
+    expect(byNumber.get('5')).toBe('CLK');
+    expect(byNumber.get('6')).toBe('DOUT');
+    // SPI-like: DIN/CS/CLK are inputs, DOUT is the daisy-chain output, power pins power_in.
+    const byKey = new Map(m?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('3')).toBe('input'); // DIN
+    expect(byKey.get('4')).toBe('input'); // CS
+    expect(byKey.get('5')).toBe('input'); // CLK
+    expect(byKey.get('6')).toBe('output'); // DOUT
+    expect(byKey.get('1')).toBe('power_in');
+    expect(byKey.get('2')).toBe('power_in');
   });
 
   it('power pseudo-parts expose power_out pins for the ERC source rule', () => {
