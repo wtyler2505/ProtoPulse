@@ -1391,6 +1391,42 @@ const ky016RgbLed = definePart({
     'Pin map web-verified 2026-06-21 against arduinomodules + espboards + joy-it SensorKit + Cirkit Designer KY-016 pinouts (NOT taken from the shared component log): 4-pin R, G, B, GND. Common-CATHODE 5 mm RGB LED with three onboard 150 Ω series resistors; R/G/B are anodes driven by PWM lines (modeled as inputs to the module), GND is the shared cathode (power_in). 20 mA/channel; Vf ≈1.8 V red, ≈2.8 V green/blue. refPrefix D. Header silk order is board-revision-dependent (names/functions fixed). See inbox/2026-06-21-ky016-rgb-led-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// TM1637 4-digit 7-segment display module — a Titan Micro TM1637 LED driver + 4-digit
+// display on a 2-wire bus. 4-pin: CLK, DIO, VCC, GND. The protocol is I²C-like but not
+// standard I²C; DIO is bidirectional (the TM1637 can also scan a key matrix back over
+// it), so it's modeled bidi. Schematic-only, footprint deferred.
+const tm1637Display = definePart({
+  id: 'core:tm1637-display',
+  name: 'TM1637 4-digit 7-segment display',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'TM1637',
+  manufacturer: 'Titan Micro (TM1637)',
+  datasheetUrl: 'https://lastminuteengineers.com/tm1637-arduino-tutorial/',
+  pins: [
+    pin('1', 'CLK', 'input', '1'), // 2-wire clock from MCU
+    pin('2', 'DIO', 'bidi', '2'), // 2-wire data I/O (also key-scan readback)
+    pin('3', 'VCC', 'power_in', '3'), // 3.3–5 V
+    pin('4', 'GND', 'power_in', '4'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -3 * G, w: 6 * G, h: 6 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'TM1637', sizeNm: Math.round(G * 0.42) },
+    ],
+    pins: [
+      { key: '3', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC
+      { key: '4', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '1', at: { x: 4 * G, y: G }, dir: 'E' }, // CLK
+      { key: '2', at: { x: 4 * G, y: -G }, dir: 'E' }, // DIO
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // 3.3–5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-21 against lastminuteengineers + makerguides + circuitdigest + Cirkit Designer TM1637 module pinouts and the Titan Micro TM1637 IC (NOT taken from the shared component log): 4-pin CLK, DIO, VCC, GND. 2-wire interface (I²C-like but not standard I²C); CLK is a clock input, DIO is bidirectional (data + optional key-scan readback) so modeled bidi. 3.3–5 V. Power pins power_in. See inbox/2026-06-21-tm1637-display-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1426,6 +1462,7 @@ export const SEED_PARTS: Part[] = [
   ky005IrTransmitter,
   slotOptocoupler,
   ky016RgbLed,
+  tm1637Display,
   pushbutton,
   header2x10,
   usbcPower,
