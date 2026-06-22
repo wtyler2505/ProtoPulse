@@ -535,28 +535,30 @@ describe('seed library', () => {
     expect(n?.refPrefix).toBe('A');
   });
 
-  it('Arduino Uno R3 pin map matches the verified 31-pin 4-header layout', () => {
+  it('Arduino Uno R3 pin map matches the verified 32-pin 4-header layout', () => {
     const u = SEED_PARTS.find((p) => p.id === 'core:arduino-uno-r3');
     expect(u).toBeDefined();
-    expect(u?.pins).toHaveLength(31);
-    expect(new Set(u?.pins.map((p) => p.key)).size).toBe(31);
+    expect(u?.pins).toHaveLength(32);
+    expect(new Set(u?.pins.map((p) => p.key)).size).toBe(32);
     const byNumber = new Map(u?.pins.map((p) => [p.number, p.name]));
-    expect(byNumber.get('1')).toBe('IOREF');
-    expect(byNumber.get('2')).toBe('RESET');
-    expect(byNumber.get('7')).toBe('VIN');
-    expect(byNumber.get('8')).toBe('A0');
-    expect(byNumber.get('14')).toBe('D0'); // RX
-    expect(byNumber.get('27')).toBe('D13');
-    expect(byNumber.get('29')).toBe('AREF');
-    expect(byNumber.get('30')).toBe('SDA');
-    expect(byNumber.get('31')).toBe('SCL');
+    expect(byNumber.get('1')).toBe('NC'); // reserved corner pin of the R3 power header
+    expect(byNumber.get('2')).toBe('IOREF');
+    expect(byNumber.get('3')).toBe('RESET');
+    expect(byNumber.get('8')).toBe('VIN');
+    expect(byNumber.get('9')).toBe('A0');
+    expect(byNumber.get('15')).toBe('D0'); // RX
+    expect(byNumber.get('28')).toBe('D13');
+    expect(byNumber.get('30')).toBe('AREF');
+    expect(byNumber.get('31')).toBe('SDA');
+    expect(byNumber.get('32')).toBe('SCL');
     const byKey = new Map(u?.pins.map((p) => [p.key, p.electricalType]));
-    expect(byKey.get('1')).toBe('power_out'); // IOREF
-    expect(byKey.get('3')).toBe('power_out'); // 3V3
-    expect(byKey.get('4')).toBe('power_out'); // 5V
-    expect(byKey.get('7')).toBe('power_in'); // VIN
-    expect(byKey.get('16')).toBe('bidi'); // D2
-    expect(byKey.get('29')).toBe('input'); // AREF
+    expect(byKey.get('1')).toBe('nc'); // reserved corner pin
+    expect(byKey.get('2')).toBe('power_out'); // IOREF
+    expect(byKey.get('4')).toBe('power_out'); // 3V3
+    expect(byKey.get('5')).toBe('power_out'); // 5V
+    expect(byKey.get('8')).toBe('power_in'); // VIN
+    expect(byKey.get('17')).toBe('bidi'); // D2
+    expect(byKey.get('30')).toBe('input'); // AREF
     expect(u?.refPrefix).toBe('A');
   });
 
