@@ -36,6 +36,7 @@ describe('seed library', () => {
       'core:ds3231',
       'core:esp32-s3-wroom-1',
       'core:flame-sensor',
+      'core:hc-sr04',
       'core:ir-obstacle',
       'core:ky004-button',
       'core:ky005-ir-transmitter',
@@ -332,6 +333,23 @@ describe('seed library', () => {
     expect(byKey.get('1')).toBe('power_in');
     expect(byKey.get('3')).toBe('output'); // DO
     expect(byKey.get('4')).toBe('output'); // AO
+  });
+
+  it('HC-SR04 pin map matches the verified 4-pin VCC/TRIG/ECHO/GND layout', () => {
+    const h = SEED_PARTS.find((p) => p.id === 'core:hc-sr04');
+    expect(h).toBeDefined();
+    expect(h?.pins).toHaveLength(4);
+    const byNumber = new Map(h?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('VCC');
+    expect(byNumber.get('2')).toBe('TRIG');
+    expect(byNumber.get('3')).toBe('ECHO');
+    expect(byNumber.get('4')).toBe('GND');
+    const byKey = new Map(h?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('power_in'); // VCC
+    expect(byKey.get('2')).toBe('input'); // TRIG (MCU-driven)
+    expect(byKey.get('3')).toBe('output'); // ECHO (module-driven)
+    expect(byKey.get('4')).toBe('power_in'); // GND
+    expect(h?.refPrefix).toBe('U');
   });
 
   it('IR obstacle sensor pin map matches the verified 3-pin digital module', () => {
