@@ -45,6 +45,7 @@ describe('seed library', () => {
       'core:ky008-laser',
       'core:ky016-rgb-led',
       'core:ky022-ir-receiver',
+      'core:ky023-joystick',
       'core:ky038',
       'core:ky040-encoder',
       'core:l298n',
@@ -386,6 +387,25 @@ describe('seed library', () => {
     expect(byKey.get('4')).toBe('power_in'); // +
     expect(byKey.get('5')).toBe('power_in'); // GND
     expect(k?.refPrefix).toBe('U');
+  });
+
+  it('KY-023 joystick pin map matches the verified 5-pin GND/+5V/VRx/VRy/SW layout', () => {
+    const j = SEED_PARTS.find((p) => p.id === 'core:ky023-joystick');
+    expect(j).toBeDefined();
+    expect(j?.pins).toHaveLength(5);
+    const byNumber = new Map(j?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('GND');
+    expect(byNumber.get('2')).toBe('+5V');
+    expect(byNumber.get('3')).toBe('VRx');
+    expect(byNumber.get('4')).toBe('VRy');
+    expect(byNumber.get('5')).toBe('SW');
+    const byKey = new Map(j?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('power_in'); // GND
+    expect(byKey.get('2')).toBe('power_in'); // +5V
+    expect(byKey.get('3')).toBe('output'); // VRx analog
+    expect(byKey.get('4')).toBe('output'); // VRy analog
+    expect(byKey.get('5')).toBe('output'); // SW button
+    expect(j?.refPrefix).toBe('U');
   });
 
   it('IR obstacle sensor pin map matches the verified 3-pin digital module', () => {

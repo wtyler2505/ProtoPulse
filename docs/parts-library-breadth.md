@@ -59,6 +59,7 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:hc-sr04` — HC-SR04 ultrasonic distance sensor (4-pin VCC/TRIG/ECHO/GND; web-verified). 2026-06-22
 - [x] `core:hc-sr501` — HC-SR501 PIR motion sensor (3-pin VCC/OUT/GND; web-verified). 2026-06-22
 - [x] `core:ky040-encoder` — KY-040 rotary encoder (5-pin CLK/DT/SW/+/GND; web-verified). 2026-06-22
+- [x] `core:ky023-joystick` — KY-023 dual-axis analog joystick (5-pin GND/+5V/VRx/VRy/SW; web-verified). 2026-06-22
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:

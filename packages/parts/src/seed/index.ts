@@ -2282,6 +2282,44 @@ const ky040Encoder = definePart({
     'Pin map web-verified 2026-06-22 against components101 KY-040 + espboards.dev + the Keyes KY-040 datasheet (the shared component log agrees): 5-pin module, silk order CLK, DT, SW, +, GND. Incremental quadrature rotary encoder + shaft push-button. CLK = quadrature A, DT = quadrature B (board carries 10k pull-ups on both so an open contact reads HIGH); SW = momentary push-button to GND. 3.3–5 V. CLK/DT/SW modeled output (signal lines the MCU reads), + and GND power_in. refPrefix U. See inbox/2026-06-22-ky040-encoder-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// KY-023 dual-axis analog joystick — 5-pin (GND, +5V, VRx, VRy, SW). Two 10k pots (X/Y)
+// + a push-button (press the stick down). VRx/VRy = analog wiper outputs (0–VCC), SW =
+// momentary button to GND. 3.3–5 V. VRx/VRy/SW = output (MCU reads), GND/+5V = power_in.
+// Footprint deferred.
+const ky023Joystick = definePart({
+  id: 'core:ky023-joystick',
+  name: 'KY-023 dual-axis analog joystick module',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'KY-023',
+  manufacturer: 'Keyes (generic PS2-style joystick)',
+  datasheetUrl: 'https://arduinomodules.info/ky-023-joystick-dual-axis-module/',
+  pins: [
+    pin('1', 'GND', 'power_in', '1'),
+    pin('2', '+5V', 'power_in', '2'), // 3.3–5 V supply
+    pin('3', 'VRx', 'output', '3'), // X-axis analog (pot wiper, 0–VCC)
+    pin('4', 'VRy', 'output', '4'), // Y-axis analog (pot wiper, 0–VCC)
+    pin('5', 'SW', 'output', '5'), // push-button (to GND, needs MCU pull-up)
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -4 * G, w: 6 * G, h: 8 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'KY-023', sizeNm: Math.round(G * 0.42) },
+    ],
+    pins: [
+      { key: '2', at: { x: -4 * G, y: 2 * G }, dir: 'W' }, // +5V
+      { key: '1', at: { x: -4 * G, y: -2 * G }, dir: 'W' }, // GND
+      { key: '3', at: { x: 4 * G, y: 2 * G }, dir: 'E' }, // VRx
+      { key: '4', at: { x: 4 * G, y: 0 }, dir: 'E' }, // VRy
+      { key: '5', at: { x: 4 * G, y: -2 * G }, dir: 'E' }, // SW
+    ],
+  },
+  parametrics: { maxVoltage: 5 }, // 3.3–5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-22 against arduinomodules.info KY-023 + espboards.dev + watelectronics (the shared component log agrees exactly): 5-pin module, silk order GND, +5V, VRx, VRy, SW. Two perpendicular 10k pots give VRx (X) and VRy (Y) analog wiper outputs (0–VCC); pressing the stick closes SW to GND (needs an MCU pull-up, reads LOW when pressed). 3.3–5 V. VRx/VRy/SW modeled output (signals the MCU reads), GND/+5V power_in. refPrefix U. See inbox/2026-06-22-ky023-joystick-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -2325,6 +2363,7 @@ export const SEED_PARTS: Part[] = [
   hcsr04,
   hcsr501,
   ky040Encoder,
+  ky023Joystick,
   nodemcuEsp8266,
   nodemcuEsp32s,
   raspberryPi3bp,
