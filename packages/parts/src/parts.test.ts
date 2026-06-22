@@ -48,6 +48,7 @@ describe('seed library', () => {
       'core:max7219',
       'core:mpu6050',
       'core:ne555',
+      'core:nodemcu-esp32s',
       'core:nodemcu-esp8266',
       'core:raspberry-pi-3bp',
       'core:rc522',
@@ -579,6 +580,43 @@ describe('seed library', () => {
     expect(byKey.get('11')).toBe('power_out'); // 3V3
     expect(byKey.get('15')).toBe('power_in'); // VIN
     expect(byKey.get('16')).toBe('bidi'); // D0 GPIO
+    expect(n?.refPrefix).toBe('A');
+  });
+
+  it('NodeMCU ESP-32S pin map matches the verified 38-pin ESP-WROOM-32 layout', () => {
+    const n = SEED_PARTS.find((p) => p.id === 'core:nodemcu-esp32s');
+    expect(n).toBeDefined();
+    expect(n?.pins).toHaveLength(38);
+    expect(new Set(n?.pins.map((p) => p.key)).size).toBe(38);
+    const byNumber = new Map(n?.pins.map((p) => [p.number, p.name]));
+    // left column 1–19
+    expect(byNumber.get('1')).toBe('3V3');
+    expect(byNumber.get('2')).toBe('EN');
+    expect(byNumber.get('3')).toBe('GPIO36'); // VP, input only
+    expect(byNumber.get('4')).toBe('GPIO39'); // VN, input only
+    expect(byNumber.get('14')).toBe('GND');
+    expect(byNumber.get('18')).toBe('GPIO11'); // flash CMD
+    expect(byNumber.get('19')).toBe('5V'); // VIN
+    // right column 20–38
+    expect(byNumber.get('20')).toBe('GND');
+    expect(byNumber.get('21')).toBe('GPIO23'); // MOSI
+    expect(byNumber.get('22')).toBe('GPIO22'); // SCL
+    expect(byNumber.get('23')).toBe('GPIO1'); // U0TXD
+    expect(byNumber.get('24')).toBe('GPIO3'); // U0RXD
+    expect(byNumber.get('25')).toBe('GPIO21'); // SDA
+    expect(byNumber.get('38')).toBe('GPIO6'); // flash CLK
+    const byKey = new Map(n?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('power_out'); // 3V3 regulator out
+    expect(byKey.get('2')).toBe('input'); // EN
+    expect(byKey.get('3')).toBe('input'); // GPIO36 input-only
+    expect(byKey.get('6')).toBe('input'); // GPIO35 input-only
+    expect(byKey.get('19')).toBe('power_in'); // VIN
+    expect(byKey.get('21')).toBe('bidi'); // GPIO23
+    expect(byKey.get('38')).toBe('bidi'); // GPIO6 flash pin (still a GPIO)
+    // GPIO34/35/36/39 are the only input-only GPIOs; with EN that's 5 inputs
+    expect(n?.pins.filter((p) => p.electricalType === 'input')).toHaveLength(5);
+    // 3 grounds on the 38-pin header (pins 14, 20, 26)
+    expect(n?.pins.filter((p) => p.name === 'GND')).toHaveLength(3);
     expect(n?.refPrefix).toBe('A');
   });
 
