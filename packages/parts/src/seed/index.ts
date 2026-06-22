@@ -2173,6 +2173,42 @@ const arduinoMega2560 = definePart({
     'Pin map VISUALLY verified 2026-06-22 against the official Arduino Pinout-Mega2560rev3 PDF (all 4 pages, read pin-by-pin). 86 modeled header pins across five headers. POWER (8): NC, IOREF, RESET, 3V3, 5V, GND, GND, VIN — corner pin reserved/NC. ANALOG (16): A0–A15 (= D54–D69; A4–A7 also = JTAG TCK/TMS/TDO/TDI). DIGITAL shield header (18): dedicated SCL/SDA, AREF, GND, D13–D0 (D13=LED, PWM on D2–D13 per board). COMM header (8): D14–D21 (TX3/RX3/TX2/RX2/TX1/RX1/SDA/SCL). BOTTOM 2×18 header (36): 5V + even D22–D52 + GND (left), 5V + odd D23–D53 + GND (right); D50=CIPO/MISO, D51=COPI/MOSI, D52=SCK, D53=SS (SPI). All D-pins + analog bidi, AREF/RESET input, IOREF/3V3/5V power_out, VIN/GND power_in (VIN 7–12 V recommended, 6–20 V abs max), NC reserved. 5 GND + 3 5V header pins. refPrefix A. See inbox/2026-06-22-arduino-mega2560-pinout.md. No footprint yet — board land pattern is a later slice.',
 });
 
+// HC-SR04 ultrasonic distance sensor — the iconic 4-pin module (VCC, TRIG, ECHO, GND).
+// MCU pulses TRIG (10 µs) → module emits a 40 kHz burst → ECHO goes high for the round-trip
+// time. 5 V supply, 2–400 cm range. TRIG = input (MCU-driven), ECHO = output (module-driven),
+// VCC/GND = power_in. Footprint deferred.
+const hcsr04 = definePart({
+  id: 'core:hc-sr04',
+  name: 'HC-SR04 ultrasonic distance sensor',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'HC-SR04',
+  manufacturer: 'generic (ElecFreaks original)',
+  datasheetUrl: 'https://components101.com/sensors/ultrasonic-sensor-working-pinout-datasheet',
+  pins: [
+    pin('1', 'VCC', 'power_in', '1'), // +5 V
+    pin('2', 'TRIG', 'input', '2'), // trigger: MCU drives a 10 µs high pulse
+    pin('3', 'ECHO', 'output', '3'), // echo: module drives high for the round-trip time
+    pin('4', 'GND', 'power_in', '4'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -4 * G, w: 6 * G, h: 8 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'HC-SR04', sizeNm: Math.round(G * 0.42) },
+    ],
+    pins: [
+      { key: '1', at: { x: -4 * G, y: 2 * G }, dir: 'W' }, // VCC
+      { key: '4', at: { x: -4 * G, y: -2 * G }, dir: 'W' }, // GND
+      { key: '2', at: { x: 4 * G, y: 2 * G }, dir: 'E' }, // TRIG
+      { key: '3', at: { x: 4 * G, y: -2 * G }, dir: 'E' }, // ECHO
+    ],
+  },
+  parametrics: { maxVoltage: 5 }, // 5 V supply
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-22 against components101 + the official ElecFreaks HC-SR04 datasheet + espboards.dev (NOT taken from the shared component log, though it agrees): 4-pin module, left-to-right order VCC, TRIG, ECHO, GND. 5 V supply, 2–400 cm range, 40 kHz. TRIG = input (MCU drives a 10 µs trigger pulse), ECHO = output (module drives the pin high for the echo round-trip time), VCC/GND = power_in. refPrefix U. See inbox/2026-06-22-hc-sr04-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -2213,6 +2249,7 @@ export const SEED_PARTS: Part[] = [
   arduinoNano,
   arduinoUno,
   arduinoMega2560,
+  hcsr04,
   nodemcuEsp8266,
   nodemcuEsp32s,
   raspberryPi3bp,
