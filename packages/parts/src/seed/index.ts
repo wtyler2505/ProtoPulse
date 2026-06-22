@@ -1854,6 +1854,114 @@ const raspberryPi3bp = definePart({
     'Pin map web-verified 2026-06-21 against pinout.xyz + Pi4J model-3b-plus + etechnophiles Pi 3B+ references (NOT taken from the shared component log): standardized 40-pin J8 header, BCM numbering, odd pins left / even right. 2×3V3 (1,17), 2×5V (2,4), 8×GND (6,9,14,20,25,30,34,39), I²C1 on GPIO2/3 (pins 3,5), UART on GPIO14/15 (8,10), SPI0 on GPIO7-11 (19,21,23,24,26), SPI1 on GPIO16-21. Modeled as the GPIO header only (schematic symbol, SBC). GPIO bidi, 3V3/5V power_out (board sources them), GND power_in. refPrefix A. Header layout is invariant across all 40-pin Pis. See inbox/2026-06-21-raspberry-pi-3bp-pinout.md. No footprint — board land pattern deferred.',
 });
 
+// NodeMCU ESP-32S (Ai-Thinker NodeMCU-32S) — 38-pin ESP-WROOM-32 dev board. Tyler's
+// catalog mislabels the chip "ESP32-S2" but also claims Bluetooth, which the S2 lacks —
+// the board is the classic dual-core ESP32 (ESP-WROOM-32, Wi-Fi + BT/BLE). Modeled as its
+// 38-pin header: continuous numbering, left column top→bottom (1–19), then right (20–38).
+// All six SPI-flash pins (GPIO6-11) are broken out (bidi, but occupied by onboard flash).
+// GPIO34/35/36/39 are INPUT-ONLY (no output drivers / pull-ups). Footprint deferred.
+const nodemcuEsp32s = definePart({
+  id: 'core:nodemcu-esp32s',
+  name: 'NodeMCU ESP-32S (ESP-WROOM-32, 38-pin)',
+  refPrefix: 'A',
+  class: 'ic',
+  mpn: 'NodeMCU-32S',
+  manufacturer: 'Ai-Thinker (ESP32-WROOM-32)',
+  datasheetUrl: 'https://www.espboards.dev/esp32/nodemcu-32s/',
+  pins: [
+    // left column (top → bottom)
+    pin('1', '3V3', 'power_out', '1'), // onboard AMS1117 regulator out
+    pin('2', 'EN', 'input', '2'), // chip enable / reset (active high, pulled up)
+    pin('3', 'GPIO36', 'input', '3'), // SENSOR_VP, ADC1_0 — input only
+    pin('4', 'GPIO39', 'input', '4'), // SENSOR_VN, ADC1_3 — input only
+    pin('5', 'GPIO34', 'input', '5'), // ADC1_6 — input only
+    pin('6', 'GPIO35', 'input', '6'), // ADC1_7 — input only
+    pin('7', 'GPIO32', 'bidi', '7'), // ADC1_4, Touch9, Xtal32P
+    pin('8', 'GPIO33', 'bidi', '8'), // ADC1_5, Touch8, Xtal32N
+    pin('9', 'GPIO25', 'bidi', '9'), // DAC1, ADC2_8
+    pin('10', 'GPIO26', 'bidi', '10'), // DAC2, ADC2_9
+    pin('11', 'GPIO27', 'bidi', '11'), // ADC2_7, Touch7
+    pin('12', 'GPIO14', 'bidi', '12'), // ADC2_6, Touch6, HSPI CLK
+    pin('13', 'GPIO12', 'bidi', '13'), // ADC2_5, Touch5, HSPI MISO (strapping)
+    pin('14', 'GND', 'power_in', '14'),
+    pin('15', 'GPIO13', 'bidi', '15'), // ADC2_4, Touch4, HSPI MOSI
+    pin('16', 'GPIO9', 'bidi', '16'), // SD2 / flash (onboard SPI flash)
+    pin('17', 'GPIO10', 'bidi', '17'), // SD3 / flash
+    pin('18', 'GPIO11', 'bidi', '18'), // CMD / flash
+    pin('19', '5V', 'power_in', '19'), // VIN (USB / external 5 V)
+    // right column (top → bottom)
+    pin('20', 'GND', 'power_in', '20'),
+    pin('21', 'GPIO23', 'bidi', '21'), // VSPI MOSI
+    pin('22', 'GPIO22', 'bidi', '22'), // I²C SCL
+    pin('23', 'GPIO1', 'bidi', '23'), // U0TXD
+    pin('24', 'GPIO3', 'bidi', '24'), // U0RXD
+    pin('25', 'GPIO21', 'bidi', '25'), // I²C SDA
+    pin('26', 'GND', 'power_in', '26'),
+    pin('27', 'GPIO19', 'bidi', '27'), // VSPI MISO
+    pin('28', 'GPIO18', 'bidi', '28'), // VSPI SCK
+    pin('29', 'GPIO5', 'bidi', '29'), // VSPI CS0 (strapping)
+    pin('30', 'GPIO17', 'bidi', '30'), // U2TXD
+    pin('31', 'GPIO16', 'bidi', '31'), // U2RXD
+    pin('32', 'GPIO4', 'bidi', '32'), // ADC2_0, Touch0
+    pin('33', 'GPIO0', 'bidi', '33'), // boot strapping, ADC2_1, Touch1
+    pin('34', 'GPIO2', 'bidi', '34'), // ADC2_2, Touch2 (onboard LED, strapping)
+    pin('35', 'GPIO15', 'bidi', '35'), // ADC2_3, Touch3, HSPI CS0 (strapping)
+    pin('36', 'GPIO8', 'bidi', '36'), // SD1 / flash
+    pin('37', 'GPIO7', 'bidi', '37'), // SD0 / flash
+    pin('38', 'GPIO6', 'bidi', '38'), // CLK / flash
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -4 * G, y: -19 * G, w: 8 * G, h: 38 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'ESP-32S', sizeNm: Math.round(G * 0.5) },
+    ],
+    pins: [
+      { key: '1', at: { x: -5 * G, y: 18 * G }, dir: 'W' },
+      { key: '2', at: { x: -5 * G, y: 16 * G }, dir: 'W' },
+      { key: '3', at: { x: -5 * G, y: 14 * G }, dir: 'W' },
+      { key: '4', at: { x: -5 * G, y: 12 * G }, dir: 'W' },
+      { key: '5', at: { x: -5 * G, y: 10 * G }, dir: 'W' },
+      { key: '6', at: { x: -5 * G, y: 8 * G }, dir: 'W' },
+      { key: '7', at: { x: -5 * G, y: 6 * G }, dir: 'W' },
+      { key: '8', at: { x: -5 * G, y: 4 * G }, dir: 'W' },
+      { key: '9', at: { x: -5 * G, y: 2 * G }, dir: 'W' },
+      { key: '10', at: { x: -5 * G, y: 0 }, dir: 'W' },
+      { key: '11', at: { x: -5 * G, y: -2 * G }, dir: 'W' },
+      { key: '12', at: { x: -5 * G, y: -4 * G }, dir: 'W' },
+      { key: '13', at: { x: -5 * G, y: -6 * G }, dir: 'W' },
+      { key: '14', at: { x: -5 * G, y: -8 * G }, dir: 'W' },
+      { key: '15', at: { x: -5 * G, y: -10 * G }, dir: 'W' },
+      { key: '16', at: { x: -5 * G, y: -12 * G }, dir: 'W' },
+      { key: '17', at: { x: -5 * G, y: -14 * G }, dir: 'W' },
+      { key: '18', at: { x: -5 * G, y: -16 * G }, dir: 'W' },
+      { key: '19', at: { x: -5 * G, y: -18 * G }, dir: 'W' },
+      { key: '20', at: { x: 5 * G, y: 18 * G }, dir: 'E' },
+      { key: '21', at: { x: 5 * G, y: 16 * G }, dir: 'E' },
+      { key: '22', at: { x: 5 * G, y: 14 * G }, dir: 'E' },
+      { key: '23', at: { x: 5 * G, y: 12 * G }, dir: 'E' },
+      { key: '24', at: { x: 5 * G, y: 10 * G }, dir: 'E' },
+      { key: '25', at: { x: 5 * G, y: 8 * G }, dir: 'E' },
+      { key: '26', at: { x: 5 * G, y: 6 * G }, dir: 'E' },
+      { key: '27', at: { x: 5 * G, y: 4 * G }, dir: 'E' },
+      { key: '28', at: { x: 5 * G, y: 2 * G }, dir: 'E' },
+      { key: '29', at: { x: 5 * G, y: 0 }, dir: 'E' },
+      { key: '30', at: { x: 5 * G, y: -2 * G }, dir: 'E' },
+      { key: '31', at: { x: 5 * G, y: -4 * G }, dir: 'E' },
+      { key: '32', at: { x: 5 * G, y: -6 * G }, dir: 'E' },
+      { key: '33', at: { x: 5 * G, y: -8 * G }, dir: 'E' },
+      { key: '34', at: { x: 5 * G, y: -10 * G }, dir: 'E' },
+      { key: '35', at: { x: 5 * G, y: -12 * G }, dir: 'E' },
+      { key: '36', at: { x: 5 * G, y: -14 * G }, dir: 'E' },
+      { key: '37', at: { x: 5 * G, y: -16 * G }, dir: 'E' },
+      { key: '38', at: { x: 5 * G, y: -18 * G }, dir: 'E' },
+    ],
+  },
+  parametrics: { maxVoltage: 5 }, // VIN ~5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-22 by VISUAL inspection of the Mischianti high-res "ESP32 NODEMCU-32S ESP-32S Kit" pinout diagram (1440×842, read pin-by-pin in-browser, both columns zoomed), cross-checked against espboards.dev/esp32/nodemcu-32s text data (SDA=GPIO21, SCL=GPIO22, MOSI=GPIO23, MISO=GPIO19, SCK=GPIO18, CS=GPIO5, U0TXD=GPIO1/U0RXD=GPIO3, U2=GPIO16/17, VP=GPIO36/VN=GPIO39 all agree). NOT taken from the shared component log, whose "ESP32-S2 + Bluetooth" entry is internally contradictory (S2 has no Bluetooth); board is the classic dual-core ESP32 / ESP-WROOM-32. 38-pin header, continuous numbering: left 1–19 = 3V3, EN, GPIO36, 39, 34, 35, 32, 33, 25, 26, 27, 14, 12, GND, 13, 9, 10, 11, 5V(VIN); right 20–38 = GND, GPIO23, 22, 1, 3, 21, GND, 19, 18, 5, 17, 16, 4, 0, 2, 15, 8, 7, 6. All six SPI-flash pins broken out: GPIO9/10/11 = SD2/SD3/CMD (left), GPIO8/7/6 = SD1/SD0/CLK (right) — bidi but occupied by onboard SPI flash (using them as GPIO crashes the board). GPIO34/35/36/39 are INPUT-ONLY (no output drivers, no pull-ups) → modeled input; EN input; 3V3 = onboard regulator out (power_out); 5V/VIN + GND = power_in; all other GPIO bidi. refPrefix A. See inbox/2026-06-22-nodemcu-esp32s-pinout.md. No footprint yet — board land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -1894,6 +2002,7 @@ export const SEED_PARTS: Part[] = [
   arduinoNano,
   arduinoUno,
   nodemcuEsp8266,
+  nodemcuEsp32s,
   raspberryPi3bp,
   pushbutton,
   header2x10,

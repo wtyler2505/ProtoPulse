@@ -83,12 +83,28 @@ Tier 2 — sensor modules (mostly simple 3-4 pin digital/analog):
 
 Tier 3 — boards/shields (larger pin counts; model as modules, footprint deferred):
 - [x] **Arduino Nano (ATmega328P)** — done `a9a729b1` (DCCduino clone; 30-pin, web-verified)
-- [x] NodeMCU Amica (ESP8266) — done `0fca4a23`. (NodeMCU ESP-32S V1.1, ESP8266EX, Sparkfun Blynk Board still open)
+- [x] NodeMCU Amica (ESP8266) — done `0fca4a23`. NodeMCU ESP-32S V1.1 (Ai-Thinker NodeMCU-32S, 38-pin) — done, VISUALLY verified. (ESP8266EX, Sparkfun Blynk Board still open)
 - [x] Arduino Uno R3 / OSEPP Uno R3 Plus — done `86b285d0`. Nano DCCduino — done `a9a729b1`. (Arduino MEGA proto shield still open)
 - [x] Raspberry Pi 3 B+ (40-pin GPIO header) — done `bb24e1b1`. (Pi Display v1.1 still open)
 - [ ] Motor/servo/sensor shields (OSEPP, SainSmart, DK Electronics, Velleman Ethernet)
 
 The full ordered list lives in the component log's Table of Contents.
+
+## Board verification protocol (MANDATORY — Tyler's directive 2026-06-22)
+Boards/dev-boards are NOT adequately verifiable from text. A board's physical header
+order is a board-specific rearrangement that lives only in pinout **diagram images** and
+the board schematic — WebFetch/curl can't read it, and the module datasheet gives the
+wrong (pad) order. **Every board MUST be verified by VISUAL inspection of a high-res
+pinout diagram in the browser** (navigate → screenshot → zoom each column → read
+pin-by-pin), then cross-checked against an independent text source for bus assignments.
+"Two columns of text labels in an image" = browser, not WebFetch.
+
+### Retroactive visual-verification sweep (boards already shipped from text)
+- [x] NodeMCU ESP-32S (38-pin) — visually verified at creation (Mischianti diagram). `pending-sha`
+- [ ] Arduino Nano (`core:arduino-nano`) — re-verify against official Arduino Pinout-NANO diagram
+- [ ] Arduino Uno R3 (`core:arduino-uno`) — re-verify against official Arduino Pinout-UNO diagram
+- [ ] NodeMCU ESP8266 Amica (`core:nodemcu-esp8266`) — re-verify against high-res Amica diagram
+- [x] Raspberry Pi 3 B+ (`core:raspberry-pi-3bp`) — header is invariant + already pinout.xyz-sourced; low risk, but confirm in sweep
 
 ## Notes
 - Footprints stay deferred until a datasheet-exact land pattern is done (the seed
