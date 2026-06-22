@@ -27,6 +27,7 @@ describe('seed library', () => {
   it('verified parts carry datasheet-backed pin numbers and a provenance note', () => {
     const verified = SEED_PARTS.filter((p) => p.provenance === 'verified');
     expect(verified.map((p) => p.id).sort()).toEqual([
+      'core:arduino-mega2560',
       'core:arduino-nano',
       'core:arduino-uno-r3',
       'core:bat54s',
@@ -509,6 +510,54 @@ describe('seed library', () => {
     expect(byKey.get('2')).toBe('power_in');
     expect(byKey.get('3')).toBe('power_in');
     expect(b?.refPrefix).toBe('SW');
+  });
+
+  it('Arduino MEGA 2560 pin map matches the verified 86-pin 5-header layout', () => {
+    const m = SEED_PARTS.find((p) => p.id === 'core:arduino-mega2560');
+    expect(m).toBeDefined();
+    expect(m?.pins).toHaveLength(86);
+    expect(new Set(m?.pins.map((p) => p.key)).size).toBe(86);
+    const byNumber = new Map(m?.pins.map((p) => [p.number, p.name]));
+    // power header
+    expect(byNumber.get('1')).toBe('NC');
+    expect(byNumber.get('5')).toBe('5V');
+    expect(byNumber.get('8')).toBe('VIN');
+    // analog A0–A15
+    expect(byNumber.get('9')).toBe('A0');
+    expect(byNumber.get('24')).toBe('A15');
+    // digital shield header
+    expect(byNumber.get('25')).toBe('SCL');
+    expect(byNumber.get('26')).toBe('SDA');
+    expect(byNumber.get('27')).toBe('AREF');
+    expect(byNumber.get('29')).toBe('D13');
+    expect(byNumber.get('42')).toBe('D0');
+    // comm header
+    expect(byNumber.get('43')).toBe('D14');
+    expect(byNumber.get('50')).toBe('D21');
+    // bottom 2x18 header (5V/even/GND | 5V/odd/GND)
+    expect(byNumber.get('51')).toBe('5V');
+    expect(byNumber.get('52')).toBe('D22');
+    expect(byNumber.get('67')).toBe('D52');
+    expect(byNumber.get('68')).toBe('GND');
+    expect(byNumber.get('69')).toBe('5V');
+    expect(byNumber.get('85')).toBe('D53');
+    expect(byNumber.get('86')).toBe('GND');
+    const byKey = new Map(m?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('nc'); // reserved corner pin
+    expect(byKey.get('2')).toBe('power_out'); // IOREF
+    expect(byKey.get('4')).toBe('power_out'); // 3V3
+    expect(byKey.get('5')).toBe('power_out'); // 5V
+    expect(byKey.get('8')).toBe('power_in'); // VIN
+    expect(byKey.get('27')).toBe('input'); // AREF
+    expect(byKey.get('29')).toBe('bidi'); // D13
+    expect(byKey.get('51')).toBe('power_out'); // bottom-header 5V
+    expect(byKey.get('52')).toBe('bidi'); // D22
+    // exactly 54 digital D-pins (D0–D53) and 16 analog A-pins (A0–A15)
+    expect(m?.pins.filter((p) => /^D\d+$/.test(p.name))).toHaveLength(54);
+    expect(m?.pins.filter((p) => /^A\d+$/.test(p.name))).toHaveLength(16);
+    expect(m?.pins.filter((p) => p.name === 'GND')).toHaveLength(5);
+    expect(m?.pins.filter((p) => p.name === '5V')).toHaveLength(3);
+    expect(m?.refPrefix).toBe('A');
   });
 
   it('Arduino Nano pin map matches the verified 30-pin board layout', () => {
