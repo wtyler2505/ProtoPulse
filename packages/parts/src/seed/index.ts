@@ -1964,6 +1964,215 @@ const nodemcuEsp32s = definePart({
     'Pin map web-verified 2026-06-22 by VISUAL inspection of the Mischianti high-res "ESP32 NODEMCU-32S ESP-32S Kit" pinout diagram (1440×842, read pin-by-pin in-browser, both columns zoomed), cross-checked against espboards.dev/esp32/nodemcu-32s text data (SDA=GPIO21, SCL=GPIO22, MOSI=GPIO23, MISO=GPIO19, SCK=GPIO18, CS=GPIO5, U0TXD=GPIO1/U0RXD=GPIO3, U2=GPIO16/17, VP=GPIO36/VN=GPIO39 all agree). NOT taken from the shared component log, whose "ESP32-S2 + Bluetooth" entry is internally contradictory (S2 has no Bluetooth); board is the classic dual-core ESP32 / ESP-WROOM-32. 38-pin header, continuous numbering: left 1–19 = 3V3, EN, GPIO36, 39, 34, 35, 32, 33, 25, 26, 27, 14, 12, GND, 13, 9, 10, 11, 5V(VIN); right 20–38 = GND, GPIO23, 22, 1, 3, 21, GND, 19, 18, 5, 17, 16, 4, 0, 2, 15, 8, 7, 6. All six SPI-flash pins broken out: GPIO9/10/11 = SD2/SD3/CMD (left), GPIO8/7/6 = SD1/SD0/CLK (right) — bidi but occupied by onboard SPI flash (using them as GPIO crashes the board). GPIO34/35/36/39 are INPUT-ONLY (no output drivers, no pull-ups) → modeled input; EN input; 3V3 = onboard regulator out (power_out); 5V/VIN + GND = power_in; all other GPIO bidi. refPrefix A. See inbox/2026-06-22-nodemcu-esp32s-pinout.md. No footprint yet — board land pattern is a later slice.',
 });
 
+// Arduino MEGA 2560 REV3 (ATmega2560) — the large board, 86 modeled header pins across
+// five headers. Pinout VISUALLY verified 2026-06-22 against the official Arduino
+// Pinout-Mega2560rev3 PDF (all 4 pages). Power: NC, IOREF, RESET, 3V3, 5V, GND×2, VIN.
+// Analog A0–A15 (= D54–D69; A4–A7 also = JTAG). Digital shield header D0–D13 + dedicated
+// SCL/SDA + AREF + GND. Comm header D14–D21. Bottom 2×18 header D22–D53 + 5V×2 + GND×2.
+// D-pins bidi, analog bidi, AREF/RESET input, IOREF/3V3/5V power_out, VIN/GND power_in,
+// NC reserved. SPI on D50–D53 (CIPO/COPI/SCK/SS). Footprint deferred.
+const arduinoMega2560 = definePart({
+  id: 'core:arduino-mega2560',
+  name: 'Arduino MEGA 2560 R3 (ATmega2560)',
+  refPrefix: 'A',
+  class: 'ic',
+  mpn: 'Arduino Mega 2560 Rev3',
+  manufacturer: 'Arduino (ATmega2560)',
+  datasheetUrl: 'https://content.arduino.cc/assets/Pinout-Mega2560rev3_latest.pdf',
+  pins: [
+    // POWER header (8; corner pin reserved/NC per the official diagram)
+    pin('1', 'NC', 'nc', '1'), // reserved corner pin of the power header
+    pin('2', 'IOREF', 'power_out', '2'), // logic-voltage reference out to shields
+    pin('3', 'RESET', 'input', '3'), // active-low reset
+    pin('4', '3V3', 'power_out', '4'), // regulated 3.3 V out
+    pin('5', '5V', 'power_out', '5'), // regulated 5 V out
+    pin('6', 'GND', 'power_in', '6'),
+    pin('7', 'GND', 'power_in', '7'),
+    pin('8', 'VIN', 'power_in', '8'), // 7-12 V recommended (6-20 V abs max)
+    // ANALOG header A0-A15 (= D54-D69)
+    pin('9', 'A0', 'bidi', '9'), // PF0 / ADC0 / D54
+    pin('10', 'A1', 'bidi', '10'), // PF1 / ADC1 / D55
+    pin('11', 'A2', 'bidi', '11'), // PF2 / ADC2 / D56
+    pin('12', 'A3', 'bidi', '12'), // PF3 / ADC3 / D57
+    pin('13', 'A4', 'bidi', '13'), // PF4 / ADC4 / D58 / JTAG TCK
+    pin('14', 'A5', 'bidi', '14'), // PF5 / ADC5 / D59 / JTAG TMS
+    pin('15', 'A6', 'bidi', '15'), // PF6 / ADC6 / D60 / JTAG TDO
+    pin('16', 'A7', 'bidi', '16'), // PF7 / ADC7 / D61 / JTAG TDI
+    pin('17', 'A8', 'bidi', '17'), // PK0 / ADC8 / D62
+    pin('18', 'A9', 'bidi', '18'), // PK1 / ADC9 / D63
+    pin('19', 'A10', 'bidi', '19'), // PK2 / ADC10 / D64
+    pin('20', 'A11', 'bidi', '20'), // PK3 / ADC11 / D65
+    pin('21', 'A12', 'bidi', '21'), // PK4 / ADC12 / D66
+    pin('22', 'A13', 'bidi', '22'), // PK5 / ADC13 / D67
+    pin('23', 'A14', 'bidi', '23'), // PK6 / ADC14 / D68
+    pin('24', 'A15', 'bidi', '24'), // PK7 / ADC15 / D69
+    // DIGITAL shield header (right edge, top group)
+    pin('25', 'SCL', 'bidi', '25'), // dedicated I2C SCL (= D21 / PD0 net)
+    pin('26', 'SDA', 'bidi', '26'), // dedicated I2C SDA (= D20 / PD1 net)
+    pin('27', 'AREF', 'input', '27'), // ADC reference in
+    pin('28', 'GND', 'power_in', '28'),
+    pin('29', 'D13', 'bidi', '29'), // PB7 / PWM / onboard LED
+    pin('30', 'D12', 'bidi', '30'), // PB6 / PWM
+    pin('31', 'D11', 'bidi', '31'), // PB5 / PWM
+    pin('32', 'D10', 'bidi', '32'), // PB4 / PWM
+    pin('33', 'D9', 'bidi', '33'), // PH6 / PWM
+    pin('34', 'D8', 'bidi', '34'), // PH5 / PWM
+    pin('35', 'D7', 'bidi', '35'), // PH4
+    pin('36', 'D6', 'bidi', '36'), // PH3 / PWM
+    pin('37', 'D5', 'bidi', '37'), // PE3 / PWM
+    pin('38', 'D4', 'bidi', '38'), // PG5
+    pin('39', 'D3', 'bidi', '39'), // PE5 / PWM
+    pin('40', 'D2', 'bidi', '40'), // PE4 / PWM
+    pin('41', 'D1', 'bidi', '41'), // PE1 / TX0
+    pin('42', 'D0', 'bidi', '42'), // PE0 / RX0
+    // COMMUNICATION header (right edge, lower group): D14-D21
+    pin('43', 'D14', 'bidi', '43'), // PJ1 / TX3
+    pin('44', 'D15', 'bidi', '44'), // PJ0 / RX3
+    pin('45', 'D16', 'bidi', '45'), // PH1 / TX2
+    pin('46', 'D17', 'bidi', '46'), // PH0 / RX2
+    pin('47', 'D18', 'bidi', '47'), // PD3 / TX1
+    pin('48', 'D19', 'bidi', '48'), // PD2 / RX1
+    pin('49', 'D20', 'bidi', '49'), // PD1 / SDA
+    pin('50', 'D21', 'bidi', '50'), // PD0 / SCL
+    // BOTTOM 2x18 header — left column (5V, even pins D22-D52, GND)
+    pin('51', '5V', 'power_out', '51'),
+    pin('52', 'D22', 'bidi', '52'), // PA0 / AD0
+    pin('53', 'D24', 'bidi', '53'), // PA2 / AD2
+    pin('54', 'D26', 'bidi', '54'), // PA4 / AD4
+    pin('55', 'D28', 'bidi', '55'), // PA6 / AD6
+    pin('56', 'D30', 'bidi', '56'), // PC7 / A15
+    pin('57', 'D32', 'bidi', '57'), // PC5 / A13
+    pin('58', 'D34', 'bidi', '58'), // PC3 / A11
+    pin('59', 'D36', 'bidi', '59'), // PC1 / A9
+    pin('60', 'D38', 'bidi', '60'), // PD7 / T0
+    pin('61', 'D40', 'bidi', '61'), // PG1 / RD
+    pin('62', 'D42', 'bidi', '62'), // PL7
+    pin('63', 'D44', 'bidi', '63'), // PL5 / PWM
+    pin('64', 'D46', 'bidi', '64'), // PL3 / PWM
+    pin('65', 'D48', 'bidi', '65'), // PL1
+    pin('66', 'D50', 'bidi', '66'), // PB3 / CIPO/MISO
+    pin('67', 'D52', 'bidi', '67'), // PB1 / SCK
+    pin('68', 'GND', 'power_in', '68'),
+    // BOTTOM 2x18 header — right column (5V, odd pins D23-D53, GND)
+    pin('69', '5V', 'power_out', '69'),
+    pin('70', 'D23', 'bidi', '70'), // PA1 / AD1
+    pin('71', 'D25', 'bidi', '71'), // PA3 / AD3
+    pin('72', 'D27', 'bidi', '72'), // PA5 / AD5
+    pin('73', 'D29', 'bidi', '73'), // PA7 / AD7
+    pin('74', 'D31', 'bidi', '74'), // PC6 / A14
+    pin('75', 'D33', 'bidi', '75'), // PC4 / A12
+    pin('76', 'D35', 'bidi', '76'), // PC2 / A10
+    pin('77', 'D37', 'bidi', '77'), // PC0 / A8
+    pin('78', 'D39', 'bidi', '78'), // PG2 / ALE
+    pin('79', 'D41', 'bidi', '79'), // PG0 / WR
+    pin('80', 'D43', 'bidi', '80'), // PL6
+    pin('81', 'D45', 'bidi', '81'), // PL4 / PWM
+    pin('82', 'D47', 'bidi', '82'), // PL2 / PWM
+    pin('83', 'D49', 'bidi', '83'), // PL0
+    pin('84', 'D51', 'bidi', '84'), // PB2 / COPI/MOSI
+    pin('85', 'D53', 'bidi', '85'), // PB0 / SS
+    pin('86', 'GND', 'power_in', '86'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -4 * G, y: -43 * G, w: 8 * G, h: 86 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'MEGA2560', sizeNm: Math.round(G * 0.6) },
+    ],
+    pins: [
+      { key: '1', at: { x: -5 * G, y: 42 * G }, dir: 'W' },
+      { key: '2', at: { x: -5 * G, y: 40 * G }, dir: 'W' },
+      { key: '3', at: { x: -5 * G, y: 38 * G }, dir: 'W' },
+      { key: '4', at: { x: -5 * G, y: 36 * G }, dir: 'W' },
+      { key: '5', at: { x: -5 * G, y: 34 * G }, dir: 'W' },
+      { key: '6', at: { x: -5 * G, y: 32 * G }, dir: 'W' },
+      { key: '7', at: { x: -5 * G, y: 30 * G }, dir: 'W' },
+      { key: '8', at: { x: -5 * G, y: 28 * G }, dir: 'W' },
+      { key: '9', at: { x: -5 * G, y: 26 * G }, dir: 'W' },
+      { key: '10', at: { x: -5 * G, y: 24 * G }, dir: 'W' },
+      { key: '11', at: { x: -5 * G, y: 22 * G }, dir: 'W' },
+      { key: '12', at: { x: -5 * G, y: 20 * G }, dir: 'W' },
+      { key: '13', at: { x: -5 * G, y: 18 * G }, dir: 'W' },
+      { key: '14', at: { x: -5 * G, y: 16 * G }, dir: 'W' },
+      { key: '15', at: { x: -5 * G, y: 14 * G }, dir: 'W' },
+      { key: '16', at: { x: -5 * G, y: 12 * G }, dir: 'W' },
+      { key: '17', at: { x: -5 * G, y: 10 * G }, dir: 'W' },
+      { key: '18', at: { x: -5 * G, y: 8 * G }, dir: 'W' },
+      { key: '19', at: { x: -5 * G, y: 6 * G }, dir: 'W' },
+      { key: '20', at: { x: -5 * G, y: 4 * G }, dir: 'W' },
+      { key: '21', at: { x: -5 * G, y: 2 * G }, dir: 'W' },
+      { key: '22', at: { x: -5 * G, y: 0 * G }, dir: 'W' },
+      { key: '23', at: { x: -5 * G, y: -2 * G }, dir: 'W' },
+      { key: '24', at: { x: -5 * G, y: -4 * G }, dir: 'W' },
+      { key: '25', at: { x: -5 * G, y: -6 * G }, dir: 'W' },
+      { key: '26', at: { x: -5 * G, y: -8 * G }, dir: 'W' },
+      { key: '27', at: { x: -5 * G, y: -10 * G }, dir: 'W' },
+      { key: '28', at: { x: -5 * G, y: -12 * G }, dir: 'W' },
+      { key: '29', at: { x: -5 * G, y: -14 * G }, dir: 'W' },
+      { key: '30', at: { x: -5 * G, y: -16 * G }, dir: 'W' },
+      { key: '31', at: { x: -5 * G, y: -18 * G }, dir: 'W' },
+      { key: '32', at: { x: -5 * G, y: -20 * G }, dir: 'W' },
+      { key: '33', at: { x: -5 * G, y: -22 * G }, dir: 'W' },
+      { key: '34', at: { x: -5 * G, y: -24 * G }, dir: 'W' },
+      { key: '35', at: { x: -5 * G, y: -26 * G }, dir: 'W' },
+      { key: '36', at: { x: -5 * G, y: -28 * G }, dir: 'W' },
+      { key: '37', at: { x: -5 * G, y: -30 * G }, dir: 'W' },
+      { key: '38', at: { x: -5 * G, y: -32 * G }, dir: 'W' },
+      { key: '39', at: { x: -5 * G, y: -34 * G }, dir: 'W' },
+      { key: '40', at: { x: -5 * G, y: -36 * G }, dir: 'W' },
+      { key: '41', at: { x: -5 * G, y: -38 * G }, dir: 'W' },
+      { key: '42', at: { x: -5 * G, y: -40 * G }, dir: 'W' },
+      { key: '43', at: { x: -5 * G, y: -42 * G }, dir: 'W' },
+      { key: '44', at: { x: 5 * G, y: 42 * G }, dir: 'E' },
+      { key: '45', at: { x: 5 * G, y: 40 * G }, dir: 'E' },
+      { key: '46', at: { x: 5 * G, y: 38 * G }, dir: 'E' },
+      { key: '47', at: { x: 5 * G, y: 36 * G }, dir: 'E' },
+      { key: '48', at: { x: 5 * G, y: 34 * G }, dir: 'E' },
+      { key: '49', at: { x: 5 * G, y: 32 * G }, dir: 'E' },
+      { key: '50', at: { x: 5 * G, y: 30 * G }, dir: 'E' },
+      { key: '51', at: { x: 5 * G, y: 28 * G }, dir: 'E' },
+      { key: '52', at: { x: 5 * G, y: 26 * G }, dir: 'E' },
+      { key: '53', at: { x: 5 * G, y: 24 * G }, dir: 'E' },
+      { key: '54', at: { x: 5 * G, y: 22 * G }, dir: 'E' },
+      { key: '55', at: { x: 5 * G, y: 20 * G }, dir: 'E' },
+      { key: '56', at: { x: 5 * G, y: 18 * G }, dir: 'E' },
+      { key: '57', at: { x: 5 * G, y: 16 * G }, dir: 'E' },
+      { key: '58', at: { x: 5 * G, y: 14 * G }, dir: 'E' },
+      { key: '59', at: { x: 5 * G, y: 12 * G }, dir: 'E' },
+      { key: '60', at: { x: 5 * G, y: 10 * G }, dir: 'E' },
+      { key: '61', at: { x: 5 * G, y: 8 * G }, dir: 'E' },
+      { key: '62', at: { x: 5 * G, y: 6 * G }, dir: 'E' },
+      { key: '63', at: { x: 5 * G, y: 4 * G }, dir: 'E' },
+      { key: '64', at: { x: 5 * G, y: 2 * G }, dir: 'E' },
+      { key: '65', at: { x: 5 * G, y: 0 * G }, dir: 'E' },
+      { key: '66', at: { x: 5 * G, y: -2 * G }, dir: 'E' },
+      { key: '67', at: { x: 5 * G, y: -4 * G }, dir: 'E' },
+      { key: '68', at: { x: 5 * G, y: -6 * G }, dir: 'E' },
+      { key: '69', at: { x: 5 * G, y: -8 * G }, dir: 'E' },
+      { key: '70', at: { x: 5 * G, y: -10 * G }, dir: 'E' },
+      { key: '71', at: { x: 5 * G, y: -12 * G }, dir: 'E' },
+      { key: '72', at: { x: 5 * G, y: -14 * G }, dir: 'E' },
+      { key: '73', at: { x: 5 * G, y: -16 * G }, dir: 'E' },
+      { key: '74', at: { x: 5 * G, y: -18 * G }, dir: 'E' },
+      { key: '75', at: { x: 5 * G, y: -20 * G }, dir: 'E' },
+      { key: '76', at: { x: 5 * G, y: -22 * G }, dir: 'E' },
+      { key: '77', at: { x: 5 * G, y: -24 * G }, dir: 'E' },
+      { key: '78', at: { x: 5 * G, y: -26 * G }, dir: 'E' },
+      { key: '79', at: { x: 5 * G, y: -28 * G }, dir: 'E' },
+      { key: '80', at: { x: 5 * G, y: -30 * G }, dir: 'E' },
+      { key: '81', at: { x: 5 * G, y: -32 * G }, dir: 'E' },
+      { key: '82', at: { x: 5 * G, y: -34 * G }, dir: 'E' },
+      { key: '83', at: { x: 5 * G, y: -36 * G }, dir: 'E' },
+      { key: '84', at: { x: 5 * G, y: -38 * G }, dir: 'E' },
+      { key: '85', at: { x: 5 * G, y: -40 * G }, dir: 'E' },
+      { key: '86', at: { x: 5 * G, y: -42 * G }, dir: 'E' },
+    ],
+  },
+  parametrics: { maxVoltage: 12 }, // VIN 7–12 V recommended (6–20 V abs max)
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map VISUALLY verified 2026-06-22 against the official Arduino Pinout-Mega2560rev3 PDF (all 4 pages, read pin-by-pin). 86 modeled header pins across five headers. POWER (8): NC, IOREF, RESET, 3V3, 5V, GND, GND, VIN — corner pin reserved/NC. ANALOG (16): A0–A15 (= D54–D69; A4–A7 also = JTAG TCK/TMS/TDO/TDI). DIGITAL shield header (18): dedicated SCL/SDA, AREF, GND, D13–D0 (D13=LED, PWM on D2–D13 per board). COMM header (8): D14–D21 (TX3/RX3/TX2/RX2/TX1/RX1/SDA/SCL). BOTTOM 2×18 header (36): 5V + even D22–D52 + GND (left), 5V + odd D23–D53 + GND (right); D50=CIPO/MISO, D51=COPI/MOSI, D52=SCK, D53=SS (SPI). All D-pins + analog bidi, AREF/RESET input, IOREF/3V3/5V power_out, VIN/GND power_in (VIN 7–12 V recommended, 6–20 V abs max), NC reserved. 5 GND + 3 5V header pins. refPrefix A. See inbox/2026-06-22-arduino-mega2560-pinout.md. No footprint yet — board land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -2003,6 +2212,7 @@ export const SEED_PARTS: Part[] = [
   ky004Button,
   arduinoNano,
   arduinoUno,
+  arduinoMega2560,
   nodemcuEsp8266,
   nodemcuEsp32s,
   raspberryPi3bp,
