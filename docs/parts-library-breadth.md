@@ -57,6 +57,7 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:tm1637-display` — TM1637 4-digit 7-segment display (4-pin 2-wire; web-verified). `91834332`
 - [x] `core:ky004-button` — KY-004 button module (3-pin pull-down, active-high; web-verified). `7ffabbe4`
 - [x] `core:hc-sr04` — HC-SR04 ultrasonic distance sensor (4-pin VCC/TRIG/ECHO/GND; web-verified). 2026-06-22
+- [x] `core:hc-sr501` — HC-SR501 PIR motion sensor (3-pin VCC/OUT/GND; web-verified). 2026-06-22
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
