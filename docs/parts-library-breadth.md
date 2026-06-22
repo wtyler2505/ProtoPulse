@@ -99,12 +99,13 @@ pinout diagram in the browser** (navigate → screenshot → zoom each column �
 pin-by-pin), then cross-checked against an independent text source for bus assignments.
 "Two columns of text labels in an image" = browser, not WebFetch.
 
-### Retroactive visual-verification sweep (boards already shipped from text)
-- [x] NodeMCU ESP-32S (38-pin) — visually verified at creation (Mischianti diagram). `pending-sha`
-- [ ] Arduino Nano (`core:arduino-nano`) — re-verify against official Arduino Pinout-NANO diagram
-- [ ] Arduino Uno R3 (`core:arduino-uno`) — re-verify against official Arduino Pinout-UNO diagram
-- [ ] NodeMCU ESP8266 Amica (`core:nodemcu-esp8266`) — re-verify against high-res Amica diagram
-- [x] Raspberry Pi 3 B+ (`core:raspberry-pi-3bp`) — header is invariant + already pinout.xyz-sourced; low risk, but confirm in sweep
+### Retroactive visual-verification sweep (boards already shipped from text) — COMPLETE 2026-06-22
+All boards visually verified against authoritative diagrams. Record: `inbox/2026-06-22-board-visual-verification-sweep.md`.
+- [x] NodeMCU ESP-32S (38-pin) — verified at creation (Mischianti NODEMCU-32S diagram). `a911a791`
+- [x] Arduino Nano (`core:arduino-nano`) — official Arduino Pinout-NANO PDF; CORRECT, no change.
+- [x] Arduino Uno R3 (`core:arduino-uno-r3`) — official Arduino Pinout-UNOrev3 PDF; **FIXED**: added the reserved/NC corner pin (31→32 pins).
+- [x] NodeMCU ESP8266 Amica (`core:nodemcu-esp8266`) — Mischianti NodeMCU-V2 CP2102 diagram; CORRECT, no change.
+- [x] Raspberry Pi 3 B+ (`core:raspberry-pi-3bp`) — pinout.xyz structured DOM, all 40 pins exact-match; CORRECT, no change.
 
 ## Notes
 - Footprints stay deferred until a datasheet-exact land pattern is done (the seed
