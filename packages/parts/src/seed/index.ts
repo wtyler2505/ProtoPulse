@@ -2244,6 +2244,44 @@ const hcsr501 = definePart({
     'Pin map web-verified 2026-06-22 against components101 + utmel + handsontec HC-SR501 datasheet (the shared component log agrees but the web is authority): 3-pin module, order VCC, OUT, GND. Pyroelectric PIR + BISS0001; OUT = digital HIGH (3.3 V TTL) when motion detected, LOW idle; 4.5–20 V supply via onboard regulator; ~7 m range, ~120° FoV; sensitivity + delay trim pots and an H/L retrigger jumper exist on-board but are not header pins. The middle pin is always OUT; some clones silk-swap the VCC/GND ends (modeled the components101 VCC/OUT/GND order). OUT = output, VCC/GND = power_in. refPrefix U. See inbox/2026-06-22-hc-sr501-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// KY-040 rotary encoder module — 5-pin (CLK, DT, SW, +, GND). Incremental quadrature
+// encoder + push-button. CLK/DT are the two quadrature contacts (board has 10k pull-ups);
+// SW is the shaft push-button (to GND). 3.3–5 V. CLK/DT/SW = signal lines the MCU reads
+// (output), +/GND = power_in. Footprint deferred.
+const ky040Encoder = definePart({
+  id: 'core:ky040-encoder',
+  name: 'KY-040 rotary encoder module',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'KY-040',
+  manufacturer: 'Keyes (generic KY-040)',
+  datasheetUrl: 'https://components101.com/modules/KY-04-rotary-encoder-pinout-features-datasheet-working-application-alternative',
+  pins: [
+    pin('1', 'CLK', 'output', '1'), // quadrature A (board 10k pull-up)
+    pin('2', 'DT', 'output', '2'), // quadrature B (board 10k pull-up)
+    pin('3', 'SW', 'output', '3'), // shaft push-button (to GND)
+    pin('4', '+', 'power_in', '4'), // 3.3–5 V
+    pin('5', 'GND', 'power_in', '5'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -4 * G, w: 6 * G, h: 8 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'KY-040', sizeNm: Math.round(G * 0.42) },
+    ],
+    pins: [
+      { key: '4', at: { x: -4 * G, y: 2 * G }, dir: 'W' }, // +
+      { key: '5', at: { x: -4 * G, y: -2 * G }, dir: 'W' }, // GND
+      { key: '1', at: { x: 4 * G, y: 2 * G }, dir: 'E' }, // CLK
+      { key: '2', at: { x: 4 * G, y: 0 }, dir: 'E' }, // DT
+      { key: '3', at: { x: 4 * G, y: -2 * G }, dir: 'E' }, // SW
+    ],
+  },
+  parametrics: { maxVoltage: 5 }, // 3.3–5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-22 against components101 KY-040 + espboards.dev + the Keyes KY-040 datasheet (the shared component log agrees): 5-pin module, silk order CLK, DT, SW, +, GND. Incremental quadrature rotary encoder + shaft push-button. CLK = quadrature A, DT = quadrature B (board carries 10k pull-ups on both so an open contact reads HIGH); SW = momentary push-button to GND. 3.3–5 V. CLK/DT/SW modeled output (signal lines the MCU reads), + and GND power_in. refPrefix U. See inbox/2026-06-22-ky040-encoder-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -2286,6 +2324,7 @@ export const SEED_PARTS: Part[] = [
   arduinoMega2560,
   hcsr04,
   hcsr501,
+  ky040Encoder,
   nodemcuEsp8266,
   nodemcuEsp32s,
   raspberryPi3bp,
