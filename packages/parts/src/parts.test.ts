@@ -46,6 +46,7 @@ describe('seed library', () => {
       'core:ky016-rgb-led',
       'core:ky022-ir-receiver',
       'core:ky038',
+      'core:ky040-encoder',
       'core:l298n',
       'core:lcd1602',
       'core:max7219',
@@ -366,6 +367,25 @@ describe('seed library', () => {
     expect(byKey.get('2')).toBe('output'); // OUT (module-driven)
     expect(byKey.get('3')).toBe('power_in'); // GND
     expect(p?.refPrefix).toBe('U');
+  });
+
+  it('KY-040 rotary encoder pin map matches the verified 5-pin CLK/DT/SW/+/GND layout', () => {
+    const k = SEED_PARTS.find((p) => p.id === 'core:ky040-encoder');
+    expect(k).toBeDefined();
+    expect(k?.pins).toHaveLength(5);
+    const byNumber = new Map(k?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('CLK');
+    expect(byNumber.get('2')).toBe('DT');
+    expect(byNumber.get('3')).toBe('SW');
+    expect(byNumber.get('4')).toBe('+');
+    expect(byNumber.get('5')).toBe('GND');
+    const byKey = new Map(k?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('output'); // CLK quadrature
+    expect(byKey.get('2')).toBe('output'); // DT quadrature
+    expect(byKey.get('3')).toBe('output'); // SW button
+    expect(byKey.get('4')).toBe('power_in'); // +
+    expect(byKey.get('5')).toBe('power_in'); // GND
+    expect(k?.refPrefix).toBe('U');
   });
 
   it('IR obstacle sensor pin map matches the verified 3-pin digital module', () => {
