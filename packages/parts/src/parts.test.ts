@@ -37,6 +37,7 @@ describe('seed library', () => {
       'core:esp32-s3-wroom-1',
       'core:flame-sensor',
       'core:hc-sr04',
+      'core:hc-sr501',
       'core:ir-obstacle',
       'core:ky004-button',
       'core:ky005-ir-transmitter',
@@ -350,6 +351,21 @@ describe('seed library', () => {
     expect(byKey.get('3')).toBe('output'); // ECHO (module-driven)
     expect(byKey.get('4')).toBe('power_in'); // GND
     expect(h?.refPrefix).toBe('U');
+  });
+
+  it('HC-SR501 PIR pin map matches the verified 3-pin VCC/OUT/GND layout', () => {
+    const p = SEED_PARTS.find((x) => x.id === 'core:hc-sr501');
+    expect(p).toBeDefined();
+    expect(p?.pins).toHaveLength(3);
+    const byNumber = new Map(p?.pins.map((x) => [x.number, x.name]));
+    expect(byNumber.get('1')).toBe('VCC');
+    expect(byNumber.get('2')).toBe('OUT'); // middle pin (invariant)
+    expect(byNumber.get('3')).toBe('GND');
+    const byKey = new Map(p?.pins.map((x) => [x.key, x.electricalType]));
+    expect(byKey.get('1')).toBe('power_in'); // VCC
+    expect(byKey.get('2')).toBe('output'); // OUT (module-driven)
+    expect(byKey.get('3')).toBe('power_in'); // GND
+    expect(p?.refPrefix).toBe('U');
   });
 
   it('IR obstacle sensor pin map matches the verified 3-pin digital module', () => {
