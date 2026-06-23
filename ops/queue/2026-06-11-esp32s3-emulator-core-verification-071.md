@@ -44,7 +44,24 @@ Considered but NOT linked: 082 (condition-level-INTCLEAR) — about clearing lev
 Note: an earlier reweave pass (separate task) had already added the 071→[[an-emulator-that-performs-windowed-spill-and-fill-as-a-magic-net-effect...]] link; left intact.
 
 ## revisit
-(to be filled by revisit phase)
+
+Ran /revisit --handoff (BACKWARD pass) 2026-06-23.
+
+Context: the connect/reflect passes had already added the **Relevant-Notes footer** reciprocals across the interrupt/timer cluster (072 timer-latch, 073 boot-INTLEVEL, 082 condition-level, 088 special-registers). The backward pass's distinct job is **inline body links** — sentences in older/sibling notes where 071's claim is the thing actually happening (a vector being taken), not just an abstract shared-premise mention.
+
+Discriminator applied: "Does this note's body reach the moment a vector is taken?" If yes → inline link. If the body only shares the 1-IPC premise abstractly, the existing footer entry is sufficient.
+
+Genuine inline backlinks ADDED (2 — both elevate an existing footer link to the body):
+- **073 boot-INTLEVEL-15** (body) — the sentence "a timer match latches TIMERINT but no vector taken... PS.INTLEVEL is still 15" is the negative space of 071. Added inline: once RSIL opens the gate, the pending interrupt "vectors at zero cycles" — masking is the precondition, that transfer is the downstream half. Reciprocates the loop at the body level, not just the footer.
+- **072 timer-latch** (body) — the line "a latched TIMERINT still takes no vector until RSIL lowers PS.INTLEVEL below 1" reaches the vectoring moment. Added inline: "whereupon it becomes the canonical pending interrupt that vectors to the handler at zero cycles." This is the instantiation point — the latched interrupt is exactly what 071 vectors.
+
+Checked and DELIBERATELY NOT linked (avoiding inflation):
+- **a-faithful...cut (umbrella)** — body enumerates the cut list inline but only the memory/instruction cuts (480KB SRAM, 1-IPC, cache); interrupts/vectoring are absent from the body. Footer link (line 40, under "scope/conservatism cuts") is correctly placed; forcing interrupt content into a memory-cut paragraph would be artificial.
+- **082 condition-derived-level** — already has an inline 071 link in its body (line 18); no further edit.
+- **a-cycle-derived-virtual-timer** — connection is the shared cycle-clock premise (footer-appropriate, not an instantiation of vectoring).
+- **a-shared-mcucore-contract** (0 links to 071) — about ADC co-sim / reset semantics; no dependency on interrupt vectoring. Linking would be filler (same bar as the connect-phase 082 rejection).
+
+Net: cluster was already saturated at the footer level by connect/reflect; this pass added 2 genuine inline body links (073, 072) and verified the rest. The value of this pass is the verification + body-level elevation, not link count.
 
 ## verify
 (to be filled by verify phase)

@@ -41,7 +41,22 @@ Faithful-emulator umbrella ([[a-faithful-instruction-set-emulator-earns-trust-by
 No reweave/verify (one phase only).
 
 ## revisit
-(to be filled by revisit phase)
+Ran /revisit --handoff (BACKWARD pass) for claim 075. Goal: find OLDER notes + siblings that should link TO 075 but don't, add inline links FROM them.
+
+Candidate universe (correctly bounded — qmd/vector search is dead in this worktree, so the curated emulation.md MOC + on-disk sibling reads are the authoritative surface): the 5-note "Memory & image loading" cluster (074/075/076/077 + the memory-map reference) plus the 063 faithful-emulator umbrella.
+
+Verified each candidate by grepping the 075 slug (did NOT trust the connect-phase prose-mention language — the backward pass exists precisely to catch "mentioned in prose but not actually linked"):
+- 076 (read-only flash counterpart): grep → 2 occurrences. Already links back (inline + Relevant Notes). No action.
+- 074 (XOR checksum): grep → 2 occurrences. Already links back. No action.
+- 077 (SRAM aliasing): grep → 2 occurrences. Already links back. No action.
+- 063 (faithful-emulator umbrella): read on disk; line 35 already lists 075 under "Cuts stated as refusals". No action.
+- Memory-map reference (`the-esp32-s3-memory-map-and-peripheral-register-set-spans-aliased-sram-windows...`): grep → **0 occurrences.** This is the one genuine missing backward link. The note defines the SRAM (`0x40378000`/`0x3FC88000`) and IROM/DROM (`0x42xxxxxx`/`0x3Cxxxxxx`) windows and lists 076+077 in Relevant Notes but omits the loader that routes/refuses segments by exactly those region boundaries — a real asymmetry.
+
+Link added (FROM memory-map → 075, edits confined to the memory-map note only):
+- Inline at the SRAM/IROM/DROM windows sentence (the same line that already cites 077 and 076), annotated "These region boundaries are exactly what the app-image loader keys on… copies segments whose `load_addr` lands in the SRAM window and refuses those on the 0x42xxxxxx/0x3Cxxxxxx flash buses".
+- Relevant Notes entry, annotated as a CONSUMER reference (not a dependency — the map doesn't depend on the loader; the loader consumes the map): "the app-image loader that consumes this map, routing each segment to copy-or-refuse by these SRAM vs IROM/DROM region boundaries".
+
+No reweave/verify beyond this backward pass (one phase only). No link inflation — the other four candidates already had genuine reciprocal links; only the map→loader consumer connection was missing.
 
 ## verify
 (to be filled by verify phase)

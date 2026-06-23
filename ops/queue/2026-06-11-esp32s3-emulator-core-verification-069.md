@@ -42,7 +42,23 @@ MOC membership: confirmed this note is already listed under the "Windowed-regist
 Not linked (judged not genuine enough): the zero-cycle-vectoring note (modeling-xtensa-exceptions...) shares the "model net effect, skip machinery" meta-move but operates on a different mechanism (exception entry, not register windows); the 068↔vectoring edge already carries that cross-cut, so a direct 069→vectoring link would be redundant.
 
 ## revisit
-(to be filled by revisit phase)
+
+BACKWARD pass (/revisit --handoff). Surveyed older xtensa/emulation/encoding siblings for notes that should reference THIS insight (069) but don't, and added inline backlinks only where genuine instantiation/dependency exists.
+
+Backlink ADDED (1):
+- **[[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]]** (claim 063, umbrella). This older note enumerates its "modeled behavior + its cut" instances inline and is the explicit umbrella for the whole batch, yet it did NOT list 069. 069 is a direct instantiation of the umbrella's deeper principle — the overlap bug the magic spill/fill model surfaced in a first test draft is the concrete proof that "the modeled side is faithful enough to expose a real divergence," exactly the argument 063 makes in the abstract. Added 069 to the "Cuts stated as refusals" cluster, adjacent to its parent net-effect note (068), framed as the strongest evidence for the principle. 069 already linked UP to 063 (present since the done phase) — this completes the bidirectional edge.
+
+Already present from connect phase (left intact — bidirectional edges complete):
+- 068 (parent net-effect design) ↔ 069
+- 070 (handler-only-ops sibling) ↔ 069
+
+NOT linked (surveyed, judged not genuine — no link inflation):
+- **emulating-only-24-bit-xtensa-core-instructions...** and **the-esp32-s3-xtensa-lx7-24-bit-instruction-encoding...**: both say ENTRY/CALL8/RETW are *not implemented (call0 ABI only)*. They are about the decode/scope decision; 069 is a downstream consequence of the *model* (068), not of the decode scope. Both already link to 068, so a →069 edge would be redundant AND semantically jarring (a frame-sizing link beside a "not implemented" sentence). Same rejection logic the connect phase applied to the vectoring note.
+- The "refused vs modeled" wrinkle (v0 24-bit note says windowed-ABI refused; 068/069/070 model it via net effect) is an *evolution* (note self-scopes "Slice 2 later added..."), already bridged by existing →068 edges — not an instantiation/dependency, so not a backward-link candidate. Whether the opcode-encoding note's "ENTRY not implemented" line is now stale is a verify/factual question, NOT a backward-link question — flagged below, no edit made.
+
+MOC: no edits needed — 069 already listed under "Windowed-register ABI" in both knowledge/xtensa.md and knowledge/emulation.md (done phase).
+
+Observation for verify phase: the-esp32-s3-xtensa-lx7-24-bit-instruction-encoding note (line ~90) states "Windowed-ABI instructions (ENTRY/CALL8/RETW) are likewise not implemented — call0 ABI only." 068/069/070 indicate a later slice DID model ENTRY/CALL8 via the net-effect spill/fill path. That note may be stale or v0-scoped; worth a factual check (not part of this backward pass).
 
 ## verify
 (to be filled by verify phase)

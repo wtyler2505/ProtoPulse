@@ -47,7 +47,20 @@ Ran /connect --handoff (reflect/connect phase only). Verified sibling filenames 
 Pre-existing genuine links retained: zero-cycle-vectoring, timer-latch, faithful-cuts. No spurious links added.
 
 ## revisit
-(to be filled by revisit phase)
+
+Ran /revisit --handoff (BACKWARD pass only — find OLDER notes / siblings that should reference THIS note but don't, add links FROM them TO this note).
+
+**No genuinely older notes exist.** The entire xtensa/emulation cluster (all `created: 2026-06-23`) is net-new coverage for `@protopulse/emu` — the reduce note already established this (qmd vector search returned no pre-existing instruction-set/register-level emulator notes). The backward pass's "find older insights" half is legitimately empty, not an unfinished search.
+
+**All four genuine siblings already link TO the target** (confirmed via `grep -l` over knowledge/): timer-latch (claim-072, inline + Relevant Notes), special-register reference (inline §Emulator consequences + Relevant Notes), zero-cycle-vectoring (claim-071, inline + Relevant Notes), faithful-cuts umbrella. The forward/connect pass established these bidirectional links; nothing to add there.
+
+**One backward sharpen made** — `condition-derived-level-interrupts-cannot-be-cleared-by-intclear...`:
+1. Inline link anchored at the existing "once asserted and unmasked" clause — that phrase literally names the PS.INTLEVEL gate this target documents (a level source can hold its line asserted yet take no vector while masked). Genuine precondition dependency, not a reach. Now reads "unmasked by an RSIL lowering PS.INTLEVEL below 1".
+2. Upgraded its vague Relevant Notes description ("interrupt-enable preconditions in the same emulator") to name the mechanism, bringing it to parity with the timer-latch sibling's "the gate upstream of this latch" phrasing.
+
+**Rejected as link inflation:** the cycle-derived virtual-timer (TIMG0) note — its claim is about counter *precision* at the 54-bit wrap, not interrupt gating; it raises no interrupt in scope. The other 13 non-linking cluster notes (memory map, image loading, ADC, instruction encoding, verification method) carry no dependency on the PS.INTLEVEL boot gate. None linked.
+
+Net result: a backward pass that finds little because the forward pass was thorough. One generic sibling reference sharpened to inline parity; no spurious links.
 
 ## verify
 (to be filled by verify phase)

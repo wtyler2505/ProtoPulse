@@ -19,7 +19,7 @@ The ESP32-S3 emulator core needs a fixed map of where memory and peripherals liv
 
 ## Memory map
 
-The Xtensa LX7 exposes the same physical SRAM on two buses — an instruction (IRAM) address and a data (DRAM) address — so an emulator can back both ranges with one storage array (see [[the-esp32-s3-maps-one-sram-block-at-both-an-iram-and-a-dram-address-so-an-emulator-can-model-it-as-a-single-window-aliased-to-two-bus-addresses]]). Flash content reached through the cache appears in separate IROM/DROM windows (see [[flash-mapped-irom-and-drom-segments-carry-post-mapping-virtual-addresses-so-an-emulator-serves-them-read-only-straight-from-the-image]]).
+The Xtensa LX7 exposes the same physical SRAM on two buses — an instruction (IRAM) address and a data (DRAM) address — so an emulator can back both ranges with one storage array (see [[the-esp32-s3-maps-one-sram-block-at-both-an-iram-and-a-dram-address-so-an-emulator-can-model-it-as-a-single-window-aliased-to-two-bus-addresses]]). Flash content reached through the cache appears in separate IROM/DROM windows (see [[flash-mapped-irom-and-drom-segments-carry-post-mapping-virtual-addresses-so-an-emulator-serves-them-read-only-straight-from-the-image]]). These region boundaries are exactly what the app-image loader keys on: [[an-sram-only-emulator-can-still-load-esp-idf-app-images-by-loading-only-sram-resident-segments-and-refusing-flash-mapped-ones|it copies segments whose `load_addr` lands in the SRAM window and refuses those on the 0x42xxxxxx/0x3Cxxxxxx flash buses]].
 
 | Region | Low | High | Bus / notes |
 |---|---|---|---|
@@ -126,6 +126,7 @@ Level-1 external lines (from `XCHAL_INTLEVEL1_MASK = 0x000637FF`): INT0–5, INT
 - [[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]] — this map is the modeled side whose paired cut the umbrella names: one 480 KB SRAM window aliased across IRAM/DRAM, no cache, no SRAM0, with the flash-cache IROM/DROM windows served read-only — the fidelity boundary a co-sim consumer trusts
 - [[the-esp32-s3-maps-one-sram-block-at-both-an-iram-and-a-dram-address-so-an-emulator-can-model-it-as-a-single-window-aliased-to-two-bus-addresses]] — the SRAM aliasing model behind the dual IRAM/DRAM views above
 - [[flash-mapped-irom-and-drom-segments-carry-post-mapping-virtual-addresses-so-an-emulator-serves-them-read-only-straight-from-the-image]] — how the IROM/DROM cache windows are served
+- [[an-sram-only-emulator-can-still-load-esp-idf-app-images-by-loading-only-sram-resident-segments-and-refusing-flash-mapped-ones]] — the app-image loader that consumes this map, routing each segment to copy-or-refuse by these SRAM vs IROM/DROM region boundaries
 - [[esp32-s3-timg-divider-field-zero-means-divide-by-65536-because-the-hal-wraps-the-2-to-65536-range]] — consumes the TIMG0 base and `T0CONFIG` DIVIDER field defined above
 - [[the-esp32-s3-xtensa-special-register-numbers-rsr-wsr-rsil-rfe-encodings-exccause-codes-and-core-isa-config-constants-are-fixed-values-an-emulator-must-hardcode]] — companion "hardcoded constants" reference (special registers are RSR/WSR-accessed, not memory-mapped — the non-memory-mapped half of the emulator's fixed-value tables)
 

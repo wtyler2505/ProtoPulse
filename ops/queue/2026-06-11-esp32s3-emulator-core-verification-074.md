@@ -43,7 +43,23 @@ Ran /connect --handoff (reflect/connect phase only). Dual discovery: emulation.m
 Collision discipline: re-read emulation.md immediately before editing (it is the hot shared file for the 075/076/077 concurrent batch), anchored the append on the unique 075 bullet, single-line insert.
 
 ## revisit
-(to be filled by revisit phase)
+
+Ran /revisit --handoff (BACKWARD pass only). Goal: find OLDER notes and siblings that should reference 074 but don't, and add inline links FROM them TO 074.
+
+**Discovery:** grep over `knowledge/` for app-image / checksum / 0xEF / esptool / segment / SHA terms (qmd indexes the main repo, not this worktree, so used filesystem grep). Surfaced the full emulation batch plus two non-batch candidates.
+
+**The one genuine backward link (added):** `a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models` — the umbrella cut-list note. Its body (line 21) already states claim 074 verbatim: "it verifies the XOR checksum but skips the SHA-256 trailer" — that sentence IS 074's exact cut — yet the note had ZERO links to 074 (confirmed `grep -c` = 0). Two edits:
+  1. **Inline body link** — converted the phrase "verifies the XOR checksum but skips the SHA-256 trailer" into a wiki-link to 074. This is the strongest, least-padded backward connection: an existing prose instantiation now points at the note that owns it.
+  2. **Relevant Notes list entry** — added 074 to the "Cuts stated as scope/conservatism choices" group (verify-XOR / skip-SHA is a disclosed boundary, not a refusal — correct category). The note's own framing catalogs *every* modeled-behavior+cut instance, so 074's absence there was a real gap; sibling 075 (the loader) was listed but 074 (the checksum cut itself) was not.
+
+**Links deliberately NOT added (overreach avoided):**
+- `pico-uf2-drag-and-drop-bootloader-eliminates-external-programmers` (older, non-batch) — mentions `esptool` only as an upload-UX contrast for the Pico; does not touch the ESP-IDF image format or checksum. No dependency. Link inflation.
+- `hardware-board-nodemcu-esp32s` — hardware board note; only hit was an unrelated GPIO docs URL.
+- 074→076 (flash-mapped) and the memory-map reference note — both parse/own the segment table but neither computes or depends on the checksum; bodies don't invoke it. Confirmed neither links to 074. MOC co-membership in "Memory & image loading" already connects the cluster (this matches the connect phase's earlier deliberate decision).
+
+**Result:** 1 genuine backward connection (the parent cut-list note, inline + list), expected outcome for a net-new note in a batch where /connect already wired the tight cluster (075 + emulation.md MOC). No manufactured links.
+
+Collision discipline: re-read the parent note fully immediately before editing (it is the hottest shared file in this batch — every sibling task may touch it); anchored the inline edit on the unique line-21 sentence and the list edit on the unique SAR-ADC bullet, single-line inserts.
 
 ## verify
 (to be filled by verify phase)
