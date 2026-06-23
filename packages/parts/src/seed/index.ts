@@ -2320,6 +2320,69 @@ const ky023Joystick = definePart({
     'Pin map web-verified 2026-06-22 against arduinomodules.info KY-023 + espboards.dev + watelectronics (the shared component log agrees exactly): 5-pin module, silk order GND, +5V, VRx, VRy, SW. Two perpendicular 10k pots give VRx (X) and VRy (Y) analog wiper outputs (0–VCC); pressing the stick closes SW to GND (needs an MCU pull-up, reads LOW when pressed). 3.3–5 V. VRx/VRy/SW modeled output (signals the MCU reads), GND/+5V power_in. refPrefix U. See inbox/2026-06-22-ky023-joystick-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// L293D quadruple half-H driver IC (DIP-16) — dual H-bridge motor driver with internal
+// flyback diodes. Two enables (1,2EN / 3,4EN), four inputs (1A–4A), four outputs (1Y–4Y),
+// VCC1 (logic 4.5–7 V), VCC2 (motor 4.5–36 V), 4× GND (center pins, also heat-sinking).
+// EN + inputs = input (MCU-driven), Y outputs = output (drive the motor), VCC1/VCC2/GND =
+// power_in. Standard DIP-16 layout (1–8 left, 16–9 right). Footprint deferred (no DIP-16 helper).
+const l293d = definePart({
+  id: 'core:l293d',
+  name: 'L293D dual H-bridge motor driver IC',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'L293D',
+  manufacturer: 'STMicroelectronics / Texas Instruments',
+  datasheetUrl: 'https://www.st.com/resource/en/datasheet/l293d.pdf',
+  pins: [
+    pin('1', 'EN12', 'input', '1'), // 1,2EN — enable left bridge (PWM/HIGH)
+    pin('2', '1A', 'input', '2'), // input 1
+    pin('3', '1Y', 'output', '3'), // output 1 → motor
+    pin('4', 'GND', 'power_in', '4'),
+    pin('5', 'GND', 'power_in', '5'),
+    pin('6', '2Y', 'output', '6'), // output 2 → motor
+    pin('7', '2A', 'input', '7'), // input 2
+    pin('8', 'VCC2', 'power_in', '8'), // motor supply 4.5–36 V
+    pin('9', 'EN34', 'input', '9'), // 3,4EN — enable right bridge
+    pin('10', '3A', 'input', '10'), // input 3
+    pin('11', '3Y', 'output', '11'), // output 3 → motor
+    pin('12', 'GND', 'power_in', '12'),
+    pin('13', 'GND', 'power_in', '13'),
+    pin('14', '4Y', 'output', '14'), // output 4 → motor
+    pin('15', '4A', 'input', '15'), // input 4
+    pin('16', 'VCC1', 'power_in', '16'), // logic supply 4.5–7 V
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -8 * G, w: 6 * G, h: 16 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'L293D', sizeNm: Math.round(G * 0.6) },
+    ],
+    pins: [
+      // left column: pins 1–8 top → bottom
+      { key: '1', at: { x: -4 * G, y: 7 * G }, dir: 'W' },
+      { key: '2', at: { x: -4 * G, y: 5 * G }, dir: 'W' },
+      { key: '3', at: { x: -4 * G, y: 3 * G }, dir: 'W' },
+      { key: '4', at: { x: -4 * G, y: G }, dir: 'W' },
+      { key: '5', at: { x: -4 * G, y: -G }, dir: 'W' },
+      { key: '6', at: { x: -4 * G, y: -3 * G }, dir: 'W' },
+      { key: '7', at: { x: -4 * G, y: -5 * G }, dir: 'W' },
+      { key: '8', at: { x: -4 * G, y: -7 * G }, dir: 'W' },
+      // right column: pins 16–9 top → bottom (DIP mirror)
+      { key: '16', at: { x: 4 * G, y: 7 * G }, dir: 'E' },
+      { key: '15', at: { x: 4 * G, y: 5 * G }, dir: 'E' },
+      { key: '14', at: { x: 4 * G, y: 3 * G }, dir: 'E' },
+      { key: '13', at: { x: 4 * G, y: G }, dir: 'E' },
+      { key: '12', at: { x: 4 * G, y: -G }, dir: 'E' },
+      { key: '11', at: { x: 4 * G, y: -3 * G }, dir: 'E' },
+      { key: '10', at: { x: 4 * G, y: -5 * G }, dir: 'E' },
+      { key: '9', at: { x: 4 * G, y: -7 * G }, dir: 'E' },
+    ],
+  },
+  parametrics: { maxVoltage: 36 }, // VCC2 motor supply up to 36 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-22 against the ST L293D datasheet + components101 + utmel (the shared component log agrees): DIP-16. Pin 1 = 1,2EN (enable left bridge), 2 = 1A, 3 = 1Y, 4/5 = GND, 6 = 2Y, 7 = 2A, 8 = VCC2 (motor 4.5–36 V), 9 = 3,4EN, 10 = 3A, 11 = 3Y, 12/13 = GND, 14 = 4Y, 15 = 4A, 16 = VCC1 (logic 4.5–7 V). 600 mA/channel, internal flyback diodes. Enables + A inputs = input (MCU-driven), Y outputs = output (drive the load), VCC1/VCC2/4×GND = power_in. Standard DIP-16 schematic layout (1–8 left top→bottom, 16–9 right top→bottom). refPrefix U. See inbox/2026-06-22-l293d-pinout.md. No footprint yet — no DIP-16 helper, land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -2364,6 +2427,7 @@ export const SEED_PARTS: Part[] = [
   hcsr501,
   ky040Encoder,
   ky023Joystick,
+  l293d,
   nodemcuEsp8266,
   nodemcuEsp32s,
   raspberryPi3bp,
