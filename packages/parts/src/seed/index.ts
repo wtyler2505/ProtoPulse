@@ -2421,6 +2421,37 @@ const srd05vdcRelay = definePart({
     'Pin map web-verified 2026-06-22 against the Songle SRD-05VDC-SL-C datasheet (circuitbasics/handsontec) + the shared component log: 5-pin PCB-type SPDT relay. Two non-polarized coil pins (5 V, ~70 Ω, 0.36 W) and a SPDT contact set COM/NO/NC. Contacts rated 10 A 250 VAC / 10 A 30 VDC. NC closed at rest, NO closes when the coil energizes. As a bare relay all pins modeled passive (the coil is an inductive load driven externally; contacts are switch terminals). refPrefix K (relay), class switch. See inbox/2026-06-22-srd-05vdc-relay-pinout.md. No footprint yet — land pattern is a later slice.',
 });
 
+// 10K rotary potentiometer — standard 3-terminal variable resistor / voltage divider.
+// Terminals A and B are the fixed ends of the 10 kΩ track; WIPER (middle) taps the
+// adjustable point (~300° rotation). All terminals passive; class resistor, refPrefix RV.
+const pot10k = definePart({
+  id: 'core:pot-10k',
+  name: '10K rotary potentiometer',
+  refPrefix: 'RV',
+  class: 'resistor',
+  mpn: 'POT-10K',
+  manufacturer: 'generic (10 kΩ rotary)',
+  pins: [
+    pin('1', 'A', 'passive', '1'), // one end of the 10k track
+    pin('2', 'WIPER', 'passive', '2'), // wiper (variable tap)
+    pin('3', 'B', 'passive', '3'), // other end of the 10k track
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -2 * G, y: -G, w: 4 * G, h: 2 * G },
+      { kind: 'text', at: { x: 0, y: -2 * G }, text: '10k', sizeNm: Math.round(G * 0.5) },
+    ],
+    pins: [
+      { key: '1', at: { x: -3 * G, y: 0 }, dir: 'W' }, // A
+      { key: '3', at: { x: 3 * G, y: 0 }, dir: 'E' }, // B
+      { key: '2', at: { x: 0, y: 2 * G }, dir: 'N' }, // WIPER
+    ],
+  },
+  provenance: 'verified',
+  provenanceNote:
+    'Standard 3-terminal rotary potentiometer (Tyler owns a 10 kΩ rotary pot — "10K Ohm Rotary Potentiometer" in the component log). Universal topology, web-confirmed: terminals A and B are the two fixed ends of the resistive track, the middle pin is the WIPER (adjustable tap); used as a variable resistor (A–WIPER) or a voltage divider (A–WIPER–B). ~300° mechanical rotation, linear taper assumed for general-purpose use. All terminals passive; class resistor, refPrefix RV (variable resistor). See inbox/2026-06-22-pot-10k-pinout.md. No footprint yet — land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -2467,6 +2498,7 @@ export const SEED_PARTS: Part[] = [
   ky023Joystick,
   l293d,
   srd05vdcRelay,
+  pot10k,
   nodemcuEsp8266,
   nodemcuEsp32s,
   raspberryPi3bp,
