@@ -63,6 +63,7 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:l293d` — L293D dual H-bridge motor driver IC (DIP-16; web-verified vs ST datasheet). 2026-06-22
 - [x] `core:srd-05vdc-relay` — Songle SRD-05VDC-SL-C SPDT relay (5-pin, 2 coil + COM/NO/NC; web-verified). 2026-06-22
 - [x] `core:pot-10k` — 10K rotary potentiometer (3-terminal A/WIPER/B; fills variable-resistor gap). 2026-06-22
+- [x] `core:p30n06le` — P30N06LE/RFP30N06LE logic-level N-MOSFET (TO-220 G/D/S; web-verified). 2026-06-22
 - [ ] **HW-221 logic level converter — PARKED, needs diagram verification.** It's a TXS0108E/YF08E 8-channel module (NOT BSS138), 2 rows of ~10 (VA/A1–A8/GND ‖ VB/B1–B8/GND), but the OE-pin placement + exact header order aren't text-resolvable — needs a high-res pinout image (browser pass) before modeling. Do NOT model from the incomplete web text.
 
 ## High-value candidates from the component log (suggested priority)

@@ -2452,6 +2452,44 @@ const pot10k = definePart({
     'Standard 3-terminal rotary potentiometer (Tyler owns a 10 kΩ rotary pot — "10K Ohm Rotary Potentiometer" in the component log). Universal topology, web-confirmed: terminals A and B are the two fixed ends of the resistive track, the middle pin is the WIPER (adjustable tap); used as a variable resistor (A–WIPER) or a voltage divider (A–WIPER–B). ~300° mechanical rotation, linear taper assumed for general-purpose use. All terminals passive; class resistor, refPrefix RV (variable resistor). See inbox/2026-06-22-pot-10k-pinout.md. No footprint yet — land pattern is a later slice.',
 });
 
+// P30N06LE (RFP30N06LE) logic-level N-channel power MOSFET, TO-220AB. 60 V Vds, 30 A Id,
+// Rds(on) 0.047 Ω, Vgs(th) 2–4 V — fully on from 5 V logic, so a GPIO can switch it.
+// TO-220 pin order 1=Gate, 2=Drain, 3=Source (tab = Drain). Distinct from the small-signal
+// SOT-23 AO3400 already in the library. G/D/S modeled passive, class transistor, refPrefix Q.
+const p30n06le = definePart({
+  id: 'core:p30n06le',
+  name: 'P30N06LE N-MOSFET (logic-level, TO-220)',
+  refPrefix: 'Q',
+  class: 'transistor',
+  mpn: 'RFP30N06LE',
+  manufacturer: 'Fairchild / onsemi',
+  datasheetUrl: 'https://cdn.sparkfun.com/assets/4/1/1/8/0/RFP30N06LE.pdf',
+  pins: [
+    pin('G', 'G', 'passive', '1'), // gate (logic-level, Vgs(th) 2–4 V)
+    pin('D', 'D', 'passive', '2'), // drain (tab)
+    pin('S', 'S', 'passive', '3'), // source
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'circle', cx: 0, cy: 0, r: Math.round(G * 1.4) },
+      { kind: 'line', a: { x: -2 * G, y: 0 }, b: { x: -Math.round(G / 2), y: 0 } },
+      { kind: 'line', a: { x: -Math.round(G / 2), y: -G }, b: { x: -Math.round(G / 2), y: G } },
+      { kind: 'line', a: { x: 0, y: -G }, b: { x: 0, y: G } },
+      { kind: 'line', a: { x: 0, y: -Math.round(G / 2) }, b: { x: G, y: -2 * G } },
+      { kind: 'line', a: { x: 0, y: Math.round(G / 2) }, b: { x: G, y: 2 * G } },
+    ],
+    pins: [
+      { key: 'G', at: { x: -2 * G, y: 0 }, dir: 'W' },
+      { key: 'D', at: { x: G, y: -2 * G }, dir: 'N' },
+      { key: 'S', at: { x: G, y: 2 * G }, dir: 'S' },
+    ],
+  },
+  parametrics: { maxVoltage: 60 }, // Vds 60 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-22 against the Fairchild/onsemi RFP30N06LE datasheet (the shared component log agrees): logic-level N-channel enhancement-mode power MOSFET in TO-220AB. Standard pin order 1 = Gate, 2 = Drain, 3 = Source, with the metal tab internally connected to Drain. 60 V Vds, 30 A Id, Rds(on) 0.047 Ω, Vgs(th) 2–4 V (5 V-logic drivable). G/D/S modeled passive (discrete 3-terminal semiconductor), class transistor, refPrefix Q. Distinct from the SOT-23 AO3400 already in the seed. See inbox/2026-06-22-p30n06le-pinout.md. No footprint yet — TO-220 land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -2499,6 +2537,7 @@ export const SEED_PARTS: Part[] = [
   l293d,
   srd05vdcRelay,
   pot10k,
+  p30n06le,
   nodemcuEsp8266,
   nodemcuEsp32s,
   raspberryPi3bp,
