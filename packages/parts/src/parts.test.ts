@@ -48,6 +48,7 @@ describe('seed library', () => {
       'core:ky023-joystick',
       'core:ky038',
       'core:ky040-encoder',
+      'core:l293d',
       'core:l298n',
       'core:lcd1602',
       'core:max7219',
@@ -187,6 +188,30 @@ describe('seed library', () => {
     expect(byKey.get('4')).toBe('input');
     expect(byKey.get('5')).toBe('power_in');
     expect(byKey.get('6')).toBe('power_in');
+  });
+
+  it('L293D pin map matches the verified DIP-16 dual H-bridge layout', () => {
+    const d = SEED_PARTS.find((p) => p.id === 'core:l293d');
+    expect(d).toBeDefined();
+    expect(d?.pins).toHaveLength(16);
+    const byNumber = new Map(d?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('EN12');
+    expect(byNumber.get('2')).toBe('1A');
+    expect(byNumber.get('3')).toBe('1Y');
+    expect(byNumber.get('8')).toBe('VCC2'); // motor supply
+    expect(byNumber.get('9')).toBe('EN34');
+    expect(byNumber.get('16')).toBe('VCC1'); // logic supply
+    const byKey = new Map(d?.pins.map((p) => [p.key, p.electricalType]));
+    expect(byKey.get('1')).toBe('input'); // enable
+    expect(byKey.get('2')).toBe('input'); // 1A input
+    expect(byKey.get('3')).toBe('output'); // 1Y output
+    expect(byKey.get('8')).toBe('power_in'); // VCC2
+    expect(byKey.get('16')).toBe('power_in'); // VCC1
+    // 4 GND, 4 inputs (A), 4 outputs (Y), 2 enables, 2 VCC
+    expect(d?.pins.filter((p) => p.name === 'GND')).toHaveLength(4);
+    expect(d?.pins.filter((p) => /^\dY$/.test(p.name))).toHaveLength(4);
+    expect(d?.pins.filter((p) => /^\dA$/.test(p.name))).toHaveLength(4);
+    expect(d?.refPrefix).toBe('U');
   });
 
   it('L298N dual H-bridge pin map matches the verified module (power, 6 control, 4 outputs)', () => {

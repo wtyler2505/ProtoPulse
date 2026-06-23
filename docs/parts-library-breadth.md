@@ -60,6 +60,8 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:hc-sr501` — HC-SR501 PIR motion sensor (3-pin VCC/OUT/GND; web-verified). 2026-06-22
 - [x] `core:ky040-encoder` — KY-040 rotary encoder (5-pin CLK/DT/SW/+/GND; web-verified). 2026-06-22
 - [x] `core:ky023-joystick` — KY-023 dual-axis analog joystick (5-pin GND/+5V/VRx/VRy/SW; web-verified). 2026-06-22
+- [x] `core:l293d` — L293D dual H-bridge motor driver IC (DIP-16; web-verified vs ST datasheet). 2026-06-22
+- [ ] **HW-221 logic level converter — PARKED, needs diagram verification.** It's a TXS0108E/YF08E 8-channel module (NOT BSS138), 2 rows of ~10 (VA/A1–A8/GND ‖ VB/B1–B8/GND), but the OE-pin placement + exact header order aren't text-resolvable — needs a high-res pinout image (browser pass) before modeling. Do NOT model from the incomplete web text.
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
