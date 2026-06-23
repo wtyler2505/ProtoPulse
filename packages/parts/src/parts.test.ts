@@ -60,6 +60,7 @@ describe('seed library', () => {
       'core:rc522',
       'core:slot-optocoupler',
       'core:soil-moisture',
+      'core:srd-05vdc-relay',
       'core:sw420-vibration',
       'core:tb6612fng',
       'core:tm1637-display',
@@ -212,6 +213,22 @@ describe('seed library', () => {
     expect(d?.pins.filter((p) => /^\dY$/.test(p.name))).toHaveLength(4);
     expect(d?.pins.filter((p) => /^\dA$/.test(p.name))).toHaveLength(4);
     expect(d?.refPrefix).toBe('U');
+  });
+
+  it('Songle SRD-05VDC-SL-C relay pin map matches the verified 5-pin SPDT layout', () => {
+    const k = SEED_PARTS.find((p) => p.id === 'core:srd-05vdc-relay');
+    expect(k).toBeDefined();
+    expect(k?.pins).toHaveLength(5);
+    const byNumber = new Map(k?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('COIL1');
+    expect(byNumber.get('2')).toBe('COIL2');
+    expect(byNumber.get('3')).toBe('COM');
+    expect(byNumber.get('4')).toBe('NO');
+    expect(byNumber.get('5')).toBe('NC');
+    // every pin of a bare relay is passive
+    expect(k?.pins.every((p) => p.electricalType === 'passive')).toBe(true);
+    expect(k?.class).toBe('switch');
+    expect(k?.refPrefix).toBe('K');
   });
 
   it('L298N dual H-bridge pin map matches the verified module (power, 6 control, 4 outputs)', () => {

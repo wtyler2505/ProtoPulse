@@ -2383,6 +2383,44 @@ const l293d = definePart({
     'Pin map web-verified 2026-06-22 against the ST L293D datasheet + components101 + utmel (the shared component log agrees): DIP-16. Pin 1 = 1,2EN (enable left bridge), 2 = 1A, 3 = 1Y, 4/5 = GND, 6 = 2Y, 7 = 2A, 8 = VCC2 (motor 4.5–36 V), 9 = 3,4EN, 10 = 3A, 11 = 3Y, 12/13 = GND, 14 = 4Y, 15 = 4A, 16 = VCC1 (logic 4.5–7 V). 600 mA/channel, internal flyback diodes. Enables + A inputs = input (MCU-driven), Y outputs = output (drive the load), VCC1/VCC2/4×GND = power_in. Standard DIP-16 schematic layout (1–8 left top→bottom, 16–9 right top→bottom). refPrefix U. See inbox/2026-06-22-l293d-pinout.md. No footprint yet — no DIP-16 helper, land pattern is a later slice.',
 });
 
+// Songle SRD-05VDC-SL-C relay — 5 V SPDT electromechanical relay, 5-pin PCB type. Two
+// non-polarized coil pins (~70 Ω, 0.36 W) + a SPDT contact set: COM, NO, NC. Contacts
+// rated 10 A 250 VAC / 10 A 30 VDC. As a bare relay every pin is passive (the coil is an
+// inductive load you drive externally; contacts are switch terminals). refPrefix K (relay).
+const srd05vdcRelay = definePart({
+  id: 'core:srd-05vdc-relay',
+  name: 'Songle SRD-05VDC-SL-C relay (SPDT, 5 V)',
+  refPrefix: 'K',
+  class: 'switch',
+  mpn: 'SRD-05VDC-SL-C',
+  manufacturer: 'Songle (Ningbo Songle Relay)',
+  datasheetUrl: 'https://www.circuitbasics.com/wp-content/uploads/2015/11/SRD-05VDC-SL-C-Datasheet.pdf',
+  pins: [
+    pin('1', 'COIL1', 'passive', '1'), // coil (non-polarized, ~70 Ω)
+    pin('2', 'COIL2', 'passive', '2'), // coil
+    pin('3', 'COM', 'passive', '3'), // common contact
+    pin('4', 'NO', 'passive', '4'), // normally-open contact
+    pin('5', 'NC', 'passive', '5'), // normally-closed contact
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -4 * G, w: 6 * G, h: 8 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'SRD-05', sizeNm: Math.round(G * 0.42) },
+    ],
+    pins: [
+      { key: '1', at: { x: -4 * G, y: 2 * G }, dir: 'W' }, // COIL1
+      { key: '2', at: { x: -4 * G, y: -2 * G }, dir: 'W' }, // COIL2
+      { key: '3', at: { x: 4 * G, y: 2 * G }, dir: 'E' }, // COM
+      { key: '4', at: { x: 4 * G, y: 0 }, dir: 'E' }, // NO
+      { key: '5', at: { x: 4 * G, y: -2 * G }, dir: 'E' }, // NC
+    ],
+  },
+  parametrics: { maxVoltage: 250 }, // contact rating 250 VAC
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map web-verified 2026-06-22 against the Songle SRD-05VDC-SL-C datasheet (circuitbasics/handsontec) + the shared component log: 5-pin PCB-type SPDT relay. Two non-polarized coil pins (5 V, ~70 Ω, 0.36 W) and a SPDT contact set COM/NO/NC. Contacts rated 10 A 250 VAC / 10 A 30 VDC. NC closed at rest, NO closes when the coil energizes. As a bare relay all pins modeled passive (the coil is an inductive load driven externally; contacts are switch terminals). refPrefix K (relay), class switch. See inbox/2026-06-22-srd-05vdc-relay-pinout.md. No footprint yet — land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -2428,6 +2466,7 @@ export const SEED_PARTS: Part[] = [
   ky040Encoder,
   ky023Joystick,
   l293d,
+  srd05vdcRelay,
   nodemcuEsp8266,
   nodemcuEsp32s,
   raspberryPi3bp,
