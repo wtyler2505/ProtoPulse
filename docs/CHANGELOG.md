@@ -2,6 +2,25 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-23 — ESP32-S3 completion gate: criterion (2) E2E app smoke certified
+
+### Verified
+- **ESP32-S3 base completion gate, criterion (2) — E2E app smoke** (ROADMAP
+  §v0.5): drove the new-engine editor (`@protopulse/app`, port 5174) end to end —
+  opened the Firmware panel, set the core picker to **ESP32-S3 (Xtensa LX7, 240 MHz)**,
+  loaded `packages/emu/samples/esp32s3-blink-io5.bin` (48-byte raw image, "Firmware
+  loaded — ESP32-S3 @ 240MHz"), and ran it. **IO5 toggled** in the logic-analyzer pin
+  traces (68,000,000 cycles / t = 283 ms @ 240 MHz; 9,079 painted pixels on the waveform
+  canvas — not blank). The blink is cycle-exact, zero-jitter per the `blinks IO5 with
+  cycle-exact spacing` unit test, so the dense toggle reads as the solid band the sample
+  README predicts. Driven headless via Playwright against the live dev server.
+- **No code change** — this is a certification of existing, shipped integration
+  (FirmwarePanel + the slice-161 blink sample). Gate status now: (1) ✅ tests (238
+  ESP32-S3), (2) ✅ app smoke, (4) ✅ co-sim pin labels; **only (3) co-sim closed loop
+  remains** before the ESP32-S3 foundation is certified and board/sensor breadth begins.
+- `npm run -w @protopulse/emu test` re-run fresh: **325 package tests pass (238
+  ESP32-S3)**.
+
 ## 2026-06-20 — ESP32-S3 slice 163: AES-CFB8 (completes the AES_BLOCK_MODE matrix)
 
 ### Added

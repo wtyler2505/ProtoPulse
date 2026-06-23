@@ -1958,16 +1958,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       ESP32 foundation, so board/sensor breadth can begin): "done" is by
       app USABILITY, not exhaustive register fidelity — the long tail
       below is opportunistic, never a gate. Criteria: (1) ✅ `npm run -w
-      @protopulse/emu test` green (236 ESP32-S3 unit tests); (2) ⬜ E2E app
-      smoke — pick ESP32-S3 in the core picker, load a blink `.bin`, a GPIO
-      visibly toggles in the serial monitor / logic analyzer at the
-      expected rate; (3) ⬜ co-sim closed loop — an analog node drives an
+      @protopulse/emu test` green (238 ESP32-S3 unit tests); (2) ✅ E2E app
+      smoke (certified 2026-06-23) — picked ESP32-S3 in the core picker,
+      loaded `packages/emu/samples/esp32s3-blink-io5.bin`, ran 68M cycles
+      @ 240 MHz, and IO5 toggled in the logic-analyzer pin traces at the
+      cycle-exact rate (zero-jitter, per the `blinks IO5 with cycle-exact
+      spacing` unit test); (3) ⬜ co-sim closed loop — an analog node drives an
       ADC channel and the firmware reads it back tracking the SPICE node;
-      (4) ✅ co-sim pin labels show ESP32 `IO{n}`, not AVR. (1) and (4) are
-      met in-repo; only the (2)/(3) manual app smoke remains to certify the
-      phase. After certification: pivot to breadth (boards, sensors,
-      modules) — each a bounded slice (host-bus/ADC device model + KAT +
-      bench demo).
+      (4) ✅ co-sim pin labels show ESP32 `IO{n}`, not AVR. (1), (2) and (4)
+      are met in-repo; only the (3) co-sim closed-loop smoke remains to
+      certify the phase. After certification: pivot to breadth (boards,
+      sensors, modules) — each a bounded slice (host-bus/ADC device model +
+      KAT + bench demo).
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
