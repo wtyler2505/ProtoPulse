@@ -425,18 +425,18 @@ describe('seed library', () => {
     expect(h?.refPrefix).toBe('U');
   });
 
-  it('HC-SR501 PIR pin map matches the verified 3-pin VCC/OUT/GND layout', () => {
+  it('HC-SR501 PIR pin map matches the verified 3-pin GND/OUT/VCC layout', () => {
     const p = SEED_PARTS.find((x) => x.id === 'core:hc-sr501');
     expect(p).toBeDefined();
     expect(p?.pins).toHaveLength(3);
     const byNumber = new Map(p?.pins.map((x) => [x.number, x.name]));
-    expect(byNumber.get('1')).toBe('VCC');
-    expect(byNumber.get('2')).toBe('OUT'); // middle pin (invariant)
-    expect(byNumber.get('3')).toBe('GND');
+    expect(byNumber.get('1')).toBe('GND');
+    expect(byNumber.get('2')).toBe('OUT'); // middle pin (orientation-independent invariant)
+    expect(byNumber.get('3')).toBe('VCC');
     const byKey = new Map(p?.pins.map((x) => [x.key, x.electricalType]));
-    expect(byKey.get('1')).toBe('power_in'); // VCC
+    expect(byKey.get('1')).toBe('power_in'); // GND
     expect(byKey.get('2')).toBe('output'); // OUT (module-driven)
-    expect(byKey.get('3')).toBe('power_in'); // GND
+    expect(byKey.get('3')).toBe('power_in'); // VCC
     expect(p?.refPrefix).toBe('U');
   });
 
