@@ -66,18 +66,19 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:p30n06le` — P30N06LE/RFP30N06LE logic-level N-MOSFET (TO-220 1=G/2=D/3=S; diagram-verified vs Fairchild datasheet — function labels + tab=Drain confirmed; numbering is standard TO-220AB convention). 2026-06-22
 
 > **Verification audit 2026-06-22** — all 8 of the parts above through `p30n06le` were re-verified by VISUAL inspection of authoritative pinout diagrams/datasheets read as images (per the board-diagram-verification standard, extended to every part). Result: 7/8 already correct; **HC-SR501 was corrected** (VCC/OUT/GND → GND/OUT/VCC — a text table had the end pins reversed from the actual board pictures). Lesson logged: text scraping ≠ visual verification; the picture is ground truth.
-- [ ] **HW-221 logic level converter — PARKED, needs diagram verification.** It's a TXS0108E/YF08E 8-channel module (NOT BSS138), 2 rows of ~10 (VA/A1–A8/GND ‖ VB/B1–B8/GND), but the OE-pin placement + exact header order aren't text-resolvable — needs a high-res pinout image (browser pass) before modeling. Do NOT model from the incomplete web text.
+- [x] `core:hw221-level-shifter` — **HW-221 (YF08E) 8-channel bidirectional level converter — UNPARKED + done, diagram-verified.** 20 pins, two rows: low side **VA/A1–A8/OE**, high side **VB/B1–B8/GND** (channels paired across; OE↔GND). The viewed diagram CORRECTED the catalog (which had no OE and put GND on the low side) — the bottom A-side pin is OE (active-HIGH enable), GND is on the B side. TXS0108E-equivalent. 2026-06-22
 - [ ] **Membrane Switch Module — PARKED, ambiguous.** Log entry (line 1086) is vague ("multiple tactile switches + status LEDs", no pin labels/count); the cheap membrane modules vary (3-button vs 4-button, LED-per-key vs not, differing pin order). Needs Tyler's exact module identified + a diagram before modeling. Do NOT fabricate.
 
 ## Remaining queue (needs browser/diagram passes — do in a FRESH session, not at a context wall)
 The clean, datasheet-/text-verifiable parts Tyler owns are now harvested (11 parts landed 2026-06-22). What's left needs visual verification or is a low-value variant of an existing part:
-- **Browser/diagram passes:** HW-221 level converter (parked above); OSEPP/SainSmart/DK/Velleman shields (line 323/363/566/609/649/690/730); 2.8" TFT LCD shield ili9341 (966); membrane module (parked above).
+- **Browser/diagram passes:** ~~HW-221 level converter~~ DONE (diagram-verified, see above); OSEPP/SainSmart/DK/Velleman shields (line 323/363/566/609/649/690/730); 2.8" TFT LCD shield (966); membrane module (parked above).
+- **2.8" TFT LCD shield — ASSESSED 2026-06-22, KEEP PARKED.** Diagram/photo verification confirms it's a **parallel 8-bit Arduino-Uno-stackable MCUFRIEND shield** (bent shield-leg headers all four sides, onboard microSD, silk `LCD_RST/CS/RS/WR/RD` + `GND/5V/3V3/RESET`), NOT a clean SPI module — its pins ARE the Uno's pins, so it's a shield FOOTPRINT/overlay, not a normal library part. Catalog "ili9338" is a typo for **ILI9341** (most likely; controller varies by batch — ILI9325/9328 also seen). Exact controller + resistive-touch pin order need the physical unit's `readID()` on the bench. Standard MCUFRIEND map (if ever modeled as a shield overlay): data LCD_D0=D8…LCD_D7=D7; ctrl RD=A0/WR=A1/RS=A2/CS=A3/RST=A4; SD on D10–D13. Revisit when the shield/overlay part-type exists AND Tyler runs readID() on his board.
 - **Bare chip (lower reuse):** ESP8266EX (526) — 32-pin QFN, datasheet-exact but a bare module-less chip.
 - **Low-value variants of already-added parts (skip unless asked):** sound-sensor alt variant (1171), single LED module (1605), single-digit 7-seg (2973), 8×8 LED dot-matrix (3028, variant-risky), vibration reed/spring variants (1703/1752/2113), sound-detection variant (3321), IR-obstacle dup (3409), RC522 remote (1046), OSEPP IR follower (888), OSEPP solderable breadboards (810/849).
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
-- [ ] MPU-6050 — I²C 6-axis IMU (GY-521 module) — addr 0x68/0x69
+- [x] MPU-6050 — I²C 6-axis IMU (GY-521 module) — addr 0x68/0x69 — done `core:mpu6050` (8-pin VCC/GND/SCL/SDA/XDA/XCL/AD0/INT; diagram-reconfirmed 2026-06-22)
 - [x] DS1302 RTC module (3-wire serial) — done `53e2a084`. (DS1307 remains — it IS I²C)
 - [x] DS3231 RTC module (ZS-042, I²C) — done `372374b7`
 - [x] ULN2003 stepper driver module (+ 28BYJ-48 pairing) — done `22295bbb`

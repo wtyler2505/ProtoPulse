@@ -38,6 +38,7 @@ describe('seed library', () => {
       'core:flame-sensor',
       'core:hc-sr04',
       'core:hc-sr501',
+      'core:hw221-level-shifter',
       'core:ir-obstacle',
       'core:ky004-button',
       'core:ky005-ir-transmitter',
@@ -438,6 +439,31 @@ describe('seed library', () => {
     expect(byKey.get('2')).toBe('output'); // OUT (module-driven)
     expect(byKey.get('3')).toBe('power_in'); // VCC
     expect(p?.refPrefix).toBe('U');
+  });
+
+  it('HW-221 level shifter pin map matches the diagram-verified VA/A1-A8/OE + VB/B1-B8/GND layout', () => {
+    const p = SEED_PARTS.find((x) => x.id === 'core:hw221-level-shifter');
+    expect(p).toBeDefined();
+    expect(p?.pins).toHaveLength(20);
+    const byKey = new Map(p?.pins.map((x) => [x.key, x]));
+    // low-voltage A side: VA, A1–A8, OE (OE is the corrected bottom pin — NOT GND)
+    expect(byKey.get('VA')?.electricalType).toBe('power_in');
+    expect(byKey.get('OE')?.electricalType).toBe('input'); // active-HIGH output enable (host-driven)
+    // high-voltage B side: VB, B1–B8, GND (the single GND lives here)
+    expect(byKey.get('VB')?.electricalType).toBe('power_in');
+    expect(byKey.get('GND')?.electricalType).toBe('power_in');
+    // all 8 channels per side are bidirectional (auto-direction)
+    for (let i = 1; i <= 8; i++) {
+      expect(byKey.get(`A${i}`)?.electricalType).toBe('bidi');
+      expect(byKey.get(`B${i}`)?.electricalType).toBe('bidi');
+    }
+    // channels paired straight across: A side numbered 1–10, B side 11–20 (A_n ↔ B_n)
+    expect(byKey.get('A1')?.number).toBe('2');
+    expect(byKey.get('B1')?.number).toBe('12');
+    expect(byKey.get('OE')?.number).toBe('10');
+    expect(byKey.get('GND')?.number).toBe('20');
+    expect(p?.refPrefix).toBe('U');
+    expect(p?.class).toBe('ic');
   });
 
   it('KY-040 rotary encoder pin map matches the verified 5-pin CLK/DT/SW/+/GND layout', () => {

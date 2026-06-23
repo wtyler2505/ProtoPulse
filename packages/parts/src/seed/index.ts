@@ -2491,6 +2491,81 @@ const p30n06le = definePart({
     'Pin map web-verified 2026-06-22 against the Fairchild/onsemi RFP30N06LE datasheet (the shared component log agrees): logic-level N-channel enhancement-mode power MOSFET in TO-220AB. Standard pin order 1 = Gate, 2 = Drain, 3 = Source, with the metal tab internally connected to Drain. 60 V Vds, 30 A Id, Rds(on) 0.047 Ω, Vgs(th) 2–4 V (5 V-logic drivable). G/D/S modeled passive (discrete 3-terminal semiconductor), class transistor, refPrefix Q. Distinct from the SOT-23 AO3400 already in the seed. See inbox/2026-06-22-p30n06le-pinout.md. No footprint yet — TO-220 land pattern is a later slice.',
 });
 
+// HW-221 bidirectional logic level converter — YF08E (TXS0108E-equivalent) 8-channel
+// auto-direction level shifter on the common blue ~2×3 cm breakout. Two 10-pin rows:
+// low-voltage A side (VA, A1–A8, OE) and high-voltage B side (VB, B1–B8, GND), with the
+// channels paired straight across (A1↔B1 … A8↔B8, OE↔GND). VA = lower reference
+// (1.2–3.6 V), VB = higher reference (1.65–5.5 V, VA ≤ VB). OE = output-enable, active
+// HIGH with an internal pulldown (part is disabled / high-Z when OE floats). VA/VB/GND =
+// power_in, OE = input (host-driven), all A/B channels bidi (auto-direction). The catalog
+// description (no OE, GND on the low side) was WRONG — the diagram shows OE as the bottom
+// A-side pin and GND only on the B side. refPrefix U, class ic. Footprint deferred.
+const hw221LevelShifter = definePart({
+  id: 'core:hw221-level-shifter',
+  name: 'HW-221 8-channel bidirectional logic level converter (YF08E)',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'HW-221',
+  manufacturer: 'generic (YF08E / TXS0108E-equivalent)',
+  datasheetUrl: 'https://www.ti.com/lit/ds/symlink/txs0108e.pdf',
+  pins: [
+    pin('VA', 'VA', 'power_in', '1'), // low-side reference 1.2–3.6 V
+    pin('A1', 'A1', 'bidi', '2'),
+    pin('A2', 'A2', 'bidi', '3'),
+    pin('A3', 'A3', 'bidi', '4'),
+    pin('A4', 'A4', 'bidi', '5'),
+    pin('A5', 'A5', 'bidi', '6'),
+    pin('A6', 'A6', 'bidi', '7'),
+    pin('A7', 'A7', 'bidi', '8'),
+    pin('A8', 'A8', 'bidi', '9'),
+    pin('OE', 'OE', 'input', '10'), // output enable, active HIGH (internal pulldown)
+    pin('VB', 'VB', 'power_in', '11'), // high-side reference 1.65–5.5 V (VA ≤ VB)
+    pin('B1', 'B1', 'bidi', '12'),
+    pin('B2', 'B2', 'bidi', '13'),
+    pin('B3', 'B3', 'bidi', '14'),
+    pin('B4', 'B4', 'bidi', '15'),
+    pin('B5', 'B5', 'bidi', '16'),
+    pin('B6', 'B6', 'bidi', '17'),
+    pin('B7', 'B7', 'bidi', '18'),
+    pin('B8', 'B8', 'bidi', '19'),
+    pin('GND', 'GND', 'power_in', '20'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -10 * G, w: 6 * G, h: 20 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'HW-221', sizeNm: Math.round(G * 0.5) },
+    ],
+    pins: [
+      // A side (left), top→bottom: VA, A1–A8, OE
+      { key: 'VA', at: { x: -4 * G, y: 9 * G }, dir: 'W' },
+      { key: 'A1', at: { x: -4 * G, y: 7 * G }, dir: 'W' },
+      { key: 'A2', at: { x: -4 * G, y: 5 * G }, dir: 'W' },
+      { key: 'A3', at: { x: -4 * G, y: 3 * G }, dir: 'W' },
+      { key: 'A4', at: { x: -4 * G, y: G }, dir: 'W' },
+      { key: 'A5', at: { x: -4 * G, y: -G }, dir: 'W' },
+      { key: 'A6', at: { x: -4 * G, y: -3 * G }, dir: 'W' },
+      { key: 'A7', at: { x: -4 * G, y: -5 * G }, dir: 'W' },
+      { key: 'A8', at: { x: -4 * G, y: -7 * G }, dir: 'W' },
+      { key: 'OE', at: { x: -4 * G, y: -9 * G }, dir: 'W' },
+      // B side (right), top→bottom: VB, B1–B8, GND (paired opposite the A side)
+      { key: 'VB', at: { x: 4 * G, y: 9 * G }, dir: 'E' },
+      { key: 'B1', at: { x: 4 * G, y: 7 * G }, dir: 'E' },
+      { key: 'B2', at: { x: 4 * G, y: 5 * G }, dir: 'E' },
+      { key: 'B3', at: { x: 4 * G, y: 3 * G }, dir: 'E' },
+      { key: 'B4', at: { x: 4 * G, y: G }, dir: 'E' },
+      { key: 'B5', at: { x: 4 * G, y: -G }, dir: 'E' },
+      { key: 'B6', at: { x: 4 * G, y: -3 * G }, dir: 'E' },
+      { key: 'B7', at: { x: 4 * G, y: -5 * G }, dir: 'E' },
+      { key: 'B8', at: { x: 4 * G, y: -7 * G }, dir: 'E' },
+      { key: 'GND', at: { x: 4 * G, y: -9 * G }, dir: 'E' },
+    ],
+  },
+  parametrics: { maxVoltage: 5.5 }, // VB up to 5.5 V
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map VISUALLY verified 2026-06-22 against an authoritative HW-221/YF08E pinout diagram read as an image (components101 TXS0108E pinout; the diagram itself shows the "YF08E" IC and "HW-221" silkscreen, confirming the 8-channel target board — NOT the 4-channel BSS138 board). Silk rows: low-voltage A side VA, A1–A8, OE (top→bottom); high-voltage B side VB, B1–B8, GND (top→bottom); channels paired straight across (A1↔B1 … A8↔B8, OE↔GND). This CORRECTS the owner catalog, which listed no OE and put GND on the low side — the real bottom A-side pin is OE (output enable, active HIGH, internal pulldown → disabled/high-Z when floating), and the single GND is on the B side. YF08E ≈ TXS0108E: VA = lower reference 1.2–3.6 V, VB = higher reference 1.65–5.5 V (VA ≤ VB), 8 auto-direction bidirectional channels. VA/VB/GND = power_in, OE = input (host-driven), A1–A8/B1–B8 = bidi. The module carries no manufacturer pin numbers, so the 1–20 numbering is our convention (A side 1–10, B side 11–20). refPrefix U, class ic. See inbox/2026-06-22-hw221-level-shifter-pinout.md. No footprint yet — module land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -2539,6 +2614,7 @@ export const SEED_PARTS: Part[] = [
   srd05vdcRelay,
   pot10k,
   p30n06le,
+  hw221LevelShifter,
   nodemcuEsp8266,
   nodemcuEsp32s,
   raspberryPi3bp,
