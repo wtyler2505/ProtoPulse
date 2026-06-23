@@ -56,14 +56,16 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:ky016-rgb-led` — KY-016 RGB LED module (4-pin common-cathode; web-verified). `12a1cb0c`
 - [x] `core:tm1637-display` — TM1637 4-digit 7-segment display (4-pin 2-wire; web-verified). `91834332`
 - [x] `core:ky004-button` — KY-004 button module (3-pin pull-down, active-high; web-verified). `7ffabbe4`
-- [x] `core:hc-sr04` — HC-SR04 ultrasonic distance sensor (4-pin VCC/TRIG/ECHO/GND; web-verified). 2026-06-22
-- [x] `core:hc-sr501` — HC-SR501 PIR motion sensor (3-pin VCC/OUT/GND; web-verified). 2026-06-22
-- [x] `core:ky040-encoder` — KY-040 rotary encoder (5-pin CLK/DT/SW/+/GND; web-verified). 2026-06-22
-- [x] `core:ky023-joystick` — KY-023 dual-axis analog joystick (5-pin GND/+5V/VRx/VRy/SW; web-verified). 2026-06-22
-- [x] `core:l293d` — L293D dual H-bridge motor driver IC (DIP-16; web-verified vs ST datasheet). 2026-06-22
-- [x] `core:srd-05vdc-relay` — Songle SRD-05VDC-SL-C SPDT relay (5-pin, 2 coil + COM/NO/NC; web-verified). 2026-06-22
-- [x] `core:pot-10k` — 10K rotary potentiometer (3-terminal A/WIPER/B; fills variable-resistor gap). 2026-06-22
-- [x] `core:p30n06le` — P30N06LE/RFP30N06LE logic-level N-MOSFET (TO-220 G/D/S; web-verified). 2026-06-22
+- [x] `core:hc-sr04` — HC-SR04 ultrasonic distance sensor (4-pin VCC/TRIG/ECHO/GND; diagram-verified vs ElecFreaks datasheet). 2026-06-22
+- [x] `core:hc-sr501` — HC-SR501 PIR motion sensor (3-pin **GND/OUT/VCC**; diagram-verified — corrected from VCC/OUT/GND, a text-table error caught by the visual audit). 2026-06-22
+- [x] `core:ky040-encoder` — KY-040 rotary encoder (5-pin CLK/DT/SW/+/GND; diagram-verified). 2026-06-22
+- [x] `core:ky023-joystick` — KY-023 dual-axis analog joystick (5-pin GND/+5V/VRx/VRy/SW; diagram-verified). 2026-06-22
+- [x] `core:l293d` — L293D dual H-bridge motor driver IC (DIP-16; diagram-verified vs TI datasheet pg.3). 2026-06-22
+- [x] `core:srd-05vdc-relay` — Songle SRD-05VDC-SL-C SPDT relay (5-pin, 2 coil + COM/NO/NC; diagram-verified — datasheet assigns no pin numbers, flat 1..5 OK for symbol). 2026-06-22
+- [x] `core:pot-10k` — 10K rotary potentiometer (3-terminal A/WIPER/B; diagram-verified middle=wiper, fills variable-resistor gap). 2026-06-22
+- [x] `core:p30n06le` — P30N06LE/RFP30N06LE logic-level N-MOSFET (TO-220 1=G/2=D/3=S; diagram-verified vs Fairchild datasheet — function labels + tab=Drain confirmed; numbering is standard TO-220AB convention). 2026-06-22
+
+> **Verification audit 2026-06-22** — all 8 of the parts above through `p30n06le` were re-verified by VISUAL inspection of authoritative pinout diagrams/datasheets read as images (per the board-diagram-verification standard, extended to every part). Result: 7/8 already correct; **HC-SR501 was corrected** (VCC/OUT/GND → GND/OUT/VCC — a text table had the end pins reversed from the actual board pictures). Lesson logged: text scraping ≠ visual verification; the picture is ground truth.
 - [ ] **HW-221 logic level converter — PARKED, needs diagram verification.** It's a TXS0108E/YF08E 8-channel module (NOT BSS138), 2 rows of ~10 (VA/A1–A8/GND ‖ VB/B1–B8/GND), but the OE-pin placement + exact header order aren't text-resolvable — needs a high-res pinout image (browser pass) before modeling. Do NOT model from the incomplete web text.
 - [ ] **Membrane Switch Module — PARKED, ambiguous.** Log entry (line 1086) is vague ("multiple tactile switches + status LEDs", no pin labels/count); the cheap membrane modules vary (3-button vs 4-button, LED-per-key vs not, differing pin order). Needs Tyler's exact module identified + a diagram before modeling. Do NOT fabricate.
 
