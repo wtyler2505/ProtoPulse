@@ -2209,10 +2209,11 @@ const hcsr04 = definePart({
     'Pin map web-verified 2026-06-22 against components101 + the official ElecFreaks HC-SR04 datasheet + espboards.dev (NOT taken from the shared component log, though it agrees): 4-pin module, left-to-right order VCC, TRIG, ECHO, GND. 5 V supply, 2–400 cm range, 40 kHz. TRIG = input (MCU drives a 10 µs trigger pulse), ECHO = output (module drives the pin high for the echo round-trip time), VCC/GND = power_in. refPrefix U. See inbox/2026-06-22-hc-sr04-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
-// HC-SR501 PIR motion sensor — 3-pin module (VCC, OUT, GND). Pyroelectric IR sensor +
+// HC-SR501 PIR motion sensor — 3-pin module (GND, OUT, VCC). Pyroelectric IR sensor +
 // BISS0001 behind a Fresnel dome; OUT goes HIGH (3.3 V TTL) on motion. 4.5–20 V supply
 // (onboard regulator), 2 trim pots (sensitivity + time delay) and an H/L retrigger jumper
-// (not modeled). The middle pin is always OUT; some clones silk-swap the VCC/GND ends.
+// (not modeled). The middle pin is always OUT; the canonical silk order (front view) is
+// GND, OUT, VCC — but some clones swap the two end pins, so read the silkscreen per board.
 // OUT = output (module-driven), VCC/GND = power_in. Footprint deferred.
 const hcsr501 = definePart({
   id: 'core:hc-sr501',
@@ -2223,9 +2224,9 @@ const hcsr501 = definePart({
   manufacturer: 'generic (BISS0001-based PIR)',
   datasheetUrl: 'https://components101.com/sensors/hc-sr501-pir-sensor',
   pins: [
-    pin('1', 'VCC', 'power_in', '1'), // 4.5–20 V (onboard regulator)
+    pin('1', 'GND', 'power_in', '1'),
     pin('2', 'OUT', 'output', '2'), // digital HIGH (3.3 V) on motion
-    pin('3', 'GND', 'power_in', '3'),
+    pin('3', 'VCC', 'power_in', '3'), // 4.5–20 V (onboard regulator)
   ],
   symbol: {
     primitives: [
@@ -2233,15 +2234,15 @@ const hcsr501 = definePart({
       { kind: 'text', at: { x: 0, y: 0 }, text: 'PIR', sizeNm: Math.round(G * 0.5) },
     ],
     pins: [
-      { key: '1', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC
-      { key: '3', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
+      { key: '3', at: { x: -4 * G, y: G }, dir: 'W' }, // VCC (power top)
+      { key: '1', at: { x: -4 * G, y: -G }, dir: 'W' }, // GND
       { key: '2', at: { x: 4 * G, y: 0 }, dir: 'E' }, // OUT
     ],
   },
   parametrics: { maxVoltage: 20 }, // 4.5–20 V supply
   provenance: 'verified',
   provenanceNote:
-    'Pin map web-verified 2026-06-22 against components101 + utmel + handsontec HC-SR501 datasheet (the shared component log agrees but the web is authority): 3-pin module, order VCC, OUT, GND. Pyroelectric PIR + BISS0001; OUT = digital HIGH (3.3 V TTL) when motion detected, LOW idle; 4.5–20 V supply via onboard regulator; ~7 m range, ~120° FoV; sensitivity + delay trim pots and an H/L retrigger jumper exist on-board but are not header pins. The middle pin is always OUT; some clones silk-swap the VCC/GND ends (modeled the components101 VCC/OUT/GND order). OUT = output, VCC/GND = power_in. refPrefix U. See inbox/2026-06-22-hc-sr501-pinout.md. No footprint yet — module land pattern is a later slice.',
+    'Pin map VISUALLY verified 2026-06-22 against three authoritative pinout diagrams read as images — lastminuteengineers front-view diagram, components101 board photo, and componentsinfo back-side view — all three show silk order GND, OUT, VCC (pin 1 = GND, 2 = OUT, 3 = VCC). This CORRECTS an earlier text-only model that had VCC/OUT/GND (taken from a components101 text table that was reversed from the actual board pictures — caught by the mandatory board-diagram-verification sweep). Pyroelectric PIR + BISS0001; OUT = digital HIGH (3.3 V TTL) when motion detected, LOW idle; 4.5–20 V supply via onboard regulator; ~7 m range, ~120° FoV; sensitivity + delay trim pots and an H/L retrigger jumper exist on-board but are not header pins. The middle pin is ALWAYS OUT (orientation-independent anchor, unanimous across all viewed diagrams); the two END pins (GND/VCC) are silk-swapped on some clones, so the per-board silkscreen is ground truth. OUT = output, VCC/GND = power_in. refPrefix U. See inbox/2026-06-22-hc-sr501-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
 // KY-040 rotary encoder module — 5-pin (CLK, DT, SW, +, GND). Incremental quadrature
