@@ -109,6 +109,8 @@ Source: [[2026-06-11-esp32s3-emulator-core-verification]]
 - [[xtensa-load-store-offsets-are-zero-extended-and-scaled-while-addi-and-addmi-offsets-are-sign-extended-and-pdf-text-extraction-garbles-this-distinction]] — RRI8 immediate scaling vs ADDI sign-extension
 - [[emulating-only-24-bit-xtensa-core-instructions-is-sufficient-because-the-esp-toolchain-assembler-emits-no-16-bit-code-density-forms]] — why the 16-bit forms are an honest cut
 - [[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]] — the cuts-documentation principle
+- [[a-working-disassembler-source-is-a-stronger-oracle-for-opcode-constants-than-an-isa-overview-pdf-whose-text-extraction-garbles-encodings]] — how the opcode-constant table above was verified (ida-xtensa2 over the garbled PDF)
+- [[the-esp32-s3-xtensa-special-register-numbers-rsr-wsr-rsil-rfe-encodings-exccause-codes-and-core-isa-config-constants-are-fixed-values-an-emulator-must-hardcode]] — companion reference table for RSR/WSR special-register numbers and ISA config constants
 - [[oracle-agent-escalation-is-the-strongest-debugging-path]] — disassembler-oracle escalation when decode disagrees with real bytes
 
 ## Topics

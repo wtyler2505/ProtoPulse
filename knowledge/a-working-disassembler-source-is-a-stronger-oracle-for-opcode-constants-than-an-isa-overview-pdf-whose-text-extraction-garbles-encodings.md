@@ -52,8 +52,11 @@ lossy presentation format. This is a specific instance of
 
 ## Relevant Notes
 
+- [[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]] — the disassembler-as-stronger-oracle is part of the credibility apparatus that note depends on: dual-source anchoring of each modeled behavior is what makes the paired cut "deliberate" rather than merely "convenient"
 - [[two-source-verification-resolves-silicon-facts-that-a-single-garbled-vendor-pdf-leaves-ambiguous]] — the disassembler is the corroborating second source
 - [[xtensa-load-store-offsets-are-zero-extended-and-scaled-while-addi-and-addmi-offsets-are-sign-extended-and-pdf-text-extraction-garbles-this-distinction]] — the concrete encoding the PDF garbled
+- [[xtensa-l32r-always-addresses-backward-from-a-4-aligned-pc-because-its-16-bit-immediate-is-one-extended]] — a second instance of the same garble: the PDF flattened L32R's one-extension into "sign extend", and this disassembler oracle is what settled one-extend vs sign-extend
+- [[the-esp32-s3-xtensa-lx7-24-bit-instruction-encoding-uses-a-fixed-op0-t-s-r-op1-op2-field-layout-with-format-specific-immediates-and-a-verified-opcode-constant-table]] — the opcode-constant table this disassembler oracle verified
 
 ## Topics
 

@@ -27,7 +27,10 @@ navigation layer in sync with atomic knowledge.
 
 ## Knowledge Notes
 
-_Populated by `/connect` or manual curation._
+Verification-method claims from the ESP32-S3 emulator-core work — how a modeled silicon fact is made credible before it is encoded:
+
+- [[two-source-verification-resolves-silicon-facts-that-a-single-garbled-vendor-pdf-leaves-ambiguous]] — cross-check two sources that fail independently; agreement settles, disagreement flags.
+- [[a-working-disassembler-source-is-a-stronger-oracle-for-opcode-constants-than-an-isa-overview-pdf-whose-text-extraction-garbles-encodings]] — prefer an oracle whose correctness is load-bearing for a working system over one that merely describes behavior in a lossy format.
 
 ## Open Questions
 

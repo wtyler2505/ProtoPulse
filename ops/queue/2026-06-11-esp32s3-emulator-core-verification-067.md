@@ -41,7 +41,14 @@ Genuine connections wired (all reciprocal / bidirectional):
 No spurious links forced. The ESP32-S3 GPIO/peripheral notes share the `[[esp32-s3]]` topic but have no instruction-set relationship to L32R addressing.
 
 ## revisit
-(to be filled by revisit phase)
+
+BACKWARD pass (/revisit --handoff). Surveyed knowledge/ for OLDER sibling notes that instantiate or depend on the L32R claim but lacked a back-link. The three strongest siblings — encoding-ref (line 108), load/store-offsets (line 37), branch-targets (line 39) — already linked back (the connect phase + sibling tasks wired these). Two genuine backward connections were missing and are now added:
+
+1. **[[a-working-disassembler-source-is-a-stronger-oracle...]]** — added back-link in its Relevant Notes. This note's body already cites the load/store note as "the concrete encoding the PDF garbled"; L32R is a *second* instance of the exact same garble failure mode (the PDF flattened L32R's one-extension into "sign extend"), and the ida-xtensa2 disassembler is what settled one-extend vs sign-extend. The L32R note already forward-links here (its line 41); this completes the reciprocal pair. Framed as "a second instance of the same garble."
+
+2. **[[emulating-only-24-bit-xtensa-core-instructions-is-sufficient...]]** — added back-link in its Relevant Notes. This note discusses the fixed 3-byte instruction stride and already links the branch-targets note as "the direct payoff" of the `PC += 3` advance. L32R is a parallel consequence: its `(PC+3) & ~3` literal-pool base is the address of the *next* instruction, which is exactly 3 bytes ahead only because the 24-bit-only cut forbids a 16-bit form from shortening the stride. Genuine dependency (the L32R base formula relies on the fixed width this note guarantees).
+
+No spurious links added. The SRAM-only app-image loader note shares `[[esp32-s3]]`/`[[emulation]]` topics but concerns segment loading, not instruction decode — no literal-pool/L32R relationship, so correctly left unlinked. No claim sharpening or split warranted (the claim is atomic and verified).
 
 ## verify
 (to be filled by verify phase)

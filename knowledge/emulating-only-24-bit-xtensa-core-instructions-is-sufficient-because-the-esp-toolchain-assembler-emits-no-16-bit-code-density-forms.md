@@ -42,6 +42,7 @@ Relevant Notes:
 - [[an-emulator-that-performs-windowed-spill-and-fill-as-a-magic-net-effect-can-refuse-movsp-and-the-handler-only-l32e-s32e-rfwo-rfwu-instructions]] — a sibling cut with the same "refuse rather than approximate" safe-failure logic, made sound by the same call0-only / net-effect design.
 - [[native-usb-on-arm-mcus-eliminates-serial-bridge-enabling-direct-hid-and-midi-device-emulation]] — another claim where a board/MCU capability is bounded by what the silicon and toolchain actually expose, not the full theoretical surface.
 - [[xtensa-branch-targets-add-the-sign-extended-immediate-to-pc-plus-4-while-sequential-flow-advances-pc-by-3]] — the direct payoff of this 24-bit-only cut: the interpreter's sequential `PC += 3` advance is exactly the fixed 24-bit width, so it never needs the 2-byte step a 16-bit form would have required.
+- [[xtensa-l32r-always-addresses-backward-from-a-4-aligned-pc-because-its-16-bit-immediate-is-one-extended]] — another consequence of the fixed 24-bit width: L32R's `(PC+3) & ~3` literal-pool base is the address of the *next* instruction, and that "next" is exactly 3 bytes ahead only because this cut guarantees a 16-bit form can never shorten the stride.
 
 Topics:
 - [[xtensa]]

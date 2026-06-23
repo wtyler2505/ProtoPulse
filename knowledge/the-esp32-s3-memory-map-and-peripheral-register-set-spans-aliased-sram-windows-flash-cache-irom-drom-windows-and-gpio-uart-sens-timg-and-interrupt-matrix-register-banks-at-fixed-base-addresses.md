@@ -101,7 +101,7 @@ Offsets from `DR_REG_TIMERGROUP0_BASE`. The S3 group has two general-purpose tim
 | INT_RAW | `0x74` | INT_ST | `0x78` |
 | INT_CLR | `0x7C` | | |
 
-`T0CONFIG`: EN bit 31, INCREASE bit 30, AUTORELOAD bit 29, DIVIDER [28:13] (field 0 means ÷65536), ALARM_EN bit 10. T0 interrupt at bit 0 of the INT_* registers. Clock: APB at 80 MHz (`APB_CLK_FREQ`), i.e. 3 CPU cycles per APB tick at 240 MHz.
+`T0CONFIG`: EN bit 31, INCREASE bit 30, AUTORELOAD bit 29, DIVIDER [28:13] (field 0 means ÷65536 — see [[esp32-s3-timg-divider-field-zero-means-divide-by-65536-because-the-hal-wraps-the-2-to-65536-range]]), ALARM_EN bit 10. T0 interrupt at bit 0 of the INT_* registers. Clock: APB at 80 MHz (`APB_CLK_FREQ`), i.e. 3 CPU cycles per APB tick at 240 MHz.
 
 ## Interrupt matrix (`interrupt_core0_reg.h`)
 
@@ -123,8 +123,11 @@ Level-1 external lines (from `XCHAL_INTLEVEL1_MASK = 0x000637FF`): INT0–5, INT
 
 ## Relevant Notes
 
+- [[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]] — this map is the modeled side whose paired cut the umbrella names: one 480 KB SRAM window aliased across IRAM/DRAM, no cache, no SRAM0, with the flash-cache IROM/DROM windows served read-only — the fidelity boundary a co-sim consumer trusts
 - [[the-esp32-s3-maps-one-sram-block-at-both-an-iram-and-a-dram-address-so-an-emulator-can-model-it-as-a-single-window-aliased-to-two-bus-addresses]] — the SRAM aliasing model behind the dual IRAM/DRAM views above
 - [[flash-mapped-irom-and-drom-segments-carry-post-mapping-virtual-addresses-so-an-emulator-serves-them-read-only-straight-from-the-image]] — how the IROM/DROM cache windows are served
+- [[esp32-s3-timg-divider-field-zero-means-divide-by-65536-because-the-hal-wraps-the-2-to-65536-range]] — consumes the TIMG0 base and `T0CONFIG` DIVIDER field defined above
+- [[the-esp32-s3-xtensa-special-register-numbers-rsr-wsr-rsil-rfe-encodings-exccause-codes-and-core-isa-config-constants-are-fixed-values-an-emulator-must-hardcode]] — companion "hardcoded constants" reference (special registers are RSR/WSR-accessed, not memory-mapped — the non-memory-mapped half of the emulator's fixed-value tables)
 
 ## Topics
 

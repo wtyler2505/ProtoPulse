@@ -40,6 +40,7 @@ A faithful emulator earns trust not by claiming completeness but by drawing its 
 - [[modeling-xtensa-exceptions-and-level-1-interrupts-as-zero-cycle-vectoring-keeps-a-one-instruction-per-cycle-emulator-coherent-without-a-pipeline-model]]
 - [[a-conservative-emulator-boots-ps-intlevel-at-15-so-firmware-must-lower-it-via-rsil-before-interrupts-fire]]
 - [[xtensa-timer-interrupts-latch-when-ccount-equals-ccompare-and-clear-only-when-ccompare-is-rewritten]]
+- [[condition-derived-level-interrupts-cannot-be-cleared-by-intclear-until-the-underlying-condition-clears]] — level-triggered GPIO/UART sources where INTCLEAR is a no-op until the condition resolves (the contrast to the latched timer)
 - [[a-cycle-derived-virtual-timer-avoids-per-cycle-bookkeeping-but-needs-float-safe-modulo-at-the-54-bit-wrap]]
 
 ### Memory & image loading (SRAM-only window; flash-mapped refused)

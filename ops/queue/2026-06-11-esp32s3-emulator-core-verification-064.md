@@ -39,7 +39,22 @@ Inline links added to the claim note's Relevant Notes (kept the existing native-
 No reweave/verify run (one phase only).
 
 ## revisit
-(to be filled by revisit phase)
+Phase complete 2026-06-23 (revisit/reweave, --handoff). BACKWARD pass.
+
+Surveyed the full xtensa/emulation sibling cluster (grep over knowledge/ for the 064 slug + listing of all xtensa/emulator/esp32-s3 notes). Goal: find OLDER/sibling notes that genuinely instantiate or depend on 064's claim (decode only 24-bit forms because the toolchain emits no 16-bit forms) but don't yet link to it.
+
+Genuine dependents already reciprocate from the forward (connect) pass — confirmed by grep:
+- [[xtensa-branch-targets-add-the-sign-extended-immediate-to-pc-plus-4-while-sequential-flow-advances-pc-by-3]] — its `PC += 3` sequential advance *is* the 24-bit width 064 justifies; back-links 064 (its line 41).
+- [[the-esp32-s3-xtensa-lx7-24-bit-instruction-encoding-uses-a-fixed-op0-t-s-r-op1-op2-field-layout-with-format-specific-immediates-and-a-verified-opcode-constant-table]] — its "16-bit code-density forms (NOT implemented)" addendum is the concrete embodiment of 064's cut; back-links 064 (its line 110).
+- [[an-emulator-that-performs-windowed-spill-and-fill-as-a-magic-net-effect-can-refuse-movsp-and-the-handler-only-l32e-s32e-rfwo-rfwu-instructions]] — sibling cut, same "refuse rather than approximate" logic; back-links 064 (its line 34).
+
+Evaluated and REJECTED as a backlink:
+- [[the-xtensa-windowed-register-abi-can-be-emulated-by-reproducing-the-spill-and-fill-handlers-net-memory-effect-directly-avoiding-the-exception-machinery-entirely]] — initially looked like a companion call0-only cut, but it is a slice-3 *modeling* note (MAGIC SPILL/FILL — the core DOES model windowing), not an omission, and windowing is orthogonal to instruction width (the note reads identically whether or not 16-bit forms are decoded). A "shared call0-only justification" rationale would be a factually wrong edge. The sibling-cut philosophy tie is already carried by its spill-fill child (which back-links 064) and the shared parent `a-faithful-instruction-set-emulator`. Adding it would be link inflation. Rejection vetted by advisor.
+- [[a-working-disassembler-source-is-a-stronger-oracle...]] — about opcode-constant sourcing, not the 24-bit scope decision. No genuine dependency. Skipped.
+
+**Net new backward links added: 0.** All genuine dependents were front-run by the forward pass; the remaining candidates fail the instantiate/depend test. Honest empty result, not a missed connection.
+
+No verify run (one phase only).
 
 ## verify
 (to be filled by verify phase)

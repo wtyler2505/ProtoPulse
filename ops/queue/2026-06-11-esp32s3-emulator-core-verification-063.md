@@ -43,7 +43,25 @@ Ran /connect --handoff on this claim. This note is the **umbrella/meta-claim** f
 ONE PHASE ONLY — did not run reweave or verify.
 
 ## revisit
-(to be filled by revisit phase)
+
+Ran /revisit --handoff (BACKWARD / reweave pass) on this claim. The forward `## connect` phase had already added links FROM this umbrella TO its siblings; this pass added links FROM older/sibling notes back TO this umbrella where the connection carries genuine meaning (not batch-adjacency the `emulation` MOC already covers).
+
+**Backlinks added (5) — each with an em-dash "why", matching the note's existing curation discipline:**
+
+Older cross-domain notes (Jun 20, predating this Jun 23 umbrella — the heart of a backward pass):
+- `knowledge/wokwi-chips-use-counterclockwise-pin-ordering.md` — the CCW-ordering assumption is an implicit emulation-interop contract; "undocumented divergence = bug, disclosed = cut" generalizes it. Reciprocal of an existing forward link.
+- `knowledge/writing-plans-must-precede-executing-plans-as-contract.md` — the contract-as-trust-boundary pattern applied to process rather than silicon (analogical but genuine; framed honestly). Reciprocal of an existing forward link.
+
+Sibling claims from the batch that instantiate the umbrella's *actual* claim (a documented cut, OR part of the verification/credibility apparatus the umbrella explicitly invokes — not merely "a fact the emulator uses"):
+- `knowledge/the-esp32-s3-xtensa-special-register-numbers-...-an-emulator-must-hardcode.md` — strongest target: its "Emulator consequences (stated cuts)" section IS the umbrella principle in miniature.
+- `knowledge/a-working-disassembler-source-is-a-stronger-oracle-....md` — part of the dual-source credibility apparatus that makes each paired cut "deliberate." Reciprocal of an existing forward link in the credibility group.
+- `knowledge/the-esp32-s3-memory-map-...-at-fixed-base-addresses.md` — the modeled side whose memory cut (one 480 KB SRAM window, no cache, no SRAM0) the umbrella names.
+
+**Deliberately NOT linked** (would be link inflation; MOC already covers batch-adjacency): `xtensa-load-store-offsets-...` and `xtensa-l32r-...` are pure ISA decode rules with no cut/trust content — their only tie to the umbrella is "same batch."
+
+**Already linking back before this pass:** 21 of 26 batch siblings (their own connect/reflect phases had pointed at this umbrella). No new semantic search needed — the `emulation` MOC promoted in the connect phase already carries batch membership, so backward-pass links were reserved for genuine semantic reciprocity.
+
+ONE PHASE ONLY — did not run verify.
 
 ## verify
 (to be filled by verify phase)

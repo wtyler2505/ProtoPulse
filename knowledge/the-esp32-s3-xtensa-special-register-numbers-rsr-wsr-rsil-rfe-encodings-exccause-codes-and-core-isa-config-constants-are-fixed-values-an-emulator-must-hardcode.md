@@ -70,7 +70,7 @@ These values are **fixed silicon constants**, not derivable at runtime. Special-
 | `XCHAL_USER_VECOFS` | 0x340 | user-exception vector offset from VECBASE |
 | `XCHAL_KERNEL_VECOFS` | 0x300 | kernel-exception vector offset from VECBASE |
 | `XCHAL_VECBASE_RESET_VADDR` | 0x40000000 | VECBASE reset value |
-| `XCHAL_NUM_AREGS` | 64 | physical address registers (windowed ARs) |
+| `XCHAL_NUM_AREGS` | 64 | physical address registers (windowed ARs) — the count the [[the-xtensa-windowed-register-abi-can-be-emulated-by-reproducing-the-spill-and-fill-handlers-net-memory-effect-directly-avoiding-the-exception-machinery-entirely\|magic spill/fill window]] rotates over |
 | `XCHAL_NUM_TIMERS` | 3 | CCOMPARE0..2 (three core timers) |
 
 ## Timer-counter behavior (companion semantics)
@@ -86,9 +86,11 @@ The core v0 models only the timer line (INT6); level-1 only (no medium/high-prio
 **Source:** [[2026-06-11-esp32s3-emulator-core-verification]] (lines 120, 128–156)
 
 **Relevant Notes:**
+- [[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]] — this note's "Emulator consequences (stated cuts)" section (timer line only, level-1 only, UM/WOE stored not enforced, VECBASE alignment not enforced) is the umbrella principle in miniature: each hardcoded constant is paired with the cut it implies
 - [[the-esp32-s3-xtensa-lx7-24-bit-instruction-encoding-uses-a-fixed-op0-t-s-r-op1-op2-field-layout-with-format-specific-immediates-and-a-verified-opcode-constant-table]] — companion instruction-encoding reference (claim-086)
 - [[the-esp32-s3-memory-map-and-peripheral-register-set-spans-aliased-sram-windows-flash-cache-irom-drom-windows-and-gpio-uart-sens-timg-and-interrupt-matrix-register-banks-at-fixed-base-addresses]] — companion memory-map reference (claim-087)
 - [[xtensa-timer-interrupts-latch-when-ccount-equals-ccompare-and-clear-only-when-ccompare-is-rewritten]] — CCOUNT/CCOMPARE timer latch semantics (claim-072)
 - [[a-conservative-emulator-boots-ps-intlevel-at-15-so-firmware-must-lower-it-via-rsil-before-interrupts-fire]] — PS.INTLEVEL boot gating (claim-073)
+- [[the-xtensa-windowed-register-abi-can-be-emulated-by-reproducing-the-spill-and-fill-handlers-net-memory-effect-directly-avoiding-the-exception-machinery-entirely]] — consumes the `XCHAL_NUM_AREGS = 64` constant from this table to size the window it rotates (claim-068)
 
 **Topics:** [[xtensa]], [[emulation]]

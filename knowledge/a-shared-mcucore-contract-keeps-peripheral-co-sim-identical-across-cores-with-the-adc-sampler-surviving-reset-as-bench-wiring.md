@@ -7,6 +7,7 @@ created: 2026-06-23
 topics:
   - emulation
   - esp32-s3
+  - engine-redesign
 provenance:
   source: "[[2026-06-11-esp32s3-emulator-core-verification]]"
   verified: 2026-06-23
@@ -27,10 +28,13 @@ This is why the ESP32-S3 SAR ADC1 oneshot path can plug straight into the same h
 
 ## Relevant Notes
 
+- [[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]] — the umbrella principle; this contract is what co-sim/ERC/test-harness consumers build on once they know that note's fidelity boundary (reciprocates its inbound link)
 - [[esp32-s3-adc1-channel-n-reads-gpio-n-plus-1-so-an-emulator-resolves-analog-reads-to-the-correct-bench-pin]] — the channel→GPIO map the sampler reads against
 - [[an-emulator-can-model-sar-adc-oneshot-reads-as-instant-conversions-because-firmware-waits-on-the-start-bit-edge-and-done-flag-not-sar-clock-timing]] — the instant-conversion model the contract carries
+- [[a-potentiometer-wired-as-voltage-divider-converts-mechanical-rotation-to-proportional-analog-voltage-for-mcu-analogread]] — a concrete instance of the bench wiring this note treats the sampler as: the physical analog source that stays plugged into the ADC pin across an MCU reset
 
 ## Topics
 
 - emulation
 - esp32-s3
+- engine-redesign

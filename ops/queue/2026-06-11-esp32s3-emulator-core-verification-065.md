@@ -63,7 +63,60 @@ immediate treatment"). Verified placement; MOC frontmatter already promoted
 (auto_generated flag cleared, Core Idea written).
 
 ## revisit
-(to be filled by revisit phase)
+
+Phase run: reweave / `/revisit --handoff` (BACKWARD pass) on 2026-06-23.
+
+**Result: no-op on edits — the graph is already saturated.** The backward pass
+found no genuine missing connection to add. This is a legitimate result, not a
+skipped phase, for two reasons documented below.
+
+**Discovery method.** `grep -rl` for the target slug across `knowledge/` +
+direct read of the `xtensa` MOC and every Xtensa/emu sibling. qmd vector search
+was skipped — consistent with reduce + connect findings, the June-23 net-new
+notes are not yet ingested into the vector index, so topic-map + grep carried
+discovery.
+
+**Existing genuine backlinks TO this note (5, all confirmed inline / Relevant
+Notes references with descriptive context, not bare MOC list entries):**
+
+1. [[the-esp32-s3-xtensa-lx7-24-bit-instruction-encoding-...-verified-opcode-constant-table]]
+   — "RRI8 immediate scaling vs ADDI sign-extension" (the parent encoding
+   reference's Relevant Notes).
+2. [[a-working-disassembler-source-is-a-stronger-oracle-...-garbles-encodings]]
+   — this garble is its motivating example.
+3. [[xtensa-l32r-always-addresses-backward-...-one-extended]] — the three-way
+   immediate-extension contrast (zero / sign / one extend).
+4. [[xtensa-branch-targets-add-the-sign-extended-immediate-to-pc-plus-4-...]] —
+   branch imm sign-extension contrasted with zero-extended load/store offsets.
+5. [[two-source-verification-resolves-silicon-facts-that-a-single-garbled-vendor-pdf-leaves-ambiguous]]
+   — quotes the exact garble in prose ("flattened the load/store family's
+   zero-extend-then-scale offset rule into a bare sign extend").
+
+These are the reciprocals of the connect phase's outbound links (siblings 1–4)
+plus the verification-discipline note (5), all wired by the sibling claims'
+own connect phases.
+
+**Candidate considered and rejected (no link inflation):**
+
+- [[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]]
+  — the umbrella note. Rejected: it organizes children as "modeled behavior +
+  its **cut**" instances plus a "what makes the modeled side credible" set
+  (two-source, disassembler-oracle, shared-mcucore). The target is a decode-**
+  correctness** fact, not a cut; and its verification angle is already carried
+  into the umbrella by the disassembler-oracle child linked there. Fails the
+  discriminating test ("does the candidate instantiate or depend on
+  zero-extend-and-scale vs sign-extend?") on both axes — not a cut, redundant
+  on credibility.
+- `emulating-only-24-bit-core-instructions` (scope-cut justification),
+  `the-...-special-register-numbers-...` (RSR/WSR/EXCCAUSE territory),
+  `modeling-xtensa-exceptions-...` (interrupt vectoring) — none turn on the
+  imm8 extension rule. No edits.
+
+**No older notes exist.** Every emu/xtensa/esp32-s3 ISA note in this domain is
+`created: 2026-06-23` (same batch). There are no pre-dating insights for the
+backward pass to update — "older" here reduces to the sibling claims, which the
+connect phases already wired bidirectionally. Backward pass confirms saturation
+with zero new edits.
 
 ## verify
 (to be filled by verify phase)

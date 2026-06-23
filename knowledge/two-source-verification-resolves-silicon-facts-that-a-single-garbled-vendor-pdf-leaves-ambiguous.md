@@ -27,8 +27,9 @@ Independence is the load-bearing property. Two copies of the same garbled PDF pr
 Source: [[2026-06-11-esp32s3-emulator-core-verification]]
 
 ## Relevant Notes
-- [[a-working-disassembler-is-a-stronger-opcode-oracle-than-an-isa-overview-pdf-with-garbled-text-extraction]] — the disassembler-as-oracle case, a specific instance of this two-source pattern.
+- [[a-working-disassembler-source-is-a-stronger-oracle-for-opcode-constants-than-an-isa-overview-pdf-whose-text-extraction-garbles-encodings]] — the disassembler-as-oracle case, a specific instance of this two-source pattern.
 - [[xtensa-load-store-offsets-are-zero-extended-and-scaled-while-addi-and-addmi-offsets-are-sign-extended-and-pdf-text-extraction-garbles-this-distinction]] — the concrete garble this discipline caught.
+- [[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]] — the umbrella principle; two-source verification is what makes the *modeled* side of each "modeled behavior + paired cut" pair credible, just as the cut list makes the boundary honest.
 
 ## Topics
 - verification
