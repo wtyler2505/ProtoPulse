@@ -56,6 +56,7 @@ describe('seed library', () => {
       'core:ne555',
       'core:nodemcu-esp32s',
       'core:nodemcu-esp8266',
+      'core:p30n06le',
       'core:pot-10k',
       'core:raspberry-pi-3bp',
       'core:rc522',
@@ -190,6 +191,19 @@ describe('seed library', () => {
     expect(byKey.get('4')).toBe('input');
     expect(byKey.get('5')).toBe('power_in');
     expect(byKey.get('6')).toBe('power_in');
+  });
+
+  it('P30N06LE MOSFET pin map matches the verified TO-220 G/D/S layout', () => {
+    const q = SEED_PARTS.find((p) => p.id === 'core:p30n06le');
+    expect(q).toBeDefined();
+    expect(q?.pins).toHaveLength(3);
+    const byNumber = new Map(q?.pins.map((p) => [p.number, p.name]));
+    expect(byNumber.get('1')).toBe('G');
+    expect(byNumber.get('2')).toBe('D');
+    expect(byNumber.get('3')).toBe('S');
+    expect(q?.pins.every((p) => p.electricalType === 'passive')).toBe(true);
+    expect(q?.class).toBe('transistor');
+    expect(q?.refPrefix).toBe('Q');
   });
 
   it('10K potentiometer pin map matches the verified 3-terminal layout', () => {
