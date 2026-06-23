@@ -56,6 +56,7 @@ describe('seed library', () => {
       'core:ne555',
       'core:nodemcu-esp32s',
       'core:nodemcu-esp8266',
+      'core:pot-10k',
       'core:raspberry-pi-3bp',
       'core:rc522',
       'core:slot-optocoupler',
@@ -189,6 +190,19 @@ describe('seed library', () => {
     expect(byKey.get('4')).toBe('input');
     expect(byKey.get('5')).toBe('power_in');
     expect(byKey.get('6')).toBe('power_in');
+  });
+
+  it('10K potentiometer pin map matches the verified 3-terminal layout', () => {
+    const p = SEED_PARTS.find((x) => x.id === 'core:pot-10k');
+    expect(p).toBeDefined();
+    expect(p?.pins).toHaveLength(3);
+    const byNumber = new Map(p?.pins.map((x) => [x.number, x.name]));
+    expect(byNumber.get('1')).toBe('A');
+    expect(byNumber.get('2')).toBe('WIPER');
+    expect(byNumber.get('3')).toBe('B');
+    expect(p?.pins.every((x) => x.electricalType === 'passive')).toBe(true);
+    expect(p?.class).toBe('resistor');
+    expect(p?.refPrefix).toBe('RV');
   });
 
   it('L293D pin map matches the verified DIP-16 dual H-bridge layout', () => {
