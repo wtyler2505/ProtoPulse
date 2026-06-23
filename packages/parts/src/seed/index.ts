@@ -2566,6 +2566,104 @@ const hw221LevelShifter = definePart({
     'Pin map VISUALLY verified 2026-06-22 against an authoritative HW-221/YF08E pinout diagram read as an image (components101 TXS0108E pinout; the diagram itself shows the "YF08E" IC and "HW-221" silkscreen, confirming the 8-channel target board — NOT the 4-channel BSS138 board). Silk rows: low-voltage A side VA, A1–A8, OE (top→bottom); high-voltage B side VB, B1–B8, GND (top→bottom); channels paired straight across (A1↔B1 … A8↔B8, OE↔GND). This CORRECTS the owner catalog, which listed no OE and put GND on the low side — the real bottom A-side pin is OE (output enable, active HIGH, internal pulldown → disabled/high-Z when floating), and the single GND is on the B side. YF08E ≈ TXS0108E: VA = lower reference 1.2–3.6 V, VB = higher reference 1.65–5.5 V (VA ≤ VB), 8 auto-direction bidirectional channels. VA/VB/GND = power_in, OE = input (host-driven), A1–A8/B1–B8 = bidi. The module carries no manufacturer pin numbers, so the 1–20 numbering is our convention (A side 1–10, B side 11–20). refPrefix U, class ic. See inbox/2026-06-22-hw221-level-shifter-pinout.md. No footprint yet — module land pattern is a later slice.',
 });
 
+// ESP8266EX — Espressif's bare WiFi SoC in a QFN-32 (5×5 mm, 0.5 mm pitch) with a center
+// GND thermal pad (pin 33). This is the RAW CHIP for custom-PCB designs, distinct from the
+// NodeMCU/ESP-12 modules already in the seed. Pin assignment verified against the official
+// Espressif ESP8266EX datasheet v7.1, Table 2-1 (read as an image). Datasheet PRIMARY names
+// kept (MTMS/MTDI/MTCK/MTDO are the JTAG names; GPIO14/12/13/15 are their alt functions —
+// see the inline GPIO aliases). ERC: VDD*/GND = power_in; GPIOs = bidi; analog/EN/reset/bias
+// (TOUT/CHIP_EN/EXT_RSTB/RES12K) = input; XTAL_OUT = output, XTAL_IN = input; LNA (RF
+// antenna) = passive. refPrefix U, class ic. Footprint deferred (QFN-32 land pattern later).
+const esp8266ex = definePart({
+  id: 'core:esp8266ex',
+  name: 'ESP8266EX WiFi SoC (QFN-32)',
+  refPrefix: 'U',
+  class: 'ic',
+  mpn: 'ESP8266EX',
+  manufacturer: 'Espressif Systems',
+  datasheetUrl: 'https://www.espressif.com/sites/default/files/documentation/0a-esp8266ex_datasheet_en.pdf',
+  pins: [
+    pin('1', 'VDDA', 'power_in', '1'), // analog power (2.5–3.6 V)
+    pin('2', 'LNA', 'passive', '2'), // RF antenna interface
+    pin('3', 'VDD3P3', 'power_in', '3'), // amp power (2.5–3.6 V)
+    pin('4', 'VDD3P3', 'power_in', '4'), // amp power (2.5–3.6 V)
+    pin('5', 'VDD_RTC', 'power_in', '5'), // RTC rail ~1.1 V (normally left NC)
+    pin('6', 'TOUT', 'input', '6'), // ADC analog input (0–1.0 V)
+    pin('7', 'CHIP_EN', 'input', '7'), // chip enable, active HIGH
+    pin('8', 'XPD_DCDC', 'bidi', '8'), // GPIO16 / deep-sleep wakeup
+    pin('9', 'MTMS', 'bidi', '9'), // GPIO14
+    pin('10', 'MTDI', 'bidi', '10'), // GPIO12
+    pin('11', 'VDDPST', 'power_in', '11'), // digital/IO power (1.8–3.6 V)
+    pin('12', 'MTCK', 'bidi', '12'), // GPIO13
+    pin('13', 'MTDO', 'bidi', '13'), // GPIO15
+    pin('14', 'GPIO2', 'bidi', '14'), // gpio (boot strap)
+    pin('15', 'GPIO0', 'bidi', '15'), // gpio (boot strap)
+    pin('16', 'GPIO4', 'bidi', '16'), // gpio
+    pin('17', 'VDDPST', 'power_in', '17'), // digital/IO power (1.8–3.6 V)
+    pin('18', 'SDIO_DATA_2', 'bidi', '18'), // GPIO9
+    pin('19', 'SDIO_DATA_3', 'bidi', '19'), // GPIO10
+    pin('20', 'SDIO_CMD', 'bidi', '20'), // GPIO11
+    pin('21', 'SDIO_CLK', 'bidi', '21'), // GPIO6
+    pin('22', 'SDIO_DATA_0', 'bidi', '22'), // GPIO7
+    pin('23', 'SDIO_DATA_1', 'bidi', '23'), // GPIO8
+    pin('24', 'GPIO5', 'bidi', '24'), // gpio
+    pin('25', 'U0RXD', 'bidi', '25'), // GPIO3 / UART0 RX
+    pin('26', 'U0TXD', 'bidi', '26'), // GPIO1 / UART0 TX
+    pin('27', 'XTAL_OUT', 'output', '27'), // crystal drive out
+    pin('28', 'XTAL_IN', 'input', '28'), // crystal in
+    pin('29', 'VDDD', 'power_in', '29'), // analog power (2.5–3.6 V)
+    pin('30', 'VDDA', 'power_in', '30'), // analog power (2.5–3.6 V)
+    pin('31', 'RES12K', 'input', '31'), // bias: 12 kΩ to GND
+    pin('32', 'EXT_RSTB', 'input', '32'), // external reset, active LOW
+    pin('33', 'GND', 'power_in', '33'), // center thermal pad
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -4 * G, y: -17 * G, w: 8 * G, h: 34 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'ESP8266EX', sizeNm: Math.round(G * 0.6) },
+    ],
+    pins: [
+      { key: '1', at: { x: -5 * G, y: 16 * G }, dir: 'W' }, // VDDA
+      { key: '2', at: { x: -5 * G, y: 14 * G }, dir: 'W' }, // LNA
+      { key: '3', at: { x: -5 * G, y: 12 * G }, dir: 'W' }, // VDD3P3
+      { key: '4', at: { x: -5 * G, y: 10 * G }, dir: 'W' }, // VDD3P3
+      { key: '5', at: { x: -5 * G, y: 8 * G }, dir: 'W' }, // VDD_RTC
+      { key: '6', at: { x: -5 * G, y: 6 * G }, dir: 'W' }, // TOUT
+      { key: '7', at: { x: -5 * G, y: 4 * G }, dir: 'W' }, // CHIP_EN
+      { key: '8', at: { x: -5 * G, y: 2 * G }, dir: 'W' }, // XPD_DCDC
+      { key: '9', at: { x: -5 * G, y: 0 }, dir: 'W' }, // MTMS
+      { key: '10', at: { x: -5 * G, y: -2 * G }, dir: 'W' }, // MTDI
+      { key: '11', at: { x: -5 * G, y: -4 * G }, dir: 'W' }, // VDDPST
+      { key: '12', at: { x: -5 * G, y: -6 * G }, dir: 'W' }, // MTCK
+      { key: '13', at: { x: -5 * G, y: -8 * G }, dir: 'W' }, // MTDO
+      { key: '14', at: { x: -5 * G, y: -10 * G }, dir: 'W' }, // GPIO2
+      { key: '15', at: { x: -5 * G, y: -12 * G }, dir: 'W' }, // GPIO0
+      { key: '16', at: { x: -5 * G, y: -14 * G }, dir: 'W' }, // GPIO4
+      { key: '17', at: { x: -5 * G, y: -16 * G }, dir: 'W' }, // VDDPST
+      { key: '18', at: { x: 5 * G, y: 15 * G }, dir: 'E' }, // SDIO_DATA_2
+      { key: '19', at: { x: 5 * G, y: 13 * G }, dir: 'E' }, // SDIO_DATA_3
+      { key: '20', at: { x: 5 * G, y: 11 * G }, dir: 'E' }, // SDIO_CMD
+      { key: '21', at: { x: 5 * G, y: 9 * G }, dir: 'E' }, // SDIO_CLK
+      { key: '22', at: { x: 5 * G, y: 7 * G }, dir: 'E' }, // SDIO_DATA_0
+      { key: '23', at: { x: 5 * G, y: 5 * G }, dir: 'E' }, // SDIO_DATA_1
+      { key: '24', at: { x: 5 * G, y: 3 * G }, dir: 'E' }, // GPIO5
+      { key: '25', at: { x: 5 * G, y: 1 * G }, dir: 'E' }, // U0RXD
+      { key: '26', at: { x: 5 * G, y: -1 * G }, dir: 'E' }, // U0TXD
+      { key: '27', at: { x: 5 * G, y: -3 * G }, dir: 'E' }, // XTAL_OUT
+      { key: '28', at: { x: 5 * G, y: -5 * G }, dir: 'E' }, // XTAL_IN
+      { key: '29', at: { x: 5 * G, y: -7 * G }, dir: 'E' }, // VDDD
+      { key: '30', at: { x: 5 * G, y: -9 * G }, dir: 'E' }, // VDDA
+      { key: '31', at: { x: 5 * G, y: -11 * G }, dir: 'E' }, // RES12K
+      { key: '32', at: { x: 5 * G, y: -13 * G }, dir: 'E' }, // EXT_RSTB
+      { key: '33', at: { x: 5 * G, y: -15 * G }, dir: 'E' }, // GND
+    ],
+  },
+  parametrics: { maxVoltage: 3.6 }, // VDD 2.5–3.6 V (3.3 V typical)
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map VISUALLY verified 2026-06-22 against the official Espressif ESP8266EX datasheet v7.1, Table 2-1 + Figure 2-1 (read as images): QFN-32, 5×5 mm, 0.5 mm pitch, with the center exposed thermal pad as pin 33 = GND. 32 signal pins per the datasheet, datasheet PRIMARY names retained (pins 9/10/12/13 are MTMS/MTDI/MTCK/MTDO with GPIO14/12/13/15 as alt functions; SDIO_DATA_0..3 / SDIO_CMD / SDIO_CLK are GPIO7/8/9/10/11/6; U0RXD/U0TXD are GPIO3/1). ERC: all VDD rails (VDDA ×2, VDD3P3 ×2, VDD_RTC, VDDPST ×2, VDDD) + GND pad = power_in; GPIO/JTAG/SDIO/UART I/O pins = bidi; TOUT (ADC), CHIP_EN, EXT_RSTB (reset), RES12K (12 kΩ bias) = input; XTAL_OUT = output, XTAL_IN = input; LNA (RF antenna) = passive. This is the BARE SoC for custom PCBs — distinct from the NodeMCU ESP8266/ESP-32S modules already in the seed. See inbox/2026-06-22-esp8266ex-pinout.md. No footprint yet — QFN-32 land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -2615,6 +2713,7 @@ export const SEED_PARTS: Part[] = [
   pot10k,
   p30n06le,
   hw221LevelShifter,
+  esp8266ex,
   nodemcuEsp8266,
   nodemcuEsp32s,
   raspberryPi3bp,
