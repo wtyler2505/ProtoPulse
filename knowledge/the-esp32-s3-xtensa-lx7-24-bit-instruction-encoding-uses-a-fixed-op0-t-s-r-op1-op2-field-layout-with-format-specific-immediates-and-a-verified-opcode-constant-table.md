@@ -15,8 +15,8 @@ provenance:
 
 # ESP32-S3 Xtensa LX7 24-bit instruction encoding reference
 
-The Xtensa LX7 core (as emulated by `@protopulse/emu`'s `Esp32s3Core`, call0
-ABI) decodes a 24-bit, little-endian core instruction into a fixed set of
+The Xtensa LX7 core (as emulated by `@protopulse/emu`'s `Esp32s3Core`)
+decodes a 24-bit, little-endian core instruction into a fixed set of
 named bit-fields. Every instruction reuses the same field positions; what
 varies is which fields carry the opcode discriminator (`op0`/`op1`/`op2`) and
 which carry register selectors (`t`/`s`/`r`) or a packed immediate. Decode is
@@ -26,7 +26,7 @@ consolidates the three layers needed to do that — the field layout, the
 format-specific immediate packings, and the verified opcode-constant table —
 as one retrievable reference rather than fragmenting into trivial atoms.
 
-Two independent sources back every value: the Espressif "Overview of Xtensa
+[[two-source-verification-resolves-silicon-facts-that-a-single-garbled-vendor-pdf-leaves-ambiguous|Two independent sources back every value]]: the Espressif "Overview of Xtensa
 ISA" PDF / Cadence "Xtensa ISA Reference Manual" (field layouts + semantics)
 and `pfalcon/ida-xtensa2`'s `xtensa.py` working disassembler (exact
 opcode/mask constants, cross-checked against real `objdump` byte sequences).
@@ -86,8 +86,14 @@ extraction garbles some of these):
 The ESP toolchain assembler emits only 24-bit instructions, so the emulator
 implements no 16-bit forms. The decode details below are documented for
 reference (settled against the full Cadence ISA RM, which fixes overview text
-that the PDF extraction garbled). Windowed-ABI instructions
-(ENTRY/CALL8/RETW) are likewise not implemented — call0 ABI only.
+that the PDF extraction garbled). Windowed-ABI support is partial by design:
+the windowed *calls* `ENTRY`/`CALL8`/`RETW` (24-bit) ARE emulated — the core
+performs the register-window spill/fill *net memory effect* directly instead of
+running the overflow/underflow handlers — while the handler machinery itself,
+`MOVSP`, and the handler-only `L32E`/`S32E`/`RFWO`/`RFWU` instructions are
+refused, as is the 16-bit `RETW.N`. (This is mandatory: ESP-IDF app images use
+the windowed ABI by default, so the core could not run real firmware as
+"call0-only.") See the linked spill/fill-as-net-effect and CALL8-frame notes.
 
 | Form     | Decode detail |
 |----------|---------------|
@@ -108,6 +114,8 @@ Source: [[2026-06-11-esp32s3-emulator-core-verification]]
 - [[xtensa-l32r-always-addresses-backward-from-a-4-aligned-pc-because-its-16-bit-immediate-is-one-extended]] — L32R RI16 one-extension detail
 - [[xtensa-load-store-offsets-are-zero-extended-and-scaled-while-addi-and-addmi-offsets-are-sign-extended-and-pdf-text-extraction-garbles-this-distinction]] — RRI8 immediate scaling vs ADDI sign-extension
 - [[emulating-only-24-bit-xtensa-core-instructions-is-sufficient-because-the-esp-toolchain-assembler-emits-no-16-bit-code-density-forms]] — why the 16-bit forms are an honest cut
+- [[an-emulator-that-performs-windowed-spill-and-fill-as-a-magic-net-effect-can-refuse-movsp-and-the-handler-only-l32e-s32e-rfwo-rfwu-instructions]] — how the windowed calls above are emulated (net-effect spill/fill) and exactly which window ops are refused
+- [[a-call8-making-xtensa-function-must-entry-with-a-frame-of-at-least-32-bytes-or-its-save-area-overlaps-the-callers]] — concrete proof CALL8/ENTRY are emulated (frame-size requirement that only matters if they run)
 - [[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]] — the cuts-documentation principle
 - [[a-working-disassembler-source-is-a-stronger-oracle-for-opcode-constants-than-an-isa-overview-pdf-whose-text-extraction-garbles-encodings]] — how the opcode-constant table above was verified (ida-xtensa2 over the garbled PDF)
 - [[the-esp32-s3-xtensa-special-register-numbers-rsr-wsr-rsil-rfe-encodings-exccause-codes-and-core-isa-config-constants-are-fixed-values-an-emulator-must-hardcode]] — companion reference table for RSR/WSR special-register numbers and ISA config constants
