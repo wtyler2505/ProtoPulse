@@ -53,6 +53,7 @@ describe('seed library', () => {
       'core:l293d',
       'core:l298n',
       'core:lcd1602',
+      'core:led-matrix-1088as',
       'core:max7219',
       'core:mpu6050',
       'core:ne555',
@@ -62,6 +63,7 @@ describe('seed library', () => {
       'core:pot-10k',
       'core:raspberry-pi-3bp',
       'core:rc522',
+      'core:seg7-5161as',
       'core:slot-optocoupler',
       'core:soil-moisture',
       'core:srd-05vdc-relay',
@@ -440,6 +442,39 @@ describe('seed library', () => {
     expect(byKey.get('2')).toBe('output'); // OUT (module-driven)
     expect(byKey.get('3')).toBe('power_in'); // VCC
     expect(p?.refPrefix).toBe('U');
+  });
+
+  it('1088AS LED matrix pin map matches the datasheet-verified common-cathode row/col layout', () => {
+    const p = SEED_PARTS.find((x) => x.id === 'core:led-matrix-1088as');
+    expect(p).toBeDefined();
+    expect(p?.pins).toHaveLength(16);
+    const byNumber = new Map(p?.pins.map((x) => [x.number, x.name]));
+    // verified pin->row/col map (non-linear)
+    expect(byNumber.get('13')).toBe('COL1');
+    expect(byNumber.get('9')).toBe('ROW1');
+    expect(byNumber.get('5')).toBe('ROW8');
+    expect(byNumber.get('16')).toBe('COL8');
+    // all pins are passive LED terminals
+    expect(p?.pins.every((x) => x.electricalType === 'passive')).toBe(true);
+    expect(p?.refPrefix).toBe('DS');
+    expect(p?.class).toBe('led');
+  });
+
+  it('5161AS 7-segment pin map matches the datasheet-verified common-cathode layout', () => {
+    const p = SEED_PARTS.find((x) => x.id === 'core:seg7-5161as');
+    expect(p).toBeDefined();
+    expect(p?.pins).toHaveLength(10);
+    const byNumber = new Map(p?.pins.map((x) => [x.number, x.name]));
+    expect(byNumber.get('7')).toBe('A');
+    expect(byNumber.get('1')).toBe('E');
+    expect(byNumber.get('5')).toBe('DP');
+    expect(byNumber.get('10')).toBe('G');
+    // both commons are cathodes (pins 3 and 8, internally tied)
+    expect(byNumber.get('3')).toBe('COM');
+    expect(byNumber.get('8')).toBe('COM');
+    expect(p?.pins.every((x) => x.electricalType === 'passive')).toBe(true);
+    expect(p?.refPrefix).toBe('DS');
+    expect(p?.class).toBe('led');
   });
 
   it('ESP8266EX pin map matches the datasheet-verified QFN-32 layout', () => {

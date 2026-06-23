@@ -2664,6 +2664,117 @@ const esp8266ex = definePart({
     'Pin map VISUALLY verified 2026-06-22 against the official Espressif ESP8266EX datasheet v7.1, Table 2-1 + Figure 2-1 (read as images): QFN-32, 5×5 mm, 0.5 mm pitch, with the center exposed thermal pad as pin 33 = GND. 32 signal pins per the datasheet, datasheet PRIMARY names retained (pins 9/10/12/13 are MTMS/MTDI/MTCK/MTDO with GPIO14/12/13/15 as alt functions; SDIO_DATA_0..3 / SDIO_CMD / SDIO_CLK are GPIO7/8/9/10/11/6; U0RXD/U0TXD are GPIO3/1). ERC: all VDD rails (VDDA ×2, VDD3P3 ×2, VDD_RTC, VDDPST ×2, VDDD) + GND pad = power_in; GPIO/JTAG/SDIO/UART I/O pins = bidi; TOUT (ADC), CHIP_EN, EXT_RSTB (reset), RES12K (12 kΩ bias) = input; XTAL_OUT = output, XTAL_IN = input; LNA (RF antenna) = passive. This is the BARE SoC for custom PCBs — distinct from the NodeMCU ESP8266/ESP-32S modules already in the seed. See inbox/2026-06-22-esp8266ex-pinout.md. No footprint yet — QFN-32 land pattern is a later slice.',
 });
 
+// 1088AS — 8×8 LED dot matrix, 16 pins, COMMON-CATHODE by row (TOP-CC-1088AS-N4). Each LED's
+// anode is on its COLUMN line and cathode on its ROW line: to light an LED, drive its COLUMN
+// HIGH (anode) and pull its ROW LOW (cathode). The pin↔row/col map is NOT linear — taken from
+// the datasheet internal-matrix diagram. All 16 pins are LED terminals → passive. class led,
+// refPrefix DS. Footprint deferred. (CA sibling is the 1088BS — this is the AS = CC part.)
+const ledMatrix1088as = definePart({
+  id: 'core:led-matrix-1088as',
+  name: '1088AS 8×8 LED dot matrix (common-cathode)',
+  refPrefix: 'DS',
+  class: 'led',
+  mpn: '1088AS',
+  manufacturer: 'generic (TOPLITE TOP-CC-1088AS-N4)',
+  datasheetUrl: 'https://www.makerguides.com/wp-content/uploads/2020/06/1088AS-Datasheet.pdf',
+  pins: [
+    pin('1', 'ROW5', 'passive', '1'),
+    pin('2', 'ROW7', 'passive', '2'),
+    pin('3', 'COL2', 'passive', '3'),
+    pin('4', 'COL3', 'passive', '4'),
+    pin('5', 'ROW8', 'passive', '5'),
+    pin('6', 'COL5', 'passive', '6'),
+    pin('7', 'ROW6', 'passive', '7'),
+    pin('8', 'ROW3', 'passive', '8'),
+    pin('9', 'ROW1', 'passive', '9'),
+    pin('10', 'COL4', 'passive', '10'),
+    pin('11', 'COL6', 'passive', '11'),
+    pin('12', 'ROW4', 'passive', '12'),
+    pin('13', 'COL1', 'passive', '13'),
+    pin('14', 'ROW2', 'passive', '14'),
+    pin('15', 'COL7', 'passive', '15'),
+    pin('16', 'COL8', 'passive', '16'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -8 * G, w: 6 * G, h: 16 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: '1088AS', sizeNm: Math.round(G * 0.42) },
+    ],
+    pins: [
+      // left column: ROW1–ROW8 (top→bottom)
+      { key: '9', at: { x: -4 * G, y: 7 * G }, dir: 'W' }, // ROW1
+      { key: '14', at: { x: -4 * G, y: 5 * G }, dir: 'W' }, // ROW2
+      { key: '8', at: { x: -4 * G, y: 3 * G }, dir: 'W' }, // ROW3
+      { key: '12', at: { x: -4 * G, y: G }, dir: 'W' }, // ROW4
+      { key: '1', at: { x: -4 * G, y: -G }, dir: 'W' }, // ROW5
+      { key: '7', at: { x: -4 * G, y: -3 * G }, dir: 'W' }, // ROW6
+      { key: '2', at: { x: -4 * G, y: -5 * G }, dir: 'W' }, // ROW7
+      { key: '5', at: { x: -4 * G, y: -7 * G }, dir: 'W' }, // ROW8
+      // right column: COL1–COL8 (top→bottom)
+      { key: '13', at: { x: 4 * G, y: 7 * G }, dir: 'E' }, // COL1
+      { key: '3', at: { x: 4 * G, y: 5 * G }, dir: 'E' }, // COL2
+      { key: '4', at: { x: 4 * G, y: 3 * G }, dir: 'E' }, // COL3
+      { key: '10', at: { x: 4 * G, y: G }, dir: 'E' }, // COL4
+      { key: '6', at: { x: 4 * G, y: -G }, dir: 'E' }, // COL5
+      { key: '11', at: { x: 4 * G, y: -3 * G }, dir: 'E' }, // COL6
+      { key: '15', at: { x: 4 * G, y: -5 * G }, dir: 'E' }, // COL7
+      { key: '16', at: { x: 4 * G, y: -7 * G }, dir: 'E' }, // COL8
+    ],
+  },
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map VISUALLY verified 2026-06-22 against the makerguides-hosted TOPLITE TOP-CC-1088AS-N4 datasheet internal-matrix diagram (read as an image): 8×8 LED dot matrix, 16 pins, COMMON-CATHODE by row. Each LED anode = its COLUMN line, cathode = its ROW line; light an LED by driving its COLUMN HIGH and pulling its ROW LOW. Pin→row/col map (NOT linear): COL1=13, COL2=3, COL3=4, COL4=10, COL5=6, COL6=11, COL7=15, COL8=16; ROW1=9, ROW2=14, ROW3=8, ROW4=12, ROW5=1, ROW6=7, ROW7=2, ROW8=5. All 16 pins are LED terminals → passive. class led, refPrefix DS. The common-anode sibling is the 1088BS; this is the AS (CC) part. See inbox/2026-06-22-led-matrix-1088as-pinout.md. No footprint yet — land pattern is a later slice.',
+});
+
+// 5161AS — single-digit 0.56" 7-segment display, 10 pins, COMMON-CATHODE. 7 segments + DP +
+// two common-cathode pins (3 and 8, internally tied). Segment→pin map from the datasheet
+// diagram. All pins are LED terminals → passive. class led, refPrefix DS. Footprint deferred.
+// (CA sibling is the 5161BS — this is the AS = CC part.)
+const seg7_5161as = definePart({
+  id: 'core:seg7-5161as',
+  name: '5161AS single-digit 7-segment display (common-cathode)',
+  refPrefix: 'DS',
+  class: 'led',
+  mpn: '5161AS',
+  manufacturer: 'generic (XLITX 5161AS)',
+  datasheetUrl: 'https://www.xlitx.com/datasheet/5161AS.pdf',
+  pins: [
+    pin('1', 'E', 'passive', '1'),
+    pin('2', 'D', 'passive', '2'),
+    pin('3', 'COM', 'passive', '3'), // common cathode (tied to pin 8)
+    pin('4', 'C', 'passive', '4'),
+    pin('5', 'DP', 'passive', '5'),
+    pin('6', 'B', 'passive', '6'),
+    pin('7', 'A', 'passive', '7'),
+    pin('8', 'COM', 'passive', '8'), // common cathode (tied to pin 3)
+    pin('9', 'F', 'passive', '9'),
+    pin('10', 'G', 'passive', '10'),
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -3 * G, y: -5 * G, w: 6 * G, h: 10 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: '5161AS', sizeNm: Math.round(G * 0.42) },
+    ],
+    pins: [
+      // left column: pins 1–5 (top→bottom)
+      { key: '1', at: { x: -4 * G, y: 4 * G }, dir: 'W' }, // E
+      { key: '2', at: { x: -4 * G, y: 2 * G }, dir: 'W' }, // D
+      { key: '3', at: { x: -4 * G, y: 0 }, dir: 'W' }, // COM (cathode)
+      { key: '4', at: { x: -4 * G, y: -2 * G }, dir: 'W' }, // C
+      { key: '5', at: { x: -4 * G, y: -4 * G }, dir: 'W' }, // DP
+      // right column: pins 6–10 (top→bottom)
+      { key: '6', at: { x: 4 * G, y: 4 * G }, dir: 'E' }, // B
+      { key: '7', at: { x: 4 * G, y: 2 * G }, dir: 'E' }, // A
+      { key: '8', at: { x: 4 * G, y: 0 }, dir: 'E' }, // COM (cathode)
+      { key: '9', at: { x: 4 * G, y: -2 * G }, dir: 'E' }, // F
+      { key: '10', at: { x: 4 * G, y: -4 * G }, dir: 'E' }, // G
+    ],
+  },
+  provenance: 'verified',
+  provenanceNote:
+    'Pin map VISUALLY verified 2026-06-22 against the XLITX 5161AS datasheet (spec block "Mode: Common-Cathode" + the page-2 segment/diode diagram, read as an image; diode arrows point toward the shared common rail → common = cathode): single-digit 0.56" 7-segment, 10 pins, COMMON-CATHODE. Segment→pin: A=7, B=6, C=4, D=2, E=1, F=9, G=10, DP=5; the two common-cathode pins are 3 and 8 (internally tied). All pins are LED terminals → passive. class led, refPrefix DS. The common-anode sibling is the 5161BS; this is the AS (CC) part. See inbox/2026-06-22-seg7-5161as-pinout.md. No footprint yet — land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -2714,6 +2825,8 @@ export const SEED_PARTS: Part[] = [
   p30n06le,
   hw221LevelShifter,
   esp8266ex,
+  ledMatrix1088as,
+  seg7_5161as,
   nodemcuEsp8266,
   nodemcuEsp32s,
   raspberryPi3bp,
