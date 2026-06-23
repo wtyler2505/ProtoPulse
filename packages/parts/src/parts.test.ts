@@ -35,6 +35,7 @@ describe('seed library', () => {
       'core:ds1302',
       'core:ds3231',
       'core:esp32-s3-wroom-1',
+      'core:esp8266ex',
       'core:flame-sensor',
       'core:hc-sr04',
       'core:hc-sr501',
@@ -439,6 +440,31 @@ describe('seed library', () => {
     expect(byKey.get('2')).toBe('output'); // OUT (module-driven)
     expect(byKey.get('3')).toBe('power_in'); // VCC
     expect(p?.refPrefix).toBe('U');
+  });
+
+  it('ESP8266EX pin map matches the datasheet-verified QFN-32 layout', () => {
+    const p = SEED_PARTS.find((x) => x.id === 'core:esp8266ex');
+    expect(p).toBeDefined();
+    expect(p?.pins).toHaveLength(33); // 32 signal pins + pin 33 center GND thermal pad
+    const byNumber = new Map(p?.pins.map((x) => [x.number, x]));
+    expect(byNumber.get('1')?.name).toBe('VDDA');
+    expect(byNumber.get('2')?.name).toBe('LNA');
+    expect(byNumber.get('2')?.electricalType).toBe('passive'); // RF antenna
+    expect(byNumber.get('7')?.name).toBe('CHIP_EN');
+    expect(byNumber.get('7')?.electricalType).toBe('input');
+    expect(byNumber.get('27')?.name).toBe('XTAL_OUT');
+    expect(byNumber.get('27')?.electricalType).toBe('output');
+    expect(byNumber.get('28')?.name).toBe('XTAL_IN');
+    expect(byNumber.get('28')?.electricalType).toBe('input');
+    expect(byNumber.get('33')?.name).toBe('GND');
+    expect(byNumber.get('33')?.electricalType).toBe('power_in'); // center thermal pad
+    // GPIO / SDIO I/O pins are bidirectional
+    expect(byNumber.get('15')?.name).toBe('GPIO0');
+    expect(byNumber.get('15')?.electricalType).toBe('bidi');
+    expect(byNumber.get('21')?.name).toBe('SDIO_CLK');
+    expect(byNumber.get('21')?.electricalType).toBe('bidi');
+    expect(p?.refPrefix).toBe('U');
+    expect(p?.class).toBe('ic');
   });
 
   it('HW-221 level shifter pin map matches the diagram-verified VA/A1-A8/OE + VB/B1-B8/GND layout', () => {
