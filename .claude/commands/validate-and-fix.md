@@ -3,13 +3,11 @@ description: Run quality checks and automatically fix issues using concurrent ag
 category: workflow
 allowed-tools: Bash, Task, TodoWrite, Read, Edit, MultiEdit
 ---
-
 # Validate and Fix
 
 Run quality checks and automatically fix discovered issues using parallel execution.
 
 ## House Rule: Errors Are Errors
-
 **Fix ALL of them before moving on.** Never dismiss any error as "pre-existing" or "unrelated." If any check below reports errors, the command is not done until every one is fixed.
 
 ## Process
@@ -17,11 +15,11 @@ Run quality checks and automatically fix discovered issues using parallel execut
 ### 1. SYSTEMATIC PRIORITY-BASED ANALYSIS
 
 #### Known Validation Commands (run these first)
-ProtoPulse's canonical quality gates — all must pass clean:
-1. `npm run check` — TypeScript typecheck (legacy app)
-2. `npm run check:packages` — typecheck the `packages/` engine workspaces
-3. `npm test` — full test suite
-4. `npx eslint .` — lint
+ProtoPulse's canonical quality gates   all must pass clean:
+1. `npm run check`   TypeScript typecheck (legacy app)
+2. `npm run check:packages`   typecheck the `packages/` engine workspaces
+3. `npm test`   full test suite
+4. `npx eslint .`   lint
 
 Also available: `npx prettier --write .` for formatting fixes, `npm run test:packages` for engine tests.
 
@@ -98,8 +96,8 @@ Launch multiple agents concurrently for independent, parallelizable tasks:
 - Parallelizable tasks: Different file fixes, independent test suites, non-overlapping components
 - Sequential tasks: Tasks with dependencies, shared state modifications, ordered phases
 - **Use specialized subagents** when tasks match expert domains (TypeScript, React, testing, databases, etc.)
-- Run `claudekit list agents` to see available specialized experts  
-- Match task requirements to expert domains for optimal results
+  - Run `claudekit list agents` to see available specialized experts
+  - Match task requirements to expert domains for optimal results
 - Use general-purpose approach only when no specialized expert fits
 - Each parallel agent should have non-overlapping responsibilities to avoid conflicts
 - Agents working on related files must understand the shared interfaces

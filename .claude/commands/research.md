@@ -5,10 +5,8 @@ allowed-tools: Task, Read, Write, Edit, Grep, Glob
 category: workflow
 model: sonnet
 ---
-
-# 🔬 Research Command
-
-> **Note:** The `deep-research` skill is the primary research surface (fan-out web searches, adversarial verification, cited report). This command is the agent-dispatch variant — use it when you specifically want parallel `research-expert` subagents with filesystem artifacts.
+# Research Command
+> **Note:** The `deep-research` skill is the primary research surface (fan-out web searches, adversarial verification, cited report). This command is the agent-dispatch variant   use it when you specifically want parallel `research-expert` subagents with filesystem artifacts.
 
 Conduct deep, parallel research on any topic using multiple specialized subagents.
 
@@ -18,23 +16,19 @@ $ARGUMENTS
 ## Research Process
 
 ### Phase 1: Query Classification (CRITICAL FIRST STEP)
-
 **PRIMARY DECISION: Classify the query type to determine research strategy**
 
 #### Query Types:
-
 1. **BREADTH-FIRST QUERIES** (Wide exploration)
    - Characteristics: Multiple independent aspects, survey questions, comparisons
    - Examples: "Compare all major cloud providers", "List board members of S&P 500 tech companies"
    - Strategy: 5-10 parallel subagents, each exploring different aspects
    - Each subagent gets narrow, specific tasks
-
 2. **DEPTH-FIRST QUERIES** (Deep investigation)
    - Characteristics: Single topic requiring thorough understanding, technical deep-dives
    - Examples: "How does transformer architecture work?", "Explain quantum entanglement"
    - Strategy: 2-4 subagents with overlapping but complementary angles
    - Each subagent explores the same topic from different perspectives
-
 3. **SIMPLE FACTUAL QUERIES** (Quick lookup)
    - Characteristics: Single fact, recent event, specific data point
    - Examples: "When was Claude Opus 4.8 released?", "Current CEO of Microsoft"
@@ -47,7 +41,6 @@ $ARGUMENTS
 - **Depth vs Coverage**: How deep vs how wide to search
 
 ### Phase 2: Parallel Research Execution
-
 Based on the query classification, spawn appropriate research subagents IN A SINGLE MESSAGE for true parallelization.
 
 **CRITICAL: Parallel Execution Pattern**
@@ -55,31 +48,25 @@ Use multiple Task tool invocations in ONE message, ALL with subagent_type="resea
 
 **MANDATORY: Start Each Task Prompt with Mode Indicator**
 You MUST begin each task prompt with one of these trigger phrases to control subagent behavior:
-
 - **Quick Verification (3-5 searches)**: Start with "Quick check:", "Verify:", or "Confirm:"
 - **Focused Investigation (5-10 searches)**: Start with "Investigate:", "Explore:", or "Find details about:"
 - **Deep Research (10-15 searches)**: Start with "Deep dive:", "Comprehensive:", "Thorough research:", or "Exhaustive:"
 
 Example Task invocations:
-```
-Task(description="Academic research", prompt="Deep dive: Find all academic papers on transformer architectures from 2017-2026", subagent_type="research-expert")
-Task(description="Quick fact check", prompt="Quick check: Verify the release date of Claude Opus 4.8", subagent_type="research-expert")
-Task(description="Company research", prompt="Investigate: OpenAI's current product offerings and pricing", subagent_type="research-expert")
-```
+- Task(description="Academic research", prompt="Deep dive: Find all academic papers on transformer architectures from 2017-2026", subagent_type="research-expert")
+- Task(description="Quick fact check", prompt="Quick check: Verify the release date of Claude Opus 4.8", subagent_type="research-expert")
+- Task(description="Company research", prompt="Investigate: OpenAI's current product offerings and pricing", subagent_type="research-expert")
 
 This ensures all subagents work simultaneously AND understand the expected search depth through these trigger words.
 
-**Filesystem Artifact Pattern**:
-Each subagent saves full report to `/tmp/research_[timestamp]_[topic].md` and returns only:
+**Filesystem Artifact Pattern**: Each subagent saves full report to `/tmp/research_[timestamp]_[topic].md` and returns only:
 - File path to the full report
 - Brief 2-3 sentence summary
 - Key topics covered
 - Number of sources found
 
 ### Phase 3: Synthesis from Filesystem Artifacts
-
 **CRITICAL: Subagents Return File References, Not Full Reports**
-
 Each subagent will:
 1. Write their full report to `/tmp/research_*.md`
 2. Return only a summary with the file path
@@ -98,7 +85,6 @@ Synthesis Process:
 5. **Write Final Report**: Save synthesized report to `/tmp/research_final_[timestamp].md`
 
 ### Phase 4: Final Report Structure
-
 The synthesized report (written to file) must include:
 
 # Research Report: [Query Topic]
@@ -112,7 +98,6 @@ The synthesized report (written to file) must include:
 3. **[Major Finding 3]** - With supporting evidence from multiple sources
 
 ## Detailed Analysis
-
 ### [Theme 1 - Merged from Multiple Reports]
 [Comprehensive synthesis integrating all relevant subagent findings]
 
@@ -149,9 +134,7 @@ The synthesized report (written to file) must include:
 - Independent exploration prevents bias and groupthink
 
 ## Execution
-
 **Step 1: CLASSIFY THE QUERY** (Breadth-first, Depth-first, or Simple factual)
-
 **Step 2: LAUNCH APPROPRIATE SUBAGENT CONFIGURATION**
 
 ### Example Execution Patterns:
@@ -181,7 +164,6 @@ The synthesized report (written to file) must include:
 Each subagent works independently, writes findings to `/tmp/research_*.md`, and returns a lightweight summary.
 
 ### Step 3: SYNTHESIZE AND DELIVER
-
 After all subagents complete:
 1. Read all research artifact files from `/tmp/research_*.md`
 2. Synthesize findings into comprehensive report

@@ -1,11 +1,9 @@
 ---
 description: Generate a written report for a notebook. Auto-archives.
-argument-hint: [alias=pp-core] [--format "Briefing Doc"|"Study Guide"|"Blog Post"|"Create Your Own"] [--prompt "..."]
+argument-hint: '[alias=pp-core] [--format "Briefing Doc"|"Study Guide"|"Blog Post"|"Create Your Own"] [--prompt "..."]'
 allowed-tools: Bash(nlm:*), Bash(bash:*), AskUserQuestion
 ---
-
 # /pp-report
-
 ## Args
 $ARGUMENTS (defaults: alias=pp-core, format="Briefing Doc")
 

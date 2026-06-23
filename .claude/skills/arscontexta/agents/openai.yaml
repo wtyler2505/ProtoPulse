@@ -1,0 +1,4 @@
+interface:
+  display_name: "ArsContexta"
+  short_description: "Operate ArsContexta vaults from Codex"
+  default_prompt: "Use $arscontexta to orient, query, maintain, or evolve TAS.SPAM and other ArsContexta vaults from Codex."

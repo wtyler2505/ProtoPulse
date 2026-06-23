@@ -4,12 +4,11 @@ category: claude-setup
 allowed-tools: Write, Read, Bash(mkdir:*)
 argument-hint: "[command-name] [description]"
 ---
-
 Create a new Claude Code slash command based on the user's requirements: $ARGUMENTS
 
 For complete slash command documentation, see: https://docs.claude.com/en/docs/claude-code/slash-commands
 
-> **Primary reference:** the `slash-commands-mastery` skill covers the full slash-command lifecycle (frontmatter schema, `$ARGUMENTS`, `!`-prefixed bash context, `@` file references, namespacing, troubleshooting) in depth — load it for anything beyond the quick templates below. This command is the hands-on scaffolder; the skill is the authority.
+> **Primary reference:** the `slash-commands-mastery` skill covers the full slash-command lifecycle (frontmatter schema, `$ARGUMENTS`, `!`-prefixed bash context, `@` file references, namespacing, troubleshooting) in depth   load it for anything beyond the quick templates below. This command is the hands-on scaffolder; the skill is the authority.
 
 First, ask the user to specify the command type:
 - **project** - Add to current project's `.claude/commands/` directory (shared with team)
@@ -28,20 +27,15 @@ Then gather the following information from the user:
 
 ### YAML Frontmatter
 Commands use standardized frontmatter that follows Claude Code's official schema:
-
 ```yaml
----
 # Required field:
 description: Brief description of what the command does
-
 # Security control (highly recommended):
 allowed-tools: Read, Write, Bash(git:*)  # Specify allowed tools
-
 # Optional fields:
 argument-hint: "<feature-name>"  # Help text for expected arguments
 model: sonnet  # opus, sonnet, haiku, or specific model
 category: workflow  # workflow, ai-assistant, or validation
----
 ```
 
 ### Security with allowed-tools
@@ -51,7 +45,6 @@ The `allowed-tools` field provides granular security control:
 - Multiple restrictions: `allowed-tools: Read, Write, Bash(npm:*, git:*)`
 
 ## Features to Support
-
 When creating the command, support these Claude Code features if requested:
 
 **Arguments:** If the user wants dynamic input, use `$ARGUMENTS` placeholder
@@ -66,23 +59,19 @@ When creating the command, support these Claude Code features if requested:
 - Example: `@package.json` to include package.json contents
 
 **Namespacing:** If the command name contains `:`, create subdirectories
-- Example: `/api:create` → `.claude/commands/api/create.md`
-
+- Example: `/api:create`   `.claude/commands/api/create.md`
 
 ## Implementation Steps
-
 1. **Determine Location**
    - If command type not specified, ask the user (project vs personal)
    - For project commands: create `.claude/commands/` directory if needed
    - For personal commands: create `~/.claude/commands/` directory if needed
    - Create subdirectories for namespaced commands (e.g., `api/` for `/api:create`)
-
 2. **Create Command File**
    - Generate `{{COMMAND_NAME}}.md` file in the appropriate directory
    - Include YAML frontmatter if the command needs specific tools
    - Add the command content with any placeholders, bash commands, or file references
    - Ensure proper markdown formatting
-
 3. **Show the User**
    - Display the created command file path
    - Show how to invoke it with `/{{COMMAND_NAME}}`
@@ -90,42 +79,31 @@ When creating the command, support these Claude Code features if requested:
    - Provide a brief example of using the command
 
 ## Command Content Guidelines
-
 Key principle: Write instructions TO the AI agent, not as the AI agent. Use imperative, instructional language rather than first-person descriptions of what the agent will do.
 
 ### Example Command Templates
 
 **Simple Command:**
 ```markdown
----
 description: Create a React component
 allowed-tools: Write
----
 
 Create a new React component named $ARGUMENTS
-
 Component template:
-\```tsx
+\`\`\`tsx
 import React from 'react';
-
 export const $ARGUMENTS: React.FC = () => {
   return <div>$ARGUMENTS Component</div>;
-};
-\```
+\`\`\`
 ```
 
 **Command with Bash and File Analysis:**
 ```markdown
----
 description: Analyze dependencies
 allowed-tools: Read, Bash(npm:*, yarn:*, pnpm:*)
----
 
-Current dependencies:
-@package.json
-
-Outdated packages:
-!npm outdated 2>/dev/null || echo "No outdated packages"
+Current dependencies: @package.json
+Outdated packages: !npm outdated 2>/dev/null || echo "No outdated packages"
 
 Suggest which packages to update based on the above information.
 ```

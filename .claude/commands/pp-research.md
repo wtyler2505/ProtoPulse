@@ -3,9 +3,7 @@ description: Deep-research a topic into pp-research notebook (web mode by defaul
 argument-hint: <topic>
 allowed-tools: Bash(nlm:*), Bash(touch:*), AskUserQuestion
 ---
-
 # /pp-research
-
 Trigger NotebookLM deep-research on a topic, poll until done, confirm before importing.
 
 ## Args

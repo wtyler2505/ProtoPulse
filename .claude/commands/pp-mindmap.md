@@ -1,11 +1,9 @@
 ---
 description: Generate a mind map for a notebook. Auto-archives to docs/nlm-archive/.
-argument-hint: [alias=pp-core] [--title "Topic"]
+argument-hint: "[alias=pp-core] [--title \"Topic\"]"
 allowed-tools: Bash(nlm:*), Bash(bash:*)
 ---
-
 # /pp-mindmap
-
 ## Args
 $ARGUMENTS (defaults: alias=pp-core)
 

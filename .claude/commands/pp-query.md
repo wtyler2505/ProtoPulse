@@ -3,16 +3,13 @@ description: Cross-query the active ProtoPulse NotebookLM corpus (all pp:active 
 argument-hint: <question>
 allowed-tools: Bash(nlm:*)
 ---
-
 # /pp-query
-
 One-shot recall against the full `pp:active` corpus. Use when scope is unclear or crosses `pp-core` and `pp-hardware`.
 
 ## Args
 $ARGUMENTS
 
 ## Steps
-
 1. Verify auth: `nlm login --check`. If fails, halt.
 2. Run: `nlm cross query --tags pp:active "$ARGUMENTS"`.
 3. Print the response verbatim (citations included).

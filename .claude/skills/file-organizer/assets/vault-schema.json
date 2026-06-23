@@ -1,0 +1,23 @@
+{
+  "schemas": {
+    "second_brain": {
+      "folders": [
+        "00_Inbox",
+        "10_Atlas",
+        "20_Cards",
+        "30_Projects",
+        "40_Archives",
+        "99_Meta"
+      ],
+      "description": "Ars Contexta inspired Zettelkasten/Second Brain routing.",
+      "logic": {
+        "00_Inbox": "Unprocessed, newly downloaded, or raw files.",
+        "10_Atlas": "High-level index files, Maps of Content (MOCs), and dashboards.",
+        "20_Cards": "Atomic notes, specific code snippets, single-topic references.",
+        "30_Projects": "Active, time-bound working directories.",
+        "40_Archives": "Completed projects and historical reference data.",
+        "99_Meta": "System templates, scripts, undo logs, and config files."
+      }
+    }
+  }
+}

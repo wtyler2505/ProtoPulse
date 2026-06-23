@@ -1,0 +1,4 @@
+interface:
+  display_name: "ArsContexta Pipeline"
+  short_description: "Process sources into connected findings"
+  default_prompt: "Use $arscontexta-pipeline to seed, reduce, reflect, reweave, verify, and maintain TAS.SPAM content."
