@@ -59,6 +59,7 @@ describe('seed library', () => {
       'core:ne555',
       'core:nodemcu-esp32s',
       'core:nodemcu-esp8266',
+      'core:osepp-bth-01',
       'core:p30n06le',
       'core:pot-10k',
       'core:raspberry-pi-3bp',
@@ -442,6 +443,26 @@ describe('seed library', () => {
     expect(byKey.get('2')).toBe('output'); // OUT (module-driven)
     expect(byKey.get('3')).toBe('power_in'); // VCC
     expect(p?.refPrefix).toBe('U');
+  });
+
+  it('OSEPP BTH-01 pin map matches the verified Uno R3-compatible 32-pin layout', () => {
+    const p = SEED_PARTS.find((x) => x.id === 'core:osepp-bth-01');
+    expect(p).toBeDefined();
+    expect(p?.pins).toHaveLength(32);
+    const byNumber = new Map(p?.pins.map((x) => [x.number, x]));
+    expect(byNumber.get('1')?.name).toBe('NC'); // reserved corner pin
+    expect(byNumber.get('1')?.electricalType).toBe('nc');
+    expect(byNumber.get('8')?.name).toBe('VIN');
+    expect(byNumber.get('15')?.name).toBe('D0'); // RX (shared with onboard WT11 Bluetooth)
+    expect(byNumber.get('16')?.name).toBe('D1'); // TX (shared with onboard WT11 Bluetooth)
+    expect(byNumber.get('13')?.name).toBe('A4'); // I2C SDA
+    expect(byNumber.get('28')?.name).toBe('D13');
+    // standard Uno R3 ERC roles
+    expect(byNumber.get('5')?.electricalType).toBe('power_out'); // 5V
+    expect(byNumber.get('8')?.electricalType).toBe('power_in'); // VIN
+    expect(byNumber.get('9')?.electricalType).toBe('bidi'); // A0
+    expect(p?.refPrefix).toBe('A');
+    expect(p?.class).toBe('ic');
   });
 
   it('1088AS LED matrix pin map matches the datasheet-verified common-cathode row/col layout', () => {

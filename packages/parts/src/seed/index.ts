@@ -2775,6 +2775,108 @@ const seg7_5161as = definePart({
     'Pin map VISUALLY verified 2026-06-22 against the XLITX 5161AS datasheet (spec block "Mode: Common-Cathode" + the page-2 segment/diode diagram, read as an image; diode arrows point toward the shared common rail → common = cathode): single-digit 0.56" 7-segment, 10 pins, COMMON-CATHODE. Segment→pin: A=7, B=6, C=4, D=2, E=1, F=9, G=10, DP=5; the two common-cathode pins are 3 and 8 (internally tied). All pins are LED terminals → passive. class led, refPrefix DS. The common-anode sibling is the 5161BS; this is the AS (CC) part. See inbox/2026-06-22-seg7-5161as-pinout.md. No footprint yet — land pattern is a later slice.',
 });
 
+// OSEPP BTH-01 — Arduino-Uno-R3-compatible main board (ATmega328P @ 16 MHz) with an onboard
+// Bluegiga WT11 Bluetooth 2.1+EDR module wired to the hardware UART, plus a PL2303 USB-serial.
+// VISUALLY confirmed from Tyler's own board photos: full Uno form factor, standard R3 header
+// rows, ICSP, the WT11 module, PL2303. Its user-facing pinout IS the standard Arduino Uno R3
+// header layout (shield-compatible), so the 32-pin map mirrors core:arduino-uno-r3 exactly;
+// the WT11 sits on the UART internally, so D0(RX)/D1(TX) are shared with onboard Bluetooth.
+// (Distinct from OSEPP's BTM-01 — the small BC417/HC-06-style serial MODULE the catalog had
+// conflated with this board.) refPrefix A, class ic. Footprint deferred.
+const oseppBth01 = definePart({
+  id: 'core:osepp-bth-01',
+  name: 'OSEPP BTH-01 Bluetooth Arduino board (ATmega328P + WT11)',
+  refPrefix: 'A',
+  class: 'ic',
+  mpn: 'BTH-01',
+  manufacturer: 'OSEPP (ATmega328P + Bluegiga WT11)',
+  datasheetUrl: 'https://osepp.com/electronic-modules/microcontroller-boards/99-osepp-bluetooth',
+  pins: [
+    // POWER header (8 pins; the corner pin is reserved/NC per the Uno R3 layout)
+    pin('1', 'NC', 'nc', '1'), // reserved corner pin of the R3 power header
+    pin('2', 'IOREF', 'power_out', '2'), // logic-voltage reference out to shields
+    pin('3', 'RESET', 'input', '3'), // active-low reset
+    pin('4', '3V3', 'power_out', '4'), // regulated 3.3 V out
+    pin('5', '5V', 'power_out', '5'), // regulated 5 V out
+    pin('6', 'GND', 'power_in', '6'),
+    pin('7', 'GND', 'power_in', '7'),
+    pin('8', 'VIN', 'power_in', '8'), // 7–12 V recommended
+    // ANALOG header
+    pin('9', 'A0', 'bidi', '9'),
+    pin('10', 'A1', 'bidi', '10'),
+    pin('11', 'A2', 'bidi', '11'),
+    pin('12', 'A3', 'bidi', '12'),
+    pin('13', 'A4', 'bidi', '13'), // I²C SDA
+    pin('14', 'A5', 'bidi', '14'), // I²C SCL
+    // DIGITAL lower header (D0–D7)
+    pin('15', 'D0', 'bidi', '15'), // RX — shared with onboard WT11 Bluetooth
+    pin('16', 'D1', 'bidi', '16'), // TX — shared with onboard WT11 Bluetooth
+    pin('17', 'D2', 'bidi', '17'),
+    pin('18', 'D3', 'bidi', '18'), // PWM
+    pin('19', 'D4', 'bidi', '19'),
+    pin('20', 'D5', 'bidi', '20'), // PWM
+    pin('21', 'D6', 'bidi', '21'), // PWM
+    pin('22', 'D7', 'bidi', '22'),
+    // DIGITAL upper header (D8–D13 + GND, AREF, SDA, SCL)
+    pin('23', 'D8', 'bidi', '23'),
+    pin('24', 'D9', 'bidi', '24'), // PWM
+    pin('25', 'D10', 'bidi', '25'), // SPI SS / PWM
+    pin('26', 'D11', 'bidi', '26'), // SPI MOSI / PWM
+    pin('27', 'D12', 'bidi', '27'), // SPI MISO
+    pin('28', 'D13', 'bidi', '28'), // SPI SCK (onboard LED)
+    pin('29', 'GND', 'power_in', '29'),
+    pin('30', 'AREF', 'input', '30'), // ADC reference in
+    pin('31', 'SDA', 'bidi', '31'), // dedicated I²C (= A4 net)
+    pin('32', 'SCL', 'bidi', '32'), // dedicated I²C (= A5 net)
+  ],
+  symbol: {
+    primitives: [
+      { kind: 'rect', x: -4 * G, y: -16 * G, w: 8 * G, h: 32 * G },
+      { kind: 'text', at: { x: 0, y: 0 }, text: 'BTH-01', sizeNm: Math.round(G * 0.6) },
+    ],
+    pins: [
+      // left column: keys 1–16 (y 15G..−15G, step −2G)
+      { key: '1', at: { x: -5 * G, y: 15 * G }, dir: 'W' },
+      { key: '2', at: { x: -5 * G, y: 13 * G }, dir: 'W' },
+      { key: '3', at: { x: -5 * G, y: 11 * G }, dir: 'W' },
+      { key: '4', at: { x: -5 * G, y: 9 * G }, dir: 'W' },
+      { key: '5', at: { x: -5 * G, y: 7 * G }, dir: 'W' },
+      { key: '6', at: { x: -5 * G, y: 5 * G }, dir: 'W' },
+      { key: '7', at: { x: -5 * G, y: 3 * G }, dir: 'W' },
+      { key: '8', at: { x: -5 * G, y: 1 * G }, dir: 'W' },
+      { key: '9', at: { x: -5 * G, y: -1 * G }, dir: 'W' },
+      { key: '10', at: { x: -5 * G, y: -3 * G }, dir: 'W' },
+      { key: '11', at: { x: -5 * G, y: -5 * G }, dir: 'W' },
+      { key: '12', at: { x: -5 * G, y: -7 * G }, dir: 'W' },
+      { key: '13', at: { x: -5 * G, y: -9 * G }, dir: 'W' },
+      { key: '14', at: { x: -5 * G, y: -11 * G }, dir: 'W' },
+      { key: '15', at: { x: -5 * G, y: -13 * G }, dir: 'W' },
+      { key: '16', at: { x: -5 * G, y: -15 * G }, dir: 'W' },
+      // right column: keys 17–32 (y 15G..−15G, step −2G)
+      { key: '17', at: { x: 5 * G, y: 15 * G }, dir: 'E' },
+      { key: '18', at: { x: 5 * G, y: 13 * G }, dir: 'E' },
+      { key: '19', at: { x: 5 * G, y: 11 * G }, dir: 'E' },
+      { key: '20', at: { x: 5 * G, y: 9 * G }, dir: 'E' },
+      { key: '21', at: { x: 5 * G, y: 7 * G }, dir: 'E' },
+      { key: '22', at: { x: 5 * G, y: 5 * G }, dir: 'E' },
+      { key: '23', at: { x: 5 * G, y: 3 * G }, dir: 'E' },
+      { key: '24', at: { x: 5 * G, y: 1 * G }, dir: 'E' },
+      { key: '25', at: { x: 5 * G, y: -1 * G }, dir: 'E' },
+      { key: '26', at: { x: 5 * G, y: -3 * G }, dir: 'E' },
+      { key: '27', at: { x: 5 * G, y: -5 * G }, dir: 'E' },
+      { key: '28', at: { x: 5 * G, y: -7 * G }, dir: 'E' },
+      { key: '29', at: { x: 5 * G, y: -9 * G }, dir: 'E' },
+      { key: '30', at: { x: 5 * G, y: -11 * G }, dir: 'E' },
+      { key: '31', at: { x: 5 * G, y: -13 * G }, dir: 'E' },
+      { key: '32', at: { x: 5 * G, y: -15 * G }, dir: 'E' },
+    ],
+  },
+  parametrics: { maxVoltage: 12 }, // VIN 7–12 V recommended
+  provenance: 'verified',
+  provenanceNote:
+    'Identity + form factor VISUALLY verified 2026-06-22 from Tyler\'s own board photos (images/OSEPP-BTH-01 (Rev1.1).jpeg + images/BTH_01_1_-374-300-225-80.jpg): full Arduino Uno form factor with standard R3 header rows, an ICSP header, an onboard Bluegiga WT11 Bluetooth module, and a PL2303 USB-serial chip — i.e. the OSEPP BTH-01 Arduino MAIN BOARD (ATmega328P @ 16 MHz), NOT the small BC417 serial module. This corrects the owner catalog, which conflated BTH-01 with OSEPP\'s separate BTM-01 (the HC-06-style serial module). The board is shield-compatible, so its user-facing pinout IS the standard Arduino Uno R3 header layout (32 modeled pins, identical net assignment to core:arduino-uno-r3): POWER (NC/IOREF/RESET/3V3/5V/GND/GND/VIN), ANALOG (A0–A5, A4/A5 = I²C), DIGITAL D0–D13 + GND/AREF/SDA/SCL. The WT11 Bluetooth is wired to the hardware UART internally, so D0(RX)/D1(TX) are shared with onboard Bluetooth. ERC: GPIO bidi, analog/RESET/AREF input, IOREF/3V3/5V power_out, VIN/GND power_in. refPrefix A, class ic. See inbox/2026-06-22-osepp-bth-01-pinout.md. No footprint yet — board land pattern is a later slice.',
+});
+
 export const SEED_PARTS: Part[] = [
   resistor,
   capacitor,
@@ -2827,6 +2929,7 @@ export const SEED_PARTS: Part[] = [
   esp8266ex,
   ledMatrix1088as,
   seg7_5161as,
+  oseppBth01,
   nodemcuEsp8266,
   nodemcuEsp32s,
   raspberryPi3bp,
