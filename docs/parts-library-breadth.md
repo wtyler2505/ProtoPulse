@@ -65,6 +65,13 @@ of the now-certified ESP32-S3 emulator base.
 - [x] `core:pot-10k` — 10K rotary potentiometer (3-terminal A/WIPER/B; fills variable-resistor gap). 2026-06-22
 - [x] `core:p30n06le` — P30N06LE/RFP30N06LE logic-level N-MOSFET (TO-220 G/D/S; web-verified). 2026-06-22
 - [ ] **HW-221 logic level converter — PARKED, needs diagram verification.** It's a TXS0108E/YF08E 8-channel module (NOT BSS138), 2 rows of ~10 (VA/A1–A8/GND ‖ VB/B1–B8/GND), but the OE-pin placement + exact header order aren't text-resolvable — needs a high-res pinout image (browser pass) before modeling. Do NOT model from the incomplete web text.
+- [ ] **Membrane Switch Module — PARKED, ambiguous.** Log entry (line 1086) is vague ("multiple tactile switches + status LEDs", no pin labels/count); the cheap membrane modules vary (3-button vs 4-button, LED-per-key vs not, differing pin order). Needs Tyler's exact module identified + a diagram before modeling. Do NOT fabricate.
+
+## Remaining queue (needs browser/diagram passes — do in a FRESH session, not at a context wall)
+The clean, datasheet-/text-verifiable parts Tyler owns are now harvested (11 parts landed 2026-06-22). What's left needs visual verification or is a low-value variant of an existing part:
+- **Browser/diagram passes:** HW-221 level converter (parked above); OSEPP/SainSmart/DK/Velleman shields (line 323/363/566/609/649/690/730); 2.8" TFT LCD shield ili9341 (966); membrane module (parked above).
+- **Bare chip (lower reuse):** ESP8266EX (526) — 32-pin QFN, datasheet-exact but a bare module-less chip.
+- **Low-value variants of already-added parts (skip unless asked):** sound-sensor alt variant (1171), single LED module (1605), single-digit 7-seg (2973), 8×8 LED dot-matrix (3028, variant-risky), vibration reed/spring variants (1703/1752/2113), sound-detection variant (3321), IR-obstacle dup (3409), RC522 remote (1046), OSEPP IR follower (888), OSEPP solderable breadboards (810/849).
 
 ## High-value candidates from the component log (suggested priority)
 Tier 1 — common, well-documented, high reuse:
