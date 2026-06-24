@@ -2221,6 +2221,13 @@ interface PcntUnit {
   pendingPulseCycle: number[];
 }
 
+/**
+ * An installed I2C slave device: answers a master register read at `address`
+ * (7-bit) / `register` with the byte to return. Lets a modeled peripheral (a
+ * sensor's register map) respond to firmware-driven master transactions.
+ */
+export type I2cSlave = (address: number, register: number) => number;
+
 interface I2cController {
   regs: Map<number, number>;
   commands: number[];
@@ -2233,6 +2240,7 @@ interface I2cController {
   maps: InterruptMapPair;
   writeLog: number[];
   lastAck: 0 | 1;
+  slave?: I2cSlave;
 }
 
 interface SpiController {
@@ -3322,6 +3330,17 @@ export class Esp32s3Core implements McuCore {
 
   setAdcSampler(fn: AdcSampler): void {
     this.sampler = fn;
+  }
+
+  /**
+   * Install an I2C slave device on a controller port. The emulated master's
+   * register reads call `fn(address, register)` for each byte (the register
+   * auto-increments across a burst read); pass null to remove it. Without a
+   * slave, reads return 0 (the prior synthetic-zero behavior).
+   */
+  setI2cSlave(port: 0 | 1, fn: I2cSlave | null): void {
+    const ctrl = this.i2c[port];
+    if (ctrl) ctrl.slave = fn ?? undefined;
   }
 
   drainAdcReads(): AdcReadRequest[] {
@@ -5125,6 +5144,10 @@ export class Esp32s3Core implements McuCore {
     let sawStop = false;
     let stopped = false;
     ctrl.lastAck = 0;
+    // Bytes written in THIS transaction (addr, register, …) so an installed
+    // slave can recover the device address + register pointer for reads.
+    const written: number[] = [];
+    let readIndex = 0;
     for (let i = 0; i < I2C_CMD_COUNT && !stopped; i++) {
       const command = ctrl.commands[i] ?? 0;
       const payload = command & I2C_COMMAND_MASK;
@@ -5139,6 +5162,7 @@ export class Esp32s3Core implements McuCore {
             const byte = ctrl.txFifo.shift() ?? ctrl.txMem[txMemCursor] ?? 0;
             txMemCursor++;
             ctrl.writeLog.push(byte & 0xff);
+            written.push(byte & 0xff);
           }
           const ackExpected = (payload & I2C_CMD_ACK_EXP) !== 0 ? 1 : 0;
           if ((payload & I2C_CMD_ACK_EN) !== 0 && ackExpected !== ctrl.lastAck) {
@@ -5149,13 +5173,20 @@ export class Esp32s3Core implements McuCore {
         }
         case I2C_LL_CMD_READ: {
           const count = payload & I2C_CMD_BYTE_NUM_MASK;
+          // Recover the device address + register pointer from the bytes
+          // written earlier in this transaction (addr+W, reg, addr+R); a burst
+          // read auto-increments the register.
+          const addr = (written[0] ?? 0) >> 1;
+          const regBase = written[1] ?? 0;
           for (let n = 0; n < count; n++) {
             if (ctrl.rxFifo.length >= I2C_FIFO_LEN) {
               ctrl.intRaw |= I2C_RXFIFO_OVF_INT;
               break;
             }
-            ctrl.rxFifo.push(0);
-            ctrl.rxMem[ctrl.rxFifo.length - 1] = 0;
+            const byte = ctrl.slave ? ctrl.slave(addr, (regBase + readIndex) & 0xff) & 0xff : 0;
+            readIndex++;
+            ctrl.rxFifo.push(byte);
+            ctrl.rxMem[ctrl.rxFifo.length - 1] = byte;
           }
           break;
         }

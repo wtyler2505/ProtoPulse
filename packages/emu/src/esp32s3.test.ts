@@ -7992,6 +7992,55 @@ describe('Esp32s3Core — peripheral interrupt lines through the matrix (slice 6
     expect([...c.drainI2cWrites(1)]).toEqual([0xa0]);
   });
 
+  it('a master register read returns the installed I2C slave byte (chip-ID KAT)', () => {
+    // The full ESP-IDF i2c_master register-read shape: write [addr+W, reg],
+    // RESTART, write [addr+R], READ 1 byte. A BME280-style slave at 0x76
+    // answers its chip-ID register 0xD0 with 0x60. Without setI2cSlave the read
+    // returns 0 (the synthetic-zero path); the slave hook makes the emulated
+    // master deliver the modeled register byte to the firmware.
+    const ADDR_W = (0x76 << 1) | 0; // 0xEC
+    const REG = 0xd0;
+    const ADDR_R = (0x76 << 1) | 1; // 0xED
+    const WRITE2_ACK = 2 | (1 << 8) | (1 << 11);
+    const WRITE1_ACK = 1 | (1 << 8) | (1 << 11);
+    const READ1 = 1 | (3 << 11);
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [I2C0, UART, ADDR_W, REG, ADDR_R, WRITE2_ACK, I2C_CMD_RESTART, WRITE1_ACK, READ1, I2C_CMD_STOP, I2C_CMD_END],
+      [
+        L32R(2, 0), // a2 = I2C0
+        L32R(6, 1), // a6 = UART0
+        L32R(3, 2),
+        S32I(3, 2, 0x1c), // TXFIFO <- addr+W (0xEC)
+        L32R(3, 3),
+        S32I(3, 2, 0x1c), // TXFIFO <- reg (0xD0)
+        L32R(3, 4),
+        S32I(3, 2, 0x1c), // TXFIFO <- addr+R (0xED)
+        L32R(3, 5),
+        S32I(3, 2, 0x58), // COMD0 = WRITE 2 (+ACK): addr+W, reg
+        L32R(3, 6),
+        S32I(3, 2, 0x5c), // COMD1 = RESTART
+        L32R(3, 7),
+        S32I(3, 2, 0x60), // COMD2 = WRITE 1 (+ACK): addr+R
+        L32R(3, 8),
+        S32I(3, 2, 0x64), // COMD3 = READ 1
+        L32R(3, 9),
+        S32I(3, 2, 0x68), // COMD4 = STOP
+        L32R(3, 10),
+        S32I(3, 2, 0x6c), // COMD5 = END
+        MOVI(3, 0x20),
+        S32I(3, 2, 0x04), // TRANS_START — runs the transaction
+        L32I(4, 2, 0x1c), // a4 = RXFIFO byte (chip ID)
+        S32I(4, 6, 0), // UART <- chip ID
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.setI2cSlave(0, (address, register) => (address === 0x76 && register === 0xd0 ? 0x60 : 0xff));
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([0x60]);
+  });
+
   it('runs a GPSPI2 CPU-FIFO master write and routes TRANS_DONE through SPI2_DMA', () => {
     // Context7: ESP-IDF v5.5.4 SPI master polling completion waits for
     // cmd.usr to clear; source-checked against spi_reg.h/GPSPI2 plus
