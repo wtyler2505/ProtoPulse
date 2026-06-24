@@ -42,12 +42,16 @@ export {
   type Esp32s3TwaiErrorState,
   type Esp32s3TwaiEvent,
   type Esp32s3TwaiFrame,
+  type I2cSlave,
   esp32s3PinId,
   ESP32S3_IRAM_BASE,
   ESP32S3_DRAM_BASE,
   ESP32S3_GPIO_BASE,
   ESP32S3_UART0_BASE,
+  ESP32S3_I2C0_BASE,
+  ESP32S3_I2C1_BASE,
 } from './esp32s3.js';
+export { i2cRegisterDevice, mpu6050, type Mpu6050State } from './i2c-devices.js';
 export * as xt from './xtensa-asm.js';
 export { XtensaCpu, type XtensaBus } from './xtensa.js';
 export type {
