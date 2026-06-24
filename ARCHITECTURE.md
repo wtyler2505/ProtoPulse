@@ -14,6 +14,9 @@ describes. One home per fact; pointers everywhere else.
 
 **The legacy app (`client/ server/ shared/` — still the shipping product):**
 - [`DESIGN.md`](./DESIGN.md) — design language + the engine chapter.
+- [`docs/figma-design-system.md`](./docs/figma-design-system.md) — design-system
+  rules for Figma MCP integration (Tailwind v4 `@theme` tokens, shadcn/ui, lucide;
+  target the legacy `client/` system, not the engine editor).
 - [`docs/DEVELOPER.md`](./docs/DEVELOPER.md) — dev setup for both stacks.
 - [`docs/adr/`](./docs/adr/) — decision records, legacy and engine alike.
 
