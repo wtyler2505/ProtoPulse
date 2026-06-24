@@ -1991,6 +1991,11 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       the I²C sensor class (BME280, MPU-6050) that exchanges register bytes over
       the bus rather than sourcing a voltage. Device-model registry + cosim
       bus-device binding are the follow-ups.
+      **First I²C device landed 2026-06-24 (BL-0893):** the GY-521/MPU-6050
+      6-axis IMU (`mpu6050` in `@protopulse/emu`'s `i2c-devices.ts`) — unmodified
+      firmware reads WHO_AM_I → 0x68 and burst-reads the accel registers through
+      the slave hook. `i2cRegisterDevice(map)` is the reusable register-map
+      device helper. Remaining: a cosim bus-device binding (parametrized values).
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

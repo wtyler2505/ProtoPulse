@@ -2,6 +2,24 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-24 — First real I²C device: GY-521/MPU-6050 6-axis IMU (BL-0893)
+
+### Added
+- **`@protopulse/emu` I²C device models** (`i2c-devices.ts`): `i2cRegisterDevice(map)`
+  builds an `I2cSlave` from a register map (absent registers read 0); `mpu6050(state)`
+  models the GY-521/MPU-6050 at address 0x68 — WHO_AM_I (0x75)=0x68, PWR_MGMT_1
+  (0x6B)=0x40 (the device's SLEEP reset default), and big-endian signed-16-bit
+  ACCEL/GYRO registers from 0x3B. Register map web-verified (InvenSense MPU register
+  map, kriswiner/MPU6050). Exported from the package index for downstream (co-sim) reuse.
+- **`i2c-devices.test.ts`** (3 tests): unmodified firmware reads WHO_AM_I → **0x68** (the
+  canonical MPU-6050 identity check) and 2-byte burst-reads ACCEL_XOUT_H/L → **0x12/0x34**
+  from an `accelX=0x1234` device — exercising the BL-0892 slave hook's register
+  auto-increment; unset axes read 0. The first real sensor over the I²C master+slave path.
+
+### Verified
+- On main: `npm run -w @protopulse/emu test` → **7 files / 329 tests pass** (+3).
+  Targeted `tsc --noEmit` on `@protopulse/emu` (incl. the package index) → **EXIT=0**.
+
 ## 2026-06-23 — I²C slave-device hook: foundation for I²C digital-sensor co-sim (BL-0892)
 
 ### Added
