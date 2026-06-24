@@ -1978,6 +1978,9 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       TMP36 analog temperature sensor → ADC co-sim — `core:tmp36` SPICE emitter
       (`@protopulse/sim`) + `packages/cosim/src/quantum.tmp36.cosim.test.ts`
       (firmware reads track the sensor node: 0.75 V @ 25 °C, 1.00 V @ 50 °C).
+      **Slice 2 landed 2026-06-23 (BL-0890):** potentiometer (`core:pot-10k`) →
+      ADC — a 3-terminal wiper divider (`emitPot10k`), firmware tracks the
+      variable wiper (2.31 V @ pos 0.3, 0.99 V @ pos 0.7).
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

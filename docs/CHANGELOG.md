@@ -2,6 +2,27 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-23 — Breadth slice 2: potentiometer → ADC co-sim (BL-0890)
+
+### Added
+- **`core:pot-10k` SPICE emitter** (`@protopulse/sim`, `models.ts`): the 10 kΩ rotary
+  potentiometer, a 3-terminal voltage divider — two resistors summing to 10 kΩ
+  (A–WIPER = 10k·pos, WIPER–B = 10k·(1−pos)), where the wiper fraction `pos` (A→B,
+  default 0.5) rides on the placed part's `value` (1 Ω floor avoids a 0 Ω element at the
+  travel limits). Generalizes the slice-1 analog-ADC pattern from a 2-pin source to a
+  3-terminal device.
+- **`packages/cosim/src/quantum.pot.cosim.test.ts`** — breadth slice 2, built TDD. Real
+  closed loop: VCC(3.3 V) → pot A, WIPER → MID (ADC ch0), B → GND, so `V_wiper = 3.3·(1−pos)`.
+  A real `Esp32s3Core` runs `esp32s3-adc0-read.bin` through `runCosimClosedLoop`; asserts
+  MID solves **2.31 V @ pos 0.3** and **0.99 V @ pos 0.7**, settled ADC reads track ±0.005 V,
+  UART code = round(V/3.3 × 4095). The pos=0.7 case proves a *variable* input — different
+  wiper positions solve to different node voltages, which the firmware reads back.
+
+### Verified
+- On main: `npm run -w @protopulse/cosim test` → **7 files / 79 tests pass** (was 74; +5).
+  Targeted `tsc --noEmit` on `@protopulse/sim` and `@protopulse/cosim` → **EXIT=0** (the
+  project-wide `check:packages` OOM-terminates — the known trap; verified per-package).
+
 ## 2026-06-23 — Breadth slice 1: TMP36 analog sensor → ADC co-sim (BL-0889)
 
 ### Added
