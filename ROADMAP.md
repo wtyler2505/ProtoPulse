@@ -1985,6 +1985,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       (`core:soil-moisture`) → ADC — a supply-dependent B-source
       (`emitSoilMoisture`, AO = V·(1−moisture)); firmware tracks 2.475 V @
       moisture 0.25 / 0.825 V @ 0.75 (wet < dry).
+      **I²C digital-sensor foundation landed 2026-06-23 (BL-0892):** the emu
+      I²C master gained a slave-device hook (`Esp32s3Core.setI2cSlave`) so
+      firmware register-reads return modeled bytes instead of zeros — unblocks
+      the I²C sensor class (BME280, MPU-6050) that exchanges register bytes over
+      the bus rather than sourcing a voltage. Device-model registry + cosim
+      bus-device binding are the follow-ups.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -2,6 +2,30 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-23 — I²C slave-device hook: foundation for I²C digital-sensor co-sim (BL-0892)
+
+### Added
+- **`Esp32s3Core.setI2cSlave(port, fn)`** (`@protopulse/emu`): the ESP32-S3 I²C master
+  previously filled every RX-FIFO read with hardcoded zeros — a connected device could
+  not answer. The new hook lets a modeled slave respond: during a master transaction the
+  emulator recovers the 7-bit device address + register pointer from the bytes written
+  this transaction (the standard `write [addr+W, reg]` → restart → `write [addr+R]` →
+  `read` shape) and calls `fn(address, register)` for each read byte (the register
+  auto-increments across a burst read). Passing `null` removes it; **with no slave,
+  reads still return 0 — no regression** to the existing master-read behavior.
+- New emu test: a BME280-style slave at address `0x76` answers its chip-ID register
+  `0xD0` with `0x60`, and firmware reads it back over a real I²C master transaction.
+
+This is the **foundation for the next breadth class — I²C digital sensors** (BME280,
+GY-521/MPU-6050, …), which (unlike the analog→ADC slices) exchange register bytes over
+the bus rather than sourcing a voltage. A device-model registry + a cosim bus-device
+binding build on this hook in follow-ups.
+
+### Verified
+- On main: `npm run -w @protopulse/emu test` → **6 files / 326 tests pass** (239 ESP32-S3,
+  incl. the new I²C slave test; the existing no-slave READ test still returns zeros).
+  Targeted `tsc --noEmit` on `@protopulse/emu` → **EXIT=0**.
+
 ## 2026-06-23 — Breadth slice 3: FC-28 soil moisture → ADC co-sim (BL-0891)
 
 ### Added
