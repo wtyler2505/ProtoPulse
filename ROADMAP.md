@@ -2005,6 +2005,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       I²C device (`bme280`, chip-ID 0x60) + `I2C_DEVICES_BY_PART_ID` /
       `i2cDeviceForPart` so a placed I²C part auto-resolves its model (the
       bus-device parallel to the analog `EMITTERS_BY_PART_ID`).
+      **I²C graph-auto-resolve landed 2026-06-24 (BL-0896):** `i2cDevicesFromGraph`
+      turns the I²C parts placed in a design into `runCosimClosedLoop` device
+      bindings via the registry — the I²C sensor path is now usable straight
+      from a design (place a sensor, run co-sim, firmware reads it).
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

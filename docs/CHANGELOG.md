@@ -2,6 +2,22 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-24 — Auto-resolve I²C devices from the design graph (BL-0896)
+
+### Added
+- **`i2cDevicesFromGraph(graph)`** (`@protopulse/cosim`): scans a `DesignGraph`'s
+  components, resolves each modeled I²C part via the `@protopulse/emu` registry
+  (`i2cDeviceForPart`), and returns `ClosedLoopSpec.i2cDevices` bindings (port 0; DNP parts
+  skipped). A caller feeds it straight to `runCosimClosedLoop` — no hand-listing sensors.
+  Port 0 is the convention: the ESP32-S3 muxes I²C over the GPIO matrix, so which
+  controller a sensor uses is firmware-decided, not graph-encoded. Exported from the index.
+- Completes the I²C-sensor-usable-from-a-design path: place a `core:mpu6050` /
+  `core:bme280` → `i2cDevicesFromGraph` → `runCosimClosedLoop` reads it back.
+
+### Verified
+- On main: `npm run -w @protopulse/cosim test` → **10 files / 87 tests pass** (+2).
+  Targeted `tsc --noEmit` on `@protopulse/cosim` → **EXIT=0**.
+
 ## 2026-06-24 — BME280 I²C device + part→device registry (BL-0895)
 
 ### Added
