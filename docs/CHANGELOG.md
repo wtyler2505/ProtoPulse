@@ -2,6 +2,27 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-23 — Breadth slice 3: FC-28 soil moisture → ADC co-sim (BL-0891)
+
+### Added
+- **`core:soil-moisture` SPICE emitter** (`@protopulse/sim`, `models.ts`): the FC-28
+  resistive soil-moisture module. Its analog output AO (pin 4) is modeled as a
+  **supply-dependent behavioral source** (a SPICE B-source, unlike the fixed DC sources
+  of slices 1–2): `AO = V_supply · (1 − moisture)`, referenced to GND. Web-verified
+  direction — dry soil → high AO (≈VCC), wet soil → low AO (≈0). The moisture fraction
+  (0=dry … 1=wet, default 0.5) rides on the placed part's `value`; a simplified linear
+  stand-in for the real non-linear, board-dependent curve (the digital DO is not modeled).
+- **`packages/cosim/src/quantum.soil.cosim.test.ts`** — breadth slice 3, built TDD. Real
+  closed loop: VCC(3.3 V) → soil VCC, AO → MID (ADC ch0); real `Esp32s3Core` runs
+  `esp32s3-adc0-read.bin` through `runCosimClosedLoop`. Asserts MID solves **2.475 V @
+  moisture 0.25** and **0.825 V @ moisture 0.75**, settled ADC reads track ±0.005 V, UART
+  code = round(V/3.3 × 4095), and wetter soil reads lower (`wet < dry`) — moisture drives
+  the reading. First slice to exercise a supply-dependent B-source through the closed loop.
+
+### Verified
+- On main: `npm run -w @protopulse/cosim test` → **8 files / 84 tests pass** (was 79; +5).
+  Targeted `tsc --noEmit` on `@protopulse/sim` and `@protopulse/cosim` → **EXIT=0**.
+
 ## 2026-06-23 — Breadth slice 2: potentiometer → ADC co-sim (BL-0890)
 
 ### Added

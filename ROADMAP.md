@@ -1981,6 +1981,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       **Slice 2 landed 2026-06-23 (BL-0890):** potentiometer (`core:pot-10k`) →
       ADC — a 3-terminal wiper divider (`emitPot10k`), firmware tracks the
       variable wiper (2.31 V @ pos 0.3, 0.99 V @ pos 0.7).
+      **Slice 3 landed 2026-06-23 (BL-0891):** FC-28 soil moisture
+      (`core:soil-moisture`) → ADC — a supply-dependent B-source
+      (`emitSoilMoisture`, AO = V·(1−moisture)); firmware tracks 2.475 V @
+      moisture 0.25 / 0.825 V @ 0.75 (wet < dry).
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
