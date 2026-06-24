@@ -2026,6 +2026,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       Device catalog so far: I²C — MPU-6050, BME280, DS3231 (BL-0900); SPI —
       RC522. Each `core:*` part auto-resolves into a co-sim run; adding more is
       a register-map + registry entry.
+      **Wired into the app 2026-06-24 (BL-0901):** running a closed-loop co-sim
+      in the editor auto-installs device models for placed I²C/SPI parts — the
+      device layer is usable end to end from the product (place a sensor → run →
+      firmware reads it), not just from the cosim API.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

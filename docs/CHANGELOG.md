@@ -2,6 +2,26 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-24 — Co-sim in the editor auto-installs device models for placed I²C/SPI parts (BL-0901)
+
+### Added
+- **Device auto-install in the app's closed-loop co-sim runner** (`packages/app/src/cosim/runner.ts`):
+  running a co-sim from the editor now auto-installs the device model for any placed modeled
+  I²C/SPI part (MPU-6050, BME280, DS3231, RC522) — no manual wiring. The runner resolves
+  `spec.i2cDevices`/`spec.spiDevices` via the lazily-loaded cosim module's `i2cDevicesFromGraph`/
+  `spiDevicesFromGraph` when the caller omits them; an explicit list still wins (`??`
+  short-circuits, skipping graph resolution). The helpers are probed (optional) so older cosim
+  builds degrade gracefully.
+- App cosim types gained `I2cDeviceBinding`/`SpiDeviceBinding`, `ClosedLoopSpec.i2cDevices`/
+  `spiDevices`, and `CosimModule.*FromGraph` (the package's local pinned-API mirror).
+
+This is the product payoff of the device layer (BL-0892→0900): **place a sensor → run a
+co-sim → firmware reads it, zero config.**
+
+### Verified
+- On main: `npm run -w @protopulse/app test -- cosim/runner` → **19 tests pass** (+2: auto-resolve
+  from graph into the spec; explicit `i2cDevices` not overridden). App `tsc` → **EXIT=0**.
+
 ## 2026-06-24 — DS3231 RTC I²C device model (BL-0900)
 
 ### Added
