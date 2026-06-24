@@ -8,6 +8,7 @@ import {
   DEFAULT_VIL_V,
   closedLoopSpecSchema,
   hasAdcSupport,
+  hasI2cSupport,
 } from './types.js';
 
 import type {
@@ -181,6 +182,21 @@ export async function runCosimClosedLoop(
       'closed-loop ADC bindings need a core with the pinned ADC surface ' +
         '(setAdcSampler/drainAdcReads) — this @protopulse/emu build lacks it',
     );
+  }
+
+  // I2C slave devices: installed once for the whole run (the master reads them
+  // mid-step, like the ADC sampler). Probe the pinned surface, never assume.
+  const i2cDevices = spec.i2cDevices ?? [];
+  if (i2cDevices.length > 0) {
+    if (!hasI2cSupport(core)) {
+      throw new Error(
+        'closed-loop I2C device bindings need a core with the pinned I2C surface ' +
+          '(setI2cSlave) — this @protopulse/emu build lacks it',
+      );
+    }
+    for (const device of i2cDevices) {
+      core.setI2cSlave(device.port, device.slave);
+    }
   }
 
   // Node names are a function of the graph alone (extraCards never move
