@@ -290,6 +290,46 @@ const emitPushbutton: Emitter = ({ component, node }) => ({
   entry: { tier: 'behavioral', note: 'modeled closed (pressed)' },
 });
 
+/**
+ * Parse a TMP36 operating temperature (°C) off the placed part's `value`.
+ * A bare number, optionally suffixed `C`/`°C`. Defaults to 25 °C with a
+ * manifest note when absent or unparseable.
+ */
+function tmp36TempC(raw: string | undefined): NumericValue {
+  if (raw === undefined || raw.trim() === '') {
+    return { value: 25, note: 'no temperature — defaulted to 25 °C' };
+  }
+  const parsed = Number.parseFloat(raw.replace(/\s*°?\s*C\s*$/i, '').trim());
+  if (!Number.isFinite(parsed)) {
+    return { value: 25, note: `temperature "${raw}" unparseable — defaulted to 25 °C` };
+  }
+  return { value: parsed };
+}
+
+/**
+ * Analog Devices TMP35/36/37 analog temperature sensor. VOUT (pin 2) is an
+ * ideal voltage referenced to the sensor's own GND (pin 3):
+ *   Vout = 10 mV/°C · T + 500 mV   (TMP36, datasheet Rev H)
+ * The operating temperature (°C) rides on the placed part's `value` (default
+ * 25 °C). +VS (pin 1) draws no current in this ideal output model — it only
+ * needs an external DC path (wire it to a rail).
+ */
+const emitTmp36: Emitter = ({ component, node }) => {
+  const t = tmp36TempC(component.value);
+  const vout = 0.01 * t.value + 0.5;
+  return {
+    lines: [`${elementName('V', component.ref)} ${node('2')} ${node('3')} DC ${spiceNum(vout)}`],
+    models: [],
+    entry: {
+      tier: 'behavioral',
+      note: joinNotes(
+        `TMP36 ideal output Vout = 10mV/°C·T + 500mV; T=${t.value}°C → ${vout.toFixed(3)}V`,
+        t.note,
+      ),
+    },
+  };
+};
+
 const stubEmission: Emission = {
   lines: [],
   models: [],
@@ -312,6 +352,7 @@ const EMITTERS_BY_PART_ID: ReadonlyMap<string, Emitter> = new Map<string, Emitte
   ['core:pwr-vcc', emitPwrVcc],
   ['core:pwr-gnd', emitPwrGnd],
   ['core:pushbutton', emitPushbutton],
+  ['core:tmp36', emitTmp36],
 ]);
 
 /** Generic class fallbacks for parts outside the seed library. */
