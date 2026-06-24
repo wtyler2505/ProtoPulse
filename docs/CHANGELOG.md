@@ -2,6 +2,23 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-24 — First SPI device: MFRC522/RC522 RFID reader + SPI device registry (BL-0898)
+
+### Added
+- **`rc522(state)`** (`@protopulse/emu`, `spi-devices.ts`): the NXP MFRC522 (RC522) RFID
+  reader as an SPI slave — VersionReg (0x37) = 0x92 (v2.0, the canonical identity check),
+  decoding the MFRC522 read address byte `((reg<<1)&0x7E)|0x80` from the clocked-out MOSI
+  (datasheet §8.1.2.3). Configurable version (e.g. 0x91 for a v1.0 clone).
+- **`SPI_DEVICES_BY_PART_ID` + `spiDeviceForPart(partId)`** — maps `core:rc522` to its
+  model, the SPI parallel to the I²C `I2C_DEVICES_BY_PART_ID`. Exported from the index.
+- New `spi-devices.test.ts` (3 tests): firmware reads VersionReg via a command+MISO
+  transaction → 0x92 (and a configured 0x91); registry lookup resolves. First real SPI
+  device over the master+slave path (BL-0897).
+
+### Verified
+- On main: `npm run -w @protopulse/emu test` → **8 files / 335 tests pass** (+3).
+  Targeted `tsc --noEmit` on `@protopulse/emu` (incl. index) → **EXIT=0**.
+
 ## 2026-06-24 — SPI slave-device hook: foundation for SPI device co-sim (BL-0897)
 
 ### Added

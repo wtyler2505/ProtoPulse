@@ -2014,6 +2014,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       reads return modeled bytes instead of zeros — the SPI counterpart of the
       I²C hook, foundation for SPI devices (RC522, MAX7219, SPI flash). Device
       models + registry + co-sim binding mirror the I²C path as follow-ups.
+      **First SPI device landed 2026-06-24 (BL-0898):** the RC522/MFRC522 RFID
+      reader (`rc522`) — firmware reads VersionReg → 0x92 over SPI through the
+      slave hook; `SPI_DEVICES_BY_PART_ID`/`spiDeviceForPart` mirror the I²C
+      registry. SPI now has foundation + a real device + a part→device registry.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
