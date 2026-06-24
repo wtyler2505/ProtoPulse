@@ -2,6 +2,30 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-23 — ESP32-S3 completion gate CERTIFIED (criterion (3) co-sim closed loop)
+
+### Added
+- **ESP32-S3 ADC0 reader firmware sample** (`packages/emu/samples/esp32s3-adc0-read.bin`
+  + self-verifying `gen-adc0-read.mts`): reads SAR ADC1 channel 0 in a loop and TX's
+  each 12-bit result over UART0. The missing artifact for the co-sim closed loop.
+
+### Verified
+- **ESP32-S3 base completion gate, criterion (3) — co-sim closed loop** (ROADMAP §v0.5):
+  new integration test `packages/cosim/src/quantum.esp32s3.cosim.test.ts` proves the loop
+  end-to-end with REAL components (no mocks). A real resistor divider (`core:pwr-vcc`
+  3.3 V → R1 10k → net **MID** → R2 10k → `core:pwr-gnd`) SPICE-solves MID to 1.65 V; a
+  real `Esp32s3Core` loaded with `esp32s3-adc0-read.bin` reads ADC channel 0 through the
+  real `runCosimClosedLoop` quantum engine (`packages/cosim/src/quantum.ts`), which feeds
+  back the bound net's solved voltage. Assertions: `adcReads` non-empty, all channel 0;
+  settled reads (quantum 1+) track MID to **±0.02 V**; the firmware's UART output decodes
+  to **code 2048 = round(1.65/3.3×4095)** — the value reached the firmware, not just the
+  sampler log. TDD red-check confirmed it fails for the right reason at a wrong expected V.
+- `npm run -w @protopulse/cosim test`: **5 files / 69 tests pass**; `npm run check:packages`
+  (tsc -p packages): **0 errors**.
+- **All four gate criteria now met** — (1) emu tests (238 ESP32-S3), (2) app smoke,
+  (3) co-sim closed loop, (4) co-sim pin labels. The ESP32-S3 foundation is certified;
+  next is board/sensor/module breadth.
+
 ## 2026-06-23 — ESP32-S3 completion gate: criterion (2) E2E app smoke certified
 
 ### Verified
