@@ -330,6 +330,52 @@ const emitTmp36: Emitter = ({ component, node }) => {
   };
 };
 
+/** Total track resistance of the core:pot-10k. */
+const POT10K_TOTAL_OHMS = 10_000;
+
+/**
+ * Parse a wiper position [0,1] off the placed part's `value` (the fraction of
+ * the track from end A toward end B). Defaults to 0.5 (centre); out-of-range
+ * values clamp with a manifest note.
+ */
+function potPosition(raw: string | undefined): NumericValue {
+  if (raw === undefined || raw.trim() === '') {
+    return { value: 0.5, note: 'no wiper position — defaulted to 0.5 (centre)' };
+  }
+  const parsed = Number.parseFloat(raw.trim());
+  if (!Number.isFinite(parsed)) {
+    return { value: 0.5, note: `wiper "${raw}" unparseable — defaulted to 0.5` };
+  }
+  const clamped = Math.min(1, Math.max(0, parsed));
+  return clamped === parsed ? { value: clamped } : { value: clamped, note: `wiper ${parsed} clamped to ${clamped}` };
+}
+
+/**
+ * 10 kΩ rotary potentiometer (core:pot-10k) — a 3-terminal voltage divider.
+ * Pins 1=A, 2=WIPER, 3=B. Two resistors summing to 10 kΩ: A–WIPER = 10k·pos and
+ * WIPER–B = 10k·(1−pos), where `pos` (the wiper fraction from A toward B) rides
+ * on the placed part's `value` (default 0.5). A 1 Ω floor keeps neither half a
+ * 0 Ω element at the travel limits. Wired A→source, B→ground, the wiper taps
+ * V·(1−pos).
+ */
+const emitPot10k: Emitter = ({ component, node }) => {
+  const p = potPosition(component.value);
+  const rA = Math.max(1, POT10K_TOTAL_OHMS * p.value);
+  const rB = Math.max(1, POT10K_TOTAL_OHMS * (1 - p.value));
+  const name = elementName('R', component.ref);
+  return {
+    lines: [
+      `${name}A ${node('1')} ${node('2')} ${spiceNum(rA)}`,
+      `${name}B ${node('2')} ${node('3')} ${spiceNum(rB)}`,
+    ],
+    models: [],
+    entry: {
+      tier: 'spice',
+      note: joinNotes(`10k pot divider, wiper pos=${p.value} (A–W ${rA}Ω, W–B ${rB}Ω)`, p.note),
+    },
+  };
+};
+
 const stubEmission: Emission = {
   lines: [],
   models: [],
@@ -353,6 +399,7 @@ const EMITTERS_BY_PART_ID: ReadonlyMap<string, Emitter> = new Map<string, Emitte
   ['core:pwr-gnd', emitPwrGnd],
   ['core:pushbutton', emitPushbutton],
   ['core:tmp36', emitTmp36],
+  ['core:pot-10k', emitPot10k],
 ]);
 
 /** Generic class fallbacks for parts outside the seed library. */
