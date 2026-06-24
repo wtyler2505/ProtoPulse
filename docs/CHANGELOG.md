@@ -2,6 +2,27 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-23 — Breadth slice 1: TMP36 analog sensor → ADC co-sim (BL-0889)
+
+### Added
+- **`core:tmp36` SPICE emitter** (`@protopulse/sim`, `models.ts`): the Analog Devices
+  TMP35/36/37 analog temperature sensor, modeled as an ideal DC source on VOUT (pin 2)
+  referenced to GND (pin 3) — `Vout = 10 mV/°C · T + 500 mV`. The operating temperature
+  rides on the placed part's `value` (a bare °C number, default 25 °C); there is no
+  per-instance parametrics map in the emitter path, so `value` is the settable channel.
+- **`packages/cosim/src/quantum.tmp36.cosim.test.ts`** — the first post-gate **breadth**
+  slice, built TDD (red → green). Real closed loop, no mocks: VCC(3.3 V) → TMP36 → MID
+  (bound to ADC ch0); a real `Esp32s3Core` runs `esp32s3-adc0-read.bin` through the real
+  `runCosimClosedLoop`. Asserts MID solves **0.75 V @ 25 °C** and **1.00 V @ 50 °C**, the
+  firmware's settled ADC reads track the node to ±0.005 V, and the UART-reported 12-bit
+  code = round(Vout/3.3 × 4095). The 50 °C case proves a *transfer function*, not a
+  constant (a hardcoded 0.75 V would fail it).
+
+### Verified
+- On main: `npm run -w @protopulse/cosim test` → **6 files / 74 tests pass** (was 69; +5).
+  Targeted `tsc --noEmit` on `@protopulse/sim` and `@protopulse/cosim` → **EXIT=0** (the
+  project-wide `check:packages` OOM-terminates — the known trap; verified per-package).
+
 ## 2026-06-23 — ESP32-S3 completion gate CERTIFIED (criterion (3) co-sim closed loop)
 
 ### Added

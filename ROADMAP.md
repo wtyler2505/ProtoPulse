@@ -1972,9 +1972,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       the real `runCosimClosedLoop` quantum engine, and the settled reads track
       MID to ±0.02 V (UART decodes to code 2048 = round(1.65/3.3×4095));
       (4) ✅ co-sim pin labels show ESP32 `IO{n}`, not AVR. All four criteria
-      are met in-repo — the ESP32-S3 foundation is certified. Next: pivot to
+      are met in-repo — the ESP32-S3 foundation is certified. Now pivoting to
       breadth (boards, sensors, modules) — each a bounded slice (host-bus/ADC
-      device model + KAT + bench demo).
+      device model + KAT + bench demo). **Slice 1 landed 2026-06-23 (BL-0889):**
+      TMP36 analog temperature sensor → ADC co-sim — `core:tmp36` SPICE emitter
+      (`@protopulse/sim`) + `packages/cosim/src/quantum.tmp36.cosim.test.ts`
+      (firmware reads track the sensor node: 0.75 V @ 25 °C, 1.00 V @ 50 °C).
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
