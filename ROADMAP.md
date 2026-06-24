@@ -1954,8 +1954,8 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       `candidatePins` takes the core's defaults (falling back to AVR for
       back-compat). Closes the last "AVR-flavored pin names" gap left by
       the firmware-panel core picker.
-- [ ] **ESP32-S3 base — COMPLETION GATE** (the Definition of Done for the
-      ESP32 foundation, so board/sensor breadth can begin): "done" is by
+- [x] **ESP32-S3 base — COMPLETION GATE** (CERTIFIED 2026-06-23; the Definition
+      of Done for the ESP32 foundation, so board/sensor breadth can begin): "done" is by
       app USABILITY, not exhaustive register fidelity — the long tail
       below is opportunistic, never a gate. Criteria: (1) ✅ `npm run -w
       @protopulse/emu test` green (238 ESP32-S3 unit tests); (2) ✅ E2E app
@@ -1963,13 +1963,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       loaded `packages/emu/samples/esp32s3-blink-io5.bin`, ran 68M cycles
       @ 240 MHz, and IO5 toggled in the logic-analyzer pin traces at the
       cycle-exact rate (zero-jitter, per the `blinks IO5 with cycle-exact
-      spacing` unit test); (3) ⬜ co-sim closed loop — an analog node drives an
-      ADC channel and the firmware reads it back tracking the SPICE node;
-      (4) ✅ co-sim pin labels show ESP32 `IO{n}`, not AVR. (1), (2) and (4)
-      are met in-repo; only the (3) co-sim closed-loop smoke remains to
-      certify the phase. After certification: pivot to breadth (boards,
-      sensors, modules) — each a bounded slice (host-bus/ADC device model +
-      KAT + bench demo).
+      spacing` unit test); (3) ✅ co-sim closed loop (certified 2026-06-23) —
+      an analog node drives an ADC channel and the firmware reads it back
+      tracking the SPICE node, proven end-to-end by
+      `packages/cosim/src/quantum.esp32s3.cosim.test.ts`: a real divider (VCC
+      3.3 V → R1 10k → MID → R2 10k → GND) SPICE-solves MID to 1.65 V; a real
+      `Esp32s3Core` loaded with `esp32s3-adc0-read.bin` reads ADC ch0 through
+      the real `runCosimClosedLoop` quantum engine, and the settled reads track
+      MID to ±0.02 V (UART decodes to code 2048 = round(1.65/3.3×4095));
+      (4) ✅ co-sim pin labels show ESP32 `IO{n}`, not AVR. All four criteria
+      are met in-repo — the ESP32-S3 foundation is certified. Next: pivot to
+      breadth (boards, sensors, modules) — each a bounded slice (host-bus/ADC
+      device model + KAT + bench demo).
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
