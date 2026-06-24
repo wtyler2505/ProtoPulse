@@ -51,7 +51,15 @@ export {
   ESP32S3_I2C0_BASE,
   ESP32S3_I2C1_BASE,
 } from './esp32s3.js';
-export { i2cRegisterDevice, mpu6050, type Mpu6050State } from './i2c-devices.js';
+export {
+  bme280,
+  i2cDeviceForPart,
+  i2cRegisterDevice,
+  I2C_DEVICES_BY_PART_ID,
+  mpu6050,
+  type Bme280State,
+  type Mpu6050State,
+} from './i2c-devices.js';
 export * as xt from './xtensa-asm.js';
 export { XtensaCpu, type XtensaBus } from './xtensa.js';
 export type {

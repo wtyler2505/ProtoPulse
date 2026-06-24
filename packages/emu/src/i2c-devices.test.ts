@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Esp32s3Core, ESP32S3_I2C0_BASE, ESP32S3_IRAM_BASE, ESP32S3_UART0_BASE } from './esp32s3.js';
-import { mpu6050 } from './i2c-devices.js';
+import { bme280, i2cDeviceForPart, mpu6050 } from './i2c-devices.js';
 import { assembleXtensa, BR, J, L32I, L32R, MOVI, S32I } from './xtensa-asm.js';
 
 import type { XtInstr } from './xtensa-asm.js';
@@ -91,5 +91,25 @@ describe('I2C device models — MPU-6050 over the emu master + slave hook', () =
     c.setI2cSlave(0, mpu6050());
     c.step(400);
     expect([...c.drainUart()]).toEqual([0x00, 0x00]);
+  });
+});
+
+describe('I2C device models — BME280 + the part→device registry', () => {
+  it('BME280 reports chip-ID 0x60 at register 0xD0 (the canonical identity check)', () => {
+    const c = core(i2cReadImage(0x76, 0xd0, 1)); // BME280 "id" register at addr 0x76
+    c.setI2cSlave(0, bme280());
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([0x60]);
+  });
+
+  it('resolves a placed part id to its I2C device model (and null for non-I2C parts)', () => {
+    const mpu = i2cDeviceForPart('core:mpu6050');
+    const bme = i2cDeviceForPart('core:bme280');
+    expect(mpu).not.toBeNull();
+    expect(bme).not.toBeNull();
+    // The resolved models answer their identity registers.
+    expect(mpu?.(0x68, 0x75)).toBe(0x68); // MPU-6050 WHO_AM_I
+    expect(bme?.(0x76, 0xd0)).toBe(0x60); // BME280 chip ID
+    expect(i2cDeviceForPart('core:resistor')).toBeNull();
   });
 });
