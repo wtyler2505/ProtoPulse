@@ -61,6 +61,7 @@ export {
   type Bme280State,
   type Mpu6050State,
 } from './i2c-devices.js';
+export { rc522, spiDeviceForPart, SPI_DEVICES_BY_PART_ID, type Rc522State } from './spi-devices.js';
 export * as xt from './xtensa-asm.js';
 export { XtensaCpu, type XtensaBus } from './xtensa.js';
 export type {
