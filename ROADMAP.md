@@ -2009,6 +2009,11 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       turns the I²C parts placed in a design into `runCosimClosedLoop` device
       bindings via the registry — the I²C sensor path is now usable straight
       from a design (place a sensor, run co-sim, firmware reads it).
+      **SPI slave-device foundation landed 2026-06-24 (BL-0897):** the emu SPI
+      master gained a slave hook (`Esp32s3Core.setSpiSlave`, GPSPI2/3) so MISO
+      reads return modeled bytes instead of zeros — the SPI counterpart of the
+      I²C hook, foundation for SPI devices (RC522, MAX7219, SPI flash). Device
+      models + registry + co-sim binding mirror the I²C path as follow-ups.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

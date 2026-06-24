@@ -2,6 +2,26 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-24 — SPI slave-device hook: foundation for SPI device co-sim (BL-0897)
+
+### Added
+- **`Esp32s3Core.setSpiSlave(port, fn)`** (`@protopulse/emu`): the SPI counterpart of the
+  I²C slave hook (BL-0892), for GPSPI2/GPSPI3. `spiRunTransaction` now collects the
+  command/address/MOSI bytes clocked out this transaction into a `mosi[]` (still recorded
+  in the host write-log) and the MISO phase calls `fn(mosi, misoIndex)` per read byte
+  instead of filling zeros. SPI is full-duplex/command-based, so the slave sees what the
+  master clocked out and answers the read. Passing `null` removes it; **with no slave,
+  MISO reads back 0 — no regression.** New `SpiSlave` type exported.
+- New emu test: a GPSPI2 slave feeds `[0xAB, 0xCD]` into a 16-bit MISO read.
+
+Foundation for the next breadth class — **SPI devices** (RC522 RFID, MAX7219 displays,
+SPI flash, …), mirroring the I²C path (device models → registry → co-sim binding).
+
+### Verified
+- On main: `npm run -w @protopulse/emu test` → esp32s3 **240 tests pass** (+1; rp2040's
+  blink test timed out once under full-suite load — a known flake, passes 7/7 alone).
+  Targeted `tsc --noEmit` on `@protopulse/emu` (incl. index) → **EXIT=0**.
+
 ## 2026-06-24 — Auto-resolve I²C devices from the design graph (BL-0896)
 
 ### Added
