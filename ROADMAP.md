@@ -2023,6 +2023,9 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       parity — firmware reads an RC522 over SPI inside `runCosimClosedLoop`,
       auto-resolved from a placed part. Both digital buses (I²C, SPI) now run
       end to end: hook → device model → registry → co-sim binding → graph.
+      Device catalog so far: I²C — MPU-6050, BME280, DS3231 (BL-0900); SPI —
+      RC522. Each `core:*` part auto-resolves into a co-sim run; adding more is
+      a register-map + registry entry.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

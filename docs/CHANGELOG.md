@@ -2,6 +2,19 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-24 — DS3231 RTC I²C device model (BL-0900)
+
+### Added
+- **`ds3231(state)`** (`@protopulse/emu`): the Maxim/Analog Devices DS3231 RTC (addr 0x68)
+  as an I²C slave — BCD timekeeping registers (datasheet §8.1): 0x00 seconds, 0x01 minutes,
+  0x02 hours (24-hour), 0x03 day, 0x04 date, 0x05 month, 0x06 year. State is decimal,
+  BCD-encoded internally. Registered in `I2C_DEVICES_BY_PART_ID` (`core:ds3231`), exported
+  from the index. The 3rd I²C device model (an RTC), exercising BCD burst reads.
+
+### Verified
+- On main: `npm run -w @protopulse/emu test` → **8 files / 337 tests pass** (+2).
+  Targeted `tsc --noEmit` on `@protopulse/emu` (incl. index) → **EXIT=0**.
+
 ## 2026-06-24 — SPI device co-sim binding + graph auto-resolve: SPI at I²C parity (BL-0899)
 
 ### Added
