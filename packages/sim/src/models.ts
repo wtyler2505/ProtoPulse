@@ -376,6 +376,48 @@ const emitPot10k: Emitter = ({ component, node }) => {
   };
 };
 
+/**
+ * Parse a soil-moisture fraction [0,1] off the placed part's `value` (0=bone
+ * dry, 1=saturated). Defaults to 0.5; out-of-range clamps with a manifest note.
+ */
+function soilMoisture(raw: string | undefined): NumericValue {
+  if (raw === undefined || raw.trim() === '') {
+    return { value: 0.5, note: 'no moisture — defaulted to 0.5' };
+  }
+  const parsed = Number.parseFloat(raw.trim());
+  if (!Number.isFinite(parsed)) {
+    return { value: 0.5, note: `moisture "${raw}" unparseable — defaulted to 0.5` };
+  }
+  const clamped = Math.min(1, Math.max(0, parsed));
+  return clamped === parsed ? { value: clamped } : { value: clamped, note: `moisture ${parsed} clamped to ${clamped}` };
+}
+
+/**
+ * FC-28 resistive soil-moisture module (core:soil-moisture). AO (pin 4) is the
+ * soil-resistance divider tap off the supply — web-verified: dry soil → high AO
+ * (near VCC), wet soil → low AO (near 0). Modeled as a supply-dependent
+ * behavioral source AO = V_supply·(1 − moisture) referenced to GND (pin 2),
+ * where the moisture fraction (0=dry … 1=wet, default 0.5) rides on the part's
+ * `value`. A simplified linear stand-in for the real non-linear, board-dependent
+ * curve; the digital comparator output DO (pin 3) is not modeled, and +VS draws
+ * no current in this ideal output model.
+ */
+const emitSoilMoisture: Emitter = ({ component, node }) => {
+  const m = soilMoisture(component.value);
+  const name = elementName('B', component.ref);
+  return {
+    lines: [`${name} ${node('4')} ${node('2')} V=(v(${node('1')})-v(${node('2')}))*(1-${m.value})`],
+    models: [],
+    entry: {
+      tier: 'behavioral',
+      note: joinNotes(
+        `FC-28 AO = Vsupply·(1−moisture), moisture=${m.value} (dry→high, wet→low; simplified linear, web-verified direction)`,
+        m.note,
+      ),
+    },
+  };
+};
+
 const stubEmission: Emission = {
   lines: [],
   models: [],
@@ -400,6 +442,7 @@ const EMITTERS_BY_PART_ID: ReadonlyMap<string, Emitter> = new Map<string, Emitte
   ['core:pushbutton', emitPushbutton],
   ['core:tmp36', emitTmp36],
   ['core:pot-10k', emitPot10k],
+  ['core:soil-moisture', emitSoilMoisture],
 ]);
 
 /** Generic class fallbacks for parts outside the seed library. */
