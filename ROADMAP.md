@@ -1995,7 +1995,12 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       6-axis IMU (`mpu6050` in `@protopulse/emu`'s `i2c-devices.ts`) — unmodified
       firmware reads WHO_AM_I → 0x68 and burst-reads the accel registers through
       the slave hook. `i2cRegisterDevice(map)` is the reusable register-map
-      device helper. Remaining: a cosim bus-device binding (parametrized values).
+      device helper.
+      **I²C-in-co-sim landed 2026-06-24 (BL-0894):** `ClosedLoopSpec.i2cDevices`
+      installs slave devices for a `runCosimClosedLoop` run (the bus-device
+      counterpart of the ADC sampler) — firmware reads an MPU-6050 over I²C
+      inside the closed loop. The I²C sensor path is now complete end to end
+      (emu master+slave hook → device model → co-sim binding).
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

@@ -2,6 +2,23 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-24 — I²C device in the co-sim closed loop (BL-0894)
+
+### Added
+- **`ClosedLoopSpec.i2cDevices`** (`@protopulse/cosim`): the bus-device counterpart of the
+  ADC sampler — `{ port, slave }[]`. `runCosimClosedLoop` probes the pinned I²C surface
+  (`hasI2cSupport` → `setI2cSlave`) and installs each modeled device on its controller
+  before stepping, so unmodified firmware reads real I²C sensors during a co-sim run. New
+  `I2cCapableCore`/`hasI2cSupport` mirror the ADC `AdcCapableCore`/`hasAdcSupport` probes.
+- **`quantum.i2c.cosim.test.ts`**: a real `Esp32s3Core` runs I²C WHO_AM_I firmware through
+  `runCosimClosedLoop` with an `mpu6050()` device bound on port 0 → reads back **0x68**.
+  This completes the I²C digital-sensor path: emu master + slave hook (BL-0892) → device
+  model (BL-0893) → co-sim closed-loop binding (this).
+
+### Verified
+- On main: `npm run -w @protopulse/cosim test` → **9 files / 85 tests pass** (+1).
+  Targeted `tsc --noEmit` on `@protopulse/cosim` → **EXIT=0**.
+
 ## 2026-06-24 — First real I²C device: GY-521/MPU-6050 6-axis IMU (BL-0893)
 
 ### Added
