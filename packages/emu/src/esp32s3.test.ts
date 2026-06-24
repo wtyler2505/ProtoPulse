@@ -8172,6 +8172,39 @@ describe('Esp32s3Core — peripheral interrupt lines through the matrix (slice 6
     expect([...c.drainUart()]).toEqual([1, 0, 0, 0]);
   });
 
+  it('an installed GPSPI2 slave answers MISO bytes instead of zeros', () => {
+    // Same 16-bit MISO read as above, but a slave device feeds the bytes: the
+    // master clocks out the (empty) MOSI and reads back the slave's [0xAB, 0xCD]
+    // into W0 (low byte first). Without a slave these read 0 (the test above).
+    const image = assembleXtensa(
+      ESP32S3_IRAM_BASE,
+      [SPI2, UART, SPI_TRANS_DONE_INT, SPI_ALL_INTS, SPI_USR_MISO, SPI_MS_DLEN_16_BITS, SPI_CMD_USR, 0xdeadbeef],
+      [
+        L32R(2, 0), // GPSPI2
+        L32R(6, 1), // UART0
+        L32R(3, 3),
+        S32I(3, 2, 0x38), // clear all SPI raw bits
+        L32R(3, 7),
+        S32I(3, 2, 0x98), // W0 starts nonzero
+        L32R(3, 5),
+        S32I(3, 2, 0x1c), // 16-bit read data phase
+        L32R(3, 4),
+        S32I(3, 2, 0x10), // MISO phase
+        L32R(3, 6),
+        S32I(3, 2, 0x00), // USR start
+        L32I(4, 2, 0x98), // W0 after the transaction
+        S32I(4, 6, 0), // low byte
+        SRLI(4, 4, 8),
+        S32I(4, 6, 0), // high byte
+        J(BR(-1)),
+      ],
+    );
+    const c = core(image);
+    c.setSpiSlave(2, (_mosi, misoIndex) => [0xab, 0xcd][misoIndex] ?? 0);
+    c.step(600);
+    expect([...c.drainUart()]).toEqual([0xab, 0xcd]);
+  });
+
   it('routes GPSPI3 independently and drains MOSI from W8 when highpart is selected', () => {
     const image = assembleXtensa(
       ESP32S3_IRAM_BASE,
