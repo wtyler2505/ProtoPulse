@@ -56,11 +56,13 @@ export {
 } from './esp32s3.js';
 export {
   bme280,
+  ds3231,
   i2cDeviceForPart,
   i2cRegisterDevice,
   I2C_DEVICES_BY_PART_ID,
   mpu6050,
   type Bme280State,
+  type Ds3231State,
   type Mpu6050State,
 } from './i2c-devices.js';
 export { rc522, spiDeviceForPart, SPI_DEVICES_BY_PART_ID, type Rc522State } from './spi-devices.js';

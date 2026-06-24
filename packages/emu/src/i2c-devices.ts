@@ -97,6 +97,45 @@ export function bme280(state: Bme280State = {}): I2cSlave {
   return i2cRegisterDevice(regs);
 }
 
+/** Optional initial time for {@link ds3231} (decimal; default 00:00:00, day/date/month 1). */
+export interface Ds3231State {
+  seconds?: number;
+  minutes?: number;
+  hours?: number;
+  /** Day of week, 1–7. */
+  day?: number;
+  /** Day of month, 1–31. */
+  date?: number;
+  /** Month, 1–12. */
+  month?: number;
+  /** Year, 0–99. */
+  year?: number;
+}
+
+/** Decimal → packed BCD (e.g. 42 → 0x42). */
+function toBcd(n: number): number {
+  return (((Math.floor(n / 10) % 10) << 4) | (Math.floor(n) % 10)) & 0xff;
+}
+
+/**
+ * Maxim/Analog Devices DS3231 RTC as an I2C slave — `core:ds3231`, address 0x68.
+ * Timekeeping registers (datasheet §8.1, all BCD): 0x00 seconds, 0x01 minutes,
+ * 0x02 hours (24-hour mode, bit 6 = 0), 0x03 day-of-week, 0x04 date, 0x05 month,
+ * 0x06 year. A burst read from 0x00 returns the time. The control/status/alarm
+ * and temperature registers (0x07–0x12) are not modeled (read 0).
+ */
+export function ds3231(state: Ds3231State = {}): I2cSlave {
+  const regs = new Map<number, number>();
+  regs.set(0x00, toBcd(state.seconds ?? 0));
+  regs.set(0x01, toBcd(state.minutes ?? 0));
+  regs.set(0x02, toBcd(state.hours ?? 0));
+  regs.set(0x03, toBcd(state.day ?? 1));
+  regs.set(0x04, toBcd(state.date ?? 1));
+  regs.set(0x05, toBcd(state.month ?? 1));
+  regs.set(0x06, toBcd(state.year ?? 0));
+  return i2cRegisterDevice(regs);
+}
+
 /**
  * Registry of modeled I2C device part ids → device-model factories. Lets the
  * co-sim (or app) auto-install the right slave for a placed I2C part — the
@@ -108,6 +147,7 @@ export const I2C_DEVICES_BY_PART_ID: ReadonlyMap<string, () => I2cSlave> = new M
 >([
   ['core:mpu6050', () => mpu6050()],
   ['core:bme280', () => bme280()],
+  ['core:ds3231', () => ds3231()],
 ]);
 
 /** Resolve a placed part id to a fresh I2C device model, or null if the part

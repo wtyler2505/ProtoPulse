@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Esp32s3Core, ESP32S3_I2C0_BASE, ESP32S3_IRAM_BASE, ESP32S3_UART0_BASE } from './esp32s3.js';
-import { bme280, i2cDeviceForPart, mpu6050 } from './i2c-devices.js';
+import { bme280, ds3231, i2cDeviceForPart, mpu6050 } from './i2c-devices.js';
 import { assembleXtensa, BR, J, L32I, L32R, MOVI, S32I } from './xtensa-asm.js';
 
 import type { XtInstr } from './xtensa-asm.js';
@@ -111,5 +111,20 @@ describe('I2C device models — BME280 + the part→device registry', () => {
     expect(mpu?.(0x68, 0x75)).toBe(0x68); // MPU-6050 WHO_AM_I
     expect(bme?.(0x76, 0xd0)).toBe(0x60); // BME280 chip ID
     expect(i2cDeviceForPart('core:resistor')).toBeNull();
+  });
+});
+
+describe('I2C device models — DS3231 RTC', () => {
+  it('reads BCD time registers (seconds/minutes/hours) via a burst read', () => {
+    // DS3231 @ 0x68, time registers 0x00..0x02 are BCD. 13:30:42 reads back as
+    // the BCD bytes 0x42 (sec), 0x30 (min), 0x13 (hr) via register auto-increment.
+    const c = core(i2cReadImage(0x68, 0x00, 3));
+    c.setI2cSlave(0, ds3231({ hours: 13, minutes: 30, seconds: 42 }));
+    c.step(400);
+    expect([...c.drainUart()]).toEqual([0x42, 0x30, 0x13]);
+  });
+
+  it('is registered for core:ds3231', () => {
+    expect(i2cDeviceForPart('core:ds3231')).not.toBeNull();
   });
 });
