@@ -43,6 +43,7 @@ export {
   type Esp32s3TwaiEvent,
   type Esp32s3TwaiFrame,
   type I2cSlave,
+  type SpiSlave,
   esp32s3PinId,
   ESP32S3_IRAM_BASE,
   ESP32S3_DRAM_BASE,
