@@ -51,6 +51,8 @@ export {
   ESP32S3_UART0_BASE,
   ESP32S3_I2C0_BASE,
   ESP32S3_I2C1_BASE,
+  ESP32S3_SPI2_BASE,
+  ESP32S3_SPI3_BASE,
 } from './esp32s3.js';
 export {
   bme280,

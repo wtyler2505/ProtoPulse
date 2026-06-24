@@ -9,6 +9,7 @@ import {
   closedLoopSpecSchema,
   hasAdcSupport,
   hasI2cSupport,
+  hasSpiSupport,
 } from './types.js';
 
 import type {
@@ -196,6 +197,21 @@ export async function runCosimClosedLoop(
     }
     for (const device of i2cDevices) {
       core.setI2cSlave(device.port, device.slave);
+    }
+  }
+
+  // SPI slave devices: same install-once model as I2C, probing the pinned
+  // SPI surface (setSpiSlave) before use.
+  const spiDevices = spec.spiDevices ?? [];
+  if (spiDevices.length > 0) {
+    if (!hasSpiSupport(core)) {
+      throw new Error(
+        'closed-loop SPI device bindings need a core with the pinned SPI surface ' +
+          '(setSpiSlave) — this @protopulse/emu build lacks it',
+      );
+    }
+    for (const device of spiDevices) {
+      core.setSpiSlave(device.port, device.slave);
     }
   }
 

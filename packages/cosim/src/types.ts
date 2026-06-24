@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { I2cSlave, McuCore, PinEvent } from '@protopulse/emu';
+import type { I2cSlave, McuCore, PinEvent, SpiSlave } from '@protopulse/emu';
 import type { Uuid } from '@protopulse/graph';
 import type { SimulateResult } from '@protopulse/sim';
 
@@ -126,6 +126,19 @@ export function hasI2cSupport(core: McuCore): core is I2cCapableCore {
   return typeof (core as Partial<I2cCapableCore>).setI2cSlave === 'function';
 }
 
+/**
+ * PINNED extension: a core that can host SPI slave devices on a controller
+ * port (GPSPI2/3 on the ESP32-S3 emu surface). Probed via {@link hasSpiSupport}.
+ */
+export interface SpiCapableCore extends McuCore {
+  setSpiSlave(port: 2 | 3, fn: SpiSlave | null): void;
+}
+
+/** Runtime probe for the SPI slave-device surface on a core. */
+export function hasSpiSupport(core: McuCore): core is SpiCapableCore {
+  return typeof (core as Partial<SpiCapableCore>).setSpiSlave === 'function';
+}
+
 /** One analog net fed back onto one MCU *digital input* pin through the
  *  Schmitt comparator (VIL/VIH + hysteresis, state retained per pin). */
 export interface InputBinding {
@@ -151,6 +164,14 @@ export interface I2cDeviceBinding {
   slave: I2cSlave;
 }
 
+/** One modeled SPI slave device installed on a controller port for the run. */
+export interface SpiDeviceBinding {
+  /** SPI controller port (2 = GPSPI2, 3 = GPSPI3). */
+  port: 2 | 3;
+  /** The device model — answers the master's MISO phase. */
+  slave: SpiSlave;
+}
+
 /** A closed-loop co-sim window: outputs out, comparator + ADC back in,
  *  lock-stepped on a conservative quantum (default 50 µs). */
 export interface ClosedLoopSpec {
@@ -168,6 +189,8 @@ export interface ClosedLoopSpec {
   adc?: AdcBinding[];
   /** I2C slave devices installed on the core for the run (bus-device models). */
   i2cDevices?: I2cDeviceBinding[];
+  /** SPI slave devices installed on the core for the run (bus-device models). */
+  spiDevices?: SpiDeviceBinding[];
 }
 
 /** Everything a closed-loop run produced, plus its honesty counters. */
@@ -257,6 +280,15 @@ export const i2cDeviceBindingSchema: z.ZodType<I2cDeviceBinding> = z
   })
   .strict();
 
+export const spiDeviceBindingSchema: z.ZodType<SpiDeviceBinding> = z
+  .object({
+    port: z.union([z.literal(2), z.literal(3)]),
+    slave: z.custom<SpiSlave>((v) => typeof v === 'function', {
+      message: 'spi slave must be a function',
+    }),
+  })
+  .strict();
+
 export const closedLoopSpecSchema: z.ZodType<ClosedLoopSpec> = z
   .object({
     windowS: zPositive,
@@ -266,6 +298,7 @@ export const closedLoopSpecSchema: z.ZodType<ClosedLoopSpec> = z
     inputs: z.array(inputBindingSchema).optional(),
     adc: z.array(adcBindingSchema).optional(),
     i2cDevices: z.array(i2cDeviceBindingSchema).optional(),
+    spiDevices: z.array(spiDeviceBindingSchema).optional(),
   })
   .strict()
   .superRefine((spec, ctx) => {
