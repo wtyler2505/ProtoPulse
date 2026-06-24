@@ -2001,6 +2001,10 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       counterpart of the ADC sampler) — firmware reads an MPU-6050 over I²C
       inside the closed loop. The I²C sensor path is now complete end to end
       (emu master+slave hook → device model → co-sim binding).
+      **BME280 + I²C device registry landed 2026-06-24 (BL-0895):** a 2nd modeled
+      I²C device (`bme280`, chip-ID 0x60) + `I2C_DEVICES_BY_PART_ID` /
+      `i2cDeviceForPart` so a placed I²C part auto-resolves its model (the
+      bus-device parallel to the analog `EMITTERS_BY_PART_ID`).
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining

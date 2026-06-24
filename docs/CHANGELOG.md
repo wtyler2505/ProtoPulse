@@ -2,6 +2,23 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-24 — BME280 I²C device + part→device registry (BL-0895)
+
+### Added
+- **`bme280(state)`** (`@protopulse/emu`): the Bosch BME280 (addr 0x76/0x77) as an I²C
+  slave — chip-ID register 0xD0 = **0x60** (the canonical identity check), reset/status
+  registers, and 20-bit press/temp + 16-bit humidity raw registers (MSB-first, settable).
+  Bosch compensation is firmware-side; the calibration-coefficient registers are not
+  modeled (the chip-ID identity check + raw reads work as-is).
+- **`I2C_DEVICES_BY_PART_ID` + `i2cDeviceForPart(partId)`** — maps `core:mpu6050` /
+  `core:bme280` to their device-model factories, the bus-device parallel to the SPICE
+  `EMITTERS_BY_PART_ID`. Lets the co-sim/app auto-resolve a placed I²C part's model.
+  Both exported from the package index.
+
+### Verified
+- On main: `npm run -w @protopulse/emu test` → **7 files / 331 tests pass** (+2).
+  Targeted `tsc --noEmit` on `@protopulse/emu` (incl. index) → **EXIT=0**.
+
 ## 2026-06-24 — I²C device in the co-sim closed loop (BL-0894)
 
 ### Added
