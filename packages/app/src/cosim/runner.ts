@@ -186,7 +186,21 @@ export function createCosimRunner(opts: CosimRunnerOpts = {}): CosimRunner {
         };
       }
       const fn = mod.runCosimClosedLoop;
-      return { ok: true, exec: (core) => fn({ graph, parts, core, spec }) };
+      // Auto-install device models for placed I2C/SPI parts when the caller did
+      // not list them explicitly (?? short-circuits so an explicit list wins
+      // and graph resolution is skipped). The *FromGraph helpers are optional
+      // on older cosim builds — probe before calling.
+      const i2cDevices = spec.i2cDevices ?? mod.i2cDevicesFromGraph?.(graph);
+      const spiDevices = spec.spiDevices ?? mod.spiDevicesFromGraph?.(graph);
+      const resolved: ClosedLoopSpec =
+        i2cDevices !== undefined || spiDevices !== undefined
+          ? {
+              ...spec,
+              ...(i2cDevices !== undefined ? { i2cDevices } : {}),
+              ...(spiDevices !== undefined ? { spiDevices } : {}),
+            }
+          : spec;
+      return { ok: true, exec: (core) => fn({ graph, parts, core, spec: resolved }) };
     });
 
   return { run, runClosedLoop };

@@ -363,4 +363,43 @@ describe('createCosimRunner — runClosedLoop', () => {
     await runner.runClosedLoop(graph, parts, closedSpec());
     expect(loader).toHaveBeenCalledTimes(1);
   });
+
+  it('auto-installs I2C/SPI devices resolved from the graph when the spec omits them', async () => {
+    const core = new FakeCore();
+    const session = await loadedSession(core);
+    const runCosimClosedLoop = vi.fn<RunCosimClosedLoopFn>(() => Promise.resolve(okClosedResult()));
+    const i2cBinding = { port: 0 as const, slave: () => 0x68 };
+    const spiBinding = { port: 2 as const, slave: () => 0x92 };
+    const runner = createCosimRunner({
+      loader: () =>
+        Promise.resolve({
+          runCosimClosedLoop,
+          i2cDevicesFromGraph: () => [i2cBinding],
+          spiDevicesFromGraph: () => [spiBinding],
+        } as Partial<CosimModule>),
+      session,
+    });
+    const out = await runner.runClosedLoop(graph, parts, closedSpec());
+    expect(out.ok).toBe(true);
+    const callArg = runCosimClosedLoop.mock.calls[0]?.[0];
+    expect(callArg?.spec.i2cDevices).toEqual([i2cBinding]);
+    expect(callArg?.spec.spiDevices).toEqual([spiBinding]);
+  });
+
+  it('does not override an explicit spec.i2cDevices, and skips graph resolution for it', async () => {
+    const core = new FakeCore();
+    const session = await loadedSession(core);
+    const runCosimClosedLoop = vi.fn<RunCosimClosedLoopFn>(() => Promise.resolve(okClosedResult()));
+    const i2cDevicesFromGraph = vi.fn(() => [{ port: 0 as const, slave: () => 0xff }]);
+    const explicit = [{ port: 0 as const, slave: () => 0x68 }];
+    const runner = createCosimRunner({
+      loader: () =>
+        Promise.resolve({ runCosimClosedLoop, i2cDevicesFromGraph } as Partial<CosimModule>),
+      session,
+    });
+    await runner.runClosedLoop(graph, parts, closedSpec({ i2cDevices: explicit }));
+    const callArg = runCosimClosedLoop.mock.calls[0]?.[0];
+    expect(callArg?.spec.i2cDevices).toBe(explicit); // explicit wins (by reference)
+    expect(i2cDevicesFromGraph).not.toHaveBeenCalled(); // ?? short-circuits
+  });
 });
