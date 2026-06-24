@@ -2,6 +2,28 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-24 — SPI device co-sim binding + graph auto-resolve: SPI at I²C parity (BL-0899)
+
+### Added
+- **`ClosedLoopSpec.spiDevices`** (`@protopulse/cosim`): the SPI counterpart of `i2cDevices`
+  — `{ port: 2|3, slave }[]`. `runCosimClosedLoop` probes the pinned SPI surface
+  (`hasSpiSupport` → `setSpiSlave`) and installs each device before stepping. New
+  `SpiCapableCore`/`hasSpiSupport`/`SpiDeviceBinding` mirror the I²C equivalents.
+- **`spiDevicesFromGraph(graph)`** (`spi-graph.ts`): resolves placed SPI parts via the emu
+  registry (`spiDeviceForPart`) to port-2 (GPSPI2) bindings — the SPI parallel to
+  `i2cDevicesFromGraph`. Exported from the cosim index. The emu index now also exports
+  `ESP32S3_SPI2_BASE` / `ESP32S3_SPI3_BASE`.
+- Tests: firmware reads RC522 VersionReg → 0x92 through `runCosimClosedLoop` with an
+  `rc522()` device on port 2; `spiDevicesFromGraph` resolves `core:rc522`.
+
+**The SPI digital-device path is now end-to-end at full I²C parity:** emu master+slave
+hook (BL-0897) → device model + registry (BL-0898) → co-sim binding + graph auto-resolve
+(this). Both digital buses are complete.
+
+### Verified
+- On main: `npm run -w @protopulse/cosim test` → **12 files / 90 tests pass** (+3).
+  Targeted `tsc --noEmit` on `@protopulse/cosim` and `@protopulse/emu` → **EXIT=0**.
+
 ## 2026-06-24 — First SPI device: MFRC522/RC522 RFID reader + SPI device registry (BL-0898)
 
 ### Added

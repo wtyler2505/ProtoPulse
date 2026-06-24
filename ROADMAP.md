@@ -2018,6 +2018,11 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       reader (`rc522`) — firmware reads VersionReg → 0x92 over SPI through the
       slave hook; `SPI_DEVICES_BY_PART_ID`/`spiDeviceForPart` mirror the I²C
       registry. SPI now has foundation + a real device + a part→device registry.
+      **SPI co-sim binding + graph auto-resolve landed 2026-06-24 (BL-0899):**
+      `ClosedLoopSpec.spiDevices` + `spiDevicesFromGraph` bring SPI to full I²C
+      parity — firmware reads an RC522 over SPI inside `runCosimClosedLoop`,
+      auto-resolved from a placed part. Both digital buses (I²C, SPI) now run
+      end to end: hook → device model → registry → co-sim binding → graph.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
