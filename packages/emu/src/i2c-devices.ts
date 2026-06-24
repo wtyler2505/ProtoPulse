@@ -53,3 +53,66 @@ export function mpu6050(state: Mpu6050State = {}): I2cSlave {
   put16be(0x47, state.gyroZ ?? 0); // GYRO_ZOUT_H/L
   return i2cRegisterDevice(regs);
 }
+
+/** Optional initial raw ADC outputs for {@link bme280} (the firmware applies
+ *  Bosch compensation using the calibration registers; default 0). */
+export interface Bme280State {
+  /** 20-bit raw temperature ADC (UT). */
+  rawTemp?: number;
+  /** 20-bit raw pressure ADC (UP). */
+  rawPress?: number;
+  /** 16-bit raw humidity ADC (UH). */
+  rawHum?: number;
+}
+
+/**
+ * Bosch BME280 temperature/humidity/pressure sensor as an I2C slave —
+ * `core:bme280`, address 0x76 (SDO low) / 0x77 (SDO high). Register map per the
+ * BME280 datasheet §5.3:
+ *   - "id" (0xD0) = 0x60 — the canonical chip-ID identity check.
+ *   - reset (0xE0) reads 0x00; status (0xF3) reads 0x00 (idle).
+ *   - raw ADC outputs MSB-first: press 0xF7..0xF9 (20-bit), temp 0xFA..0xFC
+ *     (20-bit), hum 0xFD..0xFE (16-bit), settable via state.
+ * The calibration-coefficient registers (0x88.., 0xE1..) are NOT modeled — a
+ * driver computing compensated °C/%RH/hPa needs them; the chip-ID identity
+ * check and raw-register reads work as-is.
+ */
+export function bme280(state: Bme280State = {}): I2cSlave {
+  const regs = new Map<number, number>();
+  regs.set(0xd0, 0x60); // id — BME280
+  regs.set(0xe0, 0x00); // reset register reads back 0
+  regs.set(0xf3, 0x00); // status — idle
+  // 20-bit press (0xF7..F9) and temp (0xFA..FC): [msb, lsb, xlsb<<4].
+  const put20 = (msbReg: number, value: number): void => {
+    const v = value & 0xfffff;
+    regs.set(msbReg, (v >> 12) & 0xff);
+    regs.set(msbReg + 1, (v >> 4) & 0xff);
+    regs.set(msbReg + 2, (v << 4) & 0xf0);
+  };
+  put20(0xf7, state.rawPress ?? 0); // press_msb/lsb/xlsb
+  put20(0xfa, state.rawTemp ?? 0); // temp_msb/lsb/xlsb
+  const hum = (state.rawHum ?? 0) & 0xffff; // hum_msb/lsb (0xFD..0xFE)
+  regs.set(0xfd, (hum >> 8) & 0xff);
+  regs.set(0xfe, hum & 0xff);
+  return i2cRegisterDevice(regs);
+}
+
+/**
+ * Registry of modeled I2C device part ids → device-model factories. Lets the
+ * co-sim (or app) auto-install the right slave for a placed I2C part — the
+ * bus-device parallel to the SPICE `EMITTERS_BY_PART_ID` for analog parts.
+ */
+export const I2C_DEVICES_BY_PART_ID: ReadonlyMap<string, () => I2cSlave> = new Map<
+  string,
+  () => I2cSlave
+>([
+  ['core:mpu6050', () => mpu6050()],
+  ['core:bme280', () => bme280()],
+]);
+
+/** Resolve a placed part id to a fresh I2C device model, or null if the part
+ *  is not a modeled I2C device. */
+export function i2cDeviceForPart(partId: string): I2cSlave | null {
+  const factory = I2C_DEVICES_BY_PART_ID.get(partId);
+  return factory ? factory() : null;
+}
