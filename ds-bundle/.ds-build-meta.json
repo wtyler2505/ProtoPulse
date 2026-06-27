@@ -1,9 +1,0 @@
-{
-  "namespace": "ProtoPulse",
-  "source": "rest-express@1.0.0",
-  "shape": "package",
-  "provider": "TooltipProvider",
-  "componentCount": 76,
-  "skippedStoryIds": [],
-  "runtimeFontPrefixes": []
-}
