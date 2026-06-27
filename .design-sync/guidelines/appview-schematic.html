@@ -1,0 +1,85 @@
+<!-- @dsCard group="App Views" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;width:1180px;height:720px;background:var(--color-background);color:var(--color-foreground);font-family:var(--font-sans),system-ui,sans-serif;font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{height:48px;flex:0 0 48px;border-bottom:1px solid var(--color-border);background:color-mix(in srgb,var(--color-card) 60%,transparent);display:flex;align-items:center;gap:16px;padding:0 16px}
+  .wm{font-family:var(--font-display);font-weight:700;font-size:18px}.wm b{color:var(--color-brand)}
+  .crumb{color:var(--color-muted-foreground);font-size:12px}
+  .crumb .proj{color:var(--color-foreground)}
+  .spacer{flex:1}
+  .btn{font-size:12px;padding:5px 12px;border:1px solid var(--color-border);background:transparent;color:var(--color-foreground)}
+  .btn.primary{background:var(--color-primary);color:var(--color-primary-foreground);border-color:var(--color-primary)}
+  .body{flex:1;display:flex;min-height:0}
+  .rail{width:64px;flex:0 0 64px;border-right:1px solid var(--color-border);background:var(--color-sidebar);display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:2px}
+  .nav{width:48px;height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-muted-foreground);font-size:9px;border-left:2px solid transparent}
+  .nav .ic{width:18px;height:18px;border:1.5px solid currentColor;opacity:.8}
+  .nav.active{color:var(--color-primary);border-left-color:var(--color-primary);background:color-mix(in srgb,var(--color-primary) 8%,transparent)}
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .toolbar{height:40px;flex:0 0 40px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:8px;padding:0 12px;background:color-mix(in srgb,var(--color-card) 40%,transparent)}
+  .tool{font-size:11px;color:var(--color-muted-foreground);padding:4px 8px;border:1px solid var(--color-border)}
+  .tool.on{color:var(--color-primary);border-color:var(--color-primary)}
+  .canvas{flex:1;position:relative;background:var(--color-background);background-image:radial-gradient(color-mix(in srgb,var(--color-foreground) 8%,transparent) 1px,transparent 1px);background-size:22px 22px;overflow:hidden}
+  .sym{position:absolute;border:1.5px solid var(--color-foreground);background:var(--color-card);font-family:var(--font-mono);font-size:10px;color:var(--color-foreground);display:flex;align-items:center;justify-content:center;text-align:center}
+  .pin{position:absolute;height:1.5px;background:var(--color-signal)}
+  .netlabel{position:absolute;font-family:var(--font-mono);font-size:10px;padding:1px 5px;border:1px solid var(--color-border);background:var(--color-card)}
+  .netlabel.pwr{color:var(--color-power);border-color:color-mix(in srgb,var(--color-power) 50%,transparent)}
+  .netlabel.net{color:var(--color-signal);border-color:color-mix(in srgb,var(--color-signal) 50%,transparent)}
+  .panel{width:248px;flex:0 0 248px;border-left:1px solid var(--color-border);background:var(--color-card);display:flex;flex-direction:column}
+  .ptabs{display:flex;border-bottom:1px solid var(--color-border)}
+  .ptab{flex:1;text-align:center;font-size:11px;padding:8px 0;color:var(--color-muted-foreground)}
+  .ptab.on{color:var(--color-primary);border-bottom:2px solid var(--color-primary)}
+  .psearch{margin:10px;padding:6px 8px;border:1px solid var(--color-input);background:var(--color-background);font-size:11px;color:var(--color-muted-foreground)}
+  .part{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid color-mix(in srgb,var(--color-border) 60%,transparent);font-size:11px}
+  .part .sw{width:8px;height:8px;flex:0 0 8px}
+  .part .mono{font-family:var(--font-mono);color:var(--color-muted-foreground);margin-left:auto}
+</style></head>
+<body>
+  <div class="topbar">
+    <div class="wm">Proto<b>Pulse</b></div>
+    <div class="crumb">SMPS Reference&nbsp;/&nbsp;<span class="proj">Buck Converter v2</span></div>
+    <div class="spacer"></div>
+    <button class="btn">Export netlist</button>
+    <button class="btn primary">Run ERC</button>
+  </div>
+  <div class="body">
+    <nav class="rail">
+      <div class="nav"><div class="ic"></div>Dash</div>
+      <div class="nav active"><div class="ic"></div>Schem</div>
+      <div class="nav"><div class="ic"></div>PCB</div>
+      <div class="nav"><div class="ic"></div>Board</div>
+      <div class="nav"><div class="ic"></div>Sim</div>
+      <div class="nav"><div class="ic"></div>Code</div>
+      <div class="nav"><div class="ic"></div>Plan</div>
+    </nav>
+    <div class="main">
+      <div class="toolbar">
+        <span class="tool on">Select</span><span class="tool">Wire</span><span class="tool">Place part</span><span class="tool">Net label</span><span class="tool">Power</span>
+        <div class="spacer"></div><span class="tool" style="color:var(--color-success);border-color:color-mix(in srgb,var(--color-success) 50%,transparent)">ERC: 0 errors</span>
+      </div>
+      <div class="canvas">
+        <div class="sym" style="left:430px;top:230px;width:120px;height:150px">U1<br>ATmega328P</div>
+        <div class="sym" style="left:250px;top:150px;width:46px;height:24px">R1<br>10k</div>
+        <div class="sym" style="left:250px;top:430px;width:46px;height:24px">C1<br>100nF</div>
+        <div class="sym" style="left:700px;top:255px;width:50px;height:30px">D1</div>
+        <div class="pin" style="left:296px;top:162px;width:134px"></div>
+        <div class="pin" style="left:550px;top:270px;width:150px"></div>
+        <div class="pin" style="left:296px;top:442px;width:134px"></div>
+        <div class="netlabel pwr" style="left:150px;top:120px">+3V3</div>
+        <div class="netlabel pwr" style="left:150px;top:470px">GND</div>
+        <div class="netlabel net" style="left:760px;top:262px">PD6 / OC0A</div>
+        <div class="netlabel net" style="left:360px;top:200px">SCK</div>
+      </div>
+    </div>
+    <aside class="panel">
+      <div class="ptabs"><div class="ptab on">Components</div><div class="ptab">Power</div><div class="ptab">Sheets</div><div class="ptab">Sim</div></div>
+      <div class="psearch">Search parts — MCU, passive, connector…</div>
+      <div class="part"><span class="sw" style="background:var(--color-signal)"></span>ATmega328P-PU<span class="mono">DIP-28</span></div>
+      <div class="part"><span class="sw" style="background:var(--color-data)"></span>ESP32-WROOM-32E<span class="mono">module</span></div>
+      <div class="part"><span class="sw" style="background:var(--color-foreground)"></span>Resistor 10k<span class="mono">0603</span></div>
+      <div class="part"><span class="sw" style="background:var(--color-foreground)"></span>Cap 100nF X7R<span class="mono">0603</span></div>
+      <div class="part"><span class="sw" style="background:var(--color-power)"></span>AMS1117-3.3<span class="mono">SOT-223</span></div>
+      <div class="part"><span class="sw" style="background:var(--color-warning)"></span>LED red 2mA<span class="mono">0805</span></div>
+    </aside>
+  </div>
+</body></html>
