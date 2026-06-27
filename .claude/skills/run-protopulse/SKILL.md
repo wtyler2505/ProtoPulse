@@ -55,7 +55,7 @@ Not needed for the dev path. For production static serve:
 npm run build    # tsx scripts/build.ts: vite builds client → dist/public, esbuild bundles server → dist/index.cjs
 ```
 
-(In this sandbox the client `vite build` was SIGTERM'd mid-`transform` by a memory watchdog even at 8 GB heap — see Gotchas. On normal hardware it completes; the project's CI builds it.)
+(On a memory-pinned box — ~7 GB total running a full desktop, ~1-2 GB free, swap near-full, `earlyoom` active — the client `vite build` was SIGTERM'd mid-`transform`; raising the heap made it worse, see Gotchas. On a host with several GB free it completes; the project's CI builds it.)
 
 ## Run (agent path)
 
@@ -63,10 +63,10 @@ Single shell — provision env, launch the one Express process, wait for it to s
 
 ```bash
 fuser -k 5000/tcp 2>/dev/null; sleep 1        # free a stale port (NOT pkill — see Gotchas)
-NODE_OPTIONS='--max-old-space-size=8192' \
 DATABASE_URL='postgresql://protopulse:protopulse@localhost:5432/protopulse' \
 UNSAFE_DEV_SKIP_ENCRYPTION=1 UNSAFE_DEV_BYPASS_AUTH=1 NODE_ENV=development PORT=5000 \
   setsid bash -c "cd '$PWD' && exec npm run dev" >/tmp/pp-legacy.log 2>&1 </dev/null &
+  # (no --max-old-space-size: a bigger heap trips earlyoom sooner — see Gotchas)
 
 # wait until it serves (legacy boot is slower than the editor: ~10-30s on a cold Vite cache):
 for i in $(seq 1 120); do curl -sf -o /dev/null http://127.0.0.1:5000/ && { echo "ready@poll${i}"; break; }; sleep 0.3; done
@@ -88,11 +88,11 @@ A healthy run renders the app shell into `#root` (`rootChildren` ≥ 1) with `co
 
 Server log → `/tmp/pp-legacy.log`; look for `serving on port 5000`.
 
-> **Verified here:** the server boots with the env above, serves `http://127.0.0.1:5000/` (title `ProtoPulse`), and Chromium connects. The **full** client bundle is large; in this memory-constrained sandbox the Vite-middleware process was repeatedly SIGTERM'd while serving the module graph, leaving `#root` empty (`ERR_EMPTY_RESPONSE`). On normal hardware the bundle loads and the app renders — the repo's own `npm run test:e2e` (Playwright, `baseURL: http://localhost:5000`, `webServer: npm run dev`) drives the rendered app headlessly. If you hit a blank `#root` on constrained hardware, use the **production static** path (build once, then `NODE_ENV=production node dist/index.cjs` with `DATABASE_URL` set) — static serving is low-footprint and survives.
+> **Verified here:** the server boots with the env above (DB connection verified, job executors registered), serves `http://127.0.0.1:5000/` (title `ProtoPulse`), and Chromium connects (`document.readyState: complete`). The **full** client bundle is large; on the memory-pinned host described in Gotchas, `earlyoom` SIGTERM'd the server (~40s in) before its on-demand Vite compile of the module graph finished, leaving `#root` empty (`ERR_EMPTY_RESPONSE`). On a host with several GB free the bundle loads and the app renders — the repo's own `npm run test:e2e` (Playwright, `baseURL: http://localhost:5000`, `webServer: npm run dev`) drives the rendered app headlessly. For a guaranteed-stable render anywhere, use the **production static** path (build once on a host with RAM headroom, then `NODE_ENV=production node dist/index.cjs` with `DATABASE_URL` set) — static serving has no on-demand compile and a low, flat footprint.
 
 ### Alternative: persistent MCP browser (process-reaping sandboxes)
 
-Same pattern as `run-protopulse-app`: hold the server with `desktop-commander start_process` (full env line above) and drive with `chrome-devtools navigate_page` / `evaluate_script` / `take_screenshot`. Verified here: DC holds the server, the server boots (DB verified, job executors registered) and serves, and chrome-devtools connects and loads `index.html` (`document.readyState: complete`, title `ProtoPulse`). On this constrained host the large dev client bundle still didn't finish on-demand compilation before the ~40s watchdog SIGTERM, so `#root` stayed empty — for a rendered shot, use the production-static path or normal hardware. The combo *does* render the lighter engine editor cleanly, so it's the right in-sandbox driver when the bundle is small enough.
+Same pattern as `run-protopulse-app`: hold the server with `desktop-commander start_process` (full env line above) and drive with `chrome-devtools navigate_page` / `evaluate_script` / `take_screenshot`. Verified here: DC holds the server, the server boots (DB verified, job executors registered) and serves, and chrome-devtools connects and loads `index.html` (`document.readyState: complete`, title `ProtoPulse`). On this memory-pinned host the large dev client bundle still didn't finish on-demand compilation before `earlyoom` SIGTERM'd the server (~40s in), so `#root` stayed empty — for a rendered shot, use the production-static path or a host with RAM headroom. The combo *does* render the lighter engine editor cleanly, so it's the right in-sandbox driver when the bundle is small enough.
 
 ## Run (human path)
 
@@ -115,7 +115,7 @@ npm run test:e2e     # playwright e2e — boots `npm run dev` itself (webServer)
 - **`API_KEY_ENCRYPTION_KEY` blocks boot before anything else useful.** The error is explicit and names the escape hatch: `UNSAFE_DEV_SKIP_ENCRYPTION=1`. `DATABASE_URL` missing is a hard `exit(1)` even earlier.
 - **Use `127.0.0.1`, not `localhost`** — Playwright's Chromium resolved `localhost` to IPv6 and got `ERR_CONNECTION_REFUSED` while the server was on IPv4.
 - **Never `pkill -f` with a pattern in your own command line** (`pkill -f 'tsx server/index.ts'` etc.) — it matches and kills the running shell (exit 144). Tear down by port (`fuser -k 5000/tcp`) or saved PID.
-- **Sandbox process reaping + memory watchdog.** Detached servers are SIGTERM'd across tool calls (npm `code 143`), and heavy processes (the Vite-middleware module graph, `vite build`) get killed mid-flight on memory-constrained hosts. Hence the single-shell launch+drive+teardown, the driver's lean single-process Chromium, and the production-static fallback for a stable render. None of this happens on normal dev hardware.
+- **`earlyoom` under memory pressure is the killer.** On a memory-pinned host (verified: ~7 GB total, full desktop + Chrome + MCP servers, ~1-2 GB free, swap near-full, `systemctl is-active earlyoom` → `active`), earlyoom SIGTERMs the largest-RSS process — so the Vite-middleware module-graph compile and `vite build` die mid-flight (graceful `code 143`), and the heavy legacy server gets killed ~40s in. Detached servers are also reaped across tool calls. Hence the single-shell launch+drive+teardown and the production-static fallback. **Don't raise `--max-old-space-size` to fight it** — a bigger heap trips earlyoom sooner. None of this happens on a host with several GB free; the project's e2e suite runs the rendered app there.
 - **`UNSAFE_DEV_BYPASS_AUTH=1` is the no-login driving path.** Without it, requests need an `X-Session-Id` (there's also `e2e/auth.setup.ts` which mints a real session for the Playwright suite).
 
 ## Troubleshooting
@@ -127,5 +127,5 @@ npm run test:e2e     # playwright e2e — boots `npm run dev` itself (webServer)
 | `Could not connect to database after N attempts` | Postgres not running / wrong creds. Verify with the `psql` line in Setup; `pg_lsclusters` to confirm the cluster is online. |
 | `Could not find the build directory: .../dist/public` (production) | Run `npm run build` first; production serve needs the prebuilt client. |
 | `net::ERR_CONNECTION_REFUSED` on nav | Server not up yet / reaped. Poll `curl http://127.0.0.1:5000/`; use `127.0.0.1`; re-run the single-shell block. |
-| Blank `#root` / `ERR_EMPTY_RESPONSE` | Dev module graph didn't finish loading before a watchdog kill (constrained host). Use the production-static path, or run on a normal machine. |
+| Blank `#root` / `ERR_EMPTY_RESPONSE` | `earlyoom` SIGTERM'd the server before the dev module graph finished compiling (memory-pinned host). Free RAM (`free -h` to check), use the production-static path, or run on a host with several GB free. |
 | Shell exits 144, no output | `pkill -f` self-matched your command. Use `fuser -k 5000/tcp`. |
