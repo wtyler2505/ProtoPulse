@@ -52,6 +52,16 @@ A healthy run prints a title (`ProtoPulse — Schematic Editor`), `rootChildren`
 
 **Driver commands** (one per line on stdin; `#` and blanks ignored): `nav <url|path>`, `wait <selector>` (CSS or `text=…`), `click`, `fill <sel> <value>`, `type`, `press <key>`, `text <sel>`, `count <sel>`, `eval <js>`, `ss [name]` (→ `$PP_SHOTS/<name>.png`, default `/tmp/pp-shots`), `sleep <ms>`, `errors`, `quit`. Env knobs: `PP_SHOTS` (screenshot dir), `PP_TIMEOUT` (per-action ms, default 30000), `PP_NAV_RETRY_MS` (nav retry budget, default 25000), `PP_WEBGL=1` (SwiftShader profile for the 3D PCB view — see Gotchas). Exit code is non-zero if any uncaught page error occurred.
 
+### Alternative: persistent MCP browser (process-reaping sandboxes)
+
+In a sandbox that reaps backgrounded processes across calls (see Gotchas), hold the server in a persistent process tree and drive it with a warm, persistent browser — verified to render this editor cleanly:
+
+1. `desktop-commander start_process`: `cd <repo> && NODE_OPTIONS='--max-old-space-size=4096' npm run -w @protopulse/app dev` — DC keeps it alive across tool calls.
+2. `chrome-devtools navigate_page` → `http://127.0.0.1:5174/`, then `evaluate_script` (`document.querySelector('#root').children.length` ≥ 1), `take_screenshot`, `list_console_messages`.
+3. `desktop-commander force_terminate <pid>` to stop.
+
+A warm browser navigates instantly, so it loads inside the server's live window where a cold-launched driver may miss it.
+
 ## Run (human path)
 
 ```bash

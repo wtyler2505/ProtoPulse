@@ -90,6 +90,10 @@ Server log → `/tmp/pp-legacy.log`; look for `serving on port 5000`.
 
 > **Verified here:** the server boots with the env above, serves `http://127.0.0.1:5000/` (title `ProtoPulse`), and Chromium connects. The **full** client bundle is large; in this memory-constrained sandbox the Vite-middleware process was repeatedly SIGTERM'd while serving the module graph, leaving `#root` empty (`ERR_EMPTY_RESPONSE`). On normal hardware the bundle loads and the app renders — the repo's own `npm run test:e2e` (Playwright, `baseURL: http://localhost:5000`, `webServer: npm run dev`) drives the rendered app headlessly. If you hit a blank `#root` on constrained hardware, use the **production static** path (build once, then `NODE_ENV=production node dist/index.cjs` with `DATABASE_URL` set) — static serving is low-footprint and survives.
 
+### Alternative: persistent MCP browser (process-reaping sandboxes)
+
+Same pattern as `run-protopulse-app`: hold the server with `desktop-commander start_process` (full env line above) and drive with `chrome-devtools navigate_page` / `evaluate_script` / `take_screenshot`. Verified here: DC holds the server, the server boots (DB verified, job executors registered) and serves, and chrome-devtools connects and loads `index.html` (`document.readyState: complete`, title `ProtoPulse`). On this constrained host the large dev client bundle still didn't finish on-demand compilation before the ~40s watchdog SIGTERM, so `#root` stayed empty — for a rendered shot, use the production-static path or normal hardware. The combo *does* render the lighter engine editor cleanly, so it's the right in-sandbox driver when the bundle is small enough.
+
 ## Run (human path)
 
 ```bash
