@@ -66,7 +66,7 @@
     "Slider": "6bbf3795d48c1857",
     "SmartHintToast": "00dc3d199879e401",
     "Spinner": "d8322642222cdd08",
-    "StyledTooltip": "3311d15308262cd7",
+    "StyledTooltip": "9da73e9e87820299",
     "Switch": "c0dc004785a6cc1d",
     "Table": "e421fe08a2cd72f2",
     "Tabs": "4b9f70d80d6b0dd7",
@@ -144,7 +144,7 @@
     "Slider": "885bddc03767f136",
     "SmartHintToast": "7700a48f402a8ed0",
     "Spinner": "72215020a0b6eee9",
-    "StyledTooltip": "faa2bfc16656ed62",
+    "StyledTooltip": "3fd46363e268fb3b",
     "Switch": "b6d3a76ca1ac1d42",
     "Table": "4c8087b4d32f8840",
     "Tabs": "8bbf98375894356e",
@@ -389,6 +389,6 @@
     "components/general/ViewOnboardingHint/ViewOnboardingHint.d.ts": "177535c8eb77",
     "components/general/ViewOnboardingHint/ViewOnboardingHint.prompt.md": "67541c85b5b4"
   },
-  "auxSha": "13a68d316934970d",
+  "auxSha": "8c3dcc44b91e2b19",
   "bundleSha12": "7d56b7d71177"
 }

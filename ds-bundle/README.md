@@ -4,7 +4,7 @@ These are real, compiled React components from the ProtoPulse app (a browser-bas
 EDA / hardware-prototyping platform). Style them with **Tailwind v4 utility classes**
 bound to **semantic CSS-variable tokens** — never hardcode hex/rgb.
 
-## Setup — dark-first, no provider needed
+## Setup — dark-first; a few components need a provider
 The system is **dark by default** (cyberpunk palette; `--color-background` is near-black).
 Components have transparent/foreground-colored styling, so they are invisible on a white
 page. **Always render inside a `bg-background text-foreground` root**, e.g.:
@@ -19,6 +19,23 @@ page. **Always render inside a `bg-background text-foreground` root**, e.g.:
 No ThemeProvider is required for dark. (A light theme exists via a `.light` class on a
 parent, but dark is the canonical brand surface — build dark unless asked otherwise.)
 Corners are **sharp** (`--radius* = 0`); do not add `rounded-*` expecting curves.
+
+
+## Provider wrappers — REQUIRED for these components
+Most components render standalone, but a few radix-context components throw
+("must be used within …Provider") unless wrapped. The bundle does NOT auto-wrap them:
+- `Tooltip`, `StyledTooltip` → wrap the subtree in `<TooltipProvider>` (from `@/components/ui/tooltip`).
+- `Toast` → wrap in `<ToastProvider>` and render a `<ToastViewport />` (from `@/components/ui/toast`).
+- `Sidebar` (+ `SidebarMenu*`/`SidebarContent`) → wrap in `<SidebarProvider>` (from `@/components/ui/sidebar`).
+
+```jsx
+<TooltipProvider>
+  <Tooltip>
+    <TooltipTrigger asChild><button className="text-signal">GPIO12</button></TooltipTrigger>
+    <TooltipContent>Strapping pin — must be LOW at boot.</TooltipContent>
+  </Tooltip>
+</TooltipProvider>
+```
 
 ## Styling idiom — semantic token utilities (use these names verbatim)
 | Purpose | Utility classes |
