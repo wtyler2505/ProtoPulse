@@ -1,0 +1,33 @@
+<!-- @dsCard group="Guidelines" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;background:var(--color-background);color:var(--color-foreground);font-family:var(--font-sans),system-ui,sans-serif;padding:40px}
+  .wordmark{font-family:var(--font-display);font-size:46px;font-weight:700;letter-spacing:.01em}
+  .wordmark b{color:var(--color-brand)}
+  .sub{color:var(--color-muted-foreground);font-size:14px;margin:6px 0 28px}
+  h2{font-family:var(--font-display);font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-muted-foreground);margin:22px 0 10px}
+  ul{margin:0;padding-left:18px;line-height:1.7;font-size:14px}
+  code{font-family:var(--font-mono);color:var(--color-primary)}
+  .pills{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .pill{font-family:var(--font-mono);font-size:12px;padding:4px 10px;border:1px solid var(--color-border)}
+</style></head>
+<body>
+  <div class="wordmark">Proto<b>Pulse</b></div>
+  <p class="sub">A browser-based EDA &amp; hardware-prototyping platform. Dark, technical, cyan.</p>
+
+  <h2>Principles</h2>
+  <ul>
+    <li><strong>Dark-first.</strong> The canvas is near-black (<code>--color-background</code>, hsl 225 20% 3%). Build on <code>bg-background</code>.</li>
+    <li><strong>Cyan is identity.</strong> <code>--color-brand</code> / <code>--color-primary</code> = hsl(190 100% 43%). Brand cyan signals "this is ProtoPulse"; interactive emphasis lives on the same hue.</li>
+    <li><strong>Sharp, not soft.</strong> Radius 0; chamfered corners for character.</li>
+    <li><strong>Function has color.</strong> Hardware concepts carry dedicated semantics, so a schematic, a PCB, and a validation panel speak one language:</li>
+  </ul>
+  <div class="pills">
+    <span class="pill" style="color:var(--color-power)">power · VCC rails</span>
+    <span class="pill" style="color:var(--color-signal)">signal · GPIO</span>
+    <span class="pill" style="color:var(--color-data)">data · buses</span>
+    <span class="pill" style="color:var(--color-success)">success</span>
+    <span class="pill" style="color:var(--color-warning)">warning</span>
+    <span class="pill" style="color:var(--color-destructive)">error</span>
+  </div>
+</body></html>

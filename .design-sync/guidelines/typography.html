@@ -1,0 +1,36 @@
+<!-- @dsCard group="Guidelines" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;background:var(--color-background);color:var(--color-foreground);font-family:var(--font-sans),system-ui,sans-serif;padding:32px}
+  h1{font-family:var(--font-display);font-size:28px;font-weight:700;margin:0 0 4px}
+  .sub{color:var(--color-muted-foreground);font-size:13px;margin:0 0 28px}
+  .row{border:1px solid var(--color-border);background:var(--color-card);padding:18px 20px;margin-bottom:14px}
+  .tag{font-family:var(--font-mono);font-size:11px;color:var(--color-primary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+  .specimen-display{font-family:var(--font-display);font-size:34px;font-weight:600;letter-spacing:.01em}
+  .specimen-sans{font-family:var(--font-sans);font-size:22px;font-weight:400}
+  .specimen-mono{font-family:var(--font-mono);font-size:18px}
+  .note{color:var(--color-muted-foreground);font-size:12px;margin-top:8px}
+  .scale span{display:inline-block;margin-right:14px;color:var(--color-muted-foreground);font-size:12px;font-family:var(--font-mono)}
+</style></head>
+<body>
+  <h1>Typography</h1>
+  <p class="sub">Three families. Headings/UI chrome in Rajdhani, body in Inter, code &amp; technical values in JetBrains Mono.</p>
+
+  <div class="row">
+    <div class="tag">font-display · Rajdhani · 300–700</div>
+    <div class="specimen-display">Schematic · PCB Layout · Simulation</div>
+    <div class="note">Headings, panel titles, the ProtoPulse wordmark. Condensed, technical, slightly futuristic. Utility: <code style="font-family:var(--font-mono)">font-display</code></div>
+  </div>
+
+  <div class="row">
+    <div class="tag">font-sans · Inter · 300–600</div>
+    <div class="specimen-sans">Body copy, descriptions, form labels, and the bulk of readable UI text.</div>
+    <div class="note">Default body family. Utility: <code style="font-family:var(--font-mono)">font-sans</code> (applied at the app root).</div>
+  </div>
+
+  <div class="row">
+    <div class="tag">font-mono · JetBrains Mono · 100–800</div>
+    <div class="specimen-mono">U1.19 / SCK · +3V3 · 100nF X7R · 0x1A2B · 4.7kΩ ±1%</div>
+    <div class="note">Reference designators, net names, MPNs, pin labels, SPICE directives, code. Utility: <code style="font-family:var(--font-mono)">font-mono</code></div>
+  </div>
+</body></html>

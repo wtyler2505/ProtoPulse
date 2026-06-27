@@ -1,0 +1,53 @@
+<!-- @dsCard group="Guidelines" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;background:var(--color-background);color:var(--color-foreground);font-family:var(--font-sans),system-ui,sans-serif;padding:32px}
+  h1{font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:.02em;margin:0 0 4px}
+  .sub{color:var(--color-muted-foreground);font-size:13px;margin:0 0 24px}
+  h2{font-family:var(--font-display);font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-muted-foreground);margin:28px 0 12px;border-bottom:1px solid var(--color-border);padding-bottom:6px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
+  .sw{border:1px solid var(--color-border);overflow:hidden;background:var(--color-card)}
+  .chip{height:64px}
+  .meta{padding:8px 10px}
+  .nm{font-size:13px;font-weight:600}
+  .val{font-family:var(--font-mono);font-size:11px;color:var(--color-muted-foreground);margin-top:2px}
+</style></head>
+<body>
+  <h1>Color</h1>
+  <p class="sub">Semantic CSS-variable tokens. Use the token utilities (<code style="font-family:var(--font-mono)">bg-primary</code>, <code style="font-family:var(--font-mono)">text-muted-foreground</code>) — never hardcode hex. Dark-first; all values are the dark-mode defaults.</p>
+
+  <h2>Surfaces &amp; text</h2>
+  <div class="grid">
+    <div class="sw"><div class="chip" style="background:var(--color-background)"></div><div class="meta"><div class="nm">background</div><div class="val">hsl(225 20% 3%)</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-card)"></div><div class="meta"><div class="nm">card / popover</div><div class="val">hsl(225 18% 5%)</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-muted)"></div><div class="meta"><div class="nm">muted</div><div class="val">hsl(225 12% 10%)</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-sidebar)"></div><div class="meta"><div class="nm">sidebar</div><div class="val">hsl(225 20% 4%)</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-border)"></div><div class="meta"><div class="nm">border / input</div><div class="val">hsl(225 12% 20%)</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-foreground)"></div><div class="meta"><div class="nm">foreground</div><div class="val">hsl(210 20% 90%)</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-muted-foreground)"></div><div class="meta"><div class="nm">muted-foreground</div><div class="val">hsl(215 15% 63%)</div></div></div>
+  </div>
+
+  <h2>Interactive</h2>
+  <div class="grid">
+    <div class="sw"><div class="chip" style="background:var(--color-primary)"></div><div class="meta"><div class="nm">primary</div><div class="val">hsl(190 100% 43%)</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-secondary)"></div><div class="meta"><div class="nm">secondary</div><div class="val">hsl(260 100% 65%)</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-accent)"></div><div class="meta"><div class="nm">accent</div><div class="val">hsl(190 100% 43%)</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-ring)"></div><div class="meta"><div class="nm">ring</div><div class="val">hsl(190 100% 43%)</div></div></div>
+  </div>
+
+  <h2>Status</h2>
+  <div class="grid">
+    <div class="sw"><div class="chip" style="background:var(--color-destructive)"></div><div class="meta"><div class="nm">destructive / error</div><div class="val">hsl(0 85% 55%)</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-success)"></div><div class="meta"><div class="nm">success</div><div class="val">hsl(145 75% 55%)</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-warning)"></div><div class="meta"><div class="nm">warning</div><div class="val">hsl(45 100% 60%)</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-info)"></div><div class="meta"><div class="nm">info</div><div class="val">hsl(215 90% 70%)</div></div></div>
+  </div>
+
+  <h2>EDA semantics — ProtoPulse's signature layer</h2>
+  <div class="grid">
+    <div class="sw"><div class="chip" style="background:var(--color-brand)"></div><div class="meta"><div class="nm">brand</div><div class="val">hsl(190 100% 43%) · identity cyan</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-power)"></div><div class="meta"><div class="nm">power</div><div class="val">hsl(40 95% 55%) · VCC rails</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-signal)"></div><div class="meta"><div class="nm">signal</div><div class="val">hsl(190 100% 60%) · GPIO/traces</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-data)"></div><div class="meta"><div class="nm">data</div><div class="val">hsl(270 85% 72%) · buses</div></div></div>
+  </div>
+</body></html>

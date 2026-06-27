@@ -100,3 +100,15 @@ dark mode). There is no built `dist/` of the components — so this sync runs in
 - **Tooltip/Toast cluster fix** (Tooltip, StyledTooltip, ConfidenceBadge, MentionBadge, Toast): the GLOBAL cfg.provider (TooltipProvider>ToastProvider) does NOT reach authored open-state previews. Fix = wrap each preview's Surface in an **in-cell** `<TooltipProvider>` (or `<ToastProvider>`+`<ToastViewport>` for Toast), imported from the same `@/components/ui/*`. ConfidenceBadge/MentionBadge need it too (internal styled-tooltip).
 - **`cfg.overrides.<Name>.skip` is an ARRAY of story names, NOT `true`** — `skip:true` crashes the build (`new Set(true)`, emit.mjs:368). Don't use it to skip a whole component; exclude from componentSrcMap/entry instead.
 - **`__dsCells empty` capture bug**: triggered by a lucide `<Icon/>` rendered inside a radix-portal component (Alert with `[&>svg]:absolute`, Tooltip content). Fix = drop the lucide icon from that specific preview (icons as plain button/badge children are fine). Cost me real time on Alert + Tooltip.
+
+## Brand-guideline pages (hand-authored cards) — durable + re-sync step
+The original curated project's brand-guideline pages were destroyed in the replace.
+Recreated 5 as `@dsCard group="Guidelines"` HTML cards from the REAL index.css values
+(palette/fonts/radius-0/chamfer/edge-glow): color-palette, typography, corners-and-spacing,
+effects, brand. Durable sources live in **`.design-sync/guidelines/*.html`** (committed).
+- They are NOT produced by the converter and live in the build-artifact `ds-bundle/`, which
+  is wiped each build. **Re-sync step:** after `package-build`, before validate/upload, run
+  `cp .design-sync/guidelines/*.html ds-bundle/guidelines/` so they ship again.
+- They link `../styles.css` for tokens+fonts and register via the `@dsCard` first-line marker.
+- Do NOT add them to `cfg.guidelinesGlob`: emitGuidelines preserves PKG_DIR-relative subpaths,
+  so `.design-sync/guidelines/*` would land at `guidelines/.design-sync/guidelines/*` (wrong).
