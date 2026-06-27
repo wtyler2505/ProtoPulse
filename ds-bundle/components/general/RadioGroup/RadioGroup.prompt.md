@@ -1,0 +1,1 @@
+RadioGroup from rest-express. Use via `window.ProtoPulse.RadioGroup` (bundle loaded from the root `_ds_bundle.js`). Wrap the tree in `<TooltipProvider>` (full provider chain in README.md — components read theme/i18n from that context).
