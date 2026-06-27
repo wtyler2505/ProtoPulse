@@ -1,4 +1,0 @@
-/* ProtoPulse brand fonts — loaded at runtime from Google Fonts (the app does the
- * same via a <link> in client/index.html). Shipped as a token file so styles.css
- * @imports it and designs render in-brand (Rajdhani display, Inter body, JetBrains Mono). */
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..800&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap");

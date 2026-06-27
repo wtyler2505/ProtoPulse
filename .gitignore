@@ -47,3 +47,10 @@ artifacts/
 # initref machine/moment-specific artifacts (dna/map stay committed)
 .ref/project-tools.md
 .ref/project-pulse.md
+
+# design-sync build artifacts (regenerated)
+ds-bundle/
+.ds-sync/
+.design-sync/.cache/
+.design-sync/ds-tailwind.css
+.design-sync/node_modules
