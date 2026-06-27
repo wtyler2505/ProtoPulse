@@ -21,7 +21,6 @@
     "Breadcrumb": "client/src/components/ui/breadcrumb.tsx",
     "Button": "client/src/components/ui/button.tsx",
     "ButtonGroup": "client/src/components/ui/button-group.tsx",
-    "CalcApplyButtons": "client/src/components/ui/CalcApplyButtons.tsx",
     "Calendar": "client/src/components/ui/calendar.tsx",
     "Card": "client/src/components/ui/card.tsx",
     "Carousel": "client/src/components/ui/carousel.tsx",
@@ -51,7 +50,6 @@
     "Label": "client/src/components/ui/label.tsx",
     "LessonModeOverlay": "client/src/components/ui/LessonModeOverlay.tsx",
     "LibrarySuggestPopover": "client/src/components/ui/LibrarySuggestPopover.tsx",
-    "LifecycleBadge": "client/src/components/ui/LifecycleBadge.tsx",
     "MentionBadge": "client/src/components/ui/MentionBadge.tsx",
     "Menubar": "client/src/components/ui/menubar.tsx",
     "NavigationMenu": "client/src/components/ui/navigation-menu.tsx",
@@ -88,9 +86,6 @@
     "ToggleGroup": "client/src/components/ui/toggle-group.tsx",
     "Tooltip": "client/src/components/ui/tooltip.tsx",
     "TrustReceiptCard": "client/src/components/ui/TrustReceiptCard.tsx",
-    "VaultExplainer": "client/src/components/ui/vault-explainer.tsx",
-    "VaultHoverCard": "client/src/components/ui/vault-hover-card.tsx",
-    "VaultInfoIcon": "client/src/components/ui/vault-info-icon.tsx",
     "ViewOnboardingHint": "client/src/components/ui/ViewOnboardingHint.tsx"
   },
   "extraFonts": [
@@ -104,5 +99,6 @@
   },
   "extraEntries": [
     "lucide-react"
-  ]
+  ],
+  "readmeHeader": ".design-sync/conventions.md"
 }

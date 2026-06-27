@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 import MentionBadge from "@/components/ui/MentionBadge";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const Surface = ({ children }: { children: ReactNode }) => (
-  <div
-    className="bg-background text-foreground"
-    style={{ padding: 24, display: "flex", justifyContent: "center" }}
-  >
-    {children}
-  </div>
+  <TooltipProvider>
+    <div className="bg-background text-foreground" style={{ padding: 24, display: "flex", justifyContent: "center" }}>
+      {children}
+    </div>
+  </TooltipProvider>
 );
 
 export function Toolbar() {

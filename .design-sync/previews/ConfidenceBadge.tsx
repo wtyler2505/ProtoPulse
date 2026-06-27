@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
 import ConfidenceBadge from "@/components/ui/ConfidenceBadge";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const Surface = ({ children }: { children: ReactNode }) => (
-  <div className="bg-background text-foreground" style={{ padding: 24 }}>
-    {children}
-  </div>
+  <TooltipProvider>
+    <div className="bg-background text-foreground" style={{ padding: 24 }}>
+      {children}
+    </div>
+  </TooltipProvider>
 );
 
 export function Tiers() {
