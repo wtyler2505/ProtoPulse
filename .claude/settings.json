@@ -341,6 +341,15 @@
             "timeout": 8000
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/session-start-initref-check.sh"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
