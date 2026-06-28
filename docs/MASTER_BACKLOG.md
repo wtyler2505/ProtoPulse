@@ -429,12 +429,12 @@ No backlog items are explicitly `BLOCKED` (`BL-0524` closed Wave 152 — its pre
 | Priority | Open | Done | Description |
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80). |
-| P1 | 0 | 73 | All resolved (Waves 54-67). |
-| P2 | **0** | **283** | `BL-0126` closed Wave 153 (Phase 2 already wired: DRC + board-stackup + sim↔DRC bridge + full simulation suite all consume `@shared/units` canonically). `BL-0524` closed Wave 152. Waves 61-153. |
+| P1 | **3** | 73 | 3 opened 2026-06-28 by the AI-first audit (BL-0902→0904). Prior: all resolved (Waves 54-67). |
+| P2 | **2** | **283** | 2 opened 2026-06-28 by the AI-first audit (BL-0905/0906). `BL-0126` closed Wave 153; `BL-0524` closed Wave 152. Waves 61-153. |
 | P3 | 0 | 133 | All resolved (Waves 105-154). |
-| **Total** | **0** | **508** | **508 items tracked** — BACKLOG FULLY DONE as of Wave 153. |
+| **Total** | **5** | **508** | **513 items tracked** — 5 opened 2026-06-28 (AI-first audit); 508 done. |
 
-*Snapshot updated: 2026-04-18 — `BL-0126` closed in Wave 153 (verified Phase 2 wiring landed: `shared/drc-engine.ts` imports `Length_mil` from `./units`; `client/src/lib/board-stackup.ts` uses `@shared/units` branded types; `client/src/lib/simulation/pcb-geometry-bridge.ts` imports `milToMm`/`mmToMeter` from `@shared/units`; simulation suite — `spice-netlist-parser`, `spice-generator`, `design-var-spice-bridge`, `thermal-analysis` — all import canonical helpers from `@shared/units`). No remaining open or BLOCKED items.*
+*Snapshot updated: 2026-06-28 — `/ai-firstify` audit opened BL-0902→0906 (eval harness, prompt versioning, count de-drift, `.claude/` cruft cleanup, root-noise reduction); see `docs/audits/2026-06-28-ai-first-assessment.md`. Prior snapshot 2026-04-18 — `BL-0126` closed in Wave 153 (verified Phase 2 wiring landed: `shared/drc-engine.ts` imports `Length_mil` from `./units`; `client/src/lib/board-stackup.ts` uses `@shared/units` branded types; `client/src/lib/simulation/pcb-geometry-bridge.ts` imports `milToMm`/`mmToMeter` from `@shared/units`; simulation suite — `spice-netlist-parser`, `spice-generator`, `design-var-spice-bridge`, `thermal-analysis` — all import canonical helpers from `@shared/units`). No remaining open or BLOCKED items.*
 
 ---
 
@@ -472,6 +472,14 @@ No backlog items are explicitly `BLOCKED` (`BL-0524` closed Wave 152 — its pre
 ---
 
 ## P1 — High (Broken Workflows / Major UX / Test Gaps)
+
+### AI-First Audit Findings (2026-06-28 — `/ai-firstify` audit, `docs/audits/2026-06-28-ai-first-assessment.md`)
+
+| ID | Description | Status | Complexity | Source |
+|----|-------------|--------|------------|--------|
+| BL-0902 | **Golden-set regression eval harness for `@protopulse/ai`** — The crew already has deterministic `FakeProvider` scenario tests (eval-adjacent), but there is no *named, gated* regression eval. Promote them into a first-class `packages/ai/evals/` (representative cases + expected/acceptable outputs) with a one-command runner wired into `packages-ci.yml`, so prompt/model changes can't silently regress crew behavior. The single highest-value Axis-B gap. Engine-only; do not touch frozen `server/ai.ts`. | OPEN | C3 | AI-first audit 2026-06-28 |
+| BL-0903 | **Version engine AI prompts + add missing `packages/ai/README.md`** — `@protopulse/ai` system/crew prompts live inline in code; extract them into versioned prompt files. Add the `packages/ai/README.md` that CLAUDE.md's engine section already references, documenting **model pins (provider+model+version)** and a **cost/latency budget**. Add a one-line "legacy `server/ai.ts` is frozen; new AI work → `@protopulse/ai`" note to AGENTS.md. | OPEN | C3 | AI-first audit 2026-06-28 |
+| BL-0904 | **De-drift AGENTS.md counts (make self-updating)** — The two hard-coded "1,377 tests as of 2026-06-11" strings were fixed to ~1,626 (2026-06-28) but will re-stale. Replace hard-coded package/test counts with a pointer to a generated source (e.g. a `make stats` output or `.ref/project-dna.md` reference) so the number can't drift again. | OPEN | C2 | AI-first audit 2026-06-28 |
 
 ### Observed Bugs (from visual audit)
 
@@ -806,6 +814,13 @@ No backlog items are explicitly `BLOCKED` (`BL-0524` closed Wave 152 — its pre
 ---
 
 ## P2 — Medium (Feature Gaps & Polish)
+
+### AI-First Audit Findings (2026-06-28 — `/ai-firstify` audit)
+
+| ID | Description | Status | Complexity | Source |
+|----|-------------|--------|------------|--------|
+| BL-0905 | **Clean committed `.claude/` cruft** — `git rm -r` the tracked `.claude/Untitled Folder/` (113 files — a full duplicate of the commands + skills trees) and the `settings*.bak` files (`settings.json.pre-stop-hook-cleanup.bak`, `settings.local.json.pre-skill-cleanup.bak`). Duplicated instruction surfaces are the "drifting duplicate context" anti-pattern and inflate the apparent skill/command count (true surface: 67 skills / 60 commands / 29 hooks). **Jurisdiction guard:** delete only the stray duplicate copies — leave every canonical Codex-owned `pp-*`/`pp-nlm-*` skill/command/hook untouched. Pair with `scripts/sync-skills.sh --check` as a drift lint. | OPEN | C1 | AI-first audit 2026-06-28 |
+| BL-0906 | **Reduce repo-root noise** — 26 tracked `CODEX_*` / `COLLAB_*` / `CLAUDE_RESPONSE_*` / `RALPH-*` point-in-time history files sit at repo root and push real entry points down the first-scan listing an agent reads. AGENTS.md already classifies them as history → relocate to `docs/handoffs/` or `archive/`. Keep `AGENTS.md`/`README.md`/`ROADMAP.md`/`ARCHITECTURE.md`/`DESIGN.md` at root. | OPEN | C2 | AI-first audit 2026-06-28 |
 
 ### Core EDA — Schematic & PCB
 
