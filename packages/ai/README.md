@@ -138,9 +138,18 @@ digest. Locations: `agent.ts:172` (Draftsman), `analyst.ts:32`,
 Prompts are product behavior: a change to a STRICT RULES block changes what
 the crew does. Treat edits as deliberate — review them like an API change, and
 keep the persona tests (`*.test.ts`) that assert on prompt content green.
-**(BL-0903 will extract these into versioned prompt modules so prompt changes
-are tracked and diffable independently of agent logic; until then, the
-colocated literals above are the source of truth.)**
+
+**Versioning:** prompts stay colocated with their agents — deliberately
+*not* hoisted into a separate `prompts/` layer (BL-0903 weighed and descoped
+that: a persona's prompt is assembled at call time from the static
+persona+rules **and** the live `assembleContext()` digest, so splitting the
+static half from its assembler buys indirection, not isolation). Trackability
+is already covered: **git diffs** show *what* changed in a STRICT RULES block,
+and the `FakeProvider` scenario tests — promoted to a gated eval by
+**BL-0902** — catch *behavioral* regression. That pairing is the prompt
+version-control story; a separate prompt-file registry would only matter if a
+non-engineer editing workflow or runtime prompt A/B swapping were on the
+roadmap (neither is).
 
 ---
 
