@@ -231,7 +231,7 @@
           },
           {
             "type": "command",
-            "command": "setsid nohup /home/wtyler/.claude/scripts/auto-push-protopulse.sh --session-end < /dev/null > /dev/null 2>&1 & disown",
+            "command": "setsid nohup /home/wtyler/.claude/scripts/auto-push-protopulse.sh --session-end < /dev/null > /dev/null 2>&1 &",
             "timeout": 60
           }
         ]
