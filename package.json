@@ -16,6 +16,7 @@
     "check": "NODE_OPTIONS='--max-old-space-size=16384' tsc",
     "check:packages": "tsc -p packages",
     "test:packages": "npm run test --workspaces --if-present",
+    "eval:ai": "npm run -w @protopulse/ai eval",
     "test": "NODE_OPTIONS='--max-old-space-size=8192' vitest run",
     "test:watch": "NODE_OPTIONS='--max-old-space-size=8192' vitest",
     "test:coverage": "NODE_OPTIONS='--max-old-space-size=8192' vitest run --coverage",
