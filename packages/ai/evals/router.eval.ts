@@ -21,7 +21,7 @@ import type { PinnedRouteRequest, RouterHooks } from '../src/route-types.js';
 import type { DesignGraph, OpBody } from '@protopulse/graph';
 import type { GoldenRun, GoldenScenario } from './schema.js';
 
-function use(id: string, name: string, input: unknown): AgentEvent {
+function toolUse(id: string, name: string, input: unknown): AgentEvent {
   return { kind: 'tool_use', id, name, input };
 }
 function done(stopReason: string): AgentEvent {
@@ -123,10 +123,10 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'router',
     input: 'Route the board.',
     scriptedTurns: [
-      [use('t1', 'read_board', {}), done('tool_use')],
-      [use('t2', 'route_connection', { net: 'SIG', mode: 'walk' }), done('tool_use')],
-      [use('t3', 'route_connection', { net: 'SIG', mode: 'shove' }), done('tool_use')],
-      [use('t4', 'run_drc', {}), done('tool_use')],
+      [toolUse('t1', 'read_board', {}), done('tool_use')],
+      [toolUse('t2', 'route_connection', { net: 'SIG', mode: 'walk' }), done('tool_use')],
+      [toolUse('t3', 'route_connection', { net: 'SIG', mode: 'shove' }), done('tool_use')],
+      [toolUse('t4', 'run_drc', {}), done('tool_use')],
       say('SIG landed via shove after walk refused. DRC: 0 errors.'),
     ],
     expect: {
@@ -151,11 +151,11 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'router',
     input: 'Route SIG, then rip it up and route it again.',
     scriptedTurns: [
-      [use('t1', 'read_board', {}), done('tool_use')],
-      [use('t2', 'route_connection', { net: 'SIG', mode: 'shove' }), done('tool_use')],
-      [use('t3', 'remove_trace', { traceId: 't-sig' }), done('tool_use')],
-      [use('t4', 'route_connection', { net: 'SIG', mode: 'shove' }), done('tool_use')],
-      [use('t5', 'run_drc', {}), done('tool_use')],
+      [toolUse('t1', 'read_board', {}), done('tool_use')],
+      [toolUse('t2', 'route_connection', { net: 'SIG', mode: 'shove' }), done('tool_use')],
+      [toolUse('t3', 'remove_trace', { traceId: 't-sig' }), done('tool_use')],
+      [toolUse('t4', 'route_connection', { net: 'SIG', mode: 'shove' }), done('tool_use')],
+      [toolUse('t5', 'run_drc', {}), done('tool_use')],
       say('Ripped up SIG and re-routed it; DRC clean.'),
     ],
     expect: {
@@ -178,7 +178,7 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'router',
     input: 'What still needs routing?',
     scriptedTurns: [
-      [use('t1', 'read_board', {}), done('tool_use')],
+      [toolUse('t1', 'read_board', {}), done('tool_use')],
       say('One connection left: SIG (R1:2→R2:1). Nothing routed yet.'),
     ],
     expect: {

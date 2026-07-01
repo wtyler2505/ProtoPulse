@@ -20,7 +20,7 @@ import type { CatalogLike } from '../src/tools/buyer.js';
 import type { GoldenRun, GoldenScenario } from './schema.js';
 import type { DesignGraph, OpBody } from '@protopulse/graph';
 
-function use(id: string, name: string, input: unknown): AgentEvent {
+function toolUse(id: string, name: string, input: unknown): AgentEvent {
   return { kind: 'tool_use', id, name, input };
 }
 function done(stopReason: string): AgentEvent {
@@ -90,10 +90,10 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'buyer',
     input: 'Source this design.',
     scriptedTurns: [
-      [use('t1', 'read_bom', {}), done('tool_use')],
-      [use('t2', 'find_offers', { ref: 'R1' }), done('tool_use')],
-      [use('t3', 'assign_sourcing', { refs: ['R1', 'R2'], lcsc: 'C25804' }), done('tool_use')],
-      [use('t4', 'sourcing_report', {}), done('tool_use')],
+      [toolUse('t1', 'read_bom', {}), done('tool_use')],
+      [toolUse('t2', 'find_offers', { ref: 'R1' }), done('tool_use')],
+      [toolUse('t3', 'assign_sourcing', { refs: ['R1', 'R2'], lcsc: 'C25804' }), done('tool_use')],
+      [toolUse('t4', 'sourcing_report', {}), done('tool_use')],
       say('Sourced the 10k resistors as C25804 (basic). R3 has no value; U1 is still unsourced.'),
     ],
     expect: {
@@ -117,12 +117,12 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'buyer',
     input: 'Source everything you can, resistors and the 555.',
     scriptedTurns: [
-      [use('t1', 'read_bom', {}), done('tool_use')],
-      [use('t2', 'find_offers', { ref: 'R1' }), done('tool_use')],
-      [use('t3', 'assign_sourcing', { refs: ['R1', 'R2'], lcsc: 'C25804' }), done('tool_use')],
-      [use('t4', 'find_offers', { ref: 'U1' }), done('tool_use')],
-      [use('t5', 'assign_sourcing', { refs: ['U1'], lcsc: 'C7593' }), done('tool_use')],
-      [use('t6', 'sourcing_report', {}), done('tool_use')],
+      [toolUse('t1', 'read_bom', {}), done('tool_use')],
+      [toolUse('t2', 'find_offers', { ref: 'R1' }), done('tool_use')],
+      [toolUse('t3', 'assign_sourcing', { refs: ['R1', 'R2'], lcsc: 'C25804' }), done('tool_use')],
+      [toolUse('t4', 'find_offers', { ref: 'U1' }), done('tool_use')],
+      [toolUse('t5', 'assign_sourcing', { refs: ['U1'], lcsc: 'C7593' }), done('tool_use')],
+      [toolUse('t6', 'sourcing_report', {}), done('tool_use')],
       say('R1/R2 sourced C25804 (basic), U1 sourced C7593 (extended, per-reel setup fee). R3 unsourced — no value.'),
     ],
     expect: {
@@ -145,9 +145,9 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'buyer',
     input: 'Can we source a 47k resistor?',
     scriptedTurns: [
-      [use('t1', 'read_bom', {}), done('tool_use')],
-      [use('t2', 'find_offers', { partId: 'core:resistor', value: '47k' }), done('tool_use')],
-      [use('t3', 'sourcing_report', {}), done('tool_use')],
+      [toolUse('t1', 'read_bom', {}), done('tool_use')],
+      [toolUse('t2', 'find_offers', { partId: 'core:resistor', value: '47k' }), done('tool_use')],
+      [toolUse('t3', 'sourcing_report', {}), done('tool_use')],
       say('No jlcpcb offer for a 47k resistor in the 2026-06 snapshot — that line stays unsourced.'),
     ],
     expect: {

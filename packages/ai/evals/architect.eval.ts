@@ -25,7 +25,7 @@ import type { AgentEvent } from '../src/provider.js';
 import type { GoldenRun, GoldenScenario } from './schema.js';
 import type { DesignGraph, OpBody } from '@protopulse/graph';
 
-function use(id: string, name: string, input: unknown): AgentEvent {
+function toolUse(id: string, name: string, input: unknown): AgentEvent {
   return { kind: 'tool_use', id, name, input };
 }
 function done(stopReason: string): AgentEvent {
@@ -90,20 +90,20 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'architect',
     input: 'Organize this design: bus the power rails and put the PSU on its own sheet.',
     scriptedTurns: [
-      [use('t1', 'read_structure', {}), done('tool_use')],
+      [toolUse('t1', 'read_structure', {}), done('tool_use')],
       [
-        use('t2', 'create_bus', { name: 'POWER', busKind: 'PWR', nets: ['VCC', 'GND'] }),
+        toolUse('t2', 'create_bus', { name: 'POWER', busKind: 'PWR', nets: ['VCC', 'GND'] }),
         done('tool_use'),
       ],
       [
-        use('t3', 'create_sheet', {
+        toolUse('t3', 'create_sheet', {
           name: 'PSU',
           components: ['R1', 'C1'],
           interface: [{ name: 'VOUT', direction: 'out', net: 'VCC' }],
         }),
         done('tool_use'),
       ],
-      [use('t4', 'read_structure', {}), done('tool_use')],
+      [toolUse('t4', 'read_structure', {}), done('tool_use')],
       say('Organized: POWER bus over VCC+GND, PSU sheet with R1 and C1.'),
     ],
     expect: {
@@ -128,12 +128,12 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'architect',
     input: 'Make an MCU sheet and move the second resistor onto it.',
     scriptedTurns: [
-      [use('t1', 'read_structure', {}), done('tool_use')],
+      [toolUse('t1', 'read_structure', {}), done('tool_use')],
       [
-        use('t2', 'create_sheet', { name: 'MCU', components: ['R1'] }),
+        toolUse('t2', 'create_sheet', { name: 'MCU', components: ['R1'] }),
         done('tool_use'),
       ],
-      [use('t3', 'move_components', { components: ['R2'], sheet: 'MCU' }), done('tool_use')],
+      [toolUse('t3', 'move_components', { components: ['R2'], sheet: 'MCU' }), done('tool_use')],
       say('Moved R2 onto the MCU sheet.'),
     ],
     expect: {
@@ -156,7 +156,7 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'architect',
     input: 'Should this design be reorganized?',
     scriptedTurns: [
-      [use('t1', 'read_structure', {}), done('tool_use')],
+      [toolUse('t1', 'read_structure', {}), done('tool_use')],
       say('This design is too small to reorganize — it is already flat and clear.'),
     ],
     expect: {

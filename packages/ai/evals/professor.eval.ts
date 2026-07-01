@@ -26,7 +26,7 @@ import type { CodeToConcept, ConceptLookup } from '../src/tools/professor.js';
 import type { GoldenRun, GoldenScenario } from './schema.js';
 import type { DesignGraph, OpBody, OpEnvelope } from '@protopulse/graph';
 
-function use(id: string, name: string, input: unknown): AgentEvent {
+function toolUse(id: string, name: string, input: unknown): AgentEvent {
   return { kind: 'tool_use', id, name, input };
 }
 function done(stopReason: string): AgentEvent {
@@ -103,10 +103,10 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'professor',
     input: 'Explain this finding: ERC-OC-NO-PULLUP on VOUT',
     scriptedTurns: [
-      [use('t1', 'read_design', {}), done('tool_use')],
-      [use('t2', 'lookup_concept', { slug: 'pull-up-pull-down' }), done('tool_use')],
+      [toolUse('t1', 'read_design', {}), done('tool_use')],
+      [toolUse('t2', 'lookup_concept', { slug: 'pull-up-pull-down' }), done('tool_use')],
       [
-        use('t3', 'explain_finding', { code: 'ERC-OC-NO-PULLUP', message: 'no pull-up on VOUT' }),
+        toolUse('t3', 'explain_finding', { code: 'ERC-OC-NO-PULLUP', message: 'no pull-up on VOUT' }),
         done('tool_use'),
       ],
       say('Per "Pull-up and pull-down resistors": R1 on net VOUT has no pull-up, so nothing defines the idle level.'),
@@ -134,7 +134,7 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'professor',
     input: 'Teach me why VOUT behaves the way it does.',
     scriptedTurns: [
-      [use('t1', 'read_design', {}), done('tool_use')],
+      [toolUse('t1', 'read_design', {}), done('tool_use')],
       say('From first principles: R1 on VOUT... try measuring it on the bench yourself.'),
     ],
     expect: {

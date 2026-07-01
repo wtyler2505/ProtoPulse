@@ -22,7 +22,7 @@ import type { DesignGraph, OpBody, OpEnvelope } from '@protopulse/graph';
 import type { PartDb } from '@protopulse/parts';
 import type { GoldenRun, GoldenScenario } from './schema.js';
 
-function use(id: string, name: string, input: unknown): AgentEvent {
+function toolUse(id: string, name: string, input: unknown): AgentEvent {
   return { kind: 'tool_use', id, name, input };
 }
 function done(stopReason: string): AgentEvent {
@@ -100,9 +100,9 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'analyst',
     input: 'What does the output settle to?',
     scriptedTurns: [
-      [use('t1', 'read_design', {}), done('tool_use')],
-      [use('t2', 'run_simulation', { analysis: TRAN }), done('tool_use')],
-      [use('t3', 'measure', { vector: 'v(out)', metric: 'final' }), done('tool_use')],
+      [toolUse('t1', 'read_design', {}), done('tool_use')],
+      [toolUse('t2', 'run_simulation', { analysis: TRAN }), done('tool_use')],
+      [toolUse('t3', 'measure', { vector: 'v(out)', metric: 'final' }), done('tool_use')],
       say('v(out) settles at 4V. Fidelity: 1 spice — numbers are trustworthy.'),
     ],
     expect: {
@@ -126,8 +126,8 @@ const SCENARIOS: GoldenScenario[] = [
     persona: 'analyst',
     input: 'measure first by mistake',
     scriptedTurns: [
-      [use('t1', 'measure', { vector: 'v(out)', metric: 'rms' }), done('tool_use')],
-      [use('t2', 'run_simulation', { analysis: TRAN }), done('tool_use')],
+      [toolUse('t1', 'measure', { vector: 'v(out)', metric: 'rms' }), done('tool_use')],
+      [toolUse('t2', 'run_simulation', { analysis: TRAN }), done('tool_use')],
       say('Ran it properly this time.'),
     ],
     expect: {

@@ -17,7 +17,7 @@ import { describeGolden } from './suite.js';
 import type { AgentEvent } from '../src/provider.js';
 import type { GoldenRun, GoldenScenario } from './schema.js';
 
-function use(id: string, name: string, input: unknown): AgentEvent {
+function toolUse(id: string, name: string, input: unknown): AgentEvent {
   return { kind: 'tool_use', id, name, input };
 }
 function done(stopReason: string): AgentEvent {
@@ -54,12 +54,12 @@ const SCENARIOS: GoldenScenario[] = [
     input: 'Add an LED with a current-limiting resistor.',
     scriptedTurns: [
       [
-        use('t1', 'add_component', { part_id: 'core:led' }),
-        use('t2', 'add_component', { part_id: 'core:resistor', value: '330' }),
+        toolUse('t1', 'add_component', { part_id: 'core:led' }),
+        toolUse('t2', 'add_component', { part_id: 'core:resistor', value: '330' }),
         done('tool_use'),
       ],
-      [use('t3', 'connect', { from_port: 'R1:2', to_port: 'D1:A' }), done('tool_use')],
-      [use('t4', 'run_erc', {}), done('tool_use')],
+      [toolUse('t3', 'connect', { from_port: 'R1:2', to_port: 'D1:A' }), done('tool_use')],
+      [toolUse('t4', 'run_erc', {}), done('tool_use')],
       say('Wired the LED through a 330Ω limiter.'),
     ],
     expect: {
@@ -79,7 +79,7 @@ const SCENARIOS: GoldenScenario[] = [
     id: 'draftsman/erc-only-read-no-ops',
     persona: 'draftsman',
     input: 'Check the design.',
-    scriptedTurns: [[use('t1', 'run_erc', {}), done('tool_use')], say('All clear.')],
+    scriptedTurns: [[toolUse('t1', 'run_erc', {}), done('tool_use')], say('All clear.')],
     expect: {
       promptIncludes: ['You are the Draftsman', 'STRICT RULES:'],
       toolSequence: ['run_erc'],
