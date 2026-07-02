@@ -3,7 +3,7 @@
  *
  * Kinetic counterpart to `p1-a11y-scan.spec.ts` (Phase 5, static axe scan).
  * For each major tab/route this spec:
- *   1. Navigates via /projects/1/{viewName} (same inventory as Phase 5).
+ *   1. Navigates via /projects/:id/{viewName} (same inventory as Phase 5).
  *   2. Waits for the workspace-main landmark and lets lazy chunks resolve.
  *   3. Runs `tabThrough(page, 20)` and asserts:
  *        - at least one reachable focus stop,
@@ -26,6 +26,7 @@
 import { expect, test } from '@playwright/test';
 
 import { assertNoKeyboardTrap, tabThrough } from './keyboard-helpers';
+import { getTestProjectId } from './test-project';
 
 import type { FocusStop } from './keyboard-helpers';
 import type { Page } from '@playwright/test';
@@ -37,7 +38,7 @@ test.use({ storageState: 'e2e/.auth-state.json' });
  * Mirrors `p1-a11y-scan.spec.ts::openView` for consistency.
  */
 async function openView(page: Page, viewName: string): Promise<void> {
-  await page.goto(`/projects/1/${viewName}`);
+  await page.goto(`/projects/${getTestProjectId()}/${viewName}`);
   await page.waitForSelector('[data-testid="workspace-main"]', { timeout: 15_000 });
   await page.waitForTimeout(2_000);
   await expect(page.locator('[data-testid="workspace-main"]')).toBeVisible();
@@ -69,10 +70,7 @@ async function runKeyboardKernel(page: Page, label: string): Promise<void> {
   }
 
   // Reachability: at least one non-null named stop.
-  expect(
-    named.length,
-    `[keyboard-nav] ${label}: no reachable interactive elements in 20 Tabs`,
-  ).toBeGreaterThan(0);
+  expect(named.length, `[keyboard-nav] ${label}: no reachable interactive elements in 20 Tabs`).toBeGreaterThan(0);
 
   // Accessible-name check: every non-null stop has a non-empty accessibleName.
   const unnamed = named.filter((s) => !s.accessibleName || s.accessibleName.length === 0);

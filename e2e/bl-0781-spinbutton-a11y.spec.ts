@@ -23,12 +23,17 @@
  * no additional signal (the underlying bug is view-agnostic: any spinbutton
  * without a real `max` gets the fix once it uses NumberInput).
  */
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect  } from '@playwright/test';
+
+import { getTestProjectId } from './test-project';
+
+import type {Page} from '@playwright/test';
+
 
 test.use({ storageState: 'e2e/.auth-state.json' });
 
 async function openView(page: Page, viewName: string): Promise<void> {
-  await page.goto(`/projects/1/${viewName}`);
+  await page.goto(`/projects/${getTestProjectId()}/${viewName}`);
   await page.waitForSelector('[data-testid="workspace-main"]', { timeout: 15_000 });
   await page.waitForTimeout(2_000);
   await expect(page.locator('[data-testid="workspace-main"]')).toBeVisible();
@@ -69,9 +74,7 @@ test.describe('BL-0781 — spinbutton aria-valuemax regression (real browser)', 
     await assertNoSynthesizedZeroMax(page, 'pcb');
   });
 
-  test('component_editor tab (ComponentInspector, DRCPanel, GeneratorModal, ShapeCanvas)', async ({
-    page,
-  }) => {
+  test('component_editor tab (ComponentInspector, DRCPanel, GeneratorModal, ShapeCanvas)', async ({ page }) => {
     await openView(page, 'component_editor');
     await assertNoSynthesizedZeroMax(page, 'component_editor');
   });
