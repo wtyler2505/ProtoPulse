@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NumberInput } from '@/components/ui/number-input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import type { MysteryPartConfig, MysteryPartPinSide } from '@shared/component-types';
@@ -108,13 +109,7 @@ function MysteryPartPreview({ config }: PreviewProps) {
   }, [config.pins, bySide, bodyW, bodyH]);
 
   return (
-    <svg
-      data-testid="mystery-preview"
-      width={svgW}
-      height={svgH}
-      viewBox={`0 0 ${svgW} ${svgH}`}
-      className="mx-auto"
-    >
+    <svg data-testid="mystery-preview" width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="mx-auto">
       {/* Body */}
       <rect
         x={PAD}
@@ -142,14 +137,7 @@ function MysteryPartPreview({ config }: PreviewProps) {
       {pinElements.map((p) => (
         <g key={p.key}>
           <circle cx={p.cx} cy={p.cy} r={PIN_R} fill="#C0C0C0" stroke="#888" strokeWidth={1} />
-          <text
-            x={p.cx}
-            y={p.cy - PIN_R - 2}
-            textAnchor="middle"
-            fill="#aaa"
-            fontSize={7}
-            fontFamily="monospace"
-          >
+          <text x={p.cx} y={p.cy - PIN_R - 2} textAnchor="middle" fill="#aaa" fontSize={7} fontFamily="monospace">
             {p.label}
           </text>
         </g>
@@ -162,15 +150,8 @@ function MysteryPartPreview({ config }: PreviewProps) {
 // Main Component
 // ---------------------------------------------------------------------------
 
-export function MysteryPartConfigurator({
-  open,
-  onOpenChange,
-  initialConfig,
-  onApply,
-}: MysteryPartConfiguratorProps) {
-  const [config, setConfig] = useState<MysteryPartConfig>(
-    () => initialConfig ?? createDefaultMysteryPartConfig(),
-  );
+export function MysteryPartConfigurator({ open, onOpenChange, initialConfig, onApply }: MysteryPartConfiguratorProps) {
+  const [config, setConfig] = useState<MysteryPartConfig>(() => initialConfig ?? createDefaultMysteryPartConfig());
   const [pinCountInput, setPinCountInput] = useState(() => String(config.pins.length));
   const [selectedSides, setSelectedSides] = useState<MysteryPartPinSide[]>(() => {
     // Derive initial selected sides from the config's pins
@@ -219,7 +200,7 @@ export function MysteryPartConfigurator({
       if (n < MYSTERY_PART_MIN_PINS || n > MYSTERY_PART_MAX_PINS) {
         return;
       }
-      const sides = selectedSides.length > 0 ? selectedSides : ['left', 'right'] as MysteryPartPinSide[];
+      const sides = selectedSides.length > 0 ? selectedSides : (['left', 'right'] as MysteryPartPinSide[]);
       const newPins = distributePins(n, sides);
       // Preserve existing labels where possible
       for (let i = 0; i < Math.min(newPins.length, config.pins.length); i++) {
@@ -337,11 +318,12 @@ export function MysteryPartConfigurator({
 
               {/* Pin count */}
               <div className="space-y-1.5">
-                <Label htmlFor="mystery-pin-count">Pin Count ({MYSTERY_PART_MIN_PINS}-{MYSTERY_PART_MAX_PINS})</Label>
-                <Input
+                <Label htmlFor="mystery-pin-count">
+                  Pin Count ({MYSTERY_PART_MIN_PINS}-{MYSTERY_PART_MAX_PINS})
+                </Label>
+                <NumberInput
                   id="mystery-pin-count"
                   data-testid="mystery-pin-count"
-                  type="number"
                   min={MYSTERY_PART_MIN_PINS}
                   max={MYSTERY_PART_MAX_PINS}
                   value={pinCountInput}
@@ -359,10 +341,7 @@ export function MysteryPartConfigurator({
                 <Label>Pin Sides</Label>
                 <div className="flex flex-wrap gap-3">
                   {ALL_SIDES.map((side) => (
-                    <label
-                      key={side}
-                      className="flex items-center gap-1.5 text-sm capitalize cursor-pointer"
-                    >
+                    <label key={side} className="flex items-center gap-1.5 text-sm capitalize cursor-pointer">
                       <Checkbox
                         data-testid={`mystery-side-${side}`}
                         checked={selectedSides.includes(side)}
@@ -378,10 +357,9 @@ export function MysteryPartConfigurator({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="mystery-body-width">Body Width</Label>
-                  <Input
+                  <NumberInput
                     id="mystery-body-width"
                     data-testid="mystery-body-width"
-                    type="number"
                     min={1}
                     max={20}
                     value={config.bodyWidth}
@@ -390,10 +368,9 @@ export function MysteryPartConfigurator({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="mystery-body-height">Body Height</Label>
-                  <Input
+                  <NumberInput
                     id="mystery-body-height"
                     data-testid="mystery-body-height"
-                    type="number"
                     min={1}
                     max={20}
                     value={config.bodyHeight}
@@ -408,18 +385,14 @@ export function MysteryPartConfigurator({
                 <div className="space-y-1 max-h-[200px] overflow-y-auto rounded border border-border p-2">
                   {config.pins.map((pin, i) => (
                     <div key={`${pin.side}-${pin.index}`} className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
-                        {i + 1}
-                      </span>
+                      <span className="text-xs text-muted-foreground w-6 text-right shrink-0">{i + 1}</span>
                       <Input
                         data-testid={`mystery-pin-label-${i}`}
                         className="h-7 text-xs"
                         value={pin.label}
                         onChange={(e) => updatePinLabel(i, e.target.value)}
                       />
-                      <span className="text-xs text-muted-foreground capitalize shrink-0 w-10">
-                        {pin.side}
-                      </span>
+                      <span className="text-xs text-muted-foreground capitalize shrink-0 w-10">{pin.side}</span>
                     </div>
                   ))}
                 </div>
@@ -432,8 +405,8 @@ export function MysteryPartConfigurator({
             <p className="text-xs text-muted-foreground mb-2">Preview</p>
             <MysteryPartPreview config={config} />
             <p className="text-xs text-muted-foreground mt-2">
-              {config.pins.length} pin{config.pins.length !== 1 ? 's' : ''} &middot;{' '}
-              {config.bodyWidth}&times;{config.bodyHeight} grid units
+              {config.pins.length} pin{config.pins.length !== 1 ? 's' : ''} &middot; {config.bodyWidth}&times;
+              {config.bodyHeight} grid units
             </p>
           </div>
         </div>

@@ -1,21 +1,14 @@
 import { memo, useState, useCallback, useMemo, useSyncExternalStore } from 'react';
-import {
-  Ruler,
-  Check,
-  AlertTriangle,
-  Play,
-  RefreshCw,
-  ChevronDown,
-  ChevronRight,
-  Settings2,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+
+import { Ruler, Check, AlertTriangle, Play, RefreshCw, ChevronDown, ChevronRight, Settings2 } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { NumberInput } from '@/components/ui/number-input';
 import { DiffPairLengthMatcher } from '@/lib/pcb/diff-pair-length-match';
 import type { DiffPairDef, MatchResult, MeanderConstraints } from '@/lib/pcb/diff-pair-length-match';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -43,10 +36,7 @@ const PairRow = memo(function PairRow({ result, onMatch, expanded, onToggle }: P
   const matched = before.matched;
 
   return (
-    <div
-      className="border border-border rounded-md overflow-hidden"
-      data-testid={`pair-row-${result.pairId}`}
-    >
+    <div className="border border-border rounded-md overflow-hidden" data-testid={`pair-row-${result.pairId}`}>
       {/* Header */}
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
@@ -105,10 +95,7 @@ const PairRow = memo(function PairRow({ result, onMatch, expanded, onToggle }: P
 
           {/* Meander suggestion */}
           {suggestion && (
-            <div
-              className="rounded bg-muted/40 p-2 text-xs space-y-1"
-              data-testid={`pair-suggestion-${result.pairId}`}
-            >
+            <div className="rounded bg-muted/40 p-2 text-xs space-y-1" data-testid={`pair-suggestion-${result.pairId}`}>
               <div className="flex items-center gap-1.5">
                 <span className="text-muted-foreground">Meander on:</span>
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -119,9 +106,7 @@ const PairRow = memo(function PairRow({ result, onMatch, expanded, onToggle }: P
               </div>
 
               {!achievable && (
-                <p className="text-yellow-400/80 text-[10px]">
-                  Cannot fully compensate within current constraints.
-                </p>
+                <p className="text-yellow-400/80 text-[10px]">Cannot fully compensate within current constraints.</p>
               )}
             </div>
           )}
@@ -247,15 +232,11 @@ export const DiffPairLengthMatchPanel = memo(function DiffPairLengthMatchPanel({
 
       {/* Settings panel */}
       {showSettings && (
-        <div
-          className="border border-border rounded-md p-3 space-y-2 bg-muted/20"
-          data-testid="length-match-settings"
-        >
+        <div className="border border-border rounded-md p-3 space-y-2 bg-muted/20" data-testid="length-match-settings">
           <div className="grid grid-cols-3 gap-2">
             <div>
               <Label className="text-[10px] text-muted-foreground">Target {'\u0394'} (mm)</Label>
-              <Input
-                type="number"
+              <NumberInput
                 step={0.01}
                 min={0}
                 value={targetDelta}
@@ -268,8 +249,7 @@ export const DiffPairLengthMatchPanel = memo(function DiffPairLengthMatchPanel({
             </div>
             <div>
               <Label className="text-[10px] text-muted-foreground">Max Amplitude (mm)</Label>
-              <Input
-                type="number"
+              <NumberInput
                 step={0.1}
                 min={0.1}
                 value={maxAmplitude}
@@ -282,8 +262,7 @@ export const DiffPairLengthMatchPanel = memo(function DiffPairLengthMatchPanel({
             </div>
             <div>
               <Label className="text-[10px] text-muted-foreground">Spacing (mm)</Label>
-              <Input
-                type="number"
+              <NumberInput
                 step={0.1}
                 min={0.1}
                 value={spacing}
@@ -370,9 +349,7 @@ export const DiffPairLengthMatchPanel = memo(function DiffPairLengthMatchPanel({
         </div>
       ) : (
         <div className="text-center text-xs text-muted-foreground py-4" data-testid="no-results">
-          {pairs.length === 0
-            ? 'No differential pairs defined.'
-            : 'Click "Analyze All" to measure pair lengths.'}
+          {pairs.length === 0 ? 'No differential pairs defined.' : 'Click "Analyze All" to measure pair lengths.'}
         </div>
       )}
     </div>

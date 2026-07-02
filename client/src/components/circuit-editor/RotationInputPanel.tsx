@@ -6,12 +6,13 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Input } from '@/components/ui/input';
+
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { NumberInput } from '@/components/ui/number-input';
 import { normalizeAngle, snapToAngle } from '@/lib/circuit-editor/rotation-utils';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -60,15 +61,7 @@ function AngleIndicator({ angle }: AngleIndicatorProps) {
       aria-label={`Angle indicator showing ${angle} degrees`}
     >
       {/* Outer ring */}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={radius}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.5}
-        className="text-border"
-      />
+      <circle cx={cx} cy={cy} r={radius} fill="none" stroke="currentColor" strokeWidth={1.5} className="text-border" />
       {/* Tick marks at 0, 90, 180, 270 */}
       {[0, 90, 180, 270].map((tick) => {
         const tickRad = (tick - 90) * (Math.PI / 180);
@@ -107,11 +100,7 @@ function AngleIndicator({ angle }: AngleIndicatorProps) {
 // RotationInputPanel
 // ---------------------------------------------------------------------------
 
-export function RotationInputPanel({
-  angle,
-  onChange,
-  className,
-}: RotationInputPanelProps) {
+export function RotationInputPanel({ angle, onChange, className }: RotationInputPanelProps) {
   const [snapEnabled, setSnapEnabled] = useState(false);
 
   const applyAngle = useCallback(
@@ -146,10 +135,7 @@ export function RotationInputPanel({
   );
 
   return (
-    <div
-      className={cn('space-y-3', className)}
-      data-testid="rotation-input-panel"
-    >
+    <div className={cn('space-y-3', className)} data-testid="rotation-input-panel">
       {/* Row 1: Angle indicator + numeric input */}
       <div className="flex items-center gap-3">
         <AngleIndicator angle={angle} />
@@ -158,9 +144,8 @@ export function RotationInputPanel({
             Angle
           </Label>
           <div className="flex items-center gap-1.5">
-            <Input
+            <NumberInput
               id="rotation-angle-input"
-              type="number"
               min={0}
               max={359}
               value={Math.round(angle)}
@@ -186,9 +171,12 @@ export function RotationInputPanel({
               size="sm"
               className={cn(
                 'h-6 px-2 text-[10px] font-mono',
-                angle === preset && 'bg-[var(--color-editor-accent)]/20 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/30',
+                angle === preset &&
+                  'bg-[var(--color-editor-accent)]/20 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/30',
               )}
-              onClick={() => { onChange(preset); }}
+              onClick={() => {
+                onChange(preset);
+              }}
               data-testid={`rotation-preset-${preset}`}
               aria-label={`Set rotation to ${preset} degrees`}
             >
@@ -206,7 +194,9 @@ export function RotationInputPanel({
             variant="outline"
             size="sm"
             className="h-6 px-2 text-[10px] font-mono"
-            onClick={() => { nudge(-15); }}
+            onClick={() => {
+              nudge(-15);
+            }}
             data-testid="rotation-nudge-minus-15"
             aria-label="Decrease angle by 15 degrees"
           >
@@ -216,7 +206,9 @@ export function RotationInputPanel({
             variant="outline"
             size="sm"
             className="h-6 px-2 text-[10px] font-mono"
-            onClick={() => { nudge(-1); }}
+            onClick={() => {
+              nudge(-1);
+            }}
             data-testid="rotation-nudge-minus-1"
             aria-label="Decrease angle by 1 degree"
           >
@@ -226,7 +218,9 @@ export function RotationInputPanel({
             variant="outline"
             size="sm"
             className="h-6 px-2 text-[10px] font-mono"
-            onClick={() => { nudge(1); }}
+            onClick={() => {
+              nudge(1);
+            }}
             data-testid="rotation-nudge-plus-1"
             aria-label="Increase angle by 1 degree"
           >
@@ -236,7 +230,9 @@ export function RotationInputPanel({
             variant="outline"
             size="sm"
             className="h-6 px-2 text-[10px] font-mono"
-            onClick={() => { nudge(15); }}
+            onClick={() => {
+              nudge(15);
+            }}
             data-testid="rotation-nudge-plus-15"
             aria-label="Increase angle by 15 degrees"
           >
@@ -260,10 +256,7 @@ export function RotationInputPanel({
           data-testid="rotation-snap-checkbox"
           aria-label="Enable angle snapping"
         />
-        <Label
-          htmlFor="rotation-snap-checkbox"
-          className="text-xs text-muted-foreground cursor-pointer"
-        >
+        <Label htmlFor="rotation-snap-checkbox" className="text-xs text-muted-foreground cursor-pointer">
           Snap to {SNAP_INCREMENT}° increments
         </Label>
       </div>

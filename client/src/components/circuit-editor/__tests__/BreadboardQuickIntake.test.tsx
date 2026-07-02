@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import BreadboardQuickIntake from '../BreadboardQuickIntake';
 
@@ -101,5 +101,33 @@ describe('BreadboardQuickIntake', () => {
     expect(screen.getByPlaceholderText(/part name/i)).toHaveValue('Arduino Mega');
     expect(screen.getByTestId('quick-intake-quantity')).toHaveValue(1);
     expect(screen.getByTestId('quick-intake-storage')).toHaveValue('');
+  });
+});
+
+describe('BreadboardQuickIntake — quantity NumberInput ARIA contract (BL-0781)', () => {
+  it('renders the quantity field as a spinbutton', () => {
+    render(<BreadboardQuickIntake onAdd={vi.fn()} />);
+    const el = screen.getByTestId('quick-intake-quantity');
+    expect(el.getAttribute('type')).toBe('number');
+  });
+
+  it('OMIT-MAX: omits aria-valuemax and the HTML max attribute (no schema-level ceiling on bench-stash quantity)', () => {
+    render(<BreadboardQuickIntake onAdd={vi.fn()} />);
+    const el = screen.getByTestId('quick-intake-quantity');
+    expect(el.hasAttribute('aria-valuemax')).toBe(false);
+    expect(el.hasAttribute('max')).toBe(false);
+  });
+
+  it('KEEP: mirrors min=1 onto aria-valuemin', () => {
+    render(<BreadboardQuickIntake onAdd={vi.fn()} />);
+    const el = screen.getByTestId('quick-intake-quantity');
+    expect(el.getAttribute('aria-valuemin')).toBe('1');
+    expect(el.getAttribute('min')).toBe('1');
+  });
+
+  it('regression guard: never coerces the missing max to aria-valuemax="0"', () => {
+    render(<BreadboardQuickIntake onAdd={vi.fn()} />);
+    const el = screen.getByTestId('quick-intake-quantity');
+    expect(el.getAttribute('aria-valuemax')).not.toBe('0');
   });
 });

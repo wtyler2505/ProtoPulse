@@ -6,30 +6,18 @@
  * "Apply Suggestions" button.
  */
 
-import { memo, useState, useCallback, useEffect } from 'react';
+import { memo, useState, useCallback, useEffect, useMemo } from 'react';
+
 import { Activity, Check, X, Zap, RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import {
-  ImpedanceTraceWidthManager,
-  calculateImpedance,
-} from '@/lib/pcb/impedance-trace-width';
-import type {
-  StackupParams,
-  TraceType,
-  WidthSuggestion,
-  NetWithTarget,
-} from '@/lib/pcb/impedance-trace-width';
+import { Label } from '@/components/ui/label';
+import { NumberInput } from '@/components/ui/number-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ImpedanceTraceWidthManager, calculateImpedance } from '@/lib/pcb/impedance-trace-width';
+import type { StackupParams, TraceType, WidthSuggestion, NetWithTarget } from '@/lib/pcb/impedance-trace-width';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -47,7 +35,7 @@ interface ImpedanceTraceWidthPanelProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-const MATERIAL_PRESETS: Array<{ label: string; er: number }> = [
+const MATERIAL_PRESETS: { label: string; er: number }[] = [
   { label: 'FR4 (4.4)', er: 4.4 },
   { label: 'Rogers 4003C (3.55)', er: 3.55 },
   { label: 'Rogers 3003 (3.0)', er: 3.0 },
@@ -82,12 +70,22 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
   // Suggestions state
   const [suggestions, setSuggestions] = useState<WidthSuggestion[]>([]);
 
-  const stackup: StackupParams = {
-    dielectricConstant,
-    dielectricHeight,
-    copperThickness,
-    traceType,
-  };
+  // Memoized so identity is stable across renders when the underlying values
+  // haven't changed — `recalculate` depends on this object, and an
+  // unmemoized `{ ... }` literal here would recreate `recalculate` on every
+  // render, re-firing the `useEffect` below on every render and infinite
+  // looping (discovered while adding this component's first render test —
+  // BL-0781; this bug is unrelated to the NumberInput ARIA migration but was
+  // fixed alongside it since it blocked mounting the component at all).
+  const stackup: StackupParams = useMemo(
+    () => ({
+      dielectricConstant,
+      dielectricHeight,
+      copperThickness,
+      traceType,
+    }),
+    [dielectricConstant, dielectricHeight, copperThickness, traceType],
+  );
 
   const activeNets = nets ?? DEMO_NETS;
 
@@ -97,7 +95,7 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
     mgr.setTolerance(tolerance / 100);
     const result = mgr.getWidthSuggestions(activeNets, stackup);
     setSuggestions(result);
-  }, [dielectricConstant, dielectricHeight, copperThickness, traceType, tolerance, activeNets, mgr, stackup]);
+  }, [stackup, tolerance, activeNets, mgr]);
 
   useEffect(() => {
     recalculate();
@@ -123,10 +121,7 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
   const previewZDisplay = Number.isNaN(previewZ) ? '—' : `${previewZ.toFixed(1)}Ω`;
 
   return (
-    <div
-      className={cn('flex flex-col gap-4 p-4 text-sm', className)}
-      data-testid="impedance-trace-width-panel"
-    >
+    <div className={cn('flex flex-col gap-4 p-4 text-sm', className)} data-testid="impedance-trace-width-panel">
       {/* Header */}
       <div className="flex items-center gap-2" data-testid="impedance-panel-header">
         <Zap className="h-4 w-4 text-[var(--color-editor-accent)]" />
@@ -140,9 +135,7 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
 
       {/* Stackup Parameters */}
       <div className="space-y-3 rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
-        <h4 className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-          Stackup Parameters
-        </h4>
+        <h4 className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Stackup Parameters</h4>
 
         {/* Material preset */}
         <div className="space-y-1">
@@ -168,12 +161,11 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
           <Label htmlFor="dielectric-constant" className="text-xs text-zinc-400">
             Dielectric Constant (εr)
           </Label>
-          <Input
+          <NumberInput
             id="dielectric-constant"
-            type="number"
             step="0.01"
-            min="1"
-            max="20"
+            min={1}
+            max={20}
             value={dielectricConstant}
             onChange={(e) => {
               setDielectricConstant(Math.max(1, parseFloat(e.target.value) || 1));
@@ -187,12 +179,11 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
           <Label htmlFor="dielectric-height" className="text-xs text-zinc-400">
             Dielectric Height (mm)
           </Label>
-          <Input
+          <NumberInput
             id="dielectric-height"
-            type="number"
             step="0.01"
-            min="0.01"
-            max="5"
+            min={0.01}
+            max={5}
             value={dielectricHeight}
             onChange={(e) => {
               setDielectricHeight(Math.max(0.01, parseFloat(e.target.value) || 0.01));
@@ -206,12 +197,11 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
           <Label htmlFor="copper-thickness" className="text-xs text-zinc-400">
             Copper Thickness (mm)
           </Label>
-          <Input
+          <NumberInput
             id="copper-thickness"
-            type="number"
             step="0.001"
-            min="0"
-            max="0.5"
+            min={0}
+            max={0.5}
             value={copperThickness}
             onChange={(e) => {
               setCopperThickness(Math.max(0, parseFloat(e.target.value) || 0));
@@ -227,7 +217,9 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
           </Label>
           <Select
             value={traceType}
-            onValueChange={(v) => { setTraceType(v as TraceType); }}
+            onValueChange={(v) => {
+              setTraceType(v as TraceType);
+            }}
           >
             <SelectTrigger id="trace-type" data-testid="trace-type-trigger">
               <SelectValue />
@@ -248,12 +240,11 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
           <Label htmlFor="tolerance" className="text-xs text-zinc-400">
             Tolerance (%)
           </Label>
-          <Input
+          <NumberInput
             id="tolerance"
-            type="number"
             step="1"
-            min="0"
-            max="100"
+            min={0}
+            max={100}
             value={tolerance}
             onChange={(e) => {
               setTolerance(Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)));
@@ -272,9 +263,7 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
       {/* Net Impedance Table */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-            Net Compliance
-          </h4>
+          <h4 className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Net Compliance</h4>
           <Button
             variant="ghost"
             size="sm"
@@ -311,9 +300,7 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
                     data-testid={`row-${s.netId}`}
                   >
                     <td className="px-2 py-1.5 font-mono text-zinc-200">{s.netName}</td>
-                    <td className="px-2 py-1.5 text-right text-zinc-400">
-                      {s.targetZ}Ω
-                    </td>
+                    <td className="px-2 py-1.5 text-right text-zinc-400">{s.targetZ}Ω</td>
                     <td className="px-2 py-1.5 text-right font-mono text-zinc-300">
                       {s.currentWidth.toFixed(3)}mm
                       <span className="ml-1 text-zinc-400">({s.actualZ}Ω)</span>
@@ -328,15 +315,9 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
                     </td>
                     <td className="px-2 py-1.5 text-center">
                       {s.compliant ? (
-                        <Check
-                          className="inline h-3.5 w-3.5 text-green-400"
-                          data-testid={`status-pass-${s.netId}`}
-                        />
+                        <Check className="inline h-3.5 w-3.5 text-green-400" data-testid={`status-pass-${s.netId}`} />
                       ) : (
-                        <X
-                          className="inline h-3.5 w-3.5 text-red-400"
-                          data-testid={`status-fail-${s.netId}`}
-                        />
+                        <X className="inline h-3.5 w-3.5 text-red-400" data-testid={`status-fail-${s.netId}`} />
                       )}
                     </td>
                   </tr>

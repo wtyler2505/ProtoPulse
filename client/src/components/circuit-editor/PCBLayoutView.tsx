@@ -18,43 +18,7 @@
  */
 
 import { useState, useCallback, useMemo, useRef, useEffect, useSyncExternalStore } from 'react';
-import { useProjectId } from '@/lib/contexts/project-id-context';
-import { useProjectBoard } from '@/hooks/useProjectBoard';
-import {
-  useCircuitDesigns,
-  useCircuitInstances,
-  useCircuitNets,
-  useCircuitWires,
-  useCircuitVias,
-  useCreateCircuitWire,
-  useDeleteCircuitWire,
-  useUpdateCircuitInstance,
-  useCreateCircuitInstance,
-  useUpdateCircuitDesign,
-  usePcbZones,
-  useCreatePcbZone,
-  useUpdatePcbZone,
-  useDeletePcbZone,
-  useComments,
-  useCreateComment,
-  useUpdateCommentStatus,
-  useDeleteComment,
-} from '@/lib/circuit-editor/hooks';
-import { useUndoRedo } from '@/lib/undo-redo-context';
-import { generateRefDes } from '@/lib/circuit-editor/ref-des';
-import RatsnestOverlay from './RatsnestOverlay';
-import ToolButton from './ToolButton';
-import { useToast } from '@/hooks/use-toast';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+
 import {
   Loader2,
   CircuitBoard,
@@ -78,7 +42,8 @@ import {
   Box,
   Cable,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
+import { Button } from '@/components/ui/button';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -86,6 +51,11 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
 } from '@/components/ui/context-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import {
   DEFAULT_BOARD,
   DEFAULT_ZOOM,
@@ -118,17 +88,52 @@ import {
   LayerStackPanel,
   TRACE_COLORS,
 } from '@/components/views/pcb-layout';
-import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import type { ActiveLayer, PcbTool, PanState, SelectionRect, SelectionDragState } from '@/components/views/pcb-layout';
-import { useProjectMeta } from '@/lib/project-context';
+import { useToast } from '@/hooks/use-toast';
+import { useProjectBoard } from '@/hooks/useProjectBoard';
 import { useBoardStackup } from '@/lib/board-stackup';
-import { calculateRoutingStatus } from '@/lib/pcb/routing-status';
-import type { Via, ViaType } from '@/lib/pcb/via-model';
-import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow } from '@shared/schema';
-import CollaborationCursors, { useCursorEmitter } from './CollaborationCursors';
+import {
+  useCircuitDesigns,
+  useCircuitInstances,
+  useCircuitNets,
+  useCircuitWires,
+  useCircuitVias,
+  useCreateCircuitWire,
+  useDeleteCircuitWire,
+  useUpdateCircuitInstance,
+  useCreateCircuitInstance,
+  useUpdateCircuitDesign,
+  usePcbZones,
+  useCreatePcbZone,
+  useUpdatePcbZone,
+  useDeletePcbZone,
+  useComments,
+  useCreateComment,
+  useUpdateCommentStatus,
+  useDeleteComment,
+} from '@/lib/circuit-editor/hooks';
+import { generateRefDes } from '@/lib/circuit-editor/ref-des';
 import type { CollaborationClient } from '@/lib/collaboration-client';
+import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useDfmHighlights } from '@/lib/dfm-pcb-bridge';
 import { logger } from '@/lib/logger';
+import { calculateRoutingStatus } from '@/lib/pcb/routing-status';
+import type { Via, ViaType } from '@/lib/pcb/via-model';
+import { useProjectMeta } from '@/lib/project-context';
+import { useUndoRedo } from '@/lib/undo-redo-context';
+import { cn } from '@/lib/utils';
+
+import type {
+  CircuitDesignRow,
+  CircuitInstanceRow,
+  CircuitNetRow,
+  CircuitWireRow,
+  CircuitViaRow,
+} from '@shared/schema';
+
+import CollaborationCursors, { useCursorEmitter } from './CollaborationCursors';
+import RatsnestOverlay from './RatsnestOverlay';
+import ToolButton from './ToolButton';
 
 // ---------------------------------------------------------------------------
 // View3DButton — jumps to viewer_3d ViewMode
@@ -139,7 +144,9 @@ function View3DButton() {
   return (
     <button
       data-testid="pcb-view-3d"
-      onClick={() => { setActiveView('viewer_3d'); }}
+      onClick={() => {
+        setActiveView('viewer_3d');
+      }}
       title="View in 3D"
       aria-label="View in 3D"
       className={cn(
@@ -171,10 +178,10 @@ function RoutingStatusBadge({ nets, wires }: { nets: CircuitNetRow[]; wires: Cir
       content={
         <div className="text-xs">
           <div className="font-medium mb-1">Routing Progress</div>
-          <div>{status.routed}/{status.total} nets routed ({status.percentComplete}%)</div>
-          {status.unrouted > 0 && (
-            <div className="text-yellow-400 mt-0.5">{status.unrouted} unrouted</div>
-          )}
+          <div>
+            {status.routed}/{status.total} nets routed ({status.percentComplete}%)
+          </div>
+          {status.unrouted > 0 && <div className="text-yellow-400 mt-0.5">{status.unrouted} unrouted</div>}
         </div>
       }
     >
@@ -217,7 +224,11 @@ interface PcbClipboardBundle {
 // Top-level view (circuit selector + canvas)
 // ---------------------------------------------------------------------------
 
-export default function PCBLayoutView({ collaborationClient = null }: { collaborationClient?: CollaborationClient | null }) {
+export default function PCBLayoutView({
+  collaborationClient = null,
+}: {
+  collaborationClient?: CollaborationClient | null;
+}) {
   const projectId = useProjectId();
   const { data: circuits, isLoading, isError, error, refetch } = useCircuitDesigns(projectId);
   const [activeCircuitId, setActiveCircuitId] = useState<number | null>(null);
@@ -284,7 +295,14 @@ export default function PCBLayoutView({ collaborationClient = null }: { collabor
           {activeCircuit ? activeCircuit.name : 'No circuit selected'} — PCB Layout
         </span>
       </div>
-      {activeCircuit && <PCBCanvas circuitId={activeCircuit.id} projectId={projectId} circuitSettings={activeCircuit.settings} collaborationClient={collaborationClient} />}
+      {activeCircuit && (
+        <PCBCanvas
+          circuitId={activeCircuit.id}
+          projectId={projectId}
+          circuitSettings={activeCircuit.settings}
+          collaborationClient={collaborationClient}
+        />
+      )}
     </div>
   );
 }
@@ -358,12 +376,7 @@ function PCBMiniMap({ boardWidth, boardHeight, instances, panOffset, zoom, conta
       className="absolute bottom-2 right-2 z-10 bg-card/80 border border-border rounded-sm overflow-hidden"
       data-testid="pcb-minimap"
     >
-      <svg
-        width={MINIMAP_W}
-        height={MINIMAP_H}
-        className="cursor-pointer"
-        onClick={handleMinimapClick}
-      >
+      <svg width={MINIMAP_W} height={MINIMAP_H} className="cursor-pointer" onClick={handleMinimapClick}>
         {/* Board outline */}
         <rect
           x={offsetX}
@@ -378,15 +391,7 @@ function PCBMiniMap({ boardWidth, boardHeight, instances, panOffset, zoom, conta
         {instances.map((inst) => {
           const ix = inst.pcbX ?? inst.schematicX;
           const iy = inst.pcbY ?? inst.schematicY;
-          return (
-            <circle
-              key={inst.id}
-              cx={offsetX + ix * scale}
-              cy={offsetY + iy * scale}
-              r={2}
-              fill="#06b6d4"
-            />
-          );
+          return <circle key={inst.id} cx={offsetX + ix * scale} cy={offsetY + iy * scale} r={2} fill="#06b6d4" />;
         })}
         {/* Viewport indicator */}
         <rect
@@ -408,7 +413,17 @@ function PCBMiniMap({ boardWidth, boardHeight, instances, panOffset, zoom, conta
 // PCB Canvas — wires together all extracted modules
 // ---------------------------------------------------------------------------
 
-function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient = null }: { circuitId: number; projectId: number; circuitSettings: unknown; collaborationClient?: CollaborationClient | null }) {
+function PCBCanvas({
+  circuitId,
+  projectId,
+  circuitSettings,
+  collaborationClient = null,
+}: {
+  circuitId: number;
+  projectId: number;
+  circuitSettings: unknown;
+  collaborationClient?: CollaborationClient | null;
+}) {
   // --- Data hooks ---
   const { data: instances } = useCircuitInstances(circuitId);
   const { data: nets } = useCircuitNets(circuitId);
@@ -432,7 +447,9 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   // fight the board value.
   const { layers: stackupLayers, applyLayerCount: syncStackupLayerCount } = useBoardStackup();
   useEffect(() => {
-    if (projectBoard.id <= 0) { return; }
+    if (projectBoard.id <= 0) {
+      return;
+    }
     const targetCount = projectBoard.layers;
     if (targetCount > 0 && stackupLayers.length !== targetCount) {
       syncStackupLayerCount(targetCount);
@@ -477,20 +494,24 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   const [newCommentPos, setNewCommentPos] = useState<{ x: number; y: number } | null>(null);
   const [newCommentText, setNewCommentNewText] = useState('');
   const [traceWidth, setTraceWidth] = useState(DEFAULT_TRACE_WIDTH);
-  const [tracePoints, setTracePoints] = useState<Array<{ x: number; y: number }>>([]);
-  const [zonePoints, setZonePoints] = useState<Array<{ x: number; y: number }>>([]);
+  const [tracePoints, setTracePoints] = useState<{ x: number; y: number }[]>([]);
+  const [zonePoints, setZonePoints] = useState<{ x: number; y: number }[]>([]);
   // Board dimensions — prefer the shared per-project board (Plan 02 Phase 4).
   // Fall back to legacy per-circuit settings if the shared row hasn't loaded
   // yet (e.g. first paint) or a legacy project still has only circuit-scoped
   // dims.
   const savedSettings = circuitSettings as Record<string, unknown> | null;
   const [boardWidth, setBoardWidth] = useState(() => {
-    if (projectBoard.id > 0 && projectBoard.widthMm > 0) { return projectBoard.widthMm; }
+    if (projectBoard.id > 0 && projectBoard.widthMm > 0) {
+      return projectBoard.widthMm;
+    }
     const saved = savedSettings?.pcbBoardWidth;
     return typeof saved === 'number' && saved > 0 ? saved : DEFAULT_BOARD.width;
   });
   const [boardHeight, setBoardHeight] = useState(() => {
-    if (projectBoard.id > 0 && projectBoard.heightMm > 0) { return projectBoard.heightMm; }
+    if (projectBoard.id > 0 && projectBoard.heightMm > 0) {
+      return projectBoard.heightMm;
+    }
     const saved = savedSettings?.pcbBoardHeight;
     return typeof saved === 'number' && saved > 0 ? saved : DEFAULT_BOARD.height;
   });
@@ -499,8 +520,12 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   // reflect that here.
   useEffect(() => {
     if (projectBoard.id > 0) {
-      if (projectBoard.widthMm !== boardWidth) { setBoardWidth(projectBoard.widthMm); }
-      if (projectBoard.heightMm !== boardHeight) { setBoardHeight(projectBoard.heightMm); }
+      if (projectBoard.widthMm !== boardWidth) {
+        setBoardWidth(projectBoard.widthMm);
+      }
+      if (projectBoard.heightMm !== boardHeight) {
+        setBoardHeight(projectBoard.heightMm);
+      }
     }
     // boardWidth/boardHeight intentionally omitted — we only want this to fire
     // when the server row changes, not on every local edit (which would fight
@@ -533,7 +558,8 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
     // Skip if dimensions match what was loaded from settings
     const currentSaved = circuitSettings as Record<string, unknown> | null;
     const savedW = typeof currentSaved?.pcbBoardWidth === 'number' ? currentSaved.pcbBoardWidth : DEFAULT_BOARD.width;
-    const savedH = typeof currentSaved?.pcbBoardHeight === 'number' ? currentSaved.pcbBoardHeight : DEFAULT_BOARD.height;
+    const savedH =
+      typeof currentSaved?.pcbBoardHeight === 'number' ? currentSaved.pcbBoardHeight : DEFAULT_BOARD.height;
     if (boardWidth === savedW && boardHeight === savedH) {
       return;
     }
@@ -586,10 +612,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
     return buildRatsnestNets(nets, instances);
   }, [nets, instances]);
 
-  const hasPlacedComponents = useMemo(
-    () => instances != null && countPlacedInstances(instances) > 0,
-    [instances],
-  );
+  const hasPlacedComponents = useMemo(() => instances != null && countPlacedInstances(instances) > 0, [instances]);
 
   // --- Callbacks (delegate to PCBInteractionManager) ---
   const callbacks = useMemo(
@@ -617,14 +640,15 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   );
 
   const handleCopy = useCallback(async () => {
-    const selectedIds = selectedInstanceIds.length > 0 ? selectedInstanceIds : (selectedInstanceId ? [selectedInstanceId] : []);
+    const selectedIds =
+      selectedInstanceIds.length > 0 ? selectedInstanceIds : selectedInstanceId ? [selectedInstanceId] : [];
     if (selectedIds.length === 0) return;
 
     const bundle: PcbClipboardBundle = {
       type: 'protopulse-pcb-bundle' as const,
       instances: (instances ?? [])
-        .filter(inst => selectedIds.includes(inst.id))
-        .map(inst => ({
+        .filter((inst) => selectedIds.includes(inst.id))
+        .map((inst) => ({
           partId: inst.partId,
           referenceDesignator: inst.referenceDesignator,
           pcbX: inst.pcbX,
@@ -632,7 +656,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
           pcbRotation: inst.pcbRotation,
           pcbSide: inst.pcbSide,
           properties: inst.properties,
-          oldId: inst.id
+          oldId: inst.id,
         })),
     };
 
@@ -645,71 +669,74 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
     }
   }, [selectedInstanceIds, selectedInstanceId, instances, toast]);
 
-  const handlePaste = useCallback(async (bundle: PcbClipboardBundle | null) => {
-    if (!bundle || bundle.type !== 'protopulse-pcb-bundle') return;
+  const handlePaste = useCallback(
+    async (bundle: PcbClipboardBundle | null) => {
+      if (!bundle || bundle.type !== 'protopulse-pcb-bundle') return;
 
-    // Center of viewport in board coordinates
-    const el = containerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const center = {
-      x: (rect.width / 2 - panOffset.x) / zoom,
-      y: (rect.height / 2 - panOffset.y) / zoom,
-    };
+      // Center of viewport in board coordinates
+      const el = containerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const center = {
+        x: (rect.width / 2 - panOffset.x) / zoom,
+        y: (rect.height / 2 - panOffset.y) / zoom,
+      };
 
-    const insts = bundle.instances || [];
-    if (insts.length === 0) return;
+      const insts = bundle.instances || [];
+      if (insts.length === 0) return;
 
-    const allX = insts.map((i: PcbClipboardInstance) => i.pcbX ?? 0);
-    const allY = insts.map((i: PcbClipboardInstance) => i.pcbY ?? 0);
-    const minX = Math.min(...allX);
-    const maxX = Math.max(...allX);
-    const minY = Math.min(...allY);
-    const maxY = Math.max(...allY);
-    const bboxCenterX = (minX + maxX) / 2;
-    const bboxCenterY = (minY + maxY) / 2;
+      const allX = insts.map((i: PcbClipboardInstance) => i.pcbX ?? 0);
+      const allY = insts.map((i: PcbClipboardInstance) => i.pcbY ?? 0);
+      const minX = Math.min(...allX);
+      const maxX = Math.max(...allX);
+      const minY = Math.min(...allY);
+      const maxY = Math.max(...allY);
+      const bboxCenterX = (minX + maxX) / 2;
+      const bboxCenterY = (minY + maxY) / 2;
 
-    const offsetX = center.x - bboxCenterX;
-    const offsetY = center.y - bboxCenterY;
+      const offsetX = center.x - bboxCenterX;
+      const offsetY = center.y - bboxCenterY;
 
-    const usedRefDes = new Set((instances ?? []).map(i => i.referenceDesignator));
+      const usedRefDes = new Set((instances ?? []).map((i) => i.referenceDesignator));
 
-    try {
-      for (const inst of insts) {
-        // Find part info for refDes generation
-        // Note: partsMap not available in PCBCanvas currently? 
-        // SchematicCanvas had it. Let's see if we need it.
-        // generateRefDes in pcb-layout doesn't seem to need partsMap if we provide prefix.
-        
-        // Actually, let's just use the copied refDes and find next available
-        let uniqueRefDes = inst.referenceDesignator;
-        let suffix = 1;
-        while (usedRefDes.has(uniqueRefDes)) {
-          const prefix = inst.referenceDesignator.replace(/\d+$/, '');
-          const match = inst.referenceDesignator.match(/\d+$/);
-          const num = match ? parseInt(match[0], 10) : 0;
-          uniqueRefDes = `${prefix}${num + suffix}`;
-          suffix++;
+      try {
+        for (const inst of insts) {
+          // Find part info for refDes generation
+          // Note: partsMap not available in PCBCanvas currently?
+          // SchematicCanvas had it. Let's see if we need it.
+          // generateRefDes in pcb-layout doesn't seem to need partsMap if we provide prefix.
+
+          // Actually, let's just use the copied refDes and find next available
+          let uniqueRefDes = inst.referenceDesignator;
+          let suffix = 1;
+          while (usedRefDes.has(uniqueRefDes)) {
+            const prefix = inst.referenceDesignator.replace(/\d+$/, '');
+            const match = inst.referenceDesignator.match(/\d+$/);
+            const num = match ? parseInt(match[0], 10) : 0;
+            uniqueRefDes = `${prefix}${num + suffix}`;
+            suffix++;
+          }
+          usedRefDes.add(uniqueRefDes);
+
+          await createInstanceMutation.mutateAsync({
+            circuitId,
+            partId: inst.partId,
+            referenceDesignator: uniqueRefDes,
+            pcbX: (inst.pcbX ?? 0) + offsetX,
+            pcbY: (inst.pcbY ?? 0) + offsetY,
+            pcbRotation: inst.pcbRotation,
+            pcbSide: (inst.pcbSide as 'front' | 'back') ?? undefined,
+            properties: (inst.properties as Record<string, string>) ?? undefined,
+          });
         }
-        usedRefDes.add(uniqueRefDes);
-
-        await createInstanceMutation.mutateAsync({
-          circuitId,
-          partId: inst.partId,
-          referenceDesignator: uniqueRefDes,
-          pcbX: (inst.pcbX ?? 0) + offsetX,
-          pcbY: (inst.pcbY ?? 0) + offsetY,
-          pcbRotation: inst.pcbRotation,
-          pcbSide: (inst.pcbSide as 'front' | 'back') ?? undefined,
-          properties: (inst.properties as Record<string, string>) ?? undefined,
-        });
+        toast({ title: 'Pasted successfully', description: `Added ${insts.length} components.` });
+      } catch (err) {
+        logger.error('Paste failed', err);
+        toast({ variant: 'destructive', title: 'Paste failed', description: 'Error duplicating components.' });
       }
-      toast({ title: 'Pasted successfully', description: `Added ${insts.length} components.` });
-    } catch (err) {
-      logger.error('Paste failed', err);
-      toast({ variant: 'destructive', title: 'Paste failed', description: 'Error duplicating components.' });
-    }
-  }, [circuitId, instances, panOffset, zoom, createInstanceMutation, toast]);
+    },
+    [circuitId, instances, panOffset, zoom, createInstanceMutation, toast],
+  );
 
   const triggerPaste = useCallback(async () => {
     let bundle = clipboardRef.current;
@@ -773,31 +800,50 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
     }
 
     if (tool === 'trace') {
-      onDoubleClick(tool, tracePoints, {
-        circuitId,
-        activeLayer,
-        traceWidth,
-        firstNetId: nets?.[0]?.id,
-        createWire: (params) => {
-          createWireMutation.mutate(params, {
-            onSuccess: (createdWire: CircuitWireRow) => {
-              pushUndo({
-                type: 'create-wire',
-                description: `Add trace (${tracePoints.length} points)`,
-                async execute() {
-                  await createWireMutation.mutateAsync(params);
-                },
-                async undo() {
-                  await deleteWireMutation.mutateAsync({ circuitId, id: createdWire.id });
-                },
-              });
-            },
-          });
+      onDoubleClick(
+        tool,
+        tracePoints,
+        {
+          circuitId,
+          activeLayer,
+          traceWidth,
+          firstNetId: nets?.[0]?.id,
+          createWire: (params) => {
+            createWireMutation.mutate(params, {
+              onSuccess: (createdWire: CircuitWireRow) => {
+                pushUndo({
+                  type: 'create-wire',
+                  description: `Add trace (${tracePoints.length} points)`,
+                  async execute() {
+                    await createWireMutation.mutateAsync(params);
+                  },
+                  async undo() {
+                    await deleteWireMutation.mutateAsync({ circuitId, id: createdWire.id });
+                  },
+                });
+              },
+            });
+          },
         },
-      }, () => setTracePoints([]));
+        () => setTracePoints([]),
+      );
       return;
     }
-  }, [tool, zonePoints, projectId, activeLayer, createZoneMutation, toast, tracePoints, circuitId, traceWidth, nets, createWireMutation, deleteWireMutation, pushUndo]);
+  }, [
+    tool,
+    zonePoints,
+    projectId,
+    activeLayer,
+    createZoneMutation,
+    toast,
+    tracePoints,
+    circuitId,
+    traceWidth,
+    nets,
+    createWireMutation,
+    deleteWireMutation,
+    pushUndo,
+  ]);
 
   const selectedInstanceRotation = useMemo(() => {
     if (selectedInstanceId == null || !instances) {
@@ -836,60 +882,87 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
         }
       }
 
-      onKeyDown(e, selectedWireId, {
-        circuitId,
-        deleteWire: (params) => {
-          // Capture wire data before deletion for undo
-          const deletedWire = pcbWires.find((w) => w.id === params.id);
-          deleteWireMutation.mutate(params, {
-            onSuccess: () => {
-              if (deletedWire) {
-                pushUndo({
-                  type: 'delete-wire',
-                  description: 'Delete trace',
-                  async execute() {
-                    await deleteWireMutation.mutateAsync(params);
-                  },
-                  async undo() {
-                    await createWireMutation.mutateAsync({
-                      circuitId: deletedWire.circuitId,
-                      netId: deletedWire.netId ?? undefined,
-                      view: deletedWire.view,
-                      layer: deletedWire.layer ?? undefined,
-                      points: deletedWire.points as Array<{ x: number; y: number }>,
-                      width: deletedWire.width,
-                    });
-                  },
-                });
-              }
-            },
-          });
+      onKeyDown(
+        e,
+        selectedWireId,
+        {
+          circuitId,
+          deleteWire: (params) => {
+            // Capture wire data before deletion for undo
+            const deletedWire = pcbWires.find((w) => w.id === params.id);
+            deleteWireMutation.mutate(params, {
+              onSuccess: () => {
+                if (deletedWire) {
+                  pushUndo({
+                    type: 'delete-wire',
+                    description: 'Delete trace',
+                    async execute() {
+                      await deleteWireMutation.mutateAsync(params);
+                    },
+                    async undo() {
+                      await createWireMutation.mutateAsync({
+                        circuitId: deletedWire.circuitId,
+                        netId: deletedWire.netId ?? undefined,
+                        view: deletedWire.view,
+                        layer: deletedWire.layer ?? undefined,
+                        points: deletedWire.points as { x: number; y: number }[],
+                        width: deletedWire.width,
+                      });
+                    },
+                  });
+                }
+              },
+            });
+          },
         },
-      }, callbacks, selectedInstanceId, tool, selectedInstanceRotation);
+        callbacks,
+        selectedInstanceId,
+        tool,
+        selectedInstanceRotation,
+      );
     },
-    [selectedWireId, circuitId, deleteWireMutation, createWireMutation, pushUndo, pcbWires, callbacks, selectedInstanceId, tool, selectedInstanceRotation, handleCopy, triggerPaste, selectedZoneId, deleteZoneMutation, projectId],
+    [
+      selectedWireId,
+      circuitId,
+      deleteWireMutation,
+      createWireMutation,
+      pushUndo,
+      pcbWires,
+      callbacks,
+      selectedInstanceId,
+      tool,
+      selectedInstanceRotation,
+      handleCopy,
+      triggerPaste,
+      selectedZoneId,
+      deleteZoneMutation,
+      projectId,
+    ],
   );
 
   const handleMDown = useCallback(
-    (e: React.MouseEvent) => onMouseDown(
-      e, tool, selectedInstanceId, panStateRef.current,
-      selectionStateRef.current, svgRef.current, panOffset, zoom
-    ),
+    (e: React.MouseEvent) =>
+      onMouseDown(
+        e,
+        tool,
+        selectedInstanceId,
+        panStateRef.current,
+        selectionStateRef.current,
+        svgRef.current,
+        panOffset,
+        zoom,
+      ),
     [tool, selectedInstanceId, panOffset, zoom],
   );
 
   const handleMMove = useCallback(
-    (e: React.MouseEvent) => onMouseMove(
-      e, panStateRef.current, svgRef.current, panOffset, zoom, callbacks,
-      selectionStateRef.current
-    ),
+    (e: React.MouseEvent) =>
+      onMouseMove(e, panStateRef.current, svgRef.current, panOffset, zoom, callbacks, selectionStateRef.current),
     [panOffset, zoom, callbacks],
   );
 
   const handleMUp = useCallback(
-    () => onMouseUp(
-      panStateRef.current, selectionStateRef.current, selectionRect, instances, callbacks
-    ),
+    () => onMouseUp(panStateRef.current, selectionStateRef.current, selectionRect, instances, callbacks),
     [selectionRect, instances, callbacks],
   );
 
@@ -901,10 +974,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
     return () => el.removeEventListener('wheel', wheelHandler);
   }, [callbacks]);
 
-  const handleWireClick = useCallback(
-    (wireId: number, _e: React.MouseEvent) => setSelectedWireId(wireId),
-    [],
-  );
+  const handleWireClick = useCallback((wireId: number, _e: React.MouseEvent) => setSelectedWireId(wireId), []);
 
   const handleInstanceClick = useCallback(
     (instanceId: number, _e: React.MouseEvent) => setSelectedInstanceId(instanceId),
@@ -938,17 +1008,77 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Toolbar */}
       <div className="h-8 border-b border-border bg-card/40 flex items-center px-2 gap-1 shrink-0">
-        <ToolButton icon={MousePointer2} label="Select (1)" active={tool === 'select'} onClick={() => setTool('select')} testId="pcb-tool-select" />
-        <ToolButton icon={Pencil} label="Trace (2)" active={tool === 'trace'} onClick={() => setTool('trace')} testId="pcb-tool-trace" />
-        <ToolButton icon={Trash2} label="Delete (3)" active={tool === 'delete'} onClick={() => setTool('delete')} testId="pcb-tool-delete" />
-        <ToolButton icon={Circle} label="Via (4)" active={tool === 'via'} onClick={() => setTool('via')} testId="pcb-tool-via" />
+        <ToolButton
+          icon={MousePointer2}
+          label="Select (1)"
+          active={tool === 'select'}
+          onClick={() => setTool('select')}
+          testId="pcb-tool-select"
+        />
+        <ToolButton
+          icon={Pencil}
+          label="Trace (2)"
+          active={tool === 'trace'}
+          onClick={() => setTool('trace')}
+          testId="pcb-tool-trace"
+        />
+        <ToolButton
+          icon={Trash2}
+          label="Delete (3)"
+          active={tool === 'delete'}
+          onClick={() => setTool('delete')}
+          testId="pcb-tool-delete"
+        />
+        <ToolButton
+          icon={Circle}
+          label="Via (4)"
+          active={tool === 'via'}
+          onClick={() => setTool('via')}
+          testId="pcb-tool-via"
+        />
         <div className="w-px h-4 bg-border mx-1" />
-        <ToolButton icon={Pentagon} label="Pour (P)" active={tool === 'pour'} onClick={() => setTool('pour')} testId="pcb-tool-pour" />
-        <ToolButton icon={ShieldAlert} label="Keepout (K)" active={tool === 'keepout'} onClick={() => setTool('keepout')} testId="pcb-tool-keepout" />
-        <ToolButton icon={ShieldCheck} label="Keepin" active={tool === 'keepin'} onClick={() => setTool('keepin')} testId="pcb-tool-keepin" />
-        <ToolButton icon={Scissors} label="Cutout (X)" active={tool === 'cutout'} onClick={() => setTool('cutout')} testId="pcb-tool-cutout" />
-        <ToolButton icon={Cable} label="Diff Pair (D)" active={tool === 'diff-pair'} onClick={() => setTool('diff-pair')} testId="pcb-tool-diff-pair" />
-        <ToolButton icon={MessageSquarePlus} label="Comment (C)" active={tool === 'comment'} onClick={() => setTool('comment')} testId="pcb-tool-comment" />
+        <ToolButton
+          icon={Pentagon}
+          label="Pour (P)"
+          active={tool === 'pour'}
+          onClick={() => setTool('pour')}
+          testId="pcb-tool-pour"
+        />
+        <ToolButton
+          icon={ShieldAlert}
+          label="Keepout (K)"
+          active={tool === 'keepout'}
+          onClick={() => setTool('keepout')}
+          testId="pcb-tool-keepout"
+        />
+        <ToolButton
+          icon={ShieldCheck}
+          label="Keepin"
+          active={tool === 'keepin'}
+          onClick={() => setTool('keepin')}
+          testId="pcb-tool-keepin"
+        />
+        <ToolButton
+          icon={Scissors}
+          label="Cutout (X)"
+          active={tool === 'cutout'}
+          onClick={() => setTool('cutout')}
+          testId="pcb-tool-cutout"
+        />
+        <ToolButton
+          icon={Cable}
+          label="Diff Pair (D)"
+          active={tool === 'diff-pair'}
+          onClick={() => setTool('diff-pair')}
+          testId="pcb-tool-diff-pair"
+        />
+        <ToolButton
+          icon={MessageSquarePlus}
+          label="Comment (C)"
+          active={tool === 'comment'}
+          onClick={() => setTool('comment')}
+          testId="pcb-tool-comment"
+        />
         <div className="w-px h-4 bg-border mx-1" />
         <button
           data-testid="pcb-layer-toggle"
@@ -962,7 +1092,9 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
         >
           <FlipHorizontal className="w-3.5 h-3.5" />
           {layerLabel(activeLayer)}
-          <svg className="w-2.5 h-2.5 opacity-60" viewBox="0 0 10 10" fill="currentColor"><path d="M2 4l3 3 3-3" /></svg>
+          <svg className="w-2.5 h-2.5 opacity-60" viewBox="0 0 10 10" fill="currentColor">
+            <path d="M2 4l3 3 3-3" />
+          </svg>
         </button>
         <div className="w-px h-4 bg-border mx-1" />
         <span className="text-[10px] text-muted-foreground">Trace:</span>
@@ -997,13 +1129,30 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
           ))}
         </div>
         <div className="w-px h-4 bg-border mx-1" />
-        <ToolButton icon={ZoomIn} label="Zoom in" onClick={() => setZoom((z) => clampZoom(z + ZOOM_BUTTON_STEP))} testId="pcb-tool-zoom-in" />
-        <ToolButton icon={ZoomOut} label="Zoom out" onClick={() => setZoom((z) => clampZoom(z - ZOOM_BUTTON_STEP))} testId="pcb-tool-zoom-out" />
-        <ToolButton icon={RotateCcw} label="Reset view" onClick={() => { setZoom(DEFAULT_ZOOM); setPanOffset(DEFAULT_PAN); }} testId="pcb-tool-reset" />
+        <ToolButton
+          icon={ZoomIn}
+          label="Zoom in"
+          onClick={() => setZoom((z) => clampZoom(z + ZOOM_BUTTON_STEP))}
+          testId="pcb-tool-zoom-in"
+        />
+        <ToolButton
+          icon={ZoomOut}
+          label="Zoom out"
+          onClick={() => setZoom((z) => clampZoom(z - ZOOM_BUTTON_STEP))}
+          testId="pcb-tool-zoom-out"
+        />
+        <ToolButton
+          icon={RotateCcw}
+          label="Reset view"
+          onClick={() => {
+            setZoom(DEFAULT_ZOOM);
+            setPanOffset(DEFAULT_PAN);
+          }}
+          testId="pcb-tool-reset"
+        />
         <div className="w-px h-4 bg-border mx-1" />
         <span className="text-[10px] text-muted-foreground">Board:</span>
-        <input
-          type="number"
+        <NumberInput
           min={10}
           max={500}
           step={5}
@@ -1015,8 +1164,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
           title="Board width (mm)"
         />
         <span className="text-[9px] text-muted-foreground">x</span>
-        <input
-          type="number"
+        <NumberInput
           min={10}
           max={500}
           step={5}
@@ -1060,9 +1208,24 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
             <svg ref={svgRef} width="100%" height="100%" data-testid="pcb-svg">
               <g transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoom})`}>
                 <BoardGrid boardWidth={boardWidth} boardHeight={boardHeight} />
-                <BackLayerTraces wires={pcbWires} activeLayer={activeLayer} fallbackWidth={traceWidth} onWireClick={handleWireClick} />
-                <ComponentFootprints instances={instances ?? []} selectedInstanceId={selectedInstanceId} activeLayer={activeLayer} onInstanceClick={handleInstanceClick} />
-                <FrontLayerTraces wires={pcbWires} activeLayer={activeLayer} fallbackWidth={traceWidth} onWireClick={handleWireClick} />
+                <BackLayerTraces
+                  wires={pcbWires}
+                  activeLayer={activeLayer}
+                  fallbackWidth={traceWidth}
+                  onWireClick={handleWireClick}
+                />
+                <ComponentFootprints
+                  instances={instances ?? []}
+                  selectedInstanceId={selectedInstanceId}
+                  activeLayer={activeLayer}
+                  onInstanceClick={handleInstanceClick}
+                />
+                <FrontLayerTraces
+                  wires={pcbWires}
+                  activeLayer={activeLayer}
+                  fallbackWidth={traceWidth}
+                  onWireClick={handleWireClick}
+                />
 
                 {/* Render Zones (BL-0100) and Teardrops (BL-0103) */}
                 {(zones ?? []).map((zone) => {
@@ -1072,27 +1235,40 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                   return (
                     <polygon
                       key={zone.id}
-                      points={(zone.points as Array<{ x: number; y: number }>).map((p) => `${p.x},${p.y}`).join(' ')}
+                      points={(zone.points as { x: number; y: number }[]).map((p) => `${p.x},${p.y}`).join(' ')}
                       fill={
-                        isTeardrop ? layerColor :
-                        zone.zoneType === 'pour' ? 'rgba(0, 255, 0, 0.2)' :
-                        zone.zoneType === 'keepout' ? 'rgba(255, 0, 0, 0.2)' :
-                        zone.zoneType === 'cutout' ? 'rgba(0, 0, 0, 0.6)' :
-                        'rgba(0, 0, 255, 0.2)'
+                        isTeardrop
+                          ? layerColor
+                          : zone.zoneType === 'pour'
+                            ? 'rgba(0, 255, 0, 0.2)'
+                            : zone.zoneType === 'keepout'
+                              ? 'rgba(255, 0, 0, 0.2)'
+                              : zone.zoneType === 'cutout'
+                                ? 'rgba(0, 0, 0, 0.6)'
+                                : 'rgba(0, 0, 255, 0.2)'
                       }
                       stroke={
-                        selectedZoneId === zone.id ? 'var(--color-editor-accent)' :
-                        isTeardrop ? layerColor :
-                        zone.zoneType === 'pour' ? '#00FF00' :
-                        zone.zoneType === 'keepout' ? '#FF0000' :
-                        zone.zoneType === 'cutout' ? '#FFFFFF' :
-                        '#0000FF'
+                        selectedZoneId === zone.id
+                          ? 'var(--color-editor-accent)'
+                          : isTeardrop
+                            ? layerColor
+                            : zone.zoneType === 'pour'
+                              ? '#00FF00'
+                              : zone.zoneType === 'keepout'
+                                ? '#FF0000'
+                                : zone.zoneType === 'cutout'
+                                  ? '#FFFFFF'
+                                  : '#0000FF'
                       }
                       strokeWidth={selectedZoneId === zone.id ? 2 / zoom : isTeardrop ? 0 : 1 / zoom}
-                      strokeDasharray={(zone.zoneType === 'keepout' || zone.zoneType === 'cutout') ? `${2/zoom},${2/zoom}` : undefined}
+                      strokeDasharray={
+                        zone.zoneType === 'keepout' || zone.zoneType === 'cutout'
+                          ? `${2 / zoom},${2 / zoom}`
+                          : undefined
+                      }
                       className={cn(
-                        "cursor-pointer transition-opacity duration-200",
-                        (activeLayer !== zone.layer && zone.zoneType !== 'cutout') && "opacity-20 pointer-events-none"
+                        'cursor-pointer transition-opacity duration-200',
+                        activeLayer !== zone.layer && zone.zoneType !== 'cutout' && 'opacity-20 pointer-events-none',
                       )}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1112,8 +1288,10 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                 {/* Render Spatial Comments (BL-0180) */}
                 {comments.map((comment) => {
                   if (comment.spatialX == null || comment.spatialY == null) return null;
-                  const x = typeof comment.spatialX === 'string' ? parseFloat(comment.spatialX) : (comment.spatialX as number);
-                  const y = typeof comment.spatialY === 'string' ? parseFloat(comment.spatialY) : (comment.spatialY as number);
+                  const x =
+                    typeof comment.spatialX === 'string' ? parseFloat(comment.spatialX) : (comment.spatialX as number);
+                  const y =
+                    typeof comment.spatialY === 'string' ? parseFloat(comment.spatialY) : (comment.spatialY as number);
                   const isSelected = selectedCommentId === comment.id;
 
                   return (
@@ -1142,8 +1320,14 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                       >
                         <circle
                           r={6 / zoom}
-                          fill={comment.status === 'resolved' ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)"}
-                          stroke={isSelected ? "var(--color-editor-accent)" : (comment.status === 'resolved' ? "#22c55e" : "#eab308")}
+                          fill={comment.status === 'resolved' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)'}
+                          stroke={
+                            isSelected
+                              ? 'var(--color-editor-accent)'
+                              : comment.status === 'resolved'
+                                ? '#22c55e'
+                                : '#eab308'
+                          }
                           strokeWidth={2 / zoom}
                         />
                         <text
@@ -1151,7 +1335,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                           textAnchor="middle"
                           fontSize={8 / zoom}
                           className="select-none pointer-events-none font-bold"
-                          fill={comment.status === 'resolved' ? "#22c55e" : "#eab308"}
+                          fill={comment.status === 'resolved' ? '#22c55e' : '#eab308'}
                         >
                           ?
                         </text>
@@ -1164,7 +1348,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                 {zonePoints.length > 0 && (
                   <g>
                     <polyline
-                      points={zonePoints.map(p => `${p.x},${p.y}`).join(' ')}
+                      points={zonePoints.map((p) => `${p.x},${p.y}`).join(' ')}
                       fill="none"
                       stroke="var(--color-editor-accent)"
                       strokeWidth={2 / zoom}
@@ -1178,7 +1362,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                         y2={mouseBoardPos.y}
                         stroke="var(--color-editor-accent)"
                         strokeWidth={1 / zoom}
-                        strokeDasharray={`${2/zoom},${2/zoom}`}
+                        strokeDasharray={`${2 / zoom},${2 / zoom}`}
                         opacity={0.6}
                       />
                     )}
@@ -1190,7 +1374,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                         y2={zonePoints[0].y}
                         stroke="var(--color-editor-accent)"
                         strokeWidth={1 / zoom}
-                        strokeDasharray={`${4/zoom},${4/zoom}`}
+                        strokeDasharray={`${4 / zoom},${4 / zoom}`}
                       />
                     )}
                     {zonePoints.map((p, i) => (
@@ -1228,7 +1412,12 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                       strokeWidth={2.5 / zoom}
                       opacity={0.9}
                     >
-                      <animate attributeName="r" values={`${dfmHighlight.radius};${dfmHighlight.radius * 1.4};${dfmHighlight.radius}`} dur="1.2s" repeatCount="indefinite" />
+                      <animate
+                        attributeName="r"
+                        values={`${dfmHighlight.radius};${dfmHighlight.radius * 1.4};${dfmHighlight.radius}`}
+                        dur="1.2s"
+                        repeatCount="indefinite"
+                      />
                       <animate attributeName="opacity" values="0.9;0.3;0.9" dur="1.2s" repeatCount="indefinite" />
                     </circle>
                     {/* Inner fill */}
@@ -1329,7 +1518,9 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCommentDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsCommentDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={handleSaveComment}>Pin Comment</Button>
           </DialogFooter>
         </DialogContent>
