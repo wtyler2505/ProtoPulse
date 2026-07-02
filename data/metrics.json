@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-07-02T10:19:12.731Z",
+  "persistedAt": "2026-07-02T14:33:09.750Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 87,
@@ -99,14 +99,15 @@
       ]
     },
     "POST /api/auth/login": {
-      "count": 10,
-      "totalDuration": 5620,
+      "count": 12,
+      "totalDuration": 7051,
       "errors": 0,
       "min": 235,
-      "max": 1047,
+      "max": 1084,
       "samples": [
         235,
         289,
+        347,
         391,
         436,
         532,
@@ -114,7 +115,8 @@
         611,
         674,
         808,
-        1047
+        1047,
+        1084
       ]
     },
     "GET /api/projects": {
@@ -1566,18 +1568,20 @@
       ]
     },
     "POST /api/auth/register": {
-      "count": 7,
-      "totalDuration": 6533,
+      "count": 9,
+      "totalDuration": 8438,
       "errors": 0,
       "min": 320,
       "max": 3403,
       "samples": [
         320,
+        393,
         420,
         479,
         578,
         585,
         748,
+        1512,
         3403
       ]
     },
