@@ -27,6 +27,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:a11y": "playwright test e2e/p1-a11y-scan.spec.ts",
     "test:keyboard-nav": "playwright test e2e/p1-keyboard-nav.spec.ts",
+    "test:e2e:bl-0781": "playwright test e2e/bl-0781-spinbutton-a11y.spec.ts",
+    "lint:no-raw-number-input": "node scripts/check-raw-number-inputs.mjs",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
