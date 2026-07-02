@@ -16,13 +16,19 @@ import re
 import sys
 from pathlib import Path
 
+# Observed status vocabulary (2026-07-01 live inventory of all 500+ rows):
+# OPEN, PARTIAL, BLOCKED [on ...], DONE, DONE (Wave 67), DONE (Wave E),
+# DONE (verified Wave 106), DONE (Wave N) — trailing prose, DONE-BY-BL-XXXX,
+# SPLIT (closed by splitting into follow-ups) — optionally **bold**-wrapped.
 STATUS_RX = re.compile(
-    r"^(OPEN|PARTIAL|BLOCKED(?:\s+on[^|]*)?|DONE(?:\s*\(verified[^)]*\))?|DONE-BY-BL-\d{4})$"
+    r"^(?:\*\*)?(OPEN|PARTIAL|BLOCKED(?:\s+on[^|]*)?|DONE(?:\s*\([^)]*\))?(?:\s*[-—–].*)?|DONE-BY-BL-\d{4}|SPLIT)(?:\*\*)?$"
 )
 ROW_RX = re.compile(r"^\|\s*(BL-\d{4})\s*\|")
 SECTION_RX = re.compile(r"^##\s+(P[0-3])\s+—")
 END_RX = re.compile(r"^##\s+Completed Work Summary")
-QS_ROW_RX = re.compile(r"^\|\s*(?:\*\*)?(P[0-3]|Total)(?:\*\*)?\s*\|\s*(?:\*\*)?(\d+)(?:\*\*)?\s*\|\s*(?:\*\*)?(\d+)(?:\*\*)?\s*\|")
+QS_ROW_RX = re.compile(
+    r"^\|\s*(?:\*\*)?(P[0-3]|Total)(?:\*\*)?\s*\|\s*(?:\*\*)?(\d+)(?:\*\*)?\s*\|\s*(?:\*\*)?(\d+)(?:\*\*)?\s*\|"
+)
 
 OPEN_STATES = ("OPEN", "PARTIAL", "BLOCKED")
 
@@ -45,6 +51,8 @@ def main() -> int:
         return 2
 
     counts = {p: {"open": 0, "done": 0} for p in ("P0", "P1", "P2", "P3")}
+    open_rows: list[str] = []  # BL ids currently open (for actionable drift)
+    heading = ""  # nearest ### sub-heading, for locating clusters
     ids_seen: dict[str, str] = {}
     dupes: list[str] = []
     unclassified: list[str] = []
@@ -52,7 +60,13 @@ def main() -> int:
 
     quick_stats: dict[str, tuple[int, int]] = {}
 
+    all_ids = set()
     for line in path.read_text().splitlines():
+        m_any = re.match(r"^\|\s*(BL-\d{4})\s*\|", line)
+        if m_any:
+            all_ids.add(m_any.group(1))
+        if line.startswith("###"):
+            heading = line.strip("# ").strip()
         sm = SECTION_RX.match(line)
         if sm:
             section = sm.group(1)
@@ -79,16 +93,22 @@ def main() -> int:
         ids_seen[bl_id] = section
         bucket = "open" if status.startswith(OPEN_STATES) else "done"
         counts[section][bucket] += 1
+        if bucket == "open":
+            open_rows.append(f"{bl_id} [{section} · {heading[:60]}]")
 
     total_open = sum(c["open"] for c in counts.values())
     total_done = sum(c["done"] for c in counts.values())
 
     result = {
         "computed": {**counts, "Total": {"open": total_open, "done": total_done}},
-        "quick_stats": {k: {"open": v[0], "done": v[1]} for k, v in quick_stats.items()},
+        "quick_stats": {
+            k: {"open": v[0], "done": v[1]} for k, v in quick_stats.items()
+        },
         "duplicates": dupes,
         "unclassified": unclassified,
-        "tracked": len(ids_seen),
+        "tracked_in_sections": len(ids_seen),
+        "unique_ids_docwide": len(all_ids),
+        "open_rows": open_rows,
     }
 
     drift = []
@@ -107,7 +127,9 @@ def main() -> int:
     if as_json:
         print(json.dumps(result, indent=2))
     else:
-        print(f"tracked items: {len(ids_seen)}")
+        print(
+            f"items in P0-P3 tables: {len(ids_seen)}  (unique BL ids doc-wide: {len(all_ids)})"
+        )
         for key in ("P0", "P1", "P2", "P3", "Total"):
             c = result["computed"][key]
             print(f"  {key}: {c['open']} open / {c['done']} done")
@@ -119,6 +141,12 @@ def main() -> int:
             print("DRIFT vs Quick Stats:")
             for d in drift:
                 print(f"  ✗ {d}")
+            if open_rows:
+                print(f"rows currently OPEN in tables ({len(open_rows)}):")
+                for r in open_rows[:20]:
+                    print(f"    {r}")
+                if len(open_rows) > 20:
+                    print(f"    … and {len(open_rows)-20} more")
         else:
             print("Quick Stats: in sync ✓")
 
