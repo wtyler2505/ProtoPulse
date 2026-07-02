@@ -73,7 +73,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claudekit-hooks run lint-changed"
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/lint-changed.sh",
+            "timeout": 120
           }
         ]
       },
