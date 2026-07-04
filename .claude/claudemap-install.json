@@ -1,0 +1,29 @@
+{
+  "artifact": "claudemap",
+  "artifactVersion": "0.2.1",
+  "artifactRoot": "/home/wtyler/dev/claudemap/artifacts/claudemap-skill/claudemap",
+  "assistant": "claude",
+  "generatedAt": "2026-07-04T19:45:53.457Z",
+  "installedAt": "2026-07-04T19:45:54.051Z",
+  "managedPaths": [
+    ".claude/skills/claudemap-runtime",
+    ".claude/agents/claudemap-architect.md",
+    ".claude/claudemap-install.json",
+    ".claude/commands/setup-claudemap.md",
+    ".claude/commands/refresh.md",
+    ".claude/commands/open-claudemap.md",
+    ".claude/commands/create-map.md",
+    ".claude/commands/show.md",
+    ".claude/commands/explain.md"
+  ],
+  "mode": "install",
+  "publicCommands": [
+    "setup-claudemap",
+    "open-claudemap",
+    "create-map",
+    "refresh",
+    "explain",
+    "show"
+  ],
+  "version": 2
+}

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Weekly Sunday 09:00 — generate audio brief from pp-journal + Briefing Doc summarizing pp-backlog.
 set -e
+export PATH="/home/wtyler/.local/bin:$PATH"
 WEEK_OF=$(date -u -d "last monday" +%Y-%m-%d)
 nlm login --check || { echo "auth needed"; exit 1; }
 
