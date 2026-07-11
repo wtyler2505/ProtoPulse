@@ -91,9 +91,16 @@ def main() -> int:
             unclassified.append(f"{section} {bl_id}")
             continue
         if bl_id in ids_seen:
+            # Flag it loudly, but still count it. Silently dropping the row
+            # from every tally (the old behavior) is worse than a collision:
+            # it hid a real BL-0902 ID clash for weeks, undercounting P2's
+            # open total with the comparison against Quick Stats still
+            # reporting "in sync" the whole time. Two rows sharing an ID are
+            # almost always two DIFFERENT real items that need renumbering,
+            # not one row appearing twice — both deserve to be counted.
             dupes.append(f"{bl_id} (in {ids_seen[bl_id]} and {section})")
-            continue
-        ids_seen[bl_id] = section
+        else:
+            ids_seen[bl_id] = section
         bucket = "open" if status.startswith(OPEN_STATES) else "done"
         counts[section][bucket] += 1
         if bucket == "open":
