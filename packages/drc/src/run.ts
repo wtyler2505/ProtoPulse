@@ -1,16 +1,9 @@
 import { compareFindings } from '@protopulse/erc';
-import { netOfPort } from '@protopulse/graph';
+import { makePortRef, netOfPort } from '@protopulse/graph';
 import Flatbush from 'flatbush';
 import polygonClipping from 'polygon-clipping';
 
-import {
-  inflateAabb,
-  rectAabb,
-  rectRectDistance,
-  segAabb,
-  segRectDistance,
-  segSegDistance,
-} from './geom.js';
+import { inflateAabb, rectAabb, rectRectDistance, segAabb, segRectDistance, segSegDistance } from './geom.js';
 
 import type { Aabb, Rect } from './geom.js';
 import type { Deck, DeckRules } from '@protopulse/content';
@@ -46,9 +39,7 @@ export const BOTTOM_LAYER = 'B.Cu';
 
 const QUARTER_TURNS_MILLI = new Set([0, 90_000, 180_000, 270_000]);
 
-type Shape =
-  | { kind: 'capsule'; a: Vec; b: Vec; r: number }
-  | { kind: 'rect'; rect: Rect };
+type Shape = { kind: 'capsule'; a: Vec; b: Vec; r: number } | { kind: 'rect'; rect: Rect };
 
 interface CopperItem {
   kind: 'trace' | 'pad' | 'via';
@@ -60,6 +51,11 @@ interface CopperItem {
   label: string;
   /** Same-group items are pre-connected (all segments of one trace). */
   groupKey: string;
+  /** Set on through-hole pads only — drives DRC-DRILL/DRC-ANNULAR the
+   *  same way via.drillNm does. Absent on SMD pads, traces, and vias
+   *  (vias carry their own drillNm on the graph and are checked
+   *  directly in ruleViaGeometry, not through this field). */
+  drillNm?: number;
 }
 
 interface DrcCtx {
@@ -188,7 +184,7 @@ function buildItems(graph: DesignGraph, parts: PartDb): { items: CopperItem[]; f
         pad.shape === 'circle'
           ? { kind: 'capsule', a: at, b: at, r: wNm / 2 }
           : { kind: 'rect', rect: { at, wNm, hNm } };
-      const port = `${componentId}:${pad.pinKey}`;
+      const port = makePortRef(componentId, pad.pinKey);
       items.push({
         kind: 'pad',
         netId: netOfPort(graph, port)?.id ?? null,
@@ -196,6 +192,7 @@ function buildItems(graph: DesignGraph, parts: PartDb): { items: CopperItem[]; f
         shape,
         label: `${comp.ref}:${pad.pinKey}`,
         groupKey: `pad:${port}`,
+        ...(pad.drillNm !== undefined ? { drillNm: pad.drillNm } : {}),
       });
     }
   }
@@ -247,6 +244,43 @@ function ruleViaGeometry(ctx: DrcCtx): Finding[] {
   return out;
 }
 
+/** Drill/annular-ring checks for through-hole FOOTPRINT pads — the pad
+ *  counterpart of ruleViaGeometry. A DIP-8, barrel-jack, or THT
+ *  connector footprint with an out-of-spec drill/ring previously sailed
+ *  through DRC clean, discoverable only at the fab house (BL-0912).
+ *  Pad "diameter" for the ring formula: a circle pad's shape is already
+ *  a zero-length capsule (r = radius), a rect pad uses its SHORTER side
+ *  — the tightest dimension, matching how a fab actually measures
+ *  copper-to-drill on an asymmetric rect/oblong pad. */
+function ruleThtPadGeometry(ctx: DrcCtx): Finding[] {
+  const out: Finding[] = [];
+  for (const item of ctx.items) {
+    if (item.kind !== 'pad' || item.drillNm === undefined) continue;
+    const padSizeNm =
+      item.shape.kind === 'capsule' ? item.shape.r * 2 : Math.min(item.shape.rect.wNm, item.shape.rect.hNm);
+    const minDrill = ruleFor(ctx, item.netId, 'min_drill_nm');
+    if (item.drillNm < minDrill) {
+      out.push({
+        severity: 'error',
+        code: 'DRC-DRILL',
+        message: `Pad ${item.label} drill ${String(item.drillNm)}nm is under the deck minimum ${String(minDrill)}nm`,
+        anchors: item.netId === null ? [] : [netAnchor(item.netId)],
+      });
+    }
+    const ring = (padSizeNm - item.drillNm) / 2;
+    const minAnnular = ruleFor(ctx, item.netId, 'min_annular_nm');
+    if (ring < minAnnular) {
+      out.push({
+        severity: 'error',
+        code: 'DRC-ANNULAR',
+        message: `Pad ${item.label} annular ring ${String(ring)}nm is under the deck minimum ${String(minAnnular)}nm`,
+        anchors: item.netId === null ? [] : [netAnchor(item.netId)],
+      });
+    }
+  }
+  return out;
+}
+
 function ruleClearance(ctx: DrcCtx): Finding[] {
   const out: Finding[] = [];
   if (ctx.items.length === 0) return out;
@@ -273,10 +307,7 @@ function ruleClearance(ctx: DrcCtx): Finding[] {
       if (a.netId !== null && a.netId === b.netId) continue; // same copper
       if (a.netId === null && b.netId === null) continue; // two floating pads — no claim
       if (!sharedLayers(a, b)) continue;
-      const required = Math.max(
-        ruleFor(ctx, a.netId, 'min_clearance_nm'),
-        ruleFor(ctx, b.netId, 'min_clearance_nm'),
-      );
+      const required = Math.max(ruleFor(ctx, a.netId, 'min_clearance_nm'), ruleFor(ctx, b.netId, 'min_clearance_nm'));
       const gap = copperGap(a.shape, b.shape);
       if (gap >= required) continue;
       const anchors: Anchor[] = [];
@@ -414,8 +445,7 @@ function ruleZones(ctx: DrcCtx): Finding[] {
     for (const item of ctx.items) {
       if (item.netId !== zone.netId || !item.layers.includes(zone.layerId)) continue;
       // Inside by any endpoint/center, or a capsule crossing the outline.
-      const pts =
-        item.shape.kind === 'rect' ? [item.shape.rect.at] : [item.shape.a, item.shape.b];
+      const pts = item.shape.kind === 'rect' ? [item.shape.rect.at] : [item.shape.a, item.shape.b];
       let touches = pts.some((pt) => pointInPolygon(pt, zone.outline));
       if (!touches && item.shape.kind === 'capsule') {
         const ring = zone.outline;
@@ -493,6 +523,7 @@ function ruleEdgeClearance(ctx: DrcCtx): Finding[] {
 const RULES: ((ctx: DrcCtx) => Finding[])[] = [
   ruleTraceWidth,
   ruleViaGeometry,
+  ruleThtPadGeometry,
   ruleClearance,
   ruleUnrouted,
   ruleZones,

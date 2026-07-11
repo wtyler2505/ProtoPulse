@@ -226,6 +226,58 @@ describe('DRC-ANNULAR and DRC-DRILL', () => {
   });
 });
 
+describe('DRC-ANNULAR and DRC-DRILL — through-hole footprint pads', () => {
+  // core:ne555 (footprintDip8): 1.6mm circle pad, 0.8mm drill on every pin
+  // -> drillNm 800_000, ring (padNm − drillNm)/2 = 400_000.
+  const dipOps: OpBody[] = [
+    { kind: 'add_component', id: 'u1', ref: 'U1', partId: 'core:ne555', partRev: 1 },
+    { kind: 'place_footprint', componentId: 'u1', at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+  ];
+
+  it('a healthy DIP-8 passes both checks against the default deck', () => {
+    // default deck: min_drill_nm 300_000, min_annular_nm 130_000 — well under 800_000/400_000.
+    const found = codes(dipOps);
+    expect(found).not.toContain('DRC-DRILL');
+    expect(found).not.toContain('DRC-ANNULAR');
+  });
+
+  it('flags a through-hole pad annular ring under the deck minimum', () => {
+    const tightDeck: Deck = { ...deck, rules: { ...deck.rules, min_annular_nm: 500_000 } }; // > 400_000
+    const found = runDrc(graphOf(dipOps), parts, tightDeck).map((f) => f.code);
+    expect(found).toContain('DRC-ANNULAR');
+    expect(found).not.toContain('DRC-DRILL');
+    // One finding per pad (8 pins), not deduped across pins.
+    expect(found.filter((c) => c === 'DRC-ANNULAR')).toHaveLength(8);
+  });
+
+  it('flags a through-hole pad drill under the fab minimum', () => {
+    const tightDeck: Deck = { ...deck, rules: { ...deck.rules, min_drill_nm: 900_000 } }; // > 800_000
+    const found = runDrc(graphOf(dipOps), parts, tightDeck).map((f) => f.code);
+    expect(found).toContain('DRC-DRILL');
+    expect(found).not.toContain('DRC-ANNULAR');
+    expect(found.filter((c) => c === 'DRC-DRILL')).toHaveLength(8);
+  });
+
+  it('SMD pads (no drillNm) are exempt — only through-hole pads are checked', () => {
+    // R1 (0805, SMD) against an absurdly strict deck would never trigger
+    // DRC-DRILL/DRC-ANNULAR since SMD pads have no drillNm at all.
+    const strictDeck: Deck = {
+      ...deck,
+      rules: { ...deck.rules, min_annular_nm: 10_000_000, min_drill_nm: 10_000_000 },
+    };
+    const found = runDrc(graphOf(placedBoard()), parts, strictDeck).map((f) => f.code);
+    expect(found).not.toContain('DRC-DRILL');
+    expect(found).not.toContain('DRC-ANNULAR');
+  });
+
+  it('the finding names the pad, not a via', () => {
+    const tightDeck: Deck = { ...deck, rules: { ...deck.rules, min_drill_nm: 900_000 } };
+    const found = runDrc(graphOf(dipOps), parts, tightDeck);
+    const pin1 = found.find((f) => f.code === 'DRC-DRILL');
+    expect(pin1?.message).toContain('U1:1');
+  });
+});
+
 describe('DRC-UNROUTED', () => {
   it('flags a net whose placed pads have no copper between them', () => {
     const found = runDrc(graphOf(placedBoard()), parts, deck);
