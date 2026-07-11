@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+import { getTestProjectId } from './test-project';
+
 test.use({ storageState: 'e2e/.auth-state.json' });
 
 test.describe('Navigation', () => {
-  test('direct URL navigation to /projects/1 works', async ({ page }) => {
-    await page.goto('/projects/1');
+  test('direct URL navigation to /projects/:id works', async ({ page }) => {
+    await page.goto(`/projects/${getTestProjectId()}`);
     await page.waitForTimeout(2000);
     // Should not show 404
     await expect(page.locator('text=404')).not.toBeVisible();
@@ -13,7 +15,7 @@ test.describe('Navigation', () => {
   });
 
   test('clicking sidebar items changes active view without errors', async ({ page }) => {
-    await page.goto('/projects/1');
+    await page.goto(`/projects/${getTestProjectId()}`);
     await page.waitForTimeout(2000);
 
     const viewLabels = ['Schematic', 'Validation', 'Output'];

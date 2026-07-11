@@ -47,16 +47,28 @@ if [ "${RIB:-False}" = "True" ]; then
   exit 0
 fi
 
-# Detect test commands
-cmd_lower="$(echo "$COMMAND" | tr '[:upper:]' '[:lower:]')"
+# Detect FOREGROUND test-runner INVOCATIONS only — not a runner NAMED in a
+# file path (vitest.config.ts), a commit message, an `ls`/`git add` argument,
+# or a JS string. A runner must sit at a COMMAND POSITION: start of line, or
+# right after a shell separator ( ; && || | & ( { ), optionally preceded by
+# env-assignments and an npx/pnpm/yarn/bunx prefix, and be followed by
+# whitespace or end-of-command — so a bare filename ending in the runner name
+# never matches.
+cmd_lower="$(printf '%s' "$COMMAND" | tr '[:upper:]' '[:lower:]')"
+
+_bound='(^|[;&|(){])'                                       # command-position boundary
+_env='[[:space:]]*([a-z_][a-z0-9_]*=[^[:space:]]*[[:space:]]+)*'  # optional VAR=val prefixes
+_runpfx='((npx|pnpm|yarn|bunx)[[:space:]]+)?'               # optional runner launcher
+_term='([[:space:]]|$)'                                     # must be followed by space or EOL
+_termc='([[:space:]:]|$)'                                   # ...or a ':' for test:suffix scripts
 
 is_test=false
-# npm test / npm run test (and any suffix like test:coverage, test:watch, test -- path)
-if echo "$cmd_lower" | grep -Eq 'npm (run )?test(\b|:)'; then
+# Direct runners: vitest / jest / playwright (optionally via npx/pnpm/yarn/bunx).
+if printf '%s' "$cmd_lower" | grep -Eq "${_bound}${_env}${_runpfx}(vitest|jest|playwright)${_term}"; then
   is_test=true
 fi
-# vitest run (with or without npx prefix, with or without path filters)
-if echo "$cmd_lower" | grep -Eq '(\bnpx )?vitest( run)?\b'; then
+# Package-manager test scripts: `npm test`, `npm run test`, `npm run test:xyz`.
+if printf '%s' "$cmd_lower" | grep -Eq "${_bound}${_env}(npm|pnpm|yarn)[[:space:]]+(run[[:space:]]+)?test${_termc}"; then
   is_test=true
 fi
 

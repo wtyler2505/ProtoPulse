@@ -6,21 +6,18 @@
  */
 
 import { useState, useMemo, useSyncExternalStore, useCallback } from 'react';
+
+import { Search, Plus, Trash2, Play, X, Star, Zap } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { NumberInput } from '@/components/ui/number-input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Search, Plus, Trash2, Play, X, Star, Zap } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { scenarioManager } from '@/lib/simulation/scenario-manager';
 import type { SimType, CreateScenarioData, SimulationParameters } from '@/lib/simulation/scenario-manager';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -83,10 +80,10 @@ function formatTime(s: number): string {
     return `${s} s`;
   }
   if (s >= 1e-3) {
-    return `${(s * 1e3).toFixed(s * 1e3 % 1 === 0 ? 0 : 1)} ms`;
+    return `${(s * 1e3).toFixed((s * 1e3) % 1 === 0 ? 0 : 1)} ms`;
   }
   if (s >= 1e-6) {
-    return `${(s * 1e6).toFixed(s * 1e6 % 1 === 0 ? 0 : 1)} \u00B5s`;
+    return `${(s * 1e6).toFixed((s * 1e6) % 1 === 0 ? 0 : 1)} \u00B5s`;
   }
   return `${(s * 1e9).toFixed(1)} ns`;
 }
@@ -147,10 +144,24 @@ function NewScenarioForm({ onSubmit, onCancel }: NewScenarioFormProps) {
       simType,
       parameters,
     });
-  }, [name, description, simType, frequencyStart, frequencyEnd, frequencyPoints, timeSpan, timeStep, temperature, onSubmit]);
+  }, [
+    name,
+    description,
+    simType,
+    frequencyStart,
+    frequencyEnd,
+    frequencyPoints,
+    timeSpan,
+    timeStep,
+    temperature,
+    onSubmit,
+  ]);
 
   return (
-    <div className="flex flex-col gap-2 p-2 border border-[var(--color-editor-accent)]/30 rounded-md bg-[var(--color-editor-accent)]/5" data-testid="scenario-new-form">
+    <div
+      className="flex flex-col gap-2 p-2 border border-[var(--color-editor-accent)]/30 rounded-md bg-[var(--color-editor-accent)]/5"
+      data-testid="scenario-new-form"
+    >
       <Input
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -180,11 +191,10 @@ function NewScenarioForm({ onSubmit, onCancel }: NewScenarioFormProps) {
 
       {/* Type-specific parameter fields */}
       {simType === 'dc' && (
-        <Input
+        <NumberInput
           value={temperature}
           onChange={(e) => setTemperature(e.target.value)}
           placeholder="Temperature (\u00B0C)"
-          type="number"
           className="h-7 text-xs"
           data-testid="scenario-form-temperature"
         />
@@ -192,27 +202,24 @@ function NewScenarioForm({ onSubmit, onCancel }: NewScenarioFormProps) {
 
       {simType === 'ac' && (
         <div className="flex flex-col gap-1">
-          <Input
+          <NumberInput
             value={frequencyStart}
             onChange={(e) => setFrequencyStart(e.target.value)}
             placeholder="Start freq (Hz)"
-            type="number"
             className="h-7 text-xs"
             data-testid="scenario-form-freq-start"
           />
-          <Input
+          <NumberInput
             value={frequencyEnd}
             onChange={(e) => setFrequencyEnd(e.target.value)}
             placeholder="End freq (Hz)"
-            type="number"
             className="h-7 text-xs"
             data-testid="scenario-form-freq-end"
           />
-          <Input
+          <NumberInput
             value={frequencyPoints}
             onChange={(e) => setFrequencyPoints(e.target.value)}
             placeholder="Points"
-            type="number"
             className="h-7 text-xs"
             data-testid="scenario-form-freq-points"
           />
@@ -221,20 +228,18 @@ function NewScenarioForm({ onSubmit, onCancel }: NewScenarioFormProps) {
 
       {simType === 'transient' && (
         <div className="flex flex-col gap-1">
-          <Input
+          <NumberInput
             value={timeSpan}
             onChange={(e) => setTimeSpan(e.target.value)}
             placeholder="Time span (s)"
-            type="number"
             step="0.001"
             className="h-7 text-xs"
             data-testid="scenario-form-timespan"
           />
-          <Input
+          <NumberInput
             value={timeStep}
             onChange={(e) => setTimeStep(e.target.value)}
             placeholder="Time step (s)"
-            type="number"
             step="0.0001"
             className="h-7 text-xs"
             data-testid="scenario-form-timestep"
@@ -339,7 +344,10 @@ export function ScenarioManagerPanel({ className, onScenarioLoad }: ScenarioMana
     >
       {/* Header */}
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-medium text-foreground flex items-center gap-1" data-testid="scenario-manager-title">
+        <span
+          className="text-xs font-medium text-foreground flex items-center gap-1"
+          data-testid="scenario-manager-title"
+        >
           <Zap className="w-3 h-3 text-[var(--color-editor-accent)]" />
           Simulation Scenarios
         </span>
@@ -384,9 +392,7 @@ export function ScenarioManagerPanel({ className, onScenarioLoad }: ScenarioMana
             <>
               <div className="flex items-center gap-1 px-1 pt-1">
                 <Star className="w-3 h-3 text-yellow-400" />
-                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                  Presets
-                </span>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Presets</span>
               </div>
               {presets.map((scenario) => (
                 <ScenarioRow
@@ -456,7 +462,9 @@ function ScenarioRow({ scenario, isActive, isPreset, onLoad, onDelete }: Scenari
     <div
       className={cn(
         'flex flex-col gap-1 px-2 py-1.5 rounded border transition-colors',
-        isActive ? 'border-[var(--color-editor-accent)]/50 bg-[var(--color-editor-accent)]/10' : 'border-transparent hover:bg-muted/40',
+        isActive
+          ? 'border-[var(--color-editor-accent)]/50 bg-[var(--color-editor-accent)]/10'
+          : 'border-transparent hover:bg-muted/40',
       )}
       data-testid={`scenario-row-${scenario.id}`}
     >
@@ -471,13 +479,21 @@ function ScenarioRow({ scenario, isActive, isPreset, onLoad, onDelete }: Scenari
         </Badge>
 
         {/* Name */}
-        <span className="flex-1 text-xs text-foreground truncate" title={scenario.name} data-testid={`scenario-name-${scenario.id}`}>
+        <span
+          className="flex-1 text-xs text-foreground truncate"
+          title={scenario.name}
+          data-testid={`scenario-name-${scenario.id}`}
+        >
           {scenario.name}
         </span>
 
         {/* Active indicator */}
         {isActive && (
-          <Badge variant="default" className="h-4 px-1 text-[9px] bg-[var(--color-editor-accent)] text-black" data-testid={`scenario-active-${scenario.id}`}>
+          <Badge
+            variant="default"
+            className="h-4 px-1 text-[9px] bg-[var(--color-editor-accent)] text-black"
+            data-testid={`scenario-active-${scenario.id}`}
+          >
             Active
           </Badge>
         )}

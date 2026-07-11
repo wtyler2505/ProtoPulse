@@ -57,7 +57,10 @@ done
 mkdir -p "$STATE" "$LOGS"
 
 log() {
-  printf '%s %s\n' "$(date -u --iso-8601=seconds)" "$*" | tee -a "$LOG"
+  # NOTE: intentionally NOT tee'd to $LOG — the cron entry already redirects
+  # this script's stdout to $LOG (>> ... 2>&1). Piping here too caused every
+  # line to be written twice.
+  printf '%s %s\n' "$(date -u --iso-8601=seconds)" "$*"
 }
 
 write_request() {

@@ -1,0 +1,28 @@
+{
+  "graphRevision": 1,
+  "updatedAt": "2026-07-04T20:00:38.122Z",
+  "graphMeta": {
+    "repoName": "ProtoPulse",
+    "generatedAt": "2026-07-04T20:00:36.538Z",
+    "source": "claude",
+    "nodeCount": 2610,
+    "edgeCount": 23,
+    "fileCount": 2529
+  },
+  "runtime": {
+    "healthOverlay": false,
+    "highlightedNodeIds": [],
+    "highlightColor": "accent",
+    "focus": null,
+    "guidedFlow": null,
+    "presentation": {
+      "mode": "free",
+      "lockInput": false,
+      "title": null,
+      "explanation": null,
+      "body": null,
+      "stepLabel": null,
+      "updatedAt": null
+    }
+  }
+}

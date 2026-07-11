@@ -6,24 +6,21 @@
  */
 
 import { useState, useMemo, useSyncExternalStore, useCallback } from 'react';
+
+import { Plus, Trash2, X, Zap, AlertTriangle, Activity } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
+import { NumberInput } from '@/components/ui/number-input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, X, Zap, AlertTriangle, Activity } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { failureInjectionManager } from '@/lib/simulation/failure-injection';
 import type { FaultType, FaultDefinition, CreateFaultData } from '@/lib/simulation/failure-injection';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -126,7 +123,9 @@ function AddFaultForm({ components, onSubmit, onCancel }: AddFaultFormProps) {
         ) : (
           <Input
             value={componentId}
-            onChange={(e) => { setComponentId(e.target.value); }}
+            onChange={(e) => {
+              setComponentId(e.target.value);
+            }}
             placeholder="Component ID"
             className="h-7 text-xs"
             data-testid="fault-form-component-input"
@@ -137,7 +136,12 @@ function AddFaultForm({ components, onSubmit, onCancel }: AddFaultFormProps) {
       {/* Fault type */}
       <div>
         <Label className="text-[10px] text-muted-foreground">Fault Type</Label>
-        <Select value={faultType} onValueChange={(v) => { setFaultType(v as FaultType); }}>
+        <Select
+          value={faultType}
+          onValueChange={(v) => {
+            setFaultType(v as FaultType);
+          }}
+        >
           <SelectTrigger className="h-7 text-xs" data-testid="fault-form-type">
             <SelectValue />
           </SelectTrigger>
@@ -177,33 +181,36 @@ function AddFaultForm({ components, onSubmit, onCancel }: AddFaultFormProps) {
 
       {/* Type-specific fields */}
       {faultType === 'noise' && (
-        <Input
+        <NumberInput
           value={noiseAmplitude}
-          onChange={(e) => { setNoiseAmplitude(e.target.value); }}
+          onChange={(e) => {
+            setNoiseAmplitude(e.target.value);
+          }}
           placeholder="Noise amplitude (optional)"
-          type="number"
           className="h-7 text-xs"
           data-testid="fault-form-noise-amplitude"
         />
       )}
 
       {faultType === 'drift' && (
-        <Input
+        <NumberInput
           value={driftPercent}
-          onChange={(e) => { setDriftPercent(e.target.value); }}
+          onChange={(e) => {
+            setDriftPercent(e.target.value);
+          }}
           placeholder="Drift % (optional, e.g. 20)"
-          type="number"
           className="h-7 text-xs"
           data-testid="fault-form-drift-percent"
         />
       )}
 
       {(faultType === 'noise' || faultType === 'intermittent') && (
-        <Input
+        <NumberInput
           value={seed}
-          onChange={(e) => { setSeed(e.target.value); }}
+          onChange={(e) => {
+            setSeed(e.target.value);
+          }}
           placeholder="PRNG seed (optional)"
-          type="number"
           className="h-7 text-xs"
           data-testid="fault-form-seed"
         />
@@ -267,11 +274,7 @@ function FaultRow({ fault, onRemove }: FaultRowProps) {
           {fault.componentName}
         </span>
 
-        <Badge
-          variant="secondary"
-          className="h-4 px-1 text-[9px] font-mono"
-          data-testid={`fault-severity-${fault.id}`}
-        >
+        <Badge variant="secondary" className="h-4 px-1 text-[9px] font-mono" data-testid={`fault-severity-${fault.id}`}>
           {Math.round(fault.severity * 100)}%
         </Badge>
       </div>
@@ -279,15 +282,21 @@ function FaultRow({ fault, onRemove }: FaultRowProps) {
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-muted-foreground/70">
           {fault.faultType === 'noise' && fault.noiseAmplitude !== undefined && `amp: ${fault.noiseAmplitude}`}
-          {fault.faultType === 'drift' && fault.driftPercent !== undefined && `drift: ${Math.round(fault.driftPercent * 100)}%`}
-          {(fault.faultType === 'noise' || fault.faultType === 'intermittent') && fault.seed !== undefined && ` seed: ${fault.seed}`}
+          {fault.faultType === 'drift' &&
+            fault.driftPercent !== undefined &&
+            `drift: ${Math.round(fault.driftPercent * 100)}%`}
+          {(fault.faultType === 'noise' || fault.faultType === 'intermittent') &&
+            fault.seed !== undefined &&
+            ` seed: ${fault.seed}`}
         </span>
 
         <Button
           variant="ghost"
           size="icon"
           className="h-5 w-5 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
-          onClick={() => { onRemove(fault.id); }}
+          onClick={() => {
+            onRemove(fault.id);
+          }}
           aria-label={`Remove fault on ${fault.componentName}`}
           data-testid={`fault-remove-${fault.id}`}
         >
@@ -337,11 +346,7 @@ export function FailureInjectionPanel({ className, components = {} }: FailureInj
           <AlertTriangle className="w-3.5 h-3.5 text-[var(--color-editor-accent)]" />
           Failure Injection
           {faults.length > 0 && (
-            <Badge
-              variant="secondary"
-              className="h-4 px-1 text-[9px] font-mono ml-1"
-              data-testid="fault-count-badge"
-            >
+            <Badge variant="secondary" className="h-4 px-1 text-[9px] font-mono ml-1" data-testid="fault-count-badge">
               {faults.length}
             </Badge>
           )}
@@ -369,14 +374,18 @@ export function FailureInjectionPanel({ className, components = {} }: FailureInj
           <AddFaultForm
             components={components}
             onSubmit={handleInject}
-            onCancel={() => { setShowForm(false); }}
+            onCancel={() => {
+              setShowForm(false);
+            }}
           />
         ) : (
           <Button
             variant="outline"
             size="sm"
             className="w-full h-7 text-xs gap-1 border-dashed border-[var(--color-editor-accent)]/30 text-[var(--color-editor-accent)] hover:bg-[var(--color-editor-accent)]/10"
-            onClick={() => { setShowForm(true); }}
+            onClick={() => {
+              setShowForm(true);
+            }}
             data-testid="fault-add-button"
           >
             <Plus className="w-3 h-3" />

@@ -1,26 +1,14 @@
 import { useState, useMemo, useCallback } from 'react';
-import {
-  CircuitBoard,
-  ExternalLink,
-  Plus,
-  Trash2,
-  Clock,
-  ChevronDown,
-  ChevronRight,
-  X,
-  Check,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+
+import { CircuitBoard, ExternalLink, Plus, Trash2, Clock, ChevronDown, ChevronRight, X, Check } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { useProjectId } from '@/lib/project-context';
-import {
-  usePcbOrderTracker,
-  PCB_STATUS_PIPELINE,
-  PCB_STATUS_LABELS,
-  PCB_STATUS_COLORS,
-} from '@/lib/pcb-order-tracker';
+import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/number-input';
+import { usePcbOrderTracker, PCB_STATUS_PIPELINE, PCB_STATUS_LABELS, PCB_STATUS_COLORS } from '@/lib/pcb-order-tracker';
 import type { PcbOrder, PcbOrderStatus, CreatePcbOrderInput } from '@/lib/pcb-order-tracker';
+import { useProjectId } from '@/lib/project-context';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -50,12 +38,7 @@ function StatusPipeline({ currentStatus }: { currentStatus: PcbOrderStatus }) {
               {isCurrent && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
             </div>
             {idx < PCB_STATUS_PIPELINE.length - 1 && (
-              <div
-                className={cn(
-                  'w-4 h-0.5',
-                  idx < currentIdx ? 'bg-emerald-500' : 'bg-muted-foreground/20',
-                )}
-              />
+              <div className={cn('w-4 h-0.5', idx < currentIdx ? 'bg-emerald-500' : 'bg-muted-foreground/20')} />
             )}
           </div>
         );
@@ -64,7 +47,13 @@ function StatusPipeline({ currentStatus }: { currentStatus: PcbOrderStatus }) {
   );
 }
 
-function DeliveryCountdown({ order, getDaysUntilDelivery }: { order: PcbOrder; getDaysUntilDelivery: (o: PcbOrder) => number | null }) {
+function DeliveryCountdown({
+  order,
+  getDaysUntilDelivery,
+}: {
+  order: PcbOrder;
+  getDaysUntilDelivery: (o: PcbOrder) => number | null;
+}) {
   const days = getDaysUntilDelivery(order);
   if (days === null) {
     return null;
@@ -84,11 +73,7 @@ function DeliveryCountdown({ order, getDaysUntilDelivery }: { order: PcbOrder; g
       data-testid="delivery-countdown"
     >
       <Clock className="w-3 h-3" />
-      {isOverdue
-        ? `${Math.abs(days)}d overdue`
-        : days === 0
-          ? 'Due today'
-          : `${days}d remaining`}
+      {isOverdue ? `${Math.abs(days)}d overdue` : days === 0 ? 'Due today' : `${days}d remaining`}
     </div>
   );
 }
@@ -104,7 +89,9 @@ function StatusHistory({ order }: { order: PcbOrder }) {
     <div className="mt-2" data-testid={`history-${order.id}`}>
       <button
         type="button"
-        onClick={() => { setExpanded((v) => !v); }}
+        onClick={() => {
+          setExpanded((v) => !v);
+        }}
         className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
         data-testid={`history-toggle-${order.id}`}
       >
@@ -118,12 +105,8 @@ function StatusHistory({ order }: { order: PcbOrder }) {
               <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1 shrink-0" />
               <div>
                 <span className="text-foreground font-medium">{PCB_STATUS_LABELS[entry.status]}</span>
-                <span className="text-muted-foreground ml-1.5">
-                  {new Date(entry.timestamp).toLocaleString()}
-                </span>
-                {entry.note && (
-                  <span className="text-muted-foreground ml-1.5">— {entry.note}</span>
-                )}
+                <span className="text-muted-foreground ml-1.5">{new Date(entry.timestamp).toLocaleString()}</span>
+                {entry.note && <span className="text-muted-foreground ml-1.5">— {entry.note}</span>}
               </div>
             </div>
           ))}
@@ -194,7 +177,7 @@ function OrderCard({
             <a
               href={order.trackingUrl}
               target="_blank"
-              rel="noopener,noreferrer"
+              rel="noopener, noreferrer"
               className="p-1 text-muted-foreground hover:text-primary"
               data-testid="pcb-tracking-link"
               aria-label="Open tracking URL"
@@ -204,7 +187,9 @@ function OrderCard({
           )}
           <button
             type="button"
-            onClick={() => { onDelete(order.id); }}
+            onClick={() => {
+              onDelete(order.id);
+            }}
             className="p-1 text-muted-foreground hover:text-destructive"
             data-testid={`delete-pcb-order-${order.id}`}
             aria-label="Delete order"
@@ -227,7 +212,9 @@ function OrderCard({
             size="sm"
             variant="outline"
             className="h-6 text-[10px] px-2"
-            onClick={() => { onAdvance(order.id); }}
+            onClick={() => {
+              onAdvance(order.id);
+            }}
             data-testid={`advance-pcb-order-${order.id}`}
           >
             {NEXT_STATUS_LABELS[order.status]}
@@ -268,23 +255,13 @@ const DEFAULT_NEW_PCB_ORDER: NewPcbOrderValues = {
 
 export function PcbOrderTrackerPanel() {
   const projectId = useProjectId();
-  const {
-    orders,
-    activeOrders,
-    completedOrders,
-    createOrder,
-    updateStatus,
-    deleteOrder,
-    getDaysUntilDelivery,
-  } = usePcbOrderTracker(projectId);
+  const { orders, activeOrders, completedOrders, createOrder, updateStatus, deleteOrder, getDaysUntilDelivery } =
+    usePcbOrderTracker(projectId);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newOrder, setNewOrder] = useState<NewPcbOrderValues>({ ...DEFAULT_NEW_PCB_ORDER });
 
-  const sortedOrders = useMemo(
-    () => [...orders].sort((a, b) => b.updatedAt - a.updatedAt),
-    [orders],
-  );
+  const sortedOrders = useMemo(() => [...orders].sort((a, b) => b.updatedAt - a.updatedAt), [orders]);
 
   const handleAdd = useCallback(() => {
     if (!newOrder.orderId.trim() || !newOrder.fabHouse.trim()) {
@@ -296,9 +273,10 @@ export function PcbOrderTrackerPanel() {
       boardName: newOrder.boardName.trim() || undefined,
       quantity: Math.max(1, newOrder.quantity),
       trackingUrl: newOrder.trackingUrl.trim() || undefined,
-      estimatedDelivery: newOrder.estimatedDeliveryDays > 0
-        ? Date.now() + newOrder.estimatedDeliveryDays * 24 * 60 * 60 * 1000
-        : undefined,
+      estimatedDelivery:
+        newOrder.estimatedDeliveryDays > 0
+          ? Date.now() + newOrder.estimatedDeliveryDays * 24 * 60 * 60 * 1000
+          : undefined,
     };
     createOrder(input);
     setNewOrder({ ...DEFAULT_NEW_PCB_ORDER });
@@ -308,7 +286,9 @@ export function PcbOrderTrackerPanel() {
   const handleAdvance = useCallback(
     (orderId: string) => {
       const order = orders.find((o) => o.id === orderId);
-      if (!order) { return; }
+      if (!order) {
+        return;
+      }
       const next = NEXT_STATUS[order.status];
       if (next) {
         updateStatus(orderId, next);
@@ -348,7 +328,9 @@ export function PcbOrderTrackerPanel() {
       <div className="flex items-center gap-2">
         <Button
           size="sm"
-          onClick={() => { setShowAddForm(true); }}
+          onClick={() => {
+            setShowAddForm(true);
+          }}
           className="bg-primary text-primary-foreground hover:bg-primary/90"
           data-testid="btn-add-pcb-order"
         >
@@ -362,12 +344,17 @@ export function PcbOrderTrackerPanel() {
 
       {/* Add order form */}
       {showAddForm && (
-        <div className="border border-primary/30 bg-card/90 backdrop-blur p-4 space-y-3" data-testid="add-pcb-order-form">
+        <div
+          className="border border-primary/30 bg-card/90 backdrop-blur p-4 space-y-3"
+          data-testid="add-pcb-order-form"
+        >
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium text-foreground">Track New PCB Order</h4>
             <button
               type="button"
-              onClick={() => { setShowAddForm(false); }}
+              onClick={() => {
+                setShowAddForm(false);
+              }}
               className="p-1 text-muted-foreground hover:text-foreground"
               data-testid="close-pcb-add-form"
               aria-label="Close add form"
@@ -378,13 +365,18 @@ export function PcbOrderTrackerPanel() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="pcb-fab-house">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="pcb-fab-house"
+              >
                 Fab House
               </label>
               <select
                 id="pcb-fab-house"
                 value={newOrder.fabHouse}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, fabHouse: e.target.value })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, fabHouse: e.target.value }));
+                }}
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-fab-house"
               >
@@ -397,71 +389,95 @@ export function PcbOrderTrackerPanel() {
               </select>
             </div>
             <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="pcb-order-id">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="pcb-order-id"
+              >
                 Order ID
               </label>
               <input
                 id="pcb-order-id"
                 type="text"
                 value={newOrder.orderId}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, orderId: e.target.value })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, orderId: e.target.value }));
+                }}
                 placeholder="W202603150001"
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-pcb-order-id"
               />
             </div>
             <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="pcb-board-name">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="pcb-board-name"
+              >
                 Board Name (optional)
               </label>
               <input
                 id="pcb-board-name"
                 type="text"
                 value={newOrder.boardName}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, boardName: e.target.value })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, boardName: e.target.value }));
+                }}
                 placeholder="Main Controller Rev B"
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-pcb-board-name"
               />
             </div>
             <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="pcb-quantity">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="pcb-quantity"
+              >
                 Quantity
               </label>
-              <input
+              <NumberInput
                 id="pcb-quantity"
-                type="number"
                 min={1}
                 value={newOrder.quantity}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, quantity: Math.max(1, Number(e.target.value)) })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, quantity: Math.max(1, Number(e.target.value)) }));
+                }}
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-pcb-quantity"
               />
             </div>
             <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="pcb-tracking-url">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="pcb-tracking-url"
+              >
                 Tracking URL (optional)
               </label>
               <input
                 id="pcb-tracking-url"
                 type="text"
                 value={newOrder.trackingUrl}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, trackingUrl: e.target.value })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, trackingUrl: e.target.value }));
+                }}
                 placeholder="https://..."
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-pcb-tracking-url"
               />
             </div>
             <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="pcb-delivery-days">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="pcb-delivery-days"
+              >
                 Est. Delivery (days)
               </label>
-              <input
+              <NumberInput
                 id="pcb-delivery-days"
-                type="number"
                 min={0}
+                max={365}
                 value={newOrder.estimatedDeliveryDays}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, estimatedDeliveryDays: Math.max(0, Number(e.target.value)) })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, estimatedDeliveryDays: Math.max(0, Number(e.target.value)) }));
+                }}
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-pcb-delivery-days"
               />
@@ -472,7 +488,10 @@ export function PcbOrderTrackerPanel() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => { setShowAddForm(false); setNewOrder({ ...DEFAULT_NEW_PCB_ORDER }); }}
+              onClick={() => {
+                setShowAddForm(false);
+                setNewOrder({ ...DEFAULT_NEW_PCB_ORDER });
+              }}
               data-testid="btn-cancel-pcb-add"
             >
               Cancel
@@ -508,14 +527,14 @@ export function PcbOrderTrackerPanel() {
         <div className="text-center py-12 text-muted-foreground" data-testid="empty-pcb-orders">
           <CircuitBoard className="w-10 h-10 mx-auto mb-3 opacity-40" />
           <p className="text-sm font-medium">No PCB orders being tracked</p>
-          <p className="text-xs mt-1">
-            Track your PCB fabrication orders through the manufacturing pipeline.
-          </p>
+          <p className="text-xs mt-1">Track your PCB fabrication orders through the manufacturing pipeline.</p>
           <Button
             size="sm"
             variant="outline"
             className="mt-3"
-            onClick={() => { setShowAddForm(true); }}
+            onClick={() => {
+              setShowAddForm(true);
+            }}
             data-testid="btn-add-first-pcb-order"
           >
             <Plus className="w-3.5 h-3.5 mr-1" />

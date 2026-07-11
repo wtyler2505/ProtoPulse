@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+import { getTestProjectId } from './test-project';
+
 test.use({ storageState: 'e2e/.auth-state.json' });
 
 test.describe('Accessibility — Project Picker', () => {
@@ -47,7 +49,7 @@ test.describe('Accessibility — Project Picker', () => {
 
 test.describe('Accessibility — Project Workspace', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/projects/1');
+    await page.goto(`/projects/${getTestProjectId()}`);
     await page.waitForTimeout(2000);
   });
 

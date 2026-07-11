@@ -1,4 +1,9 @@
 import { useState, useMemo, useCallback, useSyncExternalStore } from 'react';
+
+import { Plus, Trash2, Wand2, CheckCircle2, AlertTriangle, XCircle, Cable, X } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -7,31 +12,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { NumberInput } from '@/components/ui/number-input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Plus,
-  Trash2,
-  Wand2,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  Cable,
-  X,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { busPinMapper } from '@/lib/circuit-editor/bus-pin-mapper';
 import type { BusDefinition, BusValidation } from '@/lib/circuit-editor/bus-pin-mapper';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -63,12 +51,7 @@ function useBusPinMapper(): { buses: BusDefinition[]; version: number } {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function BusPinMappingDialog({
-  open,
-  onOpenChange,
-  nets,
-  onApply,
-}: BusPinMappingDialogProps) {
+export default function BusPinMappingDialog({ open, onOpenChange, nets, onApply }: BusPinMappingDialogProps) {
   const { buses } = useBusPinMapper();
 
   // --- Create bus form ---
@@ -82,10 +65,7 @@ export default function BusPinMappingDialog({
   // --- Selected bus ---
   const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
 
-  const selectedBus = useMemo(
-    () => buses.find((b) => b.id === selectedBusId) ?? null,
-    [buses, selectedBusId],
-  );
+  const selectedBus = useMemo(() => buses.find((b) => b.id === selectedBusId) ?? null, [buses, selectedBusId]);
 
   const validation: BusValidation | null = useMemo(() => {
     if (!selectedBusId) {
@@ -171,26 +151,19 @@ export default function BusPinMappingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-[700px] max-h-[90vh] flex flex-col"
-        data-testid="bus-pin-mapping-dialog"
-      >
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col" data-testid="bus-pin-mapping-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Cable className="w-5 h-5 text-primary" />
             Bus Pin Mapping
           </DialogTitle>
-          <DialogDescription>
-            Create named buses and assign individual signals to bus pins.
-          </DialogDescription>
+          <DialogDescription>Create named buses and assign individual signals to bus pins.</DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-[220px_1fr] gap-4 flex-1 overflow-hidden min-h-0">
           {/* Left column — bus list + create form */}
           <div className="flex flex-col border rounded-md overflow-hidden">
-            <div className="bg-muted/50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider border-b">
-              Buses
-            </div>
+            <div className="bg-muted/50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider border-b">Buses</div>
 
             <ScrollArea className="flex-1">
               <div className="p-2 space-y-1" data-testid="bus-list">
@@ -242,9 +215,7 @@ export default function BusPinMappingDialog({
                   );
                 })}
                 {buses.length === 0 && (
-                  <div className="text-center py-6 text-muted-foreground text-[10px] italic">
-                    No buses defined
-                  </div>
+                  <div className="text-center py-6 text-muted-foreground text-[10px] italic">No buses defined</div>
                 )}
               </div>
             </ScrollArea>
@@ -252,7 +223,9 @@ export default function BusPinMappingDialog({
             {/* Create bus form */}
             <div className="border-t p-2 space-y-2">
               <div className="space-y-1">
-                <Label htmlFor="bus-name-input" className="text-[10px]">Name</Label>
+                <Label htmlFor="bus-name-input" className="text-[10px]">
+                  Name
+                </Label>
                 <Input
                   id="bus-name-input"
                   data-testid="bus-name-input"
@@ -268,11 +241,12 @@ export default function BusPinMappingDialog({
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="bus-width-input" className="text-[10px]">Width</Label>
-                <Input
+                <Label htmlFor="bus-width-input" className="text-[10px]">
+                  Width
+                </Label>
+                <NumberInput
                   id="bus-width-input"
                   data-testid="bus-width-input"
-                  type="number"
                   min={1}
                   max={64}
                   value={newBusWidth}
@@ -377,9 +351,7 @@ export default function BusPinMappingDialog({
                     </div>
 
                     {selectedBus.signals.map((signal) => {
-                      const hasConflict = validation?.conflicts.some(
-                        (c) => c.bitIndex === signal.bitIndex,
-                      );
+                      const hasConflict = validation?.conflicts.some((c) => c.bitIndex === signal.bitIndex);
                       return (
                         <div
                           key={signal.bitIndex}
@@ -408,10 +380,7 @@ export default function BusPinMappingDialog({
                             value={signal.netId ?? ''}
                             onValueChange={(value) => handleAssignNet(signal.bitIndex, value)}
                           >
-                            <SelectTrigger
-                              className="h-7 text-xs"
-                              data-testid={`net-select-${signal.bitIndex}`}
-                            >
+                            <SelectTrigger className="h-7 text-xs" data-testid={`net-select-${signal.bitIndex}`}>
                               <SelectValue placeholder="(none)" />
                             </SelectTrigger>
                             <SelectContent>

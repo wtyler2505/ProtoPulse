@@ -2141,5 +2141,7 @@ live overlay on the schematic. Curriculum capstone: Track 7.
   flaky env-dependent legacy tests (failing on main since ≥2026-05-12).
 - Migrate the legacy app onto the engine (begins post-v0.2 at the
   earliest; the legacy app remains the shipping product until then).
-- Root-directory doc cleanup (move `CODEX_*`/`CLAUDE_RESPONSE_*` collab
-  artifacts into `docs/collab/`).
+- ~~Root-directory doc cleanup~~ — DONE 2026-07-01 (BL-0906): all 26
+  `CODEX_*`/`COLLAB_*`/`CLAUDE_RESPONSE_*`/`RALPH-*` point-in-time files
+  moved to `docs/handoffs/` (kept together so their bare-name
+  cross-references still resolve).

@@ -1,7 +1,8 @@
 /**
  * Tab / Route Matrix — Playwright smoke tests for all 30 ViewModes.
  *
- * Each test navigates directly to /projects/1/{viewName} and verifies:
+ * Each test navigates directly to /projects/:id/{viewName} (the shared e2e test
+ * project created by auth.setup.ts) and verifies:
  *  1. No crash (body is not empty, no unhandled error boundary).
  *  2. The workspace main panel renders (`[data-testid="workspace-main"]`).
  *  3. The correct tab is marked active (`[data-testid="tab-{view}"][aria-selected="true"]`).
@@ -10,6 +11,8 @@
  * route resolves to a renderable view without JS errors.
  */
 import { test, expect } from '@playwright/test';
+
+import { getTestProjectId } from './test-project';
 
 test.use({ storageState: 'e2e/.auth-state.json' });
 
@@ -22,7 +25,7 @@ async function assertViewLoads(
   /** Optional extra selector that should be visible (view-specific landmark). */
   landmark?: string,
 ) {
-  await page.goto(`/projects/1/${viewName}`);
+  await page.goto(`/projects/${getTestProjectId()}/${viewName}`);
 
   // Wait for workspace shell to appear
   await page.waitForSelector('[data-testid="workspace-main"]', { timeout: 15_000 });
