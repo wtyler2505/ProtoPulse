@@ -23,6 +23,7 @@ This directory contains Architecture Decision Records (ADRs) documenting key tec
 | [0014](0014-m1-merge-conflicts-as-data.md) | M1 merge conflicts surface as data | Accepted (deviation closed — resolver UI shipped) |
 | [0015](0015-sdf-glyph-atlas.md) | SDF glyph atlas | Accepted |
 | [0016](0016-gpu-pick-buffer-dual-picking.md) | GPU pick buffer + flatbush — the dual picking system | Accepted |
+| [0017](0017-physical-system-design-graph.md) | ProtoPulse is a physical-system design graph, EDA is vertical #1 | Proposed |
 
 ## Template
 
