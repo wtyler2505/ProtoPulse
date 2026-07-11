@@ -7,7 +7,8 @@
     "min_drill_nm": 150000,
     "min_annular_nm": 150000,
     "copper_to_edge_nm": 250000,
-    "silk_min_width_nm": 150000
+    "silk_min_width_nm": 150000,
+    "mask_expansion_nm": 50000
   },
   "classOverrides": {
     "power": {

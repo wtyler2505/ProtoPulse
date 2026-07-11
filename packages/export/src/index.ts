@@ -5,7 +5,19 @@
 export { exportKicadNetlist, compareRefs, type KicadNetlistOpts } from './kicad-netlist.js';
 export { exportBomCsv } from './bom-csv.js';
 export { escapeKicad } from './sexpr.js';
-export { exportEdgeCuts, exportGerberLayer, type CopperLayer, type GerberOpts } from './gerber.js';
+export {
+  exportEdgeCuts,
+  exportGerberLayer,
+  exportPasteLayer,
+  exportSilkscreenLayer,
+  exportSoldermaskLayer,
+  type CopperLayer,
+  type GerberOpts,
+  type MaskLayer,
+  type MaskOpts,
+  type PasteLayer,
+  type SilkLayer,
+} from './gerber.js';
 export {
   BITE_DRILL_NM,
   BITE_PITCH_NM,

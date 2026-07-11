@@ -23,6 +23,7 @@ const DECK: Deck = {
     min_annular_nm: 130_000,
     copper_to_edge_nm: 300_000,
     silk_min_width_nm: 153_000,
+    mask_expansion_nm: 50_000,
   },
   classOverrides: {},
 };
@@ -39,13 +40,10 @@ const deckLoader = () => Promise.resolve(DECK);
 describe('createDrcRunner', () => {
   it('runs the lazy module with the deck and reports deck identity', async () => {
     let calls = 0;
-    const runner = createDrcRunner(
-      () => {
-        calls++;
-        return Promise.resolve<Partial<DrcModule>>({ runDrc: () => [FINDING] });
-      },
-      deckLoader,
-    );
+    const runner = createDrcRunner(() => {
+      calls++;
+      return Promise.resolve<Partial<DrcModule>>({ runDrc: () => [FINDING] });
+    }, deckLoader);
     const outcome = await runner.run(emptyGraph(), parts, { branch: 'main', opsVersion: 1 });
     expect(outcome).toEqual({
       ok: true,
@@ -142,7 +140,9 @@ describe('createDrcRunner', () => {
       await runner.run(emptyGraph(), parts, key);
       expect(runs).toBe(2); // same head, different fab → different report
       expect(deckLoads).toBe(2); // and the deck reloaded
-      expect(() => { setFabDeckFile('nope.json'); }).toThrow('unknown fab deck');
+      expect(() => {
+        setFabDeckFile('nope.json');
+      }).toThrow('unknown fab deck');
     } finally {
       setFabDeckFile(original);
     }

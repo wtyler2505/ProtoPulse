@@ -17,6 +17,10 @@ export const deckRulesSchema = z.object({
   min_annular_nm: zNmInt,
   copper_to_edge_nm: zNmInt,
   silk_min_width_nm: zNmInt,
+  /** Radial soldermask expansion beyond each pad, per side, in nm — the
+   *  same fab-specific tolerance the gerber soldermask exporter needs
+   *  and previously had nowhere to source (BL-0909). */
+  mask_expansion_nm: zNmInt,
 });
 
 export const DeckSchema = z.object({

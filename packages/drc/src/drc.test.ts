@@ -25,6 +25,7 @@ const deck: Deck = {
     min_annular_nm: 130_000,
     copper_to_edge_nm: 300_000,
     silk_min_width_nm: 153_000,
+    mask_expansion_nm: 50_000,
   },
   classOverrides: { power: { min_trace_nm: 300_000 } },
 };
@@ -57,7 +58,14 @@ function placedBoard(): OpBody[] {
     { kind: 'connect', port: 'led:K', newNetId: 'ng' },
     { kind: 'connect', port: 'bat:-', netId: 'ng' },
     { kind: 'place_footprint', componentId: 'r1', at: { x: 0, y: 0 }, rotMilli: 0, side: 'top', locked: false },
-    { kind: 'place_footprint', componentId: 'led', at: { x: 10_000_000, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+    {
+      kind: 'place_footprint',
+      componentId: 'led',
+      at: { x: 10_000_000, y: 0 },
+      rotMilli: 0,
+      side: 'top',
+      locked: false,
+    },
   ];
 }
 
@@ -68,7 +76,10 @@ const routeMid: OpBody = {
   netId: 'nm',
   layerId: 'F.Cu',
   widthNm: 250_000,
-  path: [{ x: 950_000, y: 0 }, { x: 9_050_000, y: 0 }],
+  path: [
+    { x: 950_000, y: 0 },
+    { x: 9_050_000, y: 0 },
+  ],
 };
 
 describe('runDrc — integration', () => {
@@ -81,7 +92,14 @@ describe('runDrc — integration', () => {
       codes([
         ...placedBoard(),
         routeMid,
-        { kind: 'place_footprint', componentId: 'bat', at: { x: -20_000_000, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+        {
+          kind: 'place_footprint',
+          componentId: 'bat',
+          at: { x: -20_000_000, y: 0 },
+          rotMilli: 0,
+          side: 'top',
+          locked: false,
+        },
       ]),
     ).toEqual([]);
   });
@@ -118,7 +136,10 @@ describe('DRC-CLEARANCE', () => {
     layerId,
     widthNm: 250_000,
     // 50000nm copper gap to tm (center distance 300000, both r=125000).
-    path: [{ x: 2_000_000, y: 300_000 }, { x: 8_000_000, y: 300_000 }],
+    path: [
+      { x: 2_000_000, y: 300_000 },
+      { x: 8_000_000, y: 300_000 },
+    ],
   });
 
   it('flags two traces of different nets too close on the same layer', () => {
@@ -142,7 +163,10 @@ describe('DRC-CLEARANCE', () => {
       netId: 'nm',
       layerId: 'F.Cu',
       widthNm: 250_000,
-      path: [{ x: 950_000, y: 0 }, { x: 5_000_000, y: 0 }],
+      path: [
+        { x: 950_000, y: 0 },
+        { x: 5_000_000, y: 0 },
+      ],
     };
     expect(codes([...placedBoard(), routeMid, overlap])).toEqual([]);
   });
@@ -223,9 +247,37 @@ describe('DRC-UNROUTED', () => {
       ...placedBoard().map((op) =>
         op.kind === 'place_footprint' && op.componentId === 'led' ? { ...op, side: 'bottom' as const } : op,
       ),
-      { kind: 'route_trace', id: 't-top', netId: 'nm', layerId: 'F.Cu', widthNm: 250_000, path: [{ x: 950_000, y: 0 }, { x: 5_000_000, y: 0 }] },
-      { kind: 'place_via', id: 'v1', netId: 'nm', at: { x: 5_000_000, y: 0 }, drillNm: 300_000, padNm: 600_000, span: ['F.Cu', 'B.Cu'] },
-      { kind: 'route_trace', id: 't-bot', netId: 'nm', layerId: 'B.Cu', widthNm: 250_000, path: [{ x: 5_000_000, y: 0 }, { x: 9_050_000, y: 0 }] },
+      {
+        kind: 'route_trace',
+        id: 't-top',
+        netId: 'nm',
+        layerId: 'F.Cu',
+        widthNm: 250_000,
+        path: [
+          { x: 950_000, y: 0 },
+          { x: 5_000_000, y: 0 },
+        ],
+      },
+      {
+        kind: 'place_via',
+        id: 'v1',
+        netId: 'nm',
+        at: { x: 5_000_000, y: 0 },
+        drillNm: 300_000,
+        padNm: 600_000,
+        span: ['F.Cu', 'B.Cu'],
+      },
+      {
+        kind: 'route_trace',
+        id: 't-bot',
+        netId: 'nm',
+        layerId: 'B.Cu',
+        widthNm: 250_000,
+        path: [
+          { x: 5_000_000, y: 0 },
+          { x: 9_050_000, y: 0 },
+        ],
+      },
     ];
     expect(codes(ops)).toEqual([]);
     // Without the via the two half-routes never meet.
@@ -237,9 +289,26 @@ describe('DRC-UNROUTED', () => {
       { kind: 'add_component', id: 'u1', ref: 'U1', partId: 'core:ne555', partRev: 1 },
       { kind: 'connect', port: 'u1:1', newNetId: 'n5' },
       { kind: 'connect', port: 'u1:8', netId: 'n5' },
-      { kind: 'place_footprint', componentId: 'u1', at: { x: 30_000_000, y: 0 }, rotMilli: 0, side: 'top', locked: false },
+      {
+        kind: 'place_footprint',
+        componentId: 'u1',
+        at: { x: 30_000_000, y: 0 },
+        rotMilli: 0,
+        side: 'top',
+        locked: false,
+      },
       // Pin 1 sits at (−3.81mm, +3.81mm) and pin 8 at (+3.81mm, +3.81mm) — route on the BOTTOM.
-      { kind: 'route_trace', id: 't5', netId: 'n5', layerId: 'B.Cu', widthNm: 250_000, path: [{ x: 26_190_000, y: 3_810_000 }, { x: 33_810_000, y: 3_810_000 }] },
+      {
+        kind: 'route_trace',
+        id: 't5',
+        netId: 'n5',
+        layerId: 'B.Cu',
+        widthNm: 250_000,
+        path: [
+          { x: 26_190_000, y: 3_810_000 },
+          { x: 33_810_000, y: 3_810_000 },
+        ],
+      },
     ];
     expect(codes(ops)).toEqual([]);
   });
@@ -270,7 +339,11 @@ describe('DRC-UNSUPPORTED-ROTATION', () => {
       netId: 'nm',
       layerId: 'F.Cu',
       widthNm: 250_000,
-      path: [{ x: 0, y: 950_000 }, { x: 9_050_000, y: 950_000 }, { x: 9_050_000, y: 0 }],
+      path: [
+        { x: 0, y: 950_000 },
+        { x: 9_050_000, y: 950_000 },
+        { x: 9_050_000, y: 0 },
+      ],
     };
     expect(codes([...ops, routed])).toEqual([]);
     // The unrotated route start no longer touches pad 2.
@@ -323,8 +396,20 @@ describe('runDrc — zones', () => {
 
   it('overlapping different-net zones on one layer is an error; same net or other layer is fine', () => {
     const base = [...placedBoard(), routeMid];
-    const zoneA: OpBody = { kind: 'place_zone', id: 'za', netId: 'ng', layerId: 'F.Cu', outline: SQUARE(-2_000_000, -5_000_000, 6_000_000) };
-    const overlapForeign: OpBody = { kind: 'place_zone', id: 'zb', netId: 'nv', layerId: 'F.Cu', outline: SQUARE(0, -3_000_000, 6_000_000) };
+    const zoneA: OpBody = {
+      kind: 'place_zone',
+      id: 'za',
+      netId: 'ng',
+      layerId: 'F.Cu',
+      outline: SQUARE(-2_000_000, -5_000_000, 6_000_000),
+    };
+    const overlapForeign: OpBody = {
+      kind: 'place_zone',
+      id: 'zb',
+      netId: 'nv',
+      layerId: 'F.Cu',
+      outline: SQUARE(0, -3_000_000, 6_000_000),
+    };
     const overlapOtherLayer: OpBody = { ...overlapForeign, id: 'zc', layerId: 'B.Cu' } as OpBody;
     const overlapSameNet: OpBody = { ...overlapForeign, id: 'zd', netId: 'ng' } as OpBody;
 
@@ -337,10 +422,22 @@ describe('runDrc — zones', () => {
   it('a zone with no same-net copper inside pours an island — warn; one with copper is quiet', () => {
     const base = [...placedBoard(), routeMid];
     // ng has no placed copper at all — a far-away ng zone is an island.
-    const island: OpBody = { kind: 'place_zone', id: 'zi', netId: 'ng', layerId: 'F.Cu', outline: SQUARE(20_000_000, 20_000_000, 5_000_000) };
+    const island: OpBody = {
+      kind: 'place_zone',
+      id: 'zi',
+      netId: 'ng',
+      layerId: 'F.Cu',
+      outline: SQUARE(20_000_000, 20_000_000, 5_000_000),
+    };
     expect(codes([...base, island])).toContain('DRC-ZONE-ISOLATED');
     // An nm zone covering the mid trace is connected — no island warning.
-    const connected: OpBody = { kind: 'place_zone', id: 'zk', netId: 'nm', layerId: 'F.Cu', outline: SQUARE(2_000_000, -2_000_000, 4_000_000) };
+    const connected: OpBody = {
+      kind: 'place_zone',
+      id: 'zk',
+      netId: 'nm',
+      layerId: 'F.Cu',
+      outline: SQUARE(2_000_000, -2_000_000, 4_000_000),
+    };
     const found = codes([...base, connected]);
     expect(found).not.toContain('DRC-ZONE-ISOLATED');
   });
@@ -362,8 +459,15 @@ describe('runDrc — board edge', () => {
       { kind: 'add_component', id: 'ra', ref: 'R1', partId: 'core:resistor', partRev: 1 },
       { kind: 'connect', port: 'ra:1', newNetId: 'n1' },
       {
-        kind: 'route_trace', id: 't1', netId: 'n1', layerId: 'F.Cu', widthNm: 250_000,
-        path: [{ x: 5_000_000, y: 6_000_000 }, { x: 15_000_000, y: 6_000_000 }],
+        kind: 'route_trace',
+        id: 't1',
+        netId: 'n1',
+        layerId: 'F.Cu',
+        widthNm: 250_000,
+        path: [
+          { x: 5_000_000, y: 6_000_000 },
+          { x: 15_000_000, y: 6_000_000 },
+        ],
       },
     ];
     const without = runDrc(graphOf(base), parts, deck);
@@ -379,13 +483,25 @@ describe('runDrc — board edge', () => {
       OUTLINE,
       // Centerline 150k from the y=0 edge; copper edge at 25k < 300k rule.
       {
-        kind: 'route_trace', id: 't-edge', netId: 'n1', layerId: 'F.Cu', widthNm: 250_000,
-        path: [{ x: 5_000_000, y: 150_000 }, { x: 15_000_000, y: 150_000 }],
+        kind: 'route_trace',
+        id: 't-edge',
+        netId: 'n1',
+        layerId: 'F.Cu',
+        widthNm: 250_000,
+        path: [
+          { x: 5_000_000, y: 150_000 },
+          { x: 15_000_000, y: 150_000 },
+        ],
       },
       // Entirely outside the outline.
       {
-        kind: 'place_via', id: 'v-out', netId: 'n1', at: { x: 25_000_000, y: 6_000_000 },
-        drillNm: 300_000, padNm: 600_000, span: ['F.Cu', 'B.Cu'],
+        kind: 'place_via',
+        id: 'v-out',
+        netId: 'n1',
+        at: { x: 25_000_000, y: 6_000_000 },
+        drillNm: 300_000,
+        padNm: 600_000,
+        span: ['F.Cu', 'B.Cu'],
       },
     ];
     const findings = runDrc(graphOf(ops), parts, deck);

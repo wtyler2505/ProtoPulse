@@ -3,7 +3,13 @@ import { seedPartDb } from '@protopulse/parts';
 import { describe, expect, it } from 'vitest';
 
 import { exportExcellon } from './excellon.js';
-import { exportEdgeCuts, exportGerberLayer } from './gerber.js';
+import {
+  exportEdgeCuts,
+  exportGerberLayer,
+  exportPasteLayer,
+  exportSilkscreenLayer,
+  exportSoldermaskLayer,
+} from './gerber.js';
 import { exportPickPlace } from './pick-place.js';
 
 import type { OpBody } from '@protopulse/graph';
@@ -23,10 +29,45 @@ function routedSmdOps(): OpBody[] {
     { kind: 'connect', port: 'r1:2', newNetId: 'nm' },
     { kind: 'connect', port: 'd1:A', netId: 'nm' },
     { kind: 'place_footprint', componentId: 'r1', at: { x: 5_000_000, y: 0 }, rotMilli: 0, side: 'top', locked: false },
-    { kind: 'place_footprint', componentId: 'd1', at: { x: 15_000_000, y: 0 }, rotMilli: 0, side: 'top', locked: false },
-    { kind: 'route_trace', id: 'tr-a', netId: 'nm', layerId: 'F.Cu', widthNm: 250_000, path: [{ x: 5_950_000, y: 0 }, { x: 10_000_000, y: 0 }] },
-    { kind: 'place_via', id: 'via-a', netId: 'nm', at: { x: 10_000_000, y: 0 }, drillNm: 300_000, padNm: 600_000, span: ['F.Cu', 'B.Cu'] },
-    { kind: 'route_trace', id: 'tr-b', netId: 'nm', layerId: 'B.Cu', widthNm: 250_000, path: [{ x: 10_000_000, y: 0 }, { x: 14_050_000, y: 0 }] },
+    {
+      kind: 'place_footprint',
+      componentId: 'd1',
+      at: { x: 15_000_000, y: 0 },
+      rotMilli: 0,
+      side: 'top',
+      locked: false,
+    },
+    {
+      kind: 'route_trace',
+      id: 'tr-a',
+      netId: 'nm',
+      layerId: 'F.Cu',
+      widthNm: 250_000,
+      path: [
+        { x: 5_950_000, y: 0 },
+        { x: 10_000_000, y: 0 },
+      ],
+    },
+    {
+      kind: 'place_via',
+      id: 'via-a',
+      netId: 'nm',
+      at: { x: 10_000_000, y: 0 },
+      drillNm: 300_000,
+      padNm: 600_000,
+      span: ['F.Cu', 'B.Cu'],
+    },
+    {
+      kind: 'route_trace',
+      id: 'tr-b',
+      netId: 'nm',
+      layerId: 'B.Cu',
+      widthNm: 250_000,
+      path: [
+        { x: 10_000_000, y: 0 },
+        { x: 14_050_000, y: 0 },
+      ],
+    },
   ];
 }
 
@@ -159,7 +200,14 @@ describe('exportGerberLayer', () => {
   it('applies the bottom-side transform: mirror X before rotation', () => {
     const ops: OpBody[] = [
       { kind: 'add_component', id: 'r1', ref: 'R1', partId: 'core:resistor', partRev: 1 },
-      { kind: 'place_footprint', componentId: 'r1', at: { x: 10_000_000, y: 0 }, rotMilli: 0, side: 'bottom', locked: false },
+      {
+        kind: 'place_footprint',
+        componentId: 'r1',
+        at: { x: 10_000_000, y: 0 },
+        rotMilli: 0,
+        side: 'bottom',
+        locked: false,
+      },
     ];
     const bottom = exportGerberLayer(graphOf(ops), parts, 'B.Cu', { date: DATE });
     // Pad 1 local (-0.95mm,0) mirrors to +0.95mm → 10.95mm.
@@ -190,15 +238,177 @@ describe('exportGerberLayer', () => {
     const ops: OpBody[] = [
       { kind: 'add_component', id: 'r1', ref: 'R1', partId: 'core:resistor', partRev: 1 },
       { kind: 'connect', port: 'r1:1', newNetId: 'n1' },
-      { kind: 'route_trace', id: 't1', netId: 'n1', layerId: 'F.Cu', widthNm: 333_333, path: [{ x: 0, y: 0 }, { x: 1, y: 0 }] },
-      { kind: 'route_trace', id: 't2', netId: 'n1', layerId: 'F.Cu', widthNm: 100_000, path: [{ x: 0, y: 0 }, { x: 1, y: 0 }] },
-      { kind: 'route_trace', id: 't3', netId: 'n1', layerId: 'F.Cu', widthNm: 1_000_000, path: [{ x: 0, y: 0 }, { x: 1, y: 0 }] },
+      {
+        kind: 'route_trace',
+        id: 't1',
+        netId: 'n1',
+        layerId: 'F.Cu',
+        widthNm: 333_333,
+        path: [
+          { x: 0, y: 0 },
+          { x: 1, y: 0 },
+        ],
+      },
+      {
+        kind: 'route_trace',
+        id: 't2',
+        netId: 'n1',
+        layerId: 'F.Cu',
+        widthNm: 100_000,
+        path: [
+          { x: 0, y: 0 },
+          { x: 1, y: 0 },
+        ],
+      },
+      {
+        kind: 'route_trace',
+        id: 't3',
+        netId: 'n1',
+        layerId: 'F.Cu',
+        widthNm: 1_000_000,
+        path: [
+          { x: 0, y: 0 },
+          { x: 1, y: 0 },
+        ],
+      },
     ];
     const out = exportGerberLayer(graphOf(ops), parts, 'F.Cu', { date: DATE });
     expect(out).toContain('C,0.333333*%');
     expect(out).toContain('C,0.1*%');
     expect(out).toContain('C,1*%');
     expect(out).not.toMatch(/\d\.\d{7,}/);
+  });
+});
+
+describe('exportSoldermaskLayer', () => {
+  it('emits the X2 header shape with Soldermask FileFunction', () => {
+    const out = exportSoldermaskLayer(graphOf(routedSmdOps()), parts, 'F.Mask', { date: DATE, clearanceNm: 100_000 });
+    expect(out.startsWith('%TF.GenerationSoftware,ProtoPulse,export,0.1.0*%\n')).toBe(true);
+    expect(out).toContain('%TF.FileFunction,Soldermask,Top*%');
+    expect(out.endsWith('M02*\n')).toBe(true);
+  });
+
+  it('labels B.Mask as Soldermask,Bot', () => {
+    const out = exportSoldermaskLayer(graphOf(routedSmdOps()), parts, 'B.Mask', { date: DATE, clearanceNm: 100_000 });
+    expect(out).toContain('%TF.FileFunction,Soldermask,Bot*%');
+  });
+
+  it('expands pad apertures by clearanceNm on both sides (2x radial)', () => {
+    // R1's 0805 pads are 1mm x 1.25mm; +0.1mm clearance each side -> 1.2mm x 1.45mm.
+    const out = exportSoldermaskLayer(graphOf(routedSmdOps()), parts, 'F.Mask', { date: DATE, clearanceNm: 100_000 });
+    expect(out).toContain('R,1.2X1.45*%');
+    expect(out).not.toContain('R,1X1.25*%');
+  });
+
+  it('opens mask on through-hole pads on BOTH mask layers; SMD only on its own side', () => {
+    for (const layer of ['F.Mask', 'B.Mask'] as const) {
+      const out = exportSoldermaskLayer(graphOf(dipOps()), parts, layer, { date: DATE, clearanceNm: 100_000 });
+      // DIP-8 1.6mm circle pad + 0.2mm clearance -> 1.8mm.
+      expect(out).toContain('C,1.8*%');
+      expect(out).toContain('X-3810000Y3810000D03*');
+    }
+    const top = exportSoldermaskLayer(graphOf(routedSmdOps()), parts, 'F.Mask', { date: DATE, clearanceNm: 100_000 });
+    const bottom = exportSoldermaskLayer(graphOf(routedSmdOps()), parts, 'B.Mask', {
+      date: DATE,
+      clearanceNm: 100_000,
+    });
+    expect(top).toContain('X4050000Y0D03*'); // R1 SMD pad, front only
+    expect(bottom).not.toContain('X4050000Y0D03*');
+  });
+
+  it('opens mask on every via (no tenting concept yet — honest default)', () => {
+    const out = exportSoldermaskLayer(graphOf(routedSmdOps()), parts, 'F.Mask', { date: DATE, clearanceNm: 100_000 });
+    // via padNm 0.6mm + 0.2mm clearance -> 0.8mm, at (10mm, 0).
+    expect(out).toContain('C,0.8*%');
+    expect(out).toContain('X10000000Y0D03*');
+  });
+
+  it('has no traces or zone regions — flashes only', () => {
+    const out = exportSoldermaskLayer(graphOf(routedSmdOps()), parts, 'F.Mask', { date: DATE, clearanceNm: 100_000 });
+    expect(out).not.toContain('G36*');
+    expect(out).not.toMatch(/D02\*\n.*D01\*.*D01\*/s); // no multi-point polylines
+  });
+
+  it('is deterministic', () => {
+    const a = exportSoldermaskLayer(graphOf(routedSmdOps()), parts, 'F.Mask', { date: DATE, clearanceNm: 100_000 });
+    const b = exportSoldermaskLayer(graphOf(routedSmdOps()), parts, 'F.Mask', { date: DATE, clearanceNm: 100_000 });
+    expect(a).toBe(b);
+  });
+});
+
+describe('exportPasteLayer', () => {
+  it('emits the X2 header shape with Paste FileFunction', () => {
+    const out = exportPasteLayer(graphOf(routedSmdOps()), parts, 'F.Paste', { date: DATE });
+    expect(out).toContain('%TF.FileFunction,Paste,Top*%');
+    expect(out.endsWith('M02*\n')).toBe(true);
+  });
+
+  it('flashes SMD pads at exact pad size — no clearance expansion', () => {
+    const out = exportPasteLayer(graphOf(routedSmdOps()), parts, 'F.Paste', { date: DATE });
+    expect(out).toContain('R,1X1.25*%');
+    expect(out).toContain('X4050000Y0D03*');
+  });
+
+  it('excludes through-hole pads entirely', () => {
+    const top = exportPasteLayer(graphOf(dipOps()), parts, 'F.Paste', { date: DATE });
+    const bottom = exportPasteLayer(graphOf(dipOps()), parts, 'B.Paste', { date: DATE });
+    expect(top).not.toContain('D03*');
+    expect(bottom).not.toContain('D03*');
+  });
+
+  it('is placement-side-only, unlike soldermask', () => {
+    const top = exportPasteLayer(graphOf(routedSmdOps()), parts, 'F.Paste', { date: DATE });
+    const bottom = exportPasteLayer(graphOf(routedSmdOps()), parts, 'B.Paste', { date: DATE });
+    expect(top).toContain('X4050000Y0D03*');
+    expect(bottom).not.toContain('D03*');
+  });
+
+  it('is deterministic', () => {
+    const a = exportPasteLayer(graphOf(routedSmdOps()), parts, 'F.Paste', { date: DATE });
+    const b = exportPasteLayer(graphOf(routedSmdOps()), parts, 'F.Paste', { date: DATE });
+    expect(a).toBe(b);
+  });
+});
+
+describe('exportSilkscreenLayer', () => {
+  it('emits the X2 header shape with Legend FileFunction', () => {
+    const out = exportSilkscreenLayer(graphOf(routedSmdOps()), parts, 'F.SilkS', { date: DATE });
+    expect(out).toContain('%TF.FileFunction,Legend,Top*%');
+    expect(out).toContain('%ADD10C,0.1*%');
+    expect(out.endsWith('M02*\n')).toBe(true);
+  });
+
+  it('labels B.SilkS as Legend,Bot and only includes bottom-side parts', () => {
+    const out = exportSilkscreenLayer(graphOf(routedSmdOps()), parts, 'B.SilkS', { date: DATE });
+    expect(out).toContain('%TF.FileFunction,Legend,Bot*%');
+    // Both R1/D1 are top-placed; a bottom silkscreen has no body outline draws.
+    expect(out).not.toContain('D02*');
+  });
+
+  it('draws a closed body outline around each component courtyard + margin', () => {
+    const out = exportSilkscreenLayer(graphOf(dipOps()), parts, 'F.SilkS', { date: DATE });
+    const moves = out.match(/^(X-?\d+Y-?\d+)D02\*$/gm) ?? [];
+    expect(moves.length).toBeGreaterThan(0);
+    // Closed: the first D02 move target reappears as a D01 draw target later.
+    const firstMove = /^X(-?\d+)Y(-?\d+)D02\*$/m.exec(out);
+    expect(firstMove).not.toBeNull();
+    if (firstMove) {
+      expect(out).toContain(`X${firstMove[1]}Y${firstMove[2]}D01*`);
+    }
+  });
+
+  it('renders the reference designator as stroke text', () => {
+    const out = exportSilkscreenLayer(graphOf(dipOps()), parts, 'F.SilkS', { date: DATE });
+    // U1's ref is "U1" — expect at least the 'U' and '1' glyphs to contribute strokes
+    // beyond the 5 outline+marker segments (4 outline edges + 1 pin-1 dash).
+    const draws = out.match(/D01\*/g) ?? [];
+    expect(draws.length).toBeGreaterThan(5);
+  });
+
+  it('is deterministic', () => {
+    const a = exportSilkscreenLayer(graphOf(routedSmdOps()), parts, 'F.SilkS', { date: DATE });
+    const b = exportSilkscreenLayer(graphOf(routedSmdOps()), parts, 'F.SilkS', { date: DATE });
+    expect(a).toBe(b);
   });
 });
 
@@ -268,7 +478,14 @@ describe('exportPickPlace', () => {
     const csv = exportPickPlace(
       graphOf([
         { kind: 'add_component', id: 'r1', ref: 'R1', partId: 'core:resistor', partRev: 1, value: '330' },
-        { kind: 'place_footprint', componentId: 'r1', at: { x: 1_250_000, y: -2_000_000 }, rotMilli: 90_000, side: 'bottom', locked: false },
+        {
+          kind: 'place_footprint',
+          componentId: 'r1',
+          at: { x: 1_250_000, y: -2_000_000 },
+          rotMilli: 90_000,
+          side: 'bottom',
+          locked: false,
+        },
       ]),
       parts,
     );

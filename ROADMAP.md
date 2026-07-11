@@ -219,6 +219,18 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       224 perforations. Honest cut: outline-overlay Edge.Cuts
       (outer rect + piece rects + bites), not a kikit-style routed
       contour polygon
+- [x] Fab set completeness (BL-0909, landed 2026-07-10): the "board fab
+      set" above was copper + Edge.Cuts + drill + pick-and-place only —
+      a fab given just that produces bare copper with no legend/mask,
+      which JLC/PCBWay CAM rejects or ships wrong. Added soldermask,
+      paste, and silkscreen Gerber layers (`exportSoldermaskLayer`/
+      `exportPasteLayer`/`exportSilkscreenLayer`, `packages/export/src/
+      gerber.ts`), ported from the legacy exporter's algorithm to
+      integer-nm geometry, plus a stroke-font vector-text port
+      (`packages/export/src/stroke-font.ts`) for silkscreen reference
+      designators. Soldermask clearance is now a real per-fab deck field
+      (`mask_expansion_nm`, `content/decks/*.json`) rather than an
+      invented constant. The fab set is 11 files now, not 5
 
 ## v0.5 — The Bridge 🔨
 

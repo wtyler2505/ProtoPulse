@@ -5,8 +5,17 @@ import { fileURLToPath } from 'node:url';
 import { ERC_CODES } from '@protopulse/erc';
 import { describe, expect, it } from 'vitest';
 
+import {
+  loadCatalogFile,
+  loadConceptDir,
+  loadDeckFile,
+  loadTrackDir,
+  parseCatalog,
+  parseConceptFrontmatter,
+  parseDeck,
+  parseTrackStep,
+} from './load.js';
 import { ReviewDeckSchema } from './schemas.js';
-import { loadCatalogFile, loadConceptDir, loadDeckFile, loadTrackDir, parseCatalog, parseConceptFrontmatter, parseDeck, parseTrackStep } from './load.js';
 
 // packages/content/src → repo root.
 const repoRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '../../..');
@@ -37,6 +46,7 @@ describe('deck seed', () => {
       min_annular_nm: 130000,
       copper_to_edge_nm: 300000,
       silk_min_width_nm: 153000,
+      mask_expansion_nm: 50000,
     });
     expect(deck.classOverrides).toEqual({ power: { min_trace_nm: 300000 } });
   });
@@ -85,9 +95,7 @@ describe('sourcing catalog seed', () => {
 
   it('rejects catalogs with malformed entries', () => {
     expect(() => parseCatalog('not json')).toThrow(/not valid JSON/);
-    expect(() =>
-      parseCatalog('{"catalog":"x","rev":"1","vendor":"v","note":"n","entries":[]}'),
-    ).toThrow();
+    expect(() => parseCatalog('{"catalog":"x","rev":"1","vendor":"v","note":"n","entries":[]}')).toThrow();
   });
 });
 
@@ -321,9 +329,7 @@ describe('track 01 first-light', () => {
 
   it('steps 2–5 carry the machine-checkable erc: clean goal', () => {
     for (const step of steps.slice(1)) {
-      const hasErcClean = step.goal.some(
-        (g) => typeof g === 'object' && g.erc === 'clean',
-      );
+      const hasErcClean = step.goal.some((g) => typeof g === 'object' && g.erc === 'clean');
       expect(hasErcClean, `${step.id} must gate on erc: clean`).toBe(true);
     }
   });

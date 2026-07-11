@@ -7,17 +7,15 @@ import {
   exportExcellon,
   exportGerberLayer,
   exportKicadNetlist,
+  exportPasteLayer,
   exportPickPlace,
+  exportSilkscreenLayer,
+  exportSoldermaskLayer,
   panelizeGraph,
 } from '@protopulse/export';
 
-import { ensureRoutingClearance, routingClearanceNm } from '../pcb/routing.js';
-import {
-  bundleFromCore,
-  downloadText,
-  exportFile,
-  importFile,
-} from '../state/persistence.js';
+import { ensureRoutingClearance, routingClearanceNm, routingMaskExpansionNm } from '../pcb/routing.js';
+import { bundleFromCore, downloadText, exportFile, importFile } from '../state/persistence.js';
 import { getFindings, getGraph, partDb, useSession } from '../state/session.js';
 import { shareUrl } from '../state/share.js';
 import { useUi } from '../state/ui.js';
@@ -25,9 +23,9 @@ import { useUi } from '../state/ui.js';
 import type { DesignGraph } from '@protopulse/graph';
 
 /** Exports: KiCad netlist + BOM CSV, gated (softly) on ERC errors;
- *  fab outputs (copper gerbers, Edge.Cuts, drill, pick-and-place) for
- *  the board or a panelized array (V-cut or mouse-bites); plus
- *  whole-design .ppx.json save/load. */
+ *  a full fab set (copper, Edge.Cuts, soldermask, paste, silkscreen,
+ *  drill, pick-and-place — 11 files) for the board or a panelized array
+ *  (V-cut or mouse-bites); plus whole-design .ppx.json save/load. */
 
 const MM = 1_000_000;
 
@@ -84,6 +82,7 @@ export function ExportPanel() {
   ): boolean => {
     ensureRoutingClearance();
     const clearance = routingClearanceNm();
+    const maskExpansion = routingMaskExpansionNm();
     const hasZones = graph.pcb.zones.size > 0;
     if (hasZones && clearance === null) {
       useUi
@@ -91,12 +90,15 @@ export function ExportPanel() {
         .flashStatus('The rule deck has not loaded yet — zone pours need its clearance. Try again in a moment.');
       return false;
     }
+    if (maskExpansion === null) {
+      useUi
+        .getState()
+        .flashStatus('The rule deck has not loaded yet — soldermask needs its clearance. Try again in a moment.');
+      return false;
+    }
     const date = new Date().toISOString();
     const gerberOpts = { date, ...(clearance !== null ? { pourClearanceNm: clearance } : {}) };
-    const edge = exportEdgeCuts(graph, { date }, [
-      ...(extras.vCuts ?? []),
-      ...(extras.edgeSegments ?? []),
-    ]);
+    const edge = exportEdgeCuts(graph, { date }, [...(extras.vCuts ?? []), ...(extras.edgeSegments ?? [])]);
     if (edge === null) {
       useUi.getState().flashStatus('No board outline — draw one with the Outline tool (PCB mode) first.');
       return false;
@@ -105,8 +107,27 @@ export function ExportPanel() {
     downloadText(`${name}-B_Cu.gbr`, exportGerberLayer(graph, partDb, 'B.Cu', gerberOpts), 'text/plain');
     downloadText(`${name}-Edge_Cuts.gbr`, edge, 'text/plain');
     downloadText(
+      `${name}-F_Mask.gbr`,
+      exportSoldermaskLayer(graph, partDb, 'F.Mask', { date, clearanceNm: maskExpansion }),
+      'text/plain',
+    );
+    downloadText(
+      `${name}-B_Mask.gbr`,
+      exportSoldermaskLayer(graph, partDb, 'B.Mask', { date, clearanceNm: maskExpansion }),
+      'text/plain',
+    );
+    downloadText(`${name}-F_Paste.gbr`, exportPasteLayer(graph, partDb, 'F.Paste', { date }), 'text/plain');
+    downloadText(`${name}-B_Paste.gbr`, exportPasteLayer(graph, partDb, 'B.Paste', { date }), 'text/plain');
+    downloadText(`${name}-F_SilkS.gbr`, exportSilkscreenLayer(graph, partDb, 'F.SilkS', { date }), 'text/plain');
+    downloadText(`${name}-B_SilkS.gbr`, exportSilkscreenLayer(graph, partDb, 'B.SilkS', { date }), 'text/plain');
+    downloadText(
       `${name}.drl`,
-      exportExcellon(graph, partDb, { date }, (extras.bites ?? []).map((at) => ({ at, drillNm: BITE_DRILL_NM }))),
+      exportExcellon(
+        graph,
+        partDb,
+        { date },
+        (extras.bites ?? []).map((at) => ({ at, drillNm: BITE_DRILL_NM })),
+      ),
       'text/plain',
     );
     downloadText(`${name}-pos.csv`, exportPickPlace(graph, partDb), 'text/csv');
@@ -116,7 +137,11 @@ export function ExportPanel() {
   const exportBoardFab = () => {
     const graph = getGraph(useSession.getState());
     if (downloadFabSet(graph, state.designId)) {
-      useUi.getState().flashStatus('Fab set downloaded: F/B copper, Edge.Cuts, drill, pick-and-place (5 files).');
+      useUi
+        .getState()
+        .flashStatus(
+          'Fab set downloaded: F/B copper, Edge.Cuts, F/B mask, F/B paste, F/B silkscreen, drill, pick-and-place (11 files).',
+        );
     }
   };
 
@@ -158,7 +183,7 @@ export function ExportPanel() {
       useUi
         .getState()
         .flashStatus(
-          `Panel ${String(r)}×${String(c)} (${String(result.copies)} boards, ${separation}) downloaded — 5 files.`,
+          `Panel ${String(r)}×${String(c)} (${String(result.copies)} boards, ${separation}) downloaded — 11 files.`,
         );
     }
   };
@@ -174,9 +199,7 @@ export function ExportPanel() {
           `Share link copied (${String(url.length)} chars) — the whole design lives in the URL, no server involved.`,
         );
     } catch (err) {
-      useUi
-        .getState()
-        .flashStatus(`Share link failed: ${err instanceof Error ? err.message : String(err)}`);
+      useUi.getState().flashStatus(`Share link failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -194,8 +217,8 @@ export function ExportPanel() {
     <div className="panel-body">
       {errorCount > 0 && (
         <p className="export-warning">
-          ⚠ {errorCount} ERC error{errorCount === 1 ? '' : 's'} outstanding — exports are allowed,
-          but fix them before fabbing.
+          ⚠ {errorCount} ERC error{errorCount === 1 ? '' : 's'} outstanding — exports are allowed, but fix them before
+          fabbing.
         </p>
       )}
       <div className="export-buttons">
@@ -211,10 +234,10 @@ export function ExportPanel() {
         <button
           type="button"
           className="primary-button"
-          title="F/B copper gerbers, Edge.Cuts, Excellon drill, pick-and-place CSV"
+          title="F/B copper, Edge.Cuts, F/B soldermask, F/B paste, F/B silkscreen gerbers, Excellon drill, pick-and-place CSV"
           onClick={exportBoardFab}
         >
-          Download fab set (5 files)
+          Download fab set (11 files)
         </button>
       </div>
       <h3 className="panel-subtitle">Panelize</h3>
@@ -222,20 +245,29 @@ export function ExportPanel() {
         <span className="sim-field-label">rows × cols</span>
         <input
           value={rows}
-          onChange={(e) => { setRows(e.target.value); }}
+          onChange={(e) => {
+            setRows(e.target.value);
+          }}
           style={{ width: '3em' }}
           aria-label="panel rows"
         />
         <input
           value={cols}
-          onChange={(e) => { setCols(e.target.value); }}
+          onChange={(e) => {
+            setCols(e.target.value);
+          }}
           style={{ width: '3em' }}
           aria-label="panel cols"
         />
       </label>
       <label className="sim-field">
         <span className="sim-field-label">rail (mm)</span>
-        <input value={railMm} onChange={(e) => { setRailMm(e.target.value); }} />
+        <input
+          value={railMm}
+          onChange={(e) => {
+            setRailMm(e.target.value);
+          }}
+        />
       </label>
       <label className="sim-field">
         <span className="sim-field-label">separation</span>
@@ -253,11 +285,21 @@ export function ExportPanel() {
         <>
           <label className="sim-field">
             <span className="sim-field-label">gap (mm)</span>
-            <input value={gapMm} onChange={(e) => { setGapMm(e.target.value); }} />
+            <input
+              value={gapMm}
+              onChange={(e) => {
+                setGapMm(e.target.value);
+              }}
+            />
           </label>
           <label className="sim-field">
             <span className="sim-field-label">tab (mm)</span>
-            <input value={tabMm} onChange={(e) => { setTabMm(e.target.value); }} />
+            <input
+              value={tabMm}
+              onChange={(e) => {
+                setTabMm(e.target.value);
+              }}
+            />
           </label>
         </>
       )}
@@ -267,9 +309,9 @@ export function ExportPanel() {
         </button>
       </div>
       <p className="muted">
-        The panel is the same design replicated as one graph — the standard exporters and even
-        DRC run on it unchanged. Mouse-bite perforations join the drill file (one file — KiCad
-        would split PTH/NPTH); fabs like JLC add their own panel fiducials on request.
+        The panel is the same design replicated as one graph — the standard exporters and even DRC run on it unchanged.
+        Mouse-bite perforations join the drill file (one file — KiCad would split PTH/NPTH); fabs like JLC add their own
+        panel fiducials on request.
       </p>
       <h3 className="panel-subtitle">Design file</h3>
       <div className="export-buttons">
@@ -301,9 +343,7 @@ export function ExportPanel() {
           }}
         />
       </div>
-      <p className="muted">
-        Branch: {branch}. Exports reflect the current branch head.
-      </p>
+      <p className="muted">Branch: {branch}. Exports reflect the current branch head.</p>
     </div>
   );
 }
