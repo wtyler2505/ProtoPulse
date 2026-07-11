@@ -7,21 +7,17 @@
  */
 
 import { useSyncExternalStore, useCallback, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+
 import { Unplug, Power, PowerOff } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { NumberInput } from '@/components/ui/number-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import type { WaveformType, FunctionGeneratorState } from '@/lib/simulation/function-generator';
 import { getFunctionGenerator, formatFrequency, formatAmplitude } from '@/lib/simulation/function-generator';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -61,10 +57,7 @@ const FREQ_UNITS = [
 function useFunctionGeneratorState(): Readonly<FunctionGeneratorState> {
   const gen = getFunctionGenerator();
 
-  const subscribe = useCallback(
-    (cb: () => void) => gen.subscribe(cb),
-    [gen],
-  );
+  const subscribe = useCallback((cb: () => void) => gen.subscribe(cb), [gen]);
 
   const getSnapshot = useCallback(() => gen.getState(), [gen]);
 
@@ -80,13 +73,7 @@ const PREVIEW_HEIGHT = 48;
 const PREVIEW_PADDING = 4;
 const PREVIEW_SAMPLES = 200;
 
-function WaveformPreview({
-  waveform,
-  dutyCycle,
-}: {
-  waveform: WaveformType;
-  dutyCycle: number;
-}) {
+function WaveformPreview({ waveform, dutyCycle }: { waveform: WaveformType; dutyCycle: number }) {
   const points = useMemo(() => {
     const gen = getFunctionGenerator();
     const state = gen.getState();
@@ -98,7 +85,7 @@ function WaveformPreview({
     const pts: string[] = [];
     for (let i = 0; i <= PREVIEW_SAMPLES; i++) {
       const t = (i / PREVIEW_SAMPLES) * period;
-      const phase = ((t % period) + period) % period / period;
+      const phase = (((t % period) + period) % period) / period;
 
       let value: number;
       switch (waveform) {
@@ -160,11 +147,7 @@ function WaveformPreview({
 // Frequency input with unit selector
 // ---------------------------------------------------------------------------
 
-function FrequencyControl({
-  frequency,
-}: {
-  frequency: number;
-}) {
+function FrequencyControl({ frequency }: { frequency: number }) {
   const gen = getFunctionGenerator();
 
   // Determine best display unit
@@ -178,10 +161,9 @@ function FrequencyControl({
         Frequency
       </Label>
       <div className="flex gap-1">
-        <Input
+        <NumberInput
           id="funcgen-frequency"
           data-testid="funcgen-frequency-input"
-          type="number"
           min={0}
           step="any"
           value={displayValue}
@@ -202,10 +184,7 @@ function FrequencyControl({
             }
           }}
         >
-          <SelectTrigger
-            data-testid="funcgen-frequency-unit"
-            className="h-7 w-[4.5rem] text-xs"
-          >
+          <SelectTrigger data-testid="funcgen-frequency-unit" className="h-7 w-[4.5rem] text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -225,10 +204,7 @@ function FrequencyControl({
 // Main component
 // ---------------------------------------------------------------------------
 
-export function FunctionGeneratorPanel({
-  availableNets,
-  className,
-}: FunctionGeneratorPanelProps) {
+export function FunctionGeneratorPanel({ availableNets, className }: FunctionGeneratorPanelProps) {
   const state = useFunctionGeneratorState();
   const gen = getFunctionGenerator();
 
@@ -237,10 +213,7 @@ export function FunctionGeneratorPanel({
   const formattedAmplitude = formatAmplitude(amplitude);
 
   return (
-    <div
-      data-testid="funcgen-panel"
-      className={cn('flex flex-col gap-3 rounded-lg border bg-card p-3', className)}
-    >
+    <div data-testid="funcgen-panel" className={cn('flex flex-col gap-3 rounded-lg border bg-card p-3', className)}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">Function Generator</span>
@@ -248,11 +221,10 @@ export function FunctionGeneratorPanel({
           data-testid="funcgen-enable-toggle"
           variant="ghost"
           size="icon"
-          className={cn(
-            'h-7 w-7',
-            enabled ? 'text-[var(--color-editor-accent)]' : 'text-muted-foreground',
-          )}
-          onClick={() => { gen.setEnabled(!enabled); }}
+          className={cn('h-7 w-7', enabled ? 'text-[var(--color-editor-accent)]' : 'text-muted-foreground')}
+          onClick={() => {
+            gen.setEnabled(!enabled);
+          }}
           aria-label={enabled ? 'Disable generator' : 'Enable generator'}
           aria-pressed={enabled}
         >
@@ -278,9 +250,12 @@ export function FunctionGeneratorPanel({
             size="sm"
             className={cn(
               'min-w-[3.5rem] flex-1 px-2 text-xs',
-              waveform === w && 'bg-[var(--color-editor-accent)]/20 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/40',
+              waveform === w &&
+                'bg-[var(--color-editor-accent)]/20 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/40',
             )}
-            onClick={() => { gen.setWaveform(w); }}
+            onClick={() => {
+              gen.setWaveform(w);
+            }}
             aria-pressed={waveform === w}
           >
             {WAVEFORM_LABELS[w]}
@@ -296,10 +271,9 @@ export function FunctionGeneratorPanel({
         <Label htmlFor="funcgen-amplitude" className="text-xs text-muted-foreground">
           Amplitude ({formattedAmplitude.unit})
         </Label>
-        <Input
+        <NumberInput
           id="funcgen-amplitude"
           data-testid="funcgen-amplitude-input"
-          type="number"
           min={0}
           step="any"
           value={amplitude}
@@ -318,10 +292,9 @@ export function FunctionGeneratorPanel({
         <Label htmlFor="funcgen-dc-offset" className="text-xs text-muted-foreground">
           DC Offset (V)
         </Label>
-        <Input
+        <NumberInput
           id="funcgen-dc-offset"
           data-testid="funcgen-dc-offset-input"
-          type="number"
           step="any"
           value={dcOffset}
           className="h-7 text-xs tabular-nums"
@@ -338,13 +311,8 @@ export function FunctionGeneratorPanel({
       {waveform === 'SQUARE' && (
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
-            <Label className="text-xs text-muted-foreground">
-              Duty Cycle
-            </Label>
-            <span
-              data-testid="funcgen-duty-cycle-value"
-              className="text-xs tabular-nums text-muted-foreground"
-            >
+            <Label className="text-xs text-muted-foreground">Duty Cycle</Label>
+            <span data-testid="funcgen-duty-cycle-value" className="text-xs tabular-nums text-muted-foreground">
               {Math.round(dutyCycle * 100)}%
             </span>
           </div>
@@ -376,10 +344,7 @@ export function FunctionGeneratorPanel({
               }
             }}
           >
-            <SelectTrigger
-              data-testid="funcgen-net-select"
-              className="h-7 flex-1 text-xs"
-            >
+            <SelectTrigger data-testid="funcgen-net-select" className="h-7 flex-1 text-xs">
               <SelectValue placeholder="Select net..." />
             </SelectTrigger>
             <SelectContent>
@@ -396,7 +361,9 @@ export function FunctionGeneratorPanel({
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-muted-foreground hover:text-foreground"
-              onClick={() => { gen.disconnect(); }}
+              onClick={() => {
+                gen.disconnect();
+              }}
               aria-label="Disconnect from net"
             >
               <Unplug className="h-3.5 w-3.5" />

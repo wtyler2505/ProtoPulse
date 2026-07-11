@@ -1,0 +1,14 @@
+/* design-sync Tailwind v4 compile entry.
+ * Pulls in the app's real index.css (which has @import "tailwindcss", the
+ * @theme tokens, @custom-variant dark, and @layer rules) and explicitly scans
+ * the client source so every utility the scoped components use is emitted.
+ * Output (.design-sync/ds-tailwind.css) is wired as cfg.cssEntry. */
+@import "../client/src/index.css";
+@source "../client/src";
+
+/* Safelist ProtoPulse semantic + EDA utilities so they ship in styles.css for
+ * the design agent (components don't use them, so Tailwind wouldn't emit them
+ * otherwise). Keeps conventions.md accurate. */
+@source inline("{bg,text,border}-{brand,power,signal,data,success,warning,info,error,accent,sidebar}");
+@source inline("{bg,text}-{brand,power,signal,data,success,warning,info}-foreground");
+@source inline("ring-focus-ring");

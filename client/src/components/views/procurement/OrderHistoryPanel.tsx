@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+
 import {
   Clock,
   DollarSign,
@@ -11,21 +12,14 @@ import {
   ChevronRight,
   X,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/number-input';
+import { useOrderHistory, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, CATEGORY_LABELS } from '@/lib/order-history';
+import type { OrderCategory, OrderHistoryStatus, OrderRecord } from '@/lib/order-history';
 import { useProjectId } from '@/lib/project-context';
-import {
-  useOrderHistory,
-  ORDER_STATUS_LABELS,
-  ORDER_STATUS_COLORS,
-  CATEGORY_LABELS,
-} from '@/lib/order-history';
-import type {
-  OrderCategory,
-  OrderHistoryStatus,
-  OrderRecord,
-} from '@/lib/order-history';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -54,7 +48,9 @@ function TimelineView({ order }: { order: OrderRecord }) {
     <div className="mt-2" data-testid={`timeline-${order.id}`}>
       <button
         type="button"
-        onClick={() => { setExpanded((v) => !v); }}
+        onClick={() => {
+          setExpanded((v) => !v);
+        }}
         className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
         data-testid={`timeline-toggle-${order.id}`}
       >
@@ -68,12 +64,8 @@ function TimelineView({ order }: { order: OrderRecord }) {
               <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1 shrink-0" />
               <div>
                 <span className="text-foreground font-medium">{ORDER_STATUS_LABELS[entry.status]}</span>
-                <span className="text-muted-foreground ml-1.5">
-                  {new Date(entry.timestamp).toLocaleString()}
-                </span>
-                {entry.note && (
-                  <span className="text-muted-foreground ml-1.5">— {entry.note}</span>
-                )}
+                <span className="text-muted-foreground ml-1.5">{new Date(entry.timestamp).toLocaleString()}</span>
+                {entry.note && <span className="text-muted-foreground ml-1.5">— {entry.note}</span>}
               </div>
             </div>
           ))}
@@ -111,10 +103,7 @@ function OrderCard({
   const nextStatus = NEXT_STATUS[order.status];
 
   return (
-    <div
-      className="border border-border bg-card/80 backdrop-blur p-3 space-y-2"
-      data-testid={`order-card-${order.id}`}
-    >
+    <div className="border border-border bg-card/80 backdrop-blur p-3 space-y-2" data-testid={`order-card-${order.id}`}>
       {/* Header row */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -133,9 +122,7 @@ function OrderCard({
             <span className="font-mono" data-testid="order-total">
               {order.currency} {order.totalCost.toFixed(2)}
             </span>
-            {order.quoteReference && (
-              <span>Ref: {order.quoteReference}</span>
-            )}
+            {order.quoteReference && <span>Ref: {order.quoteReference}</span>}
           </div>
         </div>
 
@@ -144,7 +131,7 @@ function OrderCard({
             <a
               href={order.trackingUrl}
               target="_blank"
-              rel="noopener,noreferrer"
+              rel="noopener, noreferrer"
               className="p-1 text-muted-foreground hover:text-primary"
               data-testid="order-tracking-link"
             >
@@ -153,7 +140,9 @@ function OrderCard({
           )}
           <button
             type="button"
-            onClick={() => { onDelete(order.id); }}
+            onClick={() => {
+              onDelete(order.id);
+            }}
             className="p-1 text-muted-foreground hover:text-destructive"
             data-testid={`delete-order-${order.id}`}
             aria-label="Delete order"
@@ -165,21 +154,26 @@ function OrderCard({
 
       {/* Tracking info */}
       {order.trackingNumber && (
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground" data-testid="order-tracking-number">
+        <div
+          className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
+          data-testid="order-tracking-number"
+        >
           <Truck className="w-3 h-3" />
           Tracking: {order.trackingNumber}
         </div>
       )}
 
       {/* Actions */}
-      {(nextStatus || order.status !== 'delivered' && order.status !== 'cancelled') && (
+      {(nextStatus || (order.status !== 'delivered' && order.status !== 'cancelled')) && (
         <div className="flex items-center gap-2 pt-1">
           {nextStatus && (
             <Button
               size="sm"
               variant="outline"
               className="h-6 text-[10px] px-2"
-              onClick={() => { onAdvance(order.id); }}
+              onClick={() => {
+                onAdvance(order.id);
+              }}
               data-testid={`advance-order-${order.id}`}
             >
               {NEXT_STATUS_LABELS[order.status]}
@@ -190,7 +184,9 @@ function OrderCard({
               size="sm"
               variant="ghost"
               className="h-6 text-[10px] px-2 text-destructive hover:text-destructive"
-              onClick={() => { onCancel(order.id); }}
+              onClick={() => {
+                onCancel(order.id);
+              }}
               data-testid={`cancel-order-${order.id}`}
             >
               Cancel
@@ -234,15 +230,8 @@ const DEFAULT_NEW_ORDER: NewOrderValues = {
 
 export function OrderHistoryPanel() {
   const projectId = useProjectId();
-  const {
-    orders,
-    activeOrders,
-    totalSpent,
-    costByCategory,
-    createOrder,
-    updateStatus,
-    deleteOrder,
-  } = useOrderHistory(projectId);
+  const { orders, activeOrders, totalSpent, costByCategory, createOrder, updateStatus, deleteOrder } =
+    useOrderHistory(projectId);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newOrder, setNewOrder] = useState<NewOrderValues>({ ...DEFAULT_NEW_ORDER });
@@ -280,7 +269,9 @@ export function OrderHistoryPanel() {
   const handleAdvance = useCallback(
     (orderId: string) => {
       const order = orders.find((o) => o.id === orderId);
-      if (!order) { return; }
+      if (!order) {
+        return;
+      }
       const next = NEXT_STATUS[order.status];
       if (next) {
         updateStatus(orderId, next);
@@ -338,7 +329,9 @@ export function OrderHistoryPanel() {
       <div className="flex items-center gap-2 flex-wrap">
         <Button
           size="sm"
-          onClick={() => { setShowAddForm(true); }}
+          onClick={() => {
+            setShowAddForm(true);
+          }}
           className="bg-primary text-primary-foreground hover:bg-primary/90"
           data-testid="btn-add-order"
         >
@@ -348,7 +341,9 @@ export function OrderHistoryPanel() {
 
         <select
           value={filterCategory}
-          onChange={(e) => { setFilterCategory(e.target.value as OrderCategory | 'all'); }}
+          onChange={(e) => {
+            setFilterCategory(e.target.value as OrderCategory | 'all');
+          }}
           className="border border-border bg-card/80 px-2 py-1 text-xs text-foreground"
           data-testid="filter-category"
           aria-label="Filter by category"
@@ -361,7 +356,9 @@ export function OrderHistoryPanel() {
 
         <select
           value={filterStatus}
-          onChange={(e) => { setFilterStatus(e.target.value as OrderHistoryStatus | 'all'); }}
+          onChange={(e) => {
+            setFilterStatus(e.target.value as OrderHistoryStatus | 'all');
+          }}
           className="border border-border bg-card/80 px-2 py-1 text-xs text-foreground"
           data-testid="filter-status"
           aria-label="Filter by status"
@@ -387,7 +384,9 @@ export function OrderHistoryPanel() {
             <h4 className="text-sm font-medium text-foreground">New Order</h4>
             <button
               type="button"
-              onClick={() => { setShowAddForm(false); }}
+              onClick={() => {
+                setShowAddForm(false);
+              }}
               className="p-1 text-muted-foreground hover:text-foreground"
               data-testid="close-add-form"
               aria-label="Close add form"
@@ -398,41 +397,56 @@ export function OrderHistoryPanel() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="order-description">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="order-description"
+              >
                 Description
               </label>
               <input
                 id="order-description"
                 type="text"
                 value={newOrder.description}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, description: e.target.value })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, description: e.target.value }));
+                }}
                 placeholder="100x 10uF ceramic caps"
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-description"
               />
             </div>
             <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="order-supplier">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="order-supplier"
+              >
                 Supplier
               </label>
               <input
                 id="order-supplier"
                 type="text"
                 value={newOrder.supplier}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, supplier: e.target.value })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, supplier: e.target.value }));
+                }}
                 placeholder="Digi-Key"
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-supplier"
               />
             </div>
             <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="order-category">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="order-category"
+              >
                 Category
               </label>
               <select
                 id="order-category"
                 value={newOrder.category}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, category: e.target.value as OrderCategory })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, category: e.target.value as OrderCategory }));
+                }}
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-category"
               >
@@ -442,58 +456,75 @@ export function OrderHistoryPanel() {
               </select>
             </div>
             <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="order-quantity">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="order-quantity"
+              >
                 Quantity
               </label>
-              <input
+              <NumberInput
                 id="order-quantity"
-                type="number"
                 min={1}
                 value={newOrder.quantity}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, quantity: Math.max(1, Number(e.target.value)) })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, quantity: Math.max(1, Number(e.target.value)) }));
+                }}
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-quantity"
               />
             </div>
             <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="order-unit-cost">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="order-unit-cost"
+              >
                 Unit Cost ($)
               </label>
-              <input
+              <NumberInput
                 id="order-unit-cost"
-                type="number"
                 min={0}
                 step={0.01}
                 value={newOrder.unitCost}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, unitCost: Math.max(0, Number(e.target.value)) })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, unitCost: Math.max(0, Number(e.target.value)) }));
+                }}
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-unit-cost"
               />
             </div>
             <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="order-total-cost">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="order-total-cost"
+              >
                 Total Cost ($)
               </label>
-              <input
+              <NumberInput
                 id="order-total-cost"
-                type="number"
                 min={0}
                 step={0.01}
                 value={newOrder.totalCost}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, totalCost: Math.max(0, Number(e.target.value)) })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, totalCost: Math.max(0, Number(e.target.value)) }));
+                }}
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-total-cost"
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1" htmlFor="order-quote-ref">
+              <label
+                className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+                htmlFor="order-quote-ref"
+              >
                 Quote Reference (optional)
               </label>
               <input
                 id="order-quote-ref"
                 type="text"
                 value={newOrder.quoteReference}
-                onChange={(e) => { setNewOrder((v) => ({ ...v, quoteReference: e.target.value })); }}
+                onChange={(e) => {
+                  setNewOrder((v) => ({ ...v, quoteReference: e.target.value }));
+                }}
                 placeholder="QR-2026-001"
                 className="w-full border border-border bg-card/80 px-2 py-1.5 text-sm text-foreground"
                 data-testid="input-quote-ref"
@@ -505,7 +536,10 @@ export function OrderHistoryPanel() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => { setShowAddForm(false); setNewOrder({ ...DEFAULT_NEW_ORDER }); }}
+              onClick={() => {
+                setShowAddForm(false);
+                setNewOrder({ ...DEFAULT_NEW_ORDER });
+              }}
               data-testid="btn-cancel-add"
             >
               Cancel
@@ -541,14 +575,14 @@ export function OrderHistoryPanel() {
         <div className="text-center py-12 text-muted-foreground" data-testid="empty-order-history">
           <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
           <p className="text-sm font-medium">No orders yet</p>
-          <p className="text-xs mt-1">
-            Track your PCB fabrication, component, and assembly orders here.
-          </p>
+          <p className="text-xs mt-1">Track your PCB fabrication, component, and assembly orders here.</p>
           <Button
             size="sm"
             variant="outline"
             className="mt-3"
-            onClick={() => { setShowAddForm(true); }}
+            onClick={() => {
+              setShowAddForm(true);
+            }}
             data-testid="btn-add-first-order"
           >
             <Plus className="w-3.5 h-3.5 mr-1" />

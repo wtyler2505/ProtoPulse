@@ -3,9 +3,7 @@ description: Synthesize and push a session recap to pp-journal. Sub-args manage 
 argument-hint: [apply|discard|edit]
 allowed-tools: Bash(nlm:*), Bash(date:*), Bash(cat:*), Bash(rm:*), Bash(touch:*), Bash(echo:*), Edit, Read, AskUserQuestion
 ---
-
 # /pp-recap
-
 Modes:
 - **No arg**: synthesize a fresh recap from this session's transcript context, preview, confirm, push to `pp-journal`.
 - **`apply`**: read pending Stop-hook draft from `~/.claude/state/pp-nlm/pending-recap.md`, enrich, preview, confirm, push, delete pending.
@@ -23,7 +21,7 @@ $1 (one of: apply, discard, edit, or empty)
    - **Headlines**: 3-7 lines, what landed.
    - **Decisions / Insights worth capturing**: bullet list.
    - **Open threads**: bullet list of next-session candidates.
-3. Format: `<YYYY-MM-DD> — <session-tagline>` as title.
+3. Format: `<YYYY-MM-DD>   <session-tagline>` as title.
 4. Preview to Tyler. Ask: "Push? [Yes / Edit / Cancel]".
 5. On Yes: `nlm note create pp-journal "<body>" --title "<title>"`.
 6. `touch ~/.claude/state/pp-nlm/cache-invalidate`.

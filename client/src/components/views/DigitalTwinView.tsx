@@ -11,18 +11,20 @@
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+
+import { NumberInput } from '@/components/ui/number-input';
 import { useToast } from '@/hooks/use-toast';
-import { useDeviceShadow } from '@/lib/digital-twin/device-shadow';
-import { DeviceShadow } from '@/lib/digital-twin/device-shadow';
-import type { ChannelState, ShadowState } from '@/lib/digital-twin/device-shadow';
+import { useValidation } from '@/lib/contexts/validation-context';
 import { compareCircuit, overallHealth, defaultComparisonConfig } from '@/lib/digital-twin/comparison-engine';
 import type { ComparisonResult, ComparisonConfig } from '@/lib/digital-twin/comparison-engine';
+import { useDeviceShadow, DeviceShadow } from '@/lib/digital-twin/device-shadow';
+import type { ChannelState, ShadowState } from '@/lib/digital-twin/device-shadow';
 import { generateFirmware, boardPinCount } from '@/lib/digital-twin/firmware-templates';
 import type { FirmwareConfig, BoardType, PinConfig } from '@/lib/digital-twin/firmware-templates';
 import { TelemetryLogger } from '@/lib/digital-twin/telemetry-logger';
 import { TelemetryShadowBridge } from '@/lib/telemetry-shadow-bridge';
-import { WebSerialManager } from '@/lib/web-serial';
 import { cn } from '@/lib/utils';
+import { WebSerialManager } from '@/lib/web-serial';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -49,10 +51,7 @@ function ConnectionBar({
     >
       <div className="flex items-center gap-3">
         <div
-          className={cn(
-            'h-3 w-3 rounded-full',
-            state.connected ? 'bg-green-500' : 'bg-red-500',
-          )}
+          className={cn('h-3 w-3 rounded-full', state.connected ? 'bg-green-500' : 'bg-red-500')}
           data-testid="connection-indicator"
         />
         <div>
@@ -105,18 +104,18 @@ function ChannelCard({
   channelName: string;
   onSetDesired: (value: number | boolean) => void;
 }) {
-  const displayValue = typeof channelState.value === 'boolean'
-    ? (channelState.value ? 'HIGH' : 'LOW')
-    : typeof channelState.value === 'number'
-      ? channelState.value.toFixed(2)
-      : channelState.value;
+  const displayValue =
+    typeof channelState.value === 'boolean'
+      ? channelState.value
+        ? 'HIGH'
+        : 'LOW'
+      : typeof channelState.value === 'number'
+        ? channelState.value.toFixed(2)
+        : channelState.value;
 
   return (
     <div
-      className={cn(
-        'rounded-lg border border-border bg-card p-3',
-        channelState.stale && 'opacity-50',
-      )}
+      className={cn('rounded-lg border border-border bg-card p-3', channelState.stale && 'opacity-50')}
       data-testid={`channel-card-${channelId}`}
     >
       <div className="flex items-center justify-between">
@@ -154,7 +153,10 @@ function LiveValuesGrid({
 
   if (channels.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-border p-6 text-center text-muted-foreground" data-testid="no-channels">
+      <div
+        className="rounded-lg border border-dashed border-border p-6 text-center text-muted-foreground"
+        data-testid="no-channels"
+      >
         No channels available. Connect a device to see live values.
       </div>
     );
@@ -209,14 +211,13 @@ function statusBadge(status: string): string {
   }
 }
 
-function ComparisonTable({
-  results,
-}: {
-  results: ComparisonResult[];
-}) {
+function ComparisonTable({ results }: { results: ComparisonResult[] }) {
   if (results.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-border p-6 text-center text-muted-foreground" data-testid="no-comparison">
+      <div
+        className="rounded-lg border border-dashed border-border p-6 text-center text-muted-foreground"
+        data-testid="no-comparison"
+      >
         No comparison data. Run a simulation and connect a device to compare.
       </div>
     );
@@ -249,18 +250,12 @@ function ComparisonTable({
           {results.map((r) => (
             <tr key={r.channelId} className="border-b border-border/50" data-testid={`comparison-row-${r.channelId}`}>
               <td className="py-1.5 pr-3 font-medium">{r.channelName}</td>
-              <td className="py-1.5 pr-3 font-mono">
-                {r.simulated !== null ? r.simulated.toFixed(3) : '—'}
-              </td>
-              <td className="py-1.5 pr-3 font-mono">
-                {r.measured !== null ? r.measured.toFixed(3) : '—'}
-              </td>
+              <td className="py-1.5 pr-3 font-mono">{r.simulated !== null ? r.simulated.toFixed(3) : '—'}</td>
+              <td className="py-1.5 pr-3 font-mono">{r.measured !== null ? r.measured.toFixed(3) : '—'}</td>
               <td className="py-1.5 pr-3 font-mono">
                 {r.deviationPercent !== null ? `${r.deviationPercent.toFixed(1)}%` : '—'}
               </td>
-              <td className={cn('py-1.5 font-bold', statusColor(r.status))}>
-                {statusBadge(r.status)}
-              </td>
+              <td className={cn('py-1.5 font-bold', statusColor(r.status))}>{statusBadge(r.status)}</td>
             </tr>
           ))}
         </tbody>
@@ -269,13 +264,7 @@ function ComparisonTable({
   );
 }
 
-function FirmwareDialog({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+function FirmwareDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [board, setBoard] = useState<BoardType>('arduino_uno');
   const [baudRate, setBaudRate] = useState(115200);
   const [sampleRate, setSampleRate] = useState(10);
@@ -327,7 +316,12 @@ function FirmwareDialog({
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-card p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">Generate Firmware</h2>
-          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground" data-testid="close-firmware-dialog">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+            data-testid="close-firmware-dialog"
+          >
             X
           </button>
         </div>
@@ -368,8 +362,7 @@ function FirmwareDialog({
             </div>
             <div>
               <label className="text-sm font-medium">Sample Rate (Hz)</label>
-              <input
-                type="number"
+              <NumberInput
                 value={sampleRate}
                 onChange={(e) => setSampleRate(Number(e.target.value))}
                 min={1}
@@ -404,8 +397,7 @@ function FirmwareDialog({
                   placeholder="ID"
                   data-testid={`pin-id-${i}`}
                 />
-                <input
-                  type="number"
+                <NumberInput
                   value={pin.pin}
                   onChange={(e) => {
                     const updated = [...pins];
@@ -454,11 +446,7 @@ function FirmwareDialog({
             <div>
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-sm font-medium">Generated Code</span>
-                <button
-                  onClick={handleCopy}
-                  className="text-xs text-primary"
-                  data-testid="copy-firmware-button"
-                >
+                <button onClick={handleCopy} className="text-xs text-primary" data-testid="copy-firmware-button">
                   Copy
                 </button>
               </div>
@@ -475,8 +463,6 @@ function FirmwareDialog({
     </div>
   );
 }
-
-import { useValidation } from '@/lib/contexts/validation-context';
 
 // ---------------------------------------------------------------------------
 // Main view
@@ -536,7 +522,7 @@ export default function DigitalTwinView() {
       if (isOutOfBounds) {
         const msg = `Hardware telemetry on ${channel.name} (${value.toFixed(2)}${channel.unit || ''}) ${reason}.`;
         // Only add if not already in issues list
-        if (!issues.some(i => i.message === msg)) {
+        if (!issues.some((i) => i.message === msg)) {
           addValidationIssue({
             severity: 'warning',
             message: msg,
@@ -561,7 +547,11 @@ export default function DigitalTwinView() {
 
   const handleConnect = useCallback(async () => {
     if (!WebSerialManager.isSupported()) {
-      toast({ title: 'Web Serial not supported', description: 'Your browser does not support Web Serial API. Use Chrome or Edge to connect to hardware.', variant: 'destructive' });
+      toast({
+        title: 'Web Serial not supported',
+        description: 'Your browser does not support Web Serial API. Use Chrome or Edge to connect to hardware.',
+        variant: 'destructive',
+      });
       return;
     }
     const manager = WebSerialManager.getInstance();
@@ -575,7 +565,11 @@ export default function DigitalTwinView() {
       shadowState.attachSerial(manager);
       toast({ title: 'Connected', description: 'Device connected successfully.' });
     } else {
-      toast({ title: 'Connection failed', description: 'Could not open serial port. Check your device connection.', variant: 'destructive' });
+      toast({
+        title: 'Connection failed',
+        description: 'Could not open serial port. Check your device connection.',
+        variant: 'destructive',
+      });
     }
   }, [shadowState, toast]);
 
@@ -605,10 +599,7 @@ export default function DigitalTwinView() {
             Generate Firmware
           </button>
         </div>
-        <LiveValuesGrid
-          state={shadowState}
-          onSetDesired={shadowState.setDesired}
-        />
+        <LiveValuesGrid state={shadowState} onSetDesired={shadowState.setDesired} />
       </div>
 
       {/* Section 3: Comparison table */}

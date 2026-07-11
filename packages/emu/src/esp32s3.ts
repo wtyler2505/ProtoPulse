@@ -2221,6 +2221,13 @@ interface PcntUnit {
   pendingPulseCycle: number[];
 }
 
+/**
+ * An installed I2C slave device: answers a master register read at `address`
+ * (7-bit) / `register` with the byte to return. Lets a modeled peripheral (a
+ * sensor's register map) respond to firmware-driven master transactions.
+ */
+export type I2cSlave = (address: number, register: number) => number;
+
 interface I2cController {
   regs: Map<number, number>;
   commands: number[];
@@ -2233,7 +2240,16 @@ interface I2cController {
   maps: InterruptMapPair;
   writeLog: number[];
   lastAck: 0 | 1;
+  slave?: I2cSlave;
 }
+
+/**
+ * An installed SPI slave device: given the bytes the master clocked out this
+ * transaction (command + address + MOSI, MSB-first) and the MISO byte index
+ * being produced, returns the MISO byte. Lets a modeled SPI peripheral answer
+ * full-duplex reads instead of the synthetic zeros.
+ */
+export type SpiSlave = (mosi: readonly number[], misoIndex: number) => number;
 
 interface SpiController {
   regs: Map<number, number>;
@@ -2242,6 +2258,7 @@ interface SpiController {
   intEna: number;
   maps: InterruptMapPair;
   writeLog: number[];
+  slave?: SpiSlave;
 }
 
 interface McpwmTimer {
@@ -3322,6 +3339,28 @@ export class Esp32s3Core implements McuCore {
 
   setAdcSampler(fn: AdcSampler): void {
     this.sampler = fn;
+  }
+
+  /**
+   * Install an I2C slave device on a controller port. The emulated master's
+   * register reads call `fn(address, register)` for each byte (the register
+   * auto-increments across a burst read); pass null to remove it. Without a
+   * slave, reads return 0 (the prior synthetic-zero behavior).
+   */
+  setI2cSlave(port: 0 | 1, fn: I2cSlave | null): void {
+    const ctrl = this.i2c[port];
+    if (ctrl) ctrl.slave = fn ?? undefined;
+  }
+
+  /**
+   * Install an SPI slave device on a controller port (2 = GPSPI2, 3 = GPSPI3).
+   * The master's MISO phase calls `fn(mosi, misoIndex)` per read byte, where
+   * `mosi` is the command/address/MOSI bytes clocked out this transaction; pass
+   * null to remove it. Without a slave, MISO reads back 0 (the prior behavior).
+   */
+  setSpiSlave(port: 2 | 3, fn: SpiSlave | null): void {
+    const ctrl = this.spi[port - 2];
+    if (ctrl) ctrl.slave = fn ?? undefined;
   }
 
   drainAdcReads(): AdcReadRequest[] {
@@ -5125,6 +5164,10 @@ export class Esp32s3Core implements McuCore {
     let sawStop = false;
     let stopped = false;
     ctrl.lastAck = 0;
+    // Bytes written in THIS transaction (addr, register, …) so an installed
+    // slave can recover the device address + register pointer for reads.
+    const written: number[] = [];
+    let readIndex = 0;
     for (let i = 0; i < I2C_CMD_COUNT && !stopped; i++) {
       const command = ctrl.commands[i] ?? 0;
       const payload = command & I2C_COMMAND_MASK;
@@ -5139,6 +5182,7 @@ export class Esp32s3Core implements McuCore {
             const byte = ctrl.txFifo.shift() ?? ctrl.txMem[txMemCursor] ?? 0;
             txMemCursor++;
             ctrl.writeLog.push(byte & 0xff);
+            written.push(byte & 0xff);
           }
           const ackExpected = (payload & I2C_CMD_ACK_EXP) !== 0 ? 1 : 0;
           if ((payload & I2C_CMD_ACK_EN) !== 0 && ackExpected !== ctrl.lastAck) {
@@ -5149,13 +5193,20 @@ export class Esp32s3Core implements McuCore {
         }
         case I2C_LL_CMD_READ: {
           const count = payload & I2C_CMD_BYTE_NUM_MASK;
+          // Recover the device address + register pointer from the bytes
+          // written earlier in this transaction (addr+W, reg, addr+R); a burst
+          // read auto-increments the register.
+          const addr = (written[0] ?? 0) >> 1;
+          const regBase = written[1] ?? 0;
           for (let n = 0; n < count; n++) {
             if (ctrl.rxFifo.length >= I2C_FIFO_LEN) {
               ctrl.intRaw |= I2C_RXFIFO_OVF_INT;
               break;
             }
-            ctrl.rxFifo.push(0);
-            ctrl.rxMem[ctrl.rxFifo.length - 1] = 0;
+            const byte = ctrl.slave ? ctrl.slave(addr, (regBase + readIndex) & 0xff) & 0xff : 0;
+            readIndex++;
+            ctrl.rxFifo.push(byte);
+            ctrl.rxMem[ctrl.rxFifo.length - 1] = byte;
           }
           break;
         }
@@ -5214,23 +5265,33 @@ export class Esp32s3Core implements McuCore {
     const user2 = ctrl.regs.get(SPI_USER2) ?? SPI_USER2_RESET;
     const dataBits = ((ctrl.regs.get(SPI_MS_DLEN) ?? 0) & SPI_MS_DATA_BITLEN_MASK) + 1;
     const dataBytes = Math.ceil(dataBits / 8);
+    // Bytes the master clocks out this transaction (command, address, MOSI),
+    // MSB-first — recorded for the host write-log AND handed to an installed
+    // slave so it can answer the MISO phase (full-duplex).
+    const mosi: number[] = [];
     if ((user & SPI_USR_COMMAND) !== 0) {
       const bits = ((user2 >>> SPI_USR_COMMAND_BITLEN_SHIFT) & SPI_COMMAND_BITLEN_MASK) + 1;
-      this.spiAppendMsbField(ctrl.writeLog, user2 & 0xffff, bits);
+      this.spiAppendMsbField(mosi, user2 & 0xffff, bits);
     }
     if ((user & SPI_USR_ADDR) !== 0) {
       const bits = ((user1 >>> SPI_USR_ADDR_BITLEN_SHIFT) & SPI_PHASE_BITLEN_MASK) + 1;
-      this.spiAppendMsbField(ctrl.writeLog, ctrl.regs.get(SPI_ADDR) ?? 0, bits);
+      this.spiAppendMsbField(mosi, ctrl.regs.get(SPI_ADDR) ?? 0, bits);
     }
     if ((user & SPI_USR_MOSI) !== 0) {
       const startByte = (user & SPI_USR_MOSI_HIGHPART) !== 0 ? 8 * 4 : 0;
       const available = SPI_WORD_COUNT * 4 - startByte;
-      for (let i = 0; i < Math.min(dataBytes, available); i++) ctrl.writeLog.push(this.spiBufferByte(ctrl, startByte + i));
+      for (let i = 0; i < Math.min(dataBytes, available); i++) mosi.push(this.spiBufferByte(ctrl, startByte + i));
     }
+    if (mosi.length > 0) ctrl.writeLog.push(...mosi);
     if ((user & SPI_USR_MISO) !== 0) {
       const startByte = (user & SPI_USR_MISO_HIGHPART) !== 0 ? 8 * 4 : 0;
       const available = SPI_WORD_COUNT * 4 - startByte;
-      for (let i = 0; i < Math.min(dataBytes, available); i++) this.spiSetBufferByte(ctrl, startByte + i, 0);
+      let misoIndex = 0;
+      for (let i = 0; i < Math.min(dataBytes, available); i++) {
+        const byte = ctrl.slave ? ctrl.slave(mosi, misoIndex) & 0xff : 0;
+        misoIndex++;
+        this.spiSetBufferByte(ctrl, startByte + i, byte);
+      }
     }
     ctrl.intRaw |= SPI_TRANS_DONE_INT;
   }

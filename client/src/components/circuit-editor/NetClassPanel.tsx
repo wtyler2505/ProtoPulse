@@ -1,28 +1,9 @@
 import { memo, useState, useCallback, useMemo } from 'react';
-import { useProjectId } from '@/lib/contexts/project-id-context';
-import { useCircuitNets } from '@/lib/circuit-editor/hooks';
-import {
-  Network,
-  Plus,
-  Trash2,
-  Pencil,
-  Palette,
-  ChevronDown,
-  ChevronRight,
-  Check,
-  X,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+
+import { Network, Plus, Trash2, Pencil, Palette, ChevronDown, ChevronRight, Check, X } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog,
   DialogContent,
@@ -31,7 +12,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { NumberInput } from '@/components/ui/number-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCircuitNets } from '@/lib/circuit-editor/hooks';
+import { useProjectId } from '@/lib/contexts/project-id-context';
+import { cn } from '@/lib/utils';
+
 import type { CircuitNetRow } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
@@ -101,9 +89,7 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
   const [assignments, setAssignments] = useState<NetClassAssignment[]>([]);
 
   // UI state
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(['classes', 'assignments']),
-  );
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['classes', 'assignments']));
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<string | null>(null);
   const [formData, setFormData] = useState<NetClass>({ ...EMPTY_FORM, color: '#3b82f6' });
@@ -169,7 +155,9 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
   const openEditDialog = useCallback(
     (className: string) => {
       const nc = netClassMap.get(className);
-      if (!nc) { return; }
+      if (!nc) {
+        return;
+      }
       setEditingClass(className);
       setFormData({ ...nc });
       setDialogOpen(true);
@@ -179,29 +167,25 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
 
   const handleSave = useCallback(() => {
     const trimmedName = formData.name.trim();
-    if (!trimmedName) { return; }
+    if (!trimmedName) {
+      return;
+    }
 
     if (editingClass) {
       // Editing existing class
-      setNetClasses((prev) =>
-        prev.map((nc) =>
-          nc.name === editingClass ? { ...formData, name: trimmedName } : nc,
-        ),
-      );
+      setNetClasses((prev) => prev.map((nc) => (nc.name === editingClass ? { ...formData, name: trimmedName } : nc)));
       // Update assignments if name changed
       if (editingClass !== trimmedName) {
         setAssignments((prev) =>
-          prev.map((a) =>
-            a.className === editingClass ? { ...a, className: trimmedName } : a,
-          ),
+          prev.map((a) => (a.className === editingClass ? { ...a, className: trimmedName } : a)),
         );
       }
     } else {
       // Adding new class — check name uniqueness
-      const nameExists = netClasses.some(
-        (nc) => nc.name.toLowerCase() === trimmedName.toLowerCase(),
-      );
-      if (nameExists) { return; }
+      const nameExists = netClasses.some((nc) => nc.name.toLowerCase() === trimmedName.toLowerCase());
+      if (nameExists) {
+        return;
+      }
       setNetClasses((prev) => [...prev, { ...formData, name: trimmedName }]);
     }
 
@@ -209,42 +193,35 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
     setEditingClass(null);
   }, [formData, editingClass, netClasses]);
 
-  const handleDelete = useCallback(
-    (className: string) => {
-      if (className === 'Default') { return; } // Cannot delete Default
-      setNetClasses((prev) => prev.filter((nc) => nc.name !== className));
-      // Remove assignments for deleted class (nets fall back to Default)
-      setAssignments((prev) => prev.filter((a) => a.className !== className));
-    },
-    [],
-  );
+  const handleDelete = useCallback((className: string) => {
+    if (className === 'Default') {
+      return;
+    } // Cannot delete Default
+    setNetClasses((prev) => prev.filter((nc) => nc.name !== className));
+    // Remove assignments for deleted class (nets fall back to Default)
+    setAssignments((prev) => prev.filter((a) => a.className !== className));
+  }, []);
 
-  const handleAssignNet = useCallback(
-    (netId: number, className: string) => {
-      if (className === 'Default') {
-        // Remove explicit assignment — Default is implicit
-        setAssignments((prev) => prev.filter((a) => a.netId !== netId));
-      } else {
-        setAssignments((prev) => {
-          const existing = prev.findIndex((a) => a.netId === netId);
-          if (existing >= 0) {
-            const updated = [...prev];
-            updated[existing] = { netId, className };
-            return updated;
-          }
-          return [...prev, { netId, className }];
-        });
-      }
-    },
-    [],
-  );
+  const handleAssignNet = useCallback((netId: number, className: string) => {
+    if (className === 'Default') {
+      // Remove explicit assignment — Default is implicit
+      setAssignments((prev) => prev.filter((a) => a.netId !== netId));
+    } else {
+      setAssignments((prev) => {
+        const existing = prev.findIndex((a) => a.netId === netId);
+        if (existing >= 0) {
+          const updated = [...prev];
+          updated[existing] = { netId, className };
+          return updated;
+        }
+        return [...prev, { netId, className }];
+      });
+    }
+  }, []);
 
-  const updateFormField = useCallback(
-    <K extends keyof NetClass>(field: K, value: NetClass[K]) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-    },
-    [],
-  );
+  const updateFormField = useCallback(<K extends keyof NetClass>(field: K, value: NetClass[K]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -299,12 +276,8 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
             ) : (
               <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
             )}
-            <span className="text-[10px] font-medium text-foreground uppercase tracking-wider flex-1">
-              Classes
-            </span>
-            <span className="text-[9px] text-muted-foreground tabular-nums">
-              {netClasses.length}
-            </span>
+            <span className="text-[10px] font-medium text-foreground uppercase tracking-wider flex-1">Classes</span>
+            <span className="text-[9px] text-muted-foreground tabular-nums">{netClasses.length}</span>
           </button>
 
           {expandedSections.has('classes') && (
@@ -325,14 +298,9 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
                   {/* Name + properties */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-medium text-foreground truncate">
-                        {nc.name}
-                      </span>
+                      <span className="text-[11px] font-medium text-foreground truncate">{nc.name}</span>
                       {nc.name === 'Default' && (
-                        <Badge
-                          variant="outline"
-                          className="text-[8px] px-1 py-0 h-3.5 border-muted-foreground/30"
-                        >
+                        <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 border-muted-foreground/30">
                           default
                         </Badge>
                       )}
@@ -401,9 +369,7 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
             <span className="text-[10px] font-medium text-foreground uppercase tracking-wider flex-1">
               Net Assignments
             </span>
-            <span className="text-[9px] text-muted-foreground tabular-nums">
-              {nets?.length ?? 0}
-            </span>
+            <span className="text-[9px] text-muted-foreground tabular-nums">{nets?.length ?? 0}</span>
           </button>
 
           {expandedSections.has('assignments') && (
@@ -425,26 +391,18 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
                       className="flex items-center gap-2 px-2 py-1 rounded-sm hover:bg-accent/20 transition-colors"
                     >
                       {/* Color indicator */}
-                      <div
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: classColor }}
-                      />
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: classColor }} />
 
                       {/* Net name + type */}
                       <div className="flex-1 min-w-0">
-                        <span className="text-[10px] font-medium text-foreground truncate block">
-                          {net.name}
-                        </span>
+                        <span className="text-[10px] font-medium text-foreground truncate block">{net.name}</span>
                         {net.netType && net.netType !== 'signal' && (
                           <span className="text-[8px] text-cyan-400 uppercase">{net.netType}</span>
                         )}
                       </div>
 
                       {/* Class selector */}
-                      <Select
-                        value={currentClass}
-                        onValueChange={(value) => handleAssignNet(net.id, value)}
-                      >
+                      <Select value={currentClass} onValueChange={(value) => handleAssignNet(net.id, value)}>
                         <SelectTrigger
                           data-testid={`select-net-class-${net.id}`}
                           className="h-6 w-[100px] text-[10px] border-border/50 bg-transparent px-2 py-0"
@@ -460,10 +418,7 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
                               className="text-[10px]"
                             >
                               <div className="flex items-center gap-1.5">
-                                <div
-                                  className="w-2 h-2 rounded-full shrink-0"
-                                  style={{ backgroundColor: nc.color }}
-                                />
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: nc.color }} />
                                 {nc.name}
                               </div>
                             </SelectItem>
@@ -481,14 +436,9 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
 
       {/* ---- Add/Edit Dialog ---- */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent
-          className="sm:max-w-[380px] bg-card border-border"
-          data-testid="dialog-net-class"
-        >
+        <DialogContent className="sm:max-w-[380px] bg-card border-border" data-testid="dialog-net-class">
           <DialogHeader>
-            <DialogTitle className="text-sm">
-              {editingClass ? `Edit "${editingClass}"` : 'New Net Class'}
-            </DialogTitle>
+            <DialogTitle className="text-sm">{editingClass ? `Edit "${editingClass}"` : 'New Net Class'}</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
               {editingClass
                 ? 'Modify the properties of this net class.'
@@ -518,10 +468,9 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
               <Label htmlFor="nc-trace-width" className="text-[10px] text-muted-foreground">
                 Trace Width (mm)
               </Label>
-              <Input
+              <NumberInput
                 id="nc-trace-width"
                 data-testid="input-trace-width"
-                type="number"
                 step={0.05}
                 min={0.01}
                 value={formData.traceWidth}
@@ -535,10 +484,9 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
               <Label htmlFor="nc-clearance" className="text-[10px] text-muted-foreground">
                 Clearance (mm)
               </Label>
-              <Input
+              <NumberInput
                 id="nc-clearance"
                 data-testid="input-clearance"
-                type="number"
                 step={0.05}
                 min={0.01}
                 value={formData.clearance}
@@ -552,10 +500,9 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
               <Label htmlFor="nc-via-diameter" className="text-[10px] text-muted-foreground">
                 Via Diameter (mm)
               </Label>
-              <Input
+              <NumberInput
                 id="nc-via-diameter"
                 data-testid="input-via-diameter"
-                type="number"
                 step={0.1}
                 min={0.1}
                 value={formData.viaDiameter}

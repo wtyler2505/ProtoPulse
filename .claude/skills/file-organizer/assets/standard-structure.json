@@ -1,0 +1,20 @@
+{
+  "schemas": {
+    "default": {
+      "folders": ["Documents", "Images", "Media", "Archives", "Others"],
+      "description": "Standard basic organization by broad category."
+    },
+    "photography": {
+      "folders": ["RAW", "Exports", "Selects", "Web"],
+      "description": "Structure optimized for photo editing workflows."
+    },
+    "development": {
+      "folders": ["src", "docs", "assets", "scripts", "tests"],
+      "description": "Standard software project structure."
+    },
+    "archival": {
+      "folders": ["2020", "2021", "2022", "2023", "2024", "Older"],
+      "description": "Time-based bucketing for long-term storage."
+    }
+  }
+}

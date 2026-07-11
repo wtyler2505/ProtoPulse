@@ -1,0 +1,6 @@
+interface:
+  display_name: "Opportunity Tree"
+  short_description: "Map outcomes to tests"
+  default_prompt: >-
+    Use $opportunity-solution-tree to map an outcome into opportunities,
+    solution options, tests, scores, and the best first experiment.

@@ -1,21 +1,15 @@
 import { useState, useMemo, useCallback } from 'react';
+
 import { ArrowUpDown, ArrowUp, ArrowDown, Trophy, ExternalLink, Package, AlertTriangle } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { NumberInput } from '@/components/ui/number-input';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { buildComparison, sortComparisonRows, getAvailableMpns } from '@/lib/supplier-comparison';
+import type { ComparisonResult, ComparisonRow, SortField, SortState } from '@/lib/supplier-comparison';
 import { cn } from '@/lib/utils';
-import {
-  buildComparison,
-  sortComparisonRows,
-  getAvailableMpns,
-} from '@/lib/supplier-comparison';
-import type {
-  ComparisonResult,
-  ComparisonRow,
-  SortField,
-  SortState,
-} from '@/lib/supplier-comparison';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -57,22 +51,20 @@ function SortHeader({ label, field, currentSort, onSort, className }: SortHeader
 }
 
 function StockBadge({ status, stock }: { status: string; stock: number }) {
-  const variant = status === 'in-stock'
-    ? 'text-emerald-500 border-emerald-500/30'
-    : status === 'low-stock'
-      ? 'text-yellow-500 border-yellow-500/30'
-      : 'text-destructive border-destructive/30';
-  const label = status === 'in-stock'
-    ? `${stock.toLocaleString()} in stock`
-    : status === 'low-stock'
-      ? `${stock.toLocaleString()} (low)`
-      : 'Out of stock';
+  const variant =
+    status === 'in-stock'
+      ? 'text-emerald-500 border-emerald-500/30'
+      : status === 'low-stock'
+        ? 'text-yellow-500 border-yellow-500/30'
+        : 'text-destructive border-destructive/30';
+  const label =
+    status === 'in-stock'
+      ? `${stock.toLocaleString()} in stock`
+      : status === 'low-stock'
+        ? `${stock.toLocaleString()} (low)`
+        : 'Out of stock';
   return (
-    <Badge
-      variant="outline"
-      className={cn('text-[10px] whitespace-nowrap', variant)}
-      data-testid="stock-badge"
-    >
+    <Badge variant="outline" className={cn('text-[10px] whitespace-nowrap', variant)} data-testid="stock-badge">
       {label}
     </Badge>
   );
@@ -100,7 +92,9 @@ export function SupplierDrawer({ open, onOpenChange, initialMpn }: SupplierDrawe
 
   const handleCompare = useCallback(() => {
     const trimmed = mpnInput.trim();
-    if (!trimmed) { return; }
+    if (!trimmed) {
+      return;
+    }
     const result = buildComparison(trimmed, quantity);
     if (result) {
       setComparison(result);
@@ -111,16 +105,19 @@ export function SupplierDrawer({ open, onOpenChange, initialMpn }: SupplierDrawe
     }
   }, [mpnInput, quantity]);
 
-  const handleQuantityChange = useCallback((newQty: number) => {
-    const clamped = Math.max(1, Math.round(newQty));
-    setQuantity(clamped);
-    if (comparison) {
-      const result = buildComparison(comparison.mpn, clamped);
-      if (result) {
-        setComparison(result);
+  const handleQuantityChange = useCallback(
+    (newQty: number) => {
+      const clamped = Math.max(1, Math.round(newQty));
+      setQuantity(clamped);
+      if (comparison) {
+        const result = buildComparison(comparison.mpn, clamped);
+        if (result) {
+          setComparison(result);
+        }
       }
-    }
-  }, [comparison]);
+    },
+    [comparison],
+  );
 
   const handleSort = useCallback((field: SortField) => {
     setSort((prev) => ({
@@ -130,41 +127,45 @@ export function SupplierDrawer({ open, onOpenChange, initialMpn }: SupplierDrawe
   }, []);
 
   const sortedRows = useMemo(() => {
-    if (!comparison) { return []; }
+    if (!comparison) {
+      return [];
+    }
     return sortComparisonRows(comparison.rows, sort);
   }, [comparison, sort]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleCompare();
-    }
-  }, [handleCompare]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleCompare();
+      }
+    },
+    [handleCompare],
+  );
 
   // Reset state when drawer opens with a new initialMpn
-  const handleOpenChange = useCallback((isOpen: boolean) => {
-    if (isOpen && initialMpn) {
-      setMpnInput(initialMpn);
-      const result = buildComparison(initialMpn, quantity);
-      if (result) {
-        setComparison(result);
+  const handleOpenChange = useCallback(
+    (isOpen: boolean) => {
+      if (isOpen && initialMpn) {
+        setMpnInput(initialMpn);
+        const result = buildComparison(initialMpn, quantity);
+        if (result) {
+          setComparison(result);
+          setNotFound(false);
+        }
+      }
+      if (!isOpen) {
+        setComparison(null);
         setNotFound(false);
       }
-    }
-    if (!isOpen) {
-      setComparison(null);
-      setNotFound(false);
-    }
-    onOpenChange(isOpen);
-  }, [initialMpn, quantity, onOpenChange]);
+      onOpenChange(isOpen);
+    },
+    [initialMpn, quantity, onOpenChange],
+  );
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full sm:max-w-2xl overflow-y-auto"
-        data-testid="supplier-drawer"
-      >
+      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto" data-testid="supplier-drawer">
         <SheetHeader className="pb-4 border-b border-border">
           <SheetTitle data-testid="supplier-drawer-title">Compare Suppliers</SheetTitle>
           <SheetDescription>
@@ -198,9 +199,8 @@ export function SupplierDrawer({ open, onOpenChange, initialMpn }: SupplierDrawe
             <label htmlFor="comparison-quantity" className="text-xs text-muted-foreground whitespace-nowrap">
               Quantity:
             </label>
-            <Input
+            <NumberInput
               id="comparison-quantity"
-              type="number"
               min={1}
               value={quantity}
               onChange={(e) => handleQuantityChange(Number(e.target.value))}
@@ -213,10 +213,7 @@ export function SupplierDrawer({ open, onOpenChange, initialMpn }: SupplierDrawe
                   key={q}
                   variant="outline"
                   size="sm"
-                  className={cn(
-                    'text-xs px-2 h-7',
-                    quantity === q && 'bg-primary/10 border-primary text-primary',
-                  )}
+                  className={cn('text-xs px-2 h-7', quantity === q && 'bg-primary/10 border-primary text-primary')}
                   onClick={() => handleQuantityChange(q)}
                   data-testid={`button-qty-${q}`}
                 >
@@ -228,8 +225,7 @@ export function SupplierDrawer({ open, onOpenChange, initialMpn }: SupplierDrawe
 
           {/* Available parts hint */}
           <div className="text-[10px] text-muted-foreground">
-            <span className="font-medium">Demo parts:</span>{' '}
-            {availableMpns.join(', ')}
+            <span className="font-medium">Demo parts:</span> {availableMpns.join(', ')}
           </div>
         </div>
 
@@ -286,13 +282,30 @@ export function SupplierDrawer({ open, onOpenChange, initialMpn }: SupplierDrawe
                   <thead className="bg-muted/50 border-b border-border">
                     <tr>
                       <th className="px-3 py-2">
-                        <SortHeader label="Distributor" field="distributorName" currentSort={sort} onSort={handleSort} />
+                        <SortHeader
+                          label="Distributor"
+                          field="distributorName"
+                          currentSort={sort}
+                          onSort={handleSort}
+                        />
                       </th>
                       <th className="px-3 py-2 text-right">
-                        <SortHeader label="Unit Price" field="unitPrice" currentSort={sort} onSort={handleSort} className="justify-end" />
+                        <SortHeader
+                          label="Unit Price"
+                          field="unitPrice"
+                          currentSort={sort}
+                          onSort={handleSort}
+                          className="justify-end"
+                        />
                       </th>
                       <th className="px-3 py-2 text-right">
-                        <SortHeader label="Total" field="totalPrice" currentSort={sort} onSort={handleSort} className="justify-end" />
+                        <SortHeader
+                          label="Total"
+                          field="totalPrice"
+                          currentSort={sort}
+                          onSort={handleSort}
+                          className="justify-end"
+                        />
                       </th>
                       <th className="px-3 py-2">
                         <SortHeader label="Stock" field="stock" currentSort={sort} onSort={handleSort} />
@@ -311,9 +324,7 @@ export function SupplierDrawer({ open, onOpenChange, initialMpn }: SupplierDrawe
                         key={row.distributorId}
                         className={cn(
                           'transition-colors',
-                          row.isBestValue
-                            ? 'bg-primary/5 hover:bg-primary/10'
-                            : 'hover:bg-muted/30',
+                          row.isBestValue ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/30',
                         )}
                         data-testid={`comparison-row-${idx}`}
                       >
@@ -398,7 +409,8 @@ export function SupplierDrawer({ open, onOpenChange, initialMpn }: SupplierDrawe
                       {row.pricingTiers.map((tier, ti) => (
                         <div key={ti} className="flex justify-between text-[10px]">
                           <span>
-                            {tier.minQuantity}{tier.maxQuantity !== null ? `-${tier.maxQuantity}` : '+'}
+                            {tier.minQuantity}
+                            {tier.maxQuantity !== null ? `-${tier.maxQuantity}` : '+'}
                           </span>
                           <span className="font-mono">${tier.unitPrice.toFixed(3)}</span>
                         </div>

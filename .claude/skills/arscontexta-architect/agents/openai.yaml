@@ -1,0 +1,4 @@
+interface:
+  display_name: "ArsContexta Architect"
+  short_description: "Diagnose and evolve vault architecture"
+  default_prompt: "Use $arscontexta-architect to run health checks, answer methodology questions, or propose vault evolution."

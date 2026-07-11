@@ -1,0 +1,148 @@
+<!-- @dsCard group="App Views" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;width:1180px;height:720px;background:var(--color-background);color:var(--color-foreground);font-family:var(--font-sans),system-ui,sans-serif;font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{height:48px;flex:0 0 48px;border-bottom:1px solid var(--color-border);background:color-mix(in srgb,var(--color-card) 60%,transparent);display:flex;align-items:center;gap:16px;padding:0 16px}
+  .wm{font-family:var(--font-display);font-weight:700;font-size:18px}.wm b{color:var(--color-brand)}
+  .crumb{color:var(--color-muted-foreground);font-size:12px}
+  .crumb .proj{color:var(--color-foreground)}
+  .crumb .mono{font-family:var(--font-mono);font-size:11px}
+  .spacer{flex:1}
+  .btn{font-size:12px;padding:5px 12px;border:1px solid var(--color-border);background:transparent;color:var(--color-foreground)}
+  .btn.primary{background:var(--color-primary);color:var(--color-primary-foreground);border-color:var(--color-primary)}
+  .body{flex:1;display:flex;min-height:0}
+  .rail{width:64px;flex:0 0 64px;border-right:1px solid var(--color-border);background:var(--color-sidebar);display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:2px}
+  .nav{width:48px;height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-muted-foreground);font-size:9px;border-left:2px solid transparent}
+  .nav .ic{width:18px;height:18px;border:1.5px solid currentColor;opacity:.8}
+  .nav.active{color:var(--color-primary);border-left-color:var(--color-primary);background:color-mix(in srgb,var(--color-primary) 8%,transparent)}
+
+  /* file explorer */
+  .files{width:184px;flex:0 0 184px;border-right:1px solid var(--color-border);background:var(--color-sidebar);display:flex;flex-direction:column}
+  .files .fhead{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-muted-foreground);padding:11px 12px 7px;display:flex;align-items:center;gap:6px}
+  .files .fhead .add{margin-left:auto;color:var(--color-primary);font-family:var(--font-mono);font-size:13px}
+  .fitem{display:flex;align-items:center;gap:8px;padding:6px 12px;font-family:var(--font-mono);font-size:11px;color:var(--color-muted-foreground);border-left:2px solid transparent}
+  .fitem .dot{width:6px;height:6px;flex:0 0 6px;background:currentColor}
+  .fitem.on{color:var(--color-foreground);background:color-mix(in srgb,var(--color-primary) 9%,transparent);border-left-color:var(--color-primary)}
+  .fitem .dirty{margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--color-primary)}
+
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .toolbar{height:42px;flex:0 0 42px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:8px;padding:0 12px;background:color-mix(in srgb,var(--color-card) 40%,transparent)}
+  .board{display:flex;align-items:center;gap:7px;font-size:11px;padding:5px 9px;border:1px solid var(--color-border);background:var(--color-background);color:var(--color-foreground)}
+  .board .chip{width:7px;height:7px;background:var(--color-data)}
+  .board .car{color:var(--color-muted-foreground);font-size:9px}
+  .act{display:flex;align-items:center;gap:6px;font-size:11px;padding:5px 11px;border:1px solid var(--color-border);background:transparent;color:var(--color-foreground)}
+  .act .gl{width:11px;height:11px;border:1.5px solid currentColor}
+  .act.verify{color:var(--color-primary);border-color:color-mix(in srgb,var(--color-primary) 55%,transparent)}
+  .act.upload{background:var(--color-primary);color:var(--color-primary-foreground);border-color:var(--color-primary)}
+  .port{display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:11px;padding:5px 9px;border:1px solid color-mix(in srgb,var(--color-success) 45%,transparent);color:var(--color-success);background:color-mix(in srgb,var(--color-success) 8%,transparent)}
+  .port .led{width:6px;height:6px;border-radius:50%;background:var(--color-success);box-shadow:0 0 6px var(--color-success)}
+
+  /* editor */
+  .editor{flex:1;display:flex;min-height:0;background:var(--color-card);overflow:hidden}
+  .gutter{flex:0 0 46px;text-align:right;padding:10px 10px 0 0;font-family:var(--font-mono);font-size:12px;line-height:18px;color:color-mix(in srgb,var(--color-muted-foreground) 70%,transparent);border-right:1px solid color-mix(in srgb,var(--color-border) 55%,transparent);user-select:none}
+  .code{flex:1;padding:10px 0 0 14px;font-family:var(--font-mono);font-size:12px;line-height:18px;white-space:pre;overflow:hidden;color:var(--color-foreground)}
+  .gutter div.cur{color:var(--color-primary)}
+  .code .ln.cur{background:color-mix(in srgb,var(--color-primary) 7%,transparent);margin-left:-14px;padding-left:14px}
+  .k{color:var(--color-secondary)}
+  .s{color:var(--color-success)}
+  .c{color:var(--color-muted-foreground);font-style:italic}
+  .n{color:var(--color-power)}
+  .fn{color:var(--color-primary)}
+  .pp{color:var(--color-data)}
+
+  /* serial monitor */
+  .serial{flex:0 0 196px;border-top:1px solid var(--color-border);background:var(--color-background);display:flex;flex-direction:column;min-height:0}
+  .stabs{display:flex;align-items:center;border-bottom:1px solid var(--color-border);background:color-mix(in srgb,var(--color-card) 50%,transparent)}
+  .stab{display:flex;align-items:center;gap:6px;padding:8px 11px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--color-muted-foreground);border-bottom:2px solid transparent}
+  .stab .gi{width:11px;height:11px;border:1.5px solid currentColor}
+  .stab.on{color:var(--color-primary);border-bottom-color:var(--color-primary);background:color-mix(in srgb,var(--color-primary) 6%,transparent)}
+  .stools{margin-left:auto;display:flex;align-items:center;gap:8px;padding-right:10px}
+  .baud{font-family:var(--font-mono);font-size:10px;padding:3px 7px;border:1px solid var(--color-border);color:var(--color-foreground);display:flex;align-items:center;gap:6px}
+  .baud .car{color:var(--color-muted-foreground);font-size:8px}
+  .slink{font-size:10px;color:var(--color-muted-foreground)}
+  .slink.on{color:var(--color-primary)}
+  .log{flex:1;overflow:hidden;padding:8px 12px;font-family:var(--font-mono);font-size:11px;line-height:17px}
+  .log .row{display:flex;gap:10px}
+  .log .ts{color:color-mix(in srgb,var(--color-muted-foreground) 75%,transparent);flex:0 0 64px}
+  .log .ok{color:var(--color-success)}
+  .log .warn{color:var(--color-warning)}
+  .log .msg{color:var(--color-foreground)}
+  .log .dim{color:var(--color-muted-foreground)}
+  .log .v{color:var(--color-power)}
+  .sbar{flex:0 0 26px;border-top:1px solid color-mix(in srgb,var(--color-border) 55%,transparent);display:flex;align-items:center;gap:7px;padding:0 12px;font-family:var(--font-mono);font-size:10px;color:var(--color-muted-foreground)}
+  .sbar .send{margin-left:auto;color:var(--color-muted-foreground)}
+</style></head>
+<body>
+  <div class="topbar">
+    <div class="wm">Proto<b>Pulse</b></div>
+    <div class="crumb">Blink Sensor&nbsp;/&nbsp;<span class="proj mono">sensor_blink.ino</span></div>
+    <div class="spacer"></div>
+    <button class="btn">Format</button>
+    <button class="btn primary">Save</button>
+  </div>
+  <div class="body">
+    <nav class="rail">
+      <div class="nav"><div class="ic"></div>Dash</div>
+      <div class="nav"><div class="ic"></div>Schem</div>
+      <div class="nav"><div class="ic"></div>PCB</div>
+      <div class="nav"><div class="ic"></div>Board</div>
+      <div class="nav"><div class="ic"></div>Sim</div>
+      <div class="nav active"><div class="ic"></div>Code</div>
+      <div class="nav"><div class="ic"></div>Plan</div>
+    </nav>
+
+    <aside class="files">
+      <div class="fhead">Sketch<span class="add">+</span></div>
+      <div class="fitem on"><span class="dot"></span>sensor_blink.ino<span class="dirty"></span></div>
+      <div class="fitem"><span class="dot"></span>pins.h</div>
+      <div class="fitem"><span class="dot"></span>calibration.cpp</div>
+      <div class="fitem"><span class="dot"></span>README.md</div>
+      <div class="fhead" style="margin-top:6px">Libraries</div>
+      <div class="fitem"><span class="dot"></span>Adafruit_GFX</div>
+      <div class="fitem"><span class="dot"></span>OneWire</div>
+    </aside>
+
+    <div class="main">
+      <div class="toolbar">
+        <div class="board"><span class="chip"></span>Arduino Uno R3<span class="car">▾</span></div>
+        <button class="act verify"><span class="gl"></span>Verify</button>
+        <button class="act upload"><span class="gl"></span>Upload</button>
+        <div class="spacer"></div>
+        <div class="port"><span class="led"></span>/dev/ttyUSB0</div>
+      </div>
+
+      <div class="editor">
+        <div class="gutter"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div><div>11</div><div>12</div><div>13</div><div>14</div><div>15</div><div class="cur">16</div><div>17</div><div>18</div><div>19</div><div>20</div><div>21</div><div>22</div><div>23</div><div>24</div><div>25</div><div>26</div><div>27</div></div>
+        <div class="code"><div class="ln"><span class="c">// Blink + LDR sensor read — ProtoPulse demo</span></div><div class="ln"><span class="pp">#define</span> LED_PIN     <span class="n">13</span></div><div class="ln"><span class="pp">#define</span> SENSOR_PIN  A0</div><div class="ln"> </div><div class="ln"><span class="k">const</span> <span class="k">long</span> BAUD = <span class="n">9600</span>;</div><div class="ln"><span class="k">int</span> reading = <span class="n">0</span>;</div><div class="ln"> </div><div class="ln"><span class="k">void</span> <span class="fn">setup</span>() {</div><div class="ln">  <span class="fn">pinMode</span>(LED_PIN, OUTPUT);</div><div class="ln">  <span class="fn">pinMode</span>(SENSOR_PIN, INPUT);</div><div class="ln">  Serial.<span class="fn">begin</span>(BAUD);</div><div class="ln">  Serial.<span class="fn">println</span>(<span class="s">"ProtoPulse ready"</span>);</div><div class="ln">}</div><div class="ln"> </div><div class="ln"><span class="k">void</span> <span class="fn">loop</span>() {</div><div class="ln cur">  reading = <span class="fn">analogRead</span>(SENSOR_PIN);</div><div class="ln">  <span class="k">float</span> volts = reading * (<span class="n">5.0</span> / <span class="n">1023.0</span>);</div><div class="ln"> </div><div class="ln">  <span class="fn">digitalWrite</span>(LED_PIN, HIGH);</div><div class="ln">  <span class="fn">delay</span>(<span class="n">250</span>);</div><div class="ln">  <span class="fn">digitalWrite</span>(LED_PIN, LOW);</div><div class="ln">  <span class="fn">delay</span>(<span class="n">250</span>);</div><div class="ln"> </div><div class="ln">  Serial.<span class="fn">print</span>(<span class="s">"Sensor: "</span>);</div><div class="ln">  Serial.<span class="fn">print</span>(reading);</div><div class="ln">  Serial.<span class="fn">print</span>(<span class="s">"  V="</span>);</div><div class="ln">  Serial.<span class="fn">println</span>(volts);</div></div>
+      </div>
+
+      <div class="serial">
+        <div class="stabs">
+          <div class="stab"><span class="gi"></span>Output</div>
+          <div class="stab on"><span class="gi"></span>Serial Monitor</div>
+          <div class="stab"><span class="gi"></span>Libraries</div>
+          <div class="stab"><span class="gi"></span>Boards</div>
+          <div class="stab"><span class="gi"></span>Pin Constants</div>
+          <div class="stab"><span class="gi"></span>Simulate</div>
+          <div class="stools">
+            <div class="baud">9600 baud<span class="car">▾</span></div>
+            <span class="slink">Clear</span>
+            <span class="slink on">Auto-scroll</span>
+          </div>
+        </div>
+        <div class="log">
+          <div class="row"><span class="ts">21:04:11</span><span class="dim">avrdude: writing flash (7626 bytes)…</span></div>
+          <div class="row"><span class="ts">21:04:13</span><span class="ok">avrdude: 7626 bytes of flash verified · Upload complete</span></div>
+          <div class="row"><span class="ts">21:04:13</span><span class="msg">ProtoPulse ready</span></div>
+          <div class="row"><span class="ts">21:04:14</span><span class="msg">Sensor: 512  V=<span class="v">2.51</span></span></div>
+          <div class="row"><span class="ts">21:04:14</span><span class="msg">Sensor: 498  V=<span class="v">2.43</span></span></div>
+          <div class="row"><span class="ts">21:04:15</span><span class="msg">Sensor: 530  V=<span class="v">2.59</span></span></div>
+          <div class="row"><span class="ts">21:04:15</span><span class="warn">Sensor: 1003  V=4.90  · near rail</span></div>
+          <div class="row"><span class="ts">21:04:16</span><span class="msg">Sensor: 521  V=<span class="v">2.55</span></span></div>
+        </div>
+        <div class="sbar"><span>9600 baud · Newline</span><span class="send">Send ▸</span></div>
+      </div>
+    </div>
+  </div>
+</body></html>

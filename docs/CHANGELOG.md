@@ -2,6 +2,296 @@
 
 All notable changes to ProtoPulse are documented in this file.
 
+## 2026-06-24 — Co-sim in the editor auto-installs device models for placed I²C/SPI parts (BL-0901)
+
+### Added
+- **Device auto-install in the app's closed-loop co-sim runner** (`packages/app/src/cosim/runner.ts`):
+  running a co-sim from the editor now auto-installs the device model for any placed modeled
+  I²C/SPI part (MPU-6050, BME280, DS3231, RC522) — no manual wiring. The runner resolves
+  `spec.i2cDevices`/`spec.spiDevices` via the lazily-loaded cosim module's `i2cDevicesFromGraph`/
+  `spiDevicesFromGraph` when the caller omits them; an explicit list still wins (`??`
+  short-circuits, skipping graph resolution). The helpers are probed (optional) so older cosim
+  builds degrade gracefully.
+- App cosim types gained `I2cDeviceBinding`/`SpiDeviceBinding`, `ClosedLoopSpec.i2cDevices`/
+  `spiDevices`, and `CosimModule.*FromGraph` (the package's local pinned-API mirror).
+
+This is the product payoff of the device layer (BL-0892→0900): **place a sensor → run a
+co-sim → firmware reads it, zero config.**
+
+### Verified
+- On main: `npm run -w @protopulse/app test -- cosim/runner` → **19 tests pass** (+2: auto-resolve
+  from graph into the spec; explicit `i2cDevices` not overridden). App `tsc` → **EXIT=0**.
+
+## 2026-06-24 — DS3231 RTC I²C device model (BL-0900)
+
+### Added
+- **`ds3231(state)`** (`@protopulse/emu`): the Maxim/Analog Devices DS3231 RTC (addr 0x68)
+  as an I²C slave — BCD timekeeping registers (datasheet §8.1): 0x00 seconds, 0x01 minutes,
+  0x02 hours (24-hour), 0x03 day, 0x04 date, 0x05 month, 0x06 year. State is decimal,
+  BCD-encoded internally. Registered in `I2C_DEVICES_BY_PART_ID` (`core:ds3231`), exported
+  from the index. The 3rd I²C device model (an RTC), exercising BCD burst reads.
+
+### Verified
+- On main: `npm run -w @protopulse/emu test` → **8 files / 337 tests pass** (+2).
+  Targeted `tsc --noEmit` on `@protopulse/emu` (incl. index) → **EXIT=0**.
+
+## 2026-06-24 — SPI device co-sim binding + graph auto-resolve: SPI at I²C parity (BL-0899)
+
+### Added
+- **`ClosedLoopSpec.spiDevices`** (`@protopulse/cosim`): the SPI counterpart of `i2cDevices`
+  — `{ port: 2|3, slave }[]`. `runCosimClosedLoop` probes the pinned SPI surface
+  (`hasSpiSupport` → `setSpiSlave`) and installs each device before stepping. New
+  `SpiCapableCore`/`hasSpiSupport`/`SpiDeviceBinding` mirror the I²C equivalents.
+- **`spiDevicesFromGraph(graph)`** (`spi-graph.ts`): resolves placed SPI parts via the emu
+  registry (`spiDeviceForPart`) to port-2 (GPSPI2) bindings — the SPI parallel to
+  `i2cDevicesFromGraph`. Exported from the cosim index. The emu index now also exports
+  `ESP32S3_SPI2_BASE` / `ESP32S3_SPI3_BASE`.
+- Tests: firmware reads RC522 VersionReg → 0x92 through `runCosimClosedLoop` with an
+  `rc522()` device on port 2; `spiDevicesFromGraph` resolves `core:rc522`.
+
+**The SPI digital-device path is now end-to-end at full I²C parity:** emu master+slave
+hook (BL-0897) → device model + registry (BL-0898) → co-sim binding + graph auto-resolve
+(this). Both digital buses are complete.
+
+### Verified
+- On main: `npm run -w @protopulse/cosim test` → **12 files / 90 tests pass** (+3).
+  Targeted `tsc --noEmit` on `@protopulse/cosim` and `@protopulse/emu` → **EXIT=0**.
+
+## 2026-06-24 — First SPI device: MFRC522/RC522 RFID reader + SPI device registry (BL-0898)
+
+### Added
+- **`rc522(state)`** (`@protopulse/emu`, `spi-devices.ts`): the NXP MFRC522 (RC522) RFID
+  reader as an SPI slave — VersionReg (0x37) = 0x92 (v2.0, the canonical identity check),
+  decoding the MFRC522 read address byte `((reg<<1)&0x7E)|0x80` from the clocked-out MOSI
+  (datasheet §8.1.2.3). Configurable version (e.g. 0x91 for a v1.0 clone).
+- **`SPI_DEVICES_BY_PART_ID` + `spiDeviceForPart(partId)`** — maps `core:rc522` to its
+  model, the SPI parallel to the I²C `I2C_DEVICES_BY_PART_ID`. Exported from the index.
+- New `spi-devices.test.ts` (3 tests): firmware reads VersionReg via a command+MISO
+  transaction → 0x92 (and a configured 0x91); registry lookup resolves. First real SPI
+  device over the master+slave path (BL-0897).
+
+### Verified
+- On main: `npm run -w @protopulse/emu test` → **8 files / 335 tests pass** (+3).
+  Targeted `tsc --noEmit` on `@protopulse/emu` (incl. index) → **EXIT=0**.
+
+## 2026-06-24 — SPI slave-device hook: foundation for SPI device co-sim (BL-0897)
+
+### Added
+- **`Esp32s3Core.setSpiSlave(port, fn)`** (`@protopulse/emu`): the SPI counterpart of the
+  I²C slave hook (BL-0892), for GPSPI2/GPSPI3. `spiRunTransaction` now collects the
+  command/address/MOSI bytes clocked out this transaction into a `mosi[]` (still recorded
+  in the host write-log) and the MISO phase calls `fn(mosi, misoIndex)` per read byte
+  instead of filling zeros. SPI is full-duplex/command-based, so the slave sees what the
+  master clocked out and answers the read. Passing `null` removes it; **with no slave,
+  MISO reads back 0 — no regression.** New `SpiSlave` type exported.
+- New emu test: a GPSPI2 slave feeds `[0xAB, 0xCD]` into a 16-bit MISO read.
+
+Foundation for the next breadth class — **SPI devices** (RC522 RFID, MAX7219 displays,
+SPI flash, …), mirroring the I²C path (device models → registry → co-sim binding).
+
+### Verified
+- On main: `npm run -w @protopulse/emu test` → esp32s3 **240 tests pass** (+1; rp2040's
+  blink test timed out once under full-suite load — a known flake, passes 7/7 alone).
+  Targeted `tsc --noEmit` on `@protopulse/emu` (incl. index) → **EXIT=0**.
+
+## 2026-06-24 — Auto-resolve I²C devices from the design graph (BL-0896)
+
+### Added
+- **`i2cDevicesFromGraph(graph)`** (`@protopulse/cosim`): scans a `DesignGraph`'s
+  components, resolves each modeled I²C part via the `@protopulse/emu` registry
+  (`i2cDeviceForPart`), and returns `ClosedLoopSpec.i2cDevices` bindings (port 0; DNP parts
+  skipped). A caller feeds it straight to `runCosimClosedLoop` — no hand-listing sensors.
+  Port 0 is the convention: the ESP32-S3 muxes I²C over the GPIO matrix, so which
+  controller a sensor uses is firmware-decided, not graph-encoded. Exported from the index.
+- Completes the I²C-sensor-usable-from-a-design path: place a `core:mpu6050` /
+  `core:bme280` → `i2cDevicesFromGraph` → `runCosimClosedLoop` reads it back.
+
+### Verified
+- On main: `npm run -w @protopulse/cosim test` → **10 files / 87 tests pass** (+2).
+  Targeted `tsc --noEmit` on `@protopulse/cosim` → **EXIT=0**.
+
+## 2026-06-24 — BME280 I²C device + part→device registry (BL-0895)
+
+### Added
+- **`bme280(state)`** (`@protopulse/emu`): the Bosch BME280 (addr 0x76/0x77) as an I²C
+  slave — chip-ID register 0xD0 = **0x60** (the canonical identity check), reset/status
+  registers, and 20-bit press/temp + 16-bit humidity raw registers (MSB-first, settable).
+  Bosch compensation is firmware-side; the calibration-coefficient registers are not
+  modeled (the chip-ID identity check + raw reads work as-is).
+- **`I2C_DEVICES_BY_PART_ID` + `i2cDeviceForPart(partId)`** — maps `core:mpu6050` /
+  `core:bme280` to their device-model factories, the bus-device parallel to the SPICE
+  `EMITTERS_BY_PART_ID`. Lets the co-sim/app auto-resolve a placed I²C part's model.
+  Both exported from the package index.
+
+### Verified
+- On main: `npm run -w @protopulse/emu test` → **7 files / 331 tests pass** (+2).
+  Targeted `tsc --noEmit` on `@protopulse/emu` (incl. index) → **EXIT=0**.
+
+## 2026-06-24 — I²C device in the co-sim closed loop (BL-0894)
+
+### Added
+- **`ClosedLoopSpec.i2cDevices`** (`@protopulse/cosim`): the bus-device counterpart of the
+  ADC sampler — `{ port, slave }[]`. `runCosimClosedLoop` probes the pinned I²C surface
+  (`hasI2cSupport` → `setI2cSlave`) and installs each modeled device on its controller
+  before stepping, so unmodified firmware reads real I²C sensors during a co-sim run. New
+  `I2cCapableCore`/`hasI2cSupport` mirror the ADC `AdcCapableCore`/`hasAdcSupport` probes.
+- **`quantum.i2c.cosim.test.ts`**: a real `Esp32s3Core` runs I²C WHO_AM_I firmware through
+  `runCosimClosedLoop` with an `mpu6050()` device bound on port 0 → reads back **0x68**.
+  This completes the I²C digital-sensor path: emu master + slave hook (BL-0892) → device
+  model (BL-0893) → co-sim closed-loop binding (this).
+
+### Verified
+- On main: `npm run -w @protopulse/cosim test` → **9 files / 85 tests pass** (+1).
+  Targeted `tsc --noEmit` on `@protopulse/cosim` → **EXIT=0**.
+
+## 2026-06-24 — First real I²C device: GY-521/MPU-6050 6-axis IMU (BL-0893)
+
+### Added
+- **`@protopulse/emu` I²C device models** (`i2c-devices.ts`): `i2cRegisterDevice(map)`
+  builds an `I2cSlave` from a register map (absent registers read 0); `mpu6050(state)`
+  models the GY-521/MPU-6050 at address 0x68 — WHO_AM_I (0x75)=0x68, PWR_MGMT_1
+  (0x6B)=0x40 (the device's SLEEP reset default), and big-endian signed-16-bit
+  ACCEL/GYRO registers from 0x3B. Register map web-verified (InvenSense MPU register
+  map, kriswiner/MPU6050). Exported from the package index for downstream (co-sim) reuse.
+- **`i2c-devices.test.ts`** (3 tests): unmodified firmware reads WHO_AM_I → **0x68** (the
+  canonical MPU-6050 identity check) and 2-byte burst-reads ACCEL_XOUT_H/L → **0x12/0x34**
+  from an `accelX=0x1234` device — exercising the BL-0892 slave hook's register
+  auto-increment; unset axes read 0. The first real sensor over the I²C master+slave path.
+
+### Verified
+- On main: `npm run -w @protopulse/emu test` → **7 files / 329 tests pass** (+3).
+  Targeted `tsc --noEmit` on `@protopulse/emu` (incl. the package index) → **EXIT=0**.
+
+## 2026-06-23 — I²C slave-device hook: foundation for I²C digital-sensor co-sim (BL-0892)
+
+### Added
+- **`Esp32s3Core.setI2cSlave(port, fn)`** (`@protopulse/emu`): the ESP32-S3 I²C master
+  previously filled every RX-FIFO read with hardcoded zeros — a connected device could
+  not answer. The new hook lets a modeled slave respond: during a master transaction the
+  emulator recovers the 7-bit device address + register pointer from the bytes written
+  this transaction (the standard `write [addr+W, reg]` → restart → `write [addr+R]` →
+  `read` shape) and calls `fn(address, register)` for each read byte (the register
+  auto-increments across a burst read). Passing `null` removes it; **with no slave,
+  reads still return 0 — no regression** to the existing master-read behavior.
+- New emu test: a BME280-style slave at address `0x76` answers its chip-ID register
+  `0xD0` with `0x60`, and firmware reads it back over a real I²C master transaction.
+
+This is the **foundation for the next breadth class — I²C digital sensors** (BME280,
+GY-521/MPU-6050, …), which (unlike the analog→ADC slices) exchange register bytes over
+the bus rather than sourcing a voltage. A device-model registry + a cosim bus-device
+binding build on this hook in follow-ups.
+
+### Verified
+- On main: `npm run -w @protopulse/emu test` → **6 files / 326 tests pass** (239 ESP32-S3,
+  incl. the new I²C slave test; the existing no-slave READ test still returns zeros).
+  Targeted `tsc --noEmit` on `@protopulse/emu` → **EXIT=0**.
+
+## 2026-06-23 — Breadth slice 3: FC-28 soil moisture → ADC co-sim (BL-0891)
+
+### Added
+- **`core:soil-moisture` SPICE emitter** (`@protopulse/sim`, `models.ts`): the FC-28
+  resistive soil-moisture module. Its analog output AO (pin 4) is modeled as a
+  **supply-dependent behavioral source** (a SPICE B-source, unlike the fixed DC sources
+  of slices 1–2): `AO = V_supply · (1 − moisture)`, referenced to GND. Web-verified
+  direction — dry soil → high AO (≈VCC), wet soil → low AO (≈0). The moisture fraction
+  (0=dry … 1=wet, default 0.5) rides on the placed part's `value`; a simplified linear
+  stand-in for the real non-linear, board-dependent curve (the digital DO is not modeled).
+- **`packages/cosim/src/quantum.soil.cosim.test.ts`** — breadth slice 3, built TDD. Real
+  closed loop: VCC(3.3 V) → soil VCC, AO → MID (ADC ch0); real `Esp32s3Core` runs
+  `esp32s3-adc0-read.bin` through `runCosimClosedLoop`. Asserts MID solves **2.475 V @
+  moisture 0.25** and **0.825 V @ moisture 0.75**, settled ADC reads track ±0.005 V, UART
+  code = round(V/3.3 × 4095), and wetter soil reads lower (`wet < dry`) — moisture drives
+  the reading. First slice to exercise a supply-dependent B-source through the closed loop.
+
+### Verified
+- On main: `npm run -w @protopulse/cosim test` → **8 files / 84 tests pass** (was 79; +5).
+  Targeted `tsc --noEmit` on `@protopulse/sim` and `@protopulse/cosim` → **EXIT=0**.
+
+## 2026-06-23 — Breadth slice 2: potentiometer → ADC co-sim (BL-0890)
+
+### Added
+- **`core:pot-10k` SPICE emitter** (`@protopulse/sim`, `models.ts`): the 10 kΩ rotary
+  potentiometer, a 3-terminal voltage divider — two resistors summing to 10 kΩ
+  (A–WIPER = 10k·pos, WIPER–B = 10k·(1−pos)), where the wiper fraction `pos` (A→B,
+  default 0.5) rides on the placed part's `value` (1 Ω floor avoids a 0 Ω element at the
+  travel limits). Generalizes the slice-1 analog-ADC pattern from a 2-pin source to a
+  3-terminal device.
+- **`packages/cosim/src/quantum.pot.cosim.test.ts`** — breadth slice 2, built TDD. Real
+  closed loop: VCC(3.3 V) → pot A, WIPER → MID (ADC ch0), B → GND, so `V_wiper = 3.3·(1−pos)`.
+  A real `Esp32s3Core` runs `esp32s3-adc0-read.bin` through `runCosimClosedLoop`; asserts
+  MID solves **2.31 V @ pos 0.3** and **0.99 V @ pos 0.7**, settled ADC reads track ±0.005 V,
+  UART code = round(V/3.3 × 4095). The pos=0.7 case proves a *variable* input — different
+  wiper positions solve to different node voltages, which the firmware reads back.
+
+### Verified
+- On main: `npm run -w @protopulse/cosim test` → **7 files / 79 tests pass** (was 74; +5).
+  Targeted `tsc --noEmit` on `@protopulse/sim` and `@protopulse/cosim` → **EXIT=0** (the
+  project-wide `check:packages` OOM-terminates — the known trap; verified per-package).
+
+## 2026-06-23 — Breadth slice 1: TMP36 analog sensor → ADC co-sim (BL-0889)
+
+### Added
+- **`core:tmp36` SPICE emitter** (`@protopulse/sim`, `models.ts`): the Analog Devices
+  TMP35/36/37 analog temperature sensor, modeled as an ideal DC source on VOUT (pin 2)
+  referenced to GND (pin 3) — `Vout = 10 mV/°C · T + 500 mV`. The operating temperature
+  rides on the placed part's `value` (a bare °C number, default 25 °C); there is no
+  per-instance parametrics map in the emitter path, so `value` is the settable channel.
+- **`packages/cosim/src/quantum.tmp36.cosim.test.ts`** — the first post-gate **breadth**
+  slice, built TDD (red → green). Real closed loop, no mocks: VCC(3.3 V) → TMP36 → MID
+  (bound to ADC ch0); a real `Esp32s3Core` runs `esp32s3-adc0-read.bin` through the real
+  `runCosimClosedLoop`. Asserts MID solves **0.75 V @ 25 °C** and **1.00 V @ 50 °C**, the
+  firmware's settled ADC reads track the node to ±0.005 V, and the UART-reported 12-bit
+  code = round(Vout/3.3 × 4095). The 50 °C case proves a *transfer function*, not a
+  constant (a hardcoded 0.75 V would fail it).
+
+### Verified
+- On main: `npm run -w @protopulse/cosim test` → **6 files / 74 tests pass** (was 69; +5).
+  Targeted `tsc --noEmit` on `@protopulse/sim` and `@protopulse/cosim` → **EXIT=0** (the
+  project-wide `check:packages` OOM-terminates — the known trap; verified per-package).
+
+## 2026-06-23 — ESP32-S3 completion gate CERTIFIED (criterion (3) co-sim closed loop)
+
+### Added
+- **ESP32-S3 ADC0 reader firmware sample** (`packages/emu/samples/esp32s3-adc0-read.bin`
+  + self-verifying `gen-adc0-read.mts`): reads SAR ADC1 channel 0 in a loop and TX's
+  each 12-bit result over UART0. The missing artifact for the co-sim closed loop.
+
+### Verified
+- **ESP32-S3 base completion gate, criterion (3) — co-sim closed loop** (ROADMAP §v0.5):
+  new integration test `packages/cosim/src/quantum.esp32s3.cosim.test.ts` proves the loop
+  end-to-end with REAL components (no mocks). A real resistor divider (`core:pwr-vcc`
+  3.3 V → R1 10k → net **MID** → R2 10k → `core:pwr-gnd`) SPICE-solves MID to 1.65 V; a
+  real `Esp32s3Core` loaded with `esp32s3-adc0-read.bin` reads ADC channel 0 through the
+  real `runCosimClosedLoop` quantum engine (`packages/cosim/src/quantum.ts`), which feeds
+  back the bound net's solved voltage. Assertions: `adcReads` non-empty, all channel 0;
+  settled reads (quantum 1+) track MID to **±0.02 V**; the firmware's UART output decodes
+  to **code 2048 = round(1.65/3.3×4095)** — the value reached the firmware, not just the
+  sampler log. TDD red-check confirmed it fails for the right reason at a wrong expected V.
+- `npm run -w @protopulse/cosim test`: **5 files / 69 tests pass**; `npm run check:packages`
+  (tsc -p packages): **0 errors**.
+- **All four gate criteria now met** — (1) emu tests (238 ESP32-S3), (2) app smoke,
+  (3) co-sim closed loop, (4) co-sim pin labels. The ESP32-S3 foundation is certified;
+  next is board/sensor/module breadth.
+
+## 2026-06-23 — ESP32-S3 completion gate: criterion (2) E2E app smoke certified
+
+### Verified
+- **ESP32-S3 base completion gate, criterion (2) — E2E app smoke** (ROADMAP
+  §v0.5): drove the new-engine editor (`@protopulse/app`, port 5174) end to end —
+  opened the Firmware panel, set the core picker to **ESP32-S3 (Xtensa LX7, 240 MHz)**,
+  loaded `packages/emu/samples/esp32s3-blink-io5.bin` (48-byte raw image, "Firmware
+  loaded — ESP32-S3 @ 240MHz"), and ran it. **IO5 toggled** in the logic-analyzer pin
+  traces (68,000,000 cycles / t = 283 ms @ 240 MHz; 9,079 painted pixels on the waveform
+  canvas — not blank). The blink is cycle-exact, zero-jitter per the `blinks IO5 with
+  cycle-exact spacing` unit test, so the dense toggle reads as the solid band the sample
+  README predicts. Driven headless via Playwright against the live dev server.
+- **No code change** — this is a certification of existing, shipped integration
+  (FirmwarePanel + the slice-161 blink sample). Gate status now: (1) ✅ tests (238
+  ESP32-S3), (2) ✅ app smoke, (4) ✅ co-sim pin labels; **only (3) co-sim closed loop
+  remains** before the ESP32-S3 foundation is certified and board/sensor breadth begins.
+- `npm run -w @protopulse/emu test` re-run fresh: **325 package tests pass (238
+  ESP32-S3)**.
+
 ## 2026-06-20 — ESP32-S3 slice 163: AES-CFB8 (completes the AES_BLOCK_MODE matrix)
 
 ### Added

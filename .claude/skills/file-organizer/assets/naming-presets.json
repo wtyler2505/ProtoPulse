@@ -1,0 +1,29 @@
+{
+  "rules": [
+    {
+      "name": "Remove copy suffixes",
+      "pattern": "(?i)[\\s_-]+copy(?:\\s+\\d+)?(?:\\.(?!.*\\.))",
+      "replacement": "."
+    },
+    {
+      "name": "Remove version suffixes",
+      "pattern": "(?i)[\\s_-]+v\\d+(?:\\.(?!.*\\.))",
+      "replacement": "."
+    },
+    {
+      "name": "Remove browser duplicate artifacts",
+      "pattern": "\\s*\\(\\d+\\)(?:\\.(?!.*\\.))",
+      "replacement": "."
+    },
+    {
+      "name": "Convert spaces to hyphens",
+      "pattern": "\\s+",
+      "replacement": "-"
+    },
+    {
+      "name": "Remove word 'final'",
+      "pattern": "(?i)[\\s_-]*final[\\s_-]*",
+      "replacement": "-"
+    }
+  ]
+}

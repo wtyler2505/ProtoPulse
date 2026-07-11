@@ -1,0 +1,49 @@
+{
+  "logic_levels": {
+    "esp32": {
+      "v_logic": 3.3,
+      "v_max_io": 3.6,
+      "notes": "NOT 5V tolerant. Requires level shifters for 5V sensors."
+    },
+    "nodemcu": {
+      "v_logic": 3.3,
+      "v_max_io": 3.6,
+      "notes": "ESP8266 based. Not 5V tolerant."
+    },
+    "arduino_mega": {
+      "v_logic": 5.0,
+      "v_max_io": 5.5,
+      "v_input_range": [7.0, 12.0]
+    },
+    "arduino_nano": {
+      "v_logic": 5.0,
+      "v_max_io": 5.5,
+      "v_input_range": [7.0, 12.0]
+    },
+    "raspberry_pi_3": {
+      "v_logic": 3.3,
+      "v_max_io": 3.3,
+      "notes": "Strict 3.3V. 5V on GPIO will kill the SoC."
+    }
+  },
+  "power_modules": {
+    "l298n": {
+      "v_logic": 5.0,
+      "v_motor_max": 46.0,
+      "i_peak_per_channel": 2.0,
+      "notes": "Has internal 5V regulator if jumpered."
+    },
+    "srd-05vdc-sl-c": {
+      "v_coil": 5.0,
+      "i_switch_max": 10.0,
+      "v_switch_ac_max": 250.0
+    }
+  },
+  "actuators": {
+    "delta_bcb1012uh": {
+      "v_nominal": 12.0,
+      "v_range": [7.0, 13.2],
+      "i_max": 2.0
+    }
+  }
+}

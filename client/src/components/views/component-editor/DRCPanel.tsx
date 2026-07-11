@@ -1,7 +1,21 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, XCircle, PlayCircle, Eye, EyeOff, Shield, ChevronDown, ChevronRight, Download } from 'lucide-react';
-import type { DRCViolation, DRCRule } from '@shared/component-types';
+
+import {
+  AlertTriangle,
+  XCircle,
+  PlayCircle,
+  Eye,
+  EyeOff,
+  Shield,
+  ChevronDown,
+  ChevronRight,
+  Download,
+} from 'lucide-react';
+
+import { NumberInput } from '@/components/ui/number-input';
 import { VaultExplainer } from '@/components/ui/vault-explainer';
+
+import type { DRCViolation, DRCRule } from '@shared/component-types';
 
 interface DRCPanelProps {
   violations: DRCViolation[];
@@ -14,20 +28,26 @@ interface DRCPanelProps {
 }
 
 function formatRuleType(type: string): string {
-  return type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  return type
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
 function formatParamKey(key: string): string {
-  return key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (s) => s.toUpperCase())
+    .trim();
 }
 
 function downloadJSON(violations: DRCViolation[], filename: string) {
   const report = {
     generatedAt: new Date().toISOString(),
     totalViolations: violations.length,
-    errors: violations.filter(v => v.severity === 'error').length,
-    warnings: violations.filter(v => v.severity === 'warning').length,
-    violations: violations.map(v => ({
+    errors: violations.filter((v) => v.severity === 'error').length,
+    warnings: violations.filter((v) => v.severity === 'warning').length,
+    violations: violations.map((v) => ({
       id: v.id,
       ruleType: v.ruleType,
       severity: v.severity,
@@ -49,9 +69,12 @@ function downloadJSON(violations: DRCViolation[], filename: string) {
 
 function downloadCSV(violations: DRCViolation[], filename: string) {
   const header = 'Rule Type,Severity,Message,View,Location X,Location Y,Actual,Required\n';
-  const rows = violations.map(v =>
-    `"${v.ruleType}","${v.severity}","${v.message.replace(/"/g, '""')}","${v.view}",${v.location.x.toFixed(1)},${v.location.y.toFixed(1)},${v.actual ?? ''},${v.required ?? ''}`
-  ).join('\n');
+  const rows = violations
+    .map(
+      (v) =>
+        `"${v.ruleType}","${v.severity}","${v.message.replace(/"/g, '""')}","${v.view}",${v.location.x.toFixed(1)},${v.location.y.toFixed(1)},${v.actual ?? ''},${v.required ?? ''}`,
+    )
+    .join('\n');
   const blob = new Blob([header + rows], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -61,28 +84,35 @@ function downloadCSV(violations: DRCViolation[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleOverlays, onHighlight, rules, onUpdateRule }: DRCPanelProps) {
+export default function DRCPanel({
+  violations,
+  onRunDRC,
+  showOverlays,
+  onToggleOverlays,
+  onHighlight,
+  rules,
+  onUpdateRule,
+}: DRCPanelProps) {
   const [rulesExpanded, setRulesExpanded] = useState(false);
   const grouped = useMemo(() => {
-    const errors = violations.filter(v => v.severity === 'error');
-    const warnings = violations.filter(v => v.severity === 'warning');
+    const errors = violations.filter((v) => v.severity === 'error');
+    const warnings = violations.filter((v) => v.severity === 'warning');
     return { errors, warnings };
   }, [violations]);
 
   const summary = useMemo(() => {
     const parts: string[] = [];
-    if (grouped.errors.length > 0) parts.push(`${grouped.errors.length} error${grouped.errors.length !== 1 ? 's' : ''}`);
-    if (grouped.warnings.length > 0) parts.push(`${grouped.warnings.length} warning${grouped.warnings.length !== 1 ? 's' : ''}`);
+    if (grouped.errors.length > 0)
+      parts.push(`${grouped.errors.length} error${grouped.errors.length !== 1 ? 's' : ''}`);
+    if (grouped.warnings.length > 0)
+      parts.push(`${grouped.warnings.length} warning${grouped.warnings.length !== 1 ? 's' : ''}`);
     return parts.join(', ');
   }, [grouped]);
 
   const sortedViolations = useMemo(() => [...grouped.errors, ...grouped.warnings], [grouped]);
 
   return (
-    <div
-      className="w-60 border-l border-border bg-background flex flex-col"
-      data-testid="drc-panel"
-    >
+    <div className="w-60 border-l border-border bg-background flex flex-col" data-testid="drc-panel">
       <div className="px-3 py-2 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Shield className="w-3.5 h-3.5 text-muted-foreground" />
@@ -131,12 +161,12 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
 
       <div className="px-3 py-2 border-b border-border">
         <button
-          onClick={() => setRulesExpanded(v => !v)}
+          onClick={() => setRulesExpanded((v) => !v)}
           className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full"
           data-testid="button-toggle-drc-rules"
         >
           {rulesExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-          Rules ({rules.filter(r => r.enabled).length}/{rules.length})
+          Rules ({rules.filter((r) => r.enabled).length}/{rules.length})
         </button>
         {rulesExpanded && (
           <div className="mt-2 flex flex-col gap-2">
@@ -153,7 +183,9 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
                   <span className={rule.enabled ? 'text-foreground' : 'text-muted-foreground line-through'}>
                     {formatRuleType(rule.type)}
                   </span>
-                  <span className={`ml-auto text-[9px] px-1 rounded ${rule.severity === 'error' ? 'bg-red-400/10 text-red-400' : 'bg-amber-400/10 text-amber-400'}`}>
+                  <span
+                    className={`ml-auto text-[9px] px-1 rounded ${rule.severity === 'error' ? 'bg-red-400/10 text-red-400' : 'bg-amber-400/10 text-amber-400'}`}
+                  >
                     {rule.severity}
                   </span>
                 </label>
@@ -162,8 +194,7 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
                     {Object.entries(rule.params).map(([key, value]) => (
                       <label key={key} className="flex items-center gap-1 text-[9px] text-muted-foreground">
                         <span>{formatParamKey(key)}</span>
-                        <input
-                          type="number"
+                        <NumberInput
                           value={value}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value) || 0;
@@ -183,27 +214,18 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
       </div>
 
       {summary && (
-        <div
-          className="px-3 py-1.5 border-b border-border"
-          data-testid="drc-summary"
-        >
+        <div className="px-3 py-1.5 border-b border-border" data-testid="drc-summary">
           <span className="text-[10px] text-muted-foreground">{summary}</span>
         </div>
       )}
 
       <div className="flex-1 overflow-y-auto">
         {sortedViolations.length === 0 ? (
-          <div className="p-4 text-center text-xs text-muted-foreground">
-            No DRC violations found
-          </div>
+          <div className="p-4 text-center text-xs text-muted-foreground">No DRC violations found</div>
         ) : (
           <div className="py-1">
-            {sortedViolations.map(v => (
-              <div
-                key={v.id}
-                data-testid={`drc-violation-${v.id}`}
-                className="px-3 py-1.5 flex flex-col gap-1.5"
-              >
+            {sortedViolations.map((v) => (
+              <div key={v.id} data-testid={`drc-violation-${v.id}`} className="px-3 py-1.5 flex flex-col gap-1.5">
                 <button
                   type="button"
                   onClick={() => onHighlight(v.shapeIds)}
@@ -218,10 +240,7 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
                   <span className="text-[11px] text-foreground/80 leading-tight">{v.message}</span>
                 </button>
                 {/* TODO(plan-11-validation-simulation): swap `topic={v.ruleType}` for `slug={v.vaultSlug}` once DRCViolation type ships a vaultSlug field (DRC rule registry). Until then the primitive's toSlug() slugifies ruleType — close enough for graceful 404 fallback. */}
-                <VaultExplainer
-                  topic={v.ruleType}
-                  className="ml-5"
-                >
+                <VaultExplainer topic={v.ruleType} className="ml-5">
                   Why is this wrong?
                 </VaultExplainer>
               </div>

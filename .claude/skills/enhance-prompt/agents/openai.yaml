@@ -1,0 +1,6 @@
+interface:
+  display_name: "Enhance Prompt"
+  short_description: "Make rough asks executable"
+  default_prompt: >-
+    Use $enhance-prompt to turn a vague request into a clear agent prompt with
+    context, constraints, outputs, and validation.

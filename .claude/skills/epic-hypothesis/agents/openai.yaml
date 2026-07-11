@@ -1,0 +1,6 @@
+interface:
+  display_name: "Epic Hypothesis"
+  short_description: "Turn big work into a testable bet"
+  default_prompt: >-
+    Use $epic-hypothesis to frame an initiative as an if/then bet with
+    experiments, success signals, and kill-or-pivot criteria.

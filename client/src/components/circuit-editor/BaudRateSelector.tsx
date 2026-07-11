@@ -6,25 +6,16 @@
  */
 
 import { useState, useCallback, useSyncExternalStore } from 'react';
+
+import { AlertTriangle, Loader2, Search, Zap } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/number-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
 import { getBaudRateManager, STANDARD_BAUD_RATES } from '@/lib/serial/baud-rate-manager';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  AlertTriangle,
-  Loader2,
-  Search,
-  Zap,
-} from 'lucide-react';
-import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -43,17 +34,10 @@ export interface BaudRateSelectorProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function BaudRateSelector({
-  onRateChange,
-  sampleBytes,
-  className,
-}: BaudRateSelectorProps) {
+export default function BaudRateSelector({ onRateChange, sampleBytes, className }: BaudRateSelectorProps) {
   const manager = getBaudRateManager();
 
-  const state = useSyncExternalStore(
-    manager.subscribe,
-    manager.getSnapshot,
-  );
+  const state = useSyncExternalStore(manager.subscribe, manager.getSnapshot);
 
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customValue, setCustomValue] = useState('');
@@ -135,38 +119,21 @@ export default function BaudRateSelector({
   const quickRates = manager.getCommonRates().slice(0, 3);
 
   // Confidence label
-  const confidenceLabel = state.confidence >= 0.7
-    ? 'High'
-    : state.confidence >= 0.4
-      ? 'Medium'
-      : 'Low';
+  const confidenceLabel = state.confidence >= 0.7 ? 'High' : state.confidence >= 0.4 ? 'Medium' : 'Low';
 
-  const confidenceVariant = state.confidence >= 0.7
-    ? 'default'
-    : state.confidence >= 0.4
-      ? 'secondary'
-      : 'destructive';
+  const confidenceVariant = state.confidence >= 0.7 ? 'default' : state.confidence >= 0.4 ? 'secondary' : 'destructive';
 
   // -----------------------------------------------------------------------
   // Render
   // -----------------------------------------------------------------------
 
   return (
-    <div
-      data-testid="baud-rate-selector"
-      className={cn('flex flex-col gap-2', className)}
-    >
+    <div data-testid="baud-rate-selector" className={cn('flex flex-col gap-2', className)}>
       {/* Main row: select + quick-picks + auto-detect */}
       <div className="flex flex-wrap items-center gap-2">
         {/* Baud rate dropdown */}
-        <Select
-          value={String(state.selectedRate)}
-          onValueChange={handleRateSelect}
-        >
-          <SelectTrigger
-            data-testid="baud-rate-select"
-            className="h-7 w-[120px] text-xs"
-          >
+        <Select value={String(state.selectedRate)} onValueChange={handleRateSelect}>
+          <SelectTrigger data-testid="baud-rate-select" className="h-7 w-[120px] text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -175,9 +142,7 @@ export default function BaudRateSelector({
                 {rate.toLocaleString()} baud
               </SelectItem>
             ))}
-            <SelectItem value="__custom__">
-              Custom...
-            </SelectItem>
+            <SelectItem value="__custom__">Custom...</SelectItem>
           </SelectContent>
         </Select>
 
@@ -197,7 +162,8 @@ export default function BaudRateSelector({
             size="sm"
             className={cn(
               'h-6 text-[10px] px-2',
-              state.selectedRate === rate && 'bg-[var(--color-editor-accent)]/15 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/30',
+              state.selectedRate === rate &&
+                'bg-[var(--color-editor-accent)]/15 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/30',
             )}
             onClick={() => handleQuickPick(rate)}
           >
@@ -214,11 +180,7 @@ export default function BaudRateSelector({
           onClick={handleAutoDetect}
           disabled={state.isAutoDetecting || !sampleBytes || sampleBytes.length === 0}
         >
-          {state.isAutoDetecting ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : (
-            <Search className="w-3 h-3" />
-          )}
+          {state.isAutoDetecting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
           Auto-detect
         </Button>
 
@@ -226,14 +188,8 @@ export default function BaudRateSelector({
         {state.detectedRate !== null && state.confidence > 0 && (
           <div className="flex items-center gap-1">
             <Zap className="w-3 h-3 text-[var(--color-editor-accent)]" />
-            <span className="text-[10px] text-muted-foreground">
-              {manager.formatRate(state.detectedRate)}
-            </span>
-            <Badge
-              data-testid="baud-rate-confidence"
-              variant={confidenceVariant}
-              className="h-4 text-[9px] px-1.5"
-            >
+            <span className="text-[10px] text-muted-foreground">{manager.formatRate(state.detectedRate)}</span>
+            <Badge data-testid="baud-rate-confidence" variant={confidenceVariant} className="h-4 text-[9px] px-1.5">
               {confidenceLabel}
             </Badge>
           </div>
@@ -243,9 +199,8 @@ export default function BaudRateSelector({
       {/* Custom rate input */}
       {showCustomInput && (
         <div className="flex items-center gap-2">
-          <Input
+          <NumberInput
             data-testid="baud-rate-custom-input"
-            type="number"
             min={1}
             step={1}
             placeholder="Custom baud rate..."
@@ -302,9 +257,7 @@ export default function BaudRateSelector({
           className="flex items-center gap-2 text-xs bg-yellow-500/10 border border-yellow-500/20 rounded px-2 py-1.5"
         >
           <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
-          <span className="text-yellow-200">
-            Data looks garbled — wrong baud rate?
-          </span>
+          <span className="text-yellow-200">Data looks garbled — wrong baud rate?</span>
           <button
             data-testid="baud-rate-try-auto-detect"
             type="button"
