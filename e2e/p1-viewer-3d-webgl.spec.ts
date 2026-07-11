@@ -14,15 +14,10 @@
  *   2. Live gate: navigates to the WebGL viewer and asserts non-blank render.
  */
 
-import { readFileSync } from 'node:fs';
-
 import { expect, test } from '@playwright/test';
 
-import {
-  DEFAULT_VARIANCE_THRESHOLD,
-  measureNonBlankCanvas,
-  pixelVariance,
-} from './canvas-variance';
+import { DEFAULT_VARIANCE_THRESHOLD, measureNonBlankCanvas, pixelVariance } from './canvas-variance';
+import { sessionIdFromStorageState } from './test-project';
 
 // ---------------------------------------------------------------------------
 // 1. Pure-helper discrimination — the deterministic core of the gate.
@@ -61,20 +56,6 @@ test.describe('non-blank-canvas helper @unit', () => {
 // ---------------------------------------------------------------------------
 // 2. Live WebGL render gate.
 // ---------------------------------------------------------------------------
-
-/** Read the persisted e2e session id out of the saved auth storage state. */
-function sessionIdFromStorageState(): string {
-  const state = JSON.parse(readFileSync('e2e/.auth-state.json', 'utf8')) as {
-    origins?: { localStorage?: { name: string; value: string }[] }[];
-  };
-  for (const origin of state.origins ?? []) {
-    const entry = origin.localStorage?.find((e) => /session/i.test(e.name));
-    if (entry?.value) {
-      return entry.value;
-    }
-  }
-  throw new Error('No session id found in e2e/.auth-state.json');
-}
 
 test.describe('WebGL board viewer renders a non-blank canvas', () => {
   test.use({ storageState: 'e2e/.auth-state.json' });

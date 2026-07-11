@@ -2,6 +2,7 @@
 # Archive a single Studio artifact, or sweep all if no args.
 # Idempotent via docs/nlm-archive/manifest.json.
 set -e
+export PATH="/home/wtyler/.local/bin:$PATH"
 ROOT="/home/wtyler/Projects/ProtoPulse"
 ARCHIVE="$ROOT/docs/nlm-archive"
 MANIFEST="$ARCHIVE/manifest.json"

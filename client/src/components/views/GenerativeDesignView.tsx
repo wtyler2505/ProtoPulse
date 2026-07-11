@@ -9,20 +9,22 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import { useGenerativeDesign } from '@/lib/generative-design/generative-engine';
+
+import { AdoptCandidateDialog } from '@/components/dialogs/AdoptCandidateDialog';
+import { NumberInput } from '@/components/ui/number-input';
+import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
+import { toast } from '@/hooks/use-toast';
+import type { CircuitIR } from '@/lib/circuit-dsl/circuit-ir';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { defaultCriteria } from '@/lib/generative-design/fitness-scorer';
 import {
   architectureToCurrentIR,
   compareCandidateWithCurrent,
   exportCandidate,
 } from '@/lib/generative-design/generative-adopt';
-import { AdoptCandidateDialog } from '@/components/dialogs/AdoptCandidateDialog';
-import { useArchitecture } from '@/lib/contexts/architecture-context';
-import { toast } from '@/hooks/use-toast';
-import type { DesignSpec, CandidateEntry } from '@/lib/generative-design/generative-engine';
 import type { ComparisonResult, AdoptResult } from '@/lib/generative-design/generative-adopt';
-import type { CircuitIR } from '@/lib/circuit-dsl/circuit-ir';
-import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
+import { useGenerativeDesign } from '@/lib/generative-design/generative-engine';
+import type { DesignSpec, CandidateEntry } from '@/lib/generative-design/generative-engine';
 
 // ---------------------------------------------------------------------------
 // Default base circuit for seeding the generation
@@ -31,9 +33,7 @@ import { VaultInfoIcon } from '@/components/ui/vault-info-icon';
 function defaultBaseCircuit(): CircuitIR {
   return {
     meta: { name: 'Seed', version: '1.0.0' },
-    components: [
-      { id: 'r1', refdes: 'R1', partId: 'resistor', value: '10k', pins: { pin1: 'VCC', pin2: 'OUT' } },
-    ],
+    components: [{ id: 'r1', refdes: 'R1', partId: 'resistor', value: '10k', pins: { pin1: 'VCC', pin2: 'OUT' } }],
     nets: [
       { id: 'n1', name: 'VCC', type: 'power' },
       { id: 'n2', name: 'GND', type: 'ground' },
@@ -90,11 +90,14 @@ export default function GenerativeDesignView() {
     void run(spec, [defaultBaseCircuit()]);
   }, [description, budgetUsd, maxWatts, maxTempC, populationSize, generations, run]);
 
-  const handleCompare = useCallback((candidate: CandidateEntry) => {
-    const result = compareCandidateWithCurrent(candidate, currentArchitectureIR);
-    setComparisonResult(result);
-    setShowComparison((prev) => (prev === candidate.id ? null : candidate.id));
-  }, [currentArchitectureIR]);
+  const handleCompare = useCallback(
+    (candidate: CandidateEntry) => {
+      const result = compareCandidateWithCurrent(candidate, currentArchitectureIR);
+      setComparisonResult(result);
+      setShowComparison((prev) => (prev === candidate.id ? null : candidate.id));
+    },
+    [currentArchitectureIR],
+  );
 
   const handleAdoptClick = useCallback((candidate: CandidateEntry) => {
     setSelectedCandidate(candidate);
@@ -125,27 +128,35 @@ export default function GenerativeDesignView() {
             rows={3}
             placeholder="e.g., LED driver for 12V, 350mA"
             value={description}
-            onChange={(e) => { setDescription(e.target.value); }}
+            onChange={(e) => {
+              setDescription(e.target.value);
+            }}
           />
         </div>
 
         {/* Constraint sliders */}
         <div className="flex flex-col gap-3">
           <div data-testid="constraint-budget" className="flex flex-col gap-1">
-            <label htmlFor="constraint-budget-input" className="text-xs text-zinc-400">Budget: ${budgetUsd}</label>
+            <label htmlFor="constraint-budget-input" className="text-xs text-zinc-400">
+              Budget: ${budgetUsd}
+            </label>
             <input
               id="constraint-budget-input"
               type="range"
               min={1}
               max={200}
               value={budgetUsd}
-              onChange={(e) => { setBudgetUsd(Number(e.target.value)); }}
+              onChange={(e) => {
+                setBudgetUsd(Number(e.target.value));
+              }}
               className="accent-cyan-400"
             />
           </div>
 
           <div data-testid="constraint-power" className="flex flex-col gap-1">
-            <label htmlFor="constraint-power-input" className="text-xs text-zinc-400">Max Power: {maxWatts}W</label>
+            <label htmlFor="constraint-power-input" className="text-xs text-zinc-400">
+              Max Power: {maxWatts}W
+            </label>
             <input
               id="constraint-power-input"
               type="range"
@@ -153,20 +164,26 @@ export default function GenerativeDesignView() {
               max={50}
               step={0.1}
               value={maxWatts}
-              onChange={(e) => { setMaxWatts(Number(e.target.value)); }}
+              onChange={(e) => {
+                setMaxWatts(Number(e.target.value));
+              }}
               className="accent-cyan-400"
             />
           </div>
 
           <div data-testid="constraint-temperature" className="flex flex-col gap-1">
-            <label htmlFor="constraint-temperature-input" className="text-xs text-zinc-400">Max Temp: {maxTempC}C</label>
+            <label htmlFor="constraint-temperature-input" className="text-xs text-zinc-400">
+              Max Temp: {maxTempC}C
+            </label>
             <input
               id="constraint-temperature-input"
               type="range"
               min={25}
               max={150}
               value={maxTempC}
-              onChange={(e) => { setMaxTempC(Number(e.target.value)); }}
+              onChange={(e) => {
+                setMaxTempC(Number(e.target.value));
+              }}
               className="accent-cyan-400"
             />
           </div>
@@ -183,14 +200,15 @@ export default function GenerativeDesignView() {
                 ariaLabel="About genetic algorithm population parameter"
               />
             </label>
-            <input
+            <NumberInput
               id="population-size-input"
               data-testid="population-size-input"
-              type="number"
               min={2}
               max={20}
               value={populationSize}
-              onChange={(e) => { setPopulationSize(Number(e.target.value)); }}
+              onChange={(e) => {
+                setPopulationSize(Number(e.target.value));
+              }}
               className="rounded border border-zinc-700 bg-zinc-900 p-1.5 text-sm text-zinc-100"
             />
           </div>
@@ -203,14 +221,15 @@ export default function GenerativeDesignView() {
                 ariaLabel="About genetic algorithm generations parameter"
               />
             </label>
-            <input
+            <NumberInput
               id="generations-input"
               data-testid="generations-input"
-              type="number"
               min={1}
               max={50}
               value={generations}
-              onChange={(e) => { setGenerations(Number(e.target.value)); }}
+              onChange={(e) => {
+                setGenerations(Number(e.target.value));
+              }}
               className="rounded border border-zinc-700 bg-zinc-900 p-1.5 text-sm text-zinc-100"
             />
           </div>
@@ -250,7 +269,11 @@ export default function GenerativeDesignView() {
           <div data-testid="generation-progress" className="text-xs text-zinc-400">
             Generation {results.length} / {generations}
             {latestResult && (
-              <> — Best: {(latestResult.bestFitness * 100).toFixed(1)}% | Avg: {(latestResult.averageFitness * 100).toFixed(1)}%</>
+              <>
+                {' '}
+                — Best: {(latestResult.bestFitness * 100).toFixed(1)}% | Avg:{' '}
+                {(latestResult.averageFitness * 100).toFixed(1)}%
+              </>
             )}
           </div>
         )}
@@ -275,15 +298,10 @@ export default function GenerativeDesignView() {
               >
                 {/* Fitness score */}
                 <div className="flex items-center justify-between mb-2">
-                  <span
-                    data-testid={`fitness-score-${candidate.id}`}
-                    className="text-lg font-bold text-cyan-400"
-                  >
+                  <span data-testid={`fitness-score-${candidate.id}`} className="text-lg font-bold text-cyan-400">
                     {(candidate.fitness.overall * 100).toFixed(1)}%
                   </span>
-                  <span className="text-xs text-zinc-400">
-                    #{candidate.fitness.rank ?? '-'}
-                  </span>
+                  <span className="text-xs text-zinc-400">#{candidate.fitness.rank ?? '-'}</span>
                 </div>
 
                 {/* Fitness bar */}
@@ -295,10 +313,7 @@ export default function GenerativeDesignView() {
                 </div>
 
                 {/* Component count */}
-                <div
-                  data-testid={`component-count-${candidate.id}`}
-                  className="text-xs text-zinc-400"
-                >
+                <div data-testid={`component-count-${candidate.id}`} className="text-xs text-zinc-400">
                   {candidate.ir.components.length} component{candidate.ir.components.length !== 1 ? 's' : ''}
                 </div>
 
@@ -309,14 +324,9 @@ export default function GenerativeDesignView() {
                       <div key={key} className="flex items-center gap-2 text-xs">
                         <span className="text-zinc-400 w-24 truncate">{key}</span>
                         <div className="flex-1 h-1 rounded bg-zinc-800">
-                          <div
-                            className="h-full rounded bg-zinc-500"
-                            style={{ width: `${entry.score * 100}%` }}
-                          />
+                          <div className="h-full rounded bg-zinc-500" style={{ width: `${entry.score * 100}%` }} />
                         </div>
-                        <span className="text-zinc-400 w-8 text-right">
-                          {(entry.score * 100).toFixed(0)}
-                        </span>
+                        <span className="text-zinc-400 w-8 text-right">{(entry.score * 100).toFixed(0)}</span>
                       </div>
                     ))}
                   </div>
@@ -326,21 +336,27 @@ export default function GenerativeDesignView() {
                 <div className="mt-3 flex gap-1.5">
                   <button
                     data-testid={`compare-button-${candidate.id}`}
-                    onClick={() => { handleCompare(candidate); }}
+                    onClick={() => {
+                      handleCompare(candidate);
+                    }}
                     className="flex-1 rounded border border-zinc-600 px-2 py-1 text-[11px] text-zinc-300 hover:bg-zinc-800 hover:border-cyan-600 transition-colors"
                   >
                     Compare
                   </button>
                   <button
                     data-testid={`adopt-button-${candidate.id}`}
-                    onClick={() => { handleAdoptClick(candidate); }}
+                    onClick={() => {
+                      handleAdoptClick(candidate);
+                    }}
                     className="flex-1 rounded bg-cyan-700 px-2 py-1 text-[11px] font-medium text-white hover:bg-cyan-600 transition-colors"
                   >
                     Adopt
                   </button>
                   <button
                     data-testid={`export-button-${candidate.id}`}
-                    onClick={() => { handleExport(candidate); }}
+                    onClick={() => {
+                      handleExport(candidate);
+                    }}
                     className="flex-1 rounded border border-zinc-600 px-2 py-1 text-[11px] text-zinc-300 hover:bg-zinc-800 hover:border-cyan-600 transition-colors"
                   >
                     Export

@@ -1,0 +1,26 @@
+<!-- @dsCard group="Guidelines" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;background:var(--color-background);color:var(--color-foreground);font-family:var(--font-sans),system-ui,sans-serif;padding:40px}
+  h1{font-family:var(--font-display);font-size:28px;font-weight:700;margin:0 0 4px}
+  .sub{color:var(--color-muted-foreground);font-size:13px;margin:0 0 28px}
+  .demo{display:flex;gap:28px;flex-wrap:wrap}
+  .tile{background:var(--color-card);border:1px solid var(--color-border);width:200px;height:110px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;color:var(--color-muted-foreground)}
+  .edge-glow{box-shadow:0 0 1px 0 color-mix(in srgb,var(--color-primary) 30%,transparent),inset 0 0 1px 0 color-mix(in srgb,var(--color-primary) 10%,transparent)}
+  .edge-glow-strong{box-shadow:0 0 8px -2px color-mix(in srgb,var(--color-primary) 40%,transparent),0 0 2px 0 color-mix(in srgb,var(--color-primary) 20%,transparent)}
+  .note{color:var(--color-muted-foreground);font-size:12px;margin-top:10px;max-width:220px;line-height:1.5}
+</style></head>
+<body>
+  <h1>Effects — cyan edge glow</h1>
+  <p class="sub">Depth in ProtoPulse comes from a faint primary-cyan glow on edges, not drop shadows. Two intensities, both driven by <code style="font-family:var(--font-mono)">--color-primary</code> via <code style="font-family:var(--font-mono)">color-mix</code>.</p>
+  <div class="demo">
+    <div>
+      <div class="tile edge-glow">.edge-glow</div>
+      <p class="note">Resting state — a 1px cyan halo. Used on active panels, selected rows, focused canvas regions.</p>
+    </div>
+    <div>
+      <div class="tile edge-glow-strong">.edge-glow-strong</div>
+      <p class="note">Emphasis — an 8px bloom. Hover/live states, running simulations, energized nets.</p>
+    </div>
+  </div>
+</body></html>

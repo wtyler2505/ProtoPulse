@@ -20,6 +20,7 @@ The pattern is reinforced by MEMORY.md's explicit rule: "ALL implementation plan
 ---
 
 Relevant Notes:
+- [[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]] -- the same contract-as-trust-boundary pattern applied to silicon rather than process: there the cut list is the boundary a co-sim consumer trusts, here the plan document is the boundary the executor trusts
 - [[superpowers-plugin-provides-the-core-development-lifecycle]] -- the lifecycle context
 - [[agent-teams-skill-is-the-mandated-parallel-execution-mechanism]] -- plans define agent team structure
 

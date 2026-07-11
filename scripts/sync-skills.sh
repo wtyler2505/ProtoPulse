@@ -117,7 +117,7 @@ for tree in "$CLAUDE" "$AGENTS"; do
     # Skip symlinked .claude entries: their real content is linted under .agents
     [[ "$tree" == "$CLAUDE" && -L "${d%/}" ]] && continue
     # Missing SKILL.md (empty-dir scaffolds included)
-    if [[ "$name" == "shared-references" ]]; then continue; fi  # shared reference pool, not a skill
+    if [[ "$name" == "shared-references" || "$name" == "meta" ]]; then continue; fi  # non-skill holding dirs (reference pools / meta-docs), not skills
     if [[ ! -f "$d/SKILL.md" ]]; then problem "lint: $short/$name has no SKILL.md"; continue; fi
     fm="$(awk '/^---$/{n++; next} n==1{print} n>=2{exit}' "$d/SKILL.md")"
     # Literal scaffold placeholders in frontmatter

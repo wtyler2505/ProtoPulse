@@ -28,6 +28,8 @@ export {
   type ComparatorThresholds,
   type RunCosimClosedLoopArgs,
 } from './quantum.js';
+export { i2cDevicesFromGraph } from './i2c-graph.js';
+export { spiDevicesFromGraph } from './spi-graph.js';
 export {
   adcBindingSchema,
   closedLoopSpecSchema,

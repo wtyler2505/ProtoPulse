@@ -26,3 +26,14 @@
 
 ### 2026-04-19T06:52:26Z — from `component-mpn-is-the-manufacturer-contract-and-supplier-sku-is-the-distributor-contract-and-only-mpn-is-stable-across-sources`
 - [[procurement]] — stub created at `knowledge/procurement.md`
+
+
+### 2026-06-23T06:26:18Z — from `a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models`
+- [[engine-redesign]] — stub created at `knowledge/engine-redesign.md`
+### 2026-06-23T06:26:17Z — from `xtensa-l32r-always-addresses-backward-from-a-4-aligned-pc-because-its-16-bit-immediate-is-one-extended`
+- [[emulation]] — stub created at `knowledge/emulation.md`
+- [[esp32-s3]] — stub created at `knowledge/esp32-s3.md`
+- [[xtensa]] — stub created at `knowledge/xtensa.md`
+
+### 2026-06-23T06:40:53Z — from `two-source-verification-resolves-silicon-facts-that-a-single-garbled-vendor-pdf-leaves-ambiguous`
+- [[verification]] — stub created at `knowledge/verification.md`

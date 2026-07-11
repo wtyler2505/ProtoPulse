@@ -1,30 +1,48 @@
-import { useState, useSyncExternalStore, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useSyncExternalStore, useCallback, useRef } from 'react';
+
+import { Trash2, Plus, Play, BarChart3, AlertTriangle } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { NumberInput } from '@/components/ui/number-input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, Plus, Play, BarChart3, AlertTriangle } from 'lucide-react';
-import {
-  worstCaseAnalyzer,
-  type WCAParameter,
-  type WCAResult,
-  type ToleranceType,
-  type CornerType,
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { worstCaseAnalyzer } from '@/lib/simulation/worst-case-analysis';
+import type {
+  WCAParameter,
+  WCAResult,
+  ToleranceType,
+  CornerType,
+  WCAState,
 } from '@/lib/simulation/worst-case-analysis';
 
 // ---------------------------------------------------------------------------
 // Store hook
 // ---------------------------------------------------------------------------
 
-function useWorstCaseAnalyzer() {
-  const subscribe = useCallback(
-    (cb: () => void) => worstCaseAnalyzer.subscribe(cb),
-    [],
-  );
-  const getSnapshot = useCallback(() => worstCaseAnalyzer.getState(), []);
+/**
+ * `worstCaseAnalyzer.getState()` returns a fresh object literal on every call
+ * (see worst-case-analysis.ts), so a naive `useSyncExternalStore(subscribe,
+ * () => worstCaseAnalyzer.getState())` fails React's "getSnapshot should be
+ * cached" invariant and infinite-loops (discovered while adding this
+ * component's first render test — BL-0781). Cache the snapshot keyed on the
+ * singleton's already-public monotonic `version` counter, which only
+ * increments on real mutations, so getSnapshot returns a stable reference
+ * between them.
+ */
+function useWorstCaseAnalyzer(): WCAState {
+  const subscribe = useCallback((cb: () => void) => worstCaseAnalyzer.subscribe(cb), []);
+  const cacheRef = useRef<{ version: number; snapshot: WCAState } | null>(null);
+  const getSnapshot = useCallback(() => {
+    const version = worstCaseAnalyzer.version;
+    if (!cacheRef.current || cacheRef.current.version !== version) {
+      cacheRef.current = { version, snapshot: worstCaseAnalyzer.getState() };
+    }
+    return cacheRef.current.snapshot;
+  }, []);
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
@@ -92,23 +110,31 @@ function AddParameterForm({ onAdd }: { onAdd: (p: WCAParameter) => void }) {
     <form onSubmit={handleSubmit} className="space-y-2" data-testid="wca-add-form">
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label htmlFor="wca-param-id" className="text-xs text-muted-foreground">ID</Label>
+          <Label htmlFor="wca-param-id" className="text-xs text-muted-foreground">
+            ID
+          </Label>
           <Input
             id="wca-param-id"
             data-testid="wca-param-id"
             value={form.id}
-            onChange={(e) => { setForm((f) => ({ ...f, id: e.target.value })); }}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, id: e.target.value }));
+            }}
             placeholder="R1"
             className="h-7 text-xs"
           />
         </div>
         <div>
-          <Label htmlFor="wca-param-name" className="text-xs text-muted-foreground">Name</Label>
+          <Label htmlFor="wca-param-name" className="text-xs text-muted-foreground">
+            Name
+          </Label>
           <Input
             id="wca-param-name"
             data-testid="wca-param-name"
             value={form.name}
-            onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); }}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, name: e.target.value }));
+            }}
             placeholder="R1 Resistance"
             className="h-7 text-xs"
           />
@@ -117,13 +143,16 @@ function AddParameterForm({ onAdd }: { onAdd: (p: WCAParameter) => void }) {
 
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <Label htmlFor="wca-param-nominal" className="text-xs text-muted-foreground">Nominal</Label>
-          <Input
+          <Label htmlFor="wca-param-nominal" className="text-xs text-muted-foreground">
+            Nominal
+          </Label>
+          <NumberInput
             id="wca-param-nominal"
             data-testid="wca-param-nominal"
-            type="number"
             value={form.nominal}
-            onChange={(e) => { setForm((f) => ({ ...f, nominal: e.target.value })); }}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, nominal: e.target.value }));
+            }}
             placeholder="10000"
             className="h-7 text-xs"
           />
@@ -132,22 +161,27 @@ function AddParameterForm({ onAdd }: { onAdd: (p: WCAParameter) => void }) {
           <Label htmlFor="wca-param-tolerance" className="text-xs text-muted-foreground">
             Tolerance{form.toleranceType === 'percentage' ? ' (%)' : ''}
           </Label>
-          <Input
+          <NumberInput
             id="wca-param-tolerance"
             data-testid="wca-param-tolerance"
-            type="number"
             value={form.tolerance}
-            onChange={(e) => { setForm((f) => ({ ...f, tolerance: e.target.value })); }}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, tolerance: e.target.value }));
+            }}
             placeholder={form.toleranceType === 'percentage' ? '5' : '500'}
             className="h-7 text-xs"
-            min="0"
+            min={0}
           />
         </div>
         <div>
-          <Label htmlFor="wca-param-type" className="text-xs text-muted-foreground">Type</Label>
+          <Label htmlFor="wca-param-type" className="text-xs text-muted-foreground">
+            Type
+          </Label>
           <Select
             value={form.toleranceType}
-            onValueChange={(v) => { setForm((f) => ({ ...f, toleranceType: v as ToleranceType })); }}
+            onValueChange={(v) => {
+              setForm((f) => ({ ...f, toleranceType: v as ToleranceType }));
+            }}
           >
             <SelectTrigger id="wca-param-type" data-testid="wca-param-type" className="h-7 text-xs">
               <SelectValue />
@@ -160,13 +194,7 @@ function AddParameterForm({ onAdd }: { onAdd: (p: WCAParameter) => void }) {
         </div>
       </div>
 
-      <Button
-        type="submit"
-        size="sm"
-        variant="secondary"
-        className="w-full h-7 text-xs"
-        data-testid="wca-add-button"
-      >
+      <Button type="submit" size="sm" variant="secondary" className="w-full h-7 text-xs" data-testid="wca-add-button">
         <Plus className="h-3 w-3 mr-1" />
         Add Parameter
       </Button>
@@ -178,13 +206,7 @@ function AddParameterForm({ onAdd }: { onAdd: (p: WCAParameter) => void }) {
 // Parameter Table
 // ---------------------------------------------------------------------------
 
-function ParameterTable({
-  parameters,
-  onRemove,
-}: {
-  parameters: WCAParameter[];
-  onRemove: (id: string) => void;
-}) {
+function ParameterTable({ parameters, onRemove }: { parameters: WCAParameter[]; onRemove: (id: string) => void }) {
   if (parameters.length === 0) {
     return (
       <div className="text-xs text-muted-foreground text-center py-4" data-testid="wca-empty-params">
@@ -196,9 +218,8 @@ function ParameterTable({
   return (
     <div className="space-y-1" data-testid="wca-param-table">
       {parameters.map((p) => {
-        const displayTol = p.toleranceType === 'percentage'
-          ? `${(p.tolerance * 100).toFixed(1)}%`
-          : `\u00B1${p.tolerance}`;
+        const displayTol =
+          p.toleranceType === 'percentage' ? `${(p.tolerance * 100).toFixed(1)}%` : `\u00B1${p.tolerance}`;
         return (
           <div
             key={p.id}
@@ -220,7 +241,9 @@ function ParameterTable({
                 variant="ghost"
                 size="icon"
                 className="h-5 w-5 text-muted-foreground hover:text-destructive"
-                onClick={() => { onRemove(p.id); }}
+                onClick={() => {
+                  onRemove(p.id);
+                }}
                 aria-label={`Remove ${p.id}`}
                 data-testid={`wca-remove-${p.id}`}
               >
@@ -243,8 +266,7 @@ function CornerResultsTable({ result }: { result: WCAResult }) {
     <div className="space-y-1" data-testid="wca-corner-results">
       <div className="text-xs font-medium text-muted-foreground mb-1">Corner Analysis</div>
       {result.corners.map((corner) => {
-        const isWorst =
-          corner.result === result.minResult || corner.result === result.maxResult;
+        const isWorst = corner.result === result.minResult || corner.result === result.maxResult;
         return (
           <div
             key={corner.type}
@@ -253,26 +275,18 @@ function CornerResultsTable({ result }: { result: WCAResult }) {
             }`}
             data-testid={`wca-corner-${corner.type}`}
           >
-            <Badge
-              variant="outline"
-              className={`text-[10px] px-1.5 py-0 ${CORNER_COLORS[corner.type]}`}
-            >
+            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${CORNER_COLORS[corner.type]}`}>
               {CORNER_LABELS[corner.type]}
             </Badge>
             <div className="flex items-center gap-3">
               <span className="font-mono">{corner.result.toPrecision(6)}</span>
               {corner.type !== 'nominal' && (
-                <span
-                  className={`font-mono text-[10px] ${
-                    corner.deviation >= 0 ? 'text-green-400' : 'text-red-400'
-                  }`}
-                >
-                  {corner.deviation >= 0 ? '+' : ''}{corner.deviation.toPrecision(4)}
+                <span className={`font-mono text-[10px] ${corner.deviation >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {corner.deviation >= 0 ? '+' : ''}
+                  {corner.deviation.toPrecision(4)}
                 </span>
               )}
-              {isWorst && corner.type !== 'nominal' && (
-                <AlertTriangle className="h-3 w-3 text-amber-400" />
-              )}
+              {isWorst && corner.type !== 'nominal' && <AlertTriangle className="h-3 w-3 text-amber-400" />}
             </div>
           </div>
         );
@@ -283,9 +297,7 @@ function CornerResultsTable({ result }: { result: WCAResult }) {
         data-testid="wca-spread"
       >
         <span className="font-medium text-[var(--color-editor-accent)]">Total Spread</span>
-        <span className="font-mono font-medium text-[var(--color-editor-accent)]">
-          {result.spread.toPrecision(6)}
-        </span>
+        <span className="font-mono font-medium text-[var(--color-editor-accent)]">{result.spread.toPrecision(6)}</span>
       </div>
     </div>
   );
@@ -296,9 +308,7 @@ function CornerResultsTable({ result }: { result: WCAResult }) {
 // ---------------------------------------------------------------------------
 
 function SensitivityChart({ result }: { result: WCAResult }) {
-  const sensitivities = result.sensitivities
-    .slice()
-    .sort((a, b) => b.influence - a.influence);
+  const sensitivities = result.sensitivities.slice().sort((a, b) => b.influence - a.influence);
 
   if (sensitivities.length === 0) {
     return null;
@@ -340,15 +350,7 @@ function SensitivityChart({ result }: { result: WCAResult }) {
                 {s.parameterId}
               </text>
               {/* Bar */}
-              <rect
-                x={labelWidth}
-                y={y + 2}
-                width={barW}
-                height={barHeight - 4}
-                rx={2}
-                fill={color}
-                opacity={0.7}
-              />
+              <rect x={labelWidth} y={y + 2} width={barW} height={barHeight - 4} rx={2} fill={color} opacity={0.7} />
               {/* Value */}
               <text
                 x={labelWidth + barW + 4}
@@ -432,10 +434,7 @@ export function WorstCaseAnalysisPanel() {
 
         {/* Error */}
         {error && (
-          <div
-            className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1.5"
-            data-testid="wca-error"
-          >
+          <div className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1.5" data-testid="wca-error">
             {error}
           </div>
         )}

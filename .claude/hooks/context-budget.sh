@@ -1,48 +1,31 @@
 #!/bin/bash
-# PostToolUse hook: Monitor transcript file size as a proxy for context budget
-# Always exits 0 — informational warning only
+# PostToolUse hook: context-budget monitor.
+#
+# DISABLED 2026-06-23 — deliberately a no-op. Do not re-enable as-is.
+#
+# WHY: this hook used raw transcript-FILE BYTES as a proxy for context/token
+# budget (WARN at 500KB, CRITICAL at 1MB). That proxy is badly wrong on a
+# 1M-token model: the transcript .jsonl is bloated with every tool result,
+# DOM snapshot, and base64 blob, so ~1MB of transcript ~= ~15% of the real
+# token budget and ~2MB ~= ~28%. The old thresholds therefore emitted
+# "CRITICAL: ... Context near capacity. Consider new session." for nearly the
+# ENTIRE session, at single-digit-to-low-double-digit real usage.
+#
+# That false signal repeatedly caused the assistant to wrap turns early, punt
+# work to "a fresh session," and hand off at ~28% real usage -- exactly the
+# behavior Tyler called out (2026-05-09 and again 2026-06-23). Bytes do not
+# map reliably to tokens (a screenshot-heavy session bloats bytes fast; a
+# text session does not), so there is no honest fixed byte threshold.
+#
+# The accurate context read already exists: the statusline command
+# (~/.claude/scripts/context-monitor.py via ~/.claude/settings.json) tracks
+# real token usage per-model and shows e.g. "295k/1M 30%". Use that, or the
+# /context command. This byte hook was redundant AND misleading, so it is
+# silenced rather than re-thresholded.
+#
+# To re-enable a context budget warning in the future, base it on actual
+# token usage (parse the transcript's usage fields or the statusline payload),
+# NOT on stat() of the .jsonl file size.
 
-# Derive the project slug from the working directory
-# Claude Code uses the pattern: ~/.claude/projects/{slug}/
-PROJECT_DIR="/home/wtyler/Projects/ProtoPulse"
-SLUG=$(echo "$PROJECT_DIR" | sed 's|^/||' | sed 's|/|-|g')
-TRANSCRIPT_DIR="$HOME/.claude/projects/-${SLUG}"
-
-# If the directory doesn't exist with leading dash, try without
-if [ ! -d "$TRANSCRIPT_DIR" ]; then
-  SLUG=$(echo "$PROJECT_DIR" | sed 's|/|-|g')
-  TRANSCRIPT_DIR="$HOME/.claude/projects/${SLUG}"
-fi
-
-if [ ! -d "$TRANSCRIPT_DIR" ]; then
-  # Can't find transcript directory, silently exit
-  echo "{}"; exit 0
-fi
-
-# Find the most recently modified .jsonl file (current session transcript)
-LATEST_TRANSCRIPT=$(find "$TRANSCRIPT_DIR" -name "*.jsonl" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
-
-if [ -z "$LATEST_TRANSCRIPT" ]; then
-  echo "{}"; exit 0
-fi
-
-FILE_SIZE=$(stat -c%s "$LATEST_TRANSCRIPT" 2>/dev/null)
-if [ -z "$FILE_SIZE" ]; then
-  echo "{}"; exit 0
-fi
-
-# Warn at 500KB
-WARN_THRESHOLD=512000
-# Critical at 1MB
-CRITICAL_THRESHOLD=1048576
-
-if [ "$FILE_SIZE" -gt "$CRITICAL_THRESHOLD" ]; then
-  SIZE_MB=$(echo "scale=1; $FILE_SIZE / 1048576" | bc)
-  printf '{"systemMessage": "CRITICAL: Session transcript is %sMB. Context near capacity. Consider new session."}' "$SIZE_MB"
-elif [ "$FILE_SIZE" -gt "$WARN_THRESHOLD" ]; then
-  SIZE_KB=$(echo "scale=0; $FILE_SIZE / 1024" | bc)
-  printf '{"systemMessage": "Session transcript is %sKB. Context getting large."}' "$SIZE_KB"
-else
-  echo '{}'
-fi
+echo '{}'
 exit 0

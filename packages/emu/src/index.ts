@@ -42,12 +42,30 @@ export {
   type Esp32s3TwaiErrorState,
   type Esp32s3TwaiEvent,
   type Esp32s3TwaiFrame,
+  type I2cSlave,
+  type SpiSlave,
   esp32s3PinId,
   ESP32S3_IRAM_BASE,
   ESP32S3_DRAM_BASE,
   ESP32S3_GPIO_BASE,
   ESP32S3_UART0_BASE,
+  ESP32S3_I2C0_BASE,
+  ESP32S3_I2C1_BASE,
+  ESP32S3_SPI2_BASE,
+  ESP32S3_SPI3_BASE,
 } from './esp32s3.js';
+export {
+  bme280,
+  ds3231,
+  i2cDeviceForPart,
+  i2cRegisterDevice,
+  I2C_DEVICES_BY_PART_ID,
+  mpu6050,
+  type Bme280State,
+  type Ds3231State,
+  type Mpu6050State,
+} from './i2c-devices.js';
+export { rc522, spiDeviceForPart, SPI_DEVICES_BY_PART_ID, type Rc522State } from './spi-devices.js';
 export * as xt from './xtensa-asm.js';
 export { XtensaCpu, type XtensaBus } from './xtensa.js';
 export type {

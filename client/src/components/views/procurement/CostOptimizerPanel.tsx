@@ -1,12 +1,23 @@
 import { useState, useCallback, useMemo } from 'react';
-import { DollarSign, AlertTriangle, CheckCircle, TrendingDown, ArrowDownRight, RefreshCw, Trash2, Package } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { useCostOptimizer } from '@/lib/cost-optimizer';
 
-import type { BomItem } from '@/lib/project-context';
+import {
+  DollarSign,
+  AlertTriangle,
+  CheckCircle,
+  TrendingDown,
+  ArrowDownRight,
+  RefreshCw,
+  Trash2,
+  Package,
+} from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/number-input';
+import { useCostOptimizer } from '@/lib/cost-optimizer';
 import type { CostAnalysis, SuggestionType, SuggestionPriority } from '@/lib/cost-optimizer';
+import type { BomItem } from '@/lib/project-context';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -44,10 +55,7 @@ export function CostOptimizerPanel({ bom }: CostOptimizerPanelProps) {
   const [pcbCost, setPcbCost] = useState<number>(5);
   const [assemblyCost, setAssemblyCost] = useState<number>(0);
 
-  const totalBomCost = useMemo(
-    () => bom.reduce((sum, item) => sum + Number(item.totalPrice), 0),
-    [bom],
-  );
+  const totalBomCost = useMemo(() => bom.reduce((sum, item) => sum + Number(item.totalPrice), 0), [bom]);
 
   const handleAnalyze = useCallback(() => {
     analyze(bom, { budget, pcbCost, assemblyCost });
@@ -67,12 +75,14 @@ export function CostOptimizerPanel({ bom }: CostOptimizerPanelProps) {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label htmlFor="cost-opt-budget" className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
+            <label
+              htmlFor="cost-opt-budget"
+              className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+            >
               Target Budget ($)
             </label>
-            <input
+            <NumberInput
               id="cost-opt-budget"
-              type="number"
               min={0}
               step={1}
               value={budget}
@@ -82,12 +92,14 @@ export function CostOptimizerPanel({ bom }: CostOptimizerPanelProps) {
             />
           </div>
           <div>
-            <label htmlFor="cost-opt-pcb" className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
+            <label
+              htmlFor="cost-opt-pcb"
+              className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+            >
               PCB Fabrication ($)
             </label>
-            <input
+            <NumberInput
               id="cost-opt-pcb"
-              type="number"
               min={0}
               step={0.5}
               value={pcbCost}
@@ -97,12 +109,14 @@ export function CostOptimizerPanel({ bom }: CostOptimizerPanelProps) {
             />
           </div>
           <div>
-            <label htmlFor="cost-opt-assembly" className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
+            <label
+              htmlFor="cost-opt-assembly"
+              className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1"
+            >
               Assembly Cost ($)
             </label>
-            <input
+            <NumberInput
               id="cost-opt-assembly"
-              type="number"
               min={0}
               step={0.5}
               value={assemblyCost}
@@ -192,12 +206,8 @@ function CostAnalysisResults({ analysis }: { analysis: CostAnalysis }) {
                   style={{ width: `${Math.min(bucket.percentage, 100)}%` }}
                 />
               </div>
-              <span className="text-xs font-mono text-foreground w-20 text-right">
-                ${bucket.amount.toFixed(2)}
-              </span>
-              <span className="text-xs text-muted-foreground w-12 text-right">
-                {bucket.percentage.toFixed(0)}%
-              </span>
+              <span className="text-xs font-mono text-foreground w-20 text-right">${bucket.amount.toFixed(2)}</span>
+              <span className="text-xs text-muted-foreground w-12 text-right">{bucket.percentage.toFixed(0)}%</span>
             </div>
           ))}
         </div>

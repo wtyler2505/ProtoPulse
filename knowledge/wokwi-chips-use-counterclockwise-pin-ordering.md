@@ -18,6 +18,7 @@ This is relevant to ProtoPulse because any future Wokwi import/export or simulat
 ---
 
 Relevant Notes:
+- [[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]] -- the CCW-ordering assumption is exactly the kind of implicit emulation-interop contract that becomes a silent bug when undocumented; that note generalizes "an undocumented divergence is a bug, a disclosed one is a cut" across the whole emulator family
 - [[fritzing-parts-use-svg-layers-with-xml-connector-defs]] -- Fritzing's approach to the same interop problem
 - [[no-other-eda-tool-starts-from-architecture-diagrams]] -- interop with Wokwi format serves the same maker audience that benefits from architecture-first design
 - [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- Wokwi interop strengthens the simulation leg of the maker bundle

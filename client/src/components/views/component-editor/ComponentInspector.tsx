@@ -1,22 +1,33 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
+
+import { Link2, Trash2, ToggleLeft, ToggleRight, Sparkles, Check, X } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Shape, ShapeStyle, RectShape, CircleShape, TextShape, PathShape } from '@shared/component-types';
-import type { Constraint, ConstraintType } from '@shared/component-types';
-import { createConstraint } from '@/lib/component-editor/constraint-solver';
-import { Link2, Trash2, ToggleLeft, ToggleRight, Sparkles, Check, X } from 'lucide-react';
-import { inferConstraints, type InferredConstraint } from '@/lib/component-editor/constraint-inference';
-import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/number-input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
+import { inferConstraints } from '@/lib/component-editor/constraint-inference';
+import type { InferredConstraint } from '@/lib/component-editor/constraint-inference';
+import { createConstraint } from '@/lib/component-editor/constraint-solver';
+
+import type {
+  Shape,
+  ShapeStyle,
+  RectShape,
+  CircleShape,
+  TextShape,
+  PathShape,
+  Constraint,
+  ConstraintType,
+} from '@shared/component-types';
 
 type CanvasView = 'breadboard' | 'schematic' | 'pcb';
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 pt-3 pb-1">
-      {children}
-    </h3>
+    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 pt-3 pb-1">{children}</h3>
   );
 }
 
@@ -71,9 +82,8 @@ function NumberField({
   return (
     <div className="flex items-center gap-2">
       <Label className="text-xs text-muted-foreground w-16 shrink-0">{label}</Label>
-      <Input
+      <NumberInput
         data-testid={testId}
-        type="number"
         value={value}
         aria-label={label}
         onChange={(e) => onChange?.(parseFloat(e.target.value) || 0)}
@@ -115,21 +125,61 @@ function SingleShapeInspector({ shape, view }: { shape: Shape; view: CanvasView 
 
       <SectionHeader>Size</SectionHeader>
       <div className="px-3 flex flex-col gap-1.5">
-        <NumberField label="Width" value={shape.width} testId="input-shape-width" onChange={(v) => updateShape({ width: v })} />
-        <NumberField label="Height" value={shape.height} testId="input-shape-height" onChange={(v) => updateShape({ height: v })} />
+        <NumberField
+          label="Width"
+          value={shape.width}
+          testId="input-shape-width"
+          onChange={(v) => updateShape({ width: v })}
+        />
+        <NumberField
+          label="Height"
+          value={shape.height}
+          testId="input-shape-height"
+          onChange={(v) => updateShape({ height: v })}
+        />
       </div>
 
       <SectionHeader>Rotation</SectionHeader>
       <div className="px-3 flex flex-col gap-1.5">
-        <NumberField label="Deg" value={shape.rotation} testId="input-shape-rotation" onChange={(v) => updateShape({ rotation: v })} />
+        <NumberField
+          label="Deg"
+          value={shape.rotation}
+          testId="input-shape-rotation"
+          onChange={(v) => updateShape({ rotation: v })}
+        />
       </div>
 
       <SectionHeader>Style</SectionHeader>
       <div className="px-3 flex flex-col gap-1.5">
-        <ColorInput label="Fill" value={style.fill ?? ''} testId="input-shape-fill" onChange={(v) => updateStyle({ fill: v })} />
-        <ColorInput label="Stroke" value={style.stroke ?? ''} testId="input-shape-stroke" onChange={(v) => updateStyle({ stroke: v })} />
-        <NumberField label="Stroke W" value={style.strokeWidth ?? 1} testId="input-shape-strokeWidth" step={0.5} min={0} onChange={(v) => updateStyle({ strokeWidth: v })} />
-        <NumberField label="Opacity" value={style.opacity ?? 1} testId="input-shape-opacity" step={0.1} min={0} max={1} onChange={(v) => updateStyle({ opacity: v })} />
+        <ColorInput
+          label="Fill"
+          value={style.fill ?? ''}
+          testId="input-shape-fill"
+          onChange={(v) => updateStyle({ fill: v })}
+        />
+        <ColorInput
+          label="Stroke"
+          value={style.stroke ?? ''}
+          testId="input-shape-stroke"
+          onChange={(v) => updateStyle({ stroke: v })}
+        />
+        <NumberField
+          label="Stroke W"
+          value={style.strokeWidth ?? 1}
+          testId="input-shape-strokeWidth"
+          step={0.5}
+          min={0}
+          onChange={(v) => updateStyle({ strokeWidth: v })}
+        />
+        <NumberField
+          label="Opacity"
+          value={style.opacity ?? 1}
+          testId="input-shape-opacity"
+          step={0.1}
+          min={0}
+          max={1}
+          onChange={(v) => updateStyle({ opacity: v })}
+        />
       </div>
 
       {shape.type === 'rect' && (
@@ -254,10 +304,35 @@ function MultiShapeInspector({ shapes, view }: { shapes: Shape[]; view: CanvasVi
 
       <SectionHeader>Style</SectionHeader>
       <div className="px-3 flex flex-col gap-1.5">
-        <ColorInput label="Fill" value={sharedStyle.fill} testId="input-shape-fill" onChange={(v) => updateAll({ fill: v })} />
-        <ColorInput label="Stroke" value={sharedStyle.stroke} testId="input-shape-stroke" onChange={(v) => updateAll({ stroke: v })} />
-        <NumberField label="Stroke W" value={sharedStyle.strokeWidth} testId="input-shape-strokeWidth" step={0.5} min={0} onChange={(v) => updateAll({ strokeWidth: v })} />
-        <NumberField label="Opacity" value={sharedStyle.opacity} testId="input-shape-opacity" step={0.1} min={0} max={1} onChange={(v) => updateAll({ opacity: v })} />
+        <ColorInput
+          label="Fill"
+          value={sharedStyle.fill}
+          testId="input-shape-fill"
+          onChange={(v) => updateAll({ fill: v })}
+        />
+        <ColorInput
+          label="Stroke"
+          value={sharedStyle.stroke}
+          testId="input-shape-stroke"
+          onChange={(v) => updateAll({ stroke: v })}
+        />
+        <NumberField
+          label="Stroke W"
+          value={sharedStyle.strokeWidth}
+          testId="input-shape-strokeWidth"
+          step={0.5}
+          min={0}
+          onChange={(v) => updateAll({ strokeWidth: v })}
+        />
+        <NumberField
+          label="Opacity"
+          value={sharedStyle.opacity}
+          testId="input-shape-opacity"
+          step={0.1}
+          min={0}
+          max={1}
+          onChange={(v) => updateAll({ opacity: v })}
+        />
       </div>
     </div>
   );
@@ -267,9 +342,7 @@ function ConstraintSection({ view }: { view: CanvasView }) {
   const { state, dispatch } = useComponentEditor();
   const selectedIds = state.ui.selectedShapeIds;
   const constraints = state.present.constraints || [];
-  const relevantConstraints = constraints.filter(c =>
-    c.shapeIds.some(id => selectedIds.includes(id))
-  );
+  const relevantConstraints = constraints.filter((c) => c.shapeIds.some((id) => selectedIds.includes(id)));
 
   const handleAdd = (type: ConstraintType) => {
     if (selectedIds.length < 2 && type !== 'fixed') return;
@@ -293,11 +366,11 @@ function ConstraintSection({ view }: { view: CanvasView }) {
   const handleAcceptSuggestion = (s: InferredConstraint) => {
     const constraint = createConstraint(s.type, s.shapeIds, s.params);
     dispatch({ type: 'ADD_CONSTRAINT', payload: constraint });
-    setSuggestions(prev => prev.filter(p => p !== s));
+    setSuggestions((prev) => prev.filter((p) => p !== s));
   };
 
   const handleDismissSuggestion = (s: InferredConstraint) => {
-    setSuggestions(prev => prev.filter(p => p !== s));
+    setSuggestions((prev) => prev.filter((p) => p !== s));
   };
 
   const handleDelete = (id: string) => {
@@ -314,33 +387,52 @@ function ConstraintSection({ view }: { view: CanvasView }) {
       <div className="px-3 flex flex-col gap-2">
         {selectedIds.length >= 2 && (
           <div className="flex flex-wrap gap-1">
-            {(['distance', 'alignment', 'pitch', 'symmetric', 'equal'] as ConstraintType[]).map(type => (
-              <Button key={type} variant="outline" size="sm" className="h-6 text-[10px] px-2"
+            {(['distance', 'alignment', 'pitch', 'symmetric', 'equal'] as ConstraintType[]).map((type) => (
+              <Button
+                key={type}
+                variant="outline"
+                size="sm"
+                className="h-6 text-[10px] px-2"
                 data-testid={`button-add-constraint-${type}`}
-                onClick={() => handleAdd(type)}>
-                <Link2 className="w-3 h-3 mr-1" />{type}
+                onClick={() => handleAdd(type)}
+              >
+                <Link2 className="w-3 h-3 mr-1" />
+                {type}
               </Button>
             ))}
           </div>
         )}
         {selectedIds.length >= 1 && (
-          <Button variant="outline" size="sm" className="h-6 text-[10px] px-2 w-fit"
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 text-[10px] px-2 w-fit"
             data-testid="button-add-constraint-fixed"
-            onClick={() => handleAdd('fixed')}>
-            <Link2 className="w-3 h-3 mr-1" />fixed
+            onClick={() => handleAdd('fixed')}
+          >
+            <Link2 className="w-3 h-3 mr-1" />
+            fixed
           </Button>
         )}
-        <Button variant="outline" size="sm" className="h-6 text-[10px] px-2 w-fit"
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-6 text-[10px] px-2 w-fit"
           data-testid="button-infer-constraints"
-          onClick={handleInfer}>
-          <Sparkles className="w-3 h-3 mr-1" />auto-detect
+          onClick={handleInfer}
+        >
+          <Sparkles className="w-3 h-3 mr-1" />
+          auto-detect
         </Button>
         {showSuggestions && suggestions.length > 0 && (
           <div className="flex flex-col gap-1.5 mt-1">
             <span className="text-[10px] text-muted-foreground font-medium">Suggestions ({suggestions.length})</span>
             {suggestions.map((s, idx) => (
-              <div key={idx} data-testid={`suggestion-${idx}`}
-                className="flex items-start gap-1 p-1.5 rounded bg-purple-500/5 border border-purple-500/20 text-[10px]">
+              <div
+                key={idx}
+                data-testid={`suggestion-${idx}`}
+                className="flex items-start gap-1 p-1.5 rounded bg-purple-500/5 border border-purple-500/20 text-[10px]"
+              >
                 <div className="flex-1 min-w-0">
                   <span className="font-medium text-purple-400">{s.type}</span>
                   <span className="text-muted-foreground ml-1">({Math.round(s.confidence * 100)}%)</span>
@@ -351,7 +443,8 @@ function ConstraintSection({ view }: { view: CanvasView }) {
                   className="p-0.5 hover:text-green-400 text-muted-foreground shrink-0"
                   onClick={() => handleAcceptSuggestion(s)}
                   title="Accept"
-                  aria-label="Accept suggestion">
+                  aria-label="Accept suggestion"
+                >
                   <Check className="w-3.5 h-3.5" />
                 </button>
                 <button
@@ -359,7 +452,8 @@ function ConstraintSection({ view }: { view: CanvasView }) {
                   className="p-0.5 hover:text-red-400 text-muted-foreground shrink-0"
                   onClick={() => handleDismissSuggestion(s)}
                   title="Dismiss"
-                  aria-label="Dismiss suggestion">
+                  aria-label="Dismiss suggestion"
+                >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -371,31 +465,38 @@ function ConstraintSection({ view }: { view: CanvasView }) {
             {selectedIds.length < 2 ? 'Select 2 shapes to add constraints' : 'No constraints on selected shapes'}
           </p>
         )}
-        {relevantConstraints.map(c => (
-          <div key={c.id} data-testid={`constraint-${c.id}`}
-            className="flex items-center gap-1 p-1.5 rounded bg-muted/30 border border-border text-xs">
+        {relevantConstraints.map((c) => (
+          <div
+            key={c.id}
+            data-testid={`constraint-${c.id}`}
+            className="flex items-center gap-1 p-1.5 rounded bg-muted/30 border border-border text-xs"
+          >
             <span className={`font-medium ${c.enabled ? 'text-editor-accent' : 'text-muted-foreground line-through'}`}>
               {c.type}
             </span>
             {c.params.distance !== undefined && (
-              <Input
-                type="number"
+              <NumberInput
                 value={Number(c.params.distance)}
                 onChange={(e) => {
                   const val = parseFloat(e.target.value) || 0;
-                  dispatch({ type: 'UPDATE_CONSTRAINT', payload: { constraintId: c.id, updates: { params: { ...c.params, distance: val } } } });
+                  dispatch({
+                    type: 'UPDATE_CONSTRAINT',
+                    payload: { constraintId: c.id, updates: { params: { ...c.params, distance: val } } },
+                  });
                 }}
                 className="h-5 w-14 text-[10px] bg-card border-border px-1"
                 data-testid={`input-constraint-distance-${c.id}`}
               />
             )}
             {c.params.pitch !== undefined && (
-              <Input
-                type="number"
+              <NumberInput
                 value={Number(c.params.pitch)}
                 onChange={(e) => {
                   const val = parseFloat(e.target.value) || 0;
-                  dispatch({ type: 'UPDATE_CONSTRAINT', payload: { constraintId: c.id, updates: { params: { ...c.params, pitch: val } } } });
+                  dispatch({
+                    type: 'UPDATE_CONSTRAINT',
+                    payload: { constraintId: c.id, updates: { params: { ...c.params, pitch: val } } },
+                  });
                 }}
                 className="h-5 w-14 text-[10px] bg-card border-border px-1"
                 data-testid={`input-constraint-pitch-${c.id}`}
@@ -405,7 +506,10 @@ function ConstraintSection({ view }: { view: CanvasView }) {
               <select
                 value={String(c.params.axis || 'x')}
                 onChange={(e) => {
-                  dispatch({ type: 'UPDATE_CONSTRAINT', payload: { constraintId: c.id, updates: { params: { ...c.params, axis: e.target.value } } } });
+                  dispatch({
+                    type: 'UPDATE_CONSTRAINT',
+                    payload: { constraintId: c.id, updates: { params: { ...c.params, axis: e.target.value } } },
+                  });
                 }}
                 className="h-5 text-[10px] bg-card border border-border rounded px-1 text-foreground"
                 data-testid={`select-constraint-axis-${c.id}`}
@@ -418,7 +522,10 @@ function ConstraintSection({ view }: { view: CanvasView }) {
               <select
                 value={String(c.params.property || 'width')}
                 onChange={(e) => {
-                  dispatch({ type: 'UPDATE_CONSTRAINT', payload: { constraintId: c.id, updates: { params: { ...c.params, property: e.target.value } } } });
+                  dispatch({
+                    type: 'UPDATE_CONSTRAINT',
+                    payload: { constraintId: c.id, updates: { params: { ...c.params, property: e.target.value } } },
+                  });
                 }}
                 className="h-5 text-[10px] bg-card border border-border rounded px-1 text-foreground"
                 data-testid={`select-constraint-property-${c.id}`}
@@ -433,15 +540,21 @@ function ConstraintSection({ view }: { view: CanvasView }) {
               className="ml-auto p-0.5 hover:text-foreground text-muted-foreground"
               onClick={() => handleToggle(c.id, !c.enabled)}
               title={c.enabled ? 'Disable constraint' : 'Enable constraint'}
-              aria-label="Toggle constraint">
-              {c.enabled ? <ToggleRight className="w-3.5 h-3.5 text-editor-accent" /> : <ToggleLeft className="w-3.5 h-3.5" />}
+              aria-label="Toggle constraint"
+            >
+              {c.enabled ? (
+                <ToggleRight className="w-3.5 h-3.5 text-editor-accent" />
+              ) : (
+                <ToggleLeft className="w-3.5 h-3.5" />
+              )}
             </button>
             <button
               data-testid={`button-delete-constraint-${c.id}`}
               className="p-0.5 hover:text-destructive text-muted-foreground"
               onClick={() => handleDelete(c.id)}
               title="Delete constraint"
-              aria-label="Delete constraint">
+              aria-label="Delete constraint"
+            >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -478,13 +591,9 @@ export default function ComponentInspector() {
         </div>
       )}
 
-      {selectedShapes.length === 1 && (
-        <SingleShapeInspector shape={selectedShapes[0]} view={view} />
-      )}
+      {selectedShapes.length === 1 && <SingleShapeInspector shape={selectedShapes[0]} view={view} />}
 
-      {selectedShapes.length > 1 && (
-        <MultiShapeInspector shapes={selectedShapes} view={view} />
-      )}
+      {selectedShapes.length > 1 && <MultiShapeInspector shapes={selectedShapes} view={view} />}
 
       <ConstraintSection view={view} />
     </div>

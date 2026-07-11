@@ -3,7 +3,7 @@
  *
  * Dynamic counterpart to Plan 03 Phase 4 (ESLint jsx-a11y static rules).
  * For each major tab/route, this spec:
- *   1. Navigates via /projects/1/{viewName} (matches tab-route-matrix.spec.ts).
+ *   1. Navigates via /projects/:id/{viewName} (matches tab-route-matrix.spec.ts).
  *   2. Waits for the workspace-main landmark and allows lazy Suspense chunks to
  *      resolve.
  *   3. Runs axe-core with WCAG 2.1 A/AA + best-practice tags.
@@ -20,8 +20,13 @@
  * current violation count is too high to fix inline — the goal of this suite is
  * a green-baseline regression net, not a one-shot sweep.
  */
-import { test, expect, type Page } from '@playwright/test';
-import { runAxeScan, type RunAxeScanOptions } from './a11y-helpers';
+import { test, expect } from '@playwright/test';
+
+import { runAxeScan } from './a11y-helpers';
+import { getTestProjectId } from './test-project';
+
+import type { RunAxeScanOptions } from './a11y-helpers';
+import type { Page } from '@playwright/test';
 
 test.use({ storageState: 'e2e/.auth-state.json' });
 
@@ -29,7 +34,7 @@ test.use({ storageState: 'e2e/.auth-state.json' });
  * Navigate to a project view and wait for the workspace shell to mount.
  */
 async function openView(page: Page, viewName: string): Promise<void> {
-  await page.goto(`/projects/1/${viewName}`);
+  await page.goto(`/projects/${getTestProjectId()}/${viewName}`);
   await page.waitForSelector('[data-testid="workspace-main"]', { timeout: 15_000 });
   // Let lazy chunks + data-fetching effects settle. Matches the cadence used by
   // tab-route-matrix.spec.ts, which is the de-facto load-waiting convention for
@@ -38,11 +43,7 @@ async function openView(page: Page, viewName: string): Promise<void> {
   await expect(page.locator('[data-testid="workspace-main"]')).toBeVisible();
 }
 
-async function scanAndAssert(
-  page: Page,
-  label: string,
-  options: RunAxeScanOptions = {},
-): Promise<void> {
+async function scanAndAssert(page: Page, label: string, options: RunAxeScanOptions = {}): Promise<void> {
   const { criticalSerious, summary } = await runAxeScan(page, options);
   // eslint-disable-next-line no-console -- surface baseline per-tab counts in CI output
   console.log(`[a11y-scan] ${label} — ${summary}`);
@@ -50,9 +51,7 @@ async function scanAndAssert(
     const details = criticalSerious
       .map((v) => `${v.id} (${v.impact}, ${v.nodes.length} node(s)): ${v.help}`)
       .join('\n');
-    throw new Error(
-      `[a11y-scan] ${label} has ${criticalSerious.length} critical/serious violation(s):\n${details}`,
-    );
+    throw new Error(`[a11y-scan] ${label} has ${criticalSerious.length} critical/serious violation(s):\n${details}`);
   }
   expect(criticalSerious).toEqual([]);
 }
@@ -61,9 +60,7 @@ async function scanAndAssert(
 // Project Picker (root route)
 // ---------------------------------------------------------------------------
 test.describe('A11y scan — Project Picker', () => {
-  test('project-picker page has no critical/serious axe violations', async ({
-    page,
-  }) => {
+  test('project-picker page has no critical/serious axe violations', async ({ page }) => {
     await page.goto('/');
     // Ensure we land on the picker, not an auto-selected workspace.
     await page.evaluate(() => {

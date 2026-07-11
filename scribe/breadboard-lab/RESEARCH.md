@@ -29,7 +29,7 @@
     breadboard netlist to ensure dual-view coherence. (Source: `docs/MASTER_BACKLOG.md`)
 *   **Finding 5:** Recent developments delivered exact-part resolution, layout 
     quality scorecards, live board-health audits, and a staging review mode 
-    for coach plans. (Source: `CODEX_DONE.md`)
+    for coach plans. (Source: `docs/handoffs/CODEX_DONE.md`)
 
 ## Technical Context & Constraints
 *   **Fritzing Interop:** To support FZPZ import/export, the SVG generator must 

@@ -1954,20 +1954,82 @@ Status legend: ✅ shipped · 🔨 in progress · ⬜ not started
       `candidatePins` takes the core's defaults (falling back to AVR for
       back-compat). Closes the last "AVR-flavored pin names" gap left by
       the firmware-panel core picker.
-- [ ] **ESP32-S3 base — COMPLETION GATE** (the Definition of Done for the
-      ESP32 foundation, so board/sensor breadth can begin): "done" is by
+- [x] **ESP32-S3 base — COMPLETION GATE** (CERTIFIED 2026-06-23; the Definition
+      of Done for the ESP32 foundation, so board/sensor breadth can begin): "done" is by
       app USABILITY, not exhaustive register fidelity — the long tail
       below is opportunistic, never a gate. Criteria: (1) ✅ `npm run -w
-      @protopulse/emu test` green (236 ESP32-S3 unit tests); (2) ⬜ E2E app
-      smoke — pick ESP32-S3 in the core picker, load a blink `.bin`, a GPIO
-      visibly toggles in the serial monitor / logic analyzer at the
-      expected rate; (3) ⬜ co-sim closed loop — an analog node drives an
-      ADC channel and the firmware reads it back tracking the SPICE node;
-      (4) ✅ co-sim pin labels show ESP32 `IO{n}`, not AVR. (1) and (4) are
-      met in-repo; only the (2)/(3) manual app smoke remains to certify the
-      phase. After certification: pivot to breadth (boards, sensors,
-      modules) — each a bounded slice (host-bus/ADC device model + KAT +
-      bench demo).
+      @protopulse/emu test` green (238 ESP32-S3 unit tests); (2) ✅ E2E app
+      smoke (certified 2026-06-23) — picked ESP32-S3 in the core picker,
+      loaded `packages/emu/samples/esp32s3-blink-io5.bin`, ran 68M cycles
+      @ 240 MHz, and IO5 toggled in the logic-analyzer pin traces at the
+      cycle-exact rate (zero-jitter, per the `blinks IO5 with cycle-exact
+      spacing` unit test); (3) ✅ co-sim closed loop (certified 2026-06-23) —
+      an analog node drives an ADC channel and the firmware reads it back
+      tracking the SPICE node, proven end-to-end by
+      `packages/cosim/src/quantum.esp32s3.cosim.test.ts`: a real divider (VCC
+      3.3 V → R1 10k → MID → R2 10k → GND) SPICE-solves MID to 1.65 V; a real
+      `Esp32s3Core` loaded with `esp32s3-adc0-read.bin` reads ADC ch0 through
+      the real `runCosimClosedLoop` quantum engine, and the settled reads track
+      MID to ±0.02 V (UART decodes to code 2048 = round(1.65/3.3×4095));
+      (4) ✅ co-sim pin labels show ESP32 `IO{n}`, not AVR. All four criteria
+      are met in-repo — the ESP32-S3 foundation is certified. Now pivoting to
+      breadth (boards, sensors, modules) — each a bounded slice (host-bus/ADC
+      device model + KAT + bench demo). **Slice 1 landed 2026-06-23 (BL-0889):**
+      TMP36 analog temperature sensor → ADC co-sim — `core:tmp36` SPICE emitter
+      (`@protopulse/sim`) + `packages/cosim/src/quantum.tmp36.cosim.test.ts`
+      (firmware reads track the sensor node: 0.75 V @ 25 °C, 1.00 V @ 50 °C).
+      **Slice 2 landed 2026-06-23 (BL-0890):** potentiometer (`core:pot-10k`) →
+      ADC — a 3-terminal wiper divider (`emitPot10k`), firmware tracks the
+      variable wiper (2.31 V @ pos 0.3, 0.99 V @ pos 0.7).
+      **Slice 3 landed 2026-06-23 (BL-0891):** FC-28 soil moisture
+      (`core:soil-moisture`) → ADC — a supply-dependent B-source
+      (`emitSoilMoisture`, AO = V·(1−moisture)); firmware tracks 2.475 V @
+      moisture 0.25 / 0.825 V @ 0.75 (wet < dry).
+      **I²C digital-sensor foundation landed 2026-06-23 (BL-0892):** the emu
+      I²C master gained a slave-device hook (`Esp32s3Core.setI2cSlave`) so
+      firmware register-reads return modeled bytes instead of zeros — unblocks
+      the I²C sensor class (BME280, MPU-6050) that exchanges register bytes over
+      the bus rather than sourcing a voltage. Device-model registry + cosim
+      bus-device binding are the follow-ups.
+      **First I²C device landed 2026-06-24 (BL-0893):** the GY-521/MPU-6050
+      6-axis IMU (`mpu6050` in `@protopulse/emu`'s `i2c-devices.ts`) — unmodified
+      firmware reads WHO_AM_I → 0x68 and burst-reads the accel registers through
+      the slave hook. `i2cRegisterDevice(map)` is the reusable register-map
+      device helper.
+      **I²C-in-co-sim landed 2026-06-24 (BL-0894):** `ClosedLoopSpec.i2cDevices`
+      installs slave devices for a `runCosimClosedLoop` run (the bus-device
+      counterpart of the ADC sampler) — firmware reads an MPU-6050 over I²C
+      inside the closed loop. The I²C sensor path is now complete end to end
+      (emu master+slave hook → device model → co-sim binding).
+      **BME280 + I²C device registry landed 2026-06-24 (BL-0895):** a 2nd modeled
+      I²C device (`bme280`, chip-ID 0x60) + `I2C_DEVICES_BY_PART_ID` /
+      `i2cDeviceForPart` so a placed I²C part auto-resolves its model (the
+      bus-device parallel to the analog `EMITTERS_BY_PART_ID`).
+      **I²C graph-auto-resolve landed 2026-06-24 (BL-0896):** `i2cDevicesFromGraph`
+      turns the I²C parts placed in a design into `runCosimClosedLoop` device
+      bindings via the registry — the I²C sensor path is now usable straight
+      from a design (place a sensor, run co-sim, firmware reads it).
+      **SPI slave-device foundation landed 2026-06-24 (BL-0897):** the emu SPI
+      master gained a slave hook (`Esp32s3Core.setSpiSlave`, GPSPI2/3) so MISO
+      reads return modeled bytes instead of zeros — the SPI counterpart of the
+      I²C hook, foundation for SPI devices (RC522, MAX7219, SPI flash). Device
+      models + registry + co-sim binding mirror the I²C path as follow-ups.
+      **First SPI device landed 2026-06-24 (BL-0898):** the RC522/MFRC522 RFID
+      reader (`rc522`) — firmware reads VersionReg → 0x92 over SPI through the
+      slave hook; `SPI_DEVICES_BY_PART_ID`/`spiDeviceForPart` mirror the I²C
+      registry. SPI now has foundation + a real device + a part→device registry.
+      **SPI co-sim binding + graph auto-resolve landed 2026-06-24 (BL-0899):**
+      `ClosedLoopSpec.spiDevices` + `spiDevicesFromGraph` bring SPI to full I²C
+      parity — firmware reads an RC522 over SPI inside `runCosimClosedLoop`,
+      auto-resolved from a placed part. Both digital buses (I²C, SPI) now run
+      end to end: hook → device model → registry → co-sim binding → graph.
+      Device catalog so far: I²C — MPU-6050, BME280, DS3231 (BL-0900); SPI —
+      RC522. Each `core:*` part auto-resolves into a co-sim run; adding more is
+      a register-map + registry entry.
+      **Wired into the app 2026-06-24 (BL-0901):** running a closed-loop co-sim
+      in the editor auto-installs device models for placed I²C/SPI parts — the
+      device layer is usable end to end from the product (place a sensor → run →
+      firmware reads it), not just from the cosim API.
 - [ ] ESP32 core, the long tail toward unmodified IDF/FreeRTOS
       firmware: GDMA driver-pool flush policy/backpressure timing,
       sleep/wake, remaining interrupt-delivery gaps, and remaining
@@ -2079,5 +2141,7 @@ live overlay on the schematic. Curriculum capstone: Track 7.
   flaky env-dependent legacy tests (failing on main since ≥2026-05-12).
 - Migrate the legacy app onto the engine (begins post-v0.2 at the
   earliest; the legacy app remains the shipping product until then).
-- Root-directory doc cleanup (move `CODEX_*`/`CLAUDE_RESPONSE_*` collab
-  artifacts into `docs/collab/`).
+- ~~Root-directory doc cleanup~~ — DONE 2026-07-01 (BL-0906): all 26
+  `CODEX_*`/`COLLAB_*`/`CLAUDE_RESPONSE_*`/`RALPH-*` point-in-time files
+  moved to `docs/handoffs/` (kept together so their bare-name
+  cross-references still resolve).

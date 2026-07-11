@@ -1,13 +1,23 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { NumberInput } from '@/components/ui/number-input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { generate } from '@/lib/component-editor/generators';
+import type { GeneratorResult, GeneratorConfig } from '@/lib/component-editor/generators';
+import { SHAPE_TEMPLATES } from '@/lib/component-editor/shape-templates';
+import type { ShapeTemplate } from '@/lib/component-editor/shape-templates';
 import { cn } from '@/lib/utils';
-import { generate, type GeneratorResult, type GeneratorConfig } from '@/lib/component-editor/generators';
-import { SHAPE_TEMPLATES, type ShapeTemplate } from '@/lib/component-editor/shape-templates';
 
 type PackageType = GeneratorConfig['type'];
 
@@ -142,22 +152,34 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
   const config = buildConfig();
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto" data-testid="generator-modal">
         <DialogHeader>
           <DialogTitle>Generate Package</DialogTitle>
-          <DialogDescription className="sr-only">Generate a component package from templates or custom parameters</DialogDescription>
+          <DialogDescription className="sr-only">
+            Generate a component package from templates or custom parameters
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 py-2">
           <div>
             <Label className="text-sm font-semibold">Quick Templates</Label>
             <p className="text-xs text-muted-foreground mb-2">Click a template to instantly add it</p>
-            {CATEGORY_ORDER.filter(cat => templateGroups[cat]).map((cat, idx) => (
-              <div key={cat} className={cn("pb-3", idx > 0 && "pt-3 border-t border-border/50")}>
-                <span className="text-sm font-medium text-muted-foreground block mb-2" data-testid={`template-category-${cat}`}>{CATEGORY_LABELS[cat]}</span>
+            {CATEGORY_ORDER.filter((cat) => templateGroups[cat]).map((cat, idx) => (
+              <div key={cat} className={cn('pb-3', idx > 0 && 'pt-3 border-t border-border/50')}>
+                <span
+                  className="text-sm font-medium text-muted-foreground block mb-2"
+                  data-testid={`template-category-${cat}`}
+                >
+                  {CATEGORY_LABELS[cat]}
+                </span>
                 <div className="grid grid-cols-2 gap-2">
-                  {templateGroups[cat].map(template => (
+                  {templateGroups[cat].map((template) => (
                     <button
                       key={template.id}
                       data-testid={`template-card-${template.id}`}
@@ -198,10 +220,9 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
           {(packageType === 'dip' || packageType === 'soic' || packageType === 'qfp') && (
             <div className="space-y-2">
               <Label htmlFor="pin-count">Pin Count</Label>
-              <Input
+              <NumberInput
                 id="pin-count"
                 data-testid="input-pin-count"
-                type="number"
                 min={packageType === 'qfp' ? 4 : 2}
                 step={packageType === 'qfp' ? 4 : 2}
                 value={pinCount}
@@ -213,10 +234,9 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
           {(packageType === 'dip' || packageType === 'soic' || packageType === 'qfp' || packageType === 'header') && (
             <div className="space-y-2">
               <Label htmlFor="pitch">Pitch (mm)</Label>
-              <Input
+              <NumberInput
                 id="pitch"
                 data-testid="input-pitch"
-                type="number"
                 min={0.1}
                 step={0.01}
                 value={round2(pitch)}
@@ -228,10 +248,9 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
           {packageType === 'dip' && (
             <div className="space-y-2">
               <Label htmlFor="row-spacing">Row Spacing (mm)</Label>
-              <Input
+              <NumberInput
                 id="row-spacing"
                 data-testid="input-row-spacing"
-                type="number"
                 min={1}
                 step={0.01}
                 value={round2(bodyWidth)}
@@ -243,10 +262,9 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
           {packageType === 'qfp' && (
             <div className="space-y-2">
               <Label htmlFor="body-size">Body Size (mm)</Label>
-              <Input
+              <NumberInput
                 id="body-size"
                 data-testid="input-body-size"
-                type="number"
                 min={1}
                 step={0.1}
                 value={bodySize}
@@ -259,10 +277,9 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
             <>
               <div className="space-y-2">
                 <Label htmlFor="cols">Columns</Label>
-                <Input
+                <NumberInput
                   id="cols"
                   data-testid="input-cols"
-                  type="number"
                   min={1}
                   value={cols}
                   onChange={(e) => setCols(Math.max(1, parseInt(e.target.value) || 1))}
@@ -270,10 +287,9 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
               </div>
               <div className="space-y-2">
                 <Label htmlFor="rows">Rows</Label>
-                <Input
+                <NumberInput
                   id="rows"
                   data-testid="input-rows"
-                  type="number"
                   min={1}
                   value={rows}
                   onChange={(e) => setRows(Math.max(1, parseInt(e.target.value) || 1))}
@@ -290,8 +306,12 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="tht" data-testid="option-tht">THT (Through-Hole)</SelectItem>
-                  <SelectItem value="smd" data-testid="option-smd">SMD (Surface-Mount)</SelectItem>
+                  <SelectItem value="tht" data-testid="option-tht">
+                    THT (Through-Hole)
+                  </SelectItem>
+                  <SelectItem value="smd" data-testid="option-smd">
+                    SMD (Surface-Mount)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

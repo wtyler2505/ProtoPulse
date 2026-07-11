@@ -74,6 +74,25 @@ export interface AdcBinding {
   channel: number;
 }
 
+/** An I2C slave device model: answers a master register read. */
+export type I2cSlaveFn = (address: number, register: number) => number;
+/** An SPI slave device model: answers the master's MISO phase. */
+export type SpiSlaveFn = (mosi: readonly number[], misoIndex: number) => number;
+
+/** One modeled I2C device installed on a controller port for the run. */
+export interface I2cDeviceBinding {
+  /** I2C controller port (0 = I2C0, 1 = I2C1). */
+  port: 0 | 1;
+  slave: I2cSlaveFn;
+}
+
+/** One modeled SPI device installed on a controller port for the run. */
+export interface SpiDeviceBinding {
+  /** SPI controller port (2 = GPSPI2, 3 = GPSPI3). */
+  port: 2 | 3;
+  slave: SpiSlaveFn;
+}
+
 /** A closed-loop window: outputs out, comparator + ADC back in,
  *  lock-stepped on a conservative quantum (engine default 50 µs). */
 export interface ClosedLoopSpec extends CosimWindowSpec {
@@ -81,6 +100,12 @@ export interface ClosedLoopSpec extends CosimWindowSpec {
   quantumS?: number;
   inputs?: InputBinding[];
   adc?: AdcBinding[];
+  /** I2C slave devices installed on the core for the run. Auto-resolved from
+   *  the design's placed parts when omitted (see runner.ts). */
+  i2cDevices?: I2cDeviceBinding[];
+  /** SPI slave devices installed on the core for the run. Auto-resolved from
+   *  the design's placed parts when omitted. */
+  spiDevices?: SpiDeviceBinding[];
 }
 
 /** Pinned with the emu ADC track: one firmware-initiated conversion. */
@@ -115,4 +140,9 @@ export type RunCosimClosedLoopFn = (args: {
 export interface CosimModule {
   runCosimWindow: RunCosimWindowFn;
   runCosimClosedLoop: RunCosimClosedLoopFn;
+  /** Resolve placed I2C parts in a design to device bindings. Optional — older
+   *  builds of @protopulse/cosim may lack it; runner.ts probes at runtime. */
+  i2cDevicesFromGraph?: (graph: DesignGraph) => I2cDeviceBinding[];
+  /** Resolve placed SPI parts in a design to device bindings. Optional. */
+  spiDevicesFromGraph?: (graph: DesignGraph) => SpiDeviceBinding[];
 }

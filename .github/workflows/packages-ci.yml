@@ -47,6 +47,9 @@ jobs:
       - name: Test all workspaces (graph coverage gate enforced in-package)
         run: npm run test:packages
 
+      - name: AI crew regression eval (golden, deterministic — BL-0902)
+        run: npm run eval:ai
+
       - name: Build the CLI bundle
         run: npm run -w @protopulse/cli build
 
