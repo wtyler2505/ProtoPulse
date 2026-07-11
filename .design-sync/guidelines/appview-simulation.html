@@ -1,0 +1,156 @@
+<!-- @dsCard group="App Views" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;width:1180px;height:720px;background:var(--color-background);color:var(--color-foreground);font-family:var(--font-sans),system-ui,sans-serif;font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{height:48px;flex:0 0 48px;border-bottom:1px solid var(--color-border);background:color-mix(in srgb,var(--color-card) 60%,transparent);display:flex;align-items:center;gap:16px;padding:0 16px}
+  .wm{font-family:var(--font-display);font-weight:700;font-size:18px}.wm b{color:var(--color-brand)}
+  .crumb{color:var(--color-muted-foreground);font-size:12px}
+  .crumb .proj{color:var(--color-foreground)}
+  .spacer{flex:1}
+  .btn{font-size:12px;padding:5px 12px;border:1px solid var(--color-border);background:transparent;color:var(--color-foreground)}
+  .btn.primary{background:var(--color-primary);color:var(--color-primary-foreground);border-color:var(--color-primary)}
+  .body{flex:1;display:flex;min-height:0}
+  .rail{width:64px;flex:0 0 64px;border-right:1px solid var(--color-border);background:var(--color-sidebar);display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:2px}
+  .nav{width:48px;height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-muted-foreground);font-size:9px;border-left:2px solid transparent}
+  .nav .ic{width:18px;height:18px;border:1.5px solid currentColor;opacity:.8}
+  .nav.active{color:var(--color-primary);border-left-color:var(--color-primary);background:color-mix(in srgb,var(--color-primary) 8%,transparent)}
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .toolbar{height:40px;flex:0 0 40px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:8px;padding:0 12px;background:color-mix(in srgb,var(--color-card) 40%,transparent)}
+  .tool{font-size:11px;color:var(--color-muted-foreground);padding:4px 8px;border:1px solid var(--color-border)}
+  .tool.on{color:var(--color-primary);border-color:var(--color-primary)}
+  .seg{display:flex;border:1px solid var(--color-border)}
+  .seg .tool{border:0;border-right:1px solid var(--color-border)}
+  .seg .tool:last-child{border-right:0}
+  .run{font-size:11px;padding:4px 10px;display:flex;align-items:center;gap:5px;background:color-mix(in srgb,var(--color-success) 16%,transparent);color:var(--color-success);border:1px solid color-mix(in srgb,var(--color-success) 50%,transparent)}
+  .run .dot{width:6px;height:6px;background:var(--color-success)}
+  .stop{font-size:11px;padding:4px 10px;color:var(--color-muted-foreground);border:1px solid var(--color-border)}
+  .twin{font-family:var(--font-mono);font-size:10px;color:var(--color-muted-foreground);display:flex;align-items:center;gap:6px}
+  .twin b{color:var(--color-foreground)}
+  /* scope */
+  .scope{flex:1;display:flex;flex-direction:column;min-height:0;background:var(--color-background);padding:12px}
+  .scopehdr{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .scopehdr .ttl{font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--color-foreground)}
+  .legend{display:flex;gap:14px;margin-left:auto;font-family:var(--font-mono);font-size:10px}
+  .legend span{display:flex;align-items:center;gap:6px;color:var(--color-muted-foreground)}
+  .legend i{width:14px;height:2px}
+  .plotwrap{flex:1;position:relative;border:1px solid var(--color-border);background:#05080c;min-height:0}
+  .plotwrap svg{width:100%;height:100%;display:block}
+  .ylab{position:absolute;left:6px;font-family:var(--font-mono);font-size:9px;color:color-mix(in srgb,var(--color-foreground) 55%,transparent)}
+  .xaxis{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:9px;color:color-mix(in srgb,var(--color-foreground) 55%,transparent);padding:3px 4px 0}
+  .panel{width:264px;flex:0 0 264px;border-left:1px solid var(--color-border);background:var(--color-card);display:flex;flex-direction:column}
+  .ptabs{display:flex;border-bottom:1px solid var(--color-border)}
+  .ptab{flex:1;text-align:center;font-size:11px;padding:8px 0;color:var(--color-muted-foreground)}
+  .ptab.on{color:var(--color-primary);border-bottom:2px solid var(--color-primary)}
+  .phdr{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-muted-foreground);padding:10px 12px 4px}
+  .probe{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid color-mix(in srgb,var(--color-border) 60%,transparent);font-family:var(--font-mono);font-size:11px}
+  .probe .sw{width:8px;height:8px;flex:0 0 8px}
+  .probe .net{color:var(--color-foreground)}
+  .probe .val{margin-left:auto;color:var(--color-muted-foreground)}
+  .meas{display:flex;justify-content:space-between;padding:6px 12px;font-family:var(--font-mono);font-size:11px;border-bottom:1px solid color-mix(in srgb,var(--color-border) 40%,transparent)}
+  .meas .k{color:var(--color-muted-foreground)}
+  .meas .v{color:var(--color-foreground)}
+  .conv{margin:10px 12px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--color-success) 45%,transparent);background:color-mix(in srgb,var(--color-success) 10%,transparent);font-family:var(--font-mono);font-size:10px;color:var(--color-success);line-height:1.5}
+  .conv b{color:var(--color-foreground)}
+</style></head>
+<body>
+  <div class="topbar">
+    <div class="wm">Proto<b>Pulse</b></div>
+    <div class="crumb">SMPS Reference&nbsp;/&nbsp;<span class="proj">Buck Converter v2</span></div>
+    <div class="spacer"></div>
+    <button class="btn">Export CSV</button>
+    <button class="btn primary">Add probe</button>
+  </div>
+  <div class="body">
+    <nav class="rail">
+      <div class="nav"><div class="ic"></div>Dash</div>
+      <div class="nav"><div class="ic"></div>Schem</div>
+      <div class="nav"><div class="ic"></div>PCB</div>
+      <div class="nav"><div class="ic"></div>Board</div>
+      <div class="nav active"><div class="ic"></div>Sim</div>
+      <div class="nav"><div class="ic"></div>Code</div>
+      <div class="nav"><div class="ic"></div>Plan</div>
+    </nav>
+    <div class="main">
+      <div class="toolbar">
+        <div class="seg">
+          <span class="tool on">Transient</span><span class="tool">DC sweep</span><span class="tool">AC sweep</span>
+        </div>
+        <span class="run"><span class="dot"></span>Run</span>
+        <span class="stop">Stop</span>
+        <div class="spacer"></div>
+        <span class="twin">Window&nbsp;<b>0 – 20 ms</b></span>
+        <span class="twin">Step&nbsp;<b>10 µs</b></span>
+      </div>
+      <div class="scope">
+        <div class="scopehdr">
+          <div class="ttl">Transient · V(t)</div>
+          <div class="legend">
+            <span><i style="background:var(--color-signal)"></i>+3V3</span>
+            <span><i style="background:var(--color-power)"></i>VOUT</span>
+            <span><i style="background:var(--color-data)"></i>GPIO12</span>
+          </div>
+        </div>
+        <div class="plotwrap">
+          <div class="ylab" style="top:4px">3.6 V</div>
+          <div class="ylab" style="top:50%;transform:translateY(-50%)">1.8 V</div>
+          <div class="ylab" style="bottom:4px">0.0 V</div>
+          <svg viewBox="0 0 820 360" preserveAspectRatio="none">
+            <!-- faint grid -->
+            <g stroke="color-mix(in srgb, var(--color-foreground) 9%, transparent)" stroke-width="0.5">
+              <line x1="8" y1="8" x2="812" y2="8"/>
+              <line x1="8" y1="76" x2="812" y2="76"/>
+              <line x1="8" y1="144" x2="812" y2="144"/>
+              <line x1="8" y1="212" x2="812" y2="212"/>
+              <line x1="8" y1="280" x2="812" y2="280"/>
+              <line x1="8" y1="352" x2="812" y2="352"/>
+              <line x1="8" y1="8" x2="8" y2="352"/>
+              <line x1="88" y1="8" x2="88" y2="352"/>
+              <line x1="168" y1="8" x2="168" y2="352"/>
+              <line x1="248" y1="8" x2="248" y2="352"/>
+              <line x1="328" y1="8" x2="328" y2="352"/>
+              <line x1="410" y1="8" x2="410" y2="352"/>
+              <line x1="490" y1="8" x2="490" y2="352"/>
+              <line x1="570" y1="8" x2="570" y2="352"/>
+              <line x1="650" y1="8" x2="650" y2="352"/>
+              <line x1="730" y1="8" x2="730" y2="352"/>
+              <line x1="812" y1="8" x2="812" y2="352"/>
+            </g>
+            <!-- center reference (zero / mid) -->
+            <line x1="8" y1="180" x2="812" y2="180" stroke="color-mix(in srgb, var(--color-foreground) 16%, transparent)" stroke-width="0.6" stroke-dasharray="3,4"/>
+            <!-- GPIO12 digital (data / violet) -->
+            <polyline fill="none" stroke="var(--color-data)" stroke-width="1.6" stroke-linejoin="round" opacity="0.92"
+              points="8.0,70.0 60.0,70.0 61.0,250.0 125.8,250.0 125.8,70.0 178.8,70.0 178.8,250.0 243.6,250.0 243.6,70.0 296.6,70.0 296.6,250.0 361.4,250.0 361.4,70.0 414.4,70.0 414.4,250.0 479.2,250.0 479.2,70.0 532.2,70.0 532.2,250.0 597.0,250.0 597.0,70.0 650.0,70.0 650.0,250.0 714.8,250.0 714.8,70.0 767.8,70.0 767.8,250.0 812.0,250.0"/>
+            <!-- +3V3 signal (cyan sine) -->
+            <polyline fill="none" stroke="var(--color-signal)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
+              points="8.0,180.0 25.3,135.5 42.5,106.9 60.0,103.0 77.1,129.0 94.3,171.8 111.6,217.6 128.9,249.9 146.2,257.2 163.4,236.9 180.7,196.3 198.0,149.8 215.2,114.2 232.5,102.1 249.8,117.8 267.0,155.8 284.3,202.5 301.6,241.1 318.9,257.8 336.1,246.8 353.4,211.8 370.7,165.5 387.9,124.3 405.2,103.1 422.5,109.4 439.7,150.1 457.0,200.0 474.3,229.6 491.6,255.1 509.0,253.0 526.1,225.9 543.4,181.8 560.6,136.9 577.9,107.5 595.2,104.0 612.4,127.7 629.7,170.1 647.0,216.0 664.2,249.1 681.5,257.4 698.8,238.1 716.1,198.0 733.3,151.4 750.6,115.1 767.9,102.0 785.1,116.8 802.4,154.2 812.0,180.0"/>
+            <!-- VOUT power rail (amber RC step + settle) -->
+            <polyline fill="none" stroke="var(--color-power)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
+              points="8.0,300.0 54.1,300.0 61.7,287.4 73.2,259.8 86.7,228.3 100.1,200.1 113.5,176.6 127.0,158.5 140.4,147.1 153.8,142.2 167.3,140.2 180.7,140.1 194.1,141.1 211.4,143.2 232.5,145.8 257.5,148.2 290.1,149.9 328.4,151.7 372.6,151.3 432.1,150.2 510.7,150.0 650.8,150.0 812.0,150.0"/>
+          </svg>
+        </div>
+        <div class="xaxis">
+          <span>0 ms</span><span>2.5</span><span>5.0</span><span>7.5</span><span>10.0</span><span>12.5</span><span>15.0</span><span>17.5</span><span>20 ms</span>
+        </div>
+      </div>
+    </div>
+    <aside class="panel">
+      <div class="ptabs"><div class="ptab on">Probes</div><div class="ptab">Cursors</div><div class="ptab">Setup</div></div>
+      <div class="phdr">Active probes — 3</div>
+      <div class="probe"><span class="sw" style="background:var(--color-signal)"></span><span class="net">+3V3</span><span class="val">3.30 V</span></div>
+      <div class="probe"><span class="sw" style="background:var(--color-power)"></span><span class="net">VOUT</span><span class="val">1.802 V</span></div>
+      <div class="probe"><span class="sw" style="background:var(--color-data)"></span><span class="net">GPIO12</span><span class="val">⎍ 0/3.3 V</span></div>
+      <div class="phdr">Measurements — VOUT</div>
+      <div class="meas"><span class="k">Vpp</span><span class="v">42.6 mV</span></div>
+      <div class="meas"><span class="k">V mean</span><span class="v">1.802 V</span></div>
+      <div class="meas"><span class="k">Frequency</span><span class="v">62.5 kHz</span></div>
+      <div class="meas"><span class="k">Rise time</span><span class="v">118 µs</span></div>
+      <div class="meas"><span class="k">Overshoot</span><span class="v">3.1 %</span></div>
+      <div class="meas"><span class="k">Settling</span><span class="v">4.2 ms</span></div>
+      <div class="phdr">Measurements — +3V3</div>
+      <div class="meas"><span class="k">Vpp</span><span class="v">3.298 V</span></div>
+      <div class="meas"><span class="k">Frequency</span><span class="v">2.250 kHz</span></div>
+      <div class="conv"><b>Converged in 1,204 steps</b><br>ngspice · trap · reltol 1e-3<br>solve 38 ms · 412 nodes</div>
+    </aside>
+  </div>
+</body></html>

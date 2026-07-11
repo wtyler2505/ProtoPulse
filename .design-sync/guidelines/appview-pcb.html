@@ -1,0 +1,155 @@
+<!-- @dsCard group="App Views" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;width:1180px;height:720px;background:var(--color-background);color:var(--color-foreground);font-family:var(--font-sans),system-ui,sans-serif;font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{height:48px;flex:0 0 48px;border-bottom:1px solid var(--color-border);background:color-mix(in srgb,var(--color-card) 60%,transparent);display:flex;align-items:center;gap:16px;padding:0 16px}
+  .wm{font-family:var(--font-display);font-weight:700;font-size:18px}.wm b{color:var(--color-brand)}
+  .crumb{color:var(--color-muted-foreground);font-size:12px}
+  .crumb .proj{color:var(--color-foreground)}
+  .spacer{flex:1}
+  .btn{font-size:12px;padding:5px 12px;border:1px solid var(--color-border);background:transparent;color:var(--color-foreground)}
+  .btn.primary{background:var(--color-primary);color:var(--color-primary-foreground);border-color:var(--color-primary)}
+  .body{flex:1;display:flex;min-height:0}
+  .rail{width:64px;flex:0 0 64px;border-right:1px solid var(--color-border);background:var(--color-sidebar);display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:2px}
+  .nav{width:48px;height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-muted-foreground);font-size:9px;border-left:2px solid transparent}
+  .nav .ic{width:18px;height:18px;border:1.5px solid currentColor;opacity:.8}
+  .nav.active{color:var(--color-primary);border-left-color:var(--color-primary);background:color-mix(in srgb,var(--color-primary) 8%,transparent)}
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .toolbar{height:40px;flex:0 0 40px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:8px;padding:0 12px;background:color-mix(in srgb,var(--color-card) 40%,transparent)}
+  .tool{font-size:11px;color:var(--color-muted-foreground);padding:4px 8px;border:1px solid var(--color-border)}
+  .tool.on{color:var(--color-primary);border-color:var(--color-primary)}
+  .canvas{flex:1;position:relative;background:var(--color-background);background-image:radial-gradient(color-mix(in srgb,var(--color-foreground) 8%,transparent) 1px,transparent 1px);background-size:22px 22px;overflow:hidden}
+  /* --- PCB board --- */
+  .board{position:absolute;left:170px;top:96px;width:470px;height:340px;border:2px solid color-mix(in srgb,var(--color-success) 70%,transparent);background:color-mix(in srgb,var(--color-success) 9%,var(--color-card));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--color-success) 25%,transparent)}
+  .board .edge{position:absolute;font-family:var(--font-mono);font-size:9px;color:color-mix(in srgb,var(--color-success) 80%,var(--color-foreground));letter-spacing:.04em}
+  .trace{position:absolute;height:3px;border-radius:1px}
+  .trace.sig{background:var(--color-signal)}
+  .trace.pwr{background:var(--color-power);height:5px}
+  .trace.gnd{background:color-mix(in srgb,var(--color-foreground) 45%,transparent)}
+  .pad{position:absolute;background:var(--color-power);border:1px solid color-mix(in srgb,var(--color-foreground) 30%,transparent)}
+  .pad.sq{border-radius:0}.pad.rnd{border-radius:50%}
+  .fp{position:absolute;border:1.5px solid color-mix(in srgb,var(--color-foreground) 55%,transparent);background:color-mix(in srgb,var(--color-card) 70%,transparent)}
+  .via{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--color-power);border:2px solid color-mix(in srgb,var(--color-foreground) 35%,transparent)}
+  .refdes{position:absolute;font-family:var(--font-mono);font-size:10px;color:var(--color-foreground)}
+  .netlabel{position:absolute;font-family:var(--font-mono);font-size:10px;padding:1px 5px;border:1px solid var(--color-border);background:var(--color-card)}
+  .netlabel.pwr{color:var(--color-power);border-color:color-mix(in srgb,var(--color-power) 50%,transparent)}
+  .netlabel.net{color:var(--color-signal);border-color:color-mix(in srgb,var(--color-signal) 50%,transparent)}
+  .ratsnest{position:absolute;border-top:1px dashed color-mix(in srgb,var(--color-warning) 70%,transparent)}
+  /* --- right Layers panel --- */
+  .panel{width:248px;flex:0 0 248px;border-left:1px solid var(--color-border);background:var(--color-card);display:flex;flex-direction:column}
+  .ptabs{display:flex;border-bottom:1px solid var(--color-border)}
+  .ptab{flex:1;text-align:center;font-size:11px;padding:8px 0;color:var(--color-muted-foreground)}
+  .ptab.on{color:var(--color-primary);border-bottom:2px solid var(--color-primary)}
+  .phead{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-muted-foreground);padding:10px 12px 6px}
+  .layer{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid color-mix(in srgb,var(--color-border) 60%,transparent);font-size:11px}
+  .layer .sw{width:9px;height:9px;flex:0 0 9px}
+  .layer .vis{margin-left:auto;width:14px;height:14px;border:1px solid var(--color-border);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--color-muted-foreground)}
+  .layer .vis.on{border-color:var(--color-primary);color:var(--color-primary);background:color-mix(in srgb,var(--color-primary) 12%,transparent)}
+  .layer.off{color:var(--color-muted-foreground)}
+  .stack{margin:12px;padding:10px;border:1px solid var(--color-border);background:var(--color-background)}
+  .stack .big{font-family:var(--font-mono);font-size:13px;color:var(--color-foreground)}
+  .stack .row{display:flex;justify-content:space-between;font-size:11px;color:var(--color-muted-foreground);margin-top:5px}
+  .stack .row .v{font-family:var(--font-mono);color:var(--color-foreground)}
+</style></head>
+<body>
+  <div class="topbar">
+    <div class="wm">Proto<b>Pulse</b></div>
+    <div class="crumb">SMPS Reference&nbsp;/&nbsp;<span class="proj">Buck Converter v2</span>&nbsp;/&nbsp;<span class="proj">PCB</span></div>
+    <div class="spacer"></div>
+    <button class="btn">Export Gerbers</button>
+    <button class="btn primary">Run DRC</button>
+  </div>
+  <div class="body">
+    <nav class="rail">
+      <div class="nav"><div class="ic"></div>Dash</div>
+      <div class="nav"><div class="ic"></div>Schem</div>
+      <div class="nav active"><div class="ic"></div>PCB</div>
+      <div class="nav"><div class="ic"></div>Board</div>
+      <div class="nav"><div class="ic"></div>Sim</div>
+      <div class="nav"><div class="ic"></div>Code</div>
+      <div class="nav"><div class="ic"></div>Plan</div>
+    </nav>
+    <div class="main">
+      <div class="toolbar">
+        <span class="tool">Select</span><span class="tool on">Route</span><span class="tool">Via</span><span class="tool">Copper pour</span><span class="tool">Diff pair</span><span class="tool">Layers</span>
+        <div class="spacer"></div>
+        <span class="tool" style="color:var(--color-warning);border-color:color-mix(in srgb,var(--color-warning) 50%,transparent)">12 ratsnest</span>
+        <span class="tool" style="color:var(--color-success);border-color:color-mix(in srgb,var(--color-success) 50%,transparent)">DRC: 0 / 0</span>
+      </div>
+      <div class="canvas">
+        <!-- board outline -->
+        <div class="board">
+          <div class="edge" style="left:8px;top:-14px">Edge.Cuts — 64.0 × 46.0 mm</div>
+
+          <!-- footprints -->
+          <div class="fp" style="left:150px;top:120px;width:150px;height:150px"></div>
+          <div class="refdes" style="left:150px;top:104px">U1 · QFP-48</div>
+          <div class="fp" style="left:42px;top:60px;width:60px;height:26px"></div>
+          <div class="refdes" style="left:42px;top:44px">U2 · SOT-223</div>
+          <div class="fp" style="left:60px;top:230px;width:46px;height:18px"></div>
+          <div class="refdes" style="left:60px;top:252px">R1</div>
+          <div class="fp" style="left:330px;top:60px;width:42px;height:16px"></div>
+          <div class="refdes" style="left:330px;top:44px">C1</div>
+          <div class="fp" style="left:340px;top:250px;width:54px;height:30px"></div>
+          <div class="refdes" style="left:340px;top:282px">L1</div>
+
+          <!-- pads on U1 -->
+          <div class="pad sq" style="left:142px;top:150px;width:8px;height:10px"></div>
+          <div class="pad sq" style="left:142px;top:170px;width:8px;height:10px"></div>
+          <div class="pad sq" style="left:142px;top:190px;width:8px;height:10px"></div>
+          <div class="pad sq" style="left:300px;top:150px;width:8px;height:10px"></div>
+          <div class="pad sq" style="left:300px;top:200px;width:8px;height:10px"></div>
+
+          <!-- power traces (amber) -->
+          <div class="trace pwr" style="left:72px;top:71px;width:240px"></div>
+          <div class="trace pwr" style="left:308px;top:71px;width:5px;height:90px"></div>
+          <div class="trace pwr" style="left:102px;top:73px;width:5px;height:160px"></div>
+
+          <!-- signal traces (cyan) -->
+          <div class="trace sig" style="left:108px;top:156px;width:36px"></div>
+          <div class="trace sig" style="left:108px;top:158px;width:5px;height:78px"></div>
+          <div class="trace sig" style="left:308px;top:156px;width:34px"></div>
+          <div class="trace sig" style="left:338px;top:156px;width:5px;height:100px"></div>
+          <div class="trace sig" style="left:308px;top:206px;width:40px"></div>
+
+          <!-- ground return (dim) -->
+          <div class="trace gnd" style="left:66px;top:300px;width:300px"></div>
+          <div class="trace gnd" style="left:362px;top:240px;width:5px;height:62px"></div>
+
+          <!-- vias -->
+          <div class="via" style="left:206px;top:96px"></div>
+          <div class="via" style="left:330px;top:152px"></div>
+          <div class="via" style="left:200px;top:296px"></div>
+
+          <!-- unrouted ratsnest -->
+          <div class="ratsnest" style="left:108px;top:240px;width:120px;transform:rotate(8deg)"></div>
+          <div class="ratsnest" style="left:248px;top:280px;width:96px;transform:rotate(-12deg)"></div>
+        </div>
+
+        <!-- net labels floating over canvas -->
+        <div class="netlabel pwr" style="left:200px;top:118px">+3V3 · 24 mil</div>
+        <div class="netlabel net" style="left:512px;top:200px">SW · 12 mil</div>
+        <div class="netlabel" style="left:200px;top:402px;color:var(--color-muted-foreground)">GND · pour</div>
+      </div>
+    </div>
+    <aside class="panel">
+      <div class="ptabs"><div class="ptab on">Layers</div><div class="ptab">Nets</div><div class="ptab">DRC</div></div>
+      <div class="phead">Layer stack — top to bottom</div>
+      <div class="layer"><span class="sw" style="background:var(--color-power)"></span>F.Cu · Top Copper<span class="vis on">●</span></div>
+      <div class="layer"><span class="sw" style="background:color-mix(in srgb,var(--color-foreground) 80%,transparent)"></span>F.Silkscreen<span class="vis on">●</span></div>
+      <div class="layer"><span class="sw" style="background:var(--color-signal)"></span>In1.Cu · GND plane<span class="vis on">●</span></div>
+      <div class="layer"><span class="sw" style="background:var(--color-data)"></span>In2.Cu · PWR plane<span class="vis on">●</span></div>
+      <div class="layer"><span class="sw" style="background:var(--color-success)"></span>B.Cu · Bottom Copper<span class="vis on">●</span></div>
+      <div class="layer off"><span class="sw" style="background:color-mix(in srgb,var(--color-success) 40%,transparent)"></span>B.Soldermask<span class="vis">○</span></div>
+      <div class="layer off"><span class="sw" style="background:var(--color-warning)"></span>Edge.Cuts / Drill<span class="vis">○</span></div>
+      <div class="stack">
+        <div class="big">4-layer · 1.6 mm FR4</div>
+        <div class="row"><span>Copper weight</span><span class="v">1 oz</span></div>
+        <div class="row"><span>Surface finish</span><span class="v">ENIG</span></div>
+        <div class="row"><span>Min clearance</span><span class="v">6 mil</span></div>
+        <div class="row"><span>Min track width</span><span class="v">8 mil</span></div>
+      </div>
+    </aside>
+  </div>
+</body></html>

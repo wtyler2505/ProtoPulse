@@ -1,0 +1,159 @@
+<!-- @dsCard group="App Views" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;width:1180px;height:720px;background:var(--color-background);color:var(--color-foreground);font-family:var(--font-sans),system-ui,sans-serif;font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{height:48px;flex:0 0 48px;border-bottom:1px solid var(--color-border);background:color-mix(in srgb,var(--color-card) 60%,transparent);display:flex;align-items:center;gap:16px;padding:0 16px}
+  .wm{font-family:var(--font-display);font-weight:700;font-size:18px}.wm b{color:var(--color-brand)}
+  .crumb{color:var(--color-muted-foreground);font-size:12px}
+  .crumb .proj{color:var(--color-foreground)}
+  .spacer{flex:1}
+  .btn{font-size:12px;padding:5px 12px;border:1px solid var(--color-border);background:transparent;color:var(--color-foreground)}
+  .btn.primary{background:var(--color-primary);color:var(--color-primary-foreground);border-color:var(--color-primary)}
+  .body{flex:1;display:flex;min-height:0}
+  .rail{width:64px;flex:0 0 64px;border-right:1px solid var(--color-border);background:var(--color-sidebar);display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:2px}
+  .nav{width:48px;height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-muted-foreground);font-size:9px;border-left:2px solid transparent}
+  .nav .ic{width:18px;height:18px;border:1.5px solid currentColor;opacity:.8}
+  .nav.active{color:var(--color-primary);border-left-color:var(--color-primary);background:color-mix(in srgb,var(--color-primary) 8%,transparent)}
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .toolbar{height:40px;flex:0 0 40px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:8px;padding:0 14px;background:color-mix(in srgb,var(--color-card) 40%,transparent)}
+  .toolbar .title{font-family:var(--font-display);font-weight:700;font-size:14px;letter-spacing:.3px}
+  .tool{font-size:11px;color:var(--color-muted-foreground);padding:4px 8px;border:1px solid var(--color-border)}
+  .tool.ok{color:var(--color-success);border-color:color-mix(in srgb,var(--color-success) 50%,transparent)}
+  .content{flex:1;overflow:hidden;padding:16px;background:var(--color-background);display:flex;flex-direction:column;gap:14px}
+
+  /* card shell — reuse schematic card tokens */
+  .card{background:var(--color-card);border:1px solid var(--color-border);display:flex;flex-direction:column}
+  .card .ch{display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:1px solid color-mix(in srgb,var(--color-border) 70%,transparent)}
+  .card .ch .dot{width:7px;height:7px;background:var(--color-primary)}
+  .card .ch .lbl{font-family:var(--font-display);font-weight:700;font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--color-foreground)}
+  .card .ch .meta{margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--color-muted-foreground)}
+
+  /* stat tiles row */
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;flex:0 0 auto}
+  .tile{background:var(--color-card);border:1px solid var(--color-border);padding:14px 16px;position:relative;overflow:hidden}
+  .tile .cap{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--color-muted-foreground);font-family:var(--font-mono)}
+  .tile .num{font-family:var(--font-display);font-weight:700;font-size:34px;line-height:1.05;margin-top:6px}
+  .tile .sub{font-size:10px;font-family:var(--font-mono);color:var(--color-muted-foreground);margin-top:3px}
+  .tile .bar{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--color-primary)}
+  .tile.ok .num{color:var(--color-success)}.tile.ok .bar{background:var(--color-success)}
+  .tile.warn .num{color:var(--color-warning)}.tile.warn .bar{background:var(--color-warning)}
+  .tile.pwr .num{color:var(--color-power)}.tile.pwr .bar{background:var(--color-power)}
+  .tile.cyan .num{color:var(--color-primary)}
+
+  /* lower grid */
+  .grid{flex:1;display:grid;grid-template-columns:1.15fr 1fr;grid-template-rows:1fr auto;gap:14px;min-height:0}
+  .span-row{grid-row:1 / span 2}
+
+  /* validation check rows */
+  .checks{padding:6px 0;overflow:hidden}
+  .chk{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid color-mix(in srgb,var(--color-border) 50%,transparent);font-size:12px}
+  .chk:last-child{border-bottom:0}
+  .chk .mk{width:16px;height:16px;flex:0 0 16px;border:1.5px solid var(--color-success);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--color-success);font-weight:700}
+  .chk.warn .mk{border-color:var(--color-warning);color:var(--color-warning)}
+  .chk .name{color:var(--color-foreground)}
+  .chk .state{margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--color-success);text-transform:uppercase;letter-spacing:.5px}
+  .chk.warn .state{color:var(--color-warning)}
+
+  /* recent activity */
+  .act{overflow:hidden}
+  .ev{display:flex;align-items:baseline;gap:12px;padding:8px 12px;border-bottom:1px solid color-mix(in srgb,var(--color-border) 50%,transparent);font-size:12px}
+  .ev:last-child{border-bottom:0}
+  .ev .ts{font-family:var(--font-mono);font-size:10px;color:var(--color-muted-foreground);flex:0 0 62px}
+  .ev .txt{color:var(--color-foreground)}
+  .ev .txt b{font-family:var(--font-mono);font-weight:400;color:var(--color-signal)}
+  .ev .who{margin-left:auto;font-family:var(--font-mono);font-size:9px;padding:1px 5px;border:1px solid var(--color-border);color:var(--color-muted-foreground);text-transform:uppercase}
+  .ev .who.ai{color:var(--color-primary);border-color:color-mix(in srgb,var(--color-primary) 50%,transparent)}
+
+  /* release readiness */
+  .rel{padding:14px 14px 16px}
+  .rel .pct{font-family:var(--font-display);font-weight:700;font-size:40px;color:var(--color-primary);line-height:1}
+  .rel .pcap{font-size:10px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.8px;color:var(--color-muted-foreground);margin-top:2px}
+  .track{height:9px;background:color-mix(in srgb,var(--color-foreground) 10%,transparent);margin-top:14px;border:1px solid var(--color-border)}
+  .fill{height:100%;width:72%;background:linear-gradient(90deg,color-mix(in srgb,var(--color-primary) 70%,transparent),var(--color-primary))}
+  .ticks{display:flex;justify-content:space-between;margin-top:10px;font-family:var(--font-mono);font-size:10px;color:var(--color-muted-foreground)}
+  .tick.done{color:var(--color-success)}
+  .tick.cur{color:var(--color-primary)}
+</style></head>
+<body>
+  <div class="topbar">
+    <div class="wm">Proto<b>Pulse</b></div>
+    <div class="crumb">SMPS Reference&nbsp;/&nbsp;<span class="proj">Buck Converter v2</span></div>
+    <div class="spacer"></div>
+    <button class="btn">Export BOM</button>
+    <button class="btn primary">Run validation</button>
+  </div>
+  <div class="body">
+    <nav class="rail">
+      <div class="nav active"><div class="ic"></div>Dash</div>
+      <div class="nav"><div class="ic"></div>Schem</div>
+      <div class="nav"><div class="ic"></div>PCB</div>
+      <div class="nav"><div class="ic"></div>Board</div>
+      <div class="nav"><div class="ic"></div>Sim</div>
+      <div class="nav"><div class="ic"></div>Code</div>
+      <div class="nav"><div class="ic"></div>Plan</div>
+    </nav>
+    <div class="main">
+      <div class="toolbar">
+        <span class="title">Project Overview</span>
+        <div class="spacer"></div>
+        <span class="tool">24 components</span>
+        <span class="tool">rev B</span>
+        <span class="tool ok">DRC: 0 errors</span>
+      </div>
+      <div class="content">
+
+        <!-- stat tiles -->
+        <div class="tiles">
+          <div class="tile cyan"><div class="bar"></div><div class="cap">BOM Cost</div><div class="num">$48.20</div><div class="sub">24 lines &middot; qty 61</div></div>
+          <div class="tile cyan"><div class="bar"></div><div class="cap">Components</div><div class="num">24</div><div class="sub">8 unique types</div></div>
+          <div class="tile cyan"><div class="bar"></div><div class="cap">Nets</div><div class="num">31</div><div class="sub">4 power &middot; 27 signal</div></div>
+          <div class="tile ok"><div class="bar"></div><div class="cap">DRC</div><div class="num">0</div><div class="sub">errors &middot; 0 warnings</div></div>
+        </div>
+
+        <!-- lower grid -->
+        <div class="grid">
+          <!-- validation (left, spans both rows) -->
+          <section class="card span-row">
+            <div class="ch"><span class="dot"></span><span class="lbl">Validation</span><span class="meta">5 checks &middot; 1 caution</span></div>
+            <div class="checks">
+              <div class="chk"><span class="mk">&#10003;</span><span class="name">Electrical rules (ERC)</span><span class="state">pass</span></div>
+              <div class="chk"><span class="mk">&#10003;</span><span class="name">Design rules (DRC)</span><span class="state">pass</span></div>
+              <div class="chk"><span class="mk">&#10003;</span><span class="name">BOM sourced &mdash; all lines</span><span class="state">pass</span></div>
+              <div class="chk"><span class="mk">&#10003;</span><span class="name">Footprint coverage</span><span class="state">pass</span></div>
+              <div class="chk warn"><span class="mk">!</span><span class="name">Lifecycle &mdash; 2 parts NRND</span><span class="state">caution</span></div>
+            </div>
+          </section>
+
+          <!-- release readiness (top right) -->
+          <section class="card">
+            <div class="ch"><span class="dot"></span><span class="lbl">Release Readiness</span><span class="meta">v2.0 &middot; rev B</span></div>
+            <div class="rel">
+              <div class="pct">72%</div>
+              <div class="pcap">ready for fabrication</div>
+              <div class="track"><div class="fill"></div></div>
+              <div class="ticks">
+                <span class="tick done">Schematic</span>
+                <span class="tick done">Layout</span>
+                <span class="tick cur">Review</span>
+                <span class="tick">Fab</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- recent activity (bottom right) -->
+          <section class="card act">
+            <div class="ch"><span class="dot"></span><span class="lbl">Recent Activity</span><span class="meta">last 4</span></div>
+            <div>
+              <div class="ev"><span class="ts">14:22:07</span><span class="txt">Placed <b>U1 ATmega328P</b></span><span class="who">TY</span></div>
+              <div class="ev"><span class="ts">14:18:51</span><span class="txt">Routed <b>+3V3</b> net</span><span class="who ai">AI</span></div>
+              <div class="ev"><span class="ts">13:54:30</span><span class="txt">Ran transient sim &mdash; 2.0&nbsp;ms</span><span class="who ai">AI</span></div>
+              <div class="ev"><span class="ts">13:41:12</span><span class="txt">Updated <b>C1</b> to 100nF X7R</span><span class="who">TY</span></div>
+            </div>
+          </section>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</body></html>

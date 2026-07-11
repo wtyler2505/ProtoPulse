@@ -53,6 +53,11 @@ npm run -w @protopulse/app dev   # new editor on http://localhost:5174
 npm run -w @protopulse/cli build && node packages/cli/dist/protopulse.js check <design>
 ```
 
+**Engine verification — the hooks LIE on `packages/` (read this before trusting a green check):**
+- The `typecheck-changed` PostToolUse hook runs `check:packages`, which **OOM/earlyoom-terminates** on this box (`TSC errors: Terminated`) and reports a FALSE clean — a "Terminated" is *not* "0 errors". Verify a package properly with `cd packages/<pkg> && NODE_OPTIONS=--max-old-space-size=16384 npx tsc --noEmit --incremental false` and **trust the EXIT code, not grep**.
+- The `test-changed` hook uses the root vitest config, which **excludes `packages/`** → "No test files found" is a false block. Run engine tests with `npm run -w @protopulse/<pkg> test`.
+- **`earlyoom` is active** and SIGTERMs the largest-RSS process under memory pressure (~7 GB box, full desktop + Chrome + MCP). Heavy `vite build` / dev-serve and `check:packages` get killed (`code 143`, graceful). **Do NOT raise `--max-old-space-size` to fight it** — a bigger heap trips earlyoom *sooner*. Free RAM, build on a roomier host, or use prebuilt-static. See `.claude/skills/run-protopulse*` and memory `project_earlyoom_kills_heavy_builds`.
+
 ## Documentation Rules (Mandatory)
 One home per fact; pointers everywhere else. Before editing any doc, know which kind it is:
 

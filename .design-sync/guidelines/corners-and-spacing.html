@@ -1,0 +1,35 @@
+<!-- @dsCard group="Guidelines" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;background:var(--color-background);color:var(--color-foreground);font-family:var(--font-sans),system-ui,sans-serif;padding:32px}
+  h1{font-family:var(--font-display);font-size:28px;font-weight:700;margin:0 0 4px}
+  .sub{color:var(--color-muted-foreground);font-size:13px;margin:0 0 24px}
+  h2{font-family:var(--font-display);font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-muted-foreground);margin:24px 0 12px}
+  .demo{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
+  .box{background:var(--color-card);border:1px solid var(--color-border);width:120px;height:80px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;color:var(--color-muted-foreground)}
+  .chamfer{clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% 100%,calc(100% - 8px) 100%,8px 100%,0 100%,0 8px)}
+  .chamfer-tr{clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}
+  .bar{background:var(--color-primary);height:14px}
+  .srow{display:flex;align-items:center;gap:12px;margin-bottom:8px;font-family:var(--font-mono);font-size:12px;color:var(--color-muted-foreground)}
+</style></head>
+<body>
+  <h1>Corners &amp; spacing</h1>
+  <p class="sub">ProtoPulse is a <strong>sharp-cornered</strong> system — the radius scale is <code style="font-family:var(--font-mono)">0px</code> at every step. Softness comes from angled <em>chamfers</em>, not rounding.</p>
+
+  <h2>Corners — radius 0, chamfer for character</h2>
+  <div class="demo">
+    <div class="box">square (default)</div>
+    <div class="box chamfer">.chamfer · 8px</div>
+    <div class="box chamfer-tr">.chamfer-tr</div>
+  </div>
+
+  <h2>Spacing rhythm (4px base)</h2>
+  <div style="max-width:520px">
+    <div class="srow"><span style="width:48px">4</span><div class="bar" style="width:4px"></div></div>
+    <div class="srow"><span style="width:48px">8</span><div class="bar" style="width:8px"></div></div>
+    <div class="srow"><span style="width:48px">12</span><div class="bar" style="width:12px"></div></div>
+    <div class="srow"><span style="width:48px">16</span><div class="bar" style="width:16px"></div></div>
+    <div class="srow"><span style="width:48px">24</span><div class="bar" style="width:24px"></div></div>
+    <div class="srow"><span style="width:48px">32</span><div class="bar" style="width:32px"></div></div>
+  </div>
+</body></html>
