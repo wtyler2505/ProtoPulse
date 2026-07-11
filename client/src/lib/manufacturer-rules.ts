@@ -7,11 +7,33 @@
  * stricter/looser/match classification and color-coded output.
  *
  * Supported manufacturers: JLCPCB, PCBWay, OSHPark, Eurocircuits.
+ *
+ * minAnnularRing live-verified 2026-07-10 (BL-1094, a live-reachable
+ * counterpart to the dead-code `shared/drc-templates.ts` fix in BL-0913
+ * — this file IS wired into ManufacturerRuleCompare.tsx, drc-templates.ts
+ * is not):
+ *  - JLCPCB: 5mil (0.127mm) was under the real ~7mil (0.18mm) absolute
+ *    minimum floor for 2-layer 1oz copper — fixed to 7mil.
+ *  - PCBWay: 5mil (0.127mm) was under the real 6mil (0.15mm) — fixed.
+ *  - OSHPark: 7mil (0.178mm) was over-restrictive vs. the real 5mil
+ *    (0.127mm, their standard 2-layer service) — fixed, and the source
+ *    URL corrected (the old one 404s; docs.oshpark.com/services/ is
+ *    live and states the number).
+ *  - Eurocircuits: left AS-IS (7mil). Their spec is classification-tier
+ *    based (IPC-style pattern/drill classes), not a single published
+ *    minimum like the other three — three separate fetches (the cited
+ *    guidelines page, "Understanding annular rings", "Drilled Holes")
+ *    found no single standard-tier number, only a hypothetical worked
+ *    example and oblong-pad-specific rules. Needs dedicated research
+ *    into their Classification system before this can be corrected
+ *    with real confidence; guessing a number here would repeat the
+ *    exact mistake this fix is correcting elsewhere.
  */
 
-import type { DRCRule, DRCRuleType } from '@shared/component-types';
 import type { DrcRuleOverride } from '@/lib/drc-presets';
 import { formatRuleType } from '@/lib/drc-presets';
+
+import type { DRCRule, DRCRuleType } from '@shared/component-types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,7 +97,7 @@ const JLCPCB_RULES: ManufacturerRuleSet = {
     { type: 'min-clearance', params: { minClearance: 6 }, severity: 'error' },
     { type: 'min-trace-width', params: { minWidth: 5 }, severity: 'error' },
     { type: 'pad-size', params: { minPadDiameter: 35, minDrillDiameter: 15 }, severity: 'error' },
-    { type: 'annular-ring', params: { minAnnularRing: 5 }, severity: 'error' },
+    { type: 'annular-ring', params: { minAnnularRing: 7 }, severity: 'error' },
     { type: 'trace-to-edge', params: { minEdgeClearance: 8 }, severity: 'error' },
     { type: 'solder-mask', params: { minSolderMaskDam: 3, minSolderMaskExpansion: 2 }, severity: 'warning' },
     { type: 'via-in-pad', params: {}, severity: 'warning' },
@@ -99,7 +121,7 @@ const PCBWAY_RULES: ManufacturerRuleSet = {
     { type: 'min-clearance', params: { minClearance: 6 }, severity: 'error' },
     { type: 'min-trace-width', params: { minWidth: 5 }, severity: 'error' },
     { type: 'pad-size', params: { minPadDiameter: 35, minDrillDiameter: 15 }, severity: 'error' },
-    { type: 'annular-ring', params: { minAnnularRing: 5 }, severity: 'error' },
+    { type: 'annular-ring', params: { minAnnularRing: 6 }, severity: 'error' },
     { type: 'trace-to-edge', params: { minEdgeClearance: 10 }, severity: 'error' },
     { type: 'solder-mask', params: { minSolderMaskDam: 3, minSolderMaskExpansion: 2 }, severity: 'warning' },
     { type: 'via-in-pad', params: {}, severity: 'warning' },
@@ -118,12 +140,12 @@ const OSHPARK_RULES: ManufacturerRuleSet = {
   name: 'OSHPark',
   id: 'oshpark',
   description: 'US-based community board house. Purple boards, ENIG finish, tighter tolerances.',
-  source: 'https://docs.oshpark.com/design-tools/eagle/design-rules/',
+  source: 'https://docs.oshpark.com/services/',
   rules: [
     { type: 'min-clearance', params: { minClearance: 6 }, severity: 'error' },
     { type: 'min-trace-width', params: { minWidth: 5 }, severity: 'error' },
     { type: 'pad-size', params: { minPadDiameter: 40, minDrillDiameter: 20 }, severity: 'error' },
-    { type: 'annular-ring', params: { minAnnularRing: 7 }, severity: 'error' },
+    { type: 'annular-ring', params: { minAnnularRing: 5 }, severity: 'error' },
     { type: 'trace-to-edge', params: { minEdgeClearance: 15 }, severity: 'error' },
     { type: 'solder-mask', params: { minSolderMaskDam: 4, minSolderMaskExpansion: 3 }, severity: 'error' },
     { type: 'via-in-pad', params: {}, severity: 'error' },
@@ -210,10 +232,7 @@ function compareSeverity(current: string, mfg: string): ComparisonStatus {
  * Resolve a manufacturer's overrides into a full DRC rule set for comparison.
  * Maps manufacturer overrides onto a base rule set (same logic as applyOverrides).
  */
-function resolveManufacturerRules(
-  base: DRCRule[],
-  overrides: DrcRuleOverride[],
-): DRCRule[] {
+function resolveManufacturerRules(base: DRCRule[], overrides: DrcRuleOverride[]): DRCRule[] {
   const overrideMap = new Map<DRCRuleType, DrcRuleOverride>();
   for (const o of overrides) {
     overrideMap.set(o.type, o);
@@ -242,10 +261,7 @@ function resolveManufacturerRules(
  * @param manufacturerId - The manufacturer ID to compare against
  * @returns Array of per-field diffs, or empty array if manufacturer not found
  */
-export function compareWithManufacturer(
-  currentRules: DRCRule[],
-  manufacturerId: string,
-): ManufacturerRuleDiff[] {
+export function compareWithManufacturer(currentRules: DRCRule[], manufacturerId: string): ManufacturerRuleDiff[] {
   const mfgRuleSet = MANUFACTURER_RULES.get(manufacturerId);
   if (!mfgRuleSet) {
     return [];
@@ -309,10 +325,7 @@ export function summarizeComparison(diffs: ManufacturerRuleDiff[]): ComparisonSu
  * as the user's current rules. Uses the manufacturer's overrides on top of
  * the user's existing base rules.
  */
-export function buildManufacturerRules(
-  baseRules: DRCRule[],
-  manufacturerId: string,
-): DRCRule[] | null {
+export function buildManufacturerRules(baseRules: DRCRule[], manufacturerId: string): DRCRule[] | null {
   const mfgRuleSet = MANUFACTURER_RULES.get(manufacturerId);
   if (!mfgRuleSet) {
     return null;

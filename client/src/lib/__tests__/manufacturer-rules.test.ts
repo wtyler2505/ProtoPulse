@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
 import type { DRCRule } from '@shared/component-types';
 import { getDefaultDRCRules } from '@shared/drc-engine';
+
 import {
   MANUFACTURER_RULES,
   getManufacturerIds,
@@ -9,6 +11,7 @@ import {
   summarizeComparison,
   buildManufacturerRules,
 } from '../manufacturer-rules';
+
 import type { ManufacturerRuleDiff, ComparisonSummary } from '../manufacturer-rules';
 
 // ---------------------------------------------------------------------------
@@ -173,9 +176,7 @@ describe('manufacturer-rules', () => {
     it('detects severity difference', () => {
       // Default pad-size severity is 'warning', OSHPark's is 'error'
       const diffs = compareWithManufacturer(defaultRules, 'oshpark');
-      const padSizeSeverityDiff = diffs.find(
-        (d) => d.ruleType === 'pad-size' && d.field === 'severity',
-      );
+      const padSizeSeverityDiff = diffs.find((d) => d.ruleType === 'pad-size' && d.field === 'severity');
       // OSHPark pad-size is 'error', default is 'warning' → current is looser
       expect(padSizeSeverityDiff).toBeDefined();
       expect(padSizeSeverityDiff!.current).toBe('warning');
@@ -207,9 +208,7 @@ describe('manufacturer-rules', () => {
     });
 
     it('handles rules with no params gracefully', () => {
-      const rules: DRCRule[] = [
-        { type: 'silk-overlap', params: {}, severity: 'warning', enabled: true },
-      ];
+      const rules: DRCRule[] = [{ type: 'silk-overlap', params: {}, severity: 'warning', enabled: true }];
       const diffs = compareWithManufacturer(rules, 'jlcpcb');
       // silk-overlap has no numeric params to compare, but severity might differ
       expect(Array.isArray(diffs)).toBe(true);
@@ -231,9 +230,16 @@ describe('manufacturer-rules', () => {
   });
 
   describe('OSHPark comparison', () => {
-    it('OSHPark has stricter annular ring than defaults', () => {
-      // Default annular ring is 5, OSHPark is 7
+    it('OSHPark annular ring matches the default and produces no diff (BL-1094: corrected 2026-07-10, was a stale 7mil that overstated OSHPark as stricter — their real published minimum is 5mil, same as the app default; compareWithManufacturer only emits an entry when values genuinely differ)', () => {
       const diffs = compareWithManufacturer(defaultRules, 'oshpark');
+      const annularDiff = diffs.find((d) => d.ruleType === 'annular-ring' && d.field === 'minAnnularRing');
+      expect(annularDiff).toBeUndefined();
+    });
+  });
+
+  describe('JLCPCB comparison — annular ring', () => {
+    it('JLCPCB has a stricter annular ring than defaults (BL-1094: corrected 2026-07-10, was a stale 5mil — their real absolute-minimum floor is 7mil for 2-layer 1oz copper)', () => {
+      const diffs = compareWithManufacturer(defaultRules, 'jlcpcb');
       const annularDiff = diffs.find((d) => d.ruleType === 'annular-ring' && d.field === 'minAnnularRing');
       expect(annularDiff).toBeDefined();
       expect(annularDiff!.current).toBe(5);
@@ -261,9 +267,30 @@ describe('manufacturer-rules', () => {
   describe('summarizeComparison', () => {
     it('returns correct counts for a known set of diffs', () => {
       const diffs: ManufacturerRuleDiff[] = [
-        { ruleType: 'min-clearance', ruleLabel: 'Min Clearance', field: 'minClearance', current: 8, manufacturer: 6, status: 'stricter' },
-        { ruleType: 'min-trace-width', ruleLabel: 'Min Trace Width', field: 'minWidth', current: 4, manufacturer: 6, status: 'looser' },
-        { ruleType: 'annular-ring', ruleLabel: 'Annular Ring', field: 'minAnnularRing', current: 5, manufacturer: 5, status: 'match' },
+        {
+          ruleType: 'min-clearance',
+          ruleLabel: 'Min Clearance',
+          field: 'minClearance',
+          current: 8,
+          manufacturer: 6,
+          status: 'stricter',
+        },
+        {
+          ruleType: 'min-trace-width',
+          ruleLabel: 'Min Trace Width',
+          field: 'minWidth',
+          current: 4,
+          manufacturer: 6,
+          status: 'looser',
+        },
+        {
+          ruleType: 'annular-ring',
+          ruleLabel: 'Annular Ring',
+          field: 'minAnnularRing',
+          current: 5,
+          manufacturer: 5,
+          status: 'match',
+        },
       ];
       const summary = summarizeComparison(diffs);
       expect(summary.total).toBe(3);

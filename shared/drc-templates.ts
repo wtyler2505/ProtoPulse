@@ -19,19 +19,41 @@ export interface ManufacturerDRCTemplate {
  *  - JLCPCB: https://jlcpcb.com/capabilities/pcb-capabilities
  *  - PCBWay: https://www.pcbway.com/capabilities.html
  *  - OSHPark: https://docs.oshpark.com/services/
+ *
+ * minAnnularRing live-verified 2026-07-10 against the pages above
+ * (BL-0913) — every template below was wrong, in both directions:
+ *  - PCBWay: page states 0.15mm; template had 0.1mm (too loose — a
+ *    real risk of a board passing this DFM check but being rejected
+ *    or reworked at the fab).
+ *  - OSHPark: page states 0.127mm (2-layer) / 0.1016mm (4/6-layer,
+ *    "4mil"); both templates had 0.178mm (too strict — false-positive
+ *    DFM failures on boards OSHPark would actually accept).
+ *  - JLCPCB: page's PTH annular-ring table gives an "absolute minimum"
+ *    floor of 0.18mm (2-layer, 1oz copper) / 0.15mm (multilayer,
+ *    1oz — the lowest allowable tier); both templates had 0.13mm (too
+ *    loose, same failure mode as PCBWay). The page also lists a looser
+ *    "recommended" value and a tighter 2oz-copper value; this uses the
+ *    1oz absolute-minimum floor — the true hard fab constraint a DRC
+ *    check should fail against, not the friendlier recommendation.
  */
 const templates: ManufacturerDRCTemplate[] = [
   {
     name: 'JLCPCB 2-Layer',
     manufacturer: 'JLCPCB',
-    description: 'Standard 2-layer PCB capabilities for JLCPCB. Minimum trace/space 5mil (0.127mm), min drill 0.3mm, min annular ring 0.13mm.',
+    description:
+      'Standard 2-layer PCB capabilities for JLCPCB. Minimum trace/space 5mil (0.127mm), min drill 0.3mm, min annular ring 0.18mm.',
     rules: [
       { type: 'min-trace-width', params: { minWidth: 0.127 }, severity: 'error', enabled: true },
       { type: 'min-clearance', params: { minClearance: 0.127 }, severity: 'error', enabled: true },
       { type: 'pad-size', params: { minPadDiameter: 0.6, minDrillDiameter: 0.3 }, severity: 'error', enabled: true },
-      { type: 'annular-ring', params: { minAnnularRing: 0.13 }, severity: 'error', enabled: true },
+      { type: 'annular-ring', params: { minAnnularRing: 0.18 }, severity: 'error', enabled: true },
       { type: 'trace-to-edge', params: { minEdgeClearance: 0.3 }, severity: 'error', enabled: true },
-      { type: 'solder-mask', params: { minSolderMaskDam: 0.1, minSolderMaskExpansion: 0.05 }, severity: 'warning', enabled: true },
+      {
+        type: 'solder-mask',
+        params: { minSolderMaskDam: 0.1, minSolderMaskExpansion: 0.05 },
+        severity: 'warning',
+        enabled: true,
+      },
       { type: 'via-in-pad', params: {}, severity: 'warning', enabled: true },
       { type: 'silk-overlap', params: {}, severity: 'warning', enabled: true },
       { type: 'courtyard-overlap', params: { minCourtyard: 0.25 }, severity: 'warning', enabled: true },
@@ -46,9 +68,14 @@ const templates: ManufacturerDRCTemplate[] = [
       { type: 'min-trace-width', params: { minWidth: 0.09 }, severity: 'error', enabled: true },
       { type: 'min-clearance', params: { minClearance: 0.09 }, severity: 'error', enabled: true },
       { type: 'pad-size', params: { minPadDiameter: 0.6, minDrillDiameter: 0.2 }, severity: 'error', enabled: true },
-      { type: 'annular-ring', params: { minAnnularRing: 0.13 }, severity: 'error', enabled: true },
+      { type: 'annular-ring', params: { minAnnularRing: 0.15 }, severity: 'error', enabled: true },
       { type: 'trace-to-edge', params: { minEdgeClearance: 0.3 }, severity: 'error', enabled: true },
-      { type: 'solder-mask', params: { minSolderMaskDam: 0.1, minSolderMaskExpansion: 0.05 }, severity: 'warning', enabled: true },
+      {
+        type: 'solder-mask',
+        params: { minSolderMaskDam: 0.1, minSolderMaskExpansion: 0.05 },
+        severity: 'warning',
+        enabled: true,
+      },
       { type: 'via-in-pad', params: {}, severity: 'warning', enabled: true },
       { type: 'silk-overlap', params: {}, severity: 'warning', enabled: true },
       { type: 'courtyard-overlap', params: { minCourtyard: 0.25 }, severity: 'warning', enabled: true },
@@ -63,9 +90,14 @@ const templates: ManufacturerDRCTemplate[] = [
       { type: 'min-trace-width', params: { minWidth: 0.1 }, severity: 'error', enabled: true },
       { type: 'min-clearance', params: { minClearance: 0.1 }, severity: 'error', enabled: true },
       { type: 'pad-size', params: { minPadDiameter: 0.5, minDrillDiameter: 0.2 }, severity: 'error', enabled: true },
-      { type: 'annular-ring', params: { minAnnularRing: 0.1 }, severity: 'error', enabled: true },
+      { type: 'annular-ring', params: { minAnnularRing: 0.15 }, severity: 'error', enabled: true },
       { type: 'trace-to-edge', params: { minEdgeClearance: 0.25 }, severity: 'error', enabled: true },
-      { type: 'solder-mask', params: { minSolderMaskDam: 0.08, minSolderMaskExpansion: 0.05 }, severity: 'warning', enabled: true },
+      {
+        type: 'solder-mask',
+        params: { minSolderMaskDam: 0.08, minSolderMaskExpansion: 0.05 },
+        severity: 'warning',
+        enabled: true,
+      },
       { type: 'via-in-pad', params: {}, severity: 'warning', enabled: true },
       { type: 'silk-overlap', params: {}, severity: 'warning', enabled: true },
       { type: 'courtyard-overlap', params: { minCourtyard: 0.2 }, severity: 'warning', enabled: true },
@@ -75,14 +107,20 @@ const templates: ManufacturerDRCTemplate[] = [
   {
     name: 'OSHPark 2-Layer',
     manufacturer: 'OSHPark',
-    description: 'After Dark 2-layer service from OSHPark. Minimum trace/space 6mil (0.152mm), min drill 10mil (0.254mm).',
+    description:
+      'After Dark 2-layer service from OSHPark. Minimum trace/space 6mil (0.152mm), min drill 10mil (0.254mm).',
     rules: [
       { type: 'min-trace-width', params: { minWidth: 0.152 }, severity: 'error', enabled: true },
       { type: 'min-clearance', params: { minClearance: 0.152 }, severity: 'error', enabled: true },
       { type: 'pad-size', params: { minPadDiameter: 0.7, minDrillDiameter: 0.254 }, severity: 'error', enabled: true },
-      { type: 'annular-ring', params: { minAnnularRing: 0.178 }, severity: 'error', enabled: true },
+      { type: 'annular-ring', params: { minAnnularRing: 0.127 }, severity: 'error', enabled: true },
       { type: 'trace-to-edge', params: { minEdgeClearance: 0.381 }, severity: 'error', enabled: true },
-      { type: 'solder-mask', params: { minSolderMaskDam: 0.1, minSolderMaskExpansion: 0.05 }, severity: 'warning', enabled: true },
+      {
+        type: 'solder-mask',
+        params: { minSolderMaskDam: 0.1, minSolderMaskExpansion: 0.05 },
+        severity: 'warning',
+        enabled: true,
+      },
       { type: 'via-in-pad', params: {}, severity: 'warning', enabled: true },
       { type: 'silk-overlap', params: {}, severity: 'warning', enabled: true },
       { type: 'courtyard-overlap', params: { minCourtyard: 0.25 }, severity: 'warning', enabled: true },
@@ -97,9 +135,14 @@ const templates: ManufacturerDRCTemplate[] = [
       { type: 'min-trace-width', params: { minWidth: 0.127 }, severity: 'error', enabled: true },
       { type: 'min-clearance', params: { minClearance: 0.127 }, severity: 'error', enabled: true },
       { type: 'pad-size', params: { minPadDiameter: 0.7, minDrillDiameter: 0.254 }, severity: 'error', enabled: true },
-      { type: 'annular-ring', params: { minAnnularRing: 0.178 }, severity: 'error', enabled: true },
+      { type: 'annular-ring', params: { minAnnularRing: 0.1016 }, severity: 'error', enabled: true },
       { type: 'trace-to-edge', params: { minEdgeClearance: 0.381 }, severity: 'error', enabled: true },
-      { type: 'solder-mask', params: { minSolderMaskDam: 0.1, minSolderMaskExpansion: 0.05 }, severity: 'warning', enabled: true },
+      {
+        type: 'solder-mask',
+        params: { minSolderMaskDam: 0.1, minSolderMaskExpansion: 0.05 },
+        severity: 'warning',
+        enabled: true,
+      },
       { type: 'via-in-pad', params: {}, severity: 'warning', enabled: true },
       { type: 'silk-overlap', params: {}, severity: 'warning', enabled: true },
       { type: 'courtyard-overlap', params: { minCourtyard: 0.25 }, severity: 'warning', enabled: true },

@@ -38,12 +38,12 @@ describe('deck seed', () => {
   it('parses and matches the JLCPCB 2-layer spec values exactly', () => {
     const deck = loadDeckFile(deckPath);
     expect(deck.deck).toBe('jlcpcb-2layer-standard');
-    expect(deck.rev).toBe('2026-05');
+    expect(deck.rev).toBe('2026-07');
     expect(deck.rules).toEqual({
       min_trace_nm: 127000,
       min_clearance_nm: 127000,
       min_drill_nm: 300000,
-      min_annular_nm: 130000,
+      min_annular_nm: 180000,
       copper_to_edge_nm: 300000,
       silk_min_width_nm: 153000,
       mask_expansion_nm: 50000,

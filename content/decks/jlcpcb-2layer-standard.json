@@ -1,11 +1,11 @@
 {
   "deck": "jlcpcb-2layer-standard",
-  "rev": "2026-05",
+  "rev": "2026-07",
   "rules": {
     "min_trace_nm": 127000,
     "min_clearance_nm": 127000,
     "min_drill_nm": 300000,
-    "min_annular_nm": 130000,
+    "min_annular_nm": 180000,
     "copper_to_edge_nm": 300000,
     "silk_min_width_nm": 153000,
     "mask_expansion_nm": 50000
