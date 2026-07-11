@@ -19,9 +19,12 @@ from pathlib import Path
 # Observed status vocabulary (2026-07-01 live inventory of all 500+ rows):
 # OPEN, PARTIAL, BLOCKED [on ...], DONE, DONE (Wave 67), DONE (Wave E),
 # DONE (verified Wave 106), DONE (Wave N) — trailing prose, DONE-BY-BL-XXXX,
-# SPLIT (closed by splitting into follow-ups) — optionally **bold**-wrapped.
+# SPLIT (closed by splitting into follow-ups), OBSOLETE (added 2026-07-10 by
+# BL-0908 reconciliation — the finding's target surface no longer exists, so
+# it's moot rather than fixed; counts on the closed side like DONE) —
+# optionally **bold**-wrapped.
 STATUS_RX = re.compile(
-    r"^(?:\*\*)?(OPEN|PARTIAL|BLOCKED(?:\s+on[^|]*)?|DONE(?:\s*\([^)]*\))?(?:\s*[-—–].*)?|DONE-BY-BL-\d{4}|SPLIT)(?:\*\*)?$"
+    r"^(?:\*\*)?(OPEN|PARTIAL|BLOCKED(?:\s+on[^|]*)?|DONE(?:\s*\([^)]*\))?(?:\s*[-—–].*)?|DONE-BY-BL-\d{4}|SPLIT|OBSOLETE(?:\s*\([^)]*\))?)(?:\*\*)?$"
 )
 ROW_RX = re.compile(r"^\|\s*(BL-\d{4})\s*\|")
 SECTION_RX = re.compile(r"^##\s+(P[0-3])\s+—")
