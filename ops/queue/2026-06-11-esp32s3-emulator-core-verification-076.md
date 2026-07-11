@@ -46,7 +46,23 @@ Dual discovery run (topic maps + on-disk sibling verification; qmd protopulse-va
 No sibling notes edited. Pre-existing links to the fidelity-boundary parent (a-faithful-...) and the zero-cycle-vectoring note retained.
 
 ## revisit
-(to be filled by revisit phase)
+
+Backward pass (`/revisit --handoff`). Found and closed ONE genuine backward gap; one edited note, both inline + Relevant Notes.
+
+**The gap (real, not inflation):** the umbrella fidelity-boundary note `a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models` is the parent principle that catalogs every "modeled behavior + paired cut" instance in this batch. It listed sibling 075 (the loader that *refuses* flash-mapped IROM/DROM segments) but never mentioned 076 — the complementary policy where a build that *does* want those windows serves them read-only from the image (modeled: serve IROM/DROM at their post-mapping vaddrs; paired cuts: 1-cycle XIP, unmodeled MMU, refused window writes). 076 is a textbook instance of the umbrella's own pattern, so a backward link from the umbrella TO 076 is warranted.
+
+**Edits — confined to the umbrella note:**
+1. Inline parenthetical in body para 2 (the sentence about the loader refusing flash-mapped segments): added `(a build that instead wants those windows can [[076|serve them read-only ... net effect of a warmed cache]], a disclosed-boundary cut of the same shape — 1-cycle XIP, no MMU model)`. Mirrors how sibling 075's body already cross-links 076 with a parallel parenthetical.
+2. New Relevant Notes entry under the existing "scope/conservatism cuts" grouping (076 is a disclosed-boundary cut, not a refusal — correct group), pointing to 076 with the warmed-cache + paired-cuts gloss.
+
+**Checked-and-skipped (deliberate, not unexamined):**
+- `an-sram-only-emulator-... -refusing-flash-mapped-ones` (075): already bidirectionally linked to 076 (inline body line 21 + Relevant Notes line 30) — its own connect/revisit handled it. No edit.
+- `the-esp32-s3-memory-map-and-peripheral-register-set-... -base-addresses` (087): already links to 076 (body line 22 + Relevant Notes line 128). No edit.
+- `the-esp32-s3-maps-one-sram-block-...-aliased-to-two-bus-addresses`: about the SRAM window, a *different* memory region; does not instantiate/depend on the flash-serving claim. Link would be inflation. Skipped.
+- `the-esp-idf-app-image-checksum-...`: computes the XOR fold over segment bytes regardless of mapping; depends on the loader (075), not on the flash-serving policy. Different aspect of the loader. Skipped.
+- sar-adc / timg-divider / special-register notes: grep hits were their own Relevant-Notes links to *other* siblings (075/087), no flash-serving dependency. breadboard-power-module: "read-only" matched "it worked yesterday" — unrelated domain. All false positives.
+
+No sibling claims edited beyond the one umbrella note (075 and 087 already reciprocate; per batch-concurrency hygiene, did not touch other tasks' notes).
 
 ## verify
 (to be filled by verify phase)

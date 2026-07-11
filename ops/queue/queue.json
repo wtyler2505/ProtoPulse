@@ -1828,10 +1828,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-076.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -1843,10 +1844,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-077.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -1858,10 +1860,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-078.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -1873,10 +1876,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-079.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -1888,10 +1892,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-080.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -1903,10 +1908,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-081.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -1918,10 +1924,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-082.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -1933,10 +1940,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-083.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -1948,10 +1956,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-084.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -1963,10 +1972,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-085.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -1978,10 +1988,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-086.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -1993,10 +2004,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-087.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -2008,10 +2020,11 @@
       "batch": "2026-06-11-esp32s3-emulator-core-verification",
       "file": "2026-06-11-esp32s3-emulator-core-verification-088.md",
       "created": "2026-06-23T06:09:35Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     }
   ]

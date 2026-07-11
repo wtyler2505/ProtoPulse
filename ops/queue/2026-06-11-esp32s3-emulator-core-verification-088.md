@@ -52,7 +52,26 @@ Deliberately NOT added (per "don't over-link / strongest 2-4"): re-linking 071 (
 Net edit: 1 new outbound link (claim-068), bidirectional reciprocity restored. MOC membership untouched (already correct).
 
 ## revisit
-(to be filled by revisit phase)
+
+Phase: reweave / backward pass (run alone, no verify).
+
+Method: this note is a CLOSED reference TABLE — the canonical home for the fixed Xtensa SR numbers, RSR/WSR/RSIL/RFE encodings, EXCCAUSE codes, and core-isa constants. Backward pass = find OLDER notes AND siblings that USE those constants but don't point to the table. Searched all of knowledge/ for SR/RSR/WSR/RSIL/RFE/EXCCAUSE/VECBASE/XCHAL/CCOUNT/CCOMPARE/core-isa references and bucketed by `created:` date.
+
+Pre-batch (older) notes: NONE. Every note referencing these constants is in the 2026-06-11 batch (all created 2026-06-23); the only non-batch hits were the two MOCs (xtensa.md, emulation.md), which already list the target. So the backward pass is entirely sibling-reciprocity within the batch.
+
+Inbound-link audit (siblings that already linked here, no action): 086 (instruction encoding), 087 (memory map), 068 (windowed ABI), a-conservative (PS.INTLEVEL boot), modeling-xtensa-exceptions (zero-cycle vectoring), both MOCs. The connect phase + concurrent tasks had handled these.
+
+Genuine backward gaps found + closed (3 inline links, each anchored at a real SR/constant dependency — not Relevant-Notes-only):
+
+1. **two-source-verification → target** (strongest). The target's own intro cites this note as the verification discipline, and the discipline's headline payoff IS this table: cross-checking EXCSAVE2..7 (SR 210–215) caught the RM index's EXCSAVE1=192 typo (192 = DEPC) and settled it at 209. The note listed the load/store garble and disassembler-oracle as instances but omitted the register-layer headline. Added inline at the "register layer" paragraph + Relevant Notes.
+
+2. **timer-latch → target**. Explicitly cites INTCLEAR (SR 227), CCOMPARE0..2 (SR 240–242), CCOUNT (SR 234) — exactly the numbers the table hardcodes. Added inline at the SR-227/240–242 sentence + Relevant Notes.
+
+3. **condition-derived-level-interrupts → target**. Writes about the CPU `INTCLEAR` (SR 227) being a no-op for level sources. It already linked to 087 — but 087 covers the PERIPHERAL `UART_INT_CLR` (offset 0x10), a different register from the CPU INTCLEAR special register; the table is the right home for SR 227. Target forward-links this note at its own INTCLEAR row, so reciprocity is symmetric. Added inline at the "writing `INTCLEAR`" anchor (with explicit "not the peripheral UART_INT_CLR" disambiguation) + Relevant Notes.
+
+Deliberately NOT linked (rule-out, to avoid inflation): a-cycle-derived-virtual-timer (mentions CCOUNT/CCOMPARE only inside a Relevant-Notes pointer to timer-latch — it models the TIMG peripheral comparator, no Xtensa-SR dependency); the windowed-ABI consequence notes (call8 frame, magic-refuse) and the remaining ADC/SRAM/checksum/flash/encoding-immediate batch siblings (no SR / core-isa dependency).
+
+Net: 3 new outbound→target backlinks (each inline + Relevant Notes), all verified to resolve to the existing target file. MOCs untouched (already correct). Sibling reciprocity for the reference table is now complete.
 
 ## verify
 (to be filled by verify phase)

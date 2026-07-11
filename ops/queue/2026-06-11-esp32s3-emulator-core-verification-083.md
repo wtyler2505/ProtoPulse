@@ -43,7 +43,20 @@ Frontmatter: added `engine-redesign` topic (+ Topics section). esp32-s3 kept (SA
 Note body already inline-linked 078 + 079 from the create phase; left intact. No reweave, no verify run.
 
 ## revisit
-(to be filled by revisit phase)
+
+Ran /revisit --handoff (reweave / BACKWARD pass) on 2026-06-23. Goal: find OLDER notes + siblings that should reference THIS note but don't, and add inline links FROM them TO this note. Genuine connections only — no link inflation.
+
+Discriminating test applied to each candidate: does the older note *depend on or instantiate* this McuCore-co-sim-contract claim? (Dependency must run candidate → this note; if it runs this note → candidate, the existing forward link already captures it and a backward link would be inflation.)
+
+Candidates evaluated:
+- **Three batch siblings (077 umbrella, 078 channel-map, 079 oneshot)** — ALREADY reciprocate inbound links to this note (verified in their bodies: 077 line 53, 078 line 30, 079 line 29). The connect phase closed these. No action.
+- **`esp32-s3-timg-divider-field-zero...` (co-sim MOC sibling)** — checked directly. It is about TIMG prescaler-field decode (`0 → 65536`), not the ADC `setAdcSampler`/`drainAdcReads` sampler surface. Does NOT instantiate the sampler contract. No genuine link. Closed the "did I miss a dependent sibling" loop.
+- **`a-potentiometer-wired-as-voltage-divider...` (cross-domain bench-wiring note)** — REJECTED as backward link. Dependency runs the wrong way: THIS note uses the pot as its concrete "bench wiring" example (forward link new→pot already exists). The pot is a physical device independent of any emulator; it does not depend on the co-sim contract. A pot→contract link would assert a false dependency (inflation) and drag emu-internals context into a passives/breadboard note (hurts its composability).
+- **RP2040 / pico notes** (`rp2040-pio-...`, `pico-...`, `hardware-board-rpi-pico`) — REJECTED. These are physical-silicon/board notes, NOT notes about the `@protopulse/emu` RP2040 *core*. The emu RP2040 core has no knowledge note (batch was ESP32-S3 only). Nothing depends on this contract from those notes.
+
+Result: **zero new backward links** — the correct outcome. The reduce phase already recorded "Semantic neighbor: none ... net-new coverage for @protopulse/emu"; the whole 26-claim batch is net-new, so there are no *older* emulator/co-sim notes that could genuinely depend on this claim. Only contemporaneous siblings (already reciprocated via connect) and older hardware notes (referenced BY this note, not dependent ON it).
+
+Shared MOCs (`engine-redesign.md`, `esp32-s3.md`) NOT edited — concurrent reweave across 26 sibling tasks would collide there, and the backward pass asks for inline links from older insights, not MOC rebuilds. `emulation.md` already lists this note (line 57).
 
 ## verify
 (to be filled by verify phase)

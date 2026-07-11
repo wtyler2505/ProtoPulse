@@ -44,7 +44,20 @@ Topic-map membership: present in `emulation.md` (Exceptions/interrupts/timers se
 Did not link (rejected as non-genuine): the SAR-ADC instant-conversion note (different "model timing-free" rationale, no shared device), the conservative-boot PS.INTLEVEL note (no timer-derivation overlap), the windowed-ABI notes (unrelated subsystem). All link targets verified to resolve on disk.
 
 ## revisit
-(to be filled by revisit phase)
+
+Backward pass (`/revisit --handoff`). Goal: find OLDER notes / siblings that *instantiate or depend on* this claim but don't link to it, and add inline links FROM them TO this note. Direction test applied to every candidate: does X's argument lean on 080, or does 080 lean on X? Only X-depends-on-080 qualifies.
+
+**Outcome: no new links added — the one genuinely-justified backward link was already placed by the connect phase.**
+
+Candidates examined and verdicts:
+
+- **081 (TIMG divider)** — GENUINE backward link, ALREADY PRESENT. Verified on disk: inline at the "TIMG counter is virtual / derived from elapsed CPU cycles" phrase (line 22) plus a Relevant Notes entry (line 29). 081 scales the very same virtual TIMG0 counter whose precision 080 bounds — 081 genuinely depends on 080. Connect phase placed it; nothing to add.
+- **072 (CCOUNT/CCOMPARE)** — sibling cycle-based comparator. Backward link ALREADY PRESENT (Relevant Notes, line 30: "both read off the single authoritative cycle clock"). Borderline-genuine (shared 1-IPC clock premise, no 54-bit-wrap dependency) but already in place and not harmful; left intact, did not strengthen.
+- **071 (zero-cycle vectoring)** — REJECTED. 080 leans on 071 (080's body cites "the same economy the core already buys by retiring one instruction per cycle"), not the reverse. That dependency is already carried by the existing FORWARD link 080→071. Adding 071→080 would be the forward link's mirror = reciprocity-as-inflation; 071's own argument (no pipeline ⇒ zero-cycle vectoring) never touches timer derivation.
+- **Umbrella (`a-faithful-instruction-set-emulator...`)** — REJECTED as a new backward link. 080 is NOT a "cut": lazy derivation is *faithful* (identical results to per-cycle ticking) and the 54-bit wrap was *fixed* (float-safe modulo / BigInt), not disclosed-and-accepted. Filing it in the umbrella's cut list would miscategorize it. The umbrella is also already selective (it omits 081, the memory-map note, adc1, condition-derived interrupts), so the omission is not a gap. Target already links forward to the umbrella; no reciprocal needed.
+- ADC instant-conversion, conservative-boot PS.INTLEVEL, windowed-ABI notes — REJECTED (no timer-derivation dependency; different subsystems). Confirmed unchanged in connect phase.
+
+Advisor consulted before editing (full transcript forwarded): confirmed the direction test, flagged 071 as inflationary and the umbrella-as-cut as a miscategorization, and endorsed adding little/nothing when the genuine gap (081) is already closed rather than manufacturing links. No edits to knowledge/ this phase. One phase only — verify NOT run.
 
 ## verify
 (to be filled by verify phase)

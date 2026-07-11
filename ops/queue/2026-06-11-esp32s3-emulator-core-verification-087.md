@@ -47,7 +47,22 @@ Deliberately did NOT over-link the remaining consumers (sram-only image loader, 
 **No false claims:** every added edge is genuine; special-register link explicitly avoids overclaiming consumption.
 
 ## revisit
-(to be filled by revisit phase)
+
+Phase: reweave / BACKWARD pass. Target: the FOUNDATIONAL memory-map/register reference note. Goal — find OLDER sibling claims that *consume* register constants this reference owns but don't yet link back to it, and add inline links FROM those siblings TO this reference.
+
+**Discovery method.** qmd unusable in the worktree (indexes MAIN repo; this batch is untracked here), so substituted `grep -rl` over the worktree `knowledge/` to enumerate which notes already point at the reference (6: emulation.md, esp32-s3.md, timg-divider, flash-mapped, sram-alias, special-register) and to read every emulation-MOC sibling for register-constant usage. Discriminator applied per advisor: a sibling earns a backward link here only if it *names a memory-mapped register address/offset/field* this reference tabulates; if it only names a special register (RSR/WSR-accessed: PS.INTLEVEL, VECBASE, EXCCAUSE, RFE…) it belongs to the special-register reference, not this one.
+
+**4 backward links added (inline + Relevant-Notes reciprocation each):**
+- **condition-derived-level-interrupts** — inline at "`UART_INT_CLR` (offset 0x10, bit 0)"; this note names the UART INT_CLR offset + CONF1 RXFIFO_FULL_THRHD field + GPIO STATUS/INT_TYPE values, all tabulated here. Genuine consumer.
+- **esp32-s3-adc1-channel-n** — inline at the one-hot `1 << channel` → `SAR1_EN_PAD` write; SAR1_EN_PAD is the [30:19] field of SENS_SAR_MEAS1_CTRL2_REG defined here. Reciprocates the reference's existing OUT link.
+- **an-emulator-can-model-sar-adc-oneshot...instant** — inline at `SENS_SAR_MEAS1_CTRL2_REG`; this note reads/writes the *entire* MEAS1_* field block (START_FORCE, SAR1_EN_PAD_FORCE, START_SAR, DONE_SAR, DATA_SAR) the SENS table defines. Strongest SENS consumer.
+- **an-sram-only-emulator-can-still-load-esp-idf-app-images...** — inline at the `0x42xxxxxx`/`0x3Cxxxxxx` flash-bus boundaries + 480 KB SRAM window; the loader's copy-or-refuse decision keys directly on these memory-map region bounds.
+
+**Consciously EXCLUDED (not silently dropped):**
+- **a-shared-mcucore-contract...** — architectural co-sim-contract note; speaks of "conversion registers, done flags, force bits" abstractly, names no specific address/field. Not a register-level consumer.
+- **modeling-xtensa-exceptions-...-zero-cycle-vectoring** and **a-conservative-emulator-boots-ps-intlevel-at-15** — both checked for interrupt-matrix base / MAP regs / `XCHAL_INTLEVEL1_MASK = 0x000637FF`; neither names them. They deal only in PS.INTLEVEL/VECBASE/EXCCAUSE/RFE (special registers) and already link to the special-register reference. The interrupt-matrix half of this reference therefore has no genuine backward consumer among current siblings.
+
+**Result:** inbound links to the reference grew 6 → 10. All 4 new slugs verified to resolve to the existing target file (exact-slug grep). No link inflation — every added edge names a register constant the reference uniquely owns.
 
 ## verify
 (to be filled by verify phase)

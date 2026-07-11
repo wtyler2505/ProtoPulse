@@ -41,7 +41,19 @@ Reciprocal link added (sibling → target): note 084 (disassembler-oracle) now l
 Reciprocity verified (no edit needed): the four decode-detail notes — branch-targets (066), L32R (067), load-store-offsets (065), 24-bit-only (064) — already link back to this master reference. The umbrella principle [[a-faithful-instruction-set-emulator-earns-trust-by-documenting-every-deliberate-cut-alongside-what-it-models]] is linked FROM instances by design (hub-and-spoke), so no back-link required.
 
 ## revisit
-(to be filled by revisit phase)
+
+Ran /revisit --handoff (BACKWARD pass — find OLDER notes / siblings that should reference THIS reference but don't, add links FROM them TO this note). Outcome: **no new backward links needed** — the forward/connect phase was already thorough and reciprocity is fully established.
+
+Search methods (three discriminating passes):
+1. **MOC + filename scan** — [[emulation]] and [[xtensa]] both already list the target; all batch siblings carry `created: 2026-06-23`, so there are no strictly-older *batch* siblings.
+2. **Vault-wide inbound grep** (`grep -rl <target-slug> knowledge/`) — complete inbound set: 084 (disassembler-oracle), 088 (special-register), 065 (load-store), 067 (L32R), 066 (branch-targets), 064 (24-bit-only), plus both MOCs. Exactly the reciprocity the connect phase recorded — every decode-detail note and both companion references already link back.
+3. **Semantic sweep** (`qmd_search` + `qmd_deep_search` for ISA decode / opcode / instruction dispatch) — empty; the older main-repo vault is hardware-heavy with no pre-existing instruction-encoding/disassembly notes. Filename-level sweep for opcode/decode/disassembly outside this batch returned only MOCs + 064 (already linked).
+
+Evaluated and deliberately NOT added (link-inflation guard, advisor-confirmed):
+- **windowed net-effect note** (refuses L32E/S32E/RFWO/RFWU/MOVSP) — refuses those ops *by name*; they are not in 086's opcode table, so it neither instantiates nor depends on the encoding reference. Thematic, not a dependency.
+- **windowed-design note** and **exceptions note** — reference RFE/RETW/ENTRY/RSIL, which correctly route through 088 (special-registers) or are call0-excluded; none are core opcodes in 086's table. Their existing links to 088 are the right home.
+
+Zero new links is the correct backward-pass result here: the forward pass already wired every genuine connection both ways.
 
 ## verify
 (to be filled by verify phase)

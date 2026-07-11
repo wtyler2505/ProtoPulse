@@ -45,8 +45,28 @@ Topic-map membership:
 
 No reweave / no verify (single-phase task).
 
-## revisit
-(to be filled by revisit phase)
+## revisit (reweave — BACKWARD pass)
+
+Goal: find OLDER sibling insights whose own prose *invokes the two-source verification discipline or the PDF-garble failure mode* (not merely "this fact was two-source verified" — that's true of nearly every batch note and would be link inflation) and add an inline link FROM them TO this note.
+
+Discriminator applied (per advisor): genuine backward link ⇔ the older note's prose makes a claim that *uses* the verification discipline / garble, vs. just having been checked that way.
+
+Three genuine backward links added (inline, at the load-bearing phrase):
+
+1. **`xtensa-load-store-offsets-...-pdf-text-extraction-garbles-this-distinction`** (claim-065) — its body already said "the same 'two independent sources per fact' discipline"; wrapped that phrase in a wiki-link to this note and noted "this very garble is one of its motivating cases." Reciprocates the forward link this note already carries to 065.
+
+2. **`the-esp32-s3-xtensa-lx7-24-bit-instruction-encoding-...-verified-opcode-constant-table`** (opcode-table reference) — its trust-claim sentence "Two independent sources back every value" now links to this note. It previously linked only to claim-084 (the narrower disassembler-as-oracle instance), not to this general methodology note. The table IS the canonical artifact produced by the discipline.
+
+3. **`the-esp32-s3-xtensa-special-register-...-fixed-values-an-emulator-must-hardcode`** (special-register reference) — its "verified two-source-per-fact" phrase now links here, and I extended it to name the concrete instance the discipline caught: the Cadence RM's EXCSAVE1=192 typo, overruled by cross-checking the EXCSAVE2..7 range (209→210–215). A documentary error resolved by independence — a textbook instance of this claim.
+
+Deliberately NOT linked (would be inflation under the discriminator):
+- **claim-084** (disassembler-as-oracle) — already reciprocated (links here twice: body + Relevant Notes).
+- **`xtensa-l32r-...-one-extended`** (claim-067) — its prose is about the one-extend addressing rule and "the classic decoder bug"; its only verification mention is in Relevant Notes, already pointed at the narrower claim-084. The disassembler-oracle link carries the verification connection; a second link to the general note here is redundant.
+- **memory-map, branch-target, ADC, timer, windowed-ABI, image-loading notes** — two-source verified, but their claims aren't *about* verification. No link.
+
+Crypto-angle check (worktree is `emu-aes-cfb8`): the SHA/AES/RSA interrupt-matrix MAP-offset example this note cites lives only in a memory note, not in `knowledge/` (`ls knowledge/ | grep -iE 'interrupt|crypto|aes|sha|rsa'` returns no sibling offset note). Out of scope for backward linking. Confirmed.
+
+ONE PHASE ONLY — no verify run.
 
 ## verify
 (to be filled by verify phase)

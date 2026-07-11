@@ -15,7 +15,7 @@ provenance:
 
 # ESP32-S3 Xtensa special-register, RSR/WSR/RSIL/RFE, EXCCAUSE, and core-isa constants reference
 
-These values are **fixed silicon constants**, not derivable at runtime. Special-register numbers, the RSR/WSR/RSIL/RFE opcode bit-patterns, the EXCCAUSE enumeration, and the ESP32-S3 core-isa configuration are baked into the Xtensa LX7 core and the Espressif processor configuration; nothing in firmware or in a running trace lets you compute them. An emulator therefore has no choice but to **hardcode** them — exactly as the silicon and the toolchain headers fix them. The values below come from the Cadence Xtensa ISA Reference Manual (SR table §5.3, EXCCAUSE table, Timer Interrupt Option §4.4.6, RSIL/RSR/WSR/RFE instruction pages) and esp-idf v5.2 `xtensa/config/core-isa.h` for the ESP32-S3 configuration, verified two-source-per-fact for the `@protopulse/emu` Esp32s3Core.
+These values are **fixed silicon constants**, not derivable at runtime. Special-register numbers, the RSR/WSR/RSIL/RFE opcode bit-patterns, the EXCCAUSE enumeration, and the ESP32-S3 core-isa configuration are baked into the Xtensa LX7 core and the Espressif processor configuration; nothing in firmware or in a running trace lets you compute them. An emulator therefore has no choice but to **hardcode** them — exactly as the silicon and the toolchain headers fix them. The values below come from the Cadence Xtensa ISA Reference Manual (SR table §5.3, EXCCAUSE table, Timer Interrupt Option §4.4.6, RSIL/RSR/WSR/RFE instruction pages) and esp-idf v5.2 `xtensa/config/core-isa.h` for the ESP32-S3 configuration, [[two-source-verification-resolves-silicon-facts-that-a-single-garbled-vendor-pdf-leaves-ambiguous|verified two-source-per-fact]] for the `@protopulse/emu` Esp32s3Core — the same discipline that caught the RM's EXCSAVE1=192 typo by cross-checking the EXCSAVE2..7 range.
 
 ## Special-register numbers
 
@@ -75,7 +75,7 @@ These values are **fixed silicon constants**, not derivable at runtime. Special-
 
 ## Timer-counter behavior (companion semantics)
 
-CCOUNT (SR 234) increments every cycle; `CCOUNT == CCOMPARE[i]` latches `TIMERINT[i]` until `CCOMPARE[i]` is written — "timer interrupts are cleared by writing CCOMPARE" (RM). See [[xtensa-timer-interrupts-latch-when-ccount-equals-ccompare-and-clear-only-when-ccompare-is-rewritten]] for the latch/clear contract.
+CCOUNT (SR 234) increments every cycle; `CCOUNT == CCOMPARE[i]` latches `TIMERINT[i]` until `CCOMPARE[i]` is written — "timer interrupts are cleared by writing CCOMPARE" (RM). See [[xtensa-timer-interrupts-latch-when-ccount-equals-ccompare-and-clear-only-when-ccompare-is-rewritten]] for the latch/clear contract. The `INTCLEAR` SR (227) above acknowledges sticky/edge sources, but [[condition-derived-level-interrupts-cannot-be-cleared-by-intclear-until-the-underlying-condition-clears|it is a no-op for the level-triggered GPIO/UART lines]] whose status the emulator derives from live state — those re-assert until the condition resolves.
 
 ## Emulator consequences (stated cuts)
 

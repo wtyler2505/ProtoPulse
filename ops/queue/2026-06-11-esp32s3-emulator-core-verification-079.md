@@ -39,7 +39,24 @@ Existing genuine links retained (063 umbrella, esp32-adc-attenuation range axis,
 Topic-map membership: SATISFIED — target is in emulation.md line 54 (curated "Peripheral co-sim (ADC, TIMG, cross-core contract)" cluster). esp32-s3.md is an auto-stub whose Knowledge Notes section is empty for every sibling (078/083 not listed either); the cluster convention is emulation.md = working MOC, esp32-s3 = awaiting a dedicated curation pass. NOT half-populated here (would race concurrent tasks). Flagged for curation in handoff.
 
 ## revisit
-(to be filled by revisit phase)
+
+Phase: reweave / backward pass (run via /revisit --handoff, 2026-06-23). Goal: find OLDER notes + siblings that genuinely instantiate or depend on this instant-conversion claim but lack a link TO it, and add the inbound link FROM them. No link inflation.
+
+**Backward link ADDED (1):**
+1. **FROM** `the-esp32-s3-memory-map-...-sens-timg-and-interrupt-matrix-register-banks-...` (slice covering the SENS register layout) **TO** this note. The memory-map note's SENS/SAR-ADC1 table defines the exact fields this claim's mechanism reads — `MEAS1_START_SAR` (bit 17, "0→1 edge starts conversion"), `MEAS1_DONE_SAR` (bit 16), `MEAS1_DATA_SAR` ([15:0]), plus the FORCE bits. It already cross-linked the channel→GPIO note (078) for the *where* of that table, but had no link to the *when* (the start-edge→DONE-poll behavior). Genuine register-defines-the-fields → behavioral-claim-uses-them dependency. Added in that note's Relevant Notes, beside the 078 entry, glossed with the specific fields.
+
+**Already-linked genuine siblings (no edit needed — forward connect pass already reciprocated):**
+- 063 umbrella `a-faithful-instruction-set-emulator-...` line 45 → links in ("instant conversion is a timing cut that firmware's wait-on-DONE contract makes invisible").
+- 083 `a-shared-mcucore-contract-...` line 33 → links in ("the instant-conversion model the contract carries").
+- 078 `esp32-s3-adc1-channel-n-reads-gpio-n-plus-1-...` line 29 → links in ("the timing half of the same oneshot read").
+
+**Candidates considered and DECLINED (link inflation / no genuine dependency):**
+- `esp32-adc-attenuation-setting-determines-input-voltage-range` — pure hardware fact about voltage windows, predates the emulator; the target references it as the unmodeled *range* axis, but it does not depend on the *timing* model. Inflation.
+- `a-potentiometer-wired-as-voltage-divider-...` — physical analog source (bench wiring); its world is the real circuit, not how the emulator models conversion latency. The genuine emulator-side links from it belong to the co-sim contract (083), not this timing note. Inflation.
+- Other older ESP32 ADC notes (`esp32-adc2-unavailable-when-wifi-active`, `esp32-adc-is-nonlinear-above-2v5-...`) — none reference the emulator at all. Inflation.
+- `esp32-s3-timg-divider-field-zero-...` — MOC co-locates it in the "Peripheral co-sim" cluster, but it is a *different peripheral's* timing mechanic (TIMG divider) with zero ADC/DONE/SAR content and no dependency on the DONE-flag contract. Declined.
+
+Net: 1 backward link added, 3 already-present, 5 declined on the record. Topic-map membership unchanged (target already in emulation.md line 55).
 
 ## verify
 (to be filled by verify phase)

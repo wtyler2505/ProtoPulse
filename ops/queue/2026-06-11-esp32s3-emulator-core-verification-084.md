@@ -46,7 +46,25 @@ Topic-map membership:
 Guardrails honored: did NOT add 084 to xtensa.md (xtensa was a discovery surface, not a membership target — 084's topics are verification + emulation only). No out-of-set link hunting. Concurrency: verification.md is a contested shared surface seeded from 085; re-read immediately before editing, made additive-only change.
 
 ## revisit
-(to be filled by revisit phase)
+
+Ran /revisit --handoff (BACKWARD pass) on a-working-disassembler-source-is-a-stronger-oracle-for-opcode-constants-than-an-isa-overview-pdf-whose-text-extraction-garbles-encodings. Goal: find OLDER insights + sibling claims that depend on / instantiate THIS oracle-method claim but don't link back, and add inline links FROM them TO 084.
+
+Outcome: **zero new links added.** Every genuine dependent already reciprocates (closed by the forward connect pass). This is the correct result for a backward pass, not a miss — revisit exists to catch *asymmetric* genuine connections, and none remained open.
+
+Sweep (knowledge/, `rg -i 'disassembl|objdump|ida-xtensa|garble|text extraction|opcode constant|oracle'`):
+- Verified the 4 genuine dependents are already bidirectional:
+  - 065 (load/store zero-extend garble) → 084 present (line 36); 084's motivating garble example.
+  - L32R one-extend → 084 present (line 41); the one-extend-vs-sign-extend distinction this oracle settled.
+  - 086 (24-bit encoding + opcode-constant table) → 084 present (line 112); the table this oracle verified.
+  - 085 (two-source verification, parent generalization) → 084 present (line 30).
+- All four also linked FROM 084 in its Relevant Notes — fully symmetric.
+
+Candidates evaluated and REJECTED (no genuine dependency — declined to avoid link inflation):
+- **special-register note** (RSR/WSR/RSIL/RFE/EXCCAUSE/core-isa reference, claim ~088): tempting because RSR/WSR encodings *are* opcode constants. Rejected: its own provenance (line 18) names Cadence ISA RM instruction pages + esp-idf core-isa.h as its two sources — a RM+header pair, NOT 084's disassembler-vs-PDF pair. No PDF-garble-corrected-by-disassembler story for these encodings. The pull is type-level ("also opcode constants"), not dependency-level. 084 is not its verification mechanism.
+- **branch-targets note (claim ~066):** describes PC-relative extension/base semantics, not opcode-constant verification; its load-bearing link is to the encoding table (086), already present. No 084 dependency.
+- **oracle-agent-escalation-is-the-strongest-debugging-path** + **the-debugging-escalation-path-trades-speed-for-depth-across-four-levels:** both about the Claude Code "oracle agent" (dev-infrastructure / claude-code-skills domain) — a homonym of "opcode oracle", entirely unrelated to ISA verification. Cross-domain pun-links, declined. (086's existing link to oracle-agent-escalation is a pre-existing loose pun-link from another pass; out of scope for this backward pass to touch.)
+
+Guardrails honored: only genuine instantiates/depends connections considered; no out-of-set link hunting; consistent rejection of type-level/pun connections. Worktree caveat unchanged — qmd indexes main repo not this worktree, so sweep done via `rg` + `ls knowledge/` against the live worktree files.
 
 ## verify
 (to be filled by verify phase)

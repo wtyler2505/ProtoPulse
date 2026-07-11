@@ -48,7 +48,21 @@ Topic-map membership:
 The potentiometer cross-link left one-directional (078→pot); editing the pot note back is out of 078's scope.
 
 ## revisit
-(to be filled by revisit phase)
+
+Ran /revisit --handoff (BACKWARD pass). Goal: find OLDER/sibling notes that should reference 078 but don't, and add inline links FROM them TO 078. Only genuine instantiate/depend connections — no inflation.
+
+Discovery: re-read both topic maps (emulation.md, esp32-s3.md), grepped knowledge/ for existing inbound links (`rg -l "esp32-s3-adc1-channel-n-reads-gpio-n-plus-1"` → only 079, 083, and the two MOCs), then a broad grep (`rg -il "adc1|channel.*gpio|analogread|sar1_en_pad"`) to surface candidates that *should* link but don't. qmd indexes the main repo not this worktree, so grep is the oracle here.
+
+Backward link added (1, genuine):
+- [[the-esp32-s3-memory-map-and-peripheral-register-set-spans-...-register-banks-at-fixed-base-addresses]] (the memory-map/register reference, expert-tier). Its SENS/SAR-ADC1 table states the bare constant inline — "Channel→pin: ADC1 channel n = GPIO n+1 …" — but never linked to the note that explains *why* the emulator applies it. A reference table carrying a fact, pointing at the note that justifies it, is a textbook backward connection. Added BOTH: (a) inline `[[…|…]]` wiki-link wrapping the line-88 mapping text + a clause on the channel→pin boundary, and (b) a durable Relevant Notes entry. This is a NET-NEW link (the reference note had no 078 link in either direction).
+
+Considered and rejected (recorded, not silently omitted):
+- esp32-adc-attenuation-setting-determines-input-voltage-range — orthogonal axis (sets voltage *range* via the per-pin attenuator, not *which pin* a channel selects). 078 already links to it outbound as "the other half"; no backward dependency. Reject.
+- esp32-adc2-unavailable-when-wifi-active — the ESP32-classic contrast layout 078 deliberately diverges from. 078 links to it outbound; it does not depend on the S3 channel offset. Reject.
+- a-potentiometer-wired-as-voltage-divider-… — generic ATmega/A0 analogRead, 10-bit, no channel-index concept. Does not instantiate the S3 channel→GPIO mapping; linking would be inflation. (Connect already left 078→pot one-directional by design.) Reject.
+- 079 (oneshot instant conversion) and 083 (shared-mcucore contract) — already link TO 078 (verified by the inbound grep); reciprocation complete, no action.
+
+Outbound set of 078 untouched (connect owns that direction). No split warranted — 078 is already atomic and well-scoped. verify NOT run (one phase only).
 
 ## verify
 (to be filled by verify phase)

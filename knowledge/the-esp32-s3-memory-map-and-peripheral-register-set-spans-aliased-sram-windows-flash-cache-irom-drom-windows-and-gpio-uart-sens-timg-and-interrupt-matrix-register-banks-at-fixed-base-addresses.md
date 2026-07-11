@@ -58,7 +58,7 @@ Offsets from `DR_REG_GPIO_BASE`. `OUT` covers GPIO0–31; `OUT1` covers GPIO32�
 | ENABLE_W1TS | `0x24` | STATUS_W1TC | `0x4C` |
 | ENABLE_W1TC | `0x28` | STATUS1 | `0x50` (W1TS `0x54`, W1TC `0x58`) |
 
-`GPIO_PINn_REG` at `0x74 + 4·n`: `INT_TYPE` bits [9:7], `INT_ENA` bits [17:13]. Interrupt types (`gpio_int_type_t`, written verbatim): 0 disable, 1 posedge, 2 negedge, 3 anyedge, 4 low level, 5 high level. `GPIO_LL_INTR_ENA` = bit 13 (pro and app CPU share the same enable bit on S3).
+`GPIO_PINn_REG` at `0x74 + 4·n`: `INT_TYPE` bits [9:7], `INT_ENA` bits [17:13]. Interrupt types (`gpio_int_type_t`, written verbatim): 0 disable, 1 posedge, 2 negedge, 3 anyedge, 4 low level, 5 high level. `GPIO_LL_INTR_ENA` = bit 13 (pro and app CPU share the same enable bit on S3). The behavioral read of these registers: [[condition-derived-level-interrupts-cannot-be-cleared-by-intclear-until-the-underlying-condition-clears|for the level types (4/5) the emulator derives `STATUS` from the live pin and treats `STATUS_W1TC` / the UART `INT_CLR` row below as a no-op while the condition holds]] — clearing only when the pin level changes or the RX FIFO drains below `RXFIFO_FULL_THRHD` (CONF1).
 
 ## UART register offsets (`uart_reg.h`)
 
@@ -85,7 +85,7 @@ Offsets from `DR_REG_GPIO_BASE`. `OUT` covers GPIO0–31; `OUT1` covers GPIO32�
 | SAR1_EN_PAD | [30:19] (one-hot `1 << channel`) |
 | SAR1_EN_PAD_FORCE | bit 31 |
 
-Channel→pin: ADC1 channel n = GPIO n+1 (channels 0–9 → GPIO1–10); ADC2 channels 0–9 → GPIO11–20.
+Channel→pin: [[esp32-s3-adc1-channel-n-reads-gpio-n-plus-1-so-an-emulator-resolves-analog-reads-to-the-correct-bench-pin|ADC1 channel n = GPIO n+1 (channels 0–9 → GPIO1–10); ADC2 channels 0–9 → GPIO11–20]] — the emulator applies this `+1` at the channel→pin boundary so a co-sim read lands on the wired bench pin, not the channel-numbered one.
 
 ## TIMG0 timer 0 (`timer_group_reg.h`)
 
@@ -128,6 +128,8 @@ Level-1 external lines (from `XCHAL_INTLEVEL1_MASK = 0x000637FF`): INT0–5, INT
 - [[flash-mapped-irom-and-drom-segments-carry-post-mapping-virtual-addresses-so-an-emulator-serves-them-read-only-straight-from-the-image]] — how the IROM/DROM cache windows are served
 - [[an-sram-only-emulator-can-still-load-esp-idf-app-images-by-loading-only-sram-resident-segments-and-refusing-flash-mapped-ones]] — the app-image loader that consumes this map, routing each segment to copy-or-refuse by these SRAM vs IROM/DROM region boundaries
 - [[esp32-s3-timg-divider-field-zero-means-divide-by-65536-because-the-hal-wraps-the-2-to-65536-range]] — consumes the TIMG0 base and `T0CONFIG` DIVIDER field defined above
+- [[esp32-s3-adc1-channel-n-reads-gpio-n-plus-1-so-an-emulator-resolves-analog-reads-to-the-correct-bench-pin]] — explains *why* the SAR1_EN_PAD channel→pin mapping in the SENS table above carries the `+1` offset, and why the emulator core (not user code) must own it
+- [[an-emulator-can-model-sar-adc-oneshot-reads-as-instant-conversions-because-firmware-waits-on-the-start-bit-edge-and-done-flag-not-sar-clock-timing]] — the *behavioral* read of the same SENS table: firmware pulses `MEAS1_START_SAR` (the 0→1 edge above), polls `MEAS1_DONE_SAR`, then reads `MEAS1_DATA_SAR`, so the emulator can set DONE in the same step and model the conversion as instant
 - [[the-esp32-s3-xtensa-special-register-numbers-rsr-wsr-rsil-rfe-encodings-exccause-codes-and-core-isa-config-constants-are-fixed-values-an-emulator-must-hardcode]] — companion "hardcoded constants" reference (special registers are RSR/WSR-accessed, not memory-mapped — the non-memory-mapped half of the emulator's fixed-value tables)
 
 ## Topics

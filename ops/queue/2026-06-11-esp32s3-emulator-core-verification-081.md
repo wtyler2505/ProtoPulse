@@ -51,7 +51,21 @@ Dual discovery run: topic maps `knowledge/emulation.md` + `knowledge/esp32-s3.md
 File was edited mid-phase by concurrent tasks (claim-080 added the 080 link to the divider note; an ADC task added a line to `esp32-s3.md`). Re-read both shared files before each edit and appended only — no overwrites.
 
 ## revisit
-(to be filled by revisit phase)
+
+Phase: reweave (BACKWARD pass — find OLDER notes / siblings that should reference THIS note but don't, add inline links FROM them TO here). ONE PHASE ONLY (no verify).
+
+### Method
+- Discovery via topic maps `knowledge/emulation.md` + `knowledge/esp32-s3.md` and sibling-filename `ls knowledge/` (qmd indexes the main repo, not this worktree).
+- `grep -rl` for inbound links to this note + `grep -riE "timg|prescal|divider|divide-by"` across `knowledge/` to catch un-linked mentions. The bulk of divider hits were electronics voltage-divider notes (irrelevant); discarded.
+
+### Candidates evaluated
+- **[[a-cycle-derived-virtual-timer-...-54-bit-wrap]]** (claim-080) — the only note that genuinely *depends on* this claim: the prescaler this note decodes scales 080's cycle-derived virtual TIMG0 counter. Already links here bidirectionally (080 line 28 → divider; divider line 29 → 080). Established by the concurrent 080 task. **No action — already reciprocated.**
+- **[[the-esp32-s3-memory-map-...-fixed-base-addresses]]** (claim-087) — older sibling that *defines* the `T0CONFIG.DIVIDER` field this note decodes. Genuinely backward (the register definition precedes the decode gotcha). Already links here **twice**: inline at line 104 (right at the `DIVIDER [28:13]` field definition) and in Relevant Notes at line 130. Added by a concurrent task. **No action — already present.** (NB: this note's own ## connect section says "087 outbound only, no reciprocal per advisor"; that statement is now stale — 087 → 081 backlink exists and is genuine.)
+- **[[xtensa-timer-interrupts-latch-...-ccompare-is-rewritten]]** (claim-072) — considered and **rejected**. 072 is the Xtensa *core* CCOUNT/CCOMPARE special-register timer; 081 is the *TIMG peripheral* prescaler decode. Distinct subsystems sharing only the cycle clock; 072 never reads the TIMG divider, no dependency in either direction. The divider→072 forward link is a "sibling timer / see-also", and a strict instantiate/depend bar does not obligate a reciprocal. Adding 072→081 would be "both are timers" link inflation. Advisor concurred.
+- **[[a-shared-mcucore-contract-...-bench-wiring]]** — TIMG/divider grep hit was a voltage-divider false positive; no genuine connection.
+
+### Result
+**No new links added.** This is a legitimate backward-pass outcome: both notes that genuinely depend on or define the subject of this claim (080, 087) already link to it (reciprocated by concurrent sibling tasks). No older note instantiates or depends on this claim while missing the link. No link manufactured to make the phase feel productive (per advisor).
 
 ## verify
 (to be filled by verify phase)
