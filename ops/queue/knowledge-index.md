@@ -23,7 +23,8 @@ Resolve 8 dangling [[links]] in knowledge/index.md. Create stub topic maps for:
 - [[goals]] — current active threads
 - [[eda-fundamentals]] — electronics design concepts, component specs, protocols
 - [[architecture-decisions]] — why ProtoPulse is built the way it is
-- [[competitive-landscape]] — how Fritzing, Wokwi, KiCad, TinkerCad compare
+- [[outside-inspiration-and-knowledge-landscape]] — what outside tools,
+  projects, research, and community ideas can teach ProtoPulse
 - [[breadboard-intelligence]] — bench coach, verified boards, layout quality
 - [[maker-ux]] — what makes features accessible to beginners
 

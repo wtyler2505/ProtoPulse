@@ -3,7 +3,7 @@ description: "TinkerCAD's simulation feels 10x more powerful than ProtoPulse's b
 type: insight
 source: "docs/MASTER_BACKLOG.md (Wave 66 Competitive Audit)"
 confidence: proven
-topics: ["[[competitive-landscape]]", "[[maker-ux]]"]
+topics: ["[[outside-inspiration-and-knowledge-landscape]]", "[[maker-ux]]"]
 related_components: []
 ---
 
@@ -28,5 +28,5 @@ Relevant Notes:
 - [[mega-2560-pin-7-8-gap-for-shield-compatibility]] -- the 160mil gap is invisible in pinout lists but immediately obvious in visual breadboard rendering
 
 Topics:
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]
 - [[maker-ux]]

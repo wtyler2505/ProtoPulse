@@ -3,7 +3,7 @@ description: "Zero-cost self-hosting vs Flux.ai's $20-$158/month is decisive for
 type: insight
 source: "docs/product-analysis-report.md"
 confidence: proven
-topics: ["[[competitive-landscape]]", "[[maker-ux]]"]
+topics: ["[[outside-inspiration-and-knowledge-landscape]]", "[[maker-ux]]"]
 ---
 
 # Self-hosted and free is a high-durability pricing moat against Flux.ai
@@ -23,5 +23,5 @@ Relevant Notes:
 - [[native-desktop-pivot-unblocked-three-c5-programs]] -- self-hosted native desktop strengthens the pricing moat by eliminating server costs
 
 Topics:
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]
 - [[maker-ux]]

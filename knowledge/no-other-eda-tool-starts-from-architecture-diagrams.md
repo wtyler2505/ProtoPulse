@@ -3,7 +3,7 @@ description: "ProtoPulse occupies an uncontested niche by starting designs from 
 type: claim
 source: "docs/product-analysis-report.md"
 confidence: proven
-topics: ["[[competitive-landscape]]", "[[architecture-decisions]]"]
+topics: ["[[outside-inspiration-and-knowledge-landscape]]", "[[architecture-decisions]]"]
 related_components: ["client/src/components/views/ArchitectureView.tsx", "server/ai-tools/architecture.ts"]
 ---
 
@@ -24,5 +24,5 @@ Relevant Notes:
 - [[makers-need-one-tool-because-context-switching-kills-momentum]] -- architecture diagrams are the entry point that lets beginners stay in one tool from idea to Gerber
 
 Topics:
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]
 - [[architecture-decisions]]

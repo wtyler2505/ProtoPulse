@@ -3,7 +3,7 @@ description: "The EDA market provides a large and growing TAM that validates the
 type: claim
 source: "docs/product-analysis-report.md"
 confidence: likely
-topics: ["[[competitive-landscape]]"]
+topics: ["[[outside-inspiration-and-knowledge-landscape]]"]
 ---
 
 # The EDA market is valued at 15.89 billion dollars growing at 9 percent CAGR toward 34.71 billion by 2035
@@ -22,4 +22,4 @@ Relevant Notes:
 - [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- the bundle targets the maker/education segment within this TAM
 
 Topics:
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]

@@ -3,7 +3,7 @@ description: What makes EDA features accessible to beginners — UX patterns, pr
 type: moc
 topics:
   - "[[index]]"
-  - "[[competitive-landscape]]"
+  - "[[outside-inspiration-and-knowledge-landscape]]"
   - "[[breadboard-intelligence]]"
   - "[[goals]]"
 ---
@@ -102,6 +102,6 @@ Agent Notes:
 
 Topics:
 - [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring
-- [[competitive-landscape]] — How Fritzing, Wokwi, KiCad, TinkerCad, and other EDA tools compare to ProtoPulse
+- [[outside-inspiration-and-knowledge-landscape]] — What products, repositories, papers, maker projects, and community ideas can teach ProtoPulse
 - [[breadboard-intelligence]] — Bench coach logic, verified breadboard layouts, layout quality rules, and hardware debugging patterns
 - [[goals]] — Current active threads, priorities, and open questions in ProtoPulse development

@@ -3,7 +3,7 @@ description: "All five analysis phases agree: AI integration is ProtoPulse's pri
 type: decision
 source: "docs/product-analysis-report.md"
 confidence: proven
-topics: ["[[architecture-decisions]]", "[[competitive-landscape]]"]
+topics: ["[[architecture-decisions]]", "[[outside-inspiration-and-knowledge-landscape]]"]
 ---
 
 # AI integration is the moat and the strategy should lean into it not chase traditional EDA parity
@@ -23,4 +23,4 @@ Relevant Notes:
 
 Topics:
 - [[architecture-decisions]]
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]

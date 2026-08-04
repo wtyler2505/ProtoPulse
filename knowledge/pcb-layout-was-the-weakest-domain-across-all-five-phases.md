@@ -3,7 +3,7 @@ description: "PCB design rated 'Missing' or 'Critical' in every analysis phase â
 type: insight
 source: "docs/product-analysis-report.md"
 confidence: proven
-topics: ["[[competitive-landscape]]", "[[eda-fundamentals]]"]
+topics: ["[[outside-inspiration-and-knowledge-landscape]]", "[[eda-fundamentals]]"]
 ---
 
 # PCB layout was the weakest domain across all five analysis phases
@@ -23,5 +23,5 @@ Relevant Notes:
 - [[competitive-audits-generated-more-work-than-internal-analysis]] -- audits surfaced specific PCB gaps that internal analysis rated only as "Missing"
 
 Topics:
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]
 - [[eda-fundamentals]]

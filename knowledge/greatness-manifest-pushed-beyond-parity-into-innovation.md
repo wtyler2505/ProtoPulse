@@ -3,7 +3,7 @@ description: "11 C5 'Greatness Manifest' items (Waves 150-154) pushed ProtoPulse
 type: insight
 source: "docs/MASTER_BACKLOG.md (The Greatness Manifest)"
 confidence: proven
-topics: ["[[competitive-landscape]]", "[[goals]]"]
+topics: ["[[outside-inspiration-and-knowledge-landscape]]", "[[goals]]"]
 related_components: []
 ---
 
@@ -27,5 +27,5 @@ Relevant Notes:
 - [[codex-audit-produced-the-structural-skeleton-for-all-subsequent-waves]] -- the audit pipeline cleared P0-P3 debt first, opening the path to Manifest innovation
 
 Topics:
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]
 - [[goals]]

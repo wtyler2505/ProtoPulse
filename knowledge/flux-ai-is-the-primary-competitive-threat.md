@@ -3,7 +3,7 @@ description: "Flux.ai occupies the exact same niche with a more mature PCB workf
 type: insight
 source: "docs/product-analysis-report.md"
 confidence: proven
-topics: ["[[competitive-landscape]]"]
+topics: ["[[outside-inspiration-and-knowledge-landscape]]"]
 ---
 
 # Flux.ai is a complete EDA tool with AI whereas ProtoPulse is an AI tool missing EDA features
@@ -21,4 +21,4 @@ Relevant Notes:
 - [[ai-is-the-moat-lean-into-it]] -- the strategic response: leapfrog with AI instead of chasing PCB parity
 
 Topics:
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]

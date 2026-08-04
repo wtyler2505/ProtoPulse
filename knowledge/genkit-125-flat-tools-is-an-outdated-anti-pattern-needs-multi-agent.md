@@ -3,7 +3,7 @@ description: "Passing 125 flat tools to a single monolithic model causes context
 type: debt-note
 source: "conductor/comprehensive-audit.md §24"
 confidence: proven
-topics: ["[[architecture-decisions]]", "[[competitive-landscape]]"]
+topics: ["[[architecture-decisions]]", "[[outside-inspiration-and-knowledge-landscape]]"]
 related_components: ["server/ai.ts", "server/ai-tools/index.ts"]
 ---
 

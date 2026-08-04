@@ -3,7 +3,7 @@ description: "Claude handles complex tool-use reasoning while Gemini provides vi
 type: decision
 source: "docs/MASTER_BACKLOG.md, server/ai.ts"
 confidence: proven
-topics: ["[[architecture-decisions]]", [[competitive-landscape]]]
+topics: ["[[architecture-decisions]]", "[[outside-inspiration-and-knowledge-landscape]]"]
 related_components: ["server/ai.ts", "server/circuit-breaker.ts"]
 ---
 
@@ -25,4 +25,4 @@ Relevant Notes:
 
 Topics:
 - [[architecture-decisions]]
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]

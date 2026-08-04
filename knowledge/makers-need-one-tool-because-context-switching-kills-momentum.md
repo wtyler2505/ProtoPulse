@@ -3,7 +3,7 @@ description: "ProtoPulse exists because no EDA tool covers schematic-to-Gerber-t
 type: need
 source: "docs/MASTER_BACKLOG.md (Epic C, origin story)"
 confidence: proven
-topics: ["[[maker-ux]]", "[[competitive-landscape]]"]
+topics: ["[[maker-ux]]", "[[outside-inspiration-and-knowledge-landscape]]"]
 related_components: []
 ---
 
@@ -31,4 +31,4 @@ Relevant Notes:
 
 Topics:
 - [[maker-ux]]
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]

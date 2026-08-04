@@ -3,7 +3,7 @@ description: "The Tauri v2 pivot resolved firmware, debugger, and multi-platform
 type: decision
 source: "docs/MASTER_BACKLOG.md (ADR 0007/0008)"
 confidence: proven
-topics: ["[[architecture-decisions]]", "[[competitive-landscape]]"]
+topics: ["[[architecture-decisions]]", "[[outside-inspiration-and-knowledge-landscape]]"]
 related_components: []
 ---
 
@@ -27,4 +27,4 @@ Relevant Notes:
 
 Topics:
 - [[architecture-decisions]]
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]

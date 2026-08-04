@@ -3,7 +3,7 @@ description: "125 AI-callable tools vs Flux.ai's ~12 capabilities — a quantifi
 type: claim
 source: "docs/product-analysis-report.md"
 confidence: proven
-topics: ["[[competitive-landscape]]"]
+topics: ["[[outside-inspiration-and-knowledge-landscape]]"]
 related_components: ["server/ai-tools.ts", "server/ai.ts"]
 ---
 
@@ -24,4 +24,4 @@ Relevant Notes:
 - [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- the 125 AI tools are the mechanism by which proactive error catching is delivered
 
 Topics:
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]

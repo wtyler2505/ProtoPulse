@@ -3,7 +3,7 @@ description: "Wave 64 and 66 competitive audits against TinkerCAD/Fritzing/Platf
 type: insight
 source: "docs/MASTER_BACKLOG.md (Waves 64, 66)"
 confidence: proven
-topics: ["[[competitive-landscape]]", "[[goals]]"]
+topics: ["[[outside-inspiration-and-knowledge-landscape]]", "[[goals]]"]
 related_components: []
 ---
 
@@ -26,5 +26,5 @@ Relevant Notes:
 - [[protopulse-ai-breadth-is-6x-flux-ai]] -- audits quantified the 6x AI tool advantage gap over closest competitor
 
 Topics:
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]
 - [[goals]]

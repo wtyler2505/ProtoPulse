@@ -3,7 +3,7 @@ description: "The combination of breadboard view, AI guidance, and zero cost is 
 type: pattern
 source: "docs/product-analysis-report.md"
 confidence: likely
-topics: ["[[maker-ux]]", "[[competitive-landscape]]"]
+topics: ["[[maker-ux]]", "[[outside-inspiration-and-knowledge-landscape]]"]
 ---
 
 # Breadboard view plus AI guidance plus free pricing is a uniquely compelling maker bundle
@@ -28,4 +28,4 @@ Relevant Notes:
 
 Topics:
 - [[maker-ux]]
-- [[competitive-landscape]]
+- [[outside-inspiration-and-knowledge-landscape]]

@@ -13,23 +13,45 @@ How the ProtoPulse knowledge system works, why it works that way, and how it evo
 
 ## Behavior
 
-- [[enforce-hard-cap-on-concurrent-agents]] -- never exceed 6 agents / 8 background tasks simultaneously
-- [[use-agent-teams-not-raw-parallel-subagents-for-implementation]] -- /agent-teams for all parallel implementation, not raw subagents
-- [[run-standard-dev-commands-autonomously]] -- run db:push, check, test without asking permission
+- [[enforce-hard-cap-on-concurrent-agents]] -- never exceed 6 agents / 8
+  background tasks simultaneously
+- [[use-agent-teams-not-raw-parallel-subagents-for-implementation]] --
+  /agent-teams for all parallel implementation, not raw subagents
+- [[run-standard-dev-commands-autonomously]] -- run db:push, check, and test
+  without asking permission
+- [[never-sit-idle-while-subagents-or-teammates-are-running]] -- progress
+  independent work while delegated or background work is still running
+- [[use-desktop-commander-when-bash-permission-denied-on-destructive-ops]] --
+  switch to Desktop Commander after a relevant Bash denial instead of handing
+  the work back to Tyler
+- [[treat-outside-work-as-inspiration-and-evidence-not-opposition]] --
+  use every outside source for learning and creative ingredients without turning
+  product work into a race
 
 ## Quality
 
-- [[verify-wiki-links-before-completing-knowledge-work]] -- all [[links]] must resolve to real files before a task is done
+- [[verify-wiki-links-before-completing-knowledge-work]] -- all [[links]] must
+  resolve to real files before a task is done
 
 ## Processing
 
-- [[enforce-hardware-vault-as-single-source-of-truth]] -- Ensure hardware components are never hallucinated and are synced with the Ars Contexta vault
-- [[use-url-parse-or-polyfill-to-avoid-url-is-not-a-constructor]] -- Ensure robust URL parsing by using polyfills or dedicated libraries instead of relying on the global URL constructor
-- [[enforce-physical-constraints-on-breadboardfit-logic]] -- Always validate component dimensions and pin alignment against standard breadboard grid spacing 
+- [[enforce-hardware-vault-as-single-source-of-truth]] -- ensure hardware
+  components are never hallucinated and stay synced with the Ars Contexta vault
+- [[use-url-parse-or-polyfill-to-avoid-url-is-not-a-constructor]] -- ensure
+  robust URL parsing through polyfills or dedicated libraries instead of relying
+  on the global URL constructor
+- [[enforce-physical-constraints-on-breadboardfit-logic]] -- always validate
+  component dimensions and pin alignment against standard breadboard spacing
+
+## Maintenance
+
+- [[recover-user-messages-from-history-jsonl-when-transcript-expired]] -- recover
+  user-side messages from history JSONL when the full transcript has expired
 
 ## Principles
 
 The system is built on four core principles:
+
 1. **Prose-as-title**: Note titles are complete claims, not topic labels
 2. **Wiki links as graph edges**: Every link is a deliberate connection
 3. **Topic maps as attention managers**: Curated views, not folder hierarchies
@@ -42,6 +64,7 @@ Extract -> Connect -> Revisit -> Verify
 Each phase has its own skill. The cycle isn't strictly linear --
 you might extract and connect in the same session, or verify
 something months after initial capture.
+
 ## Open Questions
 
 - What's the right inbox pressure threshold for this project's pace?
@@ -51,4 +74,5 @@ something months after initial capture.
 ---
 
 Topics:
+
 - [[index]]
