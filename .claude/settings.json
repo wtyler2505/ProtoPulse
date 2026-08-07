@@ -369,7 +369,5 @@
       }
     ]
   },
-  "enabledPlugins": {
-    "ros2-engineering@ros2-engineering-skills": true
-  }
+  "enabledPlugins": {}
 }
